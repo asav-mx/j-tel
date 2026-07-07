@@ -12,8 +12,8 @@ export default async function HomePage() {
   } else {
     try {
       const repos = getRepos();
-      tecma = await repos.accounts.findBySlug("tecma");
-      jb = await repos.accounts.findBySlug("juarez-bus");
+      tecma = (await repos.accounts.findBySlug("tecma")) ?? null;
+      jb = (await repos.accounts.findBySlug("juarez-bus")) ?? null;
     } catch (err) {
       dbError =
         err instanceof Error
