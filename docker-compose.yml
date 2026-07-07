@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: jtel
+      POSTGRES_PASSWORD: jtel_dev
+      POSTGRES_DB: jtel
+    ports:
+      - "5432:5432"
+    volumes:
+      - jtel_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jtel -d jtel"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  jtel_pgdata:

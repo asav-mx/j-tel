@@ -1,0 +1,22 @@
+{
+  "name": "jtel",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "db:generate": "pnpm --filter @jtel/db generate",
+    "db:migrate": "pnpm --filter @jtel/db migrate",
+    "db:seed": "pnpm --filter @jtel/db seed",
+    "db:studio": "pnpm --filter @jtel/db studio"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.3"
+  },
+  "packageManager": "pnpm@10.12.1",
+  "engines": {
+    "node": ">=20"
+  }
+}

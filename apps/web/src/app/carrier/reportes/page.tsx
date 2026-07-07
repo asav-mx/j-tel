@@ -1,0 +1,26 @@
+import { getRepos } from "@/lib/db";
+import { AppNav, Card } from "@/components/ui";
+
+export const dynamic = "force-dynamic";
+
+export default async function CarrierReportesPage() {
+  return (
+    <main className="min-h-screen p-8">
+      <div className="mx-auto max-w-4xl">
+        <AppNav title="Reportes al cliente" links={[{ href: "/carrier", label: "← Panel" }]} />
+        <Card title="Entregables contractuales">
+          <ul className="list-inside list-disc space-y-2 text-sm text-[var(--muted)]">
+            <li>Reporte GPS mensual</li>
+            <li>Distancia por unidad</li>
+            <li>Cargos por ruta</li>
+            <li>Lista de choferes</li>
+            <li>Reporte de mantenimiento mensual</li>
+          </ul>
+          <p className="mt-4 text-sm">
+            Generados desde los mismos hechos de cumplimiento — el carrier no recalcula verdad.
+          </p>
+        </Card>
+      </div>
+    </main>
+  );
+}

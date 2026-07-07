@@ -1,0 +1,20 @@
+{
+  "name": "@jtel/worker",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/run.ts",
+    "start": "node dist/run.js"
+  },
+  "dependencies": {
+    "@jtel/db": "workspace:*",
+    "@jtel/services": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}
