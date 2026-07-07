@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, isNull, inArray, sql } from "drizzle-orm";
+import { eq, and, or, gte, lte, isNull, inArray, sql } from "drizzle-orm";
 import type { Database } from "../index.js";
 import {
   accounts,
@@ -161,7 +161,7 @@ export class FleetRepository {
       where: and(
         eq(deviceAssignments.deviceId, deviceId),
         lte(deviceAssignments.validFrom, at),
-        sql`(${deviceAssignments.validTo} IS NULL OR ${deviceAssignments.validTo} >= ${at})`,
+        or(isNull(deviceAssignments.validTo), gte(deviceAssignments.validTo, at)),
       ),
     });
     return result;
@@ -262,7 +262,10 @@ export class RouteRepository {
       where: and(
         eq(routeShiftKmlVersions.routeShiftId, routeShiftId),
         lte(routeShiftKmlVersions.validFrom, at),
-        sql`(${routeShiftKmlVersions.validTo} IS NULL OR ${routeShiftKmlVersions.validTo} >= ${at})`,
+        or(
+          isNull(routeShiftKmlVersions.validTo),
+          gte(routeShiftKmlVersions.validTo, at),
+        ),
       ),
     });
   }
@@ -396,7 +399,10 @@ export class OccurrenceRepository {
           where: and(
             eq(routeShiftKmlVersions.routeShiftId, profile.routeShiftId),
             lte(routeShiftKmlVersions.validFrom, deadline),
-            sql`(${routeShiftKmlVersions.validTo} IS NULL OR ${routeShiftKmlVersions.validTo} >= ${deadline})`,
+            or(
+              isNull(routeShiftKmlVersions.validTo),
+              gte(routeShiftKmlVersions.validTo, deadline),
+            ),
           ),
         });
 
@@ -459,7 +465,7 @@ export class OccurrenceRepository {
           isNull(complianceFacts.id),
           lte(
             sql`${serviceOccurrences.expectedDeadline} + (${serviceContracts.policy}->>'verificationGraceMinutes')::int * interval '1 minute'`,
-            now,
+            now.toISOString(),
           ),
         ),
       );

@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { sql } from "drizzle-orm";
 import { createDb } from "./index.js";
 import { createRepositories } from "./repositories/index.js";
 import type { ContractPolicy } from "@jtel/domain";
@@ -84,6 +85,20 @@ async function seed() {
     process.env.DATABASE_URL ?? "postgresql://jtel:jtel_dev@localhost:5432/jtel",
   );
   const repos = createRepositories(db);
+
+  console.log("Limpiando datos previos...");
+  await db.execute(sql`
+    DO $$
+    DECLARE r RECORD;
+    BEGIN
+      FOR r IN (
+        SELECT tablename FROM pg_tables
+        WHERE schemaname = 'public' AND tablename NOT LIKE '\_\_drizzle%'
+      ) LOOP
+        EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' RESTART IDENTITY CASCADE';
+      END LOOP;
+    END $$;
+  `);
 
   console.log("Sembrando datos de demo...");
 

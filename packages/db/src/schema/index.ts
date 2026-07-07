@@ -87,8 +87,8 @@ export const accounts = pgTable("accounts", {
   slug: text("slug").notNull().unique(),
   clerkOrgId: text("clerk_org_id"),
   isDemo: boolean("is_demo").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const carrierProfiles = pgTable("carrier_profiles", {
@@ -100,7 +100,7 @@ export const carrierProfiles = pgTable("carrier_profiles", {
   legalName: text("legal_name").notNull(),
   umbrellaUserId: text("umbrella_user_id"),
   umbrellaPasswordEncrypted: text("umbrella_password_encrypted"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const clientProfiles = pgTable("client_profiles", {
@@ -110,7 +110,7 @@ export const clientProfiles = pgTable("client_profiles", {
     .references(() => accounts.id, { onDelete: "cascade" })
     .unique(),
   legalName: text("legal_name").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const plantGroups = pgTable("plant_groups", {
@@ -119,7 +119,7 @@ export const plantGroups = pgTable("plant_groups", {
     .notNull()
     .references(() => accounts.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const plants = pgTable("plants", {
@@ -132,7 +132,7 @@ export const plants = pgTable("plants", {
   }),
   name: text("name").notNull(),
   code: text("code").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const geofences = pgTable("geofences", {
@@ -145,7 +145,7 @@ export const geofences = pgTable("geofences", {
   role: geofenceRoleEnum("role").notNull(),
   name: text("name").notNull(),
   polygon: jsonb("polygon").$type<Array<{ lat: number; lng: number }>>().notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const units = pgTable("units", {
@@ -157,7 +157,7 @@ export const units = pgTable("units", {
   plateNumber: text("plate_number"),
   jrzPassDriverId: text("jrz_pass_driver_id"),
   active: boolean("active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const devices = pgTable("devices", {
@@ -167,7 +167,7 @@ export const devices = pgTable("devices", {
     .references(() => accounts.id, { onDelete: "cascade" }),
   imei: text("imei").notNull(),
   label: text("label"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("devices_carrier_imei_idx").on(table.carrierAccountId, table.imei),
 ]);
@@ -180,9 +180,9 @@ export const deviceAssignments = pgTable("device_assignments", {
   deviceId: uuid("device_id")
     .notNull()
     .references(() => devices.id, { onDelete: "cascade" }),
-  validFrom: timestamp("valid_from", { withTimezone: true }).notNull(),
-  validTo: timestamp("valid_to", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  validFrom: timestamp("valid_from", { withTimezone: true, mode: "date" }).notNull(),
+  validTo: timestamp("valid_to", { withTimezone: true, mode: "date" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 }, (table) => [
   index("device_assignments_unit_valid_idx").on(table.unitId, table.validFrom),
   index("device_assignments_device_valid_idx").on(table.deviceId, table.validFrom),
@@ -194,7 +194,7 @@ export const routes = pgTable("routes", {
     .notNull()
     .references(() => accounts.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const shifts = pgTable("shifts", {
@@ -204,7 +204,7 @@ export const shifts = pgTable("shifts", {
     .references(() => accounts.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   startTime: time("start_time").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const routeShifts = pgTable("route_shifts", {
@@ -219,7 +219,7 @@ export const routeShifts = pgTable("route_shifts", {
     .notNull()
     .references(() => shifts.id, { onDelete: "cascade" }),
   deadlineTime: time("deadline_time").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("route_shifts_unique_idx").on(table.routeId, table.shiftId),
 ]);
@@ -231,9 +231,9 @@ export const routeShiftKmlVersions = pgTable("route_shift_kml_versions", {
     .references(() => routeShifts.id, { onDelete: "cascade" }),
   kmlContent: text("kml_content").notNull(),
   waypoints: jsonb("waypoints").$type<Array<{ lat: number; lng: number }>>().notNull().default([]),
-  validFrom: timestamp("valid_from", { withTimezone: true }).notNull(),
-  validTo: timestamp("valid_to", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  validFrom: timestamp("valid_from", { withTimezone: true, mode: "date" }).notNull(),
+  validTo: timestamp("valid_to", { withTimezone: true, mode: "date" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const serviceContracts = pgTable("service_contracts", {
@@ -251,8 +251,8 @@ export const serviceContracts = pgTable("service_contracts", {
   name: text("name").notNull(),
   status: contractStatusEnum("status").notNull().default("draft"),
   policy: jsonb("policy").$type<import("@jtel/domain").ContractPolicy>().notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const serviceProfiles = pgTable("service_profiles", {
@@ -272,7 +272,7 @@ export const serviceProfiles = pgTable("service_profiles", {
   }),
   activeDays: jsonb("active_days").$type<number[]>().notNull().default([1, 2, 3, 4, 5]),
   active: boolean("active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const serviceProfileUnits = pgTable("service_profile_units", {
@@ -305,14 +305,14 @@ export const serviceOccurrences = pgTable("service_occurrences", {
     onDelete: "set null",
   }),
   serviceDate: date("service_date").notNull(),
-  expectedDeadline: timestamp("expected_deadline", { withTimezone: true }).notNull(),
+  expectedDeadline: timestamp("expected_deadline", { withTimezone: true, mode: "date" }).notNull(),
   expectedGeofenceId: uuid("expected_geofence_id")
     .notNull()
     .references(() => geofences.id),
   referenceUnitId: uuid("reference_unit_id").references(() => units.id, {
     onDelete: "set null",
   }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("service_occurrences_unique_idx").on(
     table.serviceProfileId,
@@ -327,10 +327,10 @@ export const trips = pgTable("trips", {
     .notNull()
     .references(() => serviceOccurrences.id, { onDelete: "cascade" })
     .unique(),
-  evidenceWindowStart: timestamp("evidence_window_start", { withTimezone: true }).notNull(),
-  evidenceWindowEnd: timestamp("evidence_window_end", { withTimezone: true }).notNull(),
+  evidenceWindowStart: timestamp("evidence_window_start", { withTimezone: true, mode: "date" }).notNull(),
+  evidenceWindowEnd: timestamp("evidence_window_end", { withTimezone: true, mode: "date" }).notNull(),
   evidenceStatus: evidenceStatusEnum("evidence_status").notNull().default("en_espera"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const evidencePoints = pgTable("evidence_points", {
@@ -344,7 +344,7 @@ export const evidencePoints = pgTable("evidence_points", {
   latitude: doublePrecision("latitude").notNull(),
   longitude: doublePrecision("longitude").notNull(),
   speed: doublePrecision("speed"),
-  recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull(),
+  recordedAt: timestamp("recorded_at", { withTimezone: true, mode: "date" }).notNull(),
 }, (table) => [
   index("evidence_points_trip_idx").on(table.tripId, table.recordedAt),
 ]);
@@ -358,7 +358,7 @@ export const complianceFacts = pgTable("compliance_facts", {
   tripId: uuid("trip_id")
     .notNull()
     .references(() => trips.id, { onDelete: "cascade" }),
-  expectedDeadline: timestamp("expected_deadline", { withTimezone: true }).notNull(),
+  expectedDeadline: timestamp("expected_deadline", { withTimezone: true, mode: "date" }).notNull(),
   expectedGeofenceId: uuid("expected_geofence_id")
     .notNull()
     .references(() => geofences.id),
@@ -368,7 +368,7 @@ export const complianceFacts = pgTable("compliance_facts", {
   observedUnitId: uuid("observed_unit_id").references(() => units.id, {
     onDelete: "set null",
   }),
-  observedArrivalAt: timestamp("observed_arrival_at", { withTimezone: true }),
+  observedArrivalAt: timestamp("observed_arrival_at", { withTimezone: true, mode: "date" }),
   observedRouteMatchPct: doublePrecision("observed_route_match_pct"),
   status: complianceStatusEnum("status").notNull(),
   timing: timingStatusEnum("timing"),
@@ -378,7 +378,7 @@ export const complianceFacts = pgTable("compliance_facts", {
   contractPolicySnapshot: jsonb("contract_policy_snapshot")
     .$type<import("@jtel/domain").ContractPolicy>()
     .notNull(),
-  materializedAt: timestamp("materialized_at", { withTimezone: true }).notNull().defaultNow(),
+  materializedAt: timestamp("materialized_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const ledgerEntries = pgTable("ledger_entries", {
@@ -393,7 +393,7 @@ export const ledgerEntries = pgTable("ledger_entries", {
   action: text("action").notNull(),
   steps: jsonb("steps").$type<import("@jtel/domain").LedgerStep[]>().notNull().default([]),
   metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 }, (table) => [
   index("ledger_entries_trip_idx").on(table.tripId),
   index("ledger_entries_occurrence_idx").on(table.serviceOccurrenceId),
@@ -408,7 +408,7 @@ export const userMemberships = pgTable("user_memberships", {
   role: text("role").notNull(),
   scopeType: scopeTypeEnum("scope_type").notNull(),
   scopeId: uuid("scope_id"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("user_memberships_unique_idx").on(
     table.accountId,
@@ -430,8 +430,8 @@ export const fuelRecords = pgTable("fuel_records", {
   liters: doublePrecision("liters").notNull(),
   cost: doublePrecision("cost"),
   odometerKm: doublePrecision("odometer_km"),
-  recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  recordedAt: timestamp("recorded_at", { withTimezone: true, mode: "date" }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const maintenanceRecords = pgTable("maintenance_records", {
@@ -444,9 +444,9 @@ export const maintenanceRecords = pgTable("maintenance_records", {
     .references(() => accounts.id, { onDelete: "cascade" }),
   description: text("description").notNull(),
   status: maintenanceStatusEnum("status").notNull().default("programado"),
-  scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  scheduledAt: timestamp("scheduled_at", { withTimezone: true, mode: "date" }),
+  completedAt: timestamp("completed_at", { withTimezone: true, mode: "date" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const inspections = pgTable("inspections", {
@@ -462,8 +462,8 @@ export const inspections = pgTable("inspections", {
     .references(() => accounts.id, { onDelete: "cascade" }),
   status: inspectionStatusEnum("status").notNull().default("pendiente"),
   notes: text("notes"),
-  inspectedAt: timestamp("inspected_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  inspectedAt: timestamp("inspected_at", { withTimezone: true, mode: "date" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const notifications = pgTable("notifications", {
@@ -477,14 +477,14 @@ export const notifications = pgTable("notifications", {
   body: text("body").notNull(),
   metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
   read: boolean("read").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const demoTemplates = pgTable("demo_templates", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   config: jsonb("config").$type<Record<string, unknown>>().notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 export const accountsRelations = relations(accounts, ({ one, many }) => ({
