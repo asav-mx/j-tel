@@ -1,12 +1,14 @@
-# JTEL
+# j-tel
 
-Plataforma multi-cuenta de verificación de transporte de personal (maquiladora, México).
+Repositorio de JTEL en Cursor — plataforma multi-cuenta de verificación de transporte de personal (maquiladora, México).
+
+> Repo separado de `jtel` (otro entorno). Este es el workspace oficial de Cursor.
 
 ## Requisitos
 
 - Node.js 20+
 - pnpm 10+
-- PostgreSQL con PostGIS (`docker compose up -d`)
+- PostgreSQL (recomendado: [Neon](https://neon.com) en la nube)
 
 ## Inicio rápido
 

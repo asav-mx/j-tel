@@ -1,5 +1,5 @@
 {
-  "name": "jtel",
+  "name": "j-tel",
   "private": true,
   "scripts": {
     "build": "turbo build",
