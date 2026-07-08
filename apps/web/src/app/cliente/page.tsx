@@ -14,20 +14,22 @@ export default async function ClienteDashboardPage({
 }) {
   const repos = getRepos();
   const client = await resolveAccountByType("client", searchParams);
-  const memberships = client ? await getClientMemberships(client.id) : [];
 
-  if (!client || memberships.length === 0) {
+  if (!client) {
     return (
       <main className="p-8">
-        <p>Sin acceso o datos de demo. Ejecute db:seed.</p>
+        <p>No hay cuentas cliente. Crea una en J-Staff → Cuentas.</p>
       </main>
     );
   }
 
+  const memberships = await getClientMemberships(client.id);
   const plants = await repos.clients.getPlantsForAccount(client.id);
-  const visiblePlants = plants.filter((p) =>
-    canAccessPlant(memberships, p.id, client.id),
-  );
+  // Sin membresías (aún no hay login real): mostrar todas las plantas de la cuenta
+  const visiblePlants =
+    memberships.length === 0
+      ? plants
+      : plants.filter((p) => canAccessPlant(memberships, p.id, client.id));
   const occurrences = await repos.occurrences.findForClientAccount(client.id);
 
   const stats = {

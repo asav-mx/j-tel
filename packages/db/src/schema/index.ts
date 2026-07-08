@@ -573,6 +573,21 @@ export const tripsRelations = relations(trips, ({ one, many }) => ({
   evidencePoints: many(evidencePoints),
 }));
 
+export const evidencePointsRelations = relations(evidencePoints, ({ one }) => ({
+  trip: one(trips, {
+    fields: [evidencePoints.tripId],
+    references: [trips.id],
+  }),
+  device: one(devices, {
+    fields: [evidencePoints.deviceId],
+    references: [devices.id],
+  }),
+  unit: one(units, {
+    fields: [evidencePoints.unitId],
+    references: [units.id],
+  }),
+}));
+
 export const serviceOccurrencesRelations = relations(serviceOccurrences, ({ one }) => ({
   profile: one(serviceProfiles, {
     fields: [serviceOccurrences.serviceProfileId],
