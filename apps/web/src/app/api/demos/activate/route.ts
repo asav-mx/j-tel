@@ -12,9 +12,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Plantilla no encontrada" }, { status: 404 });
   }
 
-  const tecma = await repos.accounts.findBySlug("tecma");
-  if (tecma) {
-    const contracts = await repos.contracts.findForClient(tecma.id);
+  const clients = await repos.accounts.listByType("client");
+  for (const client of clients) {
+    const contracts = await repos.contracts.findForClient(client.id);
     for (const c of contracts) {
       await repos.contracts.activate(c.id);
     }

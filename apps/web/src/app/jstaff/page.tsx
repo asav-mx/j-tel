@@ -1,16 +1,13 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
+import { withAccount } from "@/lib/account-context";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export default async function JStaffDashboardPage() {
   const repos = getRepos();
-  const accounts = [
-    await repos.accounts.findBySlug("jstaff"),
-    await repos.accounts.findBySlug("juarez-bus"),
-    await repos.accounts.findBySlug("tecma"),
-    await repos.accounts.findBySlug("honeywell"),
-  ].filter(Boolean);
+  const accounts = await repos.accounts.listAll();
 
   const templates = await repos.demos.getTemplates();
 
@@ -33,7 +30,18 @@ export default async function JStaffDashboardPage() {
               {accounts.map((a) => (
                 <li key={a!.id} className="flex justify-between rounded border border-white/5 p-3">
                   <span>{a!.name}</span>
-                  <span className="text-[var(--muted)]">{a!.type}</span>
+                  <span className="text-[var(--muted)]">
+                    {a!.type}{" "}
+                    {a!.type === "carrier" ? (
+                      <Link className="text-[var(--accent)]" href={withAccount("/carrier", a.slug)}>
+                        Abrir
+                      </Link>
+                    ) : a!.type === "client" ? (
+                      <Link className="text-[var(--accent)]" href={withAccount("/cliente", a.slug)}>
+                        Abrir
+                      </Link>
+                    ) : null}
+                  </span>
                 </li>
               ))}
             </ul>

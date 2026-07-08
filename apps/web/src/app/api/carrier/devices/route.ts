@@ -3,7 +3,7 @@ import { getRepos } from "@/lib/db";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const carrierSlug = String(formData.get("carrierSlug") ?? "juarez-bus");
+  const carrierSlug = String(formData.get("carrierSlug") ?? "").trim();
   const imei = String(formData.get("imei") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim() || undefined;
 
@@ -26,5 +26,5 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.redirect(new URL("/carrier/flota", request.url));
+  return NextResponse.redirect(new URL(`/carrier/flota?account=${carrier.slug}`, request.url));
 }

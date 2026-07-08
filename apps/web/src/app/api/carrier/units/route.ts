@@ -3,7 +3,7 @@ import { getRepos } from "@/lib/db";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const carrierSlug = String(formData.get("carrierSlug") ?? "juarez-bus");
+  const carrierSlug = String(formData.get("carrierSlug") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim();
   const plateNumber = String(formData.get("plateNumber") ?? "").trim() || undefined;
 
@@ -18,5 +18,5 @@ export async function POST(request: Request) {
   }
 
   await repos.fleet.createUnit(carrier.id, label, plateNumber);
-  return NextResponse.redirect(new URL("/carrier/flota", request.url));
+  return NextResponse.redirect(new URL(`/carrier/flota?account=${carrier.slug}`, request.url));
 }

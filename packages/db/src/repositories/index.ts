@@ -55,6 +55,19 @@ export class AccountRepository {
   async findById(id: string) {
     return this.db.query.accounts.findFirst({ where: eq(accounts.id, id) });
   }
+
+  async listByType(type: "carrier" | "client" | "jstaff") {
+    return this.db.query.accounts.findMany({
+      where: eq(accounts.type, type),
+      orderBy: (table, { asc }) => [asc(table.name)],
+    });
+  }
+
+  async listAll() {
+    return this.db.query.accounts.findMany({
+      orderBy: (table, { asc }) => [asc(table.type), asc(table.name)],
+    });
+  }
 }
 
 export class CarrierRepository {

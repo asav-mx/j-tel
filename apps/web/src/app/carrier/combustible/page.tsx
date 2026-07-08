@@ -1,17 +1,23 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
+import { resolveAccountByType, withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
 
-export default async function CarrierCombustiblePage() {
-  const repos = getRepos();
-  const db = getRepos();
-  const carrier = await db.accounts.findBySlug("juarez-bus");
+export default async function CarrierCombustiblePage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const carrier = await resolveAccountByType("carrier", searchParams);
 
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-4xl">
-        <AppNav title="Combustible / Diésel" links={[{ href: "/carrier", label: "← Panel" }]} />
+        <AppNav
+          title="Combustible / Diésel"
+          links={[{ href: withAccount("/carrier", carrier?.slug), label: "← Panel" }]}
+        />
         <Card title="Captura manual v1">
           <p className="text-sm text-[var(--muted)]">
             Registros de combustible para {carrier?.name ?? "carrier"}. Telemetría automática en

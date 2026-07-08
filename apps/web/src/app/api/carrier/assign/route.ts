@@ -3,6 +3,7 @@ import { getRepos } from "@/lib/db";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
+  const carrierSlug = String(formData.get("carrierSlug") ?? "").trim();
   const unitId = String(formData.get("unitId") ?? "").trim();
   const deviceId = String(formData.get("deviceId") ?? "").trim();
 
@@ -15,5 +16,6 @@ export async function POST(request: Request) {
 
   const repos = getRepos();
   await repos.fleet.assignDevice(unitId, deviceId, new Date());
-  return NextResponse.redirect(new URL("/carrier/flota", request.url));
+  const account = carrierSlug ? `?account=${encodeURIComponent(carrierSlug)}` : "";
+  return NextResponse.redirect(new URL(`/carrier/flota${account}`, request.url));
 }

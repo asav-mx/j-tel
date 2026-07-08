@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
 import { createContractSchema } from "@jtel/domain";
 
-export async function GET() {
+export async function GET(request: Request) {
   const repos = getRepos();
-  const tecma = await repos.accounts.findBySlug("tecma");
-  if (!tecma) return NextResponse.json([]);
+  const url = new URL(request.url);
+  const slug = url.searchParams.get("account");
 
-  const contracts = await repos.contracts.findForClient(tecma.id);
+  const client = slug
+    ? await repos.accounts.findBySlug(slug)
+    : (await repos.accounts.listByType("client"))[0];
+  if (!client || client.type !== "client") return NextResponse.json([]);
+
+  const contracts = await repos.contracts.findForClient(client.id);
   return NextResponse.json(contracts);
 }
 

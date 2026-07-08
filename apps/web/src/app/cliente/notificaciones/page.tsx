@@ -1,19 +1,24 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
+import { resolveAccountByType, withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
 
-export default async function ClienteNotificacionesPage() {
+export default async function ClienteNotificacionesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const repos = getRepos();
-  const tecma = await repos.accounts.findBySlug("tecma");
-  const notifications = tecma ? await repos.notifications.findForAccount(tecma.id) : [];
+  const client = await resolveAccountByType("client", searchParams);
+  const notifications = client ? await repos.notifications.findForAccount(client.id) : [];
 
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-3xl">
         <AppNav
           title="Notificaciones"
-          links={[{ href: "/cliente", label: "← Cumplimiento" }]}
+          links={[{ href: withAccount("/cliente", client?.slug), label: "← Cumplimiento" }]}
         />
         <Card>
           <ul className="space-y-4">

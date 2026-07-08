@@ -2,14 +2,19 @@ import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
 import { buildMonthlyReport, reportToCsv } from "@jtel/reports";
 import type { ContractPolicy } from "@jtel/domain";
+import { resolveAccountByType, withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
 
-export default async function ClienteReportesPage() {
+export default async function ClienteReportesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const repos = getRepos();
-  const tecma = await repos.accounts.findBySlug("tecma");
-  const occurrences = tecma ? await repos.occurrences.findForClientAccount(tecma.id) : [];
-  const contracts = tecma ? await repos.contracts.findForClient(tecma.id) : [];
+  const client = await resolveAccountByType("client", searchParams);
+  const occurrences = client ? await repos.occurrences.findForClientAccount(client.id) : [];
+  const contracts = client ? await repos.contracts.findForClient(client.id) : [];
 
   const rows = occurrences
     .filter((o) => o.complianceFact)
@@ -37,7 +42,7 @@ export default async function ClienteReportesPage() {
 
   const report = buildMonthlyReport({
     period: new Date().toISOString().slice(0, 7),
-    accountName: "Tecma",
+    accountName: client?.name ?? "Cliente",
     contractName: contracts[0]?.name ?? "Contrato",
     policy,
     rows,
@@ -50,7 +55,7 @@ export default async function ClienteReportesPage() {
       <div className="mx-auto max-w-4xl">
         <AppNav
           title="Reportes mensuales"
-          links={[{ href: "/cliente", label: "← Cumplimiento" }]}
+          links={[{ href: withAccount("/cliente", client?.slug), label: "← Cumplimiento" }]}
         />
         <Card title="Reporte generado automáticamente">
           <dl className="mb-4 grid grid-cols-2 gap-2 text-sm">

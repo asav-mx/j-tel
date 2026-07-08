@@ -1,5 +1,6 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
+import { resolveAccountByType, withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +10,13 @@ const labelClass = "block text-sm";
 const btnClass =
   "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
 
-export default async function CarrierFlotaPage() {
+export default async function CarrierFlotaPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const repos = getRepos();
-  const carrier = await repos.accounts.findBySlug("juarez-bus");
+  const carrier = await resolveAccountByType("carrier", searchParams);
 
   if (!carrier) {
     return (
@@ -20,7 +25,7 @@ export default async function CarrierFlotaPage() {
           <AppNav title="Gestión de flota" links={[{ href: "/carrier", label: "← Panel" }]} />
           <Card title="Sin carrier">
             <p className="text-sm text-[var(--muted)]">
-              No hay cuenta carrier “Juárez Bus”. Crea una en J-Staff → Cuentas.
+              No hay cuentas carrier. Crea una en J-Staff → Cuentas.
             </p>
           </Card>
         </div>
@@ -41,7 +46,10 @@ export default async function CarrierFlotaPage() {
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-5xl space-y-6">
-        <AppNav title="Gestión de flota" links={[{ href: "/carrier", label: "← Panel" }]} />
+        <AppNav
+          title="Gestión de flota"
+          links={[{ href: withAccount("/carrier", carrier.slug), label: "← Panel" }]}
+        />
 
         <p className="text-sm text-[var(--muted)]">
           Carrier: <span className="text-white">{carrier.name}</span>. Orden:{" "}
@@ -110,6 +118,7 @@ export default async function CarrierFlotaPage() {
               </p>
             ) : (
               <form action="/api/carrier/assign" method="post" className="space-y-3">
+                <input type="hidden" name="carrierSlug" value={carrier.slug} />
                 <label className={labelClass}>
                   Unidad
                   <select name="unitId" required className={inputClass} defaultValue="">

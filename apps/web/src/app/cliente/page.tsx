@@ -3,15 +3,20 @@ import { getClientMemberships } from "@/lib/auth";
 import { canAccessPlant } from "@jtel/auth-rbac";
 import { AppNav, Card, StatusBadge } from "@/components/ui";
 import { computeEnforcement } from "@jtel/domain";
+import { resolveAccountByType, withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
 
-export default async function ClienteDashboardPage() {
+export default async function ClienteDashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const repos = getRepos();
-  const tecma = await repos.accounts.findBySlug("tecma");
-  const memberships = tecma ? await getClientMemberships(tecma.id) : [];
+  const client = await resolveAccountByType("client", searchParams);
+  const memberships = client ? await getClientMemberships(client.id) : [];
 
-  if (!tecma || memberships.length === 0) {
+  if (!client || memberships.length === 0) {
     return (
       <main className="p-8">
         <p>Sin acceso o datos de demo. Ejecute db:seed.</p>
@@ -19,11 +24,11 @@ export default async function ClienteDashboardPage() {
     );
   }
 
-  const plants = await repos.clients.getPlantsForAccount(tecma.id);
+  const plants = await repos.clients.getPlantsForAccount(client.id);
   const visiblePlants = plants.filter((p) =>
-    canAccessPlant(memberships, p.id, tecma.id),
+    canAccessPlant(memberships, p.id, client.id),
   );
-  const occurrences = await repos.occurrences.findForClientAccount(tecma.id);
+  const occurrences = await repos.occurrences.findForClientAccount(client.id);
 
   const stats = {
     total: occurrences.length,
@@ -37,12 +42,11 @@ export default async function ClienteDashboardPage() {
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-6xl">
         <AppNav
-          title="Cara Cliente — Tecma"
+          title={`Cara Cliente — ${client.name}`}
           links={[
-            { href: "/cliente", label: "Cumplimiento" },
-            { href: "/cliente/planta-47", label: "Planta 47" },
-            { href: "/cliente/reportes", label: "Reportes" },
-            { href: "/cliente/notificaciones", label: "Notificaciones" },
+            { href: withAccount("/cliente", client.slug), label: "Cumplimiento" },
+            { href: withAccount("/cliente/reportes", client.slug), label: "Reportes" },
+            { href: withAccount("/cliente/notificaciones", client.slug), label: "Notificaciones" },
           ]}
         />
 
@@ -57,7 +61,10 @@ export default async function ClienteDashboardPage() {
           <ul className="space-y-2 text-sm">
             {visiblePlants.map((plant) => (
               <li key={plant.id}>
-                <a href={`/cliente/planta-${plant.code}`} className="text-[var(--accent)]">
+                <a
+                  href={withAccount(`/cliente/planta-${plant.code}`, client.slug)}
+                  className="text-[var(--accent)]"
+                >
                   {plant.name} ({plant.code})
                 </a>
               </li>
@@ -102,7 +109,10 @@ export default async function ClienteDashboardPage() {
                           {enforcement[0]?.description ?? "—"}
                         </td>
                         <td className="py-3">
-                          <a href={`/cliente/servicio/${occ.id}`} className="text-[var(--accent)]">
+                          <a
+                            href={withAccount(`/cliente/servicio/${occ.id}`, client.slug)}
+                            className="text-[var(--accent)]"
+                          >
                             Ver
                           </a>
                         </td>

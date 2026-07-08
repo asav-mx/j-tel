@@ -1,10 +1,11 @@
 import { getRepos, isDatabaseConfigured } from "@/lib/db";
+import { withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  let tecma: { name: string } | null = null;
-  let jb: { name: string } | null = null;
+  let firstClient: { name: string; slug: string } | null = null;
+  let firstCarrier: { name: string; slug: string } | null = null;
   let dbError: string | null = null;
 
   if (!isDatabaseConfigured()) {
@@ -12,8 +13,8 @@ export default async function HomePage() {
   } else {
     try {
       const repos = getRepos();
-      tecma = (await repos.accounts.findBySlug("tecma")) ?? null;
-      jb = (await repos.accounts.findBySlug("juarez-bus")) ?? null;
+      firstClient = (await repos.accounts.listByType("client"))[0] ?? null;
+      firstCarrier = (await repos.accounts.listByType("carrier"))[0] ?? null;
     } catch (err) {
       dbError =
         err instanceof Error
@@ -47,7 +48,7 @@ export default async function HomePage() {
 
         <div className="grid gap-4 md:grid-cols-3">
           <a
-            href="/cliente"
+            href={withAccount("/cliente", firstClient?.slug)}
             className="rounded-xl border border-white/10 bg-[var(--card)] p-6 transition hover:border-[var(--accent)]"
           >
             <h2 className="text-lg font-semibold">Cara Cliente</h2>
@@ -56,7 +57,7 @@ export default async function HomePage() {
             </p>
           </a>
           <a
-            href="/carrier"
+            href={withAccount("/carrier", firstCarrier?.slug)}
             className="rounded-xl border border-white/10 bg-[var(--card)] p-6 transition hover:border-[var(--accent)]"
           >
             <h2 className="text-lg font-semibold">Cara Carrier</h2>
@@ -83,12 +84,12 @@ export default async function HomePage() {
               <dd>{isDatabaseConfigured() ? "Configurada" : "Pendiente"}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-[var(--muted)]">Cuenta Tecma</dt>
-              <dd>{tecma ? "Conectada" : "Sin seed — ejecute db:seed"}</dd>
+              <dt className="text-[var(--muted)]">Cliente activo</dt>
+              <dd>{firstClient ? firstClient.name : "Sin clientes"}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-[var(--muted)]">Carrier Juárez Bus</dt>
-              <dd>{jb ? "Conectado" : "Sin seed"}</dd>
+              <dt className="text-[var(--muted)]">Carrier activo</dt>
+              <dd>{firstCarrier ? firstCarrier.name : "Sin carriers"}</dd>
             </div>
           </dl>
         </section>

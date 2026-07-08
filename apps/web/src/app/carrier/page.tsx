@@ -1,13 +1,18 @@
 import { getRepos } from "@/lib/db";
 import { getCarrierMemberships } from "@/lib/auth";
 import { AppNav, Card, StatusBadge } from "@/components/ui";
+import { resolveAccountByType, withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
 
-export default async function CarrierDashboardPage() {
+export default async function CarrierDashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const memberships = await getCarrierMemberships();
   const repos = getRepos();
-  const carrier = await repos.accounts.findBySlug("juarez-bus");
+  const carrier = await resolveAccountByType("carrier", searchParams);
 
   if (!carrier) {
     return (
@@ -32,14 +37,17 @@ export default async function CarrierDashboardPage() {
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-6xl">
         <AppNav
-          title="Cara Carrier — Juárez Bus"
+          title={`Cara Carrier — ${carrier.name}`}
           links={[
-            { href: "/carrier", label: "Panel" },
-            { href: "/carrier/flota", label: "Flota" },
-            { href: "/carrier/mantenimiento", label: "Mantenimiento" },
-            { href: "/carrier/combustible", label: "Combustible" },
-            { href: "/carrier/cumplimiento", label: "Cumplimiento contractual" },
-            { href: "/carrier/reportes", label: "Reportes al cliente" },
+            { href: withAccount("/carrier", carrier.slug), label: "Panel" },
+            { href: withAccount("/carrier/flota", carrier.slug), label: "Flota" },
+            { href: withAccount("/carrier/mantenimiento", carrier.slug), label: "Mantenimiento" },
+            { href: withAccount("/carrier/combustible", carrier.slug), label: "Combustible" },
+            {
+              href: withAccount("/carrier/cumplimiento", carrier.slug),
+              label: "Cumplimiento contractual",
+            },
+            { href: withAccount("/carrier/reportes", carrier.slug), label: "Reportes al cliente" },
           ]}
         />
 

@@ -3,15 +3,20 @@ import { NavBar, StatusBadge } from "@/components/ui";
 import { notFound } from "next/navigation";
 import type { ContractPolicy } from "@jtel/domain";
 import { computeEnforcement } from "@jtel/domain";
+import { withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
 
 export default async function ServicioDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  const sp = searchParams ? await searchParams : undefined;
+  const accountSlug = typeof sp?.account === "string" ? sp.account : undefined;
   const repos = getRepos();
   const occurrence = await repos.occurrences.findById(id);
   if (!occurrence) notFound();
@@ -32,7 +37,7 @@ export default async function ServicioDetailPage({
       <div className="mx-auto max-w-4xl">
         <NavBar
           title={`Servicio ${occurrence.serviceDate}`}
-          links={[{ href: "/cliente", label: "← Corporativo" }]}
+          links={[{ href: withAccount("/cliente", accountSlug), label: "← Corporativo" }]}
         />
 
         <div className="mb-6">

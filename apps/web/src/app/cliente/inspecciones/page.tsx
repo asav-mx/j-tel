@@ -1,14 +1,19 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
+import { resolveAccountByType, withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
 
-export default async function ClienteInspeccionesPage() {
+export default async function ClienteInspeccionesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const repos = getRepos();
-  const tecma = await repos.accounts.findBySlug("tecma");
-  const plants = tecma ? await repos.clients.getPlantsForAccount(tecma.id) : [];
-  const plant47 = plants.find((p) => p.code === "47");
-  const inspections = plant47 ? await repos.inspections.findForPlant(plant47.id) : [];
+  const client = await resolveAccountByType("client", searchParams);
+  const plants = client ? await repos.clients.getPlantsForAccount(client.id) : [];
+  const firstPlant = plants[0];
+  const inspections = firstPlant ? await repos.inspections.findForPlant(firstPlant.id) : [];
 
   return (
     <main className="min-h-screen p-8">
@@ -16,8 +21,13 @@ export default async function ClienteInspeccionesPage() {
         <AppNav
           title="Inspecciones compartidas"
           links={[
-            { href: "/cliente", label: "Corporativo" },
-            { href: "/cliente/planta-47", label: "Planta 47" },
+            { href: withAccount("/cliente", client?.slug), label: "Corporativo" },
+            {
+              href: firstPlant
+                ? withAccount(`/cliente/planta-${firstPlant.code}`, client?.slug)
+                : withAccount("/cliente", client?.slug),
+              label: firstPlant?.name ?? "Planta",
+            },
           ]}
         />
         <Card title="Zona compartida — planta audita, carrier provee">

@@ -1,15 +1,20 @@
 import { getRepos } from "@/lib/db";
 import { NavBar, StatusBadge } from "@/components/ui";
 import { notFound } from "next/navigation";
+import { withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
 
 export default async function PlantaPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ plantId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { plantId } = await params;
+  const sp = searchParams ? await searchParams : undefined;
+  const accountSlug = typeof sp?.account === "string" ? sp.account : undefined;
   const repos = getRepos();
   const plant = await repos.clients.getPlantById(plantId);
   if (!plant) notFound();
@@ -23,9 +28,12 @@ export default async function PlantaPage({
         <NavBar
           title={`${plant.name} — Planta Operadora`}
           links={[
-            { href: "/cliente", label: "Corporativo" },
-            { href: `/cliente/planta/${plantId}`, label: plant.name },
-            { href: `/cliente/planta/${plantId}/inspecciones`, label: "Inspecciones" },
+            { href: withAccount("/cliente", accountSlug), label: "Corporativo" },
+            { href: withAccount(`/cliente/planta/${plantId}`, accountSlug), label: plant.name },
+            {
+              href: withAccount(`/cliente/planta/${plantId}/inspecciones`, accountSlug),
+              label: "Inspecciones",
+            },
           ]}
         />
 

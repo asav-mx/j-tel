@@ -3,26 +3,29 @@ import { getClientMemberships } from "@/lib/auth";
 import { canAccessPlant } from "@jtel/auth-rbac";
 import { AppNav, Card, StatusBadge } from "@/components/ui";
 import { notFound } from "next/navigation";
+import { resolveAccountByType, withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
 
 export default async function PlantaPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { code } = await params;
   const plantCode = code.replace("planta-", "");
   const repos = getRepos();
-  const tecma = await repos.accounts.findBySlug("tecma");
-  if (!tecma) notFound();
+  const client = await resolveAccountByType("client", searchParams);
+  if (!client) notFound();
 
-  const memberships = await getClientMemberships(tecma.id);
-  const plants = await repos.clients.getPlantsForAccount(tecma.id);
+  const memberships = await getClientMemberships(client.id);
+  const plants = await repos.clients.getPlantsForAccount(client.id);
   const plant = plants.find((p) => p.code === plantCode);
   if (!plant) notFound();
 
-  if (memberships.length > 0 && !canAccessPlant(memberships, plant.id, tecma.id)) {
+  if (memberships.length > 0 && !canAccessPlant(memberships, plant.id, client.id)) {
     return (
       <main className="p-8">
         <p>Acceso denegado — esta planta no está en su alcance.</p>
@@ -38,9 +41,9 @@ export default async function PlantaPage({
         <AppNav
           title={`Planta ${plant.name}`}
           links={[
-            { href: "/cliente", label: "Corporativo" },
-            { href: `/cliente/planta-${plant.code}`, label: plant.name },
-            { href: "/cliente/inspecciones", label: "Inspecciones" },
+            { href: withAccount("/cliente", client.slug), label: "Corporativo" },
+            { href: withAccount(`/cliente/planta-${plant.code}`, client.slug), label: plant.name },
+            { href: withAccount("/cliente/inspecciones", client.slug), label: "Inspecciones" },
           ]}
         />
 
