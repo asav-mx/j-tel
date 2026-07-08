@@ -214,6 +214,26 @@ export class GeofenceRepository {
   async findById(id: string) {
     return this.db.query.geofences.findFirst({ where: eq(geofences.id, id) });
   }
+
+  async findForPlant(plantId: string) {
+    return this.db.query.geofences.findMany({
+      where: eq(geofences.ownerPlantId, plantId),
+      orderBy: (g, { asc }) => [asc(g.name)],
+    });
+  }
+
+  /** Todas las geocercas de las plantas de un cliente (para armar perfiles de servicio). */
+  async findForClient(clientAccountId: string) {
+    const clientPlants = await this.db.query.plants.findMany({
+      where: eq(plants.clientAccountId, clientAccountId),
+    });
+    const plantIds = clientPlants.map((p) => p.id);
+    if (plantIds.length === 0) return [];
+    return this.db.query.geofences.findMany({
+      where: inArray(geofences.ownerPlantId, plantIds),
+      orderBy: (g, { asc }) => [asc(g.name)],
+    });
+  }
 }
 
 export class FleetRepository {
@@ -390,6 +410,35 @@ export class RouteRepository {
       ),
     });
   }
+
+  async getRoutesForClient(clientAccountId: string) {
+    return this.db.query.routes.findMany({
+      where: eq(routes.clientAccountId, clientAccountId),
+      orderBy: (r, { asc }) => [asc(r.name)],
+    });
+  }
+
+  async getShiftsForClient(clientAccountId: string) {
+    return this.db.query.shifts.findMany({
+      where: eq(shifts.clientAccountId, clientAccountId),
+      orderBy: (s, { asc }) => [asc(s.startTime)],
+    });
+  }
+
+  async getRouteShiftsForClient(clientAccountId: string) {
+    return this.db.query.routeShifts.findMany({
+      where: eq(routeShifts.clientAccountId, clientAccountId),
+      with: { route: true, shift: true, kmlVersions: true },
+      orderBy: (rs, { asc }) => [asc(rs.deadlineTime)],
+    });
+  }
+
+  async findRouteShiftById(id: string) {
+    return this.db.query.routeShifts.findFirst({
+      where: eq(routeShifts.id, id),
+      with: { route: true, shift: true },
+    });
+  }
 }
 
 export class ContractRepository {
@@ -482,6 +531,25 @@ export class ServiceProfileRepository {
       where: eq(serviceProfileUnits.serviceProfileId, profileId),
     });
     return rows.map((r) => r.unitId);
+  }
+
+  /** Perfiles de servicio de todos los contratos de un cliente. */
+  async findForClient(clientAccountId: string) {
+    const clientContracts = await this.db.query.serviceContracts.findMany({
+      where: eq(serviceContracts.clientAccountId, clientAccountId),
+    });
+    const contractIds = clientContracts.map((c) => c.id);
+    if (contractIds.length === 0) return [];
+    return this.db.query.serviceProfiles.findMany({
+      where: inArray(serviceProfiles.contractId, contractIds),
+      with: {
+        contract: true,
+        geofence: true,
+        possibleUnits: true,
+        routeShift: { with: { route: true, shift: true } },
+      },
+      orderBy: (p, { asc }) => [asc(p.name)],
+    });
   }
 }
 

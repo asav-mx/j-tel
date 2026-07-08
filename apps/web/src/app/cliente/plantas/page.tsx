@@ -50,6 +50,7 @@ export default async function ClientePlantasPage({
           title="Plantas del cliente"
           links={[
             { href: withAccount("/cliente", client.slug), label: "← Panel" },
+            { href: withAccount("/cliente/configuracion", client.slug), label: "Configuración" },
             { href: withAccount("/cliente/reportes", client.slug), label: "Reportes" },
           ]}
         />

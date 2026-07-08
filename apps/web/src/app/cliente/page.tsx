@@ -48,6 +48,7 @@ export default async function ClienteDashboardPage({
           links={[
             { href: withAccount("/cliente", client.slug), label: "Cumplimiento" },
             { href: withAccount("/cliente/plantas", client.slug), label: "Plantas" },
+            { href: withAccount("/cliente/configuracion", client.slug), label: "Configuración" },
             { href: withAccount("/cliente/reportes", client.slug), label: "Reportes" },
             { href: withAccount("/cliente/notificaciones", client.slug), label: "Notificaciones" },
           ]}
