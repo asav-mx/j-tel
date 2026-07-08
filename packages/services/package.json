@@ -13,15 +13,19 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "vitest run"
+    "test": "vitest run",
+    "real-e2e": "tsx src/real-e2e.ts"
   },
   "dependencies": {
     "@jtel/db": "workspace:*",
     "@jtel/domain": "workspace:*",
     "@jtel/gps-umbrella": "workspace:*",
-    "@jtel/verification": "workspace:*"
+    "@jtel/verification": "workspace:*",
+    "drizzle-orm": "^0.44.2"
   },
   "devDependencies": {
+    "@types/node": "^22.15.32",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   }

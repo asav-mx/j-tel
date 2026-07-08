@@ -40,6 +40,10 @@ interface UmbrellaDevice {
  */
 const sharedTokenCache = new Map<string, { token: string; expiresAt: number }>();
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export class UmbrellaGpsProvider implements GpsProvider {
   readonly name = "umbrella";
 
@@ -105,10 +109,18 @@ export class UmbrellaGpsProvider implements GpsProvider {
   async getHistoryLocations(token: string, query: HistoryLocationQuery): Promise<GpsPoint[]> {
     const allPoints: GpsPoint[] = [];
     let startIdx = query.startIdx ?? 0;
-    const limit = query.limit ?? 500;
-    const maxPages = 20;
+    // Umbrella rechaza consultas con más de 100 registros por página
+    // ("Query records can not be more than 100"). Si se pide más, la API
+    // responde state:false y no llega ningún punto.
+    const limit = Math.min(query.limit ?? 100, 100);
+    const maxPages = 50;
 
     for (let page = 0; page < maxPages; page++) {
+      // Umbrella limita a ~1 request/segundo. Espaciamos TODAS las llamadas
+      // (incluida la primera página) para no toparnos con "API calls quota
+      // exceeded", que además vuelve cuando dos consultas caen muy seguidas.
+      await sleep(1100);
+
       let url = `${this.baseUrl}/api/HistoryLocation?Token=${encodeURIComponent(token)}`;
       url += `&BeginGMT=${encodeURIComponent(query.beginGmt.toISOString())}`;
       url += `&EndGMT=${encodeURIComponent(query.endGmt.toISOString())}`;
@@ -138,12 +150,18 @@ export class UmbrellaGpsProvider implements GpsProvider {
   private toGpsPoint(loc: UmbrellaLocation): GpsPoint | null {
     const imei = loc.sn_imei_id;
     const gps = loc.gps_info;
-    if (!imei || !gps || gps.gps_valid === false) return null;
+    if (!imei || !gps) return null;
 
     const lat = gps.latitude;
     const lng = gps.longitude;
     const timeStr = gps.l_datetime ?? loc.r_datetime;
     if (lat == null || lng == null || !timeStr) return null;
+
+    // No descartamos por gps_valid=false: este hardware marca así los reportes
+    // por celda o con el vehículo detenido, que igual traen coordenadas reales
+    // (justo la evidencia de "llegó y se quedó en el destino"). Sólo se
+    // descartan coordenadas nulas (0,0) que indican ausencia de posición.
+    if (lat === 0 && lng === 0) return null;
 
     // La API entrega fechas en GMT sin sufijo de zona; las interpretamos como UTC.
     const hasTz = /[zZ]|[+-]\d\d:?\d\d$/.test(timeStr);

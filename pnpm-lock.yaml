@@ -190,7 +190,16 @@ importers:
       '@jtel/verification':
         specifier: workspace:*
         version: link:../verification
+      drizzle-orm:
+        specifier: ^0.44.2
+        version: 0.44.7(postgres@3.4.9)
     devDependencies:
+      '@types/node':
+        specifier: ^22.15.32
+        version: 22.20.0
+      tsx:
+        specifier: ^4.20.3
+        version: 4.23.0
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
