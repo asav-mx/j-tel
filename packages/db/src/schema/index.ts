@@ -98,6 +98,11 @@ export const carrierProfiles = pgTable("carrier_profiles", {
     .references(() => accounts.id, { onDelete: "cascade" })
     .unique(),
   legalName: text("legal_name").notNull(),
+  // Proveedor de GPS del carrier. Cada carrier puede usar uno distinto
+  // (umbrella hoy; a futuro otros o hardware propio).
+  gpsProvider: text("gps_provider").notNull().default("umbrella"),
+  gpsBaseUrl: text("gps_base_url"),
+  // Credenciales del proveedor. La contraseña se guarda cifrada (AES-256-GCM).
   umbrellaUserId: text("umbrella_user_id"),
   umbrellaPasswordEncrypted: text("umbrella_password_encrypted"),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),

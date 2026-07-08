@@ -8,6 +8,13 @@
       "when": 1783448836534,
       "tag": "0000_dapper_lake",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783543647510,
+      "tag": "0001_solid_shen",
+      "breakpoints": true
     }
   ]
 }

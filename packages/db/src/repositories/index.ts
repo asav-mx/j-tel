@@ -80,6 +80,66 @@ export class CarrierRepository {
       .returning();
     return profile!;
   }
+
+  async getProfileByAccountId(accountId: string) {
+    return this.db.query.carrierProfiles.findFirst({
+      where: eq(carrierProfiles.accountId, accountId),
+    });
+  }
+
+  /**
+   * Guarda las credenciales del proveedor GPS del carrier. La contraseña se
+   * cifra en reposo; si se envía vacía, se conserva la contraseña anterior.
+   */
+  async saveGpsCredentials(
+    accountId: string,
+    input: { provider: string; userId: string; password?: string; baseUrl?: string | null },
+  ) {
+    const values: Partial<typeof carrierProfiles.$inferInsert> = {
+      gpsProvider: input.provider,
+      gpsBaseUrl: input.baseUrl ?? null,
+      umbrellaUserId: input.userId,
+    };
+
+    if (input.password && input.password.length > 0) {
+      const { encryptSecret } = await import("../crypto.js");
+      values.umbrellaPasswordEncrypted = encryptSecret(input.password);
+    }
+
+    await this.db
+      .update(carrierProfiles)
+      .set(values)
+      .where(eq(carrierProfiles.accountId, accountId));
+  }
+
+  /**
+   * Devuelve las credenciales GPS del carrier con la contraseña descifrada,
+   * o null si el carrier todavía no configuró credenciales.
+   */
+  async getGpsCredentials(accountId: string): Promise<{
+    provider: string;
+    userId: string;
+    password: string;
+    baseUrl: string | null;
+  } | null> {
+    const profile = await this.getProfileByAccountId(accountId);
+    if (!profile?.umbrellaUserId || !profile.umbrellaPasswordEncrypted) return null;
+
+    const { decryptSecret } = await import("../crypto.js");
+    let password: string;
+    try {
+      password = decryptSecret(profile.umbrellaPasswordEncrypted);
+    } catch {
+      return null;
+    }
+
+    return {
+      provider: profile.gpsProvider ?? "umbrella",
+      userId: profile.umbrellaUserId,
+      password,
+      baseUrl: profile.gpsBaseUrl ?? null,
+    };
+  }
 }
 
 export class ClientRepository {

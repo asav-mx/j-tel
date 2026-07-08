@@ -46,7 +46,10 @@ export class UmbrellaGpsProvider implements GpsProvider {
   constructor(private config: GpsProviderConfig) {}
 
   private get baseUrl() {
-    return this.config.baseUrl.replace(/\/$/, "");
+    // La API de Umbrella vive bajo /openapi. Normalizamos de forma idempotente
+    // para que funcione tanto con la URL base como con la ya completa.
+    const trimmed = this.config.baseUrl.replace(/\/+$/, "");
+    return /\/openapi$/i.test(trimmed) ? trimmed : `${trimmed}/openapi`;
   }
 
   private async fetchJson<T>(url: string): Promise<T> {

@@ -10,25 +10,54 @@ export interface VerificationServiceConfig {
 }
 
 export class VerificationService {
-  private provider: ReturnType<typeof createUmbrellaProvider> | null = null;
+  // Un proveedor por carrier (cacheado por corrida) para reutilizar el token y
+  // evitar 429. Cada carrier puede usar un proveedor/credenciales distintos.
+  private providersByCarrier = new Map<
+    string,
+    ReturnType<typeof createUmbrellaProvider>
+  >();
 
   constructor(
     private repos: Repositories,
     private config: VerificationServiceConfig,
   ) {}
 
-  /** Un solo proveedor por servicio: reutiliza el token cacheado y evita 429. */
-  private getProvider() {
-    if (!this.provider) {
-      this.provider = createUmbrellaProvider({
-        baseUrl: this.config.umbrellaBaseUrl,
-        credentials: {
-          userId: this.config.umbrellaUserId ?? "demo_user",
-          password: this.config.umbrellaPassword ?? "demo_pass",
-        },
-      });
+  private buildProvider(provider: string, baseUrl: string, userId: string, password: string) {
+    switch (provider) {
+      case "umbrella":
+        return createUmbrellaProvider({ baseUrl, credentials: { userId, password } });
+      default:
+        throw new Error(`Proveedor GPS no soportado todavía: ${provider}`);
     }
-    return this.provider;
+  }
+
+  /**
+   * Devuelve el proveedor GPS del carrier usando sus credenciales guardadas en
+   * la base. Si el carrier aún no configuró credenciales, cae al respaldo por
+   * variables de entorno globales (transición).
+   */
+  private async getProviderForCarrier(carrierAccountId: string) {
+    const cached = this.providersByCarrier.get(carrierAccountId);
+    if (cached) return cached;
+
+    const creds = await this.repos.carriers.getGpsCredentials(carrierAccountId);
+
+    const provider = creds
+      ? this.buildProvider(
+          creds.provider,
+          creds.baseUrl ?? this.config.umbrellaBaseUrl,
+          creds.userId,
+          creds.password,
+        )
+      : this.buildProvider(
+          "umbrella",
+          this.config.umbrellaBaseUrl,
+          this.config.umbrellaUserId ?? "demo_user",
+          this.config.umbrellaPassword ?? "demo_pass",
+        );
+
+    this.providersByCarrier.set(carrierAccountId, provider);
+    return provider;
   }
 
   async processPending(now = new Date()) {
@@ -82,7 +111,7 @@ export class VerificationService {
     const imeis = candidateDevices.map((d) => d.imei);
     const imeiToDevice = new Map(devices.map((d) => [d.imei, d]));
 
-    const provider = this.getProvider();
+    const provider = await this.getProviderForCarrier(contract.carrierAccountId);
 
     const ingestResult = await ingestEvidenceForTrip(provider, {
       tripId: trip.id,
@@ -221,7 +250,7 @@ export class VerificationService {
       .map((d) => d.imei);
     const imeiToDevice = new Map(devices.map((d) => [d.imei, d]));
 
-    const provider = this.getProvider();
+    const provider = await this.getProviderForCarrier(contract.carrierAccountId);
 
     return ingestEvidenceForTrip(provider, {
       tripId: occurrence.trip.id,

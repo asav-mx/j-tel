@@ -41,6 +41,7 @@ export default async function CarrierDashboardPage({
           links={[
             { href: withAccount("/carrier", carrier.slug), label: "Panel" },
             { href: withAccount("/carrier/flota", carrier.slug), label: "Flota" },
+            { href: withAccount("/carrier/gps", carrier.slug), label: "Proveedor GPS" },
             { href: withAccount("/carrier/mantenimiento", carrier.slug), label: "Mantenimiento" },
             { href: withAccount("/carrier/combustible", carrier.slug), label: "Combustible" },
             {
