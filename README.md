@@ -46,4 +46,4 @@ Abrir http://localhost:3000
 curl -H "Authorization: Bearer dev-cron-secret" http://localhost:3000/api/cron/verify
 ```
 
-<!-- deploy: alta de cuentas con slug autogenerado -->
+<!-- deploy: credenciales GPS por carrier (JTEL_SECRET_KEY) -->
