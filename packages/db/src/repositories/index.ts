@@ -148,7 +148,21 @@ export class FleetRepository {
     return device!;
   }
 
-  async assignDevice(unitId: string, deviceId: string, validFrom: Date) {
+  async assignDevice(unitId: string, deviceId: string, validFrom: Date = new Date()) {
+    // Cierra asignaciones abiertas del mismo GPS o de la misma unidad
+    await this.db
+      .update(deviceAssignments)
+      .set({ validTo: validFrom })
+      .where(
+        and(
+          isNull(deviceAssignments.validTo),
+          or(
+            eq(deviceAssignments.deviceId, deviceId),
+            eq(deviceAssignments.unitId, unitId),
+          ),
+        ),
+      );
+
     const [assignment] = await this.db
       .insert(deviceAssignments)
       .values({ unitId, deviceId, validFrom })
@@ -170,12 +184,32 @@ export class FleetRepository {
   async getUnitsForCarrier(carrierAccountId: string) {
     return this.db.query.units.findMany({
       where: eq(units.carrierAccountId, carrierAccountId),
+      orderBy: (table, { asc }) => [asc(table.label)],
     });
   }
 
   async getDevicesForCarrier(carrierAccountId: string) {
     return this.db.query.devices.findMany({
       where: eq(devices.carrierAccountId, carrierAccountId),
+      orderBy: (table, { asc }) => [asc(table.label), asc(table.imei)],
+    });
+  }
+
+  /** Asignaciones vigentes (sin validTo) del carrier, con unidad + GPS. */
+  async getActiveAssignmentsForCarrier(carrierAccountId: string) {
+    const carrierUnits = await this.getUnitsForCarrier(carrierAccountId);
+    const unitIds = carrierUnits.map((u) => u.id);
+    if (unitIds.length === 0) return [];
+
+    return this.db.query.deviceAssignments.findMany({
+      where: and(
+        inArray(deviceAssignments.unitId, unitIds),
+        isNull(deviceAssignments.validTo),
+      ),
+      with: {
+        unit: true,
+        device: true,
+      },
     });
   }
 

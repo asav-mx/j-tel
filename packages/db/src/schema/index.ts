@@ -491,8 +491,36 @@ export const accountsRelations = relations(accounts, ({ one, many }) => ({
   carrierProfile: one(carrierProfiles),
   clientProfile: one(clientProfiles),
   units: many(units),
+  devices: many(devices),
   contractsAsCarrier: many(serviceContracts, { relationName: "carrierContracts" }),
   contractsAsClient: many(serviceContracts, { relationName: "clientContracts" }),
+}));
+
+export const unitsRelations = relations(units, ({ one, many }) => ({
+  carrier: one(accounts, {
+    fields: [units.carrierAccountId],
+    references: [accounts.id],
+  }),
+  assignments: many(deviceAssignments),
+}));
+
+export const devicesRelations = relations(devices, ({ one, many }) => ({
+  carrier: one(accounts, {
+    fields: [devices.carrierAccountId],
+    references: [accounts.id],
+  }),
+  assignments: many(deviceAssignments),
+}));
+
+export const deviceAssignmentsRelations = relations(deviceAssignments, ({ one }) => ({
+  unit: one(units, {
+    fields: [deviceAssignments.unitId],
+    references: [units.id],
+  }),
+  device: one(devices, {
+    fields: [deviceAssignments.deviceId],
+    references: [devices.id],
+  }),
 }));
 
 export const serviceContractsRelations = relations(serviceContracts, ({ one, many }) => ({
