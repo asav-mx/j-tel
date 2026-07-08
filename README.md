@@ -45,3 +45,5 @@ Abrir http://localhost:3000
 ```bash
 curl -H "Authorization: Bearer dev-cron-secret" http://localhost:3000/api/cron/verify
 ```
+
+<!-- deploy: alta de cuentas con slug autogenerado -->
