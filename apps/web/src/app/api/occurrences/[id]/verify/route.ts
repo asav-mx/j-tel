@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { getUmbrellaConfig } from "@/lib/umbrella-config";
 import { VerificationService } from "@jtel/services";
 
 export async function POST(
@@ -8,11 +9,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const repos = getRepos();
-  const service = new VerificationService(repos, {
-    umbrellaBaseUrl: process.env.UMBRELLA_GPS_BASE_URL ?? "http://gps2.umbrellasoluciones.com",
-    umbrellaUserId: process.env.UMBRELLA_GPS_USERID ?? "",
-    umbrellaPassword: process.env.UMBRELLA_GPS_PASSWORD ?? "",
-  });
+  const service = new VerificationService(repos, getUmbrellaConfig());
 
   const result = await service.verifyOccurrence(id);
   return NextResponse.json(result);

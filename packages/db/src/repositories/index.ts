@@ -114,6 +114,20 @@ export class ClientRepository {
   async getPlantsForAccount(clientAccountId: string) {
     return this.db.query.plants.findMany({
       where: eq(plants.clientAccountId, clientAccountId),
+      orderBy: (p, { asc }) => [asc(p.name)],
+    });
+  }
+
+  async getPlantGroupsForAccount(clientAccountId: string) {
+    return this.db.query.plantGroups.findMany({
+      where: eq(plantGroups.clientAccountId, clientAccountId),
+      orderBy: (g, { asc }) => [asc(g.name)],
+    });
+  }
+
+  async findPlantByCode(clientAccountId: string, code: string) {
+    return this.db.query.plants.findFirst({
+      where: and(eq(plants.clientAccountId, clientAccountId), eq(plants.code, code)),
     });
   }
 

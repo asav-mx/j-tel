@@ -1,0 +1,81 @@
+import { NextResponse } from "next/server";
+import { getRepos } from "@/lib/db";
+
+/** Genera un código corto y estable a partir del nombre: "Planta Norte 2" → "PLANTA-NORTE-2" */
+function codify(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+}
+
+function backToPlantas(request: Request, slug: string, params: Record<string, string>) {
+  const url = new URL("/cliente/plantas", request.url);
+  url.searchParams.set("account", slug);
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+  return NextResponse.redirect(url, 303);
+}
+
+export async function POST(request: Request) {
+  const formData = await request.formData();
+  const clientSlug = String(formData.get("clientSlug") ?? "").trim();
+  const action = String(formData.get("action") ?? "plant");
+
+  const repos = getRepos();
+  const client = await repos.accounts.findBySlug(clientSlug);
+
+  if (!client || client.type !== "client") {
+    const url = new URL("/cliente/plantas", request.url);
+    url.searchParams.set("error", "Cliente no encontrado.");
+    return NextResponse.redirect(url, 303);
+  }
+
+  if (action === "group") {
+    const name = String(formData.get("groupName") ?? "").trim();
+    if (!name) {
+      return backToPlantas(request, client.slug, {
+        error: "El nombre del grupo es obligatorio.",
+      });
+    }
+    await repos.clients.createPlantGroup(client.id, name);
+    return backToPlantas(request, client.slug, { created: "grupo" });
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) {
+    return backToPlantas(request, client.slug, {
+      error: "El nombre de la planta es obligatorio.",
+    });
+  }
+
+  const code = codify(String(formData.get("code") ?? "").trim() || name);
+  if (!code) {
+    return backToPlantas(request, client.slug, {
+      error: "El nombre de la planta debe tener letras o números.",
+    });
+  }
+
+  const existing = await repos.clients.findPlantByCode(client.id, code);
+  if (existing) {
+    return backToPlantas(request, client.slug, {
+      error: `Ya existe una planta con el código "${code}" (${existing.name}).`,
+    });
+  }
+
+  const rawGroup = String(formData.get("plantGroupId") ?? "").trim();
+  const plantGroupId = rawGroup.length > 0 ? rawGroup : undefined;
+
+  await repos.clients.createPlant({
+    clientAccountId: client.id,
+    name,
+    code,
+    plantGroupId,
+  });
+
+  return backToPlantas(request, client.slug, { created: "planta" });
+}

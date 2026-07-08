@@ -47,6 +47,7 @@ export default async function ClienteDashboardPage({
           title={`Cara Cliente — ${client.name}`}
           links={[
             { href: withAccount("/cliente", client.slug), label: "Cumplimiento" },
+            { href: withAccount("/cliente/plantas", client.slug), label: "Plantas" },
             { href: withAccount("/cliente/reportes", client.slug), label: "Reportes" },
             { href: withAccount("/cliente/notificaciones", client.slug), label: "Notificaciones" },
           ]}
@@ -60,18 +61,39 @@ export default async function ClienteDashboardPage({
         </div>
 
         <Card title="Plantas visibles">
-          <ul className="space-y-2 text-sm">
-            {visiblePlants.map((plant) => (
-              <li key={plant.id}>
-                <a
-                  href={withAccount(`/cliente/planta-${plant.code}`, client.slug)}
-                  className="text-[var(--accent)]"
-                >
-                  {plant.name} ({plant.code})
-                </a>
-              </li>
-            ))}
-          </ul>
+          {visiblePlants.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">
+              Este cliente aún no tiene plantas.{" "}
+              <a
+                href={withAccount("/cliente/plantas", client.slug)}
+                className="text-[var(--accent)]"
+              >
+                Crear plantas
+              </a>
+              .
+            </p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {visiblePlants.map((plant) => (
+                <li key={plant.id}>
+                  <a
+                    href={withAccount(`/cliente/planta-${plant.code}`, client.slug)}
+                    className="text-[var(--accent)]"
+                  >
+                    {plant.name} ({plant.code})
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-3 text-xs text-[var(--muted)]">
+            <a
+              href={withAccount("/cliente/plantas", client.slug)}
+              className="text-[var(--accent)]"
+            >
+              Gestionar plantas →
+            </a>
+          </p>
         </Card>
 
         <div className="mt-6">
