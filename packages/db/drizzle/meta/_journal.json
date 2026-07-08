@@ -15,6 +15,13 @@
       "when": 1783543647510,
       "tag": "0001_solid_shen",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783551396144,
+      "tag": "0002_sudden_metal_master",
+      "breakpoints": true
     }
   ]
 }

@@ -57,11 +57,25 @@ export class UmbrellaGpsProvider implements GpsProvider {
   }
 
   private async fetchJson<T>(url: string): Promise<T> {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Umbrella API error: ${response.status} ${response.statusText}`);
+    // Umbrella limita a ~1 req/seg y devuelve 429 ("Too Many Requests") cuando
+    // dos consultas caen muy seguidas (p. ej. el cron de verificación y el
+    // archivador). Reintentamos con espera creciente antes de rendirnos.
+    const backoffsMs = [2000, 5000, 10000];
+    let lastStatus = 0;
+
+    for (let attempt = 0; attempt <= backoffsMs.length; attempt++) {
+      const response = await fetch(url);
+      if (response.ok) {
+        return response.json() as Promise<T>;
+      }
+      lastStatus = response.status;
+      if (response.status !== 429 || attempt === backoffsMs.length) {
+        throw new Error(`Umbrella API error: ${response.status} ${response.statusText}`);
+      }
+      await sleep(backoffsMs[attempt]!);
     }
-    return response.json() as Promise<T>;
+
+    throw new Error(`Umbrella API error: ${lastStatus}`);
   }
 
   async login(credentials?: GpsCredentials): Promise<string> {

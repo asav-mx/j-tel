@@ -14,7 +14,8 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "real-e2e": "tsx src/real-e2e.ts"
+    "real-e2e": "tsx src/real-e2e.ts",
+    "archive": "tsx src/archive-run.ts"
   },
   "dependencies": {
     "@jtel/db": "workspace:*",

@@ -492,6 +492,42 @@ export const demoTemplates = pgTable("demo_templates", {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
+// Archivo continuo de telemetría GPS ("memoria propia"): guardamos todo el
+// historial de cada equipo de forma continua, independiente de los viajes, para
+// dejar de depender del histórico del proveedor.
+export const telemetryPoints = pgTable("telemetry_points", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  carrierAccountId: uuid("carrier_account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  deviceId: uuid("device_id").references(() => devices.id, { onDelete: "set null" }),
+  unitId: uuid("unit_id").references(() => units.id, { onDelete: "set null" }),
+  imei: text("imei").notNull(),
+  latitude: doublePrecision("latitude").notNull(),
+  longitude: doublePrecision("longitude").notNull(),
+  speed: doublePrecision("speed"),
+  recordedAt: timestamp("recorded_at", { withTimezone: true, mode: "date" }).notNull(),
+  source: text("source").notNull().default("umbrella"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => [
+  // Deduplica: un mismo equipo no puede tener dos puntos en el mismo instante.
+  uniqueIndex("telemetry_points_imei_recorded_idx").on(table.imei, table.recordedAt),
+  index("telemetry_points_carrier_recorded_idx").on(table.carrierAccountId, table.recordedAt),
+]);
+
+// Marca de agua por carrier: hasta qué instante ya archivamos, para que cada
+// corrida del cron solo pida lo nuevo.
+export const telemetryWatermarks = pgTable("telemetry_watermarks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  carrierAccountId: uuid("carrier_account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  lastRecordedAt: timestamp("last_recorded_at", { withTimezone: true, mode: "date" }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("telemetry_watermarks_carrier_idx").on(table.carrierAccountId),
+]);
+
 export const accountsRelations = relations(accounts, ({ one, many }) => ({
   carrierProfile: one(carrierProfiles),
   clientProfile: one(clientProfiles),
@@ -589,6 +625,21 @@ export const evidencePointsRelations = relations(evidencePoints, ({ one }) => ({
   }),
   unit: one(units, {
     fields: [evidencePoints.unitId],
+    references: [units.id],
+  }),
+}));
+
+export const telemetryPointsRelations = relations(telemetryPoints, ({ one }) => ({
+  carrier: one(accounts, {
+    fields: [telemetryPoints.carrierAccountId],
+    references: [accounts.id],
+  }),
+  device: one(devices, {
+    fields: [telemetryPoints.deviceId],
+    references: [devices.id],
+  }),
+  unit: one(units, {
+    fields: [telemetryPoints.unitId],
     references: [units.id],
   }),
 }));

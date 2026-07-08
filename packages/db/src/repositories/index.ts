@@ -28,6 +28,8 @@ import {
   inspections,
   notifications,
   demoTemplates,
+  telemetryPoints,
+  telemetryWatermarks,
 } from "../schema/index.js";
 import type { ContractPolicy, CreateContractInput, CreateServiceProfileInput } from "@jtel/domain";
 
@@ -876,6 +878,82 @@ export class DemoRepository {
   }
 }
 
+export class TelemetryRepository {
+  constructor(private db: Database) {}
+
+  /**
+   * Guarda puntos crudos de telemetría deduplicando por (imei, recordedAt).
+   * Devuelve las filas efectivamente insertadas (las repetidas se ignoran).
+   */
+  async savePoints(
+    points: Array<{
+      carrierAccountId: string;
+      imei: string;
+      latitude: number;
+      longitude: number;
+      speed?: number;
+      recordedAt: Date;
+      deviceId?: string | null;
+      unitId?: string | null;
+      source?: string;
+    }>,
+  ) {
+    if (points.length === 0) return [];
+    const rows = await this.db
+      .insert(telemetryPoints)
+      .values(
+        points.map((p) => ({
+          carrierAccountId: p.carrierAccountId,
+          imei: p.imei,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          speed: p.speed,
+          recordedAt: p.recordedAt,
+          deviceId: p.deviceId ?? undefined,
+          unitId: p.unitId ?? undefined,
+          source: p.source ?? "umbrella",
+        })),
+      )
+      .onConflictDoNothing()
+      .returning();
+    return rows;
+  }
+
+  async getWatermark(carrierAccountId: string) {
+    return this.db.query.telemetryWatermarks.findFirst({
+      where: eq(telemetryWatermarks.carrierAccountId, carrierAccountId),
+    });
+  }
+
+  async setWatermark(carrierAccountId: string, lastRecordedAt: Date) {
+    await this.db
+      .insert(telemetryWatermarks)
+      .values({ carrierAccountId, lastRecordedAt })
+      .onConflictDoUpdate({
+        target: telemetryWatermarks.carrierAccountId,
+        set: { lastRecordedAt, updatedAt: new Date() },
+      });
+  }
+
+  async countForCarrier(carrierAccountId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(telemetryPoints)
+      .where(eq(telemetryPoints.carrierAccountId, carrierAccountId));
+    return row?.count ?? 0;
+  }
+
+  async getForImei(imei: string, from?: Date, to?: Date) {
+    const conditions = [eq(telemetryPoints.imei, imei)];
+    if (from) conditions.push(gte(telemetryPoints.recordedAt, from));
+    if (to) conditions.push(lte(telemetryPoints.recordedAt, to));
+    return this.db.query.telemetryPoints.findMany({
+      where: and(...conditions),
+      orderBy: (p, { asc }) => [asc(p.recordedAt)],
+    });
+  }
+}
+
 export function createRepositories(db: Database) {
   return {
     accounts: new AccountRepository(db),
@@ -893,6 +971,7 @@ export function createRepositories(db: Database) {
     inspections: new InspectionRepository(db),
     notifications: new NotificationRepository(db),
     demos: new DemoRepository(db),
+    telemetry: new TelemetryRepository(db),
   };
 }
 
