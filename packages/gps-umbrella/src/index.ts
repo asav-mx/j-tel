@@ -7,21 +7,30 @@ import type {
 } from "@jtel/gps-core";
 import type { GpsPoint } from "@jtel/domain";
 
+/** Todas las respuestas de la API de Umbrella vienen envueltas así. */
+interface UmbrellaEnvelope<T> {
+  state: boolean;
+  message: string;
+  value: T;
+}
+
+interface UmbrellaGpsInfo {
+  l_datetime?: string;
+  latitude?: number;
+  longitude?: number;
+  speed?: number;
+  gps_valid?: boolean;
+}
+
 interface UmbrellaLocation {
-  Imei?: string;
-  IMEI?: string;
-  Latitude?: number;
-  Longitude?: number;
-  Speed?: number;
-  GPSTime?: string;
-  GpsTime?: string;
+  sn_imei_id?: string;
+  r_datetime?: string;
+  gps_info?: UmbrellaGpsInfo;
 }
 
 interface UmbrellaDevice {
-  Imei?: string;
-  IMEI?: string;
-  Name?: string;
-  DeviceName?: string;
+  sn_imei_id?: string;
+  tracker_name?: string;
 }
 
 export class UmbrellaGpsProvider implements GpsProvider {
@@ -49,9 +58,13 @@ export class UmbrellaGpsProvider implements GpsProvider {
 
     const creds = credentials ?? this.config.credentials;
     const url = `${this.baseUrl}/api/Login?userid=${encodeURIComponent(creds.userId)}&password=${encodeURIComponent(creds.password)}`;
-    const data = await this.fetchJson<{ Token?: string; token?: string }>(url);
-    const token = data.Token ?? data.token;
-    if (!token) throw new Error("No se obtuvo token de Umbrella GPS");
+    const env = await this.fetchJson<UmbrellaEnvelope<string>>(url);
+    const token = env?.state ? env.value : undefined;
+    if (!token) {
+      throw new Error(
+        `No se obtuvo token de Umbrella GPS: ${env?.message ?? "respuesta inválida"}`,
+      );
+    }
 
     this.tokenCache = { token, expiresAt: Date.now() + 30 * 60 * 1000 };
     return token;
@@ -59,13 +72,12 @@ export class UmbrellaGpsProvider implements GpsProvider {
 
   async getDevices(token: string): Promise<DeviceInfo[]> {
     const url = `${this.baseUrl}/api/Tracker?Token=${encodeURIComponent(token)}`;
-    const data = await this.fetchJson<UmbrellaDevice[] | { Data?: UmbrellaDevice[] }>(url);
-    const devices = Array.isArray(data) ? data : (data.Data ?? []);
+    const env = await this.fetchJson<UmbrellaEnvelope<UmbrellaDevice[]>>(url);
+    const devices = env?.value ?? [];
 
-    return devices.map((d) => ({
-      imei: d.Imei ?? d.IMEI ?? "",
-      label: d.Name ?? d.DeviceName,
-    })).filter((d) => d.imei);
+    return devices
+      .map((d) => ({ imei: d.sn_imei_id ?? "", label: d.tracker_name }))
+      .filter((d) => d.imei);
   }
 
   async getLastLocations(token: string, imeis?: string[]): Promise<GpsPoint[]> {
@@ -73,8 +85,8 @@ export class UmbrellaGpsProvider implements GpsProvider {
     if (imeis?.length) {
       url += `&Imeis=${encodeURIComponent(imeis.join(","))}`;
     }
-    const data = await this.fetchJson<UmbrellaLocation[] | { Data?: UmbrellaLocation[] }>(url);
-    const locations = Array.isArray(data) ? data : (data.Data ?? []);
+    const env = await this.fetchJson<UmbrellaEnvelope<UmbrellaLocation[]>>(url);
+    const locations = env?.value ?? [];
     return locations.map((loc) => this.toGpsPoint(loc)).filter(Boolean) as GpsPoint[];
   }
 
@@ -94,8 +106,8 @@ export class UmbrellaGpsProvider implements GpsProvider {
         url += `&Imeis=${encodeURIComponent(query.imeis.join(","))}`;
       }
 
-      const data = await this.fetchJson<UmbrellaLocation[] | { Data?: UmbrellaLocation[] }>(url);
-      const locations = Array.isArray(data) ? data : (data.Data ?? []);
+      const env = await this.fetchJson<UmbrellaEnvelope<UmbrellaLocation[]>>(url);
+      const locations = env?.value ?? [];
 
       if (locations.length === 0) break;
 
@@ -112,19 +124,26 @@ export class UmbrellaGpsProvider implements GpsProvider {
   }
 
   private toGpsPoint(loc: UmbrellaLocation): GpsPoint | null {
-    const imei = loc.Imei ?? loc.IMEI;
-    const lat = loc.Latitude;
-    const lng = loc.Longitude;
-    const timeStr = loc.GPSTime ?? loc.GpsTime;
+    const imei = loc.sn_imei_id;
+    const gps = loc.gps_info;
+    if (!imei || !gps || gps.gps_valid === false) return null;
 
-    if (!imei || lat == null || lng == null || !timeStr) return null;
+    const lat = gps.latitude;
+    const lng = gps.longitude;
+    const timeStr = gps.l_datetime ?? loc.r_datetime;
+    if (lat == null || lng == null || !timeStr) return null;
+
+    // La API entrega fechas en GMT sin sufijo de zona; las interpretamos como UTC.
+    const hasTz = /[zZ]|[+-]\d\d:?\d\d$/.test(timeStr);
+    const timestamp = new Date(hasTz ? timeStr : `${timeStr}Z`);
+    if (Number.isNaN(timestamp.getTime())) return null;
 
     return {
       imei,
       latitude: lat,
       longitude: lng,
-      speed: loc.Speed,
-      timestamp: new Date(timeStr),
+      speed: gps.speed,
+      timestamp,
     };
   }
 }
