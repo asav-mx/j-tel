@@ -10,18 +10,44 @@ export interface VerificationServiceConfig {
 }
 
 export class VerificationService {
+  private provider: ReturnType<typeof createUmbrellaProvider> | null = null;
+
   constructor(
     private repos: Repositories,
     private config: VerificationServiceConfig,
   ) {}
+
+  /** Un solo proveedor por servicio: reutiliza el token cacheado y evita 429. */
+  private getProvider() {
+    if (!this.provider) {
+      this.provider = createUmbrellaProvider({
+        baseUrl: this.config.umbrellaBaseUrl,
+        credentials: {
+          userId: this.config.umbrellaUserId ?? "demo_user",
+          password: this.config.umbrellaPassword ?? "demo_pass",
+        },
+      });
+    }
+    return this.provider;
+  }
 
   async processPending(now = new Date()) {
     const pending = await this.repos.occurrences.findPendingVerification(now);
     const results = [];
 
     for (const row of pending) {
-      const result = await this.verifyOccurrence(row.occurrence.id);
-      results.push(result);
+      // Un fallo puntual (p. ej. rate limit o una ocurrencia mal formada) no
+      // debe tumbar toda la corrida del cron.
+      try {
+        const result = await this.verifyOccurrence(row.occurrence.id);
+        results.push(result);
+      } catch (err) {
+        results.push({
+          occurrenceId: row.occurrence.id,
+          skipped: true,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
 
     return results;
@@ -56,13 +82,7 @@ export class VerificationService {
     const imeis = candidateDevices.map((d) => d.imei);
     const imeiToDevice = new Map(devices.map((d) => [d.imei, d]));
 
-    const provider = createUmbrellaProvider({
-      baseUrl: this.config.umbrellaBaseUrl,
-      credentials: {
-        userId: this.config.umbrellaUserId ?? "demo_user",
-        password: this.config.umbrellaPassword ?? "demo_pass",
-      },
-    });
+    const provider = this.getProvider();
 
     const ingestResult = await ingestEvidenceForTrip(provider, {
       tripId: trip.id,
@@ -201,13 +221,7 @@ export class VerificationService {
       .map((d) => d.imei);
     const imeiToDevice = new Map(devices.map((d) => [d.imei, d]));
 
-    const provider = createUmbrellaProvider({
-      baseUrl: this.config.umbrellaBaseUrl,
-      credentials: {
-        userId: this.config.umbrellaUserId ?? "demo_user",
-        password: this.config.umbrellaPassword ?? "demo_pass",
-      },
-    });
+    const provider = this.getProvider();
 
     return ingestEvidenceForTrip(provider, {
       tripId: occurrence.trip.id,

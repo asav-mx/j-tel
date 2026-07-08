@@ -33,9 +33,15 @@ interface UmbrellaDevice {
   tracker_name?: string;
 }
 
+/**
+ * Cache de token compartido entre instancias. Sobrevive invocaciones "warm"
+ * del serverless, evitando pedir login en cada corrida del cron (lo que
+ * provocaba 429 Too Many Requests en Umbrella).
+ */
+const sharedTokenCache = new Map<string, { token: string; expiresAt: number }>();
+
 export class UmbrellaGpsProvider implements GpsProvider {
   readonly name = "umbrella";
-  private tokenCache: { token: string; expiresAt: number } | null = null;
 
   constructor(private config: GpsProviderConfig) {}
 
@@ -52,11 +58,14 @@ export class UmbrellaGpsProvider implements GpsProvider {
   }
 
   async login(credentials?: GpsCredentials): Promise<string> {
-    if (this.tokenCache && this.tokenCache.expiresAt > Date.now()) {
-      return this.tokenCache.token;
+    const creds = credentials ?? this.config.credentials;
+    const cacheKey = `${this.baseUrl}|${creds.userId}`;
+
+    const cached = sharedTokenCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.token;
     }
 
-    const creds = credentials ?? this.config.credentials;
     const url = `${this.baseUrl}/api/Login?userid=${encodeURIComponent(creds.userId)}&password=${encodeURIComponent(creds.password)}`;
     const env = await this.fetchJson<UmbrellaEnvelope<string>>(url);
     const token = env?.state ? env.value : undefined;
@@ -66,7 +75,7 @@ export class UmbrellaGpsProvider implements GpsProvider {
       );
     }
 
-    this.tokenCache = { token, expiresAt: Date.now() + 30 * 60 * 1000 };
+    sharedTokenCache.set(cacheKey, { token, expiresAt: Date.now() + 30 * 60 * 1000 });
     return token;
   }
 
