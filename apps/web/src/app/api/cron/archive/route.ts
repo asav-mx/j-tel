@@ -18,6 +18,9 @@ export async function GET(request: Request) {
   const archiver = new ArchiverService(repos, getUmbrellaConfig());
 
   const summary = await archiver.archiveAll();
+  // Dejamos rastro en los logs para poder diagnosticar (motivo exacto si un
+  // carrier falla, cuántos puntos se guardaron, etc.).
+  console.log("[cron/archive]", JSON.stringify(summary));
   return NextResponse.json(summary);
 }
 

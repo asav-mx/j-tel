@@ -70,7 +70,13 @@ export class UmbrellaGpsProvider implements GpsProvider {
       }
       lastStatus = response.status;
       if (response.status !== 429 || attempt === backoffsMs.length) {
-        throw new Error(`Umbrella API error: ${response.status} ${response.statusText}`);
+        // Incluimos un extracto del cuerpo para saber el motivo real que
+        // reporta Umbrella (p. ej. "API calls quota exceeded").
+        const body = await response.text().catch(() => "");
+        const snippet = body.slice(0, 200).replace(/\s+/g, " ").trim();
+        throw new Error(
+          `Umbrella API error: ${response.status} ${response.statusText}${snippet ? ` — ${snippet}` : ""}`,
+        );
       }
       await sleep(backoffsMs[attempt]!);
     }
