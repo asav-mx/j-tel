@@ -15,7 +15,8 @@
     "build": "tsc",
     "test": "vitest run",
     "real-e2e": "tsx src/real-e2e.ts",
-    "archive": "tsx src/archive-run.ts"
+    "archive": "tsx src/archive-run.ts",
+    "import-jrz-memory": "tsx src/import-jrz-memory.ts"
   },
   "dependencies": {
     "@jtel/db": "workspace:*",
