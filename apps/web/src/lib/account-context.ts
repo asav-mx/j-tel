@@ -10,6 +10,18 @@ function extractSlug(searchParams: Awaited<SearchParamsInput>): string | undefin
   if (typeof account === "string" && account.trim().length > 0) {
     return account.trim();
   }
+
+  // Some chat clients / copy-paste turn ?account=tecma into ?account%3Dtecma, which
+  // Next parses as a single key "account=tecma" with an empty value.
+  if (searchParams) {
+    for (const key of Object.keys(searchParams)) {
+      const match = key.match(/^account=(.+)$/);
+      if (match?.[1]?.trim()) {
+        return match[1].trim();
+      }
+    }
+  }
+
   return undefined;
 }
 

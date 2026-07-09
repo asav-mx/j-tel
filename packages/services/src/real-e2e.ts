@@ -47,6 +47,7 @@ for (const p of ["../../.env", ".env"]) {
 
 const POLICY: ContractPolicy = {
   toleranceMinutes: 10,
+  arrivalAnticipationMinutes: 15,
   verificationGraceMinutes: 15,
   routeStrictness: "destino_only",
   allowAlternateDestination: false,
@@ -54,6 +55,7 @@ const POLICY: ContractPolicy = {
   enforcementRules: [{ type: "no_pago_viaje", toleranceMinutes: 10 }],
   evidenceMarginMinutesBefore: 60,
   evidenceMarginMinutesAfter: 30,
+  maxRouteDurationMinutes: 60,
 };
 
 function normalizeUmbrellaBaseUrl(raw: string): string {
@@ -257,17 +259,22 @@ async function main() {
     polygon: geofence,
   });
 
-  const route = await repos.routes.createRoute(client.id, "Ruta Prueba Real");
-  const shift = await repos.routes.createShift(
-    client.id,
-    "Turno Prueba",
-    "07:00:00",
-  );
+  const route = await repos.routes.createRoute({
+    clientAccountId: client.id,
+    plantId: plant.id,
+    name: "Ruta Prueba Real",
+  });
+  const shift = await repos.routes.createShift({
+    clientAccountId: client.id,
+    plantId: plant.id,
+    name: "Turno Prueba",
+    startTime: "07:00:00",
+  });
   const routeShift = await repos.routes.createRouteShift({
     clientAccountId: client.id,
+    plantId: plant.id,
     routeId: route.id,
     shiftId: shift.id,
-    deadlineTime: "07:00:00",
   });
 
   const contract = await repos.contracts.create({

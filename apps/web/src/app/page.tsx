@@ -4,8 +4,8 @@ import { withAccount } from "@/lib/account-context";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  let firstClient: { name: string; slug: string } | null = null;
-  let firstCarrier: { name: string; slug: string } | null = null;
+  let clients: Array<{ name: string; slug: string }> = [];
+  let carriers: Array<{ name: string; slug: string }> = [];
   let dbError: string | null = null;
 
   if (!isDatabaseConfigured()) {
@@ -13,8 +13,8 @@ export default async function HomePage() {
   } else {
     try {
       const repos = getRepos();
-      firstClient = (await repos.accounts.listByType("client"))[0] ?? null;
-      firstCarrier = (await repos.accounts.listByType("carrier"))[0] ?? null;
+      clients = await repos.accounts.listByType("client");
+      carriers = await repos.accounts.listByType("carrier");
     } catch (err) {
       dbError =
         err instanceof Error
@@ -47,24 +47,44 @@ export default async function HomePage() {
         )}
 
         <div className="grid gap-4 md:grid-cols-3">
-          <a
-            href={withAccount("/cliente", firstClient?.slug)}
-            className="rounded-xl border border-white/10 bg-[var(--card)] p-6 transition hover:border-[var(--accent)]"
-          >
+          <section className="rounded-xl border border-white/10 bg-[var(--card)] p-6">
             <h2 className="text-lg font-semibold">Cara Cliente</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">
               Cumplimiento, reportes y penalizaciones
             </p>
-          </a>
-          <a
-            href={withAccount("/carrier", firstCarrier?.slug)}
-            className="rounded-xl border border-white/10 bg-[var(--card)] p-6 transition hover:border-[var(--accent)]"
-          >
+            <ul className="mt-4 space-y-2 text-sm">
+              {clients.length === 0 ? (
+                <li className="text-[var(--muted)]">Sin clientes</li>
+              ) : (
+                clients.map((c) => (
+                  <li key={c.slug}>
+                    <a href={withAccount("/cliente", c.slug)} className="text-[var(--accent)] hover:underline">
+                      {c.name} →
+                    </a>
+                  </li>
+                ))
+              )}
+            </ul>
+          </section>
+          <section className="rounded-xl border border-white/10 bg-[var(--card)] p-6">
             <h2 className="text-lg font-semibold">Cara Carrier</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">
               Flota, mantenimiento y auditoría
             </p>
-          </a>
+            <ul className="mt-4 space-y-2 text-sm">
+              {carriers.length === 0 ? (
+                <li className="text-[var(--muted)]">Sin carriers</li>
+              ) : (
+                carriers.map((c) => (
+                  <li key={c.slug}>
+                    <a href={withAccount("/carrier", c.slug)} className="text-[var(--accent)] hover:underline">
+                      {c.name} →
+                    </a>
+                  </li>
+                ))
+              )}
+            </ul>
+          </section>
           <a
             href="/jstaff"
             className="rounded-xl border border-white/10 bg-[var(--card)] p-6 transition hover:border-[var(--accent)]"
@@ -84,12 +104,12 @@ export default async function HomePage() {
               <dd>{isDatabaseConfigured() ? "Configurada" : "Pendiente"}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-[var(--muted)]">Cliente activo</dt>
-              <dd>{firstClient ? firstClient.name : "Sin clientes"}</dd>
+              <dt className="text-[var(--muted)]">Clientes</dt>
+              <dd>{clients.length > 0 ? clients.map((c) => c.name).join(", ") : "Sin clientes"}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-[var(--muted)]">Carrier activo</dt>
-              <dd>{firstCarrier ? firstCarrier.name : "Sin carriers"}</dd>
+              <dt className="text-[var(--muted)]">Carriers</dt>
+              <dd>{carriers.length > 0 ? carriers.map((c) => c.name).join(", ") : "Sin carriers"}</dd>
             </div>
           </dl>
         </section>

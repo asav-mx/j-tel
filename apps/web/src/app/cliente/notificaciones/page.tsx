@@ -18,7 +18,7 @@ export default async function ClienteNotificacionesPage({
       <div className="mx-auto max-w-3xl">
         <AppNav
           title="Notificaciones"
-          links={[{ href: withAccount("/cliente", client?.slug), label: "← Cumplimiento" }]}
+          links={[{ href: withAccount("/cliente/cumplimiento", client?.slug), label: "← Cumplimiento" }]}
         />
         <Card>
           <ul className="space-y-4">

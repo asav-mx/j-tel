@@ -1,6 +1,7 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
+import { plantHref } from "@/lib/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -23,9 +24,7 @@ export default async function ClienteInspeccionesPage({
           links={[
             { href: withAccount("/cliente", client?.slug), label: "Corporativo" },
             {
-              href: firstPlant
-                ? withAccount(`/cliente/planta-${firstPlant.code}`, client?.slug)
-                : withAccount("/cliente", client?.slug),
+              href: firstPlant ? plantHref(firstPlant.id, client?.slug) : withAccount("/cliente", client?.slug),
               label: firstPlant?.name ?? "Planta",
             },
           ]}

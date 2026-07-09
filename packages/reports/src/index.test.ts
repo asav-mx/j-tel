@@ -12,6 +12,8 @@ describe("reports", () => {
       enforcementRules: [{ type: "no_pago_viaje" as const, toleranceMinutes: 5 }],
       evidenceMarginMinutesBefore: 60,
       evidenceMarginMinutesAfter: 30,
+      arrivalAnticipationMinutes: 15,
+      maxRouteDurationMinutes: 60,
     };
 
     const rows = [

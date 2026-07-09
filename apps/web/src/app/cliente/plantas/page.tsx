@@ -1,6 +1,9 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
+import { ClientAccountSwitcher } from "@/components/account-switcher";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
+import { clientNavLinks } from "@/lib/client-nav";
+import { plantHref } from "@/lib/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -41,19 +44,16 @@ export default async function ClientePlantasPage({
     repos.clients.getPlantsForAccount(client.id),
     repos.clients.getPlantGroupsForAccount(client.id),
   ]);
-  const groupById = new Map(groups.map((g) => [g.id, g.name] as const));
 
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-5xl space-y-6">
         <AppNav
           title="Plantas del cliente"
-          links={[
-            { href: withAccount("/cliente", client.slug), label: "← Panel" },
-            { href: withAccount("/cliente/configuracion", client.slug), label: "Configuración" },
-            { href: withAccount("/cliente/reportes", client.slug), label: "Reportes" },
-          ]}
+          links={clientNavLinks(client.slug)}
         />
+
+        <ClientAccountSwitcher currentSlug={client.slug} basePath="/cliente/plantas" />
 
         <p className="text-sm text-[var(--muted)]">
           Cliente corporativo: <span className="text-white">{client.name}</span>. Una cuenta de
@@ -68,7 +68,12 @@ export default async function ClientePlantasPage({
         ) : null}
         {created ? (
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-            {created === "grupo" ? "Grupo creado." : "Planta creada."} Ya aparece en la lista.
+            {created === "grupo"
+              ? "Grupo creado."
+              : created === "actualizada"
+                ? "Planta actualizada."
+                : "Planta creada."}{" "}
+            Ya aparece en la lista.
           </div>
         ) : null}
 
@@ -136,25 +141,47 @@ export default async function ClientePlantasPage({
               Este cliente todavía no tiene plantas. Crea la primera arriba.
             </p>
           ) : (
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-4 text-sm">
               {plants.map((p) => (
                 <li
                   key={p.id}
-                  className="flex items-center justify-between rounded border border-white/5 p-3"
+                  className="rounded border border-white/5 p-3"
                 >
-                  <div>
-                    <p className="font-medium">{p.name}</p>
-                    <p className="text-xs text-[var(--muted)]">
-                      Código: {p.code}
-                      {p.plantGroupId ? ` · Grupo: ${groupById.get(p.plantGroupId) ?? "—"}` : ""}
-                    </p>
-                  </div>
-                  <a
-                    href={withAccount(`/cliente/planta-${p.code}`, client.slug)}
-                    className="text-[var(--accent)]"
-                  >
-                    Abrir
-                  </a>
+                  <form action="/api/cliente/plantas" method="post" className="space-y-3">
+                    <input type="hidden" name="clientSlug" value={client.slug} />
+                    <input type="hidden" name="action" value="update" />
+                    <input type="hidden" name="plantId" value={p.id} />
+                    <div className="flex flex-wrap items-end gap-3">
+                      <label className={`${labelClass} min-w-[12rem] flex-1`}>
+                        Nombre
+                        <input name="name" defaultValue={p.name} required className={inputClass} />
+                      </label>
+                      <label className={`${labelClass} min-w-[12rem] flex-1`}>
+                        Grupo
+                        <select
+                          name="plantGroupId"
+                          className={inputClass}
+                          defaultValue={p.plantGroupId ?? ""}
+                        >
+                          <option value="">Sin grupo</option>
+                          {groups.map((g) => (
+                            <option key={g.id} value={g.id}>
+                              {g.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <p className="pb-2 text-xs text-[var(--muted)]">Código: {p.code}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      <button type="submit" className={btnClass}>
+                        Guardar cambios
+                      </button>
+                      <a href={plantHref(p.id, client.slug)} className="self-center text-[var(--accent)]">
+                        Abrir planta →
+                      </a>
+                    </div>
+                  </form>
                 </li>
               ))}
             </ul>

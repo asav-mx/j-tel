@@ -1,6 +1,7 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
+import { operationalUnitLabel } from "@/lib/operational-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,10 @@ const inputClass =
 const labelClass = "block text-sm";
 const btnClass =
   "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
+
+type GeofenceTarget =
+  | { kind: "plant"; id: string; label: string }
+  | { kind: "plant_group"; id: string; label: string };
 
 export default async function GeocercasPage({
   searchParams,
@@ -37,16 +42,39 @@ export default async function GeocercasPage({
     );
   }
 
-  const [plants, geofences] = await Promise.all([
-    repos.clients.getPlantsForAccount(client.id),
+  const [operationalUnits, geofences, allPlants] = await Promise.all([
+    repos.clients.getOperationalUnits(client.id),
     repos.geofences.findForClient(client.id),
+    repos.clients.getPlantsForAccount(client.id),
   ]);
-  const geofencesByPlant = new Map<string, typeof geofences>();
+
+  const geofenceTargets: GeofenceTarget[] = [
+    ...operationalUnits
+      .filter((u) => u.kind === "plant_group")
+      .map((u) => ({
+        kind: "plant_group" as const,
+        id: u.id,
+        label: `Campus: ${operationalUnitLabel(u)}`,
+      })),
+    ...allPlants.map((p) => ({
+      kind: "plant" as const,
+      id: p.id,
+      label: p.plantGroupId ? `${p.name} (${p.code}) — excepción` : `${p.name} (${p.code})`,
+    })),
+  ];
+
+  const geofencesByTarget = new Map<string, typeof geofences>();
   for (const g of geofences) {
-    if (!g.ownerPlantId) continue;
-    const list = geofencesByPlant.get(g.ownerPlantId) ?? [];
+    const key =
+      g.ownerType === "plant_group" && g.ownerPlantGroupId
+        ? `plant_group:${g.ownerPlantGroupId}`
+        : g.ownerPlantId
+          ? `plant:${g.ownerPlantId}`
+          : null;
+    if (!key) continue;
+    const list = geofencesByTarget.get(key) ?? [];
     list.push(g);
-    geofencesByPlant.set(g.ownerPlantId, list);
+    geofencesByTarget.set(key, list);
   }
 
   return (
@@ -61,9 +89,10 @@ export default async function GeocercasPage({
         />
 
         <p className="text-sm text-[var(--muted)]">
-          La geocerca marca <span className="text-white">dónde debe llegar</span> la unidad. Sin una
-          geocerca de destino, ese destino no se puede verificar. Captura el centro (latitud y
-          longitud) y un radio en metros; nosotros generamos el área.
+          La geocerca marca <span className="text-white">dónde debe llegar</span> la unidad. En un{" "}
+          <span className="text-white">campus</span> compartido suele haber una geocerca de llegada
+          común en la entrada; también puedes definir geocercas por planta cuando haga falta
+          (excepciones).
         </p>
 
         {error ? (
@@ -77,8 +106,8 @@ export default async function GeocercasPage({
           </div>
         ) : null}
 
-        {plants.length === 0 ? (
-          <Card title="Primero crea una planta">
+        {geofenceTargets.length === 0 ? (
+          <Card title="Primero crea plantas o campus">
             <p className="text-sm text-[var(--muted)]">
               Este cliente no tiene plantas todavía.{" "}
               <a href={withAccount("/cliente/plantas", client.slug)} className="text-[var(--accent)]">
@@ -90,15 +119,15 @@ export default async function GeocercasPage({
           <Card title="Nueva geocerca">
             <form action="/api/cliente/geocercas" method="post" className="grid gap-3 md:grid-cols-2">
               <input type="hidden" name="clientSlug" value={client.slug} />
-              <label className={labelClass}>
-                Planta
-                <select name="plantId" required className={inputClass} defaultValue="">
+              <label className={`${labelClass} md:col-span-2`}>
+                Pertenece a
+                <select name="ownerRef" required className={inputClass} defaultValue="">
                   <option value="" disabled>
-                    Elige planta…
+                    Elige campus o planta…
                   </option>
-                  {plants.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.code})
+                  {geofenceTargets.map((t) => (
+                    <option key={`${t.kind}-${t.id}`} value={`${t.kind}:${t.id}`}>
+                      {t.label}
                     </option>
                   ))}
                 </select>
@@ -106,7 +135,7 @@ export default async function GeocercasPage({
               <label className={labelClass}>
                 Tipo
                 <select name="role" className={inputClass} defaultValue="destino">
-                  <option value="destino">Destino</option>
+                  <option value="destino">Destino (llegada)</option>
                   <option value="base">Base</option>
                   <option value="caseta">Caseta</option>
                   <option value="otro">Otro</option>
@@ -114,7 +143,7 @@ export default async function GeocercasPage({
               </label>
               <label className={labelClass}>
                 Nombre
-                <input name="name" required className={inputClass} placeholder="Ej. Andén Planta Norte" />
+                <input name="name" required className={inputClass} placeholder="Ej. Entrada Campus Norte" />
               </label>
               <label className={labelClass}>
                 Radio (metros)
@@ -155,15 +184,13 @@ export default async function GeocercasPage({
             </p>
           ) : (
             <div className="space-y-4">
-              {plants
-                .filter((p) => (geofencesByPlant.get(p.id) ?? []).length > 0)
-                .map((p) => (
-                  <div key={p.id}>
-                    <p className="mb-1 text-sm font-medium">
-                      {p.name} <span className="text-[var(--muted)]">({p.code})</span>
-                    </p>
+              {geofenceTargets
+                .filter((t) => (geofencesByTarget.get(`${t.kind}:${t.id}`) ?? []).length > 0)
+                .map((t) => (
+                  <div key={`${t.kind}-${t.id}`}>
+                    <p className="mb-1 text-sm font-medium">{t.label}</p>
                     <ul className="space-y-1 text-sm">
-                      {(geofencesByPlant.get(p.id) ?? []).map((g) => (
+                      {(geofencesByTarget.get(`${t.kind}:${t.id}`) ?? []).map((g) => (
                         <li
                           key={g.id}
                           className="flex items-center justify-between rounded border border-white/5 p-2"
@@ -171,6 +198,7 @@ export default async function GeocercasPage({
                           <span>{g.name}</span>
                           <span className="text-xs text-[var(--muted)]">
                             {g.role} · {g.polygon.length} vértices
+                            {g.ownerType === "plant_group" ? " · campus" : ""}
                           </span>
                         </li>
                       ))}

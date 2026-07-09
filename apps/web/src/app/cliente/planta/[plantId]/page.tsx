@@ -1,7 +1,9 @@
 import { getRepos } from "@/lib/db";
-import { NavBar, StatusBadge } from "@/components/ui";
+import { AppNav, Card } from "@/components/ui";
+import { OccurrenceTable, toOccurrenceRow } from "@/components/occurrence-table";
+import { resolveAccountByType, withAccount } from "@/lib/account-context";
+import { complianceHref } from "@/lib/navigation";
 import { notFound } from "next/navigation";
-import { withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
 
@@ -19,73 +21,36 @@ export default async function PlantaPage({
   const plant = await repos.clients.getPlantById(plantId);
   if (!plant) notFound();
 
+  const client = accountSlug
+    ? await repos.accounts.findBySlug(accountSlug)
+    : await repos.accounts.findById(plant.clientAccountId);
+
+  if (!client || client.type !== "client") notFound();
+
   const occurrences = await repos.occurrences.findForPlant(plantId);
-  const inspections = await repos.inspections.findForPlant(plantId);
+  const rows = occurrences
+    .slice(0, 40)
+    .map((occ) => toOccurrenceRow(occ, "/cliente/servicio", client.slug, { showPlant: false }));
 
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-5xl">
-        <NavBar
-          title={`${plant.name} — Planta Operadora`}
+        <AppNav
+          title={`${plant.name} (${plant.code})`}
           links={[
-            { href: withAccount("/cliente", accountSlug), label: "Corporativo" },
-            { href: withAccount(`/cliente/planta/${plantId}`, accountSlug), label: plant.name },
-            {
-              href: withAccount(`/cliente/planta/${plantId}/inspecciones`, accountSlug),
-              label: "Inspecciones",
-            },
+            { href: withAccount("/cliente", client.slug), label: "← Panel" },
+            { href: complianceHref(client.slug, plantId), label: "Cumplimiento" },
+            { href: withAccount("/cliente/plantas", client.slug), label: "Plantas" },
           ]}
         />
 
         <p className="mb-6 text-sm text-[var(--muted)]">
-          Alcance: solo esta planta. No ve otras plantas del corporativo.
+          Cliente: {client.name} · Alcance: solo esta planta.
         </p>
 
-        <section className="mb-8">
-          <h2 className="mb-4 text-lg font-semibold">Servicios de la planta</h2>
-          <div className="overflow-x-auto rounded-xl border border-white/10">
-            <table className="w-full text-sm">
-              <thead className="bg-[var(--card)] text-left text-[var(--muted)]">
-                <tr>
-                  <th className="p-3">Fecha</th>
-                  <th className="p-3">Estado</th>
-                  <th className="p-3">Llegada observada</th>
-                </tr>
-              </thead>
-              <tbody>
-                {occurrences.map((o) => (
-                  <tr key={o.id} className="border-t border-white/5">
-                    <td className="p-3">{o.serviceDate}</td>
-                    <td className="p-3">
-                      <StatusBadge status={o.complianceFact?.status} />
-                    </td>
-                    <td className="p-3">
-                      {o.complianceFact?.observedArrivalAt?.toLocaleString("es-MX") ?? "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section>
-          <h2 className="mb-4 text-lg font-semibold">Inspecciones</h2>
-          {inspections.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">Sin inspecciones registradas.</p>
-          ) : (
-            <ul className="space-y-2">
-              {inspections.map((i) => (
-                <li
-                  key={i.id}
-                  className="rounded-lg border border-white/10 bg-[var(--card)] p-3 text-sm"
-                >
-                  {i.status} — {i.inspectedAt?.toLocaleDateString("es-MX") ?? "Pendiente"}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <Card title="Servicios de la planta">
+          <OccurrenceTable rows={rows} showPlant={false} showCarrier />
+        </Card>
       </div>
     </main>
   );

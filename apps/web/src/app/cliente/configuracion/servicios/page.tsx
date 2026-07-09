@@ -147,7 +147,8 @@ export default async function ServiciosPage({
                     </option>
                     {routeShifts.map((rs) => (
                       <option key={rs.id} value={rs.id}>
-                        {rs.route?.name ?? "—"} · {rs.shift?.name ?? "—"} · límite {rs.deadlineTime}
+                        {rs.route?.name ?? "—"} · {rs.shift?.name ?? "—"} · turno{" "}
+                        {rs.shift?.startTime?.slice(0, 5) ?? "—"}
                       </option>
                     ))}
                   </select>

@@ -14,6 +14,8 @@ const TECMA_POLICY: ContractPolicy = {
   enforcementRules: [{ type: "no_pago_viaje", toleranceMinutes: 5 }],
   evidenceMarginMinutesBefore: 60,
   evidenceMarginMinutesAfter: 30,
+  arrivalAnticipationMinutes: 15,
+  maxRouteDurationMinutes: 60,
 };
 
 const HONEYWELL_POLICY: ContractPolicy = {

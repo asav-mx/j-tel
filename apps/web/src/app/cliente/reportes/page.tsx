@@ -55,7 +55,7 @@ export default async function ClienteReportesPage({
       <div className="mx-auto max-w-4xl">
         <AppNav
           title="Reportes mensuales"
-          links={[{ href: withAccount("/cliente", client?.slug), label: "← Cumplimiento" }]}
+          links={[{ href: withAccount("/cliente/cumplimiento", client?.slug), label: "← Cumplimiento" }]}
         />
         <Card title="Reporte generado automáticamente">
           <dl className="mb-4 grid grid-cols-2 gap-2 text-sm">

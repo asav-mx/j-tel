@@ -15,6 +15,13 @@ for (const p of ["../../.env", ".env"]) {
   }
 }
 
+const TECMA_CAMPUS_POLYGON = [
+  { lat: 31.6980, lng: -106.4320 },
+  { lat: 31.6995, lng: -106.4320 },
+  { lat: 31.6995, lng: -106.4295 },
+  { lat: 31.6980, lng: -106.4295 },
+];
+
 const TECMA_PLANT_POLYGON = [
   { lat: 31.6904, lng: -106.4244 },
   { lat: 31.6914, lng: -106.4244 },
@@ -38,6 +45,7 @@ const CARRIER_BASE_POLYGON = [
 
 const TECMA_POLICY: ContractPolicy = {
   toleranceMinutes: 5,
+  arrivalAnticipationMinutes: 15,
   verificationGraceMinutes: 15,
   routeStrictness: "destino_only",
   allowAlternateDestination: false,
@@ -52,10 +60,12 @@ const TECMA_POLICY: ContractPolicy = {
   enforcementRules: [{ type: "no_pago_viaje", toleranceMinutes: 5 }],
   evidenceMarginMinutesBefore: 60,
   evidenceMarginMinutesAfter: 30,
+  maxRouteDurationMinutes: 60,
 };
 
 const HONEYWELL_POLICY: ContractPolicy = {
   toleranceMinutes: 10,
+  arrivalAnticipationMinutes: 10,
   verificationGraceMinutes: 20,
   routeStrictness: "destino_only",
   allowAlternateDestination: false,
@@ -78,6 +88,7 @@ const HONEYWELL_POLICY: ContractPolicy = {
   ],
   evidenceMarginMinutesBefore: 90,
   evidenceMarginMinutesAfter: 45,
+  maxRouteDurationMinutes: 60,
 };
 
 async function seed() {
@@ -135,6 +146,30 @@ async function seed() {
     code: "47",
   });
 
+  const campusSantosDumont = await repos.clients.createPlantGroup(
+    tecma.id,
+    "Campus Santos Dumont",
+  );
+
+  const tecmaPlant20 = await repos.clients.createPlant({
+    clientAccountId: tecma.id,
+    name: "Tecma Planta 20",
+    code: "20",
+    plantGroupId: campusSantosDumont.id,
+  });
+  const tecmaPlant24 = await repos.clients.createPlant({
+    clientAccountId: tecma.id,
+    name: "Tecma Planta 24",
+    code: "24",
+    plantGroupId: campusSantosDumont.id,
+  });
+  const tecmaPlant3 = await repos.clients.createPlant({
+    clientAccountId: tecma.id,
+    name: "Tecma Planta 3",
+    code: "3",
+    plantGroupId: campusSantosDumont.id,
+  });
+
   const honeywellPlant = await repos.clients.createPlant({
     clientAccountId: honeywell.id,
     name: "Honeywell MX07",
@@ -147,6 +182,14 @@ async function seed() {
     role: "destino",
     name: "Tecma 47 Destino",
     polygon: TECMA_PLANT_POLYGON,
+  });
+
+  const campusGeofence = await repos.geofences.create({
+    ownerType: "plant_group",
+    ownerPlantGroupId: campusSantosDumont.id,
+    role: "destino",
+    name: "Campus Santos Dumont — Entrada",
+    polygon: TECMA_CAMPUS_POLYGON,
   });
 
   const honeywellGeofence = await repos.geofences.create({
@@ -178,13 +221,13 @@ async function seed() {
   await repos.fleet.assignDevice(unit2.id, device2.id, assignStart);
   await repos.fleet.assignDevice(unit3.id, device3.id, assignStart);
 
-  const tecmaRoute = await repos.routes.createRoute(tecma.id, "Ruta Norte");
-  const tecmaShift = await repos.routes.createShift(tecma.id, "Entrada 7:00", "07:00:00");
-  const tecmaRouteShift = await repos.routes.createRouteShift({
+  const tecmaRoute = await repos.routes.createRoute({
     clientAccountId: tecma.id,
+    plantId: tecmaPlant47.id,
+    name: "Ruta Norte",
+  });
+  await repos.routes.addKmlVersion({
     routeId: tecmaRoute.id,
-    shiftId: tecmaShift.id,
-    deadlineTime: "06:45:00",
     kmlContent: "<kml><Document><name>Ruta Norte</name></Document></kml>",
     waypoints: [
       { lat: 31.7200, lng: -106.4600 },
@@ -192,14 +235,53 @@ async function seed() {
       { lat: 31.6909, lng: -106.4234 },
     ],
   });
+  const tecmaShift = await repos.routes.createShift({
+    clientAccountId: tecma.id,
+    plantId: tecmaPlant47.id,
+    name: "Entrada 7:00",
+    startTime: "07:00:00",
+  });
+  const tecmaRouteShift = await repos.routes.createRouteShift({
+    clientAccountId: tecma.id,
+    plantId: tecmaPlant47.id,
+    routeId: tecmaRoute.id,
+    shiftId: tecmaShift.id,
+  });
 
-  const honeywellRoute = await repos.routes.createRoute(honeywell.id, "Ruta Poniente");
-  const honeywellShift = await repos.routes.createShift(honeywell.id, "Entrada 6:30", "06:30:00");
-  const honeywellRouteShift = await repos.routes.createRouteShift({
+  const campusRoute = await repos.routes.createRoute({
+    clientAccountId: tecma.id,
+    plantGroupId: campusSantosDumont.id,
+    name: "Ruta Campus Poniente",
+  });
+  await repos.routes.addKmlVersion({
+    routeId: campusRoute.id,
+    kmlContent: "<kml><Document><name>Ruta Campus Poniente</name></Document></kml>",
+    waypoints: [
+      { lat: 31.7050, lng: -106.4450 },
+      { lat: 31.7000, lng: -106.4350 },
+      { lat: 31.6985, lng: -106.4305 },
+    ],
+  });
+  const campusShift = await repos.routes.createShift({
+    clientAccountId: tecma.id,
+    plantGroupId: campusSantosDumont.id,
+    name: "Entrada 6:45",
+    startTime: "06:45:00",
+  });
+  const campusRouteShift = await repos.routes.createRouteShift({
+    clientAccountId: tecma.id,
+    plantGroupId: campusSantosDumont.id,
+    routeId: campusRoute.id,
+    shiftId: campusShift.id,
+  });
+
+  const honeywellRoute = await repos.routes.createRoute({
     clientAccountId: honeywell.id,
+    plantId: honeywellPlant.id,
+    name: "Ruta Poniente",
+  });
+  await repos.routes.addKmlVersion({
     routeId: honeywellRoute.id,
-    shiftId: honeywellShift.id,
-    deadlineTime: "06:20:00",
     kmlContent: "<kml><Document><name>Ruta Poniente</name></Document></kml>",
     waypoints: [
       { lat: 31.7300, lng: -106.5000 },
@@ -207,12 +289,33 @@ async function seed() {
       { lat: 31.7239, lng: -106.4879 },
     ],
   });
+  const honeywellShift = await repos.routes.createShift({
+    clientAccountId: honeywell.id,
+    plantId: honeywellPlant.id,
+    name: "Entrada 6:30",
+    startTime: "06:30:00",
+  });
+  const honeywellRouteShift = await repos.routes.createRouteShift({
+    clientAccountId: honeywell.id,
+    plantId: honeywellPlant.id,
+    routeId: honeywellRoute.id,
+    shiftId: honeywellShift.id,
+  });
 
   const tecmaContract = await repos.contracts.create({
     carrierAccountId: juarezBus.id,
     clientAccountId: tecma.id,
     plantId: tecmaPlant47.id,
     name: "Tecma 47 - Transporte Personal",
+    policy: TECMA_POLICY,
+    status: "active",
+  });
+
+  const campusContract = await repos.contracts.create({
+    carrierAccountId: juarezBus.id,
+    clientAccountId: tecma.id,
+    plantGroupId: campusSantosDumont.id,
+    name: "Campus Santos Dumont - Transporte Personal",
     policy: TECMA_POLICY,
     status: "active",
   });
@@ -236,6 +339,16 @@ async function seed() {
     activeDays: [1, 2, 3, 4, 5],
   });
 
+  const campusProfile = await repos.profiles.create({
+    contractId: campusContract.id,
+    routeShiftId: campusRouteShift.id,
+    geofenceId: campusGeofence.id,
+    name: "Campus Poniente - Entrada 6:45",
+    possibleUnitIds: [unit2.id, unit3.id],
+    referenceUnitId: unit2.id,
+    activeDays: [1, 2, 3, 4, 5],
+  });
+
   const honeywellProfile = await repos.profiles.create({
     contractId: honeywellContract.id,
     routeShiftId: honeywellRouteShift.id,
@@ -253,6 +366,7 @@ async function seed() {
   weekAhead.setDate(weekAhead.getDate() + 7);
 
   await repos.occurrences.generateForProfile(tecmaProfile.id, weekAgo, weekAhead);
+  await repos.occurrences.generateForProfile(campusProfile.id, weekAgo, weekAhead);
   await repos.occurrences.generateForProfile(honeywellProfile.id, weekAgo, weekAhead);
 
   await repos.memberships.create({
@@ -312,9 +426,9 @@ async function seed() {
   console.log("Seed completado:");
   console.log(`  J-Staff: ${jstaff.id}`);
   console.log(`  Juárez Bus: ${juarezBus.id}`);
-  console.log(`  Tecma: ${tecma.id} (Planta 47: ${tecmaPlant47.id})`);
+  console.log(`  Tecma: ${tecma.id} (Planta 47: ${tecmaPlant47.id}, Campus: ${campusSantosDumont.id})`);
   console.log(`  Honeywell: ${honeywell.id} (MX07: ${honeywellPlant.id})`);
-  console.log(`  Contratos: Tecma=${tecmaContract.id}, Honeywell=${honeywellContract.id}`);
+  console.log(`  Contratos: Tecma 47=${tecmaContract.id}, Campus=${campusContract.id}, Honeywell=${honeywellContract.id}`);
 
   process.exit(0);
 }

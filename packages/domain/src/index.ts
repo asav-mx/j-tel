@@ -32,7 +32,7 @@ export const GeofenceRole = z.enum([
 ]);
 export type GeofenceRole = z.infer<typeof GeofenceRole>;
 
-export const GeofenceOwnerType = z.enum(["plant", "carrier"]);
+export const GeofenceOwnerType = z.enum(["plant", "plant_group", "carrier"]);
 export type GeofenceOwnerType = z.infer<typeof GeofenceOwnerType>;
 
 export const JStaffRole = z.enum(["admin_plataforma", "soporte", "comercial"]);
@@ -134,16 +134,57 @@ export type EnforcementRules = z.infer<typeof enforcementRulesSchema>;
 
 export const contractPolicySchema = z.object({
   toleranceMinutes: z.number().int().nonnegative(),
+  /** Minutos antes del inicio del turno en que debe estar en geocerca (deadline). */
+  arrivalAnticipationMinutes: z.number().int().nonnegative().default(15),
   verificationGraceMinutes: z.number().int().nonnegative().default(15),
   routeStrictness: RouteStrictness,
   allowAlternateDestination: z.boolean().default(false),
   excusableReasons: z.array(ExcusableReason).default([]),
   enforcementRules: z.array(enforcementRulesSchema).default([]),
+  /** Ventana de observación GPS: empieza N min antes del deadline (ej. 60 → 5:45 si deadline 6:45). */
   evidenceMarginMinutesBefore: z.number().int().nonnegative().default(60),
   evidenceMarginMinutesAfter: z.number().int().nonnegative().default(30),
+  /** Duración máxima esperada del recorrido de recolección (min). */
+  maxRouteDurationMinutes: z.number().int().positive().default(60),
 });
 
 export type ContractPolicy = z.infer<typeof contractPolicySchema>;
+
+/** Parsea "HH:MM" o "HH:MM:SS" a minutos desde medianoche. */
+export function parseTimeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
+}
+
+/** Deadline = inicio del turno − anticipación de llegada (contrato). */
+export function computeExpectedDeadline(
+  serviceDate: string,
+  shiftStartTime: string,
+  arrivalAnticipationMinutes: number,
+): Date {
+  const minutes = parseTimeToMinutes(shiftStartTime) - arrivalAnticipationMinutes;
+  const d = new Date(`${serviceDate}T00:00:00`);
+  d.setMinutes(minutes);
+  return d;
+}
+
+export function computeEvidenceWindow(
+  deadline: Date,
+  policy: Pick<
+    ContractPolicy,
+    "evidenceMarginMinutesBefore" | "verificationGraceMinutes" | "evidenceMarginMinutesAfter"
+  >,
+): { windowStart: Date; windowEnd: Date } {
+  const windowStart = new Date(deadline);
+  windowStart.setMinutes(windowStart.getMinutes() - policy.evidenceMarginMinutesBefore);
+  const windowEnd = new Date(deadline);
+  windowEnd.setMinutes(
+    windowEnd.getMinutes() +
+      policy.verificationGraceMinutes +
+      policy.evidenceMarginMinutesAfter,
+  );
+  return { windowStart, windowEnd };
+}
 
 export const createContractSchema = z.object({
   carrierAccountId: z.string().uuid(),
@@ -173,11 +214,10 @@ export const createServiceProfileSchema = z.object({
 export type CreateServiceProfileInput = z.infer<typeof createServiceProfileSchema>;
 
 export const createRouteShiftSchema = z.object({
+  plantId: z.string().uuid(),
   clientAccountId: z.string().uuid(),
   routeId: z.string().uuid(),
   shiftId: z.string().uuid(),
-  deadlineTime: z.string().regex(/^\d{2}:\d{2}$/),
-  kmlContent: z.string().optional(),
 });
 
 export type CreateRouteShiftInput = z.infer<typeof createRouteShiftSchema>;
@@ -228,3 +268,4 @@ export interface VerificationResult {
 }
 
 export * from "./enforcement.js";
+export * from "./operational-scope.js";

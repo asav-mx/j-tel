@@ -166,7 +166,20 @@ export default async function ContratosPage({
                 <legend className="px-1 text-sm text-[var(--muted)]">Política</legend>
                 <div className="grid gap-3 md:grid-cols-3">
                   <label className={labelClass}>
-                    Tolerancia (min)
+                    Anticipación de llegada (min antes del turno)
+                    <input
+                      name="arrivalAnticipationMinutes"
+                      type="number"
+                      min={0}
+                      defaultValue={15}
+                      className={inputClass}
+                    />
+                    <span className="mt-1 block text-xs text-[var(--muted)]">
+                      Ej. turno 7:00 y 15 min → deadline 6:45 en geocerca.
+                    </span>
+                  </label>
+                  <label className={labelClass}>
+                    Tolerancia puntualidad (min)
                     <input name="toleranceMinutes" type="number" min={0} defaultValue={5} className={inputClass} />
                   </label>
                   <label className={labelClass}>
@@ -192,6 +205,19 @@ export default async function ContratosPage({
                       name="evidenceMarginMinutesBefore"
                       type="number"
                       min={0}
+                      defaultValue={60}
+                      className={inputClass}
+                    />
+                    <span className="mt-1 block text-xs text-[var(--muted)]">
+                      Cuándo empieza a observarse el GPS (ej. 60 → 5:45 si deadline 6:45).
+                    </span>
+                  </label>
+                  <label className={labelClass}>
+                    Duración máx. de ruta (min)
+                    <input
+                      name="maxRouteDurationMinutes"
+                      type="number"
+                      min={1}
                       defaultValue={60}
                       className={inputClass}
                     />

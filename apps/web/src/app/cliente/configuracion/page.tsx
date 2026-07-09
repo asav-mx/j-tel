@@ -1,6 +1,8 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
+import { ClientAccountSwitcher } from "@/components/account-switcher";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
+import { clientNavLinks } from "@/lib/client-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -80,11 +82,10 @@ export default async function ConfiguracionPage({
       <div className="mx-auto max-w-5xl space-y-6">
         <AppNav
           title={`Configuración — ${client.name}`}
-          links={[
-            { href: withAccount("/cliente", s), label: "← Panel" },
-            { href: withAccount("/cliente/plantas", s), label: "Plantas" },
-          ]}
+          links={clientNavLinks(s)}
         />
+
+        <ClientAccountSwitcher currentSlug={client.slug} basePath="/cliente/configuracion" />
 
         <p className="text-sm text-[var(--muted)]">
           Arma un servicio real de punta a punta, sin scripts. Sigue los pasos en orden; al terminar
@@ -111,7 +112,7 @@ export default async function ConfiguracionPage({
           <Step
             n={3}
             title="Rutas y turnos"
-            desc="Define rutas, turnos y su combinación con hora límite."
+            desc="Por planta: rutas, turnos, trazado KML y programación."
             href={withAccount("/cliente/configuracion/rutas", s)}
             count={routeShifts.length}
             ready={routeShifts.length > 0}

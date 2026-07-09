@@ -1,9 +1,9 @@
+import Link from "next/link";
 import { getRepos } from "@/lib/db";
-import { getClientMemberships } from "@/lib/auth";
-import { canAccessPlant } from "@jtel/auth-rbac";
-import { AppNav, Card, StatusBadge } from "@/components/ui";
-import { computeEnforcement } from "@jtel/domain";
+import { AppNav, Card } from "@/components/ui";
+import { ClientAccountSwitcher } from "@/components/account-switcher";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
+import { clientNavLinks } from "@/lib/client-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -23,14 +23,11 @@ export default async function ClienteDashboardPage({
     );
   }
 
-  const memberships = await getClientMemberships(client.id);
-  const plants = await repos.clients.getPlantsForAccount(client.id);
-  // Sin membresías (aún no hay login real): mostrar todas las plantas de la cuenta
-  const visiblePlants =
-    memberships.length === 0
-      ? plants
-      : plants.filter((p) => canAccessPlant(memberships, p.id, client.id));
-  const occurrences = await repos.occurrences.findForClientAccount(client.id);
+  const [occurrences, plants, contracts] = await Promise.all([
+    repos.occurrences.findForClientAccount(client.id),
+    repos.clients.getPlantsForAccount(client.id),
+    repos.contracts.findForClient(client.id),
+  ]);
 
   const stats = {
     total: occurrences.length,
@@ -40,114 +37,71 @@ export default async function ClienteDashboardPage({
       .length,
   };
 
+  const s = client.slug;
+  const sections = [
+    {
+      title: "Cumplimiento",
+      desc: "Servicios verificados, evidencia GPS y estado por planta.",
+      href: withAccount("/cliente/cumplimiento", s),
+      hint:
+        stats.pendiente > 0
+          ? `${stats.pendiente} pendiente(s) por evidencia`
+          : `${stats.total} servicio(s) registrados`,
+    },
+    {
+      title: "Plantas",
+      desc: "Alta de plantas, grupos y alcance operativo.",
+      href: withAccount("/cliente/plantas", s),
+      hint: `${plants.length} planta(s)`,
+    },
+    {
+      title: "Configuración",
+      desc: "Geocercas, rutas, contratos y perfiles de servicio.",
+      href: withAccount("/cliente/configuracion", s),
+      hint: `${contracts.length} contrato(s)`,
+    },
+    {
+      title: "Reportes",
+      desc: "Resumen mensual exportable.",
+      href: withAccount("/cliente/reportes", s),
+      hint: "CSV automático",
+    },
+  ];
+
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-6xl">
-        <AppNav
-          title={`Cara Cliente — ${client.name}`}
-          links={[
-            { href: withAccount("/cliente", client.slug), label: "Cumplimiento" },
-            { href: withAccount("/cliente/plantas", client.slug), label: "Plantas" },
-            { href: withAccount("/cliente/configuracion", client.slug), label: "Configuración" },
-            { href: withAccount("/cliente/reportes", client.slug), label: "Reportes" },
-            { href: withAccount("/cliente/notificaciones", client.slug), label: "Notificaciones" },
-          ]}
-        />
+        <AppNav title={`Panel — ${client.name}`} links={clientNavLinks(s)} />
 
-        <div className="mb-6 grid gap-4 md:grid-cols-4">
-          <Card title="Total">{stats.total}</Card>
+        <ClientAccountSwitcher currentSlug={client.slug} basePath="/cliente" />
+
+        <p className="mb-6 text-sm text-[var(--muted)]">
+          Cliente corporativo: <span className="text-white">{client.name}</span>. Resumen general;
+          el detalle de cumplimiento está en su pestaña.
+        </p>
+
+        <div className="mb-8 grid gap-4 md:grid-cols-4">
+          <Card title="Total servicios">{stats.total}</Card>
           <Card title="Cumplidos">{stats.cumplido}</Card>
           <Card title="No cumplidos">{stats.noCumplido}</Card>
           <Card title="Pendientes">{stats.pendiente}</Card>
         </div>
 
-        <Card title="Plantas visibles">
-          {visiblePlants.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              Este cliente aún no tiene plantas.{" "}
-              <a
-                href={withAccount("/cliente/plantas", client.slug)}
-                className="text-[var(--accent)]"
-              >
-                Crear plantas
-              </a>
-              .
-            </p>
-          ) : (
-            <ul className="space-y-2 text-sm">
-              {visiblePlants.map((plant) => (
-                <li key={plant.id}>
-                  <a
-                    href={withAccount(`/cliente/planta-${plant.code}`, client.slug)}
-                    className="text-[var(--accent)]"
-                  >
-                    {plant.name} ({plant.code})
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="mt-3 text-xs text-[var(--muted)]">
-            <a
-              href={withAccount("/cliente/plantas", client.slug)}
-              className="text-[var(--accent)]"
+        <div className="grid gap-4 md:grid-cols-2">
+          {sections.map((section) => (
+            <Link
+              key={section.href}
+              href={section.href}
+              className="block rounded-xl border border-white/10 bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
             >
-              Gestionar plantas →
-            </a>
-          </p>
-        </Card>
-
-        <div className="mt-6">
-          <Card title="Servicios recientes">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-white/10 text-[var(--muted)]">
-                    <th className="py-2 pr-4">Fecha</th>
-                    <th className="py-2 pr-4">Perfil</th>
-                    <th className="py-2 pr-4">Estado</th>
-                    <th className="py-2 pr-4">Enforcement</th>
-                    <th className="py-2">Detalle</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {occurrences.slice(0, 20).map((occ) => {
-                    const fact = occ.complianceFact;
-                    const enforcement =
-                      fact
-                        ? computeEnforcement(
-                            fact.status,
-                            fact.timing,
-                            fact.lateExcusable,
-                            fact.contractPolicySnapshot,
-                          ).filter((e) => e.applies)
-                        : [];
-
-                    return (
-                      <tr key={occ.id} className="border-b border-white/5">
-                        <td className="py-3 pr-4">{occ.serviceDate}</td>
-                        <td className="py-3 pr-4">{occ.profile?.name ?? "—"}</td>
-                        <td className="py-3 pr-4">
-                          <StatusBadge status={fact?.status} />
-                        </td>
-                        <td className="py-3 pr-4 text-xs text-[var(--muted)]">
-                          {enforcement[0]?.description ?? "—"}
-                        </td>
-                        <td className="py-3">
-                          <a
-                            href={withAccount(`/cliente/servicio/${occ.id}`, client.slug)}
-                            className="text-[var(--accent)]"
-                          >
-                            Ver
-                          </a>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-lg font-semibold">{section.title}</h2>
+                <span className="text-xs text-[var(--muted)]">{section.hint}</span>
+              </div>
+              <p className="mt-2 text-sm text-[var(--muted)]">{section.desc}</p>
+              <p className="mt-3 text-sm text-[var(--accent)]">Abrir →</p>
+            </Link>
+          ))}
         </div>
       </div>
     </main>

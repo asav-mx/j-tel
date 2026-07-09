@@ -46,6 +46,25 @@ export async function POST(request: Request) {
     return backToPlantas(request, client.slug, { created: "grupo" });
   }
 
+  if (action === "update") {
+    const plantId = String(formData.get("plantId") ?? "").trim();
+    const plant = plantId ? await repos.clients.getPlantById(plantId) : null;
+    if (!plant || plant.clientAccountId !== client.id) {
+      return backToPlantas(request, client.slug, { error: "Planta no encontrada." });
+    }
+
+    const name = String(formData.get("name") ?? "").trim();
+    const rawGroup = String(formData.get("plantGroupId") ?? "").trim();
+    const plantGroupId = rawGroup.length > 0 ? rawGroup : null;
+
+    await repos.clients.updatePlant(plantId, client.id, {
+      name: name || plant.name,
+      plantGroupId,
+    });
+
+    return backToPlantas(request, client.slug, { created: "actualizada" });
+  }
+
   const name = String(formData.get("name") ?? "").trim();
   if (!name) {
     return backToPlantas(request, client.slug, {

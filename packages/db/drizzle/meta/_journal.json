@@ -22,6 +22,20 @@
       "when": 1783551396144,
       "tag": "0002_sudden_metal_master",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783626000000,
+      "tag": "0003_plant_routes_kml",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783710000000,
+      "tag": "0004_operational_scope",
+      "breakpoints": true
     }
   ]
 }

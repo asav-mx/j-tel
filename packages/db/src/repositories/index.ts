@@ -1,4 +1,7 @@
 import { eq, and, or, gte, lte, isNull, inArray, sql } from "drizzle-orm";
+import { computeExpectedDeadline, computeEvidenceWindow } from "@jtel/domain";
+import type { OperationalScope, OperationalUnit } from "@jtel/domain";
+import { operationalScopeColumns } from "@jtel/domain";
 import type { Database } from "../index.js";
 import {
   accounts,
@@ -13,7 +16,7 @@ import {
   routes,
   shifts,
   routeShifts,
-  routeShiftKmlVersions,
+  routeKmlVersions,
   serviceContracts,
   serviceProfiles,
   serviceProfileUnits,
@@ -196,14 +199,72 @@ export class ClientRepository {
   async getPlantById(id: string) {
     return this.db.query.plants.findFirst({ where: eq(plants.id, id) });
   }
+
+  async getPlantGroupById(id: string) {
+    return this.db.query.plantGroups.findFirst({ where: eq(plantGroups.id, id) });
+  }
+
+  /** Plantas sueltas + grupos como unidades operativas (rutas, turnos, contratos). */
+  async getOperationalUnits(clientAccountId: string): Promise<OperationalUnit[]> {
+    const [allPlants, groups] = await Promise.all([
+      this.getPlantsForAccount(clientAccountId),
+      this.getPlantGroupsForAccount(clientAccountId),
+    ]);
+
+    const units: OperationalUnit[] = [];
+
+    for (const p of allPlants.filter((plant) => !plant.plantGroupId)) {
+      units.push({ kind: "plant", id: p.id, name: p.name, code: p.code });
+    }
+
+    for (const g of groups) {
+      const memberPlants = allPlants
+        .filter((p) => p.plantGroupId === g.id)
+        .map((p) => ({ id: p.id, name: p.name, code: p.code }));
+      units.push({ kind: "plant_group", id: g.id, name: g.name, memberPlants });
+    }
+
+    return units.sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }
+
+  async resolveOperationalScope(
+    clientAccountId: string,
+    scope: OperationalScope,
+  ): Promise<OperationalScope | null> {
+    if (scope.kind === "plant") {
+      const plant = await this.getPlantById(scope.plantId);
+      if (!plant || plant.clientAccountId !== clientAccountId) return null;
+      return scope;
+    }
+    const group = await this.getPlantGroupById(scope.plantGroupId);
+    if (!group || group.clientAccountId !== clientAccountId) return null;
+    return scope;
+  }
+
+  async updatePlant(
+    plantId: string,
+    clientAccountId: string,
+    data: { name?: string; plantGroupId?: string | null },
+  ) {
+    const [plant] = await this.db
+      .update(plants)
+      .set({
+        ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.plantGroupId !== undefined ? { plantGroupId: data.plantGroupId } : {}),
+      })
+      .where(and(eq(plants.id, plantId), eq(plants.clientAccountId, clientAccountId)))
+      .returning();
+    return plant ?? null;
+  }
 }
 
 export class GeofenceRepository {
   constructor(private db: Database) {}
 
   async create(data: {
-    ownerType: "plant" | "carrier";
+    ownerType: "plant" | "plant_group" | "carrier";
     ownerPlantId?: string;
+    ownerPlantGroupId?: string;
     ownerCarrierAccountId?: string;
     role: "destino" | "base" | "caseta" | "otro";
     name: string;
@@ -224,15 +285,33 @@ export class GeofenceRepository {
     });
   }
 
-  /** Todas las geocercas de las plantas de un cliente (para armar perfiles de servicio). */
+  async findForPlantGroup(plantGroupId: string) {
+    return this.db.query.geofences.findMany({
+      where: eq(geofences.ownerPlantGroupId, plantGroupId),
+      orderBy: (g, { asc }) => [asc(g.name)],
+    });
+  }
+
+  /** Geocercas de plantas y grupos del cliente (para perfiles de servicio). */
   async findForClient(clientAccountId: string) {
     const clientPlants = await this.db.query.plants.findMany({
       where: eq(plants.clientAccountId, clientAccountId),
     });
     const plantIds = clientPlants.map((p) => p.id);
-    if (plantIds.length === 0) return [];
+
+    const groups = await this.db.query.plantGroups.findMany({
+      where: eq(plantGroups.clientAccountId, clientAccountId),
+    });
+    const groupIds = groups.map((g) => g.id);
+
+    if (plantIds.length === 0 && groupIds.length === 0) return [];
+
+    const conditions = [];
+    if (plantIds.length > 0) conditions.push(inArray(geofences.ownerPlantId, plantIds));
+    if (groupIds.length > 0) conditions.push(inArray(geofences.ownerPlantGroupId, groupIds));
+
     return this.db.query.geofences.findMany({
-      where: inArray(geofences.ownerPlantId, plantIds),
+      where: or(...conditions),
       orderBy: (g, { asc }) => [asc(g.name)],
     });
   }
@@ -354,65 +433,124 @@ export class FleetRepository {
 export class RouteRepository {
   constructor(private db: Database) {}
 
-  async createRoute(clientAccountId: string, name: string) {
+  private scopeWhere(scope: OperationalScope) {
+    const cols = operationalScopeColumns(scope);
+    if (scope.kind === "plant") return eq(routes.plantId, cols.plantId!);
+    return eq(routes.plantGroupId, cols.plantGroupId!);
+  }
+
+  async createRoute(data: {
+    clientAccountId: string;
+    plantId?: string | null;
+    plantGroupId?: string | null;
+    name: string;
+  }) {
     const [route] = await this.db
       .insert(routes)
-      .values({ clientAccountId, name })
+      .values(data)
       .returning();
     return route!;
   }
 
-  async createShift(clientAccountId: string, name: string, startTime: string) {
-    const [shift] = await this.db
-      .insert(shifts)
-      .values({ clientAccountId, name, startTime })
-      .returning();
+  async createShift(data: {
+    clientAccountId: string;
+    plantId?: string | null;
+    plantGroupId?: string | null;
+    name: string;
+    startTime: string;
+  }) {
+    const [shift] = await this.db.insert(shifts).values(data).returning();
     return shift!;
+  }
+
+  async addKmlVersion(data: {
+    routeId: string;
+    kmlContent: string;
+    waypoints?: Array<{ lat: number; lng: number }>;
+    validFrom?: Date;
+  }) {
+    const [version] = await this.db
+      .insert(routeKmlVersions)
+      .values({
+        routeId: data.routeId,
+        kmlContent: data.kmlContent,
+        waypoints: data.waypoints ?? [],
+        validFrom: data.validFrom ?? new Date(),
+      })
+      .returning();
+    return version!;
   }
 
   async createRouteShift(data: {
     clientAccountId: string;
+    plantId?: string | null;
+    plantGroupId?: string | null;
     routeId: string;
     shiftId: string;
-    deadlineTime: string;
-    kmlContent?: string;
-    waypoints?: Array<{ lat: number; lng: number }>;
   }) {
-    const [routeShift] = await this.db
-      .insert(routeShifts)
-      .values({
-        clientAccountId: data.clientAccountId,
-        routeId: data.routeId,
-        shiftId: data.shiftId,
-        deadlineTime: data.deadlineTime,
-      })
-      .returning();
-
-    if (data.kmlContent) {
-      await this.db.insert(routeShiftKmlVersions).values({
-        routeShiftId: routeShift!.id,
-        kmlContent: data.kmlContent,
-        waypoints: data.waypoints ?? [],
-        validFrom: new Date(),
-      });
-    }
-
+    const [routeShift] = await this.db.insert(routeShifts).values(data).returning();
     return routeShift!;
   }
 
-  async getKmlVersionForDate(routeShiftId: string, at: Date) {
-    return this.db.query.routeShiftKmlVersions.findFirst({
+  async getKmlVersionForDate(routeId: string, at: Date) {
+    return this.db.query.routeKmlVersions.findFirst({
       where: and(
-        eq(routeShiftKmlVersions.routeShiftId, routeShiftId),
-        lte(routeShiftKmlVersions.validFrom, at),
-        or(
-          isNull(routeShiftKmlVersions.validTo),
-          gte(routeShiftKmlVersions.validTo, at),
-        ),
+        eq(routeKmlVersions.routeId, routeId),
+        lte(routeKmlVersions.validFrom, at),
+        or(isNull(routeKmlVersions.validTo), gte(routeKmlVersions.validTo, at)),
       ),
     });
   }
 
+  async getRoutesForScope(scope: OperationalScope) {
+    return this.db.query.routes.findMany({
+      where: this.scopeWhere(scope),
+      with: { kmlVersions: true },
+      orderBy: (r, { asc }) => [asc(r.name)],
+    });
+  }
+
+  async getShiftsForScope(scope: OperationalScope) {
+    const cols = operationalScopeColumns(scope);
+    const where =
+      scope.kind === "plant"
+        ? eq(shifts.plantId, cols.plantId!)
+        : eq(shifts.plantGroupId, cols.plantGroupId!);
+    return this.db.query.shifts.findMany({
+      where,
+      orderBy: (s, { asc }) => [asc(s.startTime)],
+    });
+  }
+
+  async getRouteShiftsForScope(scope: OperationalScope) {
+    const cols = operationalScopeColumns(scope);
+    const where =
+      scope.kind === "plant"
+        ? eq(routeShifts.plantId, cols.plantId!)
+        : eq(routeShifts.plantGroupId, cols.plantGroupId!);
+    return this.db.query.routeShifts.findMany({
+      where,
+      with: { route: { with: { kmlVersions: true } }, shift: true },
+      orderBy: (rs, { asc }) => [asc(rs.createdAt)],
+    });
+  }
+
+  /** @deprecated Usar getRoutesForScope */
+  async getRoutesForPlant(plantId: string) {
+    return this.getRoutesForScope({ kind: "plant", plantId });
+  }
+
+  /** @deprecated Usar getShiftsForScope */
+  async getShiftsForPlant(plantId: string) {
+    return this.getShiftsForScope({ kind: "plant", plantId });
+  }
+
+  /** @deprecated Usar getRouteShiftsForScope */
+  async getRouteShiftsForPlant(plantId: string) {
+    return this.getRouteShiftsForScope({ kind: "plant", plantId });
+  }
+
+  /** @deprecated Usar getRoutesForPlant — mantiene compat con contadores del hub. */
   async getRoutesForClient(clientAccountId: string) {
     return this.db.query.routes.findMany({
       where: eq(routes.clientAccountId, clientAccountId),
@@ -430,15 +568,14 @@ export class RouteRepository {
   async getRouteShiftsForClient(clientAccountId: string) {
     return this.db.query.routeShifts.findMany({
       where: eq(routeShifts.clientAccountId, clientAccountId),
-      with: { route: true, shift: true, kmlVersions: true },
-      orderBy: (rs, { asc }) => [asc(rs.deadlineTime)],
+      with: { route: { with: { kmlVersions: true } }, shift: true },
     });
   }
 
   async findRouteShiftById(id: string) {
     return this.db.query.routeShifts.findFirst({
       where: eq(routeShifts.id, id),
-      with: { route: true, shift: true },
+      with: { route: { with: { kmlVersions: true } }, shift: true },
     });
   }
 }
@@ -472,14 +609,14 @@ export class ContractRepository {
   async findForClient(clientAccountId: string) {
     return this.db.query.serviceContracts.findMany({
       where: eq(serviceContracts.clientAccountId, clientAccountId),
-      with: { profiles: true, plant: true },
+      with: { profiles: true, plant: true, plantGroup: true },
     });
   }
 
   async findForCarrier(carrierAccountId: string) {
     return this.db.query.serviceContracts.findMany({
       where: eq(serviceContracts.carrierAccountId, carrierAccountId),
-      with: { profiles: true },
+      with: { profiles: true, plant: true, plantGroup: true, client: true },
     });
   }
 
@@ -565,13 +702,19 @@ export class OccurrenceRepository {
   ) {
     const profile = await this.db.query.serviceProfiles.findFirst({
       where: eq(serviceProfiles.id, profileId),
-      with: { routeShift: true, contract: true, geofence: true },
+      with: {
+        routeShift: { with: { route: true, shift: true } },
+        contract: true,
+        geofence: true,
+      },
     });
 
     if (!profile) throw new Error("Perfil no encontrado");
 
     const routeShift = profile.routeShift;
+    const shift = routeShift!.shift!;
     const policy = profile.contract!.policy;
+    const anticipation = policy.arrivalAnticipationMinutes ?? 15;
     const activeDays = profile.activeDays ?? [1, 2, 3, 4, 5];
     const created: string[] = [];
 
@@ -582,18 +725,17 @@ export class OccurrenceRepository {
       const dayOfWeek = current.getDay();
       if (activeDays.includes(dayOfWeek)) {
         const serviceDate = current.toISOString().split("T")[0]!;
-        const [hours, minutes] = routeShift!.deadlineTime.split(":").map(Number);
-        const deadline = new Date(current);
-        deadline.setHours(hours!, minutes!, 0, 0);
+        const deadline = computeExpectedDeadline(
+          serviceDate,
+          shift.startTime,
+          anticipation,
+        );
 
-        const kmlVersion = await this.db.query.routeShiftKmlVersions.findFirst({
+        const kmlVersion = await this.db.query.routeKmlVersions.findFirst({
           where: and(
-            eq(routeShiftKmlVersions.routeShiftId, profile.routeShiftId),
-            lte(routeShiftKmlVersions.validFrom, deadline),
-            or(
-              isNull(routeShiftKmlVersions.validTo),
-              gte(routeShiftKmlVersions.validTo, deadline),
-            ),
+            eq(routeKmlVersions.routeId, routeShift!.routeId),
+            lte(routeKmlVersions.validFrom, deadline),
+            or(isNull(routeKmlVersions.validTo), gte(routeKmlVersions.validTo, deadline)),
           ),
         });
 
@@ -613,16 +755,7 @@ export class OccurrenceRepository {
           .returning();
 
         if (occurrence) {
-          const windowStart = new Date(deadline);
-          windowStart.setMinutes(
-            windowStart.getMinutes() - policy.evidenceMarginMinutesBefore,
-          );
-          const windowEnd = new Date(deadline);
-          windowEnd.setMinutes(
-            windowEnd.getMinutes() +
-              policy.verificationGraceMinutes +
-              policy.evidenceMarginMinutesAfter,
-          );
+          const { windowStart, windowEnd } = computeEvidenceWindow(deadline, policy);
 
           await this.db.insert(trips).values({
             serviceOccurrenceId: occurrence.id,
@@ -677,7 +810,13 @@ export class OccurrenceRepository {
 
     return this.db.query.serviceOccurrences.findMany({
       where: and(...conditions),
-      with: { complianceFact: true, trip: true },
+      with: {
+        complianceFact: true,
+        trip: true,
+        profile: { with: { routeShift: { with: { route: true, shift: true } } } },
+        contract: { with: { plant: true, plantGroup: true, carrier: true, client: true } },
+      },
+      orderBy: (o, { desc }) => [desc(o.serviceDate)],
     });
   }
 
@@ -698,7 +837,22 @@ export class OccurrenceRepository {
         complianceFact: true,
         trip: true,
         profile: { with: { routeShift: { with: { route: true, shift: true } } } },
+        contract: { with: { plant: true, plantGroup: true, carrier: true, client: true } },
       },
+      orderBy: (o, { desc }) => [desc(o.serviceDate)],
+    });
+  }
+
+  async findForContract(contractId: string) {
+    return this.db.query.serviceOccurrences.findMany({
+      where: eq(serviceOccurrences.contractId, contractId),
+      with: {
+        complianceFact: true,
+        trip: true,
+        profile: { with: { routeShift: { with: { route: true, shift: true } } } },
+        contract: { with: { plant: true, plantGroup: true, carrier: true, client: true } },
+      },
+      orderBy: (o, { desc }) => [desc(o.serviceDate)],
     });
   }
 

@@ -44,6 +44,7 @@ export const geofenceRoleEnum = pgEnum("geofence_role", [
 ]);
 export const geofenceOwnerTypeEnum = pgEnum("geofence_owner_type", [
   "plant",
+  "plant_group",
   "carrier",
 ]);
 export const contractStatusEnum = pgEnum("contract_status", [
@@ -144,6 +145,9 @@ export const geofences = pgTable("geofences", {
   id: uuid("id").primaryKey().defaultRandom(),
   ownerType: geofenceOwnerTypeEnum("owner_type").notNull(),
   ownerPlantId: uuid("owner_plant_id").references(() => plants.id, { onDelete: "cascade" }),
+  ownerPlantGroupId: uuid("owner_plant_group_id").references(() => plantGroups.id, {
+    onDelete: "cascade",
+  }),
   ownerCarrierAccountId: uuid("owner_carrier_account_id").references(() => accounts.id, {
     onDelete: "cascade",
   }),
@@ -198,6 +202,12 @@ export const routes = pgTable("routes", {
   clientAccountId: uuid("client_account_id")
     .notNull()
     .references(() => accounts.id, { onDelete: "cascade" }),
+  /** Planta independiente (XOR con plantGroupId). */
+  plantId: uuid("plant_id").references(() => plants.id, { onDelete: "cascade" }),
+  /** Campus / grupo compartido (XOR con plantId). */
+  plantGroupId: uuid("plant_group_id").references(() => plantGroups.id, {
+    onDelete: "cascade",
+  }),
   name: text("name").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
@@ -207,7 +217,12 @@ export const shifts = pgTable("shifts", {
   clientAccountId: uuid("client_account_id")
     .notNull()
     .references(() => accounts.id, { onDelete: "cascade" }),
+  plantId: uuid("plant_id").references(() => plants.id, { onDelete: "cascade" }),
+  plantGroupId: uuid("plant_group_id").references(() => plantGroups.id, {
+    onDelete: "cascade",
+  }),
   name: text("name").notNull(),
+  /** Hora nominal de inicio del turno (cuándo entra el personal / pasa lista). */
   startTime: time("start_time").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
@@ -217,23 +232,27 @@ export const routeShifts = pgTable("route_shifts", {
   clientAccountId: uuid("client_account_id")
     .notNull()
     .references(() => accounts.id, { onDelete: "cascade" }),
+  plantId: uuid("plant_id").references(() => plants.id, { onDelete: "cascade" }),
+  plantGroupId: uuid("plant_group_id").references(() => plantGroups.id, {
+    onDelete: "cascade",
+  }),
   routeId: uuid("route_id")
     .notNull()
     .references(() => routes.id, { onDelete: "cascade" }),
   shiftId: uuid("shift_id")
     .notNull()
     .references(() => shifts.id, { onDelete: "cascade" }),
-  deadlineTime: time("deadline_time").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("route_shifts_unique_idx").on(table.routeId, table.shiftId),
 ]);
 
-export const routeShiftKmlVersions = pgTable("route_shift_kml_versions", {
+/** Trazado de recolección versionado (KML/KMZ); puede actualizarse sin cambiar ruta/turno. */
+export const routeKmlVersions = pgTable("route_kml_versions", {
   id: uuid("id").primaryKey().defaultRandom(),
-  routeShiftId: uuid("route_shift_id")
+  routeId: uuid("route_id")
     .notNull()
-    .references(() => routeShifts.id, { onDelete: "cascade" }),
+    .references(() => routes.id, { onDelete: "cascade" }),
   kmlContent: text("kml_content").notNull(),
   waypoints: jsonb("waypoints").$type<Array<{ lat: number; lng: number }>>().notNull().default([]),
   validFrom: timestamp("valid_from", { withTimezone: true, mode: "date" }).notNull(),
@@ -306,7 +325,7 @@ export const serviceOccurrences = pgTable("service_occurrences", {
   routeShiftId: uuid("route_shift_id")
     .notNull()
     .references(() => routeShifts.id, { onDelete: "cascade" }),
-  kmlVersionId: uuid("kml_version_id").references(() => routeShiftKmlVersions.id, {
+  kmlVersionId: uuid("kml_version_id").references(() => routeKmlVersions.id, {
     onDelete: "set null",
   }),
   serviceDate: date("service_date").notNull(),
@@ -583,10 +602,38 @@ export const serviceContractsRelations = relations(serviceContracts, ({ one, man
   profiles: many(serviceProfiles),
 }));
 
-export const routeShiftsRelations = relations(routeShifts, ({ one, many }) => ({
+export const routeShiftsRelations = relations(routeShifts, ({ one }) => ({
   route: one(routes, { fields: [routeShifts.routeId], references: [routes.id] }),
   shift: one(shifts, { fields: [routeShifts.shiftId], references: [shifts.id] }),
-  kmlVersions: many(routeShiftKmlVersions),
+  plant: one(plants, { fields: [routeShifts.plantId], references: [plants.id] }),
+  plantGroup: one(plantGroups, {
+    fields: [routeShifts.plantGroupId],
+    references: [plantGroups.id],
+  }),
+}));
+
+export const routesRelations = relations(routes, ({ one, many }) => ({
+  plant: one(plants, { fields: [routes.plantId], references: [plants.id] }),
+  plantGroup: one(plantGroups, {
+    fields: [routes.plantGroupId],
+    references: [plantGroups.id],
+  }),
+  kmlVersions: many(routeKmlVersions),
+}));
+
+export const shiftsRelations = relations(shifts, ({ one }) => ({
+  plant: one(plants, { fields: [shifts.plantId], references: [plants.id] }),
+  plantGroup: one(plantGroups, {
+    fields: [shifts.plantGroupId],
+    references: [plantGroups.id],
+  }),
+}));
+
+export const routeKmlVersionsRelations = relations(routeKmlVersions, ({ one }) => ({
+  route: one(routes, {
+    fields: [routeKmlVersions.routeId],
+    references: [routes.id],
+  }),
 }));
 
 export const serviceProfilesRelations = relations(serviceProfiles, ({ one, many }) => ({
@@ -604,6 +651,17 @@ export const serviceProfilesRelations = relations(serviceProfiles, ({ one, many 
   }),
   possibleUnits: many(serviceProfileUnits),
   occurrences: many(serviceOccurrences),
+}));
+
+export const serviceProfileUnitsRelations = relations(serviceProfileUnits, ({ one }) => ({
+  serviceProfile: one(serviceProfiles, {
+    fields: [serviceProfileUnits.serviceProfileId],
+    references: [serviceProfiles.id],
+  }),
+  unit: one(units, {
+    fields: [serviceProfileUnits.unitId],
+    references: [units.id],
+  }),
 }));
 
 export const tripsRelations = relations(trips, ({ one, many }) => ({

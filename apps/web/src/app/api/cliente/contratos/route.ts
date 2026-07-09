@@ -70,6 +70,8 @@ export async function POST(request: Request) {
   const target = String(formData.get("target") ?? "plant").trim();
   const plantId = String(formData.get("plantId") ?? "").trim();
   const plantGroupId = String(formData.get("plantGroupId") ?? "").trim();
+  const arrivalAnticipationMinutes = toInt(formData.get("arrivalAnticipationMinutes"), 15);
+  const maxRouteDurationMinutes = toInt(formData.get("maxRouteDurationMinutes"), 60);
   const toleranceMinutes = toInt(formData.get("toleranceMinutes"), 0);
   const verificationGraceMinutes = toInt(formData.get("verificationGraceMinutes"), 15);
   const routeStrictness = String(formData.get("routeStrictness") ?? "destino_only").trim();
@@ -88,6 +90,8 @@ export async function POST(request: Request) {
     status: "draft" as const,
     policy: {
       toleranceMinutes,
+      arrivalAnticipationMinutes,
+      maxRouteDurationMinutes,
       verificationGraceMinutes,
       routeStrictness,
       allowAlternateDestination,

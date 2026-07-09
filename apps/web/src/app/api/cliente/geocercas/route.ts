@@ -23,14 +23,18 @@ export async function POST(request: Request) {
     return NextResponse.redirect(url, 303);
   }
 
-  const plantId = String(formData.get("plantId") ?? "").trim();
+  const ownerRef = String(formData.get("ownerRef") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const role = String(formData.get("role") ?? "destino").trim();
   const lat = parseNumber(formData.get("lat"));
   const lng = parseNumber(formData.get("lng"));
   const radius = parseNumber(formData.get("radiusMeters"));
 
-  if (!plantId) return back(request, client.slug, { error: "Elige una planta." });
+  const [refKind, ownerId] = ownerRef.includes(":")
+    ? (ownerRef.split(":") as [string, string])
+    : ["plant", ownerRef];
+
+  if (!ownerId) return back(request, client.slug, { error: "Elige planta o campus." });
   if (!name) return back(request, client.slug, { error: "El nombre de la geocerca es obligatorio." });
   if (lat === null || lat < -90 || lat > 90)
     return back(request, client.slug, { error: "Latitud inválida (debe estar entre -90 y 90)." });
@@ -39,24 +43,36 @@ export async function POST(request: Request) {
   if (radius === null || radius <= 0 || radius > 20000)
     return back(request, client.slug, { error: "Radio inválido (metros, entre 1 y 20000)." });
 
-  // La planta debe pertenecer al cliente activo.
-  const plant = await repos.clients.getPlantById(plantId);
-  if (!plant || plant.clientAccountId !== client.id) {
-    return back(request, client.slug, { error: "La planta no pertenece a este cliente." });
-  }
-
   const validRoles = ["destino", "base", "caseta", "otro"] as const;
   const geofenceRole = (validRoles as readonly string[]).includes(role)
     ? (role as (typeof validRoles)[number])
     : "destino";
 
-  await repos.geofences.create({
-    ownerType: "plant",
-    ownerPlantId: plantId,
-    role: geofenceRole,
-    name,
-    polygon: circlePolygon(lat, lng, radius),
-  });
+  if (refKind === "plant_group") {
+    const group = await repos.clients.getPlantGroupById(ownerId);
+    if (!group || group.clientAccountId !== client.id) {
+      return back(request, client.slug, { error: "El campus no pertenece a este cliente." });
+    }
+    await repos.geofences.create({
+      ownerType: "plant_group",
+      ownerPlantGroupId: ownerId,
+      role: geofenceRole,
+      name,
+      polygon: circlePolygon(lat, lng, radius),
+    });
+  } else {
+    const plant = await repos.clients.getPlantById(ownerId);
+    if (!plant || plant.clientAccountId !== client.id) {
+      return back(request, client.slug, { error: "La planta no pertenece a este cliente." });
+    }
+    await repos.geofences.create({
+      ownerType: "plant",
+      ownerPlantId: ownerId,
+      role: geofenceRole,
+      name,
+      polygon: circlePolygon(lat, lng, radius),
+    });
+  }
 
   return back(request, client.slug, { created: "geocerca" });
 }
