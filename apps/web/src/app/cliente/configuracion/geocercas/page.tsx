@@ -1,4 +1,5 @@
 import { getRepos } from "@/lib/db";
+import { ClientConfigShell } from "@/components/client-config-shell";
 import { AppNav, Card } from "@/components/ui";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { operationalUnitLabel } from "@/lib/operational-scope";
@@ -80,12 +81,11 @@ export default async function GeocercasPage({
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-5xl space-y-6">
-        <AppNav
-          title="Geocercas de destino"
-          links={[
-            { href: withAccount("/cliente/configuracion", client.slug), label: "← Configuración" },
-            { href: withAccount("/cliente/plantas", client.slug), label: "Plantas" },
-          ]}
+        <ClientConfigShell
+          client={client}
+          title={`Geocercas — ${client.name}`}
+          step="geocercas"
+          basePath="/cliente/configuracion/geocercas"
         />
 
         <p className="text-sm text-[var(--muted)]">

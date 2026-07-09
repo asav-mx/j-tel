@@ -36,6 +36,13 @@
       "when": 1783710000000,
       "tag": "0004_operational_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783800000000,
+      "tag": "0005_client_carrier_auth",
+      "breakpoints": true
     }
   ]
 }

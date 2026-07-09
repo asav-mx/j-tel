@@ -43,3 +43,78 @@ export function operationalUnitLabel(unit: OperationalUnit): string {
   const members = unit.memberPlants.map((p) => p.code).join(", ");
   return members ? `${unit.name} (${members})` : unit.name;
 }
+
+export function toScopeRef(scope: OperationalScope): string {
+  if (scope.kind === "plant") return `plant:${scope.plantId}`;
+  return `plant_group:${scope.plantGroupId}`;
+}
+
+export function parseScopeRef(ref: string): OperationalScope | null {
+  const [kind, id] = ref.split(":");
+  if (!id) return null;
+  if (kind === "plant") return { kind: "plant", plantId: id };
+  if (kind === "plant_group") return { kind: "plant_group", plantGroupId: id };
+  return null;
+}
+
+export function operationalScopeFromContract(contract: {
+  plantId?: string | null;
+  plantGroupId?: string | null;
+}): OperationalScope | null {
+  return parseOperationalScope({
+    plantId: contract.plantId,
+    plantGroupId: contract.plantGroupId,
+  });
+}
+
+export function scopedRowMatches(
+  row: { plantId?: string | null; plantGroupId?: string | null },
+  scope: OperationalScope,
+): boolean {
+  if (scope.kind === "plant") {
+    return row.plantId === scope.plantId && !row.plantGroupId;
+  }
+  return row.plantGroupId === scope.plantGroupId && !row.plantId;
+}
+
+/** Geocerca válida para un alcance: campus del grupo o planta miembro (excepción). */
+export function geofenceMatchesScope(
+  geofence: {
+    ownerType: string;
+    ownerPlantId?: string | null;
+    ownerPlantGroupId?: string | null;
+  },
+  scope: OperationalScope,
+  memberPlantIds: string[] = [],
+): boolean {
+  if (scope.kind === "plant_group") {
+    if (
+      geofence.ownerType === "plant_group" &&
+      geofence.ownerPlantGroupId === scope.plantGroupId
+    ) {
+      return true;
+    }
+    return (
+      geofence.ownerType === "plant" &&
+      !!geofence.ownerPlantId &&
+      memberPlantIds.includes(geofence.ownerPlantId)
+    );
+  }
+  return geofence.ownerType === "plant" && geofence.ownerPlantId === scope.plantId;
+}
+
+export function contractMatchesScope(
+  contract: { plantId?: string | null; plantGroupId?: string | null },
+  scope: OperationalScope,
+): boolean {
+  const contractScope = operationalScopeFromContract(contract);
+  if (!contractScope) return false;
+  if (scope.kind !== contractScope.kind) return false;
+  if (scope.kind === "plant" && contractScope.kind === "plant") {
+    return scope.plantId === contractScope.plantId;
+  }
+  if (scope.kind === "plant_group" && contractScope.kind === "plant_group") {
+    return scope.plantGroupId === contractScope.plantGroupId;
+  }
+  return false;
+}

@@ -1,8 +1,9 @@
 import { getRepos } from "@/lib/db";
+import { ClientConfigShell } from "@/components/client-config-shell";
+import { ConfirmForm } from "@/components/confirm-form";
 import { AppNav, Card } from "@/components/ui";
-import { ClientAccountSwitcher } from "@/components/account-switcher";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
-import { clientNavLinks } from "@/lib/client-nav";
+import { confirmMessages } from "@/lib/confirm-messages";
 import { plantHref } from "@/lib/navigation";
 
 export const dynamic = "force-dynamic";
@@ -48,12 +49,12 @@ export default async function ClientePlantasPage({
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-5xl space-y-6">
-        <AppNav
-          title="Plantas del cliente"
-          links={clientNavLinks(client.slug)}
+        <ClientConfigShell
+          client={client}
+          title={`Plantas — ${client.name}`}
+          step="plantas"
+          basePath="/cliente/plantas"
         />
-
-        <ClientAccountSwitcher currentSlug={client.slug} basePath="/cliente/plantas" />
 
         <p className="text-sm text-[var(--muted)]">
           Cliente corporativo: <span className="text-white">{client.name}</span>. Una cuenta de
@@ -147,7 +148,15 @@ export default async function ClientePlantasPage({
                   key={p.id}
                   className="rounded border border-white/5 p-3"
                 >
-                  <form action="/api/cliente/plantas" method="post" className="space-y-3">
+                  <ConfirmForm
+                    action="/api/cliente/plantas"
+                    method="post"
+                    className="space-y-3"
+                    getConfirmMessage={(form) => {
+                      const nameInput = form.elements.namedItem("name") as HTMLInputElement | null;
+                      return confirmMessages.savePlant(nameInput?.value || p.name);
+                    }}
+                  >
                     <input type="hidden" name="clientSlug" value={client.slug} />
                     <input type="hidden" name="action" value="update" />
                     <input type="hidden" name="plantId" value={p.id} />
@@ -181,7 +190,7 @@ export default async function ClientePlantasPage({
                         Abrir planta →
                       </a>
                     </div>
-                  </form>
+                  </ConfirmForm>
                 </li>
               ))}
             </ul>

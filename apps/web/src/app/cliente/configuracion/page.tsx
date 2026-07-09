@@ -3,6 +3,7 @@ import { AppNav, Card } from "@/components/ui";
 import { ClientAccountSwitcher } from "@/components/account-switcher";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { clientNavLinks } from "@/lib/client-nav";
+import { CONFIG_STEPS } from "@/lib/config-wizard";
 
 export const dynamic = "force-dynamic";
 
@@ -67,8 +68,8 @@ export default async function ConfiguracionPage({
     );
   }
 
-  const [plants, geofences, routeShifts, contracts, profiles] = await Promise.all([
-    repos.clients.getPlantsForAccount(client.id),
+  const [operationalUnits, geofences, routeShifts, contracts, profiles] = await Promise.all([
+    repos.clients.getOperationalUnits(client.id),
     repos.geofences.findForClient(client.id),
     repos.routes.getRouteShiftsForClient(client.id),
     repos.contracts.findForClient(client.id),
@@ -76,72 +77,66 @@ export default async function ConfiguracionPage({
   ]);
 
   const s = client.slug;
+  const stepCounts: Record<string, number> = {
+    plantas: operationalUnits.length,
+    geocercas: geofences.length,
+    rutas: routeShifts.length,
+    contratos: contracts.length,
+    servicios: profiles.length,
+  };
 
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-5xl space-y-6">
-        <AppNav
-          title={`Configuración — ${client.name}`}
-          links={clientNavLinks(s)}
-        />
+        <AppNav title={`Configuración — ${client.name}`} links={clientNavLinks(s)} />
 
         <ClientAccountSwitcher currentSlug={client.slug} basePath="/cliente/configuracion" />
 
         <p className="text-sm text-[var(--muted)]">
-          Arma un servicio real de punta a punta, sin scripts. Sigue los pasos en orden; al terminar
-          podrás generar las ocurrencias que el sistema verificará automáticamente.
+          Aquí el <span className="text-white">cliente corporativo</span> arma sus servicios de
+          punta a punta. Cada paso es por <span className="text-white">unidad operativa</span> (planta
+          suelta o campus compartido). El carrier no configura esto — solo ve cumplimiento cuando el
+          contrato ya existe.
         </p>
 
+        <Card title="¿Quién configura qué?">
+          <ul className="space-y-2 text-sm text-[var(--muted)]">
+            <li>
+              <span className="text-white">J-Staff</span> — da de alta carriers y clientes; autoriza
+              qué carriers puede contratar cada cliente (Proceso comercial).
+            </li>
+            <li>
+              <span className="text-white">Cliente (Tecma, Honeywell…)</span> — plantas, geocercas,
+              rutas, contratos con <em>sus</em> carriers autorizados, perfiles de servicio.
+            </li>
+            <li>
+              <span className="text-white">Carrier (Juárez Bus…)</span> — flota, GPS y unidades;
+              consulta cumplimiento de los contratos que el cliente le asignó.
+            </li>
+          </ul>
+        </Card>
+
         <div className="grid gap-4 md:grid-cols-2">
-          <Step
-            n={1}
-            title="Plantas"
-            desc="Da de alta las plantas del cliente (dónde operan)."
-            href={withAccount("/cliente/plantas", s)}
-            count={plants.length}
-            ready={plants.length > 0}
-          />
-          <Step
-            n={2}
-            title="Geocercas de destino"
-            desc="Marca el área de llegada de cada planta (centro + radio)."
-            href={withAccount("/cliente/configuracion/geocercas", s)}
-            count={geofences.length}
-            ready={geofences.length > 0}
-          />
-          <Step
-            n={3}
-            title="Rutas y turnos"
-            desc="Por planta: rutas, turnos, trazado KML y programación."
-            href={withAccount("/cliente/configuracion/rutas", s)}
-            count={routeShifts.length}
-            ready={routeShifts.length > 0}
-          />
-          <Step
-            n={4}
-            title="Contratos"
-            desc="Política con el carrier: tolerancia, estrictez y enforcement."
-            href={withAccount("/cliente/configuracion/contratos", s)}
-            count={contracts.length}
-            ready={contracts.length > 0}
-          />
-          <Step
-            n={5}
-            title="Perfiles de servicio"
-            desc="Junta todo y genera las ocurrencias diarias a verificar."
-            href={withAccount("/cliente/configuracion/servicios", s)}
-            count={profiles.length}
-            ready={profiles.length > 0}
-          />
+          {CONFIG_STEPS.map((step) => (
+            <Step
+              key={step.id}
+              n={step.n}
+              title={step.title}
+              desc={step.desc}
+              href={withAccount(step.path, s)}
+              count={stepCounts[step.id] ?? 0}
+              ready={(stepCounts[step.id] ?? 0) > 0}
+            />
+          ))}
         </div>
 
-        <Card title="¿Cómo funciona?">
+        <Card title="Orden recomendado">
           <ol className="list-inside list-decimal space-y-1 text-sm text-[var(--muted)]">
-            <li>Creas plantas y su geocerca de destino.</li>
-            <li>Defines rutas + turnos (con hora límite de llegada).</li>
-            <li>Registras el contrato con el carrier y su política.</li>
-            <li>Creas un perfil de servicio que une contrato + ruta/turno + geocerca + unidades.</li>
-            <li>Generas las ocurrencias del periodo; el cron las verifica contra el GPS.</li>
+            <li>Plantas y campus (agrupa plantas que comparten operación).</li>
+            <li>Geocerca de llegada — en campus suele ser una sola en la entrada.</li>
+            <li>Rutas + turnos + KML por unidad operativa.</li>
+            <li>Contrato con el carrier (política: deadline, tolerancia, evidencia).</li>
+            <li>Perfil de servicio → generar ocurrencias → el cron verifica GPS.</li>
           </ol>
         </Card>
       </div>

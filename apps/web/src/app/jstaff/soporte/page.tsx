@@ -1,5 +1,7 @@
 import { getRepos } from "@/lib/db";
+import { ConfirmForm } from "@/components/confirm-form";
 import { AppNav, Card } from "@/components/ui";
+import { confirmMessages } from "@/lib/confirm-messages";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +31,18 @@ export default async function JStaffSoportePage() {
                   <p className="text-xs text-[var(--muted)]">
                     Evidencia: {row.trip.evidenceStatus} · Viaje {row.trip.id}
                   </p>
-                  <form action={`/api/occurrences/${row.occurrence.id}/verify`} method="post">
+                  <ConfirmForm
+                    action={`/api/occurrences/${row.occurrence.id}/verify`}
+                    method="post"
+                    confirmMessage={confirmMessages.verifyOccurrence(
+                      row.occurrence.serviceDate,
+                      row.contract.name,
+                    )}
+                  >
                     <button type="submit" className="mt-2 text-xs text-[var(--accent)]">
                       Re-sync / verificar
                     </button>
-                  </form>
+                  </ConfirmForm>
                 </li>
               ))
             )}

@@ -22,7 +22,10 @@ export default async function JStaffCuentasPage({
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-5xl space-y-6">
-        <AppNav title="Alta de cuentas" links={[{ href: "/jstaff", label: "← Panel" }]} />
+        <AppNav title="Alta de cuentas" links={[
+          { href: "/jstaff", label: "← Panel" },
+          { href: "/jstaff/comercial", label: "Comercial" },
+        ]} />
 
         {error ? (
           <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
@@ -110,12 +113,23 @@ export default async function JStaffCuentasPage({
                         <p className="font-medium">{a.name}</p>
                         <p className="text-xs text-[var(--muted)]">{a.slug}</p>
                       </div>
-                      <Link
-                        href={withAccount("/cliente", a.slug)}
-                        className="text-[var(--accent)]"
-                      >
-                        Abrir
-                      </Link>
+                      <div className="flex gap-3 text-sm">
+                        <Link href={withAccount("/cliente", a.slug)} className="text-[var(--accent)]">
+                          Panel
+                        </Link>
+                        <Link
+                          href={withAccount("/cliente/configuracion", a.slug)}
+                          className="text-[var(--accent)]"
+                        >
+                          Configurar
+                        </Link>
+                        <Link
+                          href={`/jstaff/comercial?client=${encodeURIComponent(a.slug)}`}
+                          className="text-[var(--accent)]"
+                        >
+                          Carriers
+                        </Link>
+                      </div>
                     </li>
                   ))}
                 </ul>

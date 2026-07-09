@@ -33,6 +33,7 @@ import {
   demoTemplates,
   telemetryPoints,
   telemetryWatermarks,
+  clientCarrierAuthorizations,
 } from "../schema/index.js";
 import type { ContractPolicy, CreateContractInput, CreateServiceProfileInput } from "@jtel/domain";
 
@@ -289,6 +290,40 @@ export class GeofenceRepository {
     return this.db.query.geofences.findMany({
       where: eq(geofences.ownerPlantGroupId, plantGroupId),
       orderBy: (g, { asc }) => [asc(g.name)],
+    });
+  }
+
+  /** Geocercas del alcance: campus + plantas miembro (excepciones) si es grupo. */
+  async findForScope(scope: OperationalScope, clientAccountId: string) {
+    if (scope.kind === "plant") {
+      return this.findForPlant(scope.plantId);
+    }
+
+    const [groupGeofences, clientPlants] = await Promise.all([
+      this.findForPlantGroup(scope.plantGroupId),
+      this.db.query.plants.findMany({
+        where: eq(plants.clientAccountId, clientAccountId),
+      }),
+    ]);
+    const memberIds = clientPlants
+      .filter((p) => p.plantGroupId === scope.plantGroupId)
+      .map((p) => p.id);
+
+    if (memberIds.length === 0) return groupGeofences;
+
+    const plantGeofences =
+      memberIds.length > 0
+        ? await this.db.query.geofences.findMany({
+            where: inArray(geofences.ownerPlantId, memberIds),
+            orderBy: (g, { asc }) => [asc(g.name)],
+          })
+        : [];
+
+    const seen = new Set<string>();
+    return [...groupGeofences, ...plantGeofences].filter((g) => {
+      if (seen.has(g.id)) return false;
+      seen.add(g.id);
+      return true;
     });
   }
 
@@ -580,6 +615,103 @@ export class RouteRepository {
   }
 }
 
+export class CommercialRepository {
+  constructor(private db: Database) {}
+
+  async authorize(data: {
+    clientAccountId: string;
+    carrierAccountId: string;
+    notes?: string;
+  }) {
+    const existing = await this.db.query.clientCarrierAuthorizations.findFirst({
+      where: and(
+        eq(clientCarrierAuthorizations.clientAccountId, data.clientAccountId),
+        eq(clientCarrierAuthorizations.carrierAccountId, data.carrierAccountId),
+      ),
+    });
+
+    if (existing) {
+      const [row] = await this.db
+        .update(clientCarrierAuthorizations)
+        .set({
+          status: "active",
+          ...(data.notes !== undefined ? { notes: data.notes } : {}),
+        })
+        .where(eq(clientCarrierAuthorizations.id, existing.id))
+        .returning();
+      return row!;
+    }
+
+    const [row] = await this.db
+      .insert(clientCarrierAuthorizations)
+      .values({
+        clientAccountId: data.clientAccountId,
+        carrierAccountId: data.carrierAccountId,
+        notes: data.notes,
+        status: "active",
+      })
+      .returning();
+    return row!;
+  }
+
+  async suspend(clientAccountId: string, carrierAccountId: string) {
+    const [row] = await this.db
+      .update(clientCarrierAuthorizations)
+      .set({ status: "suspended" })
+      .where(
+        and(
+          eq(clientCarrierAuthorizations.clientAccountId, clientAccountId),
+          eq(clientCarrierAuthorizations.carrierAccountId, carrierAccountId),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  async isAuthorized(clientAccountId: string, carrierAccountId: string) {
+    const row = await this.db.query.clientCarrierAuthorizations.findFirst({
+      where: and(
+        eq(clientCarrierAuthorizations.clientAccountId, clientAccountId),
+        eq(clientCarrierAuthorizations.carrierAccountId, carrierAccountId),
+        eq(clientCarrierAuthorizations.status, "active"),
+      ),
+    });
+    return !!row;
+  }
+
+  /** Carriers que J-Staff autorizó para este cliente (lista corta para contratos). */
+  async getAuthorizedCarriersForClient(clientAccountId: string) {
+    const rows = await this.db.query.clientCarrierAuthorizations.findMany({
+      where: and(
+        eq(clientCarrierAuthorizations.clientAccountId, clientAccountId),
+        eq(clientCarrierAuthorizations.status, "active"),
+      ),
+      with: { carrier: true },
+      orderBy: (a, { asc }) => [asc(a.createdAt)],
+    });
+    return rows.map((r) => r.carrier!).filter(Boolean);
+  }
+
+  async listForClient(clientAccountId: string) {
+    return this.db.query.clientCarrierAuthorizations.findMany({
+      where: eq(clientCarrierAuthorizations.clientAccountId, clientAccountId),
+      with: { carrier: true, client: true },
+      orderBy: (a, { desc }) => [desc(a.createdAt)],
+    });
+  }
+
+  async listForCarrier(carrierAccountId: string) {
+    return this.db.query.clientCarrierAuthorizations.findMany({
+      where: and(
+        eq(clientCarrierAuthorizations.carrierAccountId, carrierAccountId),
+        eq(clientCarrierAuthorizations.status, "active"),
+      ),
+      with: { client: true },
+      orderBy: (a, { asc }) => [asc(a.createdAt)],
+    });
+  }
+}
+
 export class ContractRepository {
   constructor(private db: Database) {}
 
@@ -609,7 +741,7 @@ export class ContractRepository {
   async findForClient(clientAccountId: string) {
     return this.db.query.serviceContracts.findMany({
       where: eq(serviceContracts.clientAccountId, clientAccountId),
-      with: { profiles: true, plant: true, plantGroup: true },
+      with: { profiles: true, plant: true, plantGroup: true, carrier: true },
     });
   }
 
@@ -620,6 +752,30 @@ export class ContractRepository {
     });
   }
 
+  /** Borrador, demo o activo para la misma unidad operativa + carrier (no suspendido). */
+  async findOpenForScopeAndCarrier(
+    clientAccountId: string,
+    carrierAccountId: string,
+    scope: { plantId?: string | null; plantGroupId?: string | null },
+  ) {
+    const scopeCond = scope.plantId
+      ? and(eq(serviceContracts.plantId, scope.plantId), isNull(serviceContracts.plantGroupId))
+      : scope.plantGroupId
+        ? and(eq(serviceContracts.plantGroupId, scope.plantGroupId), isNull(serviceContracts.plantId))
+        : undefined;
+    if (!scopeCond) return null;
+
+    return this.db.query.serviceContracts.findFirst({
+      where: and(
+        eq(serviceContracts.clientAccountId, clientAccountId),
+        eq(serviceContracts.carrierAccountId, carrierAccountId),
+        scopeCond,
+        inArray(serviceContracts.status, ["draft", "demo", "active"]),
+      ),
+      with: { carrier: true },
+    });
+  }
+
   async activate(id: string) {
     const [contract] = await this.db
       .update(serviceContracts)
@@ -627,6 +783,22 @@ export class ContractRepository {
       .where(eq(serviceContracts.id, id))
       .returning();
     return contract!;
+  }
+
+  async deleteDraft(id: string, clientAccountId: string) {
+    const contract = await this.db.query.serviceContracts.findFirst({
+      where: eq(serviceContracts.id, id),
+      with: { profiles: true },
+    });
+    if (!contract || contract.clientAccountId !== clientAccountId) return null;
+    if (contract.status !== "draft") return null;
+    if (contract.profiles.length > 0) return null;
+
+    const [deleted] = await this.db
+      .delete(serviceContracts)
+      .where(eq(serviceContracts.id, id))
+      .returning();
+    return deleted ?? null;
   }
 }
 
@@ -689,6 +861,35 @@ export class ServiceProfileRepository {
       },
       orderBy: (p, { asc }) => [asc(p.name)],
     });
+  }
+
+  async profileIdsWithOccurrences(profileIds: string[]): Promise<Set<string>> {
+    if (profileIds.length === 0) return new Set();
+    const rows = await this.db
+      .selectDistinct({ profileId: serviceOccurrences.serviceProfileId })
+      .from(serviceOccurrences)
+      .where(inArray(serviceOccurrences.serviceProfileId, profileIds));
+    return new Set(rows.map((r) => r.profileId));
+  }
+
+  async deleteProfile(id: string, clientAccountId: string) {
+    const profile = await this.db.query.serviceProfiles.findFirst({
+      where: eq(serviceProfiles.id, id),
+      with: { contract: true },
+    });
+    if (!profile || profile.contract?.clientAccountId !== clientAccountId) return null;
+
+    const existing = await this.db.query.serviceOccurrences.findFirst({
+      where: eq(serviceOccurrences.serviceProfileId, id),
+      columns: { id: true },
+    });
+    if (existing) return null;
+
+    const [deleted] = await this.db
+      .delete(serviceProfiles)
+      .where(eq(serviceProfiles.id, id))
+      .returning();
+    return deleted ?? null;
   }
 }
 
@@ -1116,6 +1317,7 @@ export function createRepositories(db: Database) {
     geofences: new GeofenceRepository(db),
     fleet: new FleetRepository(db),
     routes: new RouteRepository(db),
+    commercial: new CommercialRepository(db),
     contracts: new ContractRepository(db),
     profiles: new ServiceProfileRepository(db),
     occurrences: new OccurrenceRepository(db),

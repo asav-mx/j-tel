@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
-import { createContractSchema, type EnforcementRules } from "@jtel/domain";
+import { createContractSchema, type EnforcementRules, parseOperationalScope } from "@jtel/domain";
+import { scopeQueryParams } from "@/lib/operational-scope";
 
 function back(request: Request, slug: string, params: Record<string, string>) {
   const url = new URL("/cliente/configuracion/contratos", request.url);
@@ -62,14 +63,55 @@ export async function POST(request: Request) {
       return back(request, client.slug, { error: "Contrato no encontrado." });
     }
     await repos.contracts.activate(contractId);
-    return back(request, client.slug, { created: "activado" });
+    const scope = parseOperationalScope({
+      plantId: contract.plantId,
+      plantGroupId: contract.plantGroupId,
+    });
+    return back(request, client.slug, {
+      created: "activado",
+      ...(scope ? scopeQueryParams(scope) : {}),
+    });
   }
+
+  if (action === "delete") {
+    const contractId = String(formData.get("contractId") ?? "").trim();
+    const contract = contractId ? await repos.contracts.findById(contractId) : null;
+    const scope = contract
+      ? parseOperationalScope({
+          plantId: contract.plantId,
+          plantGroupId: contract.plantGroupId,
+        })
+      : null;
+    const scopeParams = scope ? scopeQueryParams(scope) : {};
+
+    const deleted = contractId
+      ? await repos.contracts.deleteDraft(contractId, client.id)
+      : null;
+    if (!deleted) {
+      return back(request, client.slug, {
+        ...scopeParams,
+        error: "No se pudo eliminar. Solo borradores sin perfiles de servicio.",
+      });
+    }
+    return back(request, client.slug, { ...scopeParams, created: "eliminado" });
+  }
+
+  const plantId = String(formData.get("plantId") ?? "").trim();
+  const plantGroupId = String(formData.get("plantGroupId") ?? "").trim();
+  const scope = parseOperationalScope({ plantId, plantGroupId });
+  if (!scope) {
+    return back(request, client.slug, { error: "Elige una unidad operativa válida." });
+  }
+
+  const resolved = await repos.clients.resolveOperationalScope(client.id, scope);
+  if (!resolved) {
+    return back(request, client.slug, { error: "Unidad operativa no válida." });
+  }
+
+  const scopeParams = scopeQueryParams(resolved);
 
   const name = String(formData.get("name") ?? "").trim();
   const carrierAccountId = String(formData.get("carrierAccountId") ?? "").trim();
-  const target = String(formData.get("target") ?? "plant").trim();
-  const plantId = String(formData.get("plantId") ?? "").trim();
-  const plantGroupId = String(formData.get("plantGroupId") ?? "").trim();
   const arrivalAnticipationMinutes = toInt(formData.get("arrivalAnticipationMinutes"), 15);
   const maxRouteDurationMinutes = toInt(formData.get("maxRouteDurationMinutes"), 60);
   const toleranceMinutes = toInt(formData.get("toleranceMinutes"), 0);
@@ -80,12 +122,15 @@ export async function POST(request: Request) {
   const allowAlternateDestination = formData.get("allowAlternateDestination") === "on";
   const excusableReasons = formData.getAll("excusableReasons").map((r) => String(r));
 
+  const scopeCols =
+    resolved.kind === "plant"
+      ? { plantId: resolved.plantId, plantGroupId: undefined }
+      : { plantGroupId: resolved.plantGroupId, plantId: undefined };
+
   const payload = {
     carrierAccountId,
     clientAccountId: client.id,
-    ...(target === "group"
-      ? { plantGroupId: plantGroupId || undefined }
-      : { plantId: plantId || undefined }),
+    ...scopeCols,
     name,
     status: "draft" as const,
     policy: {
@@ -106,15 +151,42 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     const first = parsed.error.issues[0];
     return back(request, client.slug, {
+      ...scopeParams,
       error: `Revisa los datos: ${first?.path.join(".") || ""} ${first?.message ?? ""}`.trim(),
     });
   }
 
   const carrier = await repos.accounts.findById(parsed.data.carrierAccountId);
   if (!carrier || carrier.type !== "carrier") {
-    return back(request, client.slug, { error: "Elige un carrier válido." });
+    return back(request, client.slug, { ...scopeParams, error: "Elige un carrier válido." });
+  }
+
+  const authorized = await repos.commercial.isAuthorized(client.id, carrier.id);
+  if (!authorized) {
+    return back(request, client.slug, {
+      ...scopeParams,
+      error: "Ese carrier no está autorizado para este cliente. Contacta a JTEL.",
+    });
+  }
+
+  const existing = await repos.contracts.findOpenForScopeAndCarrier(
+    client.id,
+    carrier.id,
+    scopeCols,
+  );
+  if (existing) {
+    const statusLabel =
+      existing.status === "active"
+        ? "activo"
+        : existing.status === "draft"
+          ? "borrador"
+          : existing.status;
+    return back(request, client.slug, {
+      ...scopeParams,
+      error: `Ya existe un contrato ${statusLabel} para ${carrier.name} en esta unidad operativa («${existing.name}»). Actívalo, elimínalo si es borrador, o suspende el anterior.`,
+    });
   }
 
   await repos.contracts.create(parsed.data);
-  return back(request, client.slug, { created: "contrato" });
+  return back(request, client.slug, { ...scopeParams, created: "contrato" });
 }

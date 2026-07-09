@@ -4,6 +4,7 @@ import { AppNav, Card } from "@/components/ui";
 import { ClientAccountSwitcher } from "@/components/account-switcher";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { clientNavLinks } from "@/lib/client-nav";
+import { configHubHref } from "@/lib/config-wizard";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,13 @@ export default async function ClienteDashboardPage({
   const s = client.slug;
   const sections = [
     {
+      title: "Configuración de servicios",
+      desc: "Guía paso a paso: plantas → geocercas → rutas → contratos → perfiles.",
+      href: configHubHref(s),
+      hint: `${contracts.length} contrato(s)`,
+      primary: true,
+    },
+    {
       title: "Cumplimiento",
       desc: "Servicios verificados, evidencia GPS y estado por planta.",
       href: withAccount("/cliente/cumplimiento", s),
@@ -50,15 +58,9 @@ export default async function ClienteDashboardPage({
     },
     {
       title: "Plantas",
-      desc: "Alta de plantas, grupos y alcance operativo.",
+      desc: "Alta de plantas, campus y alcance operativo.",
       href: withAccount("/cliente/plantas", s),
       hint: `${plants.length} planta(s)`,
-    },
-    {
-      title: "Configuración",
-      desc: "Geocercas, rutas, contratos y perfiles de servicio.",
-      href: withAccount("/cliente/configuracion", s),
-      hint: `${contracts.length} contrato(s)`,
     },
     {
       title: "Reportes",
@@ -92,7 +94,11 @@ export default async function ClienteDashboardPage({
             <Link
               key={section.href}
               href={section.href}
-              className="block rounded-xl border border-white/10 bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
+              className={`block rounded-xl border p-5 transition hover:border-[var(--accent)] ${
+                "primary" in section && section.primary
+                  ? "border-[var(--accent)]/40 bg-[var(--accent)]/5"
+                  : "border-white/10 bg-[var(--card)]"
+              }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <h2 className="text-lg font-semibold">{section.title}</h2>

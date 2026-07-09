@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
-import { createServiceProfileSchema } from "@jtel/domain";
+import {
+  createServiceProfileSchema,
+  geofenceMatchesScope,
+  operationalScopeFromContract,
+  parseOperationalScope,
+  scopedRowMatches,
+} from "@jtel/domain";
+import { scopeQueryParams, contractMatchesScope } from "@/lib/operational-scope";
 
 function back(request: Request, slug: string, params: Record<string, string>) {
   const url = new URL("/cliente/configuracion/servicios", request.url);
@@ -11,10 +18,24 @@ function back(request: Request, slug: string, params: Record<string, string>) {
   return NextResponse.redirect(url, 303);
 }
 
+async function memberPlantIdsForScope(
+  repos: ReturnType<typeof getRepos>,
+  clientAccountId: string,
+  scope: NonNullable<ReturnType<typeof parseOperationalScope>>,
+): Promise<string[]> {
+  if (scope.kind !== "plant_group") return [];
+  const plants = await repos.clients.getPlantsForAccount(clientAccountId);
+  return plants.filter((p) => p.plantGroupId === scope.plantGroupId).map((p) => p.id);
+}
+
 export async function POST(request: Request) {
   const formData = await request.formData();
   const clientSlug = String(formData.get("clientSlug") ?? "").trim();
   const action = String(formData.get("action") ?? "create").trim();
+  const plantId = String(formData.get("plantId") ?? "").trim();
+  const plantGroupId = String(formData.get("plantGroupId") ?? "").trim();
+  const formScope = parseOperationalScope({ plantId, plantGroupId });
+  const scopeParams = formScope ? scopeQueryParams(formScope) : {};
 
   const repos = getRepos();
   const client = await repos.accounts.findBySlug(clientSlug);
@@ -29,22 +50,52 @@ export async function POST(request: Request) {
     const fromDate = String(formData.get("fromDate") ?? "").trim();
     const toDate = String(formData.get("toDate") ?? "").trim();
     if (!profileId || !fromDate || !toDate) {
-      return back(request, client.slug, { error: "Elige perfil y rango de fechas." });
+      return back(request, client.slug, { ...scopeParams, error: "Elige perfil y rango de fechas." });
     }
     const from = new Date(`${fromDate}T00:00:00`);
     const to = new Date(`${toDate}T00:00:00`);
     if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
-      return back(request, client.slug, { error: "Rango de fechas inválido." });
+      return back(request, client.slug, { ...scopeParams, error: "Rango de fechas inválido." });
     }
     try {
       const createdIds = await repos.occurrences.generateForProfile(profileId, from, to);
-      return back(request, client.slug, { created: "generado", n: String(createdIds.length) });
+      return back(request, client.slug, {
+        ...scopeParams,
+        created: "generado",
+        n: String(createdIds.length),
+      });
     } catch {
-      return back(request, client.slug, { error: "No se pudieron generar las ocurrencias." });
+      return back(request, client.slug, {
+        ...scopeParams,
+        error: "No se pudieron generar las ocurrencias.",
+      });
     }
   }
 
-  // action === "create"
+  if (action === "delete") {
+    const profileId = String(formData.get("profileId") ?? "").trim();
+    if (!profileId) {
+      return back(request, client.slug, { ...scopeParams, error: "Perfil no indicado." });
+    }
+    const deleted = await repos.profiles.deleteProfile(profileId, client.id);
+    if (!deleted) {
+      return back(request, client.slug, {
+        ...scopeParams,
+        error: "No se puede eliminar: el perfil no existe o ya tiene ocurrencias generadas.",
+      });
+    }
+    return back(request, client.slug, { ...scopeParams, created: "eliminado" });
+  }
+
+  if (!formScope) {
+    return back(request, client.slug, { error: "Elige una unidad operativa." });
+  }
+
+  const scope = await repos.clients.resolveOperationalScope(client.id, formScope);
+  if (!scope) {
+    return back(request, client.slug, { error: "Unidad operativa no válida." });
+  }
+
   const name = String(formData.get("name") ?? "").trim();
   const contractId = String(formData.get("contractId") ?? "").trim();
   const routeShiftId = String(formData.get("routeShiftId") ?? "").trim();
@@ -58,10 +109,45 @@ export async function POST(request: Request) {
 
   const contract = contractId ? await repos.contracts.findById(contractId) : null;
   if (!contract || contract.clientAccountId !== client.id) {
-    return back(request, client.slug, { error: "Contrato no encontrado." });
+    return back(request, client.slug, { ...scopeParams, error: "Contrato no encontrado." });
   }
 
-  // Las unidades deben pertenecer al carrier del contrato.
+  const contractScope = operationalScopeFromContract(contract);
+  if (!contractScope) {
+    return back(request, client.slug, { ...scopeParams, error: "Contrato sin alcance válido." });
+  }
+
+  if (!contractMatchesScope(contract, scope)) {
+    return back(request, client.slug, {
+      ...scopeParams,
+      error: "El contrato no corresponde a la unidad operativa seleccionada.",
+    });
+  }
+
+  const routeShift = routeShiftId ? await repos.routes.findRouteShiftById(routeShiftId) : null;
+  if (!routeShift || routeShift.clientAccountId !== client.id) {
+    return back(request, client.slug, { ...scopeParams, error: "Ruta + turno no válidos." });
+  }
+  if (!scopedRowMatches(routeShift, scope)) {
+    return back(request, client.slug, {
+      ...scopeParams,
+      error: "La ruta + turno no pertenecen a esta unidad operativa.",
+    });
+  }
+
+  const geofence = geofenceId ? await repos.geofences.findById(geofenceId) : null;
+  if (!geofence) {
+    return back(request, client.slug, { ...scopeParams, error: "Geocerca no encontrada." });
+  }
+
+  const memberPlantIds = await memberPlantIdsForScope(repos, client.id, scope);
+  if (!geofenceMatchesScope(geofence, scope, memberPlantIds)) {
+    return back(request, client.slug, {
+      ...scopeParams,
+      error: "La geocerca no corresponde a esta unidad operativa.",
+    });
+  }
+
   const carrierUnits = await repos.fleet.getUnitsForCarrier(contract.carrierAccountId);
   const carrierUnitIds = new Set(carrierUnits.map((u) => u.id));
   const possibleUnitIds = possibleUnitIdsRaw.filter((id) => carrierUnitIds.has(id));
@@ -82,10 +168,11 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     const first = parsed.error.issues[0];
     return back(request, client.slug, {
+      ...scopeParams,
       error: `Revisa los datos: ${first?.path.join(".") || ""} ${first?.message ?? ""}`.trim(),
     });
   }
 
   await repos.profiles.create(parsed.data);
-  return back(request, client.slug, { created: "perfil" });
+  return back(request, client.slug, { ...scopeParams, created: "perfil" });
 }

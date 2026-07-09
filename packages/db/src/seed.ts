@@ -221,6 +221,17 @@ async function seed() {
   await repos.fleet.assignDevice(unit2.id, device2.id, assignStart);
   await repos.fleet.assignDevice(unit3.id, device3.id, assignStart);
 
+  await repos.commercial.authorize({
+    clientAccountId: tecma.id,
+    carrierAccountId: juarezBus.id,
+    notes: "Demo — transporte personal Juárez",
+  });
+  await repos.commercial.authorize({
+    clientAccountId: honeywell.id,
+    carrierAccountId: juarezBus.id,
+    notes: "Demo — transporte personal Juárez",
+  });
+
   const tecmaRoute = await repos.routes.createRoute({
     clientAccountId: tecma.id,
     plantId: tecmaPlant47.id,

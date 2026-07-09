@@ -53,6 +53,10 @@ export const contractStatusEnum = pgEnum("contract_status", [
   "active",
   "suspended",
 ]);
+export const clientCarrierAuthorizationStatusEnum = pgEnum("client_carrier_authorization_status", [
+  "active",
+  "suspended",
+]);
 export const scopeTypeEnum = pgEnum("scope_type", [
   "global",
   "account",
@@ -259,6 +263,30 @@ export const routeKmlVersions = pgTable("route_kml_versions", {
   validTo: timestamp("valid_to", { withTimezone: true, mode: "date" }),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
+
+/** Relación comercial J-Staff: qué carriers puede contratar un cliente. */
+export const clientCarrierAuthorizations = pgTable(
+  "client_carrier_authorizations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientAccountId: uuid("client_account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    carrierAccountId: uuid("carrier_account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    status: clientCarrierAuthorizationStatusEnum("status").notNull().default("active"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("client_carrier_auth_unique_idx").on(
+      table.clientAccountId,
+      table.carrierAccountId,
+    ),
+    index("client_carrier_auth_client_idx").on(table.clientAccountId),
+  ],
+);
 
 export const serviceContracts = pgTable("service_contracts", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -547,6 +575,22 @@ export const telemetryWatermarks = pgTable("telemetry_watermarks", {
   uniqueIndex("telemetry_watermarks_carrier_idx").on(table.carrierAccountId),
 ]);
 
+export const clientCarrierAuthorizationsRelations = relations(
+  clientCarrierAuthorizations,
+  ({ one }) => ({
+    client: one(accounts, {
+      fields: [clientCarrierAuthorizations.clientAccountId],
+      references: [accounts.id],
+      relationName: "clientCarrierAuthAsClient",
+    }),
+    carrier: one(accounts, {
+      fields: [clientCarrierAuthorizations.carrierAccountId],
+      references: [accounts.id],
+      relationName: "clientCarrierAuthAsCarrier",
+    }),
+  }),
+);
+
 export const accountsRelations = relations(accounts, ({ one, many }) => ({
   carrierProfile: one(carrierProfiles),
   clientProfile: one(clientProfiles),
@@ -554,6 +598,12 @@ export const accountsRelations = relations(accounts, ({ one, many }) => ({
   devices: many(devices),
   contractsAsCarrier: many(serviceContracts, { relationName: "carrierContracts" }),
   contractsAsClient: many(serviceContracts, { relationName: "clientContracts" }),
+  authorizedCarriers: many(clientCarrierAuthorizations, {
+    relationName: "clientCarrierAuthAsClient",
+  }),
+  authorizedClients: many(clientCarrierAuthorizations, {
+    relationName: "clientCarrierAuthAsCarrier",
+  }),
 }));
 
 export const unitsRelations = relations(units, ({ one, many }) => ({

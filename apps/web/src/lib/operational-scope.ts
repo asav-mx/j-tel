@@ -1,5 +1,12 @@
 import type { OperationalScope, OperationalUnit } from "@jtel/domain";
-import { operationalUnitLabel } from "@jtel/domain";
+import { contractMatchesScope as domainContractMatchesScope, operationalUnitLabel } from "@jtel/domain";
+
+export function contractMatchesScope(
+  contract: { plantId?: string | null; plantGroupId?: string | null },
+  scope: OperationalScope,
+): boolean {
+  return domainContractMatchesScope(contract, scope);
+}
 
 export function parseScopeFromSearchParams(
   sp: Record<string, string | string[] | undefined> | undefined,

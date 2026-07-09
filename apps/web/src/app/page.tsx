@@ -50,7 +50,7 @@ export default async function HomePage() {
           <section className="rounded-xl border border-white/10 bg-[var(--card)] p-6">
             <h2 className="text-lg font-semibold">Cara Cliente</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Cumplimiento, reportes y penalizaciones
+              Cumplimiento, reportes y configuración de servicios (plantas → contratos)
             </p>
             <ul className="mt-4 space-y-2 text-sm">
               {clients.length === 0 ? (

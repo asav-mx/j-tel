@@ -1,7 +1,7 @@
 import { getRepos } from "@/lib/db";
+import { ClientConfigShell } from "@/components/client-config-shell";
 import { AppNav, Card } from "@/components/ui";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
-import { clientNavLinks } from "@/lib/client-nav";
 import { computeExpectedDeadline } from "@jtel/domain";
 import {
   findOperationalUnit,
@@ -90,12 +90,11 @@ export default async function RutasPage({
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-5xl space-y-6">
-        <AppNav
-          title="Rutas y turnos"
-          links={[
-            { href: withAccount("/cliente/configuracion", client.slug), label: "← Configuración" },
-            ...clientNavLinks(client.slug).slice(1, 3),
-          ]}
+        <ClientConfigShell
+          client={client}
+          title={`Rutas y turnos — ${client.name}`}
+          step="rutas"
+          basePath="/cliente/configuracion/rutas"
         />
 
         <p className="text-sm text-[var(--muted)]">

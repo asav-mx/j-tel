@@ -1,6 +1,17 @@
 import { getRepos } from "@/lib/db";
+import { ClientConfigShell } from "@/components/client-config-shell";
+import { ConfirmForm } from "@/components/confirm-form";
 import { AppNav, Card } from "@/components/ui";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
+import { confirmMessages } from "@/lib/confirm-messages";
+import {
+  contractMatchesScope,
+  findOperationalUnit,
+  operationalUnitLabel,
+  parseScopeFromSearchParams,
+  unitHref,
+} from "@/lib/operational-scope";
+import { operationalScopeFromContract } from "@jtel/domain";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +33,19 @@ const EXCUSABLES: Array<{ value: string; label: string }> = [
 const createdLabels: Record<string, string> = {
   contrato: "Contrato creado (en borrador). Actívalo cuando esté listo.",
   activado: "Contrato activado.",
+  eliminado: "Borrador eliminado.",
 };
+
+function contractScopeLabel(
+  c: { plantId?: string | null; plantGroupId?: string | null },
+  units: Awaited<ReturnType<ReturnType<typeof getRepos>["clients"]["getOperationalUnits"]>>,
+): string {
+  const scope = operationalScopeFromContract(c);
+  if (!scope) return "—";
+  const unit = findOperationalUnit(units, scope);
+  if (!unit) return "—";
+  return unit.kind === "plant_group" ? `Campus: ${operationalUnitLabel(unit)}` : operationalUnitLabel(unit);
+}
 
 export default async function ContratosPage({
   searchParams,
@@ -32,6 +55,7 @@ export default async function ContratosPage({
   const sp = searchParams ? await searchParams : undefined;
   const error = typeof sp?.error === "string" ? sp.error : null;
   const created = typeof sp?.created === "string" ? sp.created : null;
+  const scope = parseScopeFromSearchParams(sp);
 
   const repos = getRepos();
   const client = await resolveAccountByType("client", searchParams);
@@ -51,28 +75,81 @@ export default async function ContratosPage({
     );
   }
 
-  const [carriers, plants, groups, contracts] = await Promise.all([
-    repos.accounts.listByType("carrier"),
-    repos.clients.getPlantsForAccount(client.id),
-    repos.clients.getPlantGroupsForAccount(client.id),
+  const [authorizedCarriers, operationalUnits, contracts] = await Promise.all([
+    repos.commercial.getAuthorizedCarriersForClient(client.id),
+    repos.clients.getOperationalUnits(client.id),
     repos.contracts.findForClient(client.id),
   ]);
-  const plantById = new Map(plants.map((p) => [p.id, p.name] as const));
-  const groupById = new Map(groups.map((g) => [g.id, g.name] as const));
+
+  const activeUnit = findOperationalUnit(operationalUnits, scope);
+  const scopedContracts = scope
+    ? contracts.filter((c) => contractMatchesScope(c, scope))
+    : contracts;
+
+  const scopeHidden = scope ? (
+    scope.kind === "plant" ? (
+      <input type="hidden" name="plantId" value={scope.plantId} />
+    ) : (
+      <input type="hidden" name="plantGroupId" value={scope.plantGroupId} />
+    )
+  ) : null;
+
+  const openByCarrier = new Map(
+    scopedContracts
+      .filter((c) => c.status !== "suspended")
+      .map((c) => [c.carrierAccountId, c] as const),
+  );
+  const allCarriersHaveOpenContract =
+    authorizedCarriers.length > 0 &&
+    authorizedCarriers.every((c) => openByCarrier.has(c.id));
 
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-5xl space-y-6">
-        <AppNav
-          title="Contratos"
-          links={[{ href: withAccount("/cliente/configuracion", client.slug), label: "← Configuración" }]}
+        <ClientConfigShell
+          client={client}
+          title={`Contratos — ${client.name}`}
+          step="contratos"
+          basePath="/cliente/configuracion/contratos"
         />
 
         <p className="text-sm text-[var(--muted)]">
           El contrato define la <span className="text-white">política</span> entre este cliente y un
-          carrier: tolerancia, estrictez de ruta, márgenes de evidencia y las reglas de castigo
-          (enforcement). Aplica a una planta o a un grupo de plantas.
+          carrier. Aplica a una <span className="text-white">unidad operativa</span>: planta
+          independiente o campus compartido. Desde ahí se calculan deadline, ventana GPS y reglas de
+          cumplimiento.
         </p>
+
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-black/20 p-3 text-sm">
+          <span className="text-[var(--muted)]">Unidad operativa:</span>
+          {operationalUnits.length === 0 ? (
+            <span className="text-[var(--muted)]">
+              Sin plantas ni campus —{" "}
+              <a href={withAccount("/cliente/plantas", client.slug)} className="text-[var(--accent)]">
+                créalos primero
+              </a>
+              .
+            </span>
+          ) : (
+            operationalUnits.map((u) => {
+              const active = activeUnit?.id === u.id && activeUnit.kind === u.kind;
+              return (
+                <a
+                  key={`${u.kind}-${u.id}`}
+                  href={unitHref("/cliente/configuracion/contratos", client.slug, u)}
+                  className={`rounded-full px-3 py-1 ${
+                    active
+                      ? "bg-[var(--accent)] font-medium text-black"
+                      : "border border-white/10 hover:border-[var(--accent)]"
+                  }`}
+                >
+                  {u.kind === "plant_group" ? "Campus: " : ""}
+                  {operationalUnitLabel(u)}
+                </a>
+              );
+            })
+          )}
+        </div>
 
         {error ? (
           <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
@@ -85,82 +162,65 @@ export default async function ContratosPage({
           </div>
         ) : null}
 
-        {carriers.length === 0 || plants.length === 0 ? (
-          <Card title="Faltan requisitos">
+        {!activeUnit || !scope ? (
+          <Card title="Elige una unidad operativa">
             <p className="text-sm text-[var(--muted)]">
-              Para crear un contrato necesitas al menos{" "}
-              {carriers.length === 0 ? "un carrier (créalo en J-Staff → Cuentas)" : null}
-              {carriers.length === 0 && plants.length === 0 ? " y " : null}
-              {plants.length === 0 ? (
-                <a href={withAccount("/cliente/plantas", client.slug)} className="text-[var(--accent)]">
-                  una planta
-                </a>
-              ) : null}
-              .
+              Selecciona arriba la planta o campus para crear y ver sus contratos.
+            </p>
+          </Card>
+        ) : authorizedCarriers.length === 0 ? (
+          <Card title="Sin carriers autorizados">
+            <p className="text-sm text-[var(--muted)]">
+              Este cliente aún no tiene carriers autorizados por J-Staff. El catálogo de transportistas
+              es privado de la plataforma — solicita a JTEL que autorice al carrier correcto antes de
+              crear contratos.
+            </p>
+          </Card>
+        ) : allCarriersHaveOpenContract ? (
+          <Card title={`Contrato existente — ${operationalUnitLabel(activeUnit!)}`}>
+            <p className="text-sm text-[var(--muted)]">
+              Ya hay un contrato en borrador o activo para cada carrier autorizado en esta unidad.
+              Activa el borrador que quieras usar o elimina los duplicados de abajo.
             </p>
           </Card>
         ) : (
-          <Card title="Nuevo contrato">
-            <form action="/api/cliente/contratos" method="post" className="space-y-4">
+          <Card title={`Nuevo contrato — ${operationalUnitLabel(activeUnit)}`}>
+            <p className="mb-3 text-xs text-[var(--muted)]">
+              Solo puede existir un contrato (borrador o activo) por carrier y unidad operativa.
+            </p>
+            <ConfirmForm
+              action="/api/cliente/contratos"
+              method="post"
+              className="space-y-4"
+              confirmMessage={confirmMessages.createContract(operationalUnitLabel(activeUnit))}
+            >
               <input type="hidden" name="clientSlug" value={client.slug} />
               <input type="hidden" name="action" value="create" />
+              {scopeHidden}
 
               <div className="grid gap-3 md:grid-cols-2">
                 <label className={labelClass}>
                   Nombre del contrato
-                  <input name="name" required className={inputClass} placeholder="Ej. Ruta Poniente 2026" />
+                  <input name="name" required className={inputClass} placeholder="Ej. Transporte Personal 2026" />
                 </label>
-                <label className={labelClass}>
-                  Carrier
-                  <select name="carrierAccountId" required className={inputClass} defaultValue="">
-                    <option value="" disabled>
-                      Elige carrier…
-                    </option>
-                    {carriers.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
+                  <label className={labelClass}>
+                    Carrier autorizado
+                    <select name="carrierAccountId" required className={inputClass} defaultValue="">
+                      <option value="" disabled>
+                        Elige carrier…
                       </option>
-                    ))}
+                    {authorizedCarriers.map((c) => {
+                      const taken = openByCarrier.has(c.id);
+                      return (
+                        <option key={c.id} value={c.id} disabled={taken}>
+                          {c.name}
+                          {taken ? " (ya tiene contrato)" : ""}
+                        </option>
+                      );
+                    })}
                   </select>
                 </label>
               </div>
-
-              <fieldset className="rounded-lg border border-white/10 p-3">
-                <legend className="px-1 text-sm text-[var(--muted)]">Alcance</legend>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <label className={labelClass}>
-                    Aplica a
-                    <select name="target" className={inputClass} defaultValue="plant">
-                      <option value="plant">Una planta</option>
-                      <option value="group">Un grupo de plantas</option>
-                    </select>
-                  </label>
-                  <div className="grid gap-3">
-                    <label className={labelClass}>
-                      Planta
-                      <select name="plantId" className={inputClass} defaultValue="">
-                        <option value="">—</option>
-                        {plants.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} ({p.code})
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className={labelClass}>
-                      Grupo (si elegiste &quot;grupo&quot;)
-                      <select name="plantGroupId" className={inputClass} defaultValue="">
-                        <option value="">—</option>
-                        {groups.map((g) => (
-                          <option key={g.id} value={g.id}>
-                            {g.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                </div>
-              </fieldset>
 
               <fieldset className="rounded-lg border border-white/10 p-3">
                 <legend className="px-1 text-sm text-[var(--muted)]">Política</legend>
@@ -208,9 +268,6 @@ export default async function ContratosPage({
                       defaultValue={60}
                       className={inputClass}
                     />
-                    <span className="mt-1 block text-xs text-[var(--muted)]">
-                      Cuándo empieza a observarse el GPS (ej. 60 → 5:45 si deadline 6:45).
-                    </span>
                   </label>
                   <label className={labelClass}>
                     Duración máx. de ruta (min)
@@ -290,24 +347,23 @@ export default async function ContratosPage({
                     />
                   </label>
                 </div>
-                <p className="mt-2 text-xs text-[var(--muted)]">
-                  Los campos de rebate/reembolso solo se usan según el tipo elegido.
-                </p>
               </fieldset>
 
               <button type="submit" className={btnClass}>
                 Crear contrato
               </button>
-            </form>
+            </ConfirmForm>
           </Card>
         )}
 
-        <Card title={`Contratos (${contracts.length})`}>
-          {contracts.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">Sin contratos todavía.</p>
+        <Card title={`Contratos${activeUnit ? ` — ${operationalUnitLabel(activeUnit)}` : ""} (${scopedContracts.length})`}>
+          {scopedContracts.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">
+              {scope ? "Sin contratos para esta unidad." : "Elige una unidad operativa arriba."}
+            </p>
           ) : (
             <ul className="space-y-2 text-sm">
-              {contracts.map((c) => (
+              {scopedContracts.map((c) => (
                 <li
                   key={c.id}
                   className="flex flex-wrap items-center justify-between gap-3 rounded border border-white/5 p-3"
@@ -320,28 +376,48 @@ export default async function ContratosPage({
                       </span>
                     </p>
                     <p className="text-xs text-[var(--muted)]">
-                      {c.plantId
-                        ? `Planta: ${plantById.get(c.plantId) ?? "—"}`
-                        : c.plantGroupId
-                          ? `Grupo: ${groupById.get(c.plantGroupId) ?? "—"}`
-                          : "—"}{" "}
-                      · Tolerancia {c.policy.toleranceMinutes} min · {c.policy.routeStrictness} ·{" "}
+                      {c.carrier?.name ?? "—"} · {contractScopeLabel(c, operationalUnits)} ·
+                      Tolerancia {c.policy.toleranceMinutes} min · anticipación{" "}
+                      {c.policy.arrivalAnticipationMinutes ?? 15} min · {c.policy.routeStrictness} ·{" "}
                       {c.profiles.length} perfil(es)
                     </p>
                   </div>
-                  {c.status !== "active" ? (
-                    <form action="/api/cliente/contratos" method="post">
-                      <input type="hidden" name="clientSlug" value={client.slug} />
-                      <input type="hidden" name="action" value="activate" />
-                      <input type="hidden" name="contractId" value={c.id} />
-                      <button
-                        type="submit"
-                        className="rounded-lg border border-white/10 px-3 py-1.5 text-xs hover:border-[var(--accent)]"
+                  <div className="flex flex-wrap gap-2">
+                    {c.status !== "active" ? (
+                      <ConfirmForm
+                        action="/api/cliente/contratos"
+                        method="post"
+                        confirmMessage={confirmMessages.activateContract(c.name)}
                       >
-                        Activar
-                      </button>
-                    </form>
-                  ) : null}
+                        <input type="hidden" name="clientSlug" value={client.slug} />
+                        <input type="hidden" name="action" value="activate" />
+                        <input type="hidden" name="contractId" value={c.id} />
+                        <button
+                          type="submit"
+                          className="rounded-lg border border-white/10 px-3 py-1.5 text-xs hover:border-[var(--accent)]"
+                        >
+                          Activar
+                        </button>
+                      </ConfirmForm>
+                    ) : null}
+                    {c.status === "draft" && c.profiles.length === 0 ? (
+                      <ConfirmForm
+                        action="/api/cliente/contratos"
+                        method="post"
+                        confirmMessage={confirmMessages.deleteContractDraft(c.name)}
+                      >
+                        <input type="hidden" name="clientSlug" value={client.slug} />
+                        <input type="hidden" name="action" value="delete" />
+                        <input type="hidden" name="contractId" value={c.id} />
+                        <button
+                          type="submit"
+                          className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-200 hover:border-red-400"
+                        >
+                          Eliminar borrador
+                        </button>
+                      </ConfirmForm>
+                    ) : null}
+                  </div>
                 </li>
               ))}
             </ul>

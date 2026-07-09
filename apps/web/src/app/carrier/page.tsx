@@ -1,5 +1,6 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
+import { CarrierAccountSwitcher } from "@/components/carrier-account-switcher";
 import { OccurrenceTable, toOccurrenceRow } from "@/components/occurrence-table";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 
@@ -68,6 +69,16 @@ export default async function CarrierDashboardPage({
             { href: withAccount("/carrier/reportes", carrier.slug), label: "Reportes al cliente" },
           ]}
         />
+
+        <CarrierAccountSwitcher currentSlug={carrier.slug} basePath="/carrier" />
+
+        <Card title="Tu rol como carrier">
+          <p className="text-sm text-[var(--muted)]">
+            Configuras <span className="text-white">flota, GPS y unidades</span>. Los{" "}
+            <span className="text-white">contratos y perfiles de servicio</span> los crea cada cliente
+            en su panel → Configuración. Aquí ves el cumplimiento de los contratos que te asignaron.
+          </p>
+        </Card>
 
         <div className="mb-6 grid gap-4 md:grid-cols-4">
           <Card title="Unidades">{units.length}</Card>
