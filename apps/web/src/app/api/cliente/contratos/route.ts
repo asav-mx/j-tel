@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
-import { createContractSchema, type EnforcementRules, parseOperationalScope, operationalScopeColumns } from "@jtel/domain";
+import { createContractSchema, contractPolicySchema, type EnforcementRules, parseOperationalScope, operationalScopeColumns } from "@jtel/domain";
 import { configApiBack } from "@/lib/config-api-back";
 
 function back(
@@ -92,6 +92,42 @@ export async function POST(request: Request) {
     }
     await repos.contracts.updateValidity(contractId, validFrom, validTo);
     return back(request, client.slug, scope, { created: "vigencia" });
+  }
+
+  if (action === "updatePolicy") {
+    const contractId = String(formData.get("contractId") ?? "").trim();
+    const contract = contractId ? await repos.contracts.findById(contractId) : null;
+    if (!contract || contract.clientAccountId !== client.id) {
+      return back(request, client.slug, null, { error: "Contrato no encontrado." });
+    }
+    const scope = parseOperationalScope({
+      plantId: contract.plantId,
+      plantGroupId: contract.plantGroupId,
+    });
+
+    const policyPayload = {
+      toleranceMinutes: toInt(formData.get("toleranceMinutes"), 0),
+      arrivalAnticipationMinutes: toInt(formData.get("arrivalAnticipationMinutes"), 15),
+      maxRouteDurationMinutes: toInt(formData.get("maxRouteDurationMinutes"), 60),
+      verificationGraceMinutes: toInt(formData.get("verificationGraceMinutes"), 15),
+      routeStrictness: String(formData.get("routeStrictness") ?? "destino_only").trim(),
+      allowAlternateDestination: formData.get("allowAlternateDestination") === "on",
+      excusableReasons: formData.getAll("excusableReasons").map((r) => String(r)),
+      enforcementRules: buildEnforcementRule(formData),
+      evidenceMarginMinutesBefore: toInt(formData.get("evidenceMarginMinutesBefore"), 60),
+      evidenceMarginMinutesAfter: toInt(formData.get("evidenceMarginMinutesAfter"), 30),
+    };
+
+    const parsed = contractPolicySchema.safeParse(policyPayload);
+    if (!parsed.success) {
+      const first = parsed.error.issues[0];
+      return back(request, client.slug, scope, {
+        error: `Revisa la política: ${first?.path.join(".") || ""} ${first?.message ?? ""}`.trim(),
+      });
+    }
+
+    await repos.contracts.updatePolicy(contractId, parsed.data);
+    return back(request, client.slug, scope, { created: "politica" });
   }
 
   if (action === "delete") {

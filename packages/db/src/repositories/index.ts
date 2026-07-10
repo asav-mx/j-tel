@@ -508,13 +508,39 @@ export class RouteRepository {
     waypoints?: Array<{ lat: number; lng: number }>;
     validFrom?: Date;
   }) {
+    const existing = await this.db.query.routeKmlVersions.findMany({
+      where: eq(routeKmlVersions.routeId, data.routeId),
+      orderBy: (v, { asc }) => [asc(v.validFrom)],
+    });
+
+    // Primera versión: aplicar desde la creación de la ruta (cubre historial).
+    // Versiones siguientes: cierran la anterior y empiezan "ahora".
+    let validFrom = data.validFrom;
+    if (!validFrom) {
+      if (existing.length === 0) {
+        const route = await this.db.query.routes.findFirst({
+          where: eq(routes.id, data.routeId),
+        });
+        validFrom = route?.createdAt ?? new Date(0);
+      } else {
+        validFrom = new Date();
+        const previous = existing[existing.length - 1]!;
+        if (!previous.validTo || previous.validTo > validFrom) {
+          await this.db
+            .update(routeKmlVersions)
+            .set({ validTo: validFrom })
+            .where(eq(routeKmlVersions.id, previous.id));
+        }
+      }
+    }
+
     const [version] = await this.db
       .insert(routeKmlVersions)
       .values({
         routeId: data.routeId,
         kmlContent: data.kmlContent,
         waypoints: data.waypoints ?? [],
-        validFrom: data.validFrom ?? new Date(),
+        validFrom,
       })
       .returning();
     return version!;
@@ -532,13 +558,25 @@ export class RouteRepository {
   }
 
   async getKmlVersionForDate(routeId: string, at: Date) {
-    return this.db.query.routeKmlVersions.findFirst({
+    const exact = await this.db.query.routeKmlVersions.findFirst({
       where: and(
         eq(routeKmlVersions.routeId, routeId),
         lte(routeKmlVersions.validFrom, at),
         or(isNull(routeKmlVersions.validTo), gte(routeKmlVersions.validTo, at)),
       ),
+      orderBy: (v, { desc }) => [desc(v.validFrom)],
     });
+    if (exact) return exact;
+
+    // Si el KML se subió después del servicio, usar la versión más antigua
+    // (el trazado describe la ruta aunque se haya cargado tarde).
+    const earliest = await this.db.query.routeKmlVersions.findFirst({
+      where: eq(routeKmlVersions.routeId, routeId),
+      orderBy: (v, { asc }) => [asc(v.validFrom)],
+    });
+    if (earliest && earliest.validFrom > at) return earliest;
+
+    return null;
   }
 
   async getRoutesForScope(scope: OperationalScope) {
@@ -1007,6 +1045,15 @@ export class ContractRepository {
     return contract!;
   }
 
+  async updatePolicy(id: string, policy: ContractPolicy) {
+    const [contract] = await this.db
+      .update(serviceContracts)
+      .set({ policy, updatedAt: new Date() })
+      .where(eq(serviceContracts.id, id))
+      .returning();
+    return contract!;
+  }
+
   async deleteDraft(id: string, clientAccountId: string) {
     const contract = await this.db.query.serviceContracts.findFirst({
       where: eq(serviceContracts.id, id),
@@ -1446,6 +1493,14 @@ export class OccurrenceRepository {
   }
 
   async findPendingVerification(now: Date) {
+    const deadlinePassed = lte(
+      sql`${serviceOccurrences.expectedDeadline} + (${serviceContracts.policy}->>'verificationGraceMinutes')::int * interval '1 minute'`,
+      now.toISOString(),
+    );
+
+    // 1) Nunca verificados
+    // 2) Pendientes por evidencia con GPS indisponible → reintento (p. ej. cuando
+    //    la memoria propia ya se puso al día).
     const rows = await this.db
       .select({
         occurrence: serviceOccurrences,
@@ -1458,10 +1513,13 @@ export class OccurrenceRepository {
       .leftJoin(complianceFacts, eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id))
       .where(
         and(
-          isNull(complianceFacts.id),
-          lte(
-            sql`${serviceOccurrences.expectedDeadline} + (${serviceContracts.policy}->>'verificationGraceMinutes')::int * interval '1 minute'`,
-            now.toISOString(),
+          deadlinePassed,
+          or(
+            isNull(complianceFacts.id),
+            and(
+              eq(complianceFacts.status, "pendiente_evidencia"),
+              eq(trips.evidenceStatus, "indisponible"),
+            ),
           ),
         ),
       );
@@ -1506,7 +1564,7 @@ export class OccurrenceRepository {
     return this.db.query.serviceOccurrences.findMany({
       where: and(...(conditions as Parameters<typeof and>)),
       with: {
-        complianceFact: true,
+        complianceFact: { with: { observedUnit: true } },
         trip: true,
         profile: { with: { routeShift: { with: { route: true, shift: true } } } },
         contract: { with: { plant: true, plantGroup: true, carrier: true, client: true } },
@@ -1529,7 +1587,7 @@ export class OccurrenceRepository {
     return this.db.query.serviceOccurrences.findMany({
       where: and(...conditions),
       with: {
-        complianceFact: true,
+        complianceFact: { with: { observedUnit: true } },
         trip: true,
         profile: { with: { routeShift: { with: { route: true, shift: true } } } },
         contract: { with: { plant: true, plantGroup: true, carrier: true, client: true } },
@@ -1542,7 +1600,7 @@ export class OccurrenceRepository {
     return this.db.query.serviceOccurrences.findMany({
       where: eq(serviceOccurrences.contractId, contractId),
       with: {
-        complianceFact: true,
+        complianceFact: { with: { observedUnit: true } },
         trip: true,
         profile: { with: { routeShift: { with: { route: true, shift: true } } } },
         contract: { with: { plant: true, plantGroup: true, carrier: true, client: true } },
@@ -1555,7 +1613,7 @@ export class OccurrenceRepository {
     return this.db.query.serviceOccurrences.findFirst({
       where: eq(serviceOccurrences.id, id),
       with: {
-        complianceFact: true,
+        complianceFact: { with: { observedUnit: true } },
         trip: { with: { evidencePoints: true } },
         profile: { with: { contract: true, geofence: true, routeShift: true } },
       },
@@ -1588,6 +1646,13 @@ export class ComplianceRepository {
       .onConflictDoNothing()
       .returning();
     return fact!;
+  }
+
+  /** Borra el hecho de cumplimiento (p. ej. para reintentar pendiente_evidencia). */
+  async deleteFactForOccurrence(serviceOccurrenceId: string) {
+    await this.db
+      .delete(complianceFacts)
+      .where(eq(complianceFacts.serviceOccurrenceId, serviceOccurrenceId));
   }
 
   async addLedgerEntry(data: {
@@ -1638,6 +1703,10 @@ export class EvidenceRepository {
       where: eq(evidencePoints.tripId, tripId),
       orderBy: (points, { asc }) => [asc(points.recordedAt)],
     });
+  }
+
+  async clearPointsForTrip(tripId: string) {
+    await this.db.delete(evidencePoints).where(eq(evidencePoints.tripId, tripId));
   }
 
   async updateTripStatus(
@@ -1798,6 +1867,19 @@ export class TelemetryRepository {
     if (to) conditions.push(lte(telemetryPoints.recordedAt, to));
     return this.db.query.telemetryPoints.findMany({
       where: and(...conditions),
+      orderBy: (p, { asc }) => [asc(p.recordedAt)],
+    });
+  }
+
+  /** Puntos de la memoria propia para un conjunto de IMEIs en una ventana. */
+  async getForImeis(imeis: string[], from: Date, to: Date) {
+    if (imeis.length === 0) return [];
+    return this.db.query.telemetryPoints.findMany({
+      where: and(
+        inArray(telemetryPoints.imei, imeis),
+        gte(telemetryPoints.recordedAt, from),
+        lte(telemetryPoints.recordedAt, to),
+      ),
       orderBy: (p, { asc }) => [asc(p.recordedAt)],
     });
   }

@@ -124,21 +124,27 @@ export function verifyService(input: VerificationInput): VerificationResult {
 
   steps.push({ step: "evidencia", result: "disponible", details: { count: input.evidencePoints.length } });
 
+  const hasKml = (input.kmlWaypoints?.length ?? 0) > 0;
+  // Si hay KML, siempre lo usamos para distinguir rutas (aunque la política sea
+  // destino_only). kml_full exige ≥80%; destino_only exige un mínimo razonable
+  // y entre candidatas gana la mejor coincidencia con el trazado.
+  const minKmlPct = input.routeStrictness === "kml_full" ? 80 : hasKml ? 40 : 0;
+
   const byImei = groupPointsByImei(input.evidencePoints);
 
   for (const [imei, points] of byImei) {
-    const arrivalAt = findGeofenceEntry(points, input.geofencePolygon);
-    const routeMatchPct =
-      input.routeStrictness === "kml_full" && input.kmlWaypoints
-        ? computeRouteMatchPct(points, input.kmlWaypoints)
-        : arrivalAt
-          ? 100
-          : 0;
+    const sorted = [...points].sort(
+      (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
+    );
+    const arrivalAt = findGeofenceEntry(sorted, input.geofencePolygon);
+    const routeMatchPct = hasKml
+      ? computeRouteMatchPct(sorted, input.kmlWaypoints!)
+      : arrivalAt
+        ? 100
+        : 0;
 
     const servedRoute =
-      input.routeStrictness === "kml_full"
-        ? routeMatchPct >= 80
-        : arrivalAt !== null;
+      arrivalAt !== null && (!hasKml || routeMatchPct >= minKmlPct);
 
     candidateUnits.push({
       unitId: imei,
@@ -150,20 +156,34 @@ export function verifyService(input: VerificationInput): VerificationResult {
     steps.push({
       step: "candidata",
       result: servedRoute ? "sirvio_ruta" : "no_sirvio",
-      details: { imei, arrivalAt: arrivalAt?.toISOString(), routeMatchPct },
+      details: {
+        imei,
+        arrivalAt: arrivalAt?.toISOString(),
+        routeMatchPct,
+        hasKml,
+      },
     });
   }
 
   const serving = candidateUnits
     .filter((c) => c.servedRoute)
     .sort((a, b) => {
+      // Con KML: gana quien mejor siguió la ruta; empate → quien llegó primero.
+      if (hasKml) {
+        const diff = (b.routeMatchPct ?? 0) - (a.routeMatchPct ?? 0);
+        if (Math.abs(diff) >= 1) return diff;
+      }
       if (!a.arrivalAt) return 1;
       if (!b.arrivalAt) return -1;
       return a.arrivalAt.getTime() - b.arrivalAt.getTime();
     });
 
   if (serving.length === 0) {
-    steps.push({ step: "decision", result: "no_cumplido", details: { reason: "ninguna_unidad_sirvio" } });
+    steps.push({
+      step: "decision",
+      result: "no_cumplido",
+      details: { reason: hasKml ? "ninguna_unidad_coincidio_ruta" : "ninguna_unidad_sirvio" },
+    });
     return {
       status: "no_cumplido",
       timing: null,
@@ -198,6 +218,8 @@ export function verifyService(input: VerificationInput): VerificationResult {
       timing,
       lateExcusable,
       arrivalAt: winner.arrivalAt?.toISOString(),
+      routeMatchPct: winner.routeMatchPct,
+      hasKml,
     },
   });
 

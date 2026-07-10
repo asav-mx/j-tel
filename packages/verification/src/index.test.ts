@@ -81,6 +81,70 @@ describe("verifyService", () => {
     const result = verifyService({ ...baseInput, evidencePoints: [] });
     expect(result.status).not.toBe("no_cumplido");
   });
+  it("prefers the unit that best matches KML when several enter the geofence", () => {
+    const waypoints = [
+      { lat: 31.6800, lng: -106.4300 },
+      { lat: 31.6850, lng: -106.4280 },
+      { lat: 31.6909, lng: -106.4234 },
+    ];
+    const result = verifyService({
+      ...baseInput,
+      kmlWaypoints: waypoints,
+      evidencePoints: [
+        // Unidad A: solo llega al destino (mala coincidencia de ruta)
+        {
+          imei: "unit-a",
+          latitude: 31.6909,
+          longitude: -106.4234,
+          timestamp: new Date("2026-07-07T12:40:00Z"),
+        },
+        // Unidad B: sigue el KML y llega un poco después
+        {
+          imei: "unit-b",
+          latitude: 31.6800,
+          longitude: -106.4300,
+          timestamp: new Date("2026-07-07T12:30:00Z"),
+        },
+        {
+          imei: "unit-b",
+          latitude: 31.6850,
+          longitude: -106.4280,
+          timestamp: new Date("2026-07-07T12:35:00Z"),
+        },
+        {
+          imei: "unit-b",
+          latitude: 31.6909,
+          longitude: -106.4234,
+          timestamp: new Date("2026-07-07T12:44:00Z"),
+        },
+      ],
+    });
+    expect(result.status).toBe("cumplido");
+    expect(result.observedUnitId).toBe("unit-b");
+    expect(result.observedRouteMatchPct).toBe(100);
+  });
+
+  it("rejects geofence-only arrival when KML match is too low", () => {
+    const waypoints = [
+      { lat: 31.6500, lng: -106.4500 },
+      { lat: 31.6600, lng: -106.4400 },
+      { lat: 31.6700, lng: -106.4350 },
+    ];
+    const result = verifyService({
+      ...baseInput,
+      kmlWaypoints: waypoints,
+      evidencePoints: [
+        {
+          imei: "unit-a",
+          latitude: 31.6909,
+          longitude: -106.4234,
+          timestamp: new Date("2026-07-07T12:44:00Z"),
+        },
+      ],
+    });
+    expect(result.status).toBe("no_cumplido");
+    expect(result.observedUnitId).toBeNull();
+  });
 });
 
 describe("pointInPolygon", () => {

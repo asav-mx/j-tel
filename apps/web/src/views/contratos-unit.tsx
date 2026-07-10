@@ -33,6 +33,7 @@ const createdLabels: Record<string, string> = {
   activado: "Contrato activado.",
   eliminado: "Borrador eliminado.",
   vigencia: "Vigencia del contrato actualizada.",
+  politica: "Política del contrato actualizada.",
 };
 
 function contractScopeLabel(
@@ -425,6 +426,231 @@ export async function ContratosUnitView({
                       Guardar vigencia
                     </button>
                   </ConfirmForm>
+
+                  <details className="border-t border-white/5 pt-2">
+                    <summary className="cursor-pointer text-sm font-medium text-[var(--accent)]">
+                      Ver / editar política (ventana GPS, tolerancia, ruta…)
+                    </summary>
+                    <ConfirmForm
+                      action="/api/cliente/contratos"
+                      method="post"
+                      className="mt-3 space-y-4"
+                      confirmMessage={confirmMessages.updatePolicy(c.name)}
+                    >
+                      <input type="hidden" name="clientSlug" value={client.slug} />
+                      <input type="hidden" name="action" value="updatePolicy" />
+                      <input type="hidden" name="contractId" value={c.id} />
+
+                      <fieldset className="rounded-lg border border-white/10 p-3">
+                        <legend className="px-1 text-sm text-[var(--muted)]">Política</legend>
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <label className={labelClass}>
+                            Anticipación de llegada (min antes del turno)
+                            <input
+                              name="arrivalAnticipationMinutes"
+                              type="number"
+                              min={0}
+                              defaultValue={c.policy.arrivalAnticipationMinutes ?? 15}
+                              className={inputClass}
+                            />
+                          </label>
+                          <label className={labelClass}>
+                            Tolerancia puntualidad (min)
+                            <input
+                              name="toleranceMinutes"
+                              type="number"
+                              min={0}
+                              defaultValue={c.policy.toleranceMinutes}
+                              className={inputClass}
+                            />
+                          </label>
+                          <label className={labelClass}>
+                            Gracia de verificación (min)
+                            <input
+                              name="verificationGraceMinutes"
+                              type="number"
+                              min={0}
+                              defaultValue={c.policy.verificationGraceMinutes ?? 15}
+                              className={inputClass}
+                            />
+                          </label>
+                          <label className={labelClass}>
+                            Estrictez de ruta
+                            <select
+                              name="routeStrictness"
+                              className={inputClass}
+                              defaultValue={c.policy.routeStrictness}
+                            >
+                              <option value="destino_only">Solo destino</option>
+                              <option value="kml_full">Ruta completa (waypoints)</option>
+                            </select>
+                          </label>
+                          <label className={labelClass}>
+                            Margen evidencia antes (min)
+                            <input
+                              name="evidenceMarginMinutesBefore"
+                              type="number"
+                              min={0}
+                              defaultValue={c.policy.evidenceMarginMinutesBefore ?? 60}
+                              className={inputClass}
+                            />
+                          </label>
+                          <label className={labelClass}>
+                            Margen evidencia después (min)
+                            <input
+                              name="evidenceMarginMinutesAfter"
+                              type="number"
+                              min={0}
+                              defaultValue={c.policy.evidenceMarginMinutesAfter ?? 30}
+                              className={inputClass}
+                            />
+                          </label>
+                          <label className={labelClass}>
+                            Duración máx. de ruta (min)
+                            <input
+                              name="maxRouteDurationMinutes"
+                              type="number"
+                              min={1}
+                              defaultValue={c.policy.maxRouteDurationMinutes ?? 60}
+                              className={inputClass}
+                            />
+                          </label>
+                          <label className="mt-6 flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              name="allowAlternateDestination"
+                              defaultChecked={c.policy.allowAlternateDestination}
+                            />
+                            Permitir destino alterno
+                          </label>
+                        </div>
+                        <p className="mt-2 text-xs text-[var(--muted)]">
+                          Ventana GPS = deadline − margen antes → deadline + gracia + margen después.
+                          Hoy: −{c.policy.evidenceMarginMinutesBefore ?? 60} / +
+                          {(c.policy.verificationGraceMinutes ?? 15) +
+                            (c.policy.evidenceMarginMinutesAfter ?? 30)}{" "}
+                          min.
+                        </p>
+                      </fieldset>
+
+                      <fieldset className="rounded-lg border border-white/10 p-3">
+                        <legend className="px-1 text-sm text-[var(--muted)]">Motivos excusables</legend>
+                        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                          {EXCUSABLES.map((e) => (
+                            <label key={e.value} className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                name="excusableReasons"
+                                value={e.value}
+                                defaultChecked={(c.policy.excusableReasons ?? []).includes(
+                                  e.value as (typeof c.policy.excusableReasons)[number],
+                                )}
+                              />
+                              {e.label}
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
+
+                      {(() => {
+                        const rule = c.policy.enforcementRules?.[0];
+                        return (
+                          <fieldset className="rounded-lg border border-white/10 p-3">
+                            <legend className="px-1 text-sm text-[var(--muted)]">
+                              Regla de enforcement
+                            </legend>
+                            <div className="grid gap-3 md:grid-cols-3">
+                              <label className={labelClass}>
+                                Tipo
+                                <select
+                                  name="enforcementType"
+                                  className={inputClass}
+                                  defaultValue={rule?.type ?? ""}
+                                >
+                                  <option value="">Ninguna</option>
+                                  <option value="no_pago_viaje">No pago del viaje</option>
+                                  <option value="rebate_escalonado">Rebate escalonado</option>
+                                  <option value="reembolso">Reembolso</option>
+                                </select>
+                              </label>
+                              <label className={labelClass}>
+                                Tolerancia de la regla (min)
+                                <input
+                                  name="enforcementTolerance"
+                                  type="number"
+                                  min={1}
+                                  defaultValue={
+                                    rule && "toleranceMinutes" in rule
+                                      ? rule.toleranceMinutes
+                                      : 5
+                                  }
+                                  className={inputClass}
+                                />
+                              </label>
+                              <label className={labelClass}>
+                                Reembolso: monto
+                                <input
+                                  name="reembolsoAmount"
+                                  type="number"
+                                  min={0}
+                                  defaultValue={
+                                    rule?.type === "reembolso" ? (rule.amount ?? "") : ""
+                                  }
+                                  className={inputClass}
+                                />
+                              </label>
+                              <label className={labelClass}>
+                                Rebate base (%)
+                                <input
+                                  name="baseRebatePercent"
+                                  type="number"
+                                  step="0.1"
+                                  defaultValue={
+                                    rule?.type === "rebate_escalonado"
+                                      ? rule.baseRebatePercent
+                                      : 0
+                                  }
+                                  className={inputClass}
+                                />
+                              </label>
+                              <label className={labelClass}>
+                                Fallas para base
+                                <input
+                                  name="baseFailureCount"
+                                  type="number"
+                                  min={1}
+                                  defaultValue={
+                                    rule?.type === "rebate_escalonado"
+                                      ? rule.baseFailureCount
+                                      : 1
+                                  }
+                                  className={inputClass}
+                                />
+                              </label>
+                              <label className={labelClass}>
+                                Rebate adicional (%)
+                                <input
+                                  name="additionalRebatePercent"
+                                  type="number"
+                                  step="0.1"
+                                  defaultValue={
+                                    rule?.type === "rebate_escalonado"
+                                      ? rule.additionalRebatePercent
+                                      : 0
+                                  }
+                                  className={inputClass}
+                                />
+                              </label>
+                            </div>
+                          </fieldset>
+                        );
+                      })()}
+
+                      <button type="submit" className={btnClass}>
+                        Guardar política
+                      </button>
+                    </ConfirmForm>
+                  </details>
                 </li>
               ))}
             </ul>

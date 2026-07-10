@@ -21,6 +21,7 @@ export function unitNavLinks(unit: OperationalUnit, clientSlug: string, clientNa
     { href: unitComplianceHref(unit, clientSlug), label: "Cumplimiento" },
     { href: unitConfigHubHref(unit, clientSlug), label: "Configuración" },
     { href: unitContratosHref(unit, clientSlug), label: "Contratos" },
+    { href: withAccount("/cliente/notificaciones", clientSlug), label: "Notificaciones" },
     { href: withAccount("/cliente", clientSlug), label: `← ${clientName}` },
   ];
 }

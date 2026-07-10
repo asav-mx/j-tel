@@ -15,6 +15,8 @@ export const confirmMessages = {
     `¿Autorizar a {__selectLabel:carrierAccountId} para trabajar con ${client}? El cliente podrá crear contratos con este carrier.`,
   suspendCarrier: (carrier: string, client: string) =>
     `¿Suspender a ${carrier} para ${client}? No podrá usarse en contratos nuevos hasta reautorizar.`,
+  updatePolicy: (name: string) =>
+    `¿Guardar la política de «${name}»? Afecta verificaciones nuevas (ventana GPS, tolerancia, estrictez de ruta).`,
   verifyOccurrence: (date: string, contract: string) =>
     `¿Re-sincronizar y verificar el servicio del ${date} (${contract})?`,
   savePlantTemplate:

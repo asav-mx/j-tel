@@ -48,9 +48,15 @@ async function main() {
     umbrellaPassword: process.env.UMBRELLA_GPS_PASSWORD ?? "",
   };
 
-  const archiver = new ArchiverService(repos, config);
+  const catchUp = process.env.ARCHIVE_CATCHUP === "1";
+  const archiver = new ArchiverService(repos, config, {
+    chunkHours: catchUp ? 1 : 2,
+    maxChunksPerRun: catchUp ? 30 : 12,
+    // Lotes chicos: con muchos IMEIs Umbrella a veces responde vacío.
+    imeiBatchSize: catchUp ? 3 : 5,
+  });
 
-  console.log("Archivando telemetría…");
+  console.log(catchUp ? "Catch-up archivando…" : "Archivando telemetría…");
   const summary = await archiver.archiveAll();
 
   for (const c of summary.carriers) {
@@ -58,7 +64,7 @@ async function main() {
       ? `omitido (${c.skipped})`
       : c.error
         ? `ERROR: ${c.error}`
-        : `equipos=${c.imeis} traídos=${c.fetched} guardados=${c.saved} · ventana ${c.from} → ${c.to}`;
+        : `equipos=${c.imeis} trozos=${c.chunks ?? 0} traídos=${c.fetched} guardados=${c.saved} · ventana ${c.from} → ${c.to}`;
     console.log(`- ${c.carrierName}: ${detail}`);
     if (!c.skipped && !c.error) {
       const total = await repos.telemetry.countForCarrier(c.carrierAccountId);

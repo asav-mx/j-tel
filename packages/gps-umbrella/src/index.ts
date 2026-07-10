@@ -57,10 +57,9 @@ export class UmbrellaGpsProvider implements GpsProvider {
   }
 
   private async fetchJson<T>(url: string): Promise<T> {
-    // Umbrella limita a ~1 req/seg y devuelve 429 ("Too Many Requests") cuando
-    // dos consultas caen muy seguidas (p. ej. el cron de verificación y el
-    // archivador). Reintentamos con espera creciente antes de rendirnos.
-    const backoffsMs = [2000, 5000, 10000];
+    // Umbrella admite ~10 llamadas/minuto. Ante 429 esperamos lo suficiente
+    // para que se renueve la cuota antes de reintentar.
+    const backoffsMs = [15_000, 30_000, 45_000];
     let lastStatus = 0;
 
     for (let attempt = 0; attempt <= backoffsMs.length; attempt++) {
@@ -70,8 +69,6 @@ export class UmbrellaGpsProvider implements GpsProvider {
       }
       lastStatus = response.status;
       if (response.status !== 429 || attempt === backoffsMs.length) {
-        // Incluimos un extracto del cuerpo para saber el motivo real que
-        // reporta Umbrella (p. ej. "API calls quota exceeded").
         const body = await response.text().catch(() => "");
         const snippet = body.slice(0, 200).replace(/\s+/g, " ").trim();
         throw new Error(
@@ -136,10 +133,9 @@ export class UmbrellaGpsProvider implements GpsProvider {
     const maxPages = 50;
 
     for (let page = 0; page < maxPages; page++) {
-      // Umbrella limita a ~1 request/segundo. Espaciamos TODAS las llamadas
-      // (incluida la primera página) para no toparnos con "API calls quota
-      // exceeded", que además vuelve cuando dos consultas caen muy seguidas.
-      await sleep(1100);
+      // Umbrella admite máximo ~10 llamadas/minuto ("API calls quota exceeded").
+      // Espaciamos TODAS las páginas ≥6.5s para no tumbar el archivador ni el cron.
+      await sleep(6500);
 
       let url = `${this.baseUrl}/api/HistoryLocation?Token=${encodeURIComponent(token)}`;
       url += `&BeginGMT=${encodeURIComponent(query.beginGmt.toISOString())}`;
@@ -151,6 +147,11 @@ export class UmbrellaGpsProvider implements GpsProvider {
       }
 
       const env = await this.fetchJson<UmbrellaEnvelope<UmbrellaLocation[]>>(url);
+      if (env && env.state === false) {
+        throw new Error(
+          `Umbrella HistoryLocation state:false — ${env.message || "sin detalle"}`,
+        );
+      }
       const locations = env?.value ?? [];
 
       if (locations.length === 0) break;
@@ -222,29 +223,34 @@ export interface EvidenceIngestInput {
 
 export async function ingestEvidenceForTrip(
   provider: UmbrellaGpsProvider,
-  input: EvidenceIngestInput,
+  input: EvidenceIngestInput & { imeiBatchSize?: number },
 ): Promise<{ pointCount: number; status: "disponible" | "parcial" | "indisponible" }> {
   const token = await provider.login();
+  const batchSize = input.imeiBatchSize ?? 3;
+  const allPoints: Awaited<ReturnType<UmbrellaGpsProvider["getHistoryLocations"]>> = [];
 
-  let points;
   try {
-    points = await provider.getHistoryLocations(token, {
-      imeis: input.imeis,
-      beginGmt: input.windowStart,
-      endGmt: input.windowEnd,
-    });
+    for (let i = 0; i < input.imeis.length; i += batchSize) {
+      const batch = input.imeis.slice(i, i + batchSize);
+      const points = await provider.getHistoryLocations(token, {
+        imeis: batch,
+        beginGmt: input.windowStart,
+        endGmt: input.windowEnd,
+      });
+      allPoints.push(...points);
+    }
   } catch {
     await input.updateStatus("indisponible");
     return { pointCount: 0, status: "indisponible" };
   }
 
-  if (points.length === 0) {
+  if (allPoints.length === 0) {
     await input.updateStatus("indisponible");
     return { pointCount: 0, status: "indisponible" };
   }
 
   const resolved = await Promise.all(
-    points.map(async (p) => {
+    allPoints.map(async (p) => {
       const unit = await input.resolveUnit(p.imei, p.timestamp);
       return {
         imei: p.imei,

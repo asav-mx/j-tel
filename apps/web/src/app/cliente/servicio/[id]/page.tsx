@@ -1,7 +1,13 @@
-import { NavBar } from "@/components/ui";
 import { ServiceDetailView } from "@/components/service-detail-view";
+import { UnitShell } from "@/components/unit-shell";
 import { loadServiceDetail } from "@/lib/service-detail-data";
+import { getRepos } from "@/lib/db";
 import { withAccount } from "@/lib/account-context";
+import {
+  unitComplianceHref,
+  unitContratosHref,
+} from "@/lib/unit-routes";
+import type { OperationalUnit } from "@jtel/domain";
 
 export const dynamic = "force-dynamic";
 
@@ -17,17 +23,59 @@ export default async function ClienteServicioPage({
   const accountSlug = typeof sp?.account === "string" ? sp.account : undefined;
   const data = await loadServiceDetail(id, { showEnforcement: true });
 
+  const slug = accountSlug ?? data.clientSlug ?? undefined;
+  const repos = getRepos();
+
+  let unit: OperationalUnit | null = null;
+  if (data.plantGroupId) {
+    const group = await repos.clients.getPlantGroupById(data.plantGroupId);
+    if (group) {
+      const plants = await repos.clients.getPlantsForAccount(group.clientAccountId);
+      unit = {
+        kind: "plant_group",
+        id: group.id,
+        name: group.name,
+        memberPlants: plants
+          .filter((p) => p.plantGroupId === group.id)
+          .map((p) => ({ id: p.id, name: p.name, code: p.code })),
+      };
+    }
+  } else if (data.plantId) {
+    const plant = await repos.clients.getPlantById(data.plantId);
+    if (plant) {
+      unit = {
+        kind: "plant",
+        id: plant.id,
+        name: plant.name,
+        code: plant.code,
+      };
+    }
+  }
+
+  const client = {
+    slug: slug ?? data.clientSlug ?? "cliente",
+    name: data.clientName,
+  };
+
+  const complianceHref = unit
+    ? unitComplianceHref(unit, client.slug)
+    : withAccount("/cliente/cumplimiento", client.slug);
+  const contratosHref = unit
+    ? unitContratosHref(unit, client.slug)
+    : withAccount("/cliente/configuracion/contratos", client.slug);
+
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-4xl">
-        <NavBar
-          title={`Servicio ${data.serviceDate}`}
-          links={[{ href: withAccount("/cliente/cumplimiento", accountSlug), label: "← Cumplimiento" }]}
-        />
+        {unit ? (
+          <UnitShell client={client} unit={unit} title={`Servicio ${data.serviceDate}`} />
+        ) : null}
         <ServiceDetailView
           data={data}
-          backHref={withAccount("/cliente/cumplimiento", accountSlug)}
+          backHref={complianceHref}
           backLabel="← Volver a cumplimiento"
+          contractHref={contratosHref}
+          contractLabel={`Ver contrato: ${data.contractName}`}
         />
       </div>
     </main>

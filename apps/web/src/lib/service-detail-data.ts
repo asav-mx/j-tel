@@ -19,6 +19,15 @@ export interface ServiceDetailData {
   observedArrivalAt: string | null;
   timing: string | null;
   evidenceStatus: string | null;
+  /** Ventana GPS del contrato (viaje). */
+  evidenceWindowStart: string | null;
+  evidenceWindowEnd: string | null;
+  evidenceMarginBeforeMinutes: number | null;
+  evidenceMarginAfterMinutes: number | null;
+  toleranceMinutes: number | null;
+  /** Primer / último punto GPS de la unidad observada. */
+  evidenceFirstAt: string | null;
+  evidenceLastAt: string | null;
   pointCount: number;
   mapPoints: MapPoint[];
   geofencePolygon: MapPolygon;
@@ -26,6 +35,12 @@ export interface ServiceDetailData {
   enforcement: Array<{ description: string; applies: boolean }>;
   showEnforcement: boolean;
   ledger: unknown[];
+  /** Para navegación de vuelta a la unidad / contrato. */
+  clientSlug: string | null;
+  contractId: string;
+  plantId: string | null;
+  plantGroupId: string | null;
+  contractName: string;
 }
 
 async function unitLabel(
@@ -81,13 +96,26 @@ export async function loadServiceDetail(
   const policy = contract.policy as ContractPolicy;
 
   const evidencePoints = occurrence.trip?.evidencePoints ?? [];
-  const mapPoints: MapPoint[] = evidencePoints
+  const observedUnitId = fact?.observedUnitId ?? null;
+
+  // Mapa: solo el recorrido de la unidad observada (si no, no dibujar "toda la flota").
+  const relevantEvidence = observedUnitId
+    ? evidencePoints.filter((p) => p.unitId === observedUnitId)
+    : [];
+
+  const mapPoints: MapPoint[] = relevantEvidence
     .map((p) => ({
       lat: p.latitude,
       lng: p.longitude,
       at: p.recordedAt.toISOString(),
     }))
     .sort((a, b) => a.at.localeCompare(b.at));
+
+  // Downsample para no saturar Leaflet (máx. ~400 puntos).
+  const mapPointsDisplay =
+    mapPoints.length <= 400
+      ? mapPoints
+      : mapPoints.filter((_, i) => i % Math.ceil(mapPoints.length / 400) === 0 || i === mapPoints.length - 1);
 
   const geofence = occurrence.profile?.geofence;
   const geofencePolygon: MapPolygon = (geofence?.polygon as MapPolygon | undefined) ?? [];
@@ -111,6 +139,12 @@ export async function loadServiceDetail(
     unitLabel(repos, contract.carrierAccountId, fact?.observedUnitId),
   ]);
 
+  const trip = occurrence.trip;
+  const evidenceFirstAt = mapPoints[0]?.at ?? null;
+  const evidenceLastAt = mapPoints[mapPoints.length - 1]?.at ?? null;
+  const afterMinutes =
+    (policy.verificationGraceMinutes ?? 0) + (policy.evidenceMarginMinutesAfter ?? 0);
+
   return {
     occurrenceId: occurrence.id,
     serviceDate: occurrence.serviceDate,
@@ -124,13 +158,25 @@ export async function loadServiceDetail(
     observedUnitLabel,
     observedArrivalAt: fact?.observedArrivalAt?.toISOString() ?? null,
     timing: fact?.timing ?? null,
-    evidenceStatus: occurrence.trip?.evidenceStatus ?? null,
+    evidenceStatus: trip?.evidenceStatus ?? null,
+    evidenceWindowStart: trip?.evidenceWindowStart?.toISOString() ?? null,
+    evidenceWindowEnd: trip?.evidenceWindowEnd?.toISOString() ?? null,
+    evidenceMarginBeforeMinutes: policy.evidenceMarginMinutesBefore ?? null,
+    evidenceMarginAfterMinutes: afterMinutes,
+    toleranceMinutes: policy.toleranceMinutes ?? null,
+    evidenceFirstAt,
+    evidenceLastAt,
     pointCount: mapPoints.length,
-    mapPoints,
+    mapPoints: mapPointsDisplay,
     geofencePolygon,
     arrivalPoint,
     enforcement,
     showEnforcement: options.showEnforcement !== false,
     ledger,
+    clientSlug: client?.slug ?? null,
+    contractId: contract.id,
+    plantId: contract.plantId ?? null,
+    plantGroupId: contract.plantGroupId ?? null,
+    contractName: contract.name,
   };
 }

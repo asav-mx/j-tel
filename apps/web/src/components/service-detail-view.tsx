@@ -20,10 +20,14 @@ export function ServiceDetailView({
   data,
   backHref,
   backLabel,
+  contractHref,
+  contractLabel,
 }: {
   data: ServiceDetailData;
   backHref: string;
   backLabel: string;
+  contractHref?: string;
+  contractLabel?: string;
 }) {
   return (
     <>
@@ -37,6 +41,14 @@ export function ServiceDetailView({
 
       <p className="mb-6 text-sm text-[var(--muted)]">
         {data.profileName} · Deadline {formatDateTime(data.expectedDeadline)}
+        {contractHref ? (
+          <>
+            {" · "}
+            <a href={contractHref} className="text-[var(--accent)] hover:underline">
+              {contractLabel ?? "Ver contrato"}
+            </a>
+          </>
+        ) : null}
       </p>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -45,6 +57,29 @@ export function ServiceDetailView({
             <div className="flex justify-between gap-4">
               <dt className="text-[var(--muted)]">Deadline</dt>
               <dd>{formatDateTime(data.expectedDeadline)}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-[var(--muted)]">Tolerancia</dt>
+              <dd>
+                {data.toleranceMinutes != null ? `±${data.toleranceMinutes} min` : "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-[var(--muted)]">Ventana GPS</dt>
+              <dd className="text-right">
+                {data.evidenceWindowStart && data.evidenceWindowEnd
+                  ? `${formatDateTime(data.evidenceWindowStart)} → ${formatDateTime(data.evidenceWindowEnd)}`
+                  : "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-[var(--muted)]">Márgenes</dt>
+              <dd>
+                {data.evidenceMarginBeforeMinutes != null &&
+                data.evidenceMarginAfterMinutes != null
+                  ? `−${data.evidenceMarginBeforeMinutes} / +${data.evidenceMarginAfterMinutes} min`
+                  : "—"}
+              </dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-[var(--muted)]">Unidad referencia</dt>
@@ -67,6 +102,14 @@ export function ServiceDetailView({
               <dt className="text-[var(--muted)]">Puntualidad</dt>
               <dd>{data.timing ? (timingLabels[data.timing] ?? data.timing) : "—"}</dd>
             </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-[var(--muted)]">GPS unidad</dt>
+              <dd className="text-right">
+                {data.evidenceFirstAt && data.evidenceLastAt
+                  ? `${formatDateTime(data.evidenceFirstAt)} → ${formatDateTime(data.evidenceLastAt)}`
+                  : "—"}
+              </dd>
+            </div>
           </dl>
         </Card>
       </div>
@@ -76,8 +119,8 @@ export function ServiceDetailView({
           <p className="mb-3 text-sm text-[var(--muted)]">
             Estado de ingesta: {data.evidenceStatus ?? "—"}
             {data.pointCount === 0
-              ? " · Aún no hay puntos en la evidencia de este viaje."
-              : " · Línea verde = recorrido; área azul = geocerca destino; punto amarillo = llegada observada."}
+              ? " · Aún no hay puntos de la unidad observada en este viaje."
+              : " · Línea verde = recorrido de la unidad observada; área azul = geocerca; punto amarillo = llegada."}
           </p>
           <ServiceEvidenceMap
             points={data.mapPoints}
@@ -110,10 +153,15 @@ export function ServiceDetailView({
         </pre>
       </details>
 
-      <p className="mt-6">
+      <p className="mt-6 flex flex-wrap gap-4">
         <a href={backHref} className="text-sm text-[var(--accent)]">
           {backLabel}
         </a>
+        {contractHref ? (
+          <a href={contractHref} className="text-sm text-[var(--accent)]">
+            {contractLabel ?? "Ver contrato"}
+          </a>
+        ) : null}
       </p>
     </>
   );

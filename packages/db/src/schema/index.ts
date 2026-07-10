@@ -779,3 +779,14 @@ export const serviceOccurrencesRelations = relations(serviceOccurrences, ({ one 
     references: [complianceFacts.serviceOccurrenceId],
   }),
 }));
+
+export const complianceFactsRelations = relations(complianceFacts, ({ one }) => ({
+  occurrence: one(serviceOccurrences, {
+    fields: [complianceFacts.serviceOccurrenceId],
+    references: [serviceOccurrences.id],
+  }),
+  observedUnit: one(units, {
+    fields: [complianceFacts.observedUnitId],
+    references: [units.id],
+  }),
+}));
