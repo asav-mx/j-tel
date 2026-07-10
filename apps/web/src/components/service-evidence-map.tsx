@@ -2,15 +2,21 @@
 
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef } from "react";
-import type { MapPoint, MapPolygon } from "@/lib/service-detail-data";
+import type { MapPoint, MapPolygon, MapWaypoint } from "@/lib/service-detail-data";
 
 export interface ServiceEvidenceMapProps {
   points: MapPoint[];
   geofence: MapPolygon;
   arrival: MapPoint | null;
+  kmlWaypoints?: MapWaypoint[];
 }
 
-export function ServiceEvidenceMap({ points, geofence, arrival }: ServiceEvidenceMapProps) {
+export function ServiceEvidenceMap({
+  points,
+  geofence,
+  arrival,
+  kmlWaypoints = [],
+}: ServiceEvidenceMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
 
@@ -56,12 +62,27 @@ export function ServiceEvidenceMap({ points, geofence, arrival }: ServiceEvidenc
           .bindTooltip("Geocerca destino", { sticky: true });
       }
 
+      if (kmlWaypoints.length >= 2) {
+        const kmlTrack = kmlWaypoints.map((p) => {
+          bounds.push([p.lat, p.lng]);
+          return L.latLng(p.lat, p.lng);
+        });
+        L.polyline(kmlTrack, {
+          color: "#a78bfa",
+          weight: 3,
+          opacity: 0.7,
+          dashArray: "6 8",
+        })
+          .addTo(map)
+          .bindTooltip("Ruta KML esperada", { sticky: true });
+      }
+
       if (points.length > 0) {
         const track = points.map((p) => {
           bounds.push([p.lat, p.lng]);
           return L.latLng(p.lat, p.lng);
         });
-        L.polyline(track, { color: "#22c55e", weight: 3, opacity: 0.85 }).addTo(map);
+        L.polyline(track, { color: "#22c55e", weight: 3, opacity: 0.9 }).addTo(map);
       }
 
       if (arrival) {
@@ -91,7 +112,7 @@ export function ServiceEvidenceMap({ points, geofence, arrival }: ServiceEvidenc
         mapRef.current = null;
       }
     };
-  }, [points, geofence, arrival]);
+  }, [points, geofence, arrival, kmlWaypoints]);
 
   return (
     <div

@@ -103,7 +103,7 @@ export function ServiceDetailView({
               <dd>{data.timing ? (timingLabels[data.timing] ?? data.timing) : "—"}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-[var(--muted)]">GPS unidad</dt>
+              <dt className="text-[var(--muted)]">GPS en ruta</dt>
               <dd className="text-right">
                 {data.evidenceFirstAt && data.evidenceLastAt
                   ? `${formatDateTime(data.evidenceFirstAt)} → ${formatDateTime(data.evidenceLastAt)}`
@@ -115,17 +115,21 @@ export function ServiceDetailView({
       </div>
 
       <div className="mt-6">
-        <Card title={`Evidencia GPS (${data.pointCount} puntos)`}>
+        <Card title={`Evidencia GPS (${data.pointCount} puntos en ruta)`}>
           <p className="mb-3 text-sm text-[var(--muted)]">
             Estado de ingesta: {data.evidenceStatus ?? "—"}
+            {data.unitPointsInWindow > data.pointCount
+              ? ` · ${data.unitPointsInWindow} pts en ventana del contrato; se muestran solo los del corredor KML / llegada.`
+              : null}
             {data.pointCount === 0
               ? " · Aún no hay puntos de la unidad observada en este viaje."
-              : " · Línea verde = recorrido de la unidad observada; área azul = geocerca; punto amarillo = llegada."}
+              : " · Verde = GPS observado en ruta; morado punteado = KML esperado; azul = geocerca; amarillo = llegada."}
           </p>
           <ServiceEvidenceMap
             points={data.mapPoints}
             geofence={data.geofencePolygon}
             arrival={data.arrivalPoint}
+            kmlWaypoints={data.kmlWaypoints}
           />
         </Card>
       </div>

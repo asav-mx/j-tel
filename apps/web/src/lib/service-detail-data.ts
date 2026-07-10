@@ -4,6 +4,7 @@ import { computeEnforcement, type ContractPolicy } from "@jtel/domain";
 
 export type MapPoint = { lat: number; lng: number; at: string };
 export type MapPolygon = Array<{ lat: number; lng: number }>;
+export type MapWaypoint = { lat: number; lng: number };
 
 export interface ServiceDetailData {
   occurrenceId: string;
@@ -25,11 +26,15 @@ export interface ServiceDetailData {
   evidenceMarginBeforeMinutes: number | null;
   evidenceMarginAfterMinutes: number | null;
   toleranceMinutes: number | null;
-  /** Primer / último punto GPS de la unidad observada. */
+  /** Primer / último punto del trazo mostrado (corredor KML / llegada). */
   evidenceFirstAt: string | null;
   evidenceLastAt: string | null;
+  /** Puntos GPS de la unidad en toda la ventana del contrato. */
+  unitPointsInWindow: number;
   pointCount: number;
   mapPoints: MapPoint[];
+  /** Trazado esperado (KML) para comparar en el mapa. */
+  kmlWaypoints: MapWaypoint[];
   geofencePolygon: MapPolygon;
   arrivalPoint: MapPoint | null;
   enforcement: Array<{ description: string; applies: boolean }>;
@@ -68,6 +73,50 @@ function closestPoint(points: MapPoint[], target: Date): MapPoint | null {
   return best;
 }
 
+function haversineKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) *
+      Math.cos((b.lat * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(x));
+}
+
+/** Recorta el GPS al tramo útil: cerca del KML y alrededor de la llegada. */
+function clipTrackToRoute(
+  points: MapPoint[],
+  kml: MapWaypoint[],
+  arrivalAt: Date | null,
+  maxRouteDurationMinutes: number,
+  corridorKm = 0.6,
+): MapPoint[] {
+  if (points.length === 0) return [];
+
+  let scoped = points;
+  if (arrivalAt) {
+    const fromMs = arrivalAt.getTime() - maxRouteDurationMinutes * 60_000;
+    const toMs = arrivalAt.getTime() + 15 * 60_000;
+    const inWindow = points.filter((p) => {
+      const t = new Date(p.at).getTime();
+      return t >= fromMs && t <= toMs;
+    });
+    if (inWindow.length > 0) scoped = inWindow;
+  }
+
+  if (kml.length === 0) return scoped;
+
+  const nearRoute = scoped.filter((p) =>
+    kml.some((wp) => haversineKm(p, wp) <= corridorKm),
+  );
+  // Si el filtro deja muy poco, no vaciar el mapa: usar el recorte temporal.
+  return nearRoute.length >= 3 ? nearRoute : scoped;
+}
+
 export async function loadServiceDetail(
   occurrenceId: string,
   options: { carrierAccountId?: string; showEnforcement?: boolean } = {},
@@ -98,18 +147,35 @@ export async function loadServiceDetail(
   const evidencePoints = occurrence.trip?.evidencePoints ?? [];
   const observedUnitId = fact?.observedUnitId ?? null;
 
-  // Mapa: solo el recorrido de la unidad observada (si no, no dibujar "toda la flota").
-  const relevantEvidence = observedUnitId
+  // Mapa: solo la unidad observada, recortada al corredor KML / llegada
+  // (no todo lo que hizo en la ventana del contrato).
+  const unitEvidence = observedUnitId
     ? evidencePoints.filter((p) => p.unitId === observedUnitId)
     : [];
 
-  const mapPoints: MapPoint[] = relevantEvidence
+  const allUnitPoints: MapPoint[] = unitEvidence
     .map((p) => ({
       lat: p.latitude,
       lng: p.longitude,
       at: p.recordedAt.toISOString(),
     }))
     .sort((a, b) => a.at.localeCompare(b.at));
+
+  const routeId = occurrence.profile?.routeShift?.routeId;
+  const kmlVersion = routeId
+    ? await repos.routes.getKmlVersionForDate(routeId, occurrence.expectedDeadline)
+    : null;
+  const kmlWaypoints: MapWaypoint[] = (kmlVersion?.waypoints ?? []).map((wp) => ({
+    lat: wp.lat,
+    lng: wp.lng,
+  }));
+
+  const mapPoints = clipTrackToRoute(
+    allUnitPoints,
+    kmlWaypoints,
+    fact?.observedArrivalAt ?? null,
+    policy.maxRouteDurationMinutes ?? 60,
+  );
 
   // Downsample para no saturar Leaflet (máx. ~400 puntos).
   const mapPointsDisplay =
@@ -123,7 +189,9 @@ export async function loadServiceDetail(
   const arrivalPoint =
     fact?.observedArrivalAt && mapPoints.length > 0
       ? closestPoint(mapPoints, fact.observedArrivalAt)
-      : null;
+      : fact?.observedArrivalAt && allUnitPoints.length > 0
+        ? closestPoint(allUnitPoints, fact.observedArrivalAt)
+        : null;
 
   const enforcement =
     fact && options.showEnforcement !== false
@@ -166,8 +234,10 @@ export async function loadServiceDetail(
     toleranceMinutes: policy.toleranceMinutes ?? null,
     evidenceFirstAt,
     evidenceLastAt,
+    unitPointsInWindow: allUnitPoints.length,
     pointCount: mapPoints.length,
     mapPoints: mapPointsDisplay,
+    kmlWaypoints,
     geofencePolygon,
     arrivalPoint,
     enforcement,
