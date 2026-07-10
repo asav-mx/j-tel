@@ -48,6 +48,7 @@ const TECMA_POLICY: ContractPolicy = {
   arrivalAnticipationMinutes: 15,
   verificationGraceMinutes: 15,
   routeStrictness: "destino_only",
+  kmlMatchMinPct: 60,
   allowAlternateDestination: false,
   excusableReasons: [
     "lluvia_nieve",
@@ -68,6 +69,7 @@ const HONEYWELL_POLICY: ContractPolicy = {
   arrivalAnticipationMinutes: 10,
   verificationGraceMinutes: 20,
   routeStrictness: "destino_only",
+  kmlMatchMinPct: 60,
   allowAlternateDestination: false,
   excusableReasons: [
     "lluvia_nieve",

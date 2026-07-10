@@ -145,6 +145,39 @@ describe("verifyService", () => {
     expect(result.status).toBe("no_cumplido");
     expect(result.observedUnitId).toBeNull();
   });
+
+  it("honors configurable kmlMatchMinPct threshold", () => {
+    const waypoints = [
+      { lat: 31.6800, lng: -106.4300 },
+      { lat: 31.6850, lng: -106.4280 },
+      { lat: 31.6909, lng: -106.4234 },
+    ];
+    // Solo cubre 1 de 3 waypoints (~33%)
+    const points = [
+      {
+        imei: "unit-a",
+        latitude: 31.6909,
+        longitude: -106.4234,
+        timestamp: new Date("2026-07-07T12:44:00Z"),
+      },
+    ];
+    const fail = verifyService({
+      ...baseInput,
+      kmlMatchMinPct: 60,
+      kmlWaypoints: waypoints,
+      evidencePoints: points,
+    });
+    expect(fail.status).toBe("no_cumplido");
+
+    const pass = verifyService({
+      ...baseInput,
+      kmlMatchMinPct: 30,
+      kmlWaypoints: waypoints,
+      evidencePoints: points,
+    });
+    expect(pass.status).toBe("cumplido");
+    expect(pass.observedRouteMatchPct).toBeCloseTo(100 / 3, 5);
+  });
 });
 
 describe("pointInPolygon", () => {

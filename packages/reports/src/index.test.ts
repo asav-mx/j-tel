@@ -7,6 +7,7 @@ describe("reports", () => {
       toleranceMinutes: 5,
       verificationGraceMinutes: 15,
       routeStrictness: "destino_only" as const,
+      kmlMatchMinPct: 60,
       allowAlternateDestination: false,
       excusableReasons: [],
       enforcementRules: [{ type: "no_pago_viaje" as const, toleranceMinutes: 5 }],

@@ -33,6 +33,7 @@ export default async function ClienteReportesPage({
     toleranceMinutes: 5,
     verificationGraceMinutes: 15,
     routeStrictness: "destino_only",
+    kmlMatchMinPct: 60,
     allowAlternateDestination: false,
     excusableReasons: [],
     enforcementRules: [],

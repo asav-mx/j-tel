@@ -50,6 +50,7 @@ const POLICY: ContractPolicy = {
   arrivalAnticipationMinutes: 15,
   verificationGraceMinutes: 15,
   routeStrictness: "destino_only",
+  kmlMatchMinPct: 60,
   allowAlternateDestination: false,
   excusableReasons: [],
   enforcementRules: [{ type: "no_pago_viaje", toleranceMinutes: 10 }],

@@ -138,6 +138,11 @@ export const contractPolicySchema = z.object({
   arrivalAnticipationMinutes: z.number().int().nonnegative().default(15),
   verificationGraceMinutes: z.number().int().nonnegative().default(15),
   routeStrictness: RouteStrictness,
+  /**
+   * % mínimo de waypoints del KML que deben tener un punto GPS cerca
+   * (haversine ≤ 500 m). 0–100. Solo aplica si hay KML cargado.
+   */
+  kmlMatchMinPct: z.number().min(0).max(100).default(60),
   allowAlternateDestination: z.boolean().default(false),
   excusableReasons: z.array(ExcusableReason).default([]),
   enforcementRules: z.array(enforcementRulesSchema).default([]),
@@ -278,6 +283,8 @@ export interface VerificationInput {
   expectedDeadline: Date;
   toleranceMinutes: number;
   routeStrictness: RouteStrictness;
+  /** Umbral mínimo de coincidencia KML (0–100). Default 60 si no se envía. */
+  kmlMatchMinPct?: number;
   geofencePolygon: Array<{ lat: number; lng: number }>;
   kmlWaypoints?: Array<{ lat: number; lng: number }>;
   evidencePoints: GpsPoint[];

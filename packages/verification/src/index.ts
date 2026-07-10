@@ -125,10 +125,10 @@ export function verifyService(input: VerificationInput): VerificationResult {
   steps.push({ step: "evidencia", result: "disponible", details: { count: input.evidencePoints.length } });
 
   const hasKml = (input.kmlWaypoints?.length ?? 0) > 0;
-  // Si hay KML, siempre lo usamos para distinguir rutas (aunque la política sea
-  // destino_only). kml_full exige ≥80%; destino_only exige un mínimo razonable
-  // y entre candidatas gana la mejor coincidencia con el trazado.
-  const minKmlPct = input.routeStrictness === "kml_full" ? 80 : hasKml ? 40 : 0;
+  // Umbral configurable en la política del contrato. Sin KML no aplica.
+  const minKmlPct = hasKml
+    ? Math.min(100, Math.max(0, input.kmlMatchMinPct ?? 60))
+    : 0;
 
   const byImei = groupPointsByImei(input.evidencePoints);
 
@@ -161,6 +161,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
         arrivalAt: arrivalAt?.toISOString(),
         routeMatchPct,
         hasKml,
+        minKmlPct,
       },
     });
   }

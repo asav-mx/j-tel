@@ -111,6 +111,7 @@ export async function POST(request: Request) {
       maxRouteDurationMinutes: toInt(formData.get("maxRouteDurationMinutes"), 60),
       verificationGraceMinutes: toInt(formData.get("verificationGraceMinutes"), 15),
       routeStrictness: String(formData.get("routeStrictness") ?? "destino_only").trim(),
+      kmlMatchMinPct: toInt(formData.get("kmlMatchMinPct"), 60),
       allowAlternateDestination: formData.get("allowAlternateDestination") === "on",
       excusableReasons: formData.getAll("excusableReasons").map((r) => String(r)),
       enforcementRules: buildEnforcementRule(formData),
@@ -178,6 +179,7 @@ export async function POST(request: Request) {
   const toleranceMinutes = toInt(formData.get("toleranceMinutes"), 0);
   const verificationGraceMinutes = toInt(formData.get("verificationGraceMinutes"), 15);
   const routeStrictness = String(formData.get("routeStrictness") ?? "destino_only").trim();
+  const kmlMatchMinPct = toInt(formData.get("kmlMatchMinPct"), 60);
   const evidenceMarginMinutesBefore = toInt(formData.get("evidenceMarginMinutesBefore"), 60);
   const evidenceMarginMinutesAfter = toInt(formData.get("evidenceMarginMinutesAfter"), 30);
   const allowAlternateDestination = formData.get("allowAlternateDestination") === "on";
@@ -197,6 +199,7 @@ export async function POST(request: Request) {
       maxRouteDurationMinutes,
       verificationGraceMinutes,
       routeStrictness,
+      kmlMatchMinPct,
       allowAlternateDestination,
       excusableReasons,
       enforcementRules: buildEnforcementRule(formData),

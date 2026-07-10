@@ -232,6 +232,20 @@ export async function ContratosUnitView({
                     </select>
                   </label>
                   <label className={labelClass}>
+                    Umbral match KML (%)
+                    <input
+                      name="kmlMatchMinPct"
+                      type="number"
+                      min={0}
+                      max={100}
+                      defaultValue={60}
+                      className={inputClass}
+                    />
+                    <span className="mt-1 block text-xs text-[var(--muted)]">
+                      % de waypoints del KML con GPS a ≤500 m. Ej. 60 = al menos 60 de 100.
+                    </span>
+                  </label>
+                  <label className={labelClass}>
                     Margen evidencia antes (min)
                     <input
                       name="evidenceMarginMinutesBefore"
@@ -350,7 +364,8 @@ export async function ContratosUnitView({
                       {c.carrier?.name ?? "—"} · {contractScopeLabel(c, operationalUnits)} ·
                       Vigencia {c.validFrom} → {c.validTo} · Tolerancia {c.policy.toleranceMinutes}{" "}
                       min · anticipación {c.policy.arrivalAnticipationMinutes ?? 15} min ·{" "}
-                      {c.policy.routeStrictness} · {c.profiles.length} perfil(es)
+                      {c.policy.routeStrictness} · KML ≥{c.policy.kmlMatchMinPct ?? 60}% ·{" "}
+                      {c.profiles.length} perfil(es)
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -484,6 +499,20 @@ export async function ContratosUnitView({
                               <option value="destino_only">Solo destino</option>
                               <option value="kml_full">Ruta completa (waypoints)</option>
                             </select>
+                          </label>
+                          <label className={labelClass}>
+                            Umbral match KML (%)
+                            <input
+                              name="kmlMatchMinPct"
+                              type="number"
+                              min={0}
+                              max={100}
+                              defaultValue={c.policy.kmlMatchMinPct ?? 60}
+                              className={inputClass}
+                            />
+                            <span className="mt-1 block text-xs text-[var(--muted)]">
+                              % de waypoints del KML con GPS a ≤500 m.
+                            </span>
                           </label>
                           <label className={labelClass}>
                             Margen evidencia antes (min)

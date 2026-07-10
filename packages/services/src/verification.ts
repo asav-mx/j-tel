@@ -228,6 +228,7 @@ export class VerificationService {
       expectedDeadline: occurrence.expectedDeadline,
       toleranceMinutes: policy.toleranceMinutes,
       routeStrictness: policy.routeStrictness,
+      kmlMatchMinPct: policy.kmlMatchMinPct ?? 60,
       geofencePolygon: geofence.polygon,
       kmlWaypoints,
       evidencePoints: enrichedPoints,

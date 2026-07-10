@@ -9,6 +9,7 @@ const TECMA_POLICY: ContractPolicy = {
   toleranceMinutes: 5,
   verificationGraceMinutes: 15,
   routeStrictness: "destino_only",
+  kmlMatchMinPct: 60,
   allowAlternateDestination: false,
   excusableReasons: ["lluvia_nieve"],
   enforcementRules: [{ type: "no_pago_viaje", toleranceMinutes: 5 }],
@@ -22,6 +23,7 @@ const HONEYWELL_POLICY: ContractPolicy = {
   toleranceMinutes: 10,
   verificationGraceMinutes: 20,
   routeStrictness: "destino_only",
+  kmlMatchMinPct: 60,
   allowAlternateDestination: false,
   excusableReasons: [],
   enforcementRules: [

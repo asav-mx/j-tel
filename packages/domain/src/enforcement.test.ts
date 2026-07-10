@@ -6,6 +6,7 @@ describe("enforcement", () => {
     toleranceMinutes: 10,
     verificationGraceMinutes: 15,
     routeStrictness: "destino_only" as const,
+    kmlMatchMinPct: 60,
     allowAlternateDestination: false,
     excusableReasons: [],
     enforcementRules: [
