@@ -16,6 +16,11 @@ if (existsSync(rootEnv)) {
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../.."),
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
   transpilePackages: [
     "@jtel/db",
     "@jtel/domain",

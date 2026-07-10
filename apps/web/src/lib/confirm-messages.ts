@@ -9,14 +9,18 @@ export const confirmMessages = {
     `¿Crear perfil de servicio para ${unitLabel}? Verifica contrato, ruta y geocerca.`,
   deleteProfile: (name: string) =>
     `¿Eliminar el perfil «${name}»? Solo es posible si no tiene ocurrencias generadas.`,
-  generateOccurrences: (name: string, from: string, to: string) =>
-    `¿Generar ocurrencias para «${name}» del ${from} al ${to}? Se crearán servicios a verificar.`,
-  authorizeCarrier: (carrier: string, client: string) =>
-    `¿Autorizar a ${carrier} para trabajar con ${client}? El cliente podrá crear contratos con este carrier.`,
+  generateOccurrencesTemplate: (name: string) =>
+    `¿Generar ocurrencias para «${name}» del {fromDate} al {toDate}? Se crearán servicios a verificar.`,
+  authorizeCarrierTemplate: (client: string) =>
+    `¿Autorizar a {__selectLabel:carrierAccountId} para trabajar con ${client}? El cliente podrá crear contratos con este carrier.`,
   suspendCarrier: (carrier: string, client: string) =>
     `¿Suspender a ${carrier} para ${client}? No podrá usarse en contratos nuevos hasta reautorizar.`,
   verifyOccurrence: (date: string, contract: string) =>
     `¿Re-sincronizar y verificar el servicio del ${date} (${contract})?`,
-  savePlant: (name: string) =>
-    `¿Guardar cambios en ${name}? Si cambias de grupo, puede afectar la unidad operativa.`,
+  savePlantTemplate:
+    "¿Guardar cambios en {name}? Si cambias de grupo, puede afectar la unidad operativa.",
+  deleteShift: (name: string, time: string) =>
+    `¿Eliminar el turno «${name}» (inicio ${time})? Solo es posible si no está programado en un perfil de servicio.`,
+  deleteRoute: (name: string, shiftLabel: string) =>
+    `¿Eliminar la ruta «${name}» (${shiftLabel})? Solo es posible si no está en un perfil de servicio.`,
 } as const;

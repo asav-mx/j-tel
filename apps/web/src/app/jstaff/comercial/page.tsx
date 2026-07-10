@@ -114,11 +114,7 @@ export default async function JStaffComercialPage({
                   action="/api/jstaff/comercial"
                   method="post"
                   className="grid gap-3 md:grid-cols-2"
-                  getConfirmMessage={(form) => {
-                    const select = form.elements.namedItem("carrierAccountId") as HTMLSelectElement | null;
-                    const label = select?.selectedOptions[0]?.text?.replace(/\s*\([^)]*\)$/, "") ?? "este carrier";
-                    return confirmMessages.authorizeCarrier(label, selectedClient.name);
-                  }}
+                  confirmTemplate={confirmMessages.authorizeCarrierTemplate(selectedClient.name)}
                 >
                   <input type="hidden" name="action" value="authorize" />
                   <input type="hidden" name="clientSlug" value={selectedClient.slug} />

@@ -1,8 +1,19 @@
 import { withAccount } from "./account-context";
+import {
+  campusHref as campusUnitHref,
+  plantHref as plantUnitHref,
+  unitComplianceHref,
+} from "./unit-routes";
+import type { OperationalUnit } from "@jtel/domain";
 
-/** Ruta canónica de una planta (siempre con cuenta en query). */
+/** Dashboard de una planta (unidad operativa o miembro de campus). */
 export function plantHref(plantId: string, accountSlug?: string | null) {
-  return withAccount(`/cliente/planta/${plantId}`, accountSlug);
+  return plantUnitHref(plantId, accountSlug ?? "");
+}
+
+/** Dashboard de un campus (unidad operativa compartida). */
+export function campusHref(groupId: string, accountSlug?: string | null) {
+  return campusUnitHref(groupId, accountSlug ?? "");
 }
 
 export function clientHref(path: string, accountSlug?: string | null, plantId?: string | null) {
@@ -12,7 +23,16 @@ export function clientHref(path: string, accountSlug?: string | null, plantId?: 
   return `${base}${sep}plant=${encodeURIComponent(plantId)}`;
 }
 
-/** Cumplimiento con filtro opcional por planta. */
+/** Cumplimiento por unidad independiente. */
 export function complianceHref(accountSlug?: string | null, plantId?: string | null) {
-  return clientHref("/cliente/cumplimiento", accountSlug, plantId);
+  if (plantId) {
+    const unit: OperationalUnit = {
+      kind: "plant",
+      id: plantId,
+      name: "",
+      code: "",
+    };
+    return unitComplianceHref(unit, accountSlug ?? "");
+  }
+  return clientHref("/cliente/cumplimiento", accountSlug);
 }

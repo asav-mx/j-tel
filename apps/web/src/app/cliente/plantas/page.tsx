@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { getRepos } from "@/lib/db";
-import { ClientConfigShell } from "@/components/client-config-shell";
+import { CorporateShell } from "@/components/unit-shell";
 import { ConfirmForm } from "@/components/confirm-form";
 import { AppNav, Card } from "@/components/ui";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { confirmMessages } from "@/lib/confirm-messages";
-import { plantHref } from "@/lib/navigation";
+import { campusHref, plantHref } from "@/lib/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -49,17 +50,11 @@ export default async function ClientePlantasPage({
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-5xl space-y-6">
-        <ClientConfigShell
-          client={client}
-          title={`Plantas — ${client.name}`}
-          step="plantas"
-          basePath="/cliente/plantas"
-        />
+        <CorporateShell client={client} title={`Administrar plantas — ${client.name}`} />
 
         <p className="text-sm text-[var(--muted)]">
-          Cliente corporativo: <span className="text-white">{client.name}</span>. Una cuenta de
-          cliente puede tener muchas plantas; opcionalmente puedes agruparlas (por región, unidad de
-          negocio, etc.).
+          Alta corporativa de plantas y campus. Para configurar servicios, entra al panel de cada{" "}
+          <span className="text-white">unidad operativa</span> desde el hub principal.
         </p>
 
         {error ? (
@@ -152,10 +147,7 @@ export default async function ClientePlantasPage({
                     action="/api/cliente/plantas"
                     method="post"
                     className="space-y-3"
-                    getConfirmMessage={(form) => {
-                      const nameInput = form.elements.namedItem("name") as HTMLInputElement | null;
-                      return confirmMessages.savePlant(nameInput?.value || p.name);
-                    }}
+                    confirmTemplate={confirmMessages.savePlantTemplate}
                   >
                     <input type="hidden" name="clientSlug" value={client.slug} />
                     <input type="hidden" name="action" value="update" />
@@ -187,7 +179,7 @@ export default async function ClientePlantasPage({
                         Guardar cambios
                       </button>
                       <a href={plantHref(p.id, client.slug)} className="self-center text-[var(--accent)]">
-                        Abrir planta →
+                        Abrir panel →
                       </a>
                     </div>
                   </ConfirmForm>

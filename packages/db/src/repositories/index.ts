@@ -565,7 +565,10 @@ export class RouteRepository {
         : eq(routeShifts.plantGroupId, cols.plantGroupId!);
     return this.db.query.routeShifts.findMany({
       where,
-      with: { route: { with: { kmlVersions: true } }, shift: true },
+      with: {
+        route: { with: { kmlVersions: { columns: { id: true } } } },
+        shift: true,
+      },
       orderBy: (rs, { asc }) => [asc(rs.createdAt)],
     });
   }
@@ -612,6 +615,210 @@ export class RouteRepository {
       where: eq(routeShifts.id, id),
       with: { route: { with: { kmlVersions: true } }, shift: true },
     });
+  }
+
+  async findShiftInScope(id: string, clientAccountId: string, scope: OperationalScope) {
+    const cols = operationalScopeColumns(scope);
+    const where =
+      scope.kind === "plant"
+        ? and(
+            eq(shifts.id, id),
+            eq(shifts.clientAccountId, clientAccountId),
+            eq(shifts.plantId, cols.plantId!),
+          )
+        : and(
+            eq(shifts.id, id),
+            eq(shifts.clientAccountId, clientAccountId),
+            eq(shifts.plantGroupId, cols.plantGroupId!),
+          );
+    return this.db.query.shifts.findFirst({ where });
+  }
+
+  async findRouteShiftByNameAndShift(scope: OperationalScope, name: string, shiftId: string) {
+    const cols = operationalScopeColumns(scope);
+    const rsWhere =
+      scope.kind === "plant"
+        ? and(eq(routeShifts.plantId, cols.plantId!), eq(routeShifts.shiftId, shiftId))
+        : and(eq(routeShifts.plantGroupId, cols.plantGroupId!), eq(routeShifts.shiftId, shiftId));
+    const linked = await this.db.query.routeShifts.findMany({
+      where: rsWhere,
+      with: { route: true },
+    });
+    return linked.find((rs) => rs.route?.name === name) ?? null;
+  }
+
+  async createRouteWithShift(data: {
+    clientAccountId: string;
+    plantId?: string | null;
+    plantGroupId?: string | null;
+    name: string;
+    shiftId: string;
+    kmlContent?: string;
+    waypoints?: Array<{ lat: number; lng: number }>;
+  }) {
+    const route = await this.createRoute({
+      clientAccountId: data.clientAccountId,
+      plantId: data.plantId,
+      plantGroupId: data.plantGroupId,
+      name: data.name,
+    });
+    if (data.kmlContent) {
+      await this.addKmlVersion({
+        routeId: route.id,
+        kmlContent: data.kmlContent,
+        waypoints: data.waypoints,
+      });
+    }
+    const routeShift = await this.createRouteShift({
+      clientAccountId: data.clientAccountId,
+      plantId: data.plantId,
+      plantGroupId: data.plantGroupId,
+      routeId: route.id,
+      shiftId: data.shiftId,
+    });
+    return { route, routeShift };
+  }
+
+  async findShiftByNameAndTime(scope: OperationalScope, name: string, startTime: string) {
+    const cols = operationalScopeColumns(scope);
+    const where =
+      scope.kind === "plant"
+        ? and(
+            eq(shifts.plantId, cols.plantId!),
+            eq(shifts.name, name),
+            eq(shifts.startTime, startTime),
+          )
+        : and(
+            eq(shifts.plantGroupId, cols.plantGroupId!),
+            eq(shifts.name, name),
+            eq(shifts.startTime, startTime),
+          );
+    return this.db.query.shifts.findFirst({ where });
+  }
+
+  private async routeShiftDeleteBlockReason(
+    routeShiftIds: string[],
+  ): Promise<"profiles" | "occurrences" | null> {
+    if (routeShiftIds.length === 0) return null;
+    const profiles = await this.db.query.serviceProfiles.findMany({
+      where: inArray(serviceProfiles.routeShiftId, routeShiftIds),
+      columns: { id: true },
+    });
+    if (profiles.length === 0) return null;
+    const occ = await this.db.query.serviceOccurrences.findFirst({
+      where: inArray(
+        serviceOccurrences.serviceProfileId,
+        profiles.map((p) => p.id),
+      ),
+      columns: { id: true },
+    });
+    return occ ? "occurrences" : "profiles";
+  }
+
+  async deleteShift(
+    id: string,
+    clientAccountId: string,
+    scope: OperationalScope,
+  ): Promise<{ ok: true } | { ok: false; reason: "not_found" | "profiles" | "occurrences" }> {
+    const cols = operationalScopeColumns(scope);
+    const where =
+      scope.kind === "plant"
+        ? and(
+            eq(shifts.id, id),
+            eq(shifts.clientAccountId, clientAccountId),
+            eq(shifts.plantId, cols.plantId!),
+          )
+        : and(
+            eq(shifts.id, id),
+            eq(shifts.clientAccountId, clientAccountId),
+            eq(shifts.plantGroupId, cols.plantGroupId!),
+          );
+
+    const shift = await this.db.query.shifts.findFirst({ where, columns: { id: true } });
+    if (!shift) return { ok: false, reason: "not_found" };
+
+    const linked = await this.db.query.routeShifts.findMany({
+      where: eq(routeShifts.shiftId, id),
+      columns: { id: true },
+    });
+    const block = await this.routeShiftDeleteBlockReason(linked.map((r) => r.id));
+    if (block) return { ok: false, reason: block };
+
+    await this.db.delete(shifts).where(eq(shifts.id, id));
+    return { ok: true };
+  }
+
+  async deleteRouteShift(
+    id: string,
+    clientAccountId: string,
+    scope: OperationalScope,
+  ): Promise<{ ok: true } | { ok: false; reason: "not_found" | "profiles" | "occurrences" }> {
+    const cols = operationalScopeColumns(scope);
+    const where =
+      scope.kind === "plant"
+        ? and(
+            eq(routeShifts.id, id),
+            eq(routeShifts.clientAccountId, clientAccountId),
+            eq(routeShifts.plantId, cols.plantId!),
+          )
+        : and(
+            eq(routeShifts.id, id),
+            eq(routeShifts.clientAccountId, clientAccountId),
+            eq(routeShifts.plantGroupId, cols.plantGroupId!),
+          );
+
+    const routeShift = await this.db.query.routeShifts.findFirst({
+      where,
+      columns: { id: true, routeId: true },
+    });
+    if (!routeShift) return { ok: false, reason: "not_found" };
+
+    const block = await this.routeShiftDeleteBlockReason([routeShift.id]);
+    if (block) return { ok: false, reason: block };
+
+    await this.db.delete(routeShifts).where(eq(routeShifts.id, routeShift.id));
+
+    const remaining = await this.db.query.routeShifts.findFirst({
+      where: eq(routeShifts.routeId, routeShift.routeId),
+      columns: { id: true },
+    });
+    if (!remaining) {
+      await this.db.delete(routes).where(eq(routes.id, routeShift.routeId));
+    }
+    return { ok: true };
+  }
+
+  async deleteRoute(
+    id: string,
+    clientAccountId: string,
+    scope: OperationalScope,
+  ): Promise<{ ok: true } | { ok: false; reason: "not_found" | "profiles" | "occurrences" }> {
+    const cols = operationalScopeColumns(scope);
+    const where =
+      scope.kind === "plant"
+        ? and(
+            eq(routes.id, id),
+            eq(routes.clientAccountId, clientAccountId),
+            eq(routes.plantId, cols.plantId!),
+          )
+        : and(
+            eq(routes.id, id),
+            eq(routes.clientAccountId, clientAccountId),
+            eq(routes.plantGroupId, cols.plantGroupId!),
+          );
+
+    const route = await this.db.query.routes.findFirst({ where, columns: { id: true } });
+    if (!route) return { ok: false, reason: "not_found" };
+
+    const linked = await this.db.query.routeShifts.findMany({
+      where: eq(routeShifts.routeId, id),
+      columns: { id: true },
+    });
+    const block = await this.routeShiftDeleteBlockReason(linked.map((r) => r.id));
+    if (block) return { ok: false, reason: block };
+
+    await this.db.delete(routes).where(eq(routes.id, id));
+    return { ok: true };
   }
 }
 
@@ -1009,8 +1216,31 @@ export class OccurrenceRepository {
     if (from) conditions.push(gte(serviceOccurrences.serviceDate, from.toISOString().split("T")[0]!));
     if (to) conditions.push(lte(serviceOccurrences.serviceDate, to.toISOString().split("T")[0]!));
 
+    return this.queryOccurrencesWithRelations(conditions);
+  }
+
+  async findForPlantGroup(plantGroupId: string, from?: Date, to?: Date) {
+    const contracts = await this.db.query.serviceContracts.findMany({
+      where: eq(serviceContracts.plantGroupId, plantGroupId),
+    });
+    const contractIds = contracts.map((c) => c.id);
+    if (contractIds.length === 0) return [];
+
+    const conditions = [inArray(serviceOccurrences.contractId, contractIds)];
+    if (from) conditions.push(gte(serviceOccurrences.serviceDate, from.toISOString().split("T")[0]!));
+    if (to) conditions.push(lte(serviceOccurrences.serviceDate, to.toISOString().split("T")[0]!));
+
+    return this.queryOccurrencesWithRelations(conditions);
+  }
+
+  async findForScope(scope: OperationalScope, from?: Date, to?: Date) {
+    if (scope.kind === "plant") return this.findForPlant(scope.plantId, from, to);
+    return this.findForPlantGroup(scope.plantGroupId, from, to);
+  }
+
+  private async queryOccurrencesWithRelations(conditions: unknown[]) {
     return this.db.query.serviceOccurrences.findMany({
-      where: and(...conditions),
+      where: and(...(conditions as Parameters<typeof and>)),
       with: {
         complianceFact: true,
         trip: true,
