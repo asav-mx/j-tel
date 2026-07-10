@@ -5,7 +5,13 @@ import { ClientAccountSwitcher } from "@/components/account-switcher";
 import { UnitConfigWizardNav } from "@/components/unit-config-wizard-nav";
 import { withAccount } from "@/lib/account-context";
 import { operationalUnitLabel } from "@/lib/operational-scope";
-import { unitBasePath, unitComplianceHref, unitConfigHubHref, unitDashboardHref } from "@/lib/unit-routes";
+import {
+  unitBasePath,
+  unitComplianceHref,
+  unitConfigHubHref,
+  unitContratosHref,
+  unitDashboardHref,
+} from "@/lib/unit-routes";
 import type { UnitConfigStepId } from "@/lib/config-wizard";
 
 export function unitNavLinks(unit: OperationalUnit, clientSlug: string, clientName: string) {
@@ -14,6 +20,7 @@ export function unitNavLinks(unit: OperationalUnit, clientSlug: string, clientNa
     { href: dash, label: "Panel" },
     { href: unitComplianceHref(unit, clientSlug), label: "Cumplimiento" },
     { href: unitConfigHubHref(unit, clientSlug), label: "Configuración" },
+    { href: unitContratosHref(unit, clientSlug), label: "Contratos" },
     { href: withAccount("/cliente", clientSlug), label: `← ${clientName}` },
   ];
 }

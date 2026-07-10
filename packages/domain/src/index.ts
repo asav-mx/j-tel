@@ -186,18 +186,28 @@ export function computeEvidenceWindow(
   return { windowStart, windowEnd };
 }
 
-export const createContractSchema = z.object({
-  carrierAccountId: z.string().uuid(),
-  clientAccountId: z.string().uuid(),
-  plantId: z.string().uuid().optional(),
-  plantGroupId: z.string().uuid().optional(),
-  name: z.string().min(1),
-  policy: contractPolicySchema,
-  status: ContractStatus.default("draft"),
-}).refine(
-  (data) => (data.plantId && !data.plantGroupId) || (!data.plantId && data.plantGroupId),
-  { message: "Debe especificar planta o grupo de plantas, no ambos" },
-);
+export const createContractSchema = z
+  .object({
+    carrierAccountId: z.string().uuid(),
+    clientAccountId: z.string().uuid(),
+    plantId: z.string().uuid().optional(),
+    plantGroupId: z.string().uuid().optional(),
+    name: z.string().min(1),
+    /** Inicio de vigencia comercial (YYYY-MM-DD). */
+    validFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    /** Fin de vigencia comercial (YYYY-MM-DD), inclusive. */
+    validTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    policy: contractPolicySchema,
+    status: ContractStatus.default("draft"),
+  })
+  .refine(
+    (data) => (data.plantId && !data.plantGroupId) || (!data.plantId && data.plantGroupId),
+    { message: "Debe especificar planta o grupo de plantas, no ambos" },
+  )
+  .refine((data) => data.validFrom <= data.validTo, {
+    message: "La vigencia debe tener fecha inicio ≤ fecha fin",
+    path: ["validTo"],
+  });
 
 export type CreateContractInput = z.infer<typeof createContractSchema>;
 

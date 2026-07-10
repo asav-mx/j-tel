@@ -51,6 +51,22 @@ export async function UnitConfigHub({
         </p>
 
         <div className="grid gap-4 md:grid-cols-2">
+          <Link
+            href={unitContratosHref(unit, client.slug)}
+            className="block rounded-xl border border-white/10 bg-[var(--card)] p-5 transition hover:border-[var(--accent)] md:col-span-2"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                Requisito para perfiles
+              </span>
+              <span className="text-sm text-[var(--accent)]">Abrir →</span>
+            </div>
+            <h3 className="mt-2 font-semibold">Contratos</h3>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Política con el carrier (deadline, GPS, enforcement). Activa el contrato aquí antes del
+              paso 4.
+            </p>
+          </Link>
           {UNIT_CONFIG_STEPS.map((step) => {
             const count = stepCounts[step.id] ?? 0;
             const ready = count > 0;
@@ -81,19 +97,12 @@ export async function UnitConfigHub({
 
         <Card title="Orden recomendado">
           <ol className="list-inside list-decimal space-y-1 text-sm text-[var(--muted)]">
+            <li>Contrato con el carrier (activar si está en borrador).</li>
             <li>Geocerca de llegada (destino / fin de la ruta).</li>
             <li>Turnos — horarios de entrada del personal.</li>
             <li>Rutas — trazado KML por turno (Riveras 7 turno 1 ≠ turno 2).</li>
             <li>Perfiles de servicio → generar ocurrencias.</li>
           </ol>
-          <p className="mt-3 text-sm text-[var(--muted)]">
-            Los <span className="text-white">contratos</span> con el carrier (política de cumplimiento)
-            se configuran por separado —{" "}
-            <Link href={unitContratosHref(unit, client.slug)} className="text-[var(--accent)]">
-              Contratos
-            </Link>
-            . Los perfiles los requieren.
-          </p>
           <p className="mt-1 text-sm">
             <Link href={unitDashboardHref(unit, client.slug)} className="text-[var(--accent)]">
               ← Volver al panel de la unidad

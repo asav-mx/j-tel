@@ -14,11 +14,17 @@ export async function POST(request: Request) {
   }
 
   const repos = getRepos();
-  const created = await repos.occurrences.generateForProfile(
+  const result = await repos.occurrences.generateForProfile(
     profileId,
     new Date(fromDate),
     new Date(toDate),
+    { rollingDays: 30 },
   );
 
-  return NextResponse.json({ created: created.length, ids: created });
+  return NextResponse.json({
+    created: result.createdIds.length,
+    ids: result.createdIds,
+    skippedExisting: result.skippedExisting,
+    clamped: result.clamped,
+  });
 }

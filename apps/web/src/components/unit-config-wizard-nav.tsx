@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { UNIT_CONFIG_STEPS, type UnitConfigStepId, unitConfigHubHrefFor, unitConfigStepHrefFor } from "@/lib/config-wizard";
 import type { OperationalUnit } from "@jtel/domain";
+import { unitContratosHref } from "@/lib/unit-routes";
 
 export function UnitConfigWizardNav({
   clientSlug,
@@ -18,12 +19,20 @@ export function UnitConfigWizardNav({
     >
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted)]">
         <span>Configuración de esta unidad</span>
-        <Link
-          href={unitConfigHubHrefFor(unit, clientSlug)}
-          className="text-[var(--accent)] hover:underline"
-        >
-          Ver resumen →
-        </Link>
+        <span className="flex flex-wrap gap-3">
+          <Link
+            href={unitContratosHref(unit, clientSlug)}
+            className="text-[var(--accent)] hover:underline"
+          >
+            Contratos
+          </Link>
+          <Link
+            href={unitConfigHubHrefFor(unit, clientSlug)}
+            className="text-[var(--accent)] hover:underline"
+          >
+            Ver resumen →
+          </Link>
+        </span>
       </div>
       <ol className="flex flex-wrap gap-2">
         {UNIT_CONFIG_STEPS.map((step) => {

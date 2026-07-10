@@ -931,6 +931,8 @@ export class ContractRepository {
         plantId: input.plantId,
         plantGroupId: input.plantGroupId,
         name: input.name,
+        validFrom: input.validFrom,
+        validTo: input.validTo,
         policy: input.policy,
         status: input.status ?? "draft",
       })
@@ -987,6 +989,15 @@ export class ContractRepository {
     const [contract] = await this.db
       .update(serviceContracts)
       .set({ status: "active", updatedAt: new Date() })
+      .where(eq(serviceContracts.id, id))
+      .returning();
+    return contract!;
+  }
+
+  async updateValidity(id: string, validFrom: string, validTo: string) {
+    const [contract] = await this.db
+      .update(serviceContracts)
+      .set({ validFrom, validTo, updatedAt: new Date() })
       .where(eq(serviceContracts.id, id))
       .returning();
     return contract!;
@@ -1079,6 +1090,43 @@ export class ServiceProfileRepository {
     return new Set(rows.map((r) => r.profileId));
   }
 
+  /** Resumen de cobertura de ocurrencias por perfil (count + rango), opcionalmente en [from, to]. */
+  async occurrenceCoverageByProfile(
+    profileIds: string[],
+    range?: { fromDate: string; toDate: string },
+  ): Promise<
+    Map<string, { count: number; fromDate: string; toDate: string }>
+  > {
+    const map = new Map<string, { count: number; fromDate: string; toDate: string }>();
+    if (profileIds.length === 0) return map;
+
+    const conditions = [inArray(serviceOccurrences.serviceProfileId, profileIds)];
+    if (range) {
+      conditions.push(gte(serviceOccurrences.serviceDate, range.fromDate));
+      conditions.push(lte(serviceOccurrences.serviceDate, range.toDate));
+    }
+
+    const rows = await this.db
+      .select({
+        profileId: serviceOccurrences.serviceProfileId,
+        count: sql<number>`count(*)::int`,
+        fromDate: sql<string>`min(${serviceOccurrences.serviceDate})`,
+        toDate: sql<string>`max(${serviceOccurrences.serviceDate})`,
+      })
+      .from(serviceOccurrences)
+      .where(and(...conditions))
+      .groupBy(serviceOccurrences.serviceProfileId);
+
+    for (const row of rows) {
+      map.set(row.profileId, {
+        count: Number(row.count),
+        fromDate: String(row.fromDate).slice(0, 10),
+        toDate: String(row.toDate).slice(0, 10),
+      });
+    }
+    return map;
+  }
+
   async deleteProfile(id: string, clientAccountId: string) {
     const profile = await this.db.query.serviceProfiles.findFirst({
       where: eq(serviceProfiles.id, id),
@@ -1103,10 +1151,35 @@ export class ServiceProfileRepository {
 export class OccurrenceRepository {
   constructor(private db: Database) {}
 
+  /** Horizonte operativo por defecto (días hacia adelante desde hoy). */
+  static readonly ROLLING_DAYS = 30;
+
+  private startOfDay(d: Date): Date {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+  }
+
+  private addDays(d: Date, days: number): Date {
+    const x = this.startOfDay(d);
+    x.setDate(x.getDate() + days);
+    return x;
+  }
+
+  private toIsoDate(d: Date): string {
+    return d.toISOString().split("T")[0]!;
+  }
+
+  /**
+   * Genera ocurrencias para un perfil en [fromDate, toDate].
+   * Siempre acota a la vigencia del contrato.
+   * Si `rollingDays` está definido, también acota el fin a hoy + rollingDays.
+   */
   async generateForProfile(
     profileId: string,
     fromDate: Date,
     toDate: Date,
+    options?: { rollingDays?: number },
   ) {
     const profile = await this.db.query.serviceProfiles.findFirst({
       where: eq(serviceProfiles.id, profileId),
@@ -1118,67 +1191,238 @@ export class OccurrenceRepository {
     });
 
     if (!profile) throw new Error("Perfil no encontrado");
+    if (!profile.contract) throw new Error("Contrato no encontrado");
 
     const routeShift = profile.routeShift;
     const shift = routeShift!.shift!;
-    const policy = profile.contract!.policy;
+    const policy = profile.contract.policy;
     const anticipation = policy.arrivalAnticipationMinutes ?? 15;
     const activeDays = profile.activeDays ?? [1, 2, 3, 4, 5];
-    const created: string[] = [];
 
-    const current = new Date(fromDate);
-    current.setHours(0, 0, 0, 0);
+    const contractFrom = new Date(`${profile.contract.validFrom}T00:00:00`);
+    const contractTo = new Date(`${profile.contract.validTo}T00:00:00`);
+    const rangeStart = this.startOfDay(fromDate);
+    let rangeEnd = this.startOfDay(toDate);
 
-    while (current <= toDate) {
+    if (options?.rollingDays != null) {
+      const rollingEnd = this.addDays(new Date(), options.rollingDays);
+      if (rangeEnd > rollingEnd) rangeEnd = rollingEnd;
+    }
+
+    const start = rangeStart < contractFrom ? contractFrom : rangeStart;
+    const end = rangeEnd > contractTo ? contractTo : rangeEnd;
+    if (start > end) {
+      return { createdIds: [] as string[], skippedExisting: 0, clamped: true as const };
+    }
+
+    const kmlVersion = await this.db.query.routeKmlVersions.findFirst({
+      where: and(
+        eq(routeKmlVersions.routeId, routeShift!.routeId),
+        lte(routeKmlVersions.validFrom, end),
+        or(isNull(routeKmlVersions.validTo), gte(routeKmlVersions.validTo, start)),
+      ),
+      orderBy: (v, { desc }) => [desc(v.validFrom)],
+    });
+
+    type Row = {
+      serviceProfileId: string;
+      contractId: string;
+      routeShiftId: string;
+      kmlVersionId: string | undefined;
+      serviceDate: string;
+      expectedDeadline: Date;
+      expectedGeofenceId: string;
+      referenceUnitId: string | null | undefined;
+      windowStart: Date;
+      windowEnd: Date;
+    };
+
+    const rows: Row[] = [];
+    const current = new Date(start);
+    while (current <= end) {
       const dayOfWeek = current.getDay();
       if (activeDays.includes(dayOfWeek)) {
-        const serviceDate = current.toISOString().split("T")[0]!;
+        const serviceDate = this.toIsoDate(current);
         const deadline = computeExpectedDeadline(
           serviceDate,
           shift.startTime,
           anticipation,
         );
-
-        const kmlVersion = await this.db.query.routeKmlVersions.findFirst({
-          where: and(
-            eq(routeKmlVersions.routeId, routeShift!.routeId),
-            lte(routeKmlVersions.validFrom, deadline),
-            or(isNull(routeKmlVersions.validTo), gte(routeKmlVersions.validTo, deadline)),
-          ),
+        const { windowStart, windowEnd } = computeEvidenceWindow(deadline, policy);
+        rows.push({
+          serviceProfileId: profileId,
+          contractId: profile.contractId,
+          routeShiftId: profile.routeShiftId,
+          kmlVersionId: kmlVersion?.id,
+          serviceDate,
+          expectedDeadline: deadline,
+          expectedGeofenceId: profile.geofenceId,
+          referenceUnitId: profile.referenceUnitId,
+          windowStart,
+          windowEnd,
         });
-
-        const [occurrence] = await this.db
-          .insert(serviceOccurrences)
-          .values({
-            serviceProfileId: profileId,
-            contractId: profile.contractId,
-            routeShiftId: profile.routeShiftId,
-            kmlVersionId: kmlVersion?.id,
-            serviceDate,
-            expectedDeadline: deadline,
-            expectedGeofenceId: profile.geofenceId,
-            referenceUnitId: profile.referenceUnitId,
-          })
-          .onConflictDoNothing()
-          .returning();
-
-        if (occurrence) {
-          const { windowStart, windowEnd } = computeEvidenceWindow(deadline, policy);
-
-          await this.db.insert(trips).values({
-            serviceOccurrenceId: occurrence.id,
-            evidenceWindowStart: windowStart,
-            evidenceWindowEnd: windowEnd,
-            evidenceStatus: "en_espera",
-          });
-
-          created.push(occurrence.id);
-        }
       }
       current.setDate(current.getDate() + 1);
     }
 
-    return created;
+    if (rows.length === 0) {
+      return { createdIds: [] as string[], skippedExisting: 0, clamped: false as const };
+    }
+
+    const inserted = await this.db
+      .insert(serviceOccurrences)
+      .values(rows.map(({ windowStart: _ws, windowEnd: _we, ...occ }) => occ))
+      .onConflictDoNothing()
+      .returning();
+
+    if (inserted.length > 0) {
+      const byDate = new Map(rows.map((r) => [r.serviceDate, r]));
+      await this.db.insert(trips).values(
+        inserted.map((occ) => {
+          const row = byDate.get(occ.serviceDate)!;
+          return {
+            serviceOccurrenceId: occ.id,
+            evidenceWindowStart: row.windowStart,
+            evidenceWindowEnd: row.windowEnd,
+            evidenceStatus: "en_espera" as const,
+          };
+        }),
+      );
+    }
+
+    return {
+      createdIds: inserted.map((o) => o.id),
+      skippedExisting: rows.length - inserted.length,
+      clamped:
+        rangeStart.getTime() !== start.getTime() ||
+        this.startOfDay(toDate).getTime() !== end.getTime(),
+    };
+  }
+
+  /**
+   * Renueva la ventana rodante de todos los perfiles activos:
+   * genera el tramo faltante hasta min(hoy+days, vigencia del contrato).
+   */
+  async renewRollingWindow(days: number = OccurrenceRepository.ROLLING_DAYS) {
+    const today = this.startOfDay(new Date());
+    const todayIso = this.toIsoDate(today);
+    const horizon = this.addDays(today, days);
+    const horizonIso = this.toIsoDate(horizon);
+
+    const profiles = await this.db.query.serviceProfiles.findMany({
+      where: eq(serviceProfiles.active, true),
+      with: { contract: true },
+    });
+
+    const summary: Array<{
+      profileId: string;
+      profileName: string;
+      created: number;
+      skipped: number;
+      from?: string;
+      to?: string;
+    }> = [];
+
+    for (const profile of profiles) {
+      const contract = profile.contract;
+      if (!contract) continue;
+      if (contract.status !== "active" && contract.status !== "demo") continue;
+      if (contract.validTo < todayIso) continue;
+      if (contract.validFrom > horizonIso) continue;
+
+      const targetIso =
+        contract.validTo < horizonIso ? contract.validTo : horizonIso;
+      const target = new Date(`${targetIso}T00:00:00`);
+
+      const [maxRow] = await this.db
+        .select({
+          maxDate: sql<string>`max(${serviceOccurrences.serviceDate})`,
+        })
+        .from(serviceOccurrences)
+        .where(eq(serviceOccurrences.serviceProfileId, profile.id));
+
+      let from = today;
+      if (maxRow?.maxDate) {
+        const next = this.addDays(new Date(`${String(maxRow.maxDate).slice(0, 10)}T00:00:00`), 1);
+        if (next > from) from = next;
+      }
+
+      if (from > target) {
+        summary.push({
+          profileId: profile.id,
+          profileName: profile.name,
+          created: 0,
+          skipped: 0,
+        });
+        continue;
+      }
+
+      const result = await this.generateForProfile(profile.id, from, target, {
+        rollingDays: days,
+      });
+      summary.push({
+        profileId: profile.id,
+        profileName: profile.name,
+        created: result.createdIds.length,
+        skipped: result.skippedExisting,
+        from: this.toIsoDate(from),
+        to: targetIso,
+      });
+    }
+
+    return {
+      days,
+      today: todayIso,
+      horizon: horizonIso,
+      profiles: summary,
+      totalCreated: summary.reduce((n, s) => n + s.created, 0),
+    };
+  }
+
+  /**
+   * Borra ocurrencias futuras lejanas (service_date > hoy + days).
+   * Conserva hasta hoy+days inclusive (ventana rodante).
+   * Cascada limpia trips / compliance / ledger.
+   * Si `plantGroupId` se pasa, solo ese campus; si no, todas.
+   */
+  async deleteBeyondHorizon(days: number = OccurrenceRepository.ROLLING_DAYS, plantGroupId?: string) {
+    const lastKept = this.toIsoDate(this.addDays(new Date(), days));
+
+    let ids: string[];
+    if (plantGroupId) {
+      const rows = await this.db
+        .select({ id: serviceOccurrences.id })
+        .from(serviceOccurrences)
+        .innerJoin(serviceContracts, eq(serviceOccurrences.contractId, serviceContracts.id))
+        .where(
+          and(
+            eq(serviceContracts.plantGroupId, plantGroupId),
+            sql`${serviceOccurrences.serviceDate} > ${lastKept}`,
+          ),
+        );
+      ids = rows.map((r) => r.id);
+    } else {
+      const rows = await this.db
+        .select({ id: serviceOccurrences.id })
+        .from(serviceOccurrences)
+        .where(sql`${serviceOccurrences.serviceDate} > ${lastKept}`);
+      ids = rows.map((r) => r.id);
+    }
+
+    if (ids.length === 0) return { cutoff: lastKept, deleted: 0 };
+
+    // Borrar en lotes para no saturar el IN.
+    const batchSize = 500;
+    let deleted = 0;
+    for (let i = 0; i < ids.length; i += batchSize) {
+      const batch = ids.slice(i, i + batchSize);
+      const removed = await this.db
+        .delete(serviceOccurrences)
+        .where(inArray(serviceOccurrences.id, batch))
+        .returning({ id: serviceOccurrences.id });
+      deleted += removed.length;
+    }
+    return { cutoff: lastKept, deleted };
   }
 
   async findPendingVerification(now: Date) {

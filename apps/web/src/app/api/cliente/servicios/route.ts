@@ -65,10 +65,26 @@ export async function POST(request: Request) {
       return back(request, client.slug, redirectScope, { error: "Rango de fechas inválido." });
     }
     try {
-      const createdIds = await repos.occurrences.generateForProfile(profileId, from, to);
+      const result = await repos.occurrences.generateForProfile(profileId, from, to, {
+        rollingDays: 30,
+      });
+      if (result.createdIds.length === 0 && result.skippedExisting > 0) {
+        return back(request, client.slug, redirectScope, {
+          created: "ya_existian",
+          n: String(result.skippedExisting),
+        });
+      }
+      if (result.createdIds.length === 0) {
+        return back(request, client.slug, redirectScope, {
+          error: result.clamped
+            ? "El rango queda fuera de la ventana operativa (30 días) o de la vigencia del contrato."
+            : "No hay días activos del perfil en ese rango.",
+        });
+      }
       return back(request, client.slug, redirectScope, {
-        created: "generado",
-        n: String(createdIds.length),
+        created: result.clamped ? "generado_acotado" : "generado",
+        n: String(result.createdIds.length),
+        ...(result.skippedExisting > 0 ? { skipped: String(result.skippedExisting) } : {}),
       });
     } catch {
       return back(request, client.slug, redirectScope, {
@@ -105,8 +121,6 @@ export async function POST(request: Request) {
   const contractId = String(formData.get("contractId") ?? "").trim();
   const routeShiftId = String(formData.get("routeShiftId") ?? "").trim();
   const geofenceId = String(formData.get("geofenceId") ?? "").trim();
-  const referenceUnitIdRaw = String(formData.get("referenceUnitId") ?? "").trim();
-  const possibleUnitIdsRaw = formData.getAll("possibleUnitIds").map((u) => String(u));
   const activeDays = formData
     .getAll("activeDays")
     .map((d) => Number(String(d)))
@@ -125,6 +139,12 @@ export async function POST(request: Request) {
   if (!contractMatchesScope(contract, scope)) {
     return back(request, client.slug, scope, {
       error: "El contrato no corresponde a la unidad operativa seleccionada.",
+    });
+  }
+
+  if (contract.status !== "active" && contract.status !== "demo") {
+    return back(request, client.slug, scope, {
+      error: "Activa el contrato antes de crear perfiles de servicio.",
     });
   }
 
@@ -150,19 +170,13 @@ export async function POST(request: Request) {
     });
   }
 
-  const carrierUnits = await repos.fleet.getUnitsForCarrier(contract.carrierAccountId);
-  const carrierUnitIds = new Set(carrierUnits.map((u) => u.id));
-  const possibleUnitIds = possibleUnitIdsRaw.filter((id) => carrierUnitIds.has(id));
-  const referenceUnitId =
-    referenceUnitIdRaw && carrierUnitIds.has(referenceUnitIdRaw) ? referenceUnitIdRaw : undefined;
-
+  // Flota: la asigna el carrier. El cliente no elige ni ve unidades aquí.
   const payload = {
     contractId,
     routeShiftId,
     geofenceId,
     name,
-    possibleUnitIds,
-    ...(referenceUnitId ? { referenceUnitId } : {}),
+    possibleUnitIds: [] as string[],
     activeDays: activeDays.length > 0 ? activeDays : [1, 2, 3, 4, 5],
   };
 

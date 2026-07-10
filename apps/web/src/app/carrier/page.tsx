@@ -74,9 +74,10 @@ export default async function CarrierDashboardPage({
 
         <Card title="Tu rol como carrier">
           <p className="text-sm text-[var(--muted)]">
-            Configuras <span className="text-white">flota, GPS y unidades</span>. Los{" "}
-            <span className="text-white">contratos y perfiles de servicio</span> los crea cada cliente
-            en su panel → Configuración. Aquí ves el cumplimiento de los contratos que te asignaron.
+            Configuras <span className="text-white">flota, GPS y unidades</span> — eso es cómo
+            atiendes. El cliente define <span className="text-white">geocercas, turnos, rutas y
+            contratos</span> (qué se verifica). Aquí ves el cumplimiento de los contratos activos
+            que te asignaron.
           </p>
         </Card>
 

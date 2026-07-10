@@ -30,9 +30,101 @@ const DAYS: Array<{ value: number; label: string }> = [
 
 const createdLabels: Record<string, string> = {
   perfil: "Perfil de servicio creado. Ya puedes generar sus ocurrencias.",
-  generado: "Ocurrencias generadas.",
+  generado: "Ocurrencias generadas (ventana de 30 días).",
+  generado_acotado: "Ocurrencias generadas (rango acotado a 30 días / vigencia del contrato).",
+  ya_existian: "Esas fechas ya tenían ocurrencias; no se crearon duplicados.",
   eliminado: "Perfil eliminado.",
 };
+
+const ROLLING_DAYS = 30;
+
+function asIsoDate(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value === "string") return value.slice(0, 10);
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+  return String(value).slice(0, 10);
+}
+
+function addDaysIso(fromIso: string, days: number): string {
+  const d = new Date(`${fromIso}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Cuántos días del perfil caen en [from, to] (inclusive). */
+function expectedOccurrenceCount(
+  fromIso: string,
+  toIso: string,
+  activeDays: number[],
+): number {
+  const days = activeDays.length > 0 ? activeDays : [1, 2, 3, 4, 5];
+  let n = 0;
+  const current = new Date(`${fromIso}T00:00:00`);
+  const end = new Date(`${toIso}T00:00:00`);
+  if (Number.isNaN(current.getTime()) || Number.isNaN(end.getTime()) || current > end) {
+    return 0;
+  }
+  while (current <= end) {
+    if (days.includes(current.getDay())) n += 1;
+    current.setDate(current.getDate() + 1);
+  }
+  return n;
+}
+
+/** Cobertura de ocurrencias dentro de la ventana rodante [hoy, hoy+30] ∩ vigencia.
+ * `coverage` debe venir ya filtrado a esa ventana. */
+function rollingWindowCoverage(
+  coverage: { count: number; fromDate: string; toDate: string } | undefined,
+  contractFrom: string | undefined,
+  contractTo: string | undefined,
+  activeDays: number[],
+) {
+  const today = todayIso();
+  let windowFrom = today;
+  let windowTo = addDaysIso(today, ROLLING_DAYS);
+  if (contractFrom && contractFrom > windowFrom) windowFrom = contractFrom;
+  if (contractTo && contractTo < windowTo) windowTo = contractTo;
+
+  const expected =
+    windowFrom <= windowTo
+      ? expectedOccurrenceCount(windowFrom, windowTo, activeDays)
+      : 0;
+
+  if (!coverage || coverage.count === 0) {
+    return {
+      windowFrom,
+      windowTo,
+      expected,
+      inWindowCount: 0,
+      coversRolling: false,
+      hasAny: false,
+      covFrom: undefined as string | undefined,
+      covTo: undefined as string | undefined,
+    };
+  }
+
+  const covFrom = asIsoDate(coverage.fromDate);
+  const covTo = asIsoDate(coverage.toDate);
+  // Con coverage ya filtrado a la ventana, basta el conteo vs esperado.
+  const coversRolling = expected > 0 && coverage.count >= expected;
+
+  return {
+    windowFrom,
+    windowTo,
+    expected,
+    inWindowCount: coverage.count,
+    coversRolling,
+    hasAny: true,
+    covFrom,
+    covTo,
+  };
+}
 
 function geofenceOptionLabel(g: {
   name: string;
@@ -76,8 +168,11 @@ export async function ServiciosUnitView({
     return cs && contractMatchesScope(p.contract ?? {}, scope);
   });
 
-  const profilesWithOccurrences = await repos.profiles.profileIdsWithOccurrences(
+  const today = todayIso();
+  const rollingTo = addDaysIso(today, ROLLING_DAYS);
+  const occurrenceCoverage = await repos.profiles.occurrenceCoverageByProfile(
     profiles.map((p) => p.id),
+    { fromDate: today, toDate: rollingTo },
   );
 
   const carrierById = new Map(
@@ -85,14 +180,6 @@ export async function ServiciosUnitView({
       .map((c) => c.carrier)
       .filter((c): c is NonNullable<typeof c> => !!c)
       .map((c) => [c.id, c] as const),
-  );
-
-  const carrierIds = [...new Set(contracts.map((c) => c.carrierAccountId))];
-  const unitsByCarrier = await Promise.all(
-    carrierIds.map(async (id) => ({
-      carrier: carrierById.get(id) ?? null,
-      units: await repos.fleet.getUnitsForCarrier(id),
-    })),
   );
 
   const scopeHidden =
@@ -103,7 +190,9 @@ export async function ServiciosUnitView({
     );
 
   const missing: string[] = [];
-  if (contracts.length === 0) missing.push("un contrato activo o borrador");
+  if (!contracts.some((c) => c.status === "active" || c.status === "demo")) {
+    missing.push("un contrato activo");
+  }
   if (routeShifts.length === 0) missing.push("ruta + turno programados");
   if (geofences.length === 0) missing.push("geocerca de destino");
 
@@ -118,9 +207,10 @@ export async function ServiciosUnitView({
         />
 
         <p className="text-sm text-[var(--muted)]">
-          El perfil junta <span className="text-white">contrato + ruta/turno + geocerca + unidades</span>{" "}
-          dentro de la misma unidad operativa. En campus, la geocerca habitual es la de llegada al
-          parque; también puedes usar geocercas por planta como excepción.
+          El perfil define <span className="text-white">qué</span> se verifica:{" "}
+          <span className="text-white">contrato + ruta/turno + geocerca + días</span>. Las
+          ocurrencias se mantienen en una <span className="text-white">ventana de 30 días</span>{" "}
+          (renovación automática diaria). Generar es solo el primer arranque o para rellenar huecos.
         </p>
 
         {error ? (
@@ -130,9 +220,11 @@ export async function ServiciosUnitView({
         ) : null}
         {created ? (
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-            {created === "generado" && n
-              ? `Ocurrencias generadas: ${n}.`
-              : createdLabels[created] ?? "Guardado."}
+            {created === "generado" || created === "generado_acotado"
+              ? `${createdLabels[created]} ${n ? `(${n} nuevas)` : ""}`
+              : created === "ya_existian"
+                ? `${createdLabels.ya_existian}${n ? ` (${n} días)` : ""}`
+                : createdLabels[created] ?? "Guardado."}
           </div>
         ) : null}
 
@@ -150,6 +242,7 @@ export async function ServiciosUnitView({
               method="post"
               className="space-y-4"
               confirmMessage={confirmMessages.createProfile(operationalUnitLabel(activeUnit))}
+              pendingLabel="Creando perfil…"
             >
               <input type="hidden" name="clientSlug" value={client.slug} />
               <input type="hidden" name="action" value="create" />
@@ -166,9 +259,11 @@ export async function ServiciosUnitView({
                     <option value="" disabled>
                       Elige contrato…
                     </option>
-                    {contracts.map((c) => (
+                    {contracts
+                      .filter((c) => c.status === "active" || c.status === "demo")
+                      .map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.name} · {c.carrier?.name ?? carrierById.get(c.carrierAccountId)?.name ?? "carrier"} · {c.status}
+                        {c.name} · {c.carrier?.name ?? carrierById.get(c.carrierAccountId)?.name ?? "carrier"}
                       </option>
                     ))}
                   </select>
@@ -200,47 +295,7 @@ export async function ServiciosUnitView({
                     ))}
                   </select>
                 </label>
-                <label className={labelClass}>
-                  Unidad de referencia (opcional)
-                  <select name="referenceUnitId" className={inputClass} defaultValue="">
-                    <option value="">—</option>
-                    {unitsByCarrier.flatMap((c) =>
-                      c.units.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.label}
-                          {u.plateNumber ? ` · ${u.plateNumber}` : ""}
-                          {c.carrier ? ` (${c.carrier.name})` : ""}
-                        </option>
-                      )),
-                    )}
-                  </select>
-                </label>
               </div>
-
-              <fieldset className="rounded-lg border border-white/10 p-3">
-                <legend className="px-1 text-sm text-[var(--muted)]">
-                  Unidades posibles (del carrier del contrato)
-                </legend>
-                {unitsByCarrier.every((c) => c.units.length === 0) ? (
-                  <p className="text-sm text-[var(--muted)]">
-                    El carrier del contrato no tiene unidades registradas.
-                  </p>
-                ) : (
-                  unitsByCarrier.map((c) => (
-                    <div key={c.carrier?.id ?? "x"} className="mb-2">
-                      <p className="text-xs text-[var(--muted)]">{c.carrier?.name ?? "Carrier"}</p>
-                      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                        {c.units.map((u) => (
-                          <label key={u.id} className="flex items-center gap-2 text-sm">
-                            <input type="checkbox" name="possibleUnitIds" value={u.id} />
-                            {u.label}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </fieldset>
 
               <fieldset className="rounded-lg border border-white/10 p-3">
                 <legend className="px-1 text-sm text-[var(--muted)]">Días activos</legend>
@@ -271,22 +326,52 @@ export async function ServiciosUnitView({
             <p className="text-sm text-[var(--muted)]">Sin perfiles para esta unidad.</p>
           ) : (
             <ul className="space-y-3 text-sm">
-              {profiles.map((p) => (
+              {profiles.map((p) => {
+                const contractFrom = asIsoDate(p.contract?.validFrom);
+                const contractTo = asIsoDate(p.contract?.validTo);
+                const coverage = occurrenceCoverage.get(p.id);
+                const rolling = rollingWindowCoverage(
+                  coverage,
+                  contractFrom,
+                  contractTo,
+                  p.activeDays ?? [1, 2, 3, 4, 5],
+                );
+                const hasOccurrences = rolling.hasAny;
+                const coversRolling = rolling.coversRolling;
+
+                return (
                 <li key={p.id} className="rounded border border-white/5 p-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="font-medium">{p.name}</p>
                       <p className="text-xs text-[var(--muted)]">
                         {p.contract?.name ?? "—"} · {p.routeShift?.route?.name ?? "—"} ·{" "}
-                        {p.routeShift?.shift?.name ?? "—"} · destino {p.geofence?.name ?? "—"} ·{" "}
-                        {p.possibleUnits.length} unidad(es) · días [{(p.activeDays ?? []).join(", ")}]
+                        {p.routeShift?.shift?.name ?? "—"} · destino {p.geofence?.name ?? "—"} · días [
+                        {(p.activeDays ?? []).join(", ")}]
+                        {contractFrom && contractTo
+                          ? ` · vigencia ${contractFrom} → ${contractTo}`
+                          : ""}
                       </p>
+                      {hasOccurrences ? (
+                        <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-300">
+                          <span aria-hidden>✓</span>
+                          {coversRolling
+                            ? `30 días cubiertos: ${rolling.inWindowCount} ocurrencias (${rolling.covFrom} → ${rolling.covTo})`
+                            : `Parcial: ${rolling.inWindowCount} de ~${rolling.expected} en ventana 30d (${rolling.covFrom} → ${rolling.covTo})`}
+                        </p>
+                      ) : (
+                        <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs text-amber-200">
+                          Sin ocurrencias — genera los próximos 30 días
+                          {rolling.expected > 0 ? ` (~${rolling.expected})` : ""}
+                        </p>
+                      )}
                     </div>
-                    {!profilesWithOccurrences.has(p.id) ? (
+                    {!hasOccurrences ? (
                       <ConfirmForm
                         action="/api/cliente/servicios"
                         method="post"
                         confirmMessage={confirmMessages.deleteProfile(p.name)}
+                        pendingLabel="Eliminando…"
                       >
                         <input type="hidden" name="clientSlug" value={client.slug} />
                         <input type="hidden" name="action" value="delete" />
@@ -301,33 +386,64 @@ export async function ServiciosUnitView({
                       </ConfirmForm>
                     ) : null}
                   </div>
-                  <ConfirmForm
-                    action="/api/cliente/servicios"
-                    method="post"
-                    className="mt-3 flex flex-wrap items-end gap-2"
-                    confirmTemplate={confirmMessages.generateOccurrencesTemplate(p.name)}
-                  >
-                    <input type="hidden" name="clientSlug" value={client.slug} />
-                    <input type="hidden" name="action" value="generar" />
-                    <input type="hidden" name="profileId" value={p.id} />
-                    {scopeHidden}
-                    <label className="text-xs">
-                      Desde
-                      <input name="fromDate" type="date" required className={inputClass} />
-                    </label>
-                    <label className="text-xs">
-                      Hasta
-                      <input name="toDate" type="date" required className={inputClass} />
-                    </label>
-                    <button
-                      type="submit"
-                      className="rounded-lg border border-white/10 px-3 py-2 text-xs hover:border-[var(--accent)]"
-                    >
-                      Generar ocurrencias
-                    </button>
-                  </ConfirmForm>
+                  {coversRolling ? (
+                    <p className="mt-3 text-xs text-[var(--muted)]">
+                      Ventana de 30 días cubierta. El cron diario la renueva; no hace falta generar
+                      de nuevo salvo que falte un hueco.
+                    </p>
+                  ) : (
+                    <>
+                      <ConfirmForm
+                        action="/api/cliente/servicios"
+                        method="post"
+                        className="mt-3 flex flex-wrap items-end gap-2"
+                        confirmTemplate={confirmMessages.generateOccurrencesTemplate(p.name)}
+                        pendingLabel="Generando ocurrencias…"
+                      >
+                        <input type="hidden" name="clientSlug" value={client.slug} />
+                        <input type="hidden" name="action" value="generar" />
+                        <input type="hidden" name="profileId" value={p.id} />
+                        {scopeHidden}
+                        <label className="text-xs">
+                          Desde
+                          <input
+                            name="fromDate"
+                            type="date"
+                            required
+                            defaultValue={rolling.windowFrom}
+                            min={contractFrom}
+                            max={rolling.windowTo}
+                            className={inputClass}
+                          />
+                        </label>
+                        <label className="text-xs">
+                          Hasta
+                          <input
+                            name="toDate"
+                            type="date"
+                            required
+                            defaultValue={rolling.windowTo}
+                            min={rolling.windowFrom}
+                            max={contractTo && contractTo < rolling.windowTo ? contractTo : rolling.windowTo}
+                            className={inputClass}
+                          />
+                        </label>
+                        <button
+                          type="submit"
+                          className="rounded-lg border border-white/10 px-3 py-2 text-xs hover:border-[var(--accent)]"
+                        >
+                          {hasOccurrences ? "Completar 30 días" : "Generar 30 días"}
+                        </button>
+                      </ConfirmForm>
+                      <p className="mt-1 text-xs text-[var(--muted)]">
+                        Por defecto: hoy → +{ROLLING_DAYS} días (techo: vigencia del contrato). El
+                        sistema renueva esta ventana cada día.
+                      </p>
+                    </>
+                  )}
                 </li>
-              ))}
+              );
+              })}
             </ul>
           )}
         </Card>

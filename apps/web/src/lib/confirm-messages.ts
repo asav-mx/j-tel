@@ -10,7 +10,7 @@ export const confirmMessages = {
   deleteProfile: (name: string) =>
     `¿Eliminar el perfil «${name}»? Solo es posible si no tiene ocurrencias generadas.`,
   generateOccurrencesTemplate: (name: string) =>
-    `¿Generar ocurrencias para «${name}» del {fromDate} al {toDate}? Se crearán servicios a verificar.`,
+    `¿Generar ocurrencias para «${name}» del {fromDate} al {toDate}? Solo se materializan hasta 30 días adelante. Puede tardar; no pulses otra vez hasta ver el resultado.`,
   authorizeCarrierTemplate: (client: string) =>
     `¿Autorizar a {__selectLabel:carrierAccountId} para trabajar con ${client}? El cliente podrá crear contratos con este carrier.`,
   suspendCarrier: (carrier: string, client: string) =>

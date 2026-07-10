@@ -282,6 +282,8 @@ async function main() {
     clientAccountId: client.id,
     plantId: plant.id,
     name: "Contrato PRUEBA REAL",
+    validFrom: new Date().toISOString().split("T")[0]!,
+    validTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]!,
     policy: POLICY,
     status: "active",
   });

@@ -70,6 +70,30 @@ export async function POST(request: Request) {
     return back(request, client.slug, scope, { created: "activado" });
   }
 
+  if (action === "updateValidity") {
+    const contractId = String(formData.get("contractId") ?? "").trim();
+    const validFrom = String(formData.get("validFrom") ?? "").trim();
+    const validTo = String(formData.get("validTo") ?? "").trim();
+    const contract = contractId ? await repos.contracts.findById(contractId) : null;
+    if (!contract || contract.clientAccountId !== client.id) {
+      return back(request, client.slug, null, { error: "Contrato no encontrado." });
+    }
+    const scope = parseOperationalScope({
+      plantId: contract.plantId,
+      plantGroupId: contract.plantGroupId,
+    });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(validFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(validTo)) {
+      return back(request, client.slug, scope, { error: "Fechas de vigencia inválidas." });
+    }
+    if (validFrom > validTo) {
+      return back(request, client.slug, scope, {
+        error: "La vigencia debe tener fecha inicio ≤ fecha fin.",
+      });
+    }
+    await repos.contracts.updateValidity(contractId, validFrom, validTo);
+    return back(request, client.slug, scope, { created: "vigencia" });
+  }
+
   if (action === "delete") {
     const contractId = String(formData.get("contractId") ?? "").trim();
     const contract = contractId ? await repos.contracts.findById(contractId) : null;
@@ -111,6 +135,8 @@ export async function POST(request: Request) {
 
   const name = String(formData.get("name") ?? "").trim();
   const carrierAccountId = String(formData.get("carrierAccountId") ?? "").trim();
+  const validFrom = String(formData.get("validFrom") ?? "").trim();
+  const validTo = String(formData.get("validTo") ?? "").trim();
   const arrivalAnticipationMinutes = toInt(formData.get("arrivalAnticipationMinutes"), 15);
   const maxRouteDurationMinutes = toInt(formData.get("maxRouteDurationMinutes"), 60);
   const toleranceMinutes = toInt(formData.get("toleranceMinutes"), 0);
@@ -126,6 +152,8 @@ export async function POST(request: Request) {
     clientAccountId: client.id,
     ...scopeCols,
     name,
+    validFrom,
+    validTo,
     status: "draft" as const,
     policy: {
       toleranceMinutes,

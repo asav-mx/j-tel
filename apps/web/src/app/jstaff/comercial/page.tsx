@@ -56,8 +56,10 @@ export default async function JStaffComercialPage({
 
         <p className="text-sm text-[var(--muted)]">
           El catálogo completo de carriers es <span className="text-white">privado de J-Staff</span>.
-          Aquí autorizas qué carriers puede contratar cada cliente. En Contratos, el cliente solo
-          verá esta lista corta — nunca el universo completo de JTEL.
+          Aquí autorizas qué carriers puede contratar cada cliente (
+          <span className="text-white">autorización active/suspended</span>
+          ). Eso no activa el contrato: el contrato se crea en borrador y se activa en{" "}
+          <span className="text-white">Contratos</span> de cada unidad operativa.
         </p>
 
         {error ? (
@@ -170,10 +172,10 @@ export default async function JStaffComercialPage({
                       </div>
                       <div className="flex gap-2">
                         <Link
-                          href={withAccount("/cliente/configuracion/contratos", selectedClient.slug)}
+                          href={withAccount("/cliente", selectedClient.slug)}
                           className="rounded-lg border border-white/10 px-3 py-1.5 text-xs hover:border-[var(--accent)]"
                         >
-                          Contratos cliente →
+                          Unidades del cliente →
                         </Link>
                         {a.status === "active" ? (
                           <ConfirmForm

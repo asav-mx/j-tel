@@ -302,6 +302,9 @@ export const serviceContracts = pgTable("service_contracts", {
   }),
   name: text("name").notNull(),
   status: contractStatusEnum("status").notNull().default("draft"),
+  /** Vigencia comercial del contrato (licitación / asignación). */
+  validFrom: date("valid_from").notNull(),
+  validTo: date("valid_to").notNull(),
   policy: jsonb("policy").$type<import("@jtel/domain").ContractPolicy>().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),

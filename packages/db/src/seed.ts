@@ -313,11 +313,19 @@ async function seed() {
     shiftId: honeywellShift.id,
   });
 
+  const today = new Date();
+  const todayIso = today.toISOString().split("T")[0]!;
+  const yearAhead = new Date(today);
+  yearAhead.setFullYear(yearAhead.getFullYear() + 1);
+  const yearAheadIso = yearAhead.toISOString().split("T")[0]!;
+
   const tecmaContract = await repos.contracts.create({
     carrierAccountId: juarezBus.id,
     clientAccountId: tecma.id,
     plantId: tecmaPlant47.id,
     name: "Tecma 47 - Transporte Personal",
+    validFrom: todayIso,
+    validTo: yearAheadIso,
     policy: TECMA_POLICY,
     status: "active",
   });
@@ -327,6 +335,8 @@ async function seed() {
     clientAccountId: tecma.id,
     plantGroupId: campusSantosDumont.id,
     name: "Campus Santos Dumont - Transporte Personal",
+    validFrom: todayIso,
+    validTo: yearAheadIso,
     policy: TECMA_POLICY,
     status: "active",
   });
@@ -336,6 +346,8 @@ async function seed() {
     clientAccountId: honeywell.id,
     plantId: honeywellPlant.id,
     name: "Honeywell MX07 - Transporte Personal",
+    validFrom: todayIso,
+    validTo: yearAheadIso,
     policy: HONEYWELL_POLICY,
     status: "active",
   });
@@ -370,7 +382,6 @@ async function seed() {
     activeDays: [1, 2, 3, 4, 5, 6],
   });
 
-  const today = new Date();
   const weekAgo = new Date(today);
   weekAgo.setDate(weekAgo.getDate() - 7);
   const weekAhead = new Date(today);

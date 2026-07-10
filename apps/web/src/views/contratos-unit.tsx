@@ -32,6 +32,7 @@ const createdLabels: Record<string, string> = {
   contrato: "Contrato creado (en borrador). Actívalo cuando esté listo.",
   activado: "Contrato activado.",
   eliminado: "Borrador eliminado.",
+  vigencia: "Vigencia del contrato actualizada.",
 };
 
 function contractScopeLabel(
@@ -84,6 +85,11 @@ export async function ContratosUnitView({
     authorizedCarriers.length > 0 &&
     authorizedCarriers.every((c) => openByCarrier.has(c.id));
 
+  const todayIso = new Date().toISOString().split("T")[0]!;
+  const yearAhead = new Date();
+  yearAhead.setFullYear(yearAhead.getFullYear() + 1);
+  const yearAheadIso = yearAhead.toISOString().split("T")[0]!;
+
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-5xl space-y-6">
@@ -120,8 +126,9 @@ export async function ContratosUnitView({
         ) : allCarriersHaveOpenContract ? (
           <Card title={`Contrato existente — ${operationalUnitLabel(activeUnit)}`}>
             <p className="text-sm text-[var(--muted)]">
-              Ya hay un contrato en borrador o activo para cada carrier autorizado en esta unidad.
-              Activa el borrador que quieras usar o elimina los duplicados de abajo.
+              {scopedContracts.some((c) => c.status === "draft")
+                ? "Ya hay un contrato en borrador o activo para cada carrier autorizado en esta unidad. Activa el borrador que quieras usar o elimina los duplicados de abajo."
+                : "Cada carrier autorizado ya tiene contrato en esta unidad. Para perfiles de servicio usa el contrato activo de la lista."}
             </p>
           </Card>
         ) : (
@@ -160,6 +167,29 @@ export async function ContratosUnitView({
                       );
                     })}
                   </select>
+                </label>
+                <label className={labelClass}>
+                  Vigencia desde
+                  <input
+                    name="validFrom"
+                    type="date"
+                    required
+                    defaultValue={todayIso}
+                    className={inputClass}
+                  />
+                </label>
+                <label className={labelClass}>
+                  Vigencia hasta
+                  <input
+                    name="validTo"
+                    type="date"
+                    required
+                    defaultValue={yearAheadIso}
+                    className={inputClass}
+                  />
+                  <span className="mt-1 block text-xs text-[var(--muted)]">
+                    Las ocurrencias de perfiles no pueden salir de este rango.
+                  </span>
                 </label>
               </div>
 
@@ -305,8 +335,9 @@ export async function ContratosUnitView({
               {scopedContracts.map((c) => (
                 <li
                   key={c.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded border border-white/5 p-3"
+                  className="space-y-2 rounded border border-white/5 p-3"
                 >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-medium">
                       {c.name}{" "}
@@ -316,9 +347,9 @@ export async function ContratosUnitView({
                     </p>
                     <p className="text-xs text-[var(--muted)]">
                       {c.carrier?.name ?? "—"} · {contractScopeLabel(c, operationalUnits)} ·
-                      Tolerancia {c.policy.toleranceMinutes} min · anticipación{" "}
-                      {c.policy.arrivalAnticipationMinutes ?? 15} min · {c.policy.routeStrictness} ·{" "}
-                      {c.profiles.length} perfil(es)
+                      Vigencia {c.validFrom} → {c.validTo} · Tolerancia {c.policy.toleranceMinutes}{" "}
+                      min · anticipación {c.policy.arrivalAnticipationMinutes ?? 15} min ·{" "}
+                      {c.policy.routeStrictness} · {c.profiles.length} perfil(es)
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -357,6 +388,43 @@ export async function ContratosUnitView({
                       </ConfirmForm>
                     ) : null}
                   </div>
+                  </div>
+                  <ConfirmForm
+                    action="/api/cliente/contratos"
+                    method="post"
+                    className="flex flex-wrap items-end gap-2 border-t border-white/5 pt-2"
+                    confirmMessage={`¿Actualizar vigencia de «${c.name}»?`}
+                  >
+                    <input type="hidden" name="clientSlug" value={client.slug} />
+                    <input type="hidden" name="action" value="updateValidity" />
+                    <input type="hidden" name="contractId" value={c.id} />
+                    <label className="text-xs">
+                      Desde
+                      <input
+                        name="validFrom"
+                        type="date"
+                        required
+                        defaultValue={c.validFrom}
+                        className={inputClass}
+                      />
+                    </label>
+                    <label className="text-xs">
+                      Hasta
+                      <input
+                        name="validTo"
+                        type="date"
+                        required
+                        defaultValue={c.validTo}
+                        className={inputClass}
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      className="rounded-lg border border-white/10 px-3 py-2 text-xs hover:border-[var(--accent)]"
+                    >
+                      Guardar vigencia
+                    </button>
+                  </ConfirmForm>
                 </li>
               ))}
             </ul>

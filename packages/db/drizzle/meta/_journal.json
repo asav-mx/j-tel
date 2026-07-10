@@ -43,6 +43,13 @@
       "when": 1783800000000,
       "tag": "0005_client_carrier_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783900000000,
+      "tag": "0006_contract_validity",
+      "breakpoints": true
     }
   ]
 }
