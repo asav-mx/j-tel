@@ -1,1 +1,1 @@
-export { default } from "./redirect";
+export { default, dynamic } from "./redirect";
