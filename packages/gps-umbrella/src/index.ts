@@ -40,6 +40,11 @@ interface UmbrellaDevice {
  */
 const sharedTokenCache = new Map<string, { token: string; expiresAt: number }>();
 
+/** Invalida tokens cacheados (p. ej. tras "Token has exceeded the use…"). */
+export function clearUmbrellaTokenCache() {
+  sharedTokenCache.clear();
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

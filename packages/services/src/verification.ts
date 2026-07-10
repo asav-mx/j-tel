@@ -82,11 +82,23 @@ export class VerificationService {
 
   /**
    * Recalcula hechos de un contrato con la política actual (p. ej. tras cambiar
-   * umbral KML / tolerancia). Reusa evidencia GPS ya guardada cuando existe.
+   * umbral KML / tolerancia). Por defecto reusa evidencia GPS ya guardada.
+   *
+   * `exclusiveUnits`: si varias rutas acreditan la misma unidad (calles
+   * compartidas), se queda en la de mayor match KML y el resto se reevalúa
+   * sin esa unidad.
    */
   async reverifyContract(
     contractId: string,
-    opts: { daysBack?: number; now?: Date } = {},
+    opts: {
+      daysBack?: number;
+      now?: Date;
+      /** ISO date YYYY-MM-DD — si se pasa, solo ese día. */
+      serviceDate?: string;
+      /** Default true (cambio de política). false = re-ingerir desde memoria. */
+      keepEvidence?: boolean;
+      exclusiveUnits?: boolean;
+    } = {},
   ) {
     const daysBack = opts.daysBack ?? 14;
     const now = opts.now ?? new Date();
@@ -94,10 +106,12 @@ export class VerificationService {
     from.setHours(0, 0, 0, 0);
     from.setDate(from.getDate() - daysBack);
     const fromIso = from.toISOString().slice(0, 10);
+    const keepEvidence = opts.keepEvidence ?? true;
 
     const occs = await this.repos.occurrences.findForContract(contractId);
     const targets = occs.filter((o) => {
       if (!o.trip) return false;
+      if (opts.serviceDate) return o.serviceDate === opts.serviceDate;
       if (o.serviceDate < fromIso) return false;
       // Solo servicios cuyo deadline ya pasó (o está en ventana de gracia).
       return o.expectedDeadline.getTime() <= now.getTime() + 60 * 60 * 1000;
@@ -107,7 +121,7 @@ export class VerificationService {
     for (const occ of targets) {
       try {
         results.push(
-          await this.verifyOccurrence(occ.id, { force: true, keepEvidence: true }),
+          await this.verifyOccurrence(occ.id, { force: true, keepEvidence }),
         );
       } catch (err) {
         results.push({
@@ -117,12 +131,99 @@ export class VerificationService {
         });
       }
     }
+
+    if (opts.exclusiveUnits) {
+      await this.resolveExclusiveUnitClaims(targets.map((o) => o.id));
+      // Refrescar resultados tras la resolución exclusiva.
+      results.length = 0;
+      for (const occ of targets) {
+        const fresh = await this.repos.occurrences.findById(occ.id);
+        results.push({
+          occurrenceId: occ.id,
+          skipped: false,
+          status: fresh?.complianceFact?.status,
+          observedUnitId: fresh?.complianceFact?.observedUnitId ?? null,
+          observedRouteMatchPct: fresh?.complianceFact?.observedRouteMatchPct ?? null,
+        });
+      }
+    }
+
     return results;
+  }
+
+  /**
+   * Si la misma unidad quedó como observada en varios servicios, se queda en
+   * el de mayor `observedRouteMatchPct` (empate → llegada más temprana) y los
+   * perdedores se re-verifican excluyendo las unidades ya asignadas.
+   */
+  private async resolveExclusiveUnitClaims(occurrenceIds: string[]) {
+    const maxRounds = 8;
+    for (let round = 0; round < maxRounds; round++) {
+      type Claim = {
+        occurrenceId: string;
+        unitId: string;
+        matchPct: number;
+        arrivalAtMs: number;
+      };
+      const claims: Claim[] = [];
+
+      for (const id of occurrenceIds) {
+        const occ = await this.repos.occurrences.findById(id);
+        const fact = occ?.complianceFact;
+        if (!fact || fact.status !== "cumplido" || !fact.observedUnitId) continue;
+        claims.push({
+          occurrenceId: id,
+          unitId: fact.observedUnitId,
+          matchPct: fact.observedRouteMatchPct ?? 0,
+          arrivalAtMs: fact.observedArrivalAt?.getTime() ?? Number.MAX_SAFE_INTEGER,
+        });
+      }
+
+      const byUnit = new Map<string, Claim[]>();
+      for (const c of claims) {
+        const list = byUnit.get(c.unitId) ?? [];
+        list.push(c);
+        byUnit.set(c.unitId, list);
+      }
+
+      const conflicts: Claim[] = [];
+      for (const list of byUnit.values()) {
+        if (list.length <= 1) continue;
+        list.sort((a, b) => {
+          const diff = b.matchPct - a.matchPct;
+          if (Math.abs(diff) >= 0.5) return diff;
+          return a.arrivalAtMs - b.arrivalAtMs;
+        });
+        conflicts.push(...list.slice(1));
+      }
+
+      if (conflicts.length === 0) return;
+
+      const assignedElsewhere = new Set(
+        claims
+          .filter((c) => !conflicts.some((x) => x.occurrenceId === c.occurrenceId))
+          .map((c) => c.unitId),
+      );
+
+      const loserIds = [...new Set(conflicts.map((c) => c.occurrenceId))];
+      for (const occurrenceId of loserIds) {
+        await this.verifyOccurrence(occurrenceId, {
+          force: true,
+          keepEvidence: true,
+          excludeUnitIds: [...assignedElsewhere],
+        });
+      }
+    }
   }
 
   async verifyOccurrence(
     occurrenceId: string,
-    opts: { force?: boolean; keepEvidence?: boolean } = {},
+    opts: {
+      force?: boolean;
+      keepEvidence?: boolean;
+      /** Unidades que no pueden ganar este servicio (asignación exclusiva). */
+      excludeUnitIds?: string[];
+    } = {},
   ) {
     const occurrence = await this.repos.occurrences.findById(occurrenceId);
     if (!occurrence?.trip) {
@@ -279,11 +380,17 @@ export class VerificationService {
       kmlWaypoints = byRoute?.waypoints;
     }
 
-    const enrichedPoints = evidencePoints.map((p) => ({
-      ...p,
-      // Agrupar por unidad cuando se conoce; si no, por IMEI.
-      imei: imeiToUnitId.get(p.imei) ?? p.imei,
-    }));
+    const excluded = new Set(opts.excludeUnitIds ?? []);
+    const enrichedPoints = evidencePoints
+      .filter((p) => {
+        const unitId = imeiToUnitId.get(p.imei);
+        return !(unitId && excluded.has(unitId));
+      })
+      .map((p) => ({
+        ...p,
+        // Agrupar por unidad cuando se conoce; si no, por IMEI.
+        imei: imeiToUnitId.get(p.imei) ?? p.imei,
+      }));
 
     const verification = verifyService({
       occurrenceId,
@@ -300,10 +407,10 @@ export class VerificationService {
     let observedUnitId: string | null = null;
     if (verification.observedUnitId) {
       const winner = verification.candidateUnits.find(
-        (c) => c.unitId === verification.observedUnitId || c.servedRoute,
+        (c) => c.unitId === verification.observedUnitId,
       );
       const candidate =
-        (winner ? units.find((u) => u.id === winner.unitId)?.id : null) ??
+        (winner && units.some((u) => u.id === winner.unitId) ? winner.unitId : null) ??
         imeiToUnitId.get(verification.observedUnitId) ??
         units.find((u) => u.id === verification.observedUnitId)?.id ??
         null;

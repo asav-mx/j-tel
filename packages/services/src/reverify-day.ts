@@ -1,0 +1,115 @@
+/**
+ * Re-verifica un día de un contrato: re-ingere evidencia desde memoria y
+ * aplica asignación exclusiva de unidades (calles compartidas).
+ *
+ * Uso:
+ *   SERVICE_DATE=2026-07-09 CONTRACT=campus \
+ *     pnpm --filter @jtel/services exec tsx src/reverify-day.ts
+ */
+import { existsSync } from "node:fs";
+import { createDb, createRepositories } from "@jtel/db";
+import { VerificationService } from "./verification.js";
+
+for (const p of ["../../.env", ".env"]) {
+  if (existsSync(p)) {
+    try {
+      process.loadEnvFile(p);
+      break;
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function normalizeUmbrellaBaseUrl(raw: string): string {
+  const trimmed = raw.trim().replace(/\/+$/, "");
+  return /\/openapi$/i.test(trimmed) ? trimmed : `${trimmed}/openapi`;
+}
+
+async function main() {
+  const serviceDate = process.env.SERVICE_DATE;
+  if (!serviceDate) {
+    console.error("Falta SERVICE_DATE=YYYY-MM-DD");
+    process.exit(1);
+  }
+
+  const db = createDb(process.env.DATABASE_URL!);
+  const repos = createRepositories(db);
+
+  const contractIdEnv = process.env.CONTRACT_ID?.trim();
+  const filter = (process.env.CONTRACT ?? "santos dumont|campus santos").toLowerCase();
+  const clients = await repos.accounts.listByType("client");
+  const contracts = [];
+  for (const client of clients) {
+    const list = await repos.contracts.findForClient(client.id);
+    contracts.push(...list);
+  }
+
+  const contract = contractIdEnv
+    ? (contracts.find((c) => c.id === contractIdEnv) ?? null)
+    : (contracts.find((c) => {
+        const hay = `${c.name ?? ""} ${c.plantGroup?.name ?? ""} ${c.plant?.name ?? ""}`.toLowerCase();
+        return filter.split("|").some((f) => hay.includes(f.trim()));
+      }) ?? null);
+
+  if (!contract) {
+    console.error(
+      "No se encontró contrato. Contratos:",
+      contracts.map((c) => `${c.id.slice(0, 8)}… ${c.name} / ${c.plantGroup?.name ?? c.plant?.name ?? "?"}`),
+    );
+    process.exit(1);
+  }
+
+  console.log(
+    `Re-verificando ${contract.name} (${contract.plantGroup?.name ?? contract.plant?.name ?? ""}) · ${serviceDate}`,
+  );
+  console.log("force + keepEvidence:false + exclusiveUnits");
+
+  const svc = new VerificationService(repos, {
+    umbrellaBaseUrl: normalizeUmbrellaBaseUrl(
+      process.env.UMBRELLA_GPS_URL ??
+        process.env.UMBRELLA_GPS_BASE_URL ??
+        "http://gps2.umbrellasoluciones.com/openapi",
+    ),
+    umbrellaUserId: process.env.UMBRELLA_GPS_USERID ?? "",
+    umbrellaPassword: process.env.UMBRELLA_GPS_PASSWORD ?? "",
+  });
+
+  const results = await svc.reverifyContract(contract.id, {
+    serviceDate,
+    keepEvidence: false,
+    exclusiveUnits: true,
+  });
+
+  const byStatus = new Map<string, number>();
+  for (const r of results) {
+    const s = String((r as { status?: string }).status ?? "error");
+    byStatus.set(s, (byStatus.get(s) ?? 0) + 1);
+  }
+  console.log("\nResumen:", Object.fromEntries(byStatus));
+
+  // Detalle Sierra Vista / Riberas 9
+  const occs = await repos.occurrences.findForContract(contract.id);
+  const focus = occs.filter(
+    (o) =>
+      o.serviceDate === serviceDate &&
+      /riberas.?9|sierra.?vista/i.test(
+        `${o.profile?.code ?? ""} ${o.profile?.name ?? ""} ${o.profile?.routeShift?.route?.name ?? ""}`,
+      ),
+  );
+  console.log("\nFoco Sierra Vista / Riberas 9:");
+  for (const o of focus) {
+    const f = o.complianceFact;
+    const unit = f?.observedUnit;
+    console.log(
+      `  ${o.profile?.code} → ${f?.status ?? "?"} ${f?.timing ?? ""} · unidad=${unit?.label ?? "-"} · match=${f?.observedRouteMatchPct?.toFixed?.(1) ?? f?.observedRouteMatchPct ?? "-"}%`,
+    );
+  }
+
+  process.exit(0);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

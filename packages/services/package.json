@@ -16,6 +16,8 @@
     "test": "vitest run",
     "real-e2e": "tsx src/real-e2e.ts",
     "archive": "tsx src/archive-run.ts",
+    "backfill-telemetry": "tsx src/backfill-telemetry.ts",
+    "reverify-day": "tsx src/reverify-day.ts",
     "import-jrz-memory": "tsx src/import-jrz-memory.ts"
   },
   "dependencies": {
