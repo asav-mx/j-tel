@@ -1,6 +1,10 @@
 import { getRepos } from "@/lib/db";
 import { notFound } from "next/navigation";
-import { computeEnforcement, type ContractPolicy } from "@jtel/domain";
+import {
+  computeEnforcement,
+  computeEvidenceWindow,
+  type ContractPolicy,
+} from "@jtel/domain";
 
 export type MapPoint = { lat: number; lng: number; at: string };
 export type MapPolygon = Array<{ lat: number; lng: number }>;
@@ -20,16 +24,21 @@ export interface ServiceDetailData {
   observedArrivalAt: string | null;
   timing: string | null;
   evidenceStatus: string | null;
-  /** Ventana GPS del contrato (viaje). */
-  evidenceWindowStart: string | null;
-  evidenceWindowEnd: string | null;
+  /** Ventana según política actual del contrato. */
+  policyWindowStart: string | null;
+  policyWindowEnd: string | null;
+  /** Ventana congelada en el viaje (la que se usó al verificar). */
+  tripWindowStart: string | null;
+  tripWindowEnd: string | null;
+  tripWindowDiffersFromPolicy: boolean;
   evidenceMarginBeforeMinutes: number | null;
+  verificationGraceMinutes: number | null;
   evidenceMarginAfterMinutes: number | null;
   toleranceMinutes: number | null;
-  /** Primer / último punto del trazo mostrado (corredor KML / llegada). */
+  /** Primer / último punto del trazo mostrado (corredor KML). */
   evidenceFirstAt: string | null;
   evidenceLastAt: string | null;
-  /** Puntos GPS de la unidad en toda la ventana del contrato. */
+  /** Puntos GPS de la unidad en toda la ventana del viaje. */
   unitPointsInWindow: number;
   pointCount: number;
   mapPoints: MapPoint[];
@@ -87,34 +96,19 @@ function haversineKm(
   return 2 * 6371 * Math.asin(Math.sqrt(x));
 }
 
-/** Recorta el GPS al tramo útil: cerca del KML y alrededor de la llegada. */
+/** Recorta el GPS al corredor del KML (sin el deambular por la ciudad). */
 function clipTrackToRoute(
   points: MapPoint[],
   kml: MapWaypoint[],
-  arrivalAt: Date | null,
-  maxRouteDurationMinutes: number,
-  corridorKm = 0.6,
+  corridorKm = 0.75,
 ): MapPoint[] {
   if (points.length === 0) return [];
+  if (kml.length === 0) return points;
 
-  let scoped = points;
-  if (arrivalAt) {
-    const fromMs = arrivalAt.getTime() - maxRouteDurationMinutes * 60_000;
-    const toMs = arrivalAt.getTime() + 15 * 60_000;
-    const inWindow = points.filter((p) => {
-      const t = new Date(p.at).getTime();
-      return t >= fromMs && t <= toMs;
-    });
-    if (inWindow.length > 0) scoped = inWindow;
-  }
-
-  if (kml.length === 0) return scoped;
-
-  const nearRoute = scoped.filter((p) =>
+  const nearRoute = points.filter((p) =>
     kml.some((wp) => haversineKm(p, wp) <= corridorKm),
   );
-  // Si el filtro deja muy poco, no vaciar el mapa: usar el recorte temporal.
-  return nearRoute.length >= 3 ? nearRoute : scoped;
+  return nearRoute.length >= 3 ? nearRoute : points;
 }
 
 export async function loadServiceDetail(
@@ -170,12 +164,7 @@ export async function loadServiceDetail(
     lng: wp.lng,
   }));
 
-  const mapPoints = clipTrackToRoute(
-    allUnitPoints,
-    kmlWaypoints,
-    fact?.observedArrivalAt ?? null,
-    policy.maxRouteDurationMinutes ?? 60,
-  );
+  const mapPoints = clipTrackToRoute(allUnitPoints, kmlWaypoints);
 
   // Downsample para no saturar Leaflet (máx. ~400 puntos).
   const mapPointsDisplay =
@@ -210,8 +199,16 @@ export async function loadServiceDetail(
   const trip = occurrence.trip;
   const evidenceFirstAt = mapPoints[0]?.at ?? null;
   const evidenceLastAt = mapPoints[mapPoints.length - 1]?.at ?? null;
-  const afterMinutes =
-    (policy.verificationGraceMinutes ?? 0) + (policy.evidenceMarginMinutesAfter ?? 0);
+
+  const policyWindow = computeEvidenceWindow(occurrence.expectedDeadline, policy);
+  const tripStart = trip?.evidenceWindowStart ?? null;
+  const tripEnd = trip?.evidenceWindowEnd ?? null;
+  const tripWindowDiffersFromPolicy = Boolean(
+    tripStart &&
+      tripEnd &&
+      (Math.abs(tripStart.getTime() - policyWindow.windowStart.getTime()) > 60_000 ||
+        Math.abs(tripEnd.getTime() - policyWindow.windowEnd.getTime()) > 60_000),
+  );
 
   return {
     occurrenceId: occurrence.id,
@@ -227,10 +224,14 @@ export async function loadServiceDetail(
     observedArrivalAt: fact?.observedArrivalAt?.toISOString() ?? null,
     timing: fact?.timing ?? null,
     evidenceStatus: trip?.evidenceStatus ?? null,
-    evidenceWindowStart: trip?.evidenceWindowStart?.toISOString() ?? null,
-    evidenceWindowEnd: trip?.evidenceWindowEnd?.toISOString() ?? null,
+    policyWindowStart: policyWindow.windowStart.toISOString(),
+    policyWindowEnd: policyWindow.windowEnd.toISOString(),
+    tripWindowStart: tripStart?.toISOString() ?? null,
+    tripWindowEnd: tripEnd?.toISOString() ?? null,
+    tripWindowDiffersFromPolicy,
     evidenceMarginBeforeMinutes: policy.evidenceMarginMinutesBefore ?? null,
-    evidenceMarginAfterMinutes: afterMinutes,
+    verificationGraceMinutes: policy.verificationGraceMinutes ?? null,
+    evidenceMarginAfterMinutes: policy.evidenceMarginMinutesAfter ?? null,
     toleranceMinutes: policy.toleranceMinutes ?? null,
     evidenceFirstAt,
     evidenceLastAt,

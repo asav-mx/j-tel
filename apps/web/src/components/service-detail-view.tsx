@@ -65,22 +65,34 @@ export function ServiceDetailView({
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-[var(--muted)]">Ventana GPS</dt>
+              <dt className="text-[var(--muted)]">Ventana (política)</dt>
               <dd className="text-right">
-                {data.evidenceWindowStart && data.evidenceWindowEnd
-                  ? `${formatDateTime(data.evidenceWindowStart)} → ${formatDateTime(data.evidenceWindowEnd)}`
+                {data.policyWindowStart && data.policyWindowEnd
+                  ? `${formatDateTime(data.policyWindowStart)} → ${formatDateTime(data.policyWindowEnd)}`
                   : "—"}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-[var(--muted)]">Márgenes</dt>
-              <dd>
-                {data.evidenceMarginBeforeMinutes != null &&
-                data.evidenceMarginAfterMinutes != null
-                  ? `−${data.evidenceMarginBeforeMinutes} / +${data.evidenceMarginAfterMinutes} min`
+              <dd className="text-right">
+                {data.evidenceMarginBeforeMinutes != null
+                  ? `−${data.evidenceMarginBeforeMinutes} · gracia ${data.verificationGraceMinutes ?? 0} · después ${data.evidenceMarginAfterMinutes ?? 0}`
                   : "—"}
               </dd>
             </div>
+            {data.tripWindowDiffersFromPolicy &&
+            data.tripWindowStart &&
+            data.tripWindowEnd ? (
+              <div className="flex justify-between gap-4">
+                <dt className="text-[var(--muted)]">Ventana usada en este viaje</dt>
+                <dd className="text-right text-amber-200/90">
+                  {formatDateTime(data.tripWindowStart)} → {formatDateTime(data.tripWindowEnd)}
+                  <span className="mt-0.5 block text-xs text-[var(--muted)]">
+                    Congelada al generar el servicio (antes de tu cambio de política).
+                  </span>
+                </dd>
+              </div>
+            ) : null}
             <div className="flex justify-between gap-4">
               <dt className="text-[var(--muted)]">Unidad referencia</dt>
               <dd>{data.referenceUnitLabel}</dd>

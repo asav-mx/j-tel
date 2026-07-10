@@ -525,11 +525,15 @@ export async function ContratosUnitView({
                           </label>
                         </div>
                         <p className="mt-2 text-xs text-[var(--muted)]">
-                          Ventana GPS = deadline − margen antes → deadline + gracia + margen después.
-                          Hoy: −{c.policy.evidenceMarginMinutesBefore ?? 60} / +
+                          Ventana GPS = deadline − margen antes → deadline +{" "}
+                          <span className="text-white">gracia</span> +{" "}
+                          <span className="text-white">margen después</span>. Con tus
+                          valores actuales: −{c.policy.evidenceMarginMinutesBefore ?? 60} / +
                           {(c.policy.verificationGraceMinutes ?? 15) +
                             (c.policy.evidenceMarginMinutesAfter ?? 30)}{" "}
-                          min.
+                          min (gracia {c.policy.verificationGraceMinutes ?? 15} + después{" "}
+                          {c.policy.evidenceMarginMinutesAfter ?? 30}). Los viajes ya
+                          generados conservan su ventana anterior hasta re-generar/re-verificar.
                         </p>
                       </fieldset>
 
