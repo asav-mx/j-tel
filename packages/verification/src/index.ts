@@ -203,13 +203,11 @@ export function verifyService(input: VerificationInput): VerificationResult {
     ? determineTiming(winner.arrivalAt, input.expectedDeadline, input.toleranceMinutes)
     : null;
 
+  // Cumplimiento de ruta ≠ puntualidad.
+  // Si sirvió la ruta (geocerca + KML), el status es cumplido; "tarde" vive en timing.
   const lateExcusable =
     timing === "tarde" && input.manualExcusable != null;
-
-  let status: ComplianceStatus = "cumplido";
-  if (timing === "tarde" && !lateExcusable) {
-    status = "no_cumplido";
-  }
+  const status: ComplianceStatus = "cumplido";
 
   steps.push({
     step: "decision",
@@ -221,6 +219,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
       arrivalAt: winner.arrivalAt?.toISOString(),
       routeMatchPct: winner.routeMatchPct,
       hasKml,
+      minKmlPct: hasKml ? minKmlPct : undefined,
     },
   });
 

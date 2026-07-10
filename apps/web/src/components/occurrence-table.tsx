@@ -10,6 +10,7 @@ export type OccurrenceRow = {
   carrierLabel: string;
   clientLabel: string;
   status: string | null | undefined;
+  timing: string | null | undefined;
   observedUnitLabel: string;
   detailHref: string;
 };
@@ -68,6 +69,7 @@ export function toOccurrenceRow(
     carrierLabel: showCarrier ? (occ.contract?.carrier?.name ?? "—") : "—",
     clientLabel: showClient ? (occ.contract?.client?.name ?? "—") : "—",
     status: fact?.status,
+    timing: fact?.timing ?? null,
     observedUnitLabel: formatObservedUnit(fact),
     detailHref: withAccount(`${detailPath}/${occ.id}`, accountSlug),
   };
@@ -123,7 +125,7 @@ export function OccurrenceTable({
                 {row.profileName}
               </td>
               <td className="py-3 pr-4">
-                <StatusBadge status={row.status} />
+                <StatusBadge status={row.status} timing={row.timing} />
               </td>
               {showUnit ? (
                 <td className="py-3 pr-4 text-sm">{row.observedUnitLabel}</td>

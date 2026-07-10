@@ -34,12 +34,22 @@ export function AppNav({
 
 export const NavBar = AppNav;
 
-export function StatusBadge({ status }: { status?: string | null }) {
+export function StatusBadge({
+  status,
+  timing,
+}: {
+  status?: string | null;
+  timing?: string | null;
+}) {
   if (!status) {
     return <span className="text-xs text-[var(--muted)]">Sin verificar</span>;
   }
+
+  const lateCumplido = status === "cumplido" && timing === "tarde";
   const styles: Record<string, string> = {
-    cumplido: "bg-emerald-500/20 text-emerald-300",
+    cumplido: lateCumplido
+      ? "bg-amber-500/20 text-amber-200"
+      : "bg-emerald-500/20 text-emerald-300",
     no_cumplido: "bg-red-500/20 text-red-300",
     pendiente_evidencia: "bg-amber-500/20 text-amber-300",
   };
@@ -50,11 +60,20 @@ export function StatusBadge({ status }: { status?: string | null }) {
     pendiente_evidencia: "Pendiente por evidencia",
   };
 
+  const timingSuffix =
+    status === "cumplido" && timing
+      ? timing === "tarde"
+        ? " · Tarde"
+        : timing === "temprano"
+          ? " · Temprano"
+          : ""
+      : "";
+
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status] ?? "bg-white/10"}`}
     >
-      {labels[status] ?? status}
+      {(labels[status] ?? status) + timingSuffix}
     </span>
   );
 }

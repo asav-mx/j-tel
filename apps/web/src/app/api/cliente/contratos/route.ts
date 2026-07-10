@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getRepos } from "@/lib/db";
 import { createContractSchema, contractPolicySchema, type EnforcementRules, parseOperationalScope, operationalScopeColumns } from "@jtel/domain";
 import { configApiBack } from "@/lib/config-api-back";
+import { VerificationService } from "@jtel/services";
+import { getUmbrellaConfig } from "@/lib/umbrella-config";
 
 function back(
   request: Request,
@@ -128,6 +130,18 @@ export async function POST(request: Request) {
     }
 
     await repos.contracts.updatePolicy(contractId, parsed.data);
+
+    // Recalcular servicios recientes con la nueva política (umbral KML, tolerancia…).
+    // Corre en segundo plano para no bloquear el redirect; reusa evidencia GPS.
+    const verification = new VerificationService(repos, getUmbrellaConfig());
+    after(async () => {
+      try {
+        await verification.reverifyContract(contractId, { daysBack: 14 });
+      } catch (err) {
+        console.error("[contratos] reverifyContract failed:", err);
+      }
+    });
+
     return back(request, client.slug, scope, { created: "politica" });
   }
 

@@ -80,27 +80,77 @@ export class VerificationService {
     return results;
   }
 
-  async verifyOccurrence(occurrenceId: string) {
+  /**
+   * Recalcula hechos de un contrato con la política actual (p. ej. tras cambiar
+   * umbral KML / tolerancia). Reusa evidencia GPS ya guardada cuando existe.
+   */
+  async reverifyContract(
+    contractId: string,
+    opts: { daysBack?: number; now?: Date } = {},
+  ) {
+    const daysBack = opts.daysBack ?? 14;
+    const now = opts.now ?? new Date();
+    const from = new Date(now);
+    from.setHours(0, 0, 0, 0);
+    from.setDate(from.getDate() - daysBack);
+    const fromIso = from.toISOString().slice(0, 10);
+
+    const occs = await this.repos.occurrences.findForContract(contractId);
+    const targets = occs.filter((o) => {
+      if (!o.trip) return false;
+      if (o.serviceDate < fromIso) return false;
+      // Solo servicios cuyo deadline ya pasó (o está en ventana de gracia).
+      return o.expectedDeadline.getTime() <= now.getTime() + 60 * 60 * 1000;
+    });
+
+    const results = [];
+    for (const occ of targets) {
+      try {
+        results.push(
+          await this.verifyOccurrence(occ.id, { force: true, keepEvidence: true }),
+        );
+      } catch (err) {
+        results.push({
+          occurrenceId: occ.id,
+          skipped: true,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+    return results;
+  }
+
+  async verifyOccurrence(
+    occurrenceId: string,
+    opts: { force?: boolean; keepEvidence?: boolean } = {},
+  ) {
     const occurrence = await this.repos.occurrences.findById(occurrenceId);
     if (!occurrence?.trip) {
       throw new Error("Ocurrencia o viaje no encontrado");
     }
 
-    // Cumplido / no cumplido ya son definitivos. Pendiente por evidencia se
-    // puede reintentar cuando la memoria GPS se pone al día.
+    const trip = occurrence.trip;
+    const existingPoints = await this.repos.evidence.getPointsForTrip(trip.id);
+    const reuseEvidence = Boolean(opts.keepEvidence && existingPoints.length > 0);
+
+    // Sin force: cumplido/no_cumplido son definitivos; pendiente se reintenta.
     if (occurrence.complianceFact) {
-      if (occurrence.complianceFact.status !== "pendiente_evidencia") {
+      if (
+        !opts.force &&
+        occurrence.complianceFact.status !== "pendiente_evidencia"
+      ) {
         return { occurrenceId, skipped: true, status: occurrence.complianceFact.status };
       }
       await this.repos.compliance.deleteFactForOccurrence(occurrenceId);
-      await this.repos.evidence.clearPointsForTrip(occurrence.trip.id);
-      await this.repos.evidence.updateTripStatus(occurrence.trip.id, "en_espera");
+      if (!reuseEvidence) {
+        await this.repos.evidence.clearPointsForTrip(trip.id);
+        await this.repos.evidence.updateTripStatus(trip.id, "en_espera");
+      }
     }
 
     const profile = occurrence.profile!;
     const contract = profile.contract!;
     const policy = contract.policy as ContractPolicy;
-    const trip = occurrence.trip;
 
     const possibleUnitIds = await this.repos.profiles.getPossibleUnitIds(profile.id);
     const devices = await this.repos.fleet.getDevicesForCarrier(contract.carrierAccountId);
@@ -124,56 +174,68 @@ export class VerificationService {
       return { unitId: assignment.unitId, deviceId: device.id };
     };
 
-    // 1) Memoria propia primero (telemetry_points).
-    // 2) Si no hay, Umbrella en vivo.
-    let ingestSource: "memory" | "umbrella" | "none" = "none";
+    let ingestSource: "memory" | "umbrella" | "none" | "cached" = "none";
     let ingestStatus: "disponible" | "parcial" | "indisponible" = "indisponible";
     let ingestPointCount = 0;
 
-    const memoryPoints = await this.repos.telemetry.getForImeis(
-      imeis,
-      trip.evidenceWindowStart,
-      trip.evidenceWindowEnd,
-    );
-
-    if (memoryPoints.length > 0) {
-      // La memoria ya trae unitId/deviceId del archivado — no re-resolver punto a punto.
-      const resolved = memoryPoints.map((p) => ({
-        imei: p.imei,
-        latitude: p.latitude,
-        longitude: p.longitude,
-        speed: p.speed ?? undefined,
-        recordedAt: p.recordedAt,
-        deviceId: p.deviceId ?? undefined,
-        unitId: p.unitId ?? undefined,
-      }));
-      await this.repos.evidence.savePoints(trip.id, resolved);
-      ingestStatus = resolved.some((p) => p.unitId) ? "disponible" : "parcial";
-      await this.repos.evidence.updateTripStatus(trip.id, ingestStatus);
-      ingestSource = "memory";
-      ingestPointCount = resolved.length;
+    if (reuseEvidence) {
+      ingestSource = "cached";
+      ingestPointCount = existingPoints.length;
+      ingestStatus =
+        trip.evidenceStatus === "disponible" || trip.evidenceStatus === "parcial"
+          ? trip.evidenceStatus
+          : existingPoints.some((p) => p.unitId)
+            ? "disponible"
+            : "parcial";
     } else {
-      const provider = await this.getProviderForCarrier(contract.carrierAccountId);
-      const ingestResult = await ingestEvidenceForTrip(provider, {
-        tripId: trip.id,
+      // 1) Memoria propia primero (telemetry_points).
+      // 2) Si no hay, Umbrella en vivo.
+      const memoryPoints = await this.repos.telemetry.getForImeis(
         imeis,
-        windowStart: trip.evidenceWindowStart,
-        windowEnd: trip.evidenceWindowEnd,
-        resolveUnit,
-        savePoints: async (points) => {
-          await this.repos.evidence.savePoints(trip.id, points);
-        },
-        updateStatus: async (status) => {
-          await this.repos.evidence.updateTripStatus(trip.id, status);
-        },
-      });
-      ingestSource = ingestResult.pointCount > 0 ? "umbrella" : "none";
-      ingestStatus = ingestResult.status;
-      ingestPointCount = ingestResult.pointCount;
+        trip.evidenceWindowStart,
+        trip.evidenceWindowEnd,
+      );
+
+      if (memoryPoints.length > 0) {
+        const resolved = memoryPoints.map((p) => ({
+          imei: p.imei,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          speed: p.speed ?? undefined,
+          recordedAt: p.recordedAt,
+          deviceId: p.deviceId ?? undefined,
+          unitId: p.unitId ?? undefined,
+        }));
+        await this.repos.evidence.savePoints(trip.id, resolved);
+        ingestStatus = resolved.some((p) => p.unitId) ? "disponible" : "parcial";
+        await this.repos.evidence.updateTripStatus(trip.id, ingestStatus);
+        ingestSource = "memory";
+        ingestPointCount = resolved.length;
+      } else {
+        const provider = await this.getProviderForCarrier(contract.carrierAccountId);
+        const ingestResult = await ingestEvidenceForTrip(provider, {
+          tripId: trip.id,
+          imeis,
+          windowStart: trip.evidenceWindowStart,
+          windowEnd: trip.evidenceWindowEnd,
+          resolveUnit,
+          savePoints: async (points) => {
+            await this.repos.evidence.savePoints(trip.id, points);
+          },
+          updateStatus: async (status) => {
+            await this.repos.evidence.updateTripStatus(trip.id, status);
+          },
+        });
+        ingestSource = ingestResult.pointCount > 0 ? "umbrella" : "none";
+        ingestStatus = ingestResult.status;
+        ingestPointCount = ingestResult.pointCount;
+      }
     }
 
     // Construye imei→unidad una sola vez (preferir unitId ya en evidencia).
-    const storedPoints = await this.repos.evidence.getPointsForTrip(trip.id);
+    const storedPoints = reuseEvidence
+      ? existingPoints
+      : await this.repos.evidence.getPointsForTrip(trip.id);
     const imeiToUnitId = new Map<string, string>();
     const unresolvedImeis = new Set<string>();
     for (const point of storedPoints) {
@@ -286,12 +348,12 @@ export class VerificationService {
         body: `El servicio del ${occurrence.serviceDate} quedó pendiente por falta de evidencia GPS.`,
         metadata: { occurrenceId },
       });
-    } else if (verification.timing === "tarde" && verification.status === "no_cumplido") {
+    } else if (verification.timing === "tarde" && !verification.lateExcusable) {
       await this.repos.notifications.create({
         accountId: contract.clientAccountId,
         type: "tarde",
         title: "Servicio con retraso",
-        body: `El servicio del ${occurrence.serviceDate} no cumplió por retraso.`,
+        body: `El servicio del ${occurrence.serviceDate} cumplió la ruta pero llegó tarde.`,
         metadata: { occurrenceId, factId: fact?.id },
       });
     }

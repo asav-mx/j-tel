@@ -45,7 +45,7 @@ describe("verifyService", () => {
     expect(result.timing).toBe("a_tiempo");
   });
 
-  it("returns no_cumplido when late beyond tolerance", () => {
+  it("returns cumplido with timing tarde when late beyond tolerance", () => {
     const result = verifyService({
       ...baseInput,
       evidencePoints: [
@@ -57,7 +57,7 @@ describe("verifyService", () => {
         },
       ],
     });
-    expect(result.status).toBe("no_cumplido");
+    expect(result.status).toBe("cumplido");
     expect(result.timing).toBe("tarde");
   });
 

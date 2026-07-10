@@ -32,7 +32,7 @@ export function ServiceDetailView({
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <StatusBadge status={data.status} />
+        <StatusBadge status={data.status} timing={data.timing} />
         <span className="text-sm text-[var(--muted)]">
           {data.clientName}
           {data.plantName ? ` · ${data.plantName}` : ""} · {data.carrierName}
