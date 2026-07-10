@@ -1,5 +1,5 @@
 import { eq, and, or, gte, lte, isNull, inArray, sql } from "drizzle-orm";
-import { computeExpectedDeadline, computeEvidenceWindow } from "@jtel/domain";
+import { computeExpectedDeadline, computeEvidenceWindow, suggestProfileCode } from "@jtel/domain";
 import type { OperationalScope, OperationalUnit } from "@jtel/domain";
 import { operationalScopeColumns } from "@jtel/domain";
 import type { Database } from "../index.js";
@@ -36,6 +36,10 @@ import {
   clientCarrierAuthorizations,
 } from "../schema/index.js";
 import type { ContractPolicy, CreateContractInput, CreateServiceProfileInput } from "@jtel/domain";
+
+function suggestProfileCodeFromName(name: string): string {
+  return suggestProfileCode(name);
+}
 
 export class AccountRepository {
   constructor(private db: Database) {}
@@ -1024,6 +1028,21 @@ export class ServiceProfileRepository {
   constructor(private db: Database) {}
 
   async create(input: CreateServiceProfileInput) {
+    const baseCode = input.code && input.code.length > 0
+      ? input.code
+      : suggestProfileCodeFromName(input.name);
+
+    let code = baseCode;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const existing = await this.db.query.serviceProfiles.findFirst({
+        where: eq(serviceProfiles.code, code),
+        columns: { id: true },
+      });
+      if (!existing) break;
+      const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+      code = `${baseCode.slice(0, 19)}-${suffix}`.slice(0, 24);
+    }
+
     const [profile] = await this.db
       .insert(serviceProfiles)
       .values({
@@ -1031,6 +1050,7 @@ export class ServiceProfileRepository {
         routeShiftId: input.routeShiftId,
         geofenceId: input.geofenceId,
         name: input.name,
+        code,
         referenceUnitId: input.referenceUnitId,
         activeDays: input.activeDays,
       })

@@ -118,6 +118,7 @@ export async function POST(request: Request) {
   }
 
   const name = String(formData.get("name") ?? "").trim();
+  const codeRaw = String(formData.get("code") ?? "").trim();
   const contractId = String(formData.get("contractId") ?? "").trim();
   const routeShiftId = String(formData.get("routeShiftId") ?? "").trim();
   const geofenceId = String(formData.get("geofenceId") ?? "").trim();
@@ -176,6 +177,7 @@ export async function POST(request: Request) {
     routeShiftId,
     geofenceId,
     name,
+    ...(codeRaw ? { code: codeRaw } : {}),
     possibleUnitIds: [] as string[],
     activeDays: activeDays.length > 0 ? activeDays : [1, 2, 3, 4, 5],
   };

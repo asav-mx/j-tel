@@ -254,6 +254,14 @@ export async function ServiciosUnitView({
                   <input name="name" required className={inputClass} placeholder="Ej. Poniente Matutino" />
                 </label>
                 <label className={labelClass}>
+                  Código (opcional)
+                  <input
+                    name="code"
+                    className={inputClass}
+                    placeholder="Ej. CSD-PON-I — si lo dejas vacío se genera del nombre"
+                  />
+                </label>
+                <label className={labelClass}>
                   Contrato
                   <select name="contractId" required className={inputClass} defaultValue="">
                     <option value="" disabled>
@@ -343,7 +351,10 @@ export async function ServiciosUnitView({
                 <li key={p.id} className="rounded border border-white/5 p-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium">{p.name}</p>
+                      <p className="font-medium">
+                        <span className="mr-2 font-mono text-xs text-[var(--accent)]">{p.code}</span>
+                        {p.name}
+                      </p>
                       <p className="text-xs text-[var(--muted)]">
                         {p.contract?.name ?? "—"} · {p.routeShift?.route?.name ?? "—"} ·{" "}
                         {p.routeShift?.shift?.name ?? "—"} · destino {p.geofence?.name ?? "—"} · días [

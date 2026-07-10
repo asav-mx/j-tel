@@ -6,6 +6,7 @@ export type OccurrenceRow = {
   id: string;
   serviceDate: string;
   profileName: string;
+  profileCode: string | null;
   plantLabel: string;
   carrierLabel: string;
   clientLabel: string;
@@ -17,7 +18,7 @@ export type OccurrenceRow = {
 type OccurrenceInput = {
   id: string;
   serviceDate: string;
-  profile?: { name?: string | null } | null;
+  profile?: { name?: string | null; code?: string | null } | null;
   complianceFact?: {
     status: "cumplido" | "no_cumplido" | "pendiente_evidencia";
     timing?: "temprano" | "a_tiempo" | "tarde" | null;
@@ -60,6 +61,7 @@ export function toOccurrenceRow(
     id: occ.id,
     serviceDate: occ.serviceDate,
     profileName: occ.profile?.name ?? "—",
+    profileCode: occ.profile?.code ?? null,
     plantLabel: plant
       ? `${plant.name} (${plant.code})`
       : plantGroup
@@ -112,7 +114,12 @@ export function OccurrenceTable({
               {showPlant ? <td className="py-3 pr-4">{row.plantLabel}</td> : null}
               {showClient ? <td className="py-3 pr-4">{row.clientLabel}</td> : null}
               {showCarrier ? <td className="py-3 pr-4">{row.carrierLabel}</td> : null}
-              <td className="py-3 pr-4">{row.profileName}</td>
+              <td className="py-3 pr-4">
+                {row.profileCode ? (
+                  <span className="mr-2 font-mono text-xs text-[var(--accent)]">{row.profileCode}</span>
+                ) : null}
+                {row.profileName}
+              </td>
               <td className="py-3 pr-4">
                 <StatusBadge status={row.status} />
               </td>

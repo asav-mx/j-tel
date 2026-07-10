@@ -211,11 +211,36 @@ export const createContractSchema = z
 
 export type CreateContractInput = z.infer<typeof createContractSchema>;
 
+/** Normaliza un código de perfil a A-Z0-9 y guiones (máx. 24). */
+export function normalizeProfileCode(raw: string): string {
+  return raw
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 24);
+}
+
+/** Sugiere código a partir del nombre del perfil. */
+export function suggestProfileCode(name: string): string {
+  const base = normalizeProfileCode(name);
+  return base.length > 0 ? base : "SRV";
+}
+
 export const createServiceProfileSchema = z.object({
   contractId: z.string().uuid(),
   routeShiftId: z.string().uuid(),
   geofenceId: z.string().uuid(),
   name: z.string().min(1),
+  code: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v && v.length > 0 ? normalizeProfileCode(v) : undefined))
+    .refine((v) => v === undefined || /^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(v), {
+      message: "Código inválido (usa letras, números y guiones)",
+    }),
   possibleUnitIds: z.array(z.string().uuid()).default([]),
   referenceUnitId: z.string().uuid().optional(),
   activeDays: z.array(z.number().int().min(0).max(6)).default([1, 2, 3, 4, 5]),

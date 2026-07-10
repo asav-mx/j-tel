@@ -310,25 +310,31 @@ export const serviceContracts = pgTable("service_contracts", {
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
-export const serviceProfiles = pgTable("service_profiles", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  contractId: uuid("contract_id")
-    .notNull()
-    .references(() => serviceContracts.id, { onDelete: "cascade" }),
-  routeShiftId: uuid("route_shift_id")
-    .notNull()
-    .references(() => routeShifts.id, { onDelete: "cascade" }),
-  geofenceId: uuid("geofence_id")
-    .notNull()
-    .references(() => geofences.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  referenceUnitId: uuid("reference_unit_id").references(() => units.id, {
-    onDelete: "set null",
-  }),
-  activeDays: jsonb("active_days").$type<number[]>().notNull().default([1, 2, 3, 4, 5]),
-  active: boolean("active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
-});
+export const serviceProfiles = pgTable(
+  "service_profiles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contractId: uuid("contract_id")
+      .notNull()
+      .references(() => serviceContracts.id, { onDelete: "cascade" }),
+    routeShiftId: uuid("route_shift_id")
+      .notNull()
+      .references(() => routeShifts.id, { onDelete: "cascade" }),
+    geofenceId: uuid("geofence_id")
+      .notNull()
+      .references(() => geofences.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** Código operativo legible (ej. CSD-FINA-I). Único globalmente. */
+    code: text("code").notNull(),
+    referenceUnitId: uuid("reference_unit_id").references(() => units.id, {
+      onDelete: "set null",
+    }),
+    activeDays: jsonb("active_days").$type<number[]>().notNull().default([1, 2, 3, 4, 5]),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("service_profiles_code_unique_idx").on(table.code)],
+);
 
 export const serviceProfileUnits = pgTable("service_profile_units", {
   id: uuid("id").primaryKey().defaultRandom(),
