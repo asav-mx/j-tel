@@ -1,3 +1,5 @@
+# Diseño integral — Verificación honesta
+
 Repo: asav-mx/j-tel · Stack: Next.js + Leaflet + Postgres (Neon) + TypeScript · Monorepo pnpm/Turbo con apps/web, apps/worker, packages/{db, verification, gps-umbrella, services} y docs/marco-limpio como fuente de verdad del dominio.
 
 

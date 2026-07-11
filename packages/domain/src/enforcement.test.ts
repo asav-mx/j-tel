@@ -7,6 +7,8 @@ describe("enforcement", () => {
     verificationGraceMinutes: 15,
     routeStrictness: "destino_only" as const,
     kmlMatchMinPct: 60,
+    kmlCorridorMeters: 120,
+    kmlCorridorMinPct: 60,
     allowAlternateDestination: false,
     excusableReasons: [],
     enforcementRules: [
@@ -22,6 +24,8 @@ describe("enforcement", () => {
     evidenceMarginMinutesAfter: 30,
     arrivalAnticipationMinutes: 15,
     maxRouteDurationMinutes: 60,
+    evidenceMinCoveragePct: 80,
+    evidenceMaxGapMinutes: 10,
   };
 
   it("Honeywell: rebate 2% por 2 faltas, +1% cada una", () => {

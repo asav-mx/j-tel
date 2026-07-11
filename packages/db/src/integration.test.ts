@@ -10,6 +10,8 @@ const TECMA_POLICY: ContractPolicy = {
   verificationGraceMinutes: 15,
   routeStrictness: "destino_only",
   kmlMatchMinPct: 60,
+  kmlCorridorMeters: 120,
+  kmlCorridorMinPct: 60,
   allowAlternateDestination: false,
   excusableReasons: ["lluvia_nieve"],
   enforcementRules: [{ type: "no_pago_viaje", toleranceMinutes: 5 }],
@@ -17,6 +19,8 @@ const TECMA_POLICY: ContractPolicy = {
   evidenceMarginMinutesAfter: 30,
   arrivalAnticipationMinutes: 15,
   maxRouteDurationMinutes: 60,
+  evidenceMinCoveragePct: 80,
+  evidenceMaxGapMinutes: 10,
 };
 
 const HONEYWELL_POLICY: ContractPolicy = {
@@ -24,6 +28,8 @@ const HONEYWELL_POLICY: ContractPolicy = {
   verificationGraceMinutes: 20,
   routeStrictness: "destino_only",
   kmlMatchMinPct: 60,
+  kmlCorridorMeters: 120,
+  kmlCorridorMinPct: 60,
   allowAlternateDestination: false,
   excusableReasons: [],
   enforcementRules: [
@@ -37,6 +43,10 @@ const HONEYWELL_POLICY: ContractPolicy = {
   ],
   evidenceMarginMinutesBefore: 90,
   evidenceMarginMinutesAfter: 45,
+  arrivalAnticipationMinutes: 10,
+  maxRouteDurationMinutes: 60,
+  evidenceMinCoveragePct: 80,
+  evidenceMaxGapMinutes: 10,
 };
 
 let dbAvailable = false;

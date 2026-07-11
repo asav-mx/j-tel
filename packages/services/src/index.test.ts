@@ -323,7 +323,6 @@ describe("perdedor exclusivo sin alternativa", () => {
   ];
 
   function buildRepos(opts: {
-    memoryTimestamps: Date[];
     evidencePoints: Array<{
       imei: string;
       latitude: number;
@@ -355,8 +354,11 @@ describe("perdedor exclusivo sin alternativa", () => {
           clientAccountId: "client-1",
           policy: {
             toleranceMinutes: 5,
+            maxRouteDurationMinutes: 60,
             routeStrictness: "destino_only" as const,
             kmlMatchMinPct: 60,
+            evidenceMinCoveragePct: 80,
+            evidenceMaxGapMinutes: 10,
             excusableReasons: [] as string[],
           },
         },
@@ -389,36 +391,30 @@ describe("perdedor exclusivo sin alternativa", () => {
           .mockResolvedValue([{ id: "unit-other" }, { id: "unit-winner" }]),
         resolveUnitAtTime: vi.fn().mockResolvedValue({ unitId: "unit-other" }),
       },
-      telemetry: {
-        getForImeis: vi.fn().mockResolvedValue(
-          opts.memoryTimestamps.map((recordedAt) => ({
-            imei: "imei-other",
-            recordedAt,
-          })),
-        ),
-      },
+      telemetry: { getForImeis: vi.fn().mockResolvedValue([]) },
       routes: { getKmlVersionForDate: vi.fn().mockResolvedValue(null) },
       carriers: { getGpsCredentials: vi.fn().mockResolvedValue(null) },
       notifications: { create: vi.fn() },
     };
-    return { repos, saveFact, windowStart };
+    return { repos, saveFact };
   }
 
-  it("con hueco en memoria → pendiente_evidencia (no no_cumplido)", async () => {
-    const windowStart = new Date("2026-07-09T10:00:00Z");
+  it("con hueco en evidencia → pendiente_evidencia (no no_cumplido)", async () => {
+    // Ventana operativa ~09:45–10:50; solo dos puntos lejos → hueco grande.
     const { repos, saveFact } = buildRepos({
-      memoryTimestamps: [
-        windowStart,
-        new Date(windowStart.getTime() + 2 * 60_000),
-        new Date(windowStart.getTime() + 45 * 60_000),
-        new Date(windowStart.getTime() + 60 * 60_000),
-      ],
       evidencePoints: [
         {
           imei: "imei-other",
           latitude: 31.8,
           longitude: -106.5,
-          recordedAt: new Date("2026-07-09T10:40:00Z"),
+          recordedAt: new Date("2026-07-09T09:45:00Z"),
+          unitId: "unit-other",
+        },
+        {
+          imei: "imei-other",
+          latitude: 31.8,
+          longitude: -106.5,
+          recordedAt: new Date("2026-07-09T10:50:00Z"),
           unitId: "unit-other",
         },
       ],
@@ -439,23 +435,19 @@ describe("perdedor exclusivo sin alternativa", () => {
   });
 
   it("con evidencia completa y nadie en ruta → no_cumplido", async () => {
-    const windowStart = new Date("2026-07-09T10:00:00Z");
-    const points: Date[] = [];
-    for (let m = 0; m <= 60; m += 2) {
-      points.push(new Date(windowStart.getTime() + m * 60_000));
+    // Cobertura densa en [09:45, 10:50], todos fuera de geocerca.
+    const evidencePoints = [];
+    const covStart = new Date("2026-07-09T09:45:00Z");
+    for (let m = 0; m <= 65; m += 2) {
+      evidencePoints.push({
+        imei: "imei-other",
+        latitude: 31.8,
+        longitude: -106.5,
+        recordedAt: new Date(covStart.getTime() + m * 60_000),
+        unitId: "unit-other",
+      });
     }
-    const { repos, saveFact } = buildRepos({
-      memoryTimestamps: points,
-      evidencePoints: [
-        {
-          imei: "imei-other",
-          latitude: 31.8,
-          longitude: -106.5,
-          recordedAt: new Date("2026-07-09T10:40:00Z"),
-          unitId: "unit-other",
-        },
-      ],
-    });
+    const { repos, saveFact } = buildRepos({ evidencePoints });
 
     const service = new VerificationService(repos as never, {
       umbrellaBaseUrl: "http://example.com",

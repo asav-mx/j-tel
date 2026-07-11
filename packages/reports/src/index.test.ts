@@ -8,6 +8,8 @@ describe("reports", () => {
       verificationGraceMinutes: 15,
       routeStrictness: "destino_only" as const,
       kmlMatchMinPct: 60,
+      kmlCorridorMeters: 120,
+      kmlCorridorMinPct: 60,
       allowAlternateDestination: false,
       excusableReasons: [],
       enforcementRules: [{ type: "no_pago_viaje" as const, toleranceMinutes: 5 }],
@@ -15,6 +17,8 @@ describe("reports", () => {
       evidenceMarginMinutesAfter: 30,
       arrivalAnticipationMinutes: 15,
       maxRouteDurationMinutes: 60,
+      evidenceMinCoveragePct: 80,
+      evidenceMaxGapMinutes: 10,
     };
 
     const rows = [

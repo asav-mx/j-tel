@@ -51,12 +51,16 @@ const POLICY: ContractPolicy = {
   verificationGraceMinutes: 15,
   routeStrictness: "destino_only",
   kmlMatchMinPct: 60,
+  kmlCorridorMeters: 120,
+  kmlCorridorMinPct: 60,
   allowAlternateDestination: false,
   excusableReasons: [],
   enforcementRules: [{ type: "no_pago_viaje", toleranceMinutes: 10 }],
   evidenceMarginMinutesBefore: 60,
   evidenceMarginMinutesAfter: 30,
   maxRouteDurationMinutes: 60,
+  evidenceMinCoveragePct: 80,
+  evidenceMaxGapMinutes: 10,
 };
 
 function normalizeUmbrellaBaseUrl(raw: string): string {
