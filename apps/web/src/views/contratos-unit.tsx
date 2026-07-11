@@ -34,7 +34,7 @@ const createdLabels: Record<string, string> = {
   eliminado: "Borrador eliminado.",
   vigencia: "Vigencia del contrato actualizada.",
   politica:
-    "Política guardada. Recalculando automáticamente los servicios de los últimos 14 días (puedes ir a Cumplimiento y refrescar en un momento).",
+    "Política guardada. Aplica solo a servicios futuros; los hechos definitivos pasados no se modifican.",
 };
 
 function contractScopeLabel(

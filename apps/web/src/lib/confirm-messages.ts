@@ -16,7 +16,7 @@ export const confirmMessages = {
   suspendCarrier: (carrier: string, client: string) =>
     `¿Suspender a ${carrier} para ${client}? No podrá usarse en contratos nuevos hasta reautorizar.`,
   updatePolicy: (name: string) =>
-    `¿Guardar la política de «${name}»? Se recalcularán automáticamente los servicios de los últimos 14 días con el nuevo umbral/tolerancia.`,
+    `¿Guardar la política de «${name}»? Aplica solo hacia adelante: no recalcula hechos ya cerrados (cumplido / no cumplido).`,
   verifyOccurrence: (date: string, contract: string) =>
     `¿Re-sincronizar y verificar el servicio del ${date} (${contract})?`,
   savePlantTemplate:

@@ -9,6 +9,120 @@ export interface VerificationServiceConfig {
   umbrellaPassword?: string;
 }
 
+/** Hueco máximo entre puntos GPS para considerar la ventana “cubierta”. */
+export const EVIDENCE_COVERAGE_MAX_GAP_MS = 5 * 60 * 1000;
+
+export type ExclusiveUnitClaim = {
+  occurrenceId: string;
+  unitId: string;
+  matchPct: number;
+  arrivalAtMs: number;
+  /** Ventana operativa del servicio (no la de evidencia GPS). */
+  windowStartMs: number;
+  windowEndMs: number;
+};
+
+/**
+ * Ventana en la que el camión “ocupa” el servicio para exclusividad:
+ * desde (deadline − duración máx. de ruta) hasta (deadline + tolerancia).
+ * Más estrecha que la ventana de evidencia (márgenes GPS de 60+30 min),
+ * para no chocar dos viajes de la misma mañana que solo se rozan en márgenes.
+ */
+export function computeExclusiveContentionWindow(
+  deadline: Date,
+  policy: {
+    maxRouteDurationMinutes?: number;
+    toleranceMinutes?: number;
+  },
+): { startMs: number; endMs: number } {
+  const durationMin = Math.max(1, policy.maxRouteDurationMinutes ?? 60);
+  const toleranceMin = Math.max(0, policy.toleranceMinutes ?? 0);
+  const startMs = deadline.getTime() - durationMin * 60_000;
+  const endMs = deadline.getTime() + toleranceMin * 60_000;
+  return { startMs, endMs };
+}
+
+/** Dos ventanas se traslapan si comparten algún instante (semiabierto en el borde). */
+export function evidenceWindowsOverlap(
+  aStartMs: number,
+  aEndMs: number,
+  bStartMs: number,
+  bEndMs: number,
+): boolean {
+  return aStartMs < bEndMs && bStartMs < aEndMs;
+}
+
+/**
+ * Entre claims de la misma unidad, solo son conflicto si sus ventanas
+ * operativas se traslapan. Misma unidad en días/turnos sin traslape = válido.
+ * Gana mayor match KML; empate → llegada más temprana.
+ */
+export function pickExclusiveUnitLosers(
+  claims: ExclusiveUnitClaim[],
+): { winners: ExclusiveUnitClaim[]; losers: ExclusiveUnitClaim[] } {
+  const byUnit = new Map<string, ExclusiveUnitClaim[]>();
+  for (const c of claims) {
+    const list = byUnit.get(c.unitId) ?? [];
+    list.push(c);
+    byUnit.set(c.unitId, list);
+  }
+
+  const winners: ExclusiveUnitClaim[] = [];
+  const losers: ExclusiveUnitClaim[] = [];
+
+  for (const list of byUnit.values()) {
+    const sorted = [...list].sort((a, b) => {
+      const diff = b.matchPct - a.matchPct;
+      if (Math.abs(diff) >= 0.5) return diff;
+      return a.arrivalAtMs - b.arrivalAtMs;
+    });
+    const unitWinners: ExclusiveUnitClaim[] = [];
+    for (const c of sorted) {
+      const conflicts = unitWinners.some((w) =>
+        evidenceWindowsOverlap(
+          w.windowStartMs,
+          w.windowEndMs,
+          c.windowStartMs,
+          c.windowEndMs,
+        ),
+      );
+      if (conflicts) losers.push(c);
+      else unitWinners.push(c);
+    }
+    winners.push(...unitWinners);
+  }
+
+  return { winners, losers };
+}
+
+/**
+ * Cobertura incompleta si no hay puntos o hay un hueco > maxGapMs al inicio,
+ * entre puntos o al final de la ventana.
+ */
+export function hasIncompleteEvidenceCoverage(
+  timestamps: Date[],
+  windowStart: Date,
+  windowEnd: Date,
+  maxGapMs = EVIDENCE_COVERAGE_MAX_GAP_MS,
+): boolean {
+  const start = windowStart.getTime();
+  const end = windowEnd.getTime();
+  if (end <= start) return false;
+
+  const sorted = timestamps
+    .map((t) => t.getTime())
+    .filter((t) => t >= start && t <= end)
+    .sort((a, b) => a - b);
+
+  if (sorted.length === 0) return true;
+  if (sorted[0]! - start > maxGapMs) return true;
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i]! - sorted[i - 1]! > maxGapMs) return true;
+  }
+  if (end - sorted[sorted.length - 1]! > maxGapMs) return true;
+  return false;
+}
+
 export class VerificationService {
   // Un proveedor por carrier (cacheado por corrida) para reutilizar el token y
   // evitar 429. Cada carrier puede usar un proveedor/credenciales distintos.
@@ -81,12 +195,12 @@ export class VerificationService {
   }
 
   /**
-   * Recalcula hechos de un contrato con la política actual (p. ej. tras cambiar
-   * umbral KML / tolerancia). Por defecto reusa evidencia GPS ya guardada.
+   * Herramienta interna (J-Staff / scripts): recalcula hechos con force.
+   * No se dispara desde la UI del cliente al guardar política.
    *
-   * `exclusiveUnits`: si varias rutas acreditan la misma unidad (calles
-   * compartidas), se queda en la de mayor match KML y el resto se reevalúa
-   * sin esa unidad.
+   * `exclusiveUnits`: si varias rutas con ventanas operativas traslapadas
+   * acreditan la misma unidad (calles compartidas), se queda en la de mayor
+   * match KML y el resto se reevalúa sin esa unidad.
    */
   async reverifyContract(
     contractId: string,
@@ -95,7 +209,7 @@ export class VerificationService {
       now?: Date;
       /** ISO date YYYY-MM-DD — si se pasa, solo ese día. */
       serviceDate?: string;
-      /** Default true (cambio de política). false = re-ingerir desde memoria. */
+      /** Default true. false = re-ingerir desde memoria. */
       keepEvidence?: boolean;
       exclusiveUnits?: boolean;
     } = {},
@@ -152,65 +266,64 @@ export class VerificationService {
   }
 
   /**
-   * Si la misma unidad quedó como observada en varios servicios, se queda en
-   * el de mayor `observedRouteMatchPct` (empate → llegada más temprana) y los
-   * perdedores se re-verifican excluyendo las unidades ya asignadas.
+   * Si la misma unidad quedó como observada en varios servicios con ventanas
+   * operativas traslapadas, se queda en el de mayor `observedRouteMatchPct`
+   * (empate → llegada más temprana) y los perdedores se re-verifican
+   * excluyendo las unidades ya asignadas en ventanas que se traslapan.
    */
   private async resolveExclusiveUnitClaims(occurrenceIds: string[]) {
     const maxRounds = 8;
     for (let round = 0; round < maxRounds; round++) {
-      type Claim = {
-        occurrenceId: string;
-        unitId: string;
-        matchPct: number;
-        arrivalAtMs: number;
-      };
-      const claims: Claim[] = [];
+      const claims: ExclusiveUnitClaim[] = [];
 
       for (const id of occurrenceIds) {
         const occ = await this.repos.occurrences.findById(id);
         const fact = occ?.complianceFact;
-        if (!fact || fact.status !== "cumplido" || !fact.observedUnitId) continue;
+        if (!fact || fact.status !== "cumplido" || !fact.observedUnitId) {
+          continue;
+        }
+        const policy =
+          (fact.contractPolicySnapshot as ContractPolicy | null | undefined) ??
+          (occ.profile?.contract?.policy as ContractPolicy | undefined);
+        const { startMs, endMs } = computeExclusiveContentionWindow(
+          occ.expectedDeadline,
+          policy ?? {},
+        );
         claims.push({
           occurrenceId: id,
           unitId: fact.observedUnitId,
           matchPct: fact.observedRouteMatchPct ?? 0,
           arrivalAtMs: fact.observedArrivalAt?.getTime() ?? Number.MAX_SAFE_INTEGER,
+          windowStartMs: startMs,
+          windowEndMs: endMs,
         });
       }
 
-      const byUnit = new Map<string, Claim[]>();
-      for (const c of claims) {
-        const list = byUnit.get(c.unitId) ?? [];
-        list.push(c);
-        byUnit.set(c.unitId, list);
-      }
+      const { winners, losers } = pickExclusiveUnitLosers(claims);
+      if (losers.length === 0) return;
 
-      const conflicts: Claim[] = [];
-      for (const list of byUnit.values()) {
-        if (list.length <= 1) continue;
-        list.sort((a, b) => {
-          const diff = b.matchPct - a.matchPct;
-          if (Math.abs(diff) >= 0.5) return diff;
-          return a.arrivalAtMs - b.arrivalAtMs;
-        });
-        conflicts.push(...list.slice(1));
-      }
-
-      if (conflicts.length === 0) return;
-
-      const assignedElsewhere = new Set(
-        claims
-          .filter((c) => !conflicts.some((x) => x.occurrenceId === c.occurrenceId))
-          .map((c) => c.unitId),
-      );
-
-      const loserIds = [...new Set(conflicts.map((c) => c.occurrenceId))];
+      const loserIds = [...new Set(losers.map((c) => c.occurrenceId))];
       for (const occurrenceId of loserIds) {
+        const loser = losers.find((c) => c.occurrenceId === occurrenceId)!;
+        // Solo excluir unidades que ganaron en ventanas que se traslapan con ésta.
+        const excludeUnitIds = [
+          ...new Set(
+            winners
+              .filter((w) =>
+                evidenceWindowsOverlap(
+                  w.windowStartMs,
+                  w.windowEndMs,
+                  loser.windowStartMs,
+                  loser.windowEndMs,
+                ),
+              )
+              .map((w) => w.unitId),
+          ),
+        ];
         await this.verifyOccurrence(occurrenceId, {
           force: true,
           keepEvidence: true,
-          excludeUnitIds: [...assignedElsewhere],
+          excludeUnitIds,
         });
       }
     }
@@ -404,8 +517,32 @@ export class VerificationService {
       excusableReasons: policy.excusableReasons,
     });
 
+    // Perdedor de asignación exclusiva: no_cumplido solo con evidencia completa.
+    // Si la memoria tiene un hueco conocido en la ventana → pendiente_evidencia.
+    let finalStatus = verification.status;
+    if (
+      opts.excludeUnitIds &&
+      opts.excludeUnitIds.length > 0 &&
+      verification.status === "no_cumplido"
+    ) {
+      const memoryPoints = await this.repos.telemetry.getForImeis(
+        imeis,
+        trip.evidenceWindowStart,
+        trip.evidenceWindowEnd,
+      );
+      if (
+        hasIncompleteEvidenceCoverage(
+          memoryPoints.map((p) => p.recordedAt),
+          trip.evidenceWindowStart,
+          trip.evidenceWindowEnd,
+        )
+      ) {
+        finalStatus = "pendiente_evidencia";
+      }
+    }
+
     let observedUnitId: string | null = null;
-    if (verification.observedUnitId) {
+    if (verification.observedUnitId && finalStatus === "cumplido") {
       const winner = verification.candidateUnits.find(
         (c) => c.unitId === verification.observedUnitId,
       );
@@ -425,11 +562,13 @@ export class VerificationService {
       expectedGeofenceId: occurrence.expectedGeofenceId,
       referenceUnitId: occurrence.referenceUnitId,
       observedUnitId,
-      observedArrivalAt: verification.observedArrivalAt,
-      observedRouteMatchPct: verification.observedRouteMatchPct,
-      status: verification.status,
-      timing: verification.timing,
-      lateExcusable: verification.lateExcusable,
+      observedArrivalAt:
+        finalStatus === "cumplido" ? verification.observedArrivalAt : null,
+      observedRouteMatchPct:
+        finalStatus === "cumplido" ? verification.observedRouteMatchPct : null,
+      status: finalStatus,
+      timing: finalStatus === "cumplido" ? verification.timing : null,
+      lateExcusable: finalStatus === "cumplido" ? verification.lateExcusable : false,
       routeStrictnessApplied: verification.routeStrictnessApplied,
       contractPolicySnapshot: policy,
     });
@@ -438,7 +577,21 @@ export class VerificationService {
       tripId: trip.id,
       serviceOccurrenceId: occurrenceId,
       action: "verificacion_automatica",
-      steps: verification.ledgerSteps,
+      steps: [
+        ...verification.ledgerSteps,
+        ...(finalStatus !== verification.status
+          ? [
+              {
+                step: "exclusiva_cobertura",
+                result: finalStatus,
+                details: {
+                  reason: "hueco_conocido_en_memoria",
+                  excludedUnits: opts.excludeUnitIds,
+                },
+              },
+            ]
+          : []),
+      ],
       metadata: {
         ingestStatus,
         ingestSource,
@@ -447,7 +600,7 @@ export class VerificationService {
       },
     });
 
-    if (verification.status === "pendiente_evidencia") {
+    if (finalStatus === "pendiente_evidencia") {
       await this.repos.notifications.create({
         accountId: contract.clientAccountId,
         type: "sin_evidencia",
@@ -455,7 +608,11 @@ export class VerificationService {
         body: `El servicio del ${occurrence.serviceDate} quedó pendiente por falta de evidencia GPS.`,
         metadata: { occurrenceId },
       });
-    } else if (verification.timing === "tarde" && !verification.lateExcusable) {
+    } else if (
+      finalStatus === "cumplido" &&
+      verification.timing === "tarde" &&
+      !verification.lateExcusable
+    ) {
       await this.repos.notifications.create({
         accountId: contract.clientAccountId,
         type: "tarde",
@@ -468,7 +625,7 @@ export class VerificationService {
     return {
       occurrenceId,
       skipped: false,
-      status: verification.status,
+      status: finalStatus,
       factId: fact?.id,
       ingestSource,
       pointCount: ingestPointCount,
