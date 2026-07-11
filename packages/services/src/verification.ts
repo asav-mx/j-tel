@@ -517,6 +517,8 @@ export class VerificationService {
       toleranceMinutes: policy.toleranceMinutes,
       routeStrictness: policy.routeStrictness,
       kmlMatchMinPct: policy.kmlMatchMinPct ?? 60,
+      kmlCorridorMeters: policy.kmlCorridorMeters ?? 120,
+      kmlCorridorMinPct: policy.kmlCorridorMinPct ?? 60,
       geofencePolygon: geofence.polygon,
       kmlWaypoints,
       evidencePoints: enrichedPoints,

@@ -112,6 +112,8 @@ export async function POST(request: Request) {
       verificationGraceMinutes: toInt(formData.get("verificationGraceMinutes"), 15),
       routeStrictness: String(formData.get("routeStrictness") ?? "destino_only").trim(),
       kmlMatchMinPct: toInt(formData.get("kmlMatchMinPct"), 60),
+      kmlCorridorMeters: toInt(formData.get("kmlCorridorMeters"), 120),
+      kmlCorridorMinPct: toInt(formData.get("kmlCorridorMinPct"), 60),
       allowAlternateDestination: formData.get("allowAlternateDestination") === "on",
       excusableReasons: formData.getAll("excusableReasons").map((r) => String(r)),
       enforcementRules: buildEnforcementRule(formData),

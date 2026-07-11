@@ -140,9 +140,19 @@ export const contractPolicySchema = z.object({
   routeStrictness: RouteStrictness,
   /**
    * % mínimo de waypoints del KML que deben tener un punto GPS cerca
-   * (haversine ≤ 500 m). 0–100. Solo aplica si hay KML cargado.
+   * (métrica A: cobertura de ruta). 0–100. Solo aplica si hay KML.
    */
   kmlMatchMinPct: z.number().min(0).max(100).default(60),
+  /**
+   * Radio del corredor KML en metros (default 120). Antes era 500 fijo.
+   * Aplica a métricas A (cobertura de ruta) y B (precisión de corredor).
+   */
+  kmlCorridorMeters: z.number().min(10).max(500).default(120),
+  /**
+   * % mínimo de puntos GPS de la unidad que deben caer dentro del corredor
+   * (métrica B: precisión). Un match exige A ≥ kmlMatchMinPct Y B ≥ este umbral.
+   */
+  kmlCorridorMinPct: z.number().min(0).max(100).default(60),
   allowAlternateDestination: z.boolean().default(false),
   excusableReasons: z.array(ExcusableReason).default([]),
   enforcementRules: z.array(enforcementRulesSchema).default([]),
@@ -293,8 +303,12 @@ export interface VerificationInput {
   expectedDeadline: Date;
   toleranceMinutes: number;
   routeStrictness: RouteStrictness;
-  /** Umbral mínimo de coincidencia KML (0–100). Default 60 si no se envía. */
+  /** Umbral mínimo métrica A — cobertura de ruta (0–100). Default 60. */
   kmlMatchMinPct?: number;
+  /** Radio del corredor en metros. Default 120. */
+  kmlCorridorMeters?: number;
+  /** Umbral mínimo métrica B — precisión de corredor (0–100). Default 60. */
+  kmlCorridorMinPct?: number;
   geofencePolygon: Array<{ lat: number; lng: number }>;
   kmlWaypoints?: Array<{ lat: number; lng: number }>;
   evidencePoints: GpsPoint[];
@@ -326,7 +340,10 @@ export interface VerificationResult {
     unitId: string;
     servedRoute: boolean;
     arrivalAt: Date | null;
+    /** Métrica A: % waypoints KML cubiertos por GPS. */
     routeMatchPct: number;
+    /** Métrica B: % puntos GPS dentro del corredor. */
+    corridorPrecisionPct: number;
   }>;
 }
 

@@ -58,7 +58,7 @@ export function findGeofenceEntry(
 export function computeRouteMatchPct(
   points: GpsPoint[],
   waypoints: Array<{ lat: number; lng: number }>,
-  thresholdKm = 0.5,
+  thresholdKm = 0.12,
 ): number {
   if (waypoints.length === 0 || points.length === 0) return 0;
 
@@ -72,6 +72,75 @@ export function computeRouteMatchPct(
   }
 
   return (matched / waypoints.length) * 100;
+}
+
+/** Distancia mínima de un punto al polilínea (segmentos entre waypoints). */
+export function minDistanceToRouteKm(
+  point: { lat: number; lng: number },
+  waypoints: Array<{ lat: number; lng: number }>,
+): number {
+  if (waypoints.length === 0) return Infinity;
+  if (waypoints.length === 1) {
+    return haversineKm(point.lat, point.lng, waypoints[0]!.lat, waypoints[0]!.lng);
+  }
+
+  let min = Infinity;
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const a = waypoints[i]!;
+    const b = waypoints[i + 1]!;
+    const dist = distPointToSegmentKm(point, a, b);
+    if (dist < min) min = dist;
+  }
+  return min;
+}
+
+function distPointToSegmentKm(
+  p: { lat: number; lng: number },
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  // Proyección equirectangular local (suficiente a escala de corredor <1 km).
+  const lat0 = ((a.lat + b.lat + p.lat) / 3) * (Math.PI / 180);
+  const toXY = (lat: number, lng: number) => ({
+    x: lng * Math.cos(lat0) * 111.32,
+    y: lat * 110.57,
+  });
+  const P = toXY(p.lat, p.lng);
+  const A = toXY(a.lat, a.lng);
+  const B = toXY(b.lat, b.lng);
+  const abx = B.x - A.x;
+  const aby = B.y - A.y;
+  const len2 = abx * abx + aby * aby;
+  if (len2 < 1e-12) return haversineKm(p.lat, p.lng, a.lat, a.lng);
+  let t = ((P.x - A.x) * abx + (P.y - A.y) * aby) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const cx = A.x + t * abx;
+  const cy = A.y + t * aby;
+  const dx = P.x - cx;
+  const dy = P.y - cy;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+/**
+ * Métrica B — precisión de corredor: % de puntos GPS cuya distancia mínima
+ * a la polilínea KML es ≤ thresholdKm.
+ */
+export function computeCorridorPrecisionPct(
+  points: GpsPoint[],
+  waypoints: Array<{ lat: number; lng: number }>,
+  thresholdKm = 0.12,
+): number {
+  if (waypoints.length === 0 || points.length === 0) return 0;
+  let inside = 0;
+  for (const p of points) {
+    if (
+      minDistanceToRouteKm({ lat: p.latitude, lng: p.longitude }, waypoints) <=
+      thresholdKm
+    ) {
+      inside++;
+    }
+  }
+  return (inside / points.length) * 100;
 }
 
 export function groupPointsByImei(points: GpsPoint[]): Map<string, GpsPoint[]> {
@@ -238,9 +307,13 @@ export function verifyService(input: VerificationInput): VerificationResult {
   steps.push({ step: "evidencia", result: "disponible", details: { count: input.evidencePoints.length } });
 
   const hasKml = (input.kmlWaypoints?.length ?? 0) > 0;
-  // Umbral configurable en la política del contrato. Sin KML no aplica.
+  const corridorKm = Math.min(0.5, Math.max(0.01, (input.kmlCorridorMeters ?? 120) / 1000));
+  // Umbrales configurables. Sin KML no aplican A/B.
   const minKmlPct = hasKml
     ? Math.min(100, Math.max(0, input.kmlMatchMinPct ?? 60))
+    : 0;
+  const minCorridorPct = hasKml
+    ? Math.min(100, Math.max(0, input.kmlCorridorMinPct ?? 60))
     : 0;
 
   const byImei = groupPointsByImei(input.evidencePoints);
@@ -251,19 +324,27 @@ export function verifyService(input: VerificationInput): VerificationResult {
     );
     const arrivalAt = findGeofenceEntry(sorted, input.geofencePolygon);
     const routeMatchPct = hasKml
-      ? computeRouteMatchPct(sorted, input.kmlWaypoints!)
+      ? computeRouteMatchPct(sorted, input.kmlWaypoints!, corridorKm)
+      : arrivalAt
+        ? 100
+        : 0;
+    const corridorPrecisionPct = hasKml
+      ? computeCorridorPrecisionPct(sorted, input.kmlWaypoints!, corridorKm)
       : arrivalAt
         ? 100
         : 0;
 
     const servedRoute =
-      arrivalAt !== null && (!hasKml || routeMatchPct >= minKmlPct);
+      arrivalAt !== null &&
+      (!hasKml ||
+        (routeMatchPct >= minKmlPct && corridorPrecisionPct >= minCorridorPct));
 
     candidateUnits.push({
       unitId: imei,
       servedRoute,
       arrivalAt,
       routeMatchPct,
+      corridorPrecisionPct,
     });
 
     steps.push({
@@ -273,8 +354,11 @@ export function verifyService(input: VerificationInput): VerificationResult {
         imei,
         arrivalAt: arrivalAt?.toISOString(),
         routeMatchPct,
+        corridorPrecisionPct,
+        corridorMeters: corridorKm * 1000,
         hasKml,
         minKmlPct,
+        minCorridorPct,
       },
     });
   }
@@ -282,9 +366,11 @@ export function verifyService(input: VerificationInput): VerificationResult {
   const serving = candidateUnits
     .filter((c) => c.servedRoute)
     .sort((a, b) => {
-      // Con KML: gana quien mejor siguió la ruta; empate → quien llegó primero.
+      // Con KML: gana quien mejor combina A y B (el mínimo); empate → llegada.
       if (hasKml) {
-        const diff = (b.routeMatchPct ?? 0) - (a.routeMatchPct ?? 0);
+        const scoreA = Math.min(a.routeMatchPct, a.corridorPrecisionPct);
+        const scoreB = Math.min(b.routeMatchPct, b.corridorPrecisionPct);
+        const diff = scoreB - scoreA;
         if (Math.abs(diff) >= 1) return diff;
       }
       if (!a.arrivalAt) return 1;
@@ -317,7 +403,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
     : null;
 
   // Cumplimiento de ruta ≠ puntualidad.
-  // Si sirvió la ruta (geocerca + KML), el status es cumplido; "tarde" vive en timing.
+  // Si sirvió la ruta (geocerca + KML A∧B), el status es cumplido; "tarde" vive en timing.
   const lateExcusable =
     timing === "tarde" && input.manualExcusable != null;
   const status: ComplianceStatus = "cumplido";
@@ -331,8 +417,11 @@ export function verifyService(input: VerificationInput): VerificationResult {
       lateExcusable,
       arrivalAt: winner.arrivalAt?.toISOString(),
       routeMatchPct: winner.routeMatchPct,
+      corridorPrecisionPct: winner.corridorPrecisionPct,
       hasKml,
       minKmlPct: hasKml ? minKmlPct : undefined,
+      minCorridorPct: hasKml ? minCorridorPct : undefined,
+      corridorMeters: hasKml ? corridorKm * 1000 : undefined,
     },
   });
 

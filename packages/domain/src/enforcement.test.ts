@@ -7,6 +7,8 @@ describe("enforcement", () => {
     verificationGraceMinutes: 15,
     routeStrictness: "destino_only" as const,
     kmlMatchMinPct: 60,
+    kmlCorridorMeters: 120,
+    kmlCorridorMinPct: 60,
     allowAlternateDestination: false,
     excusableReasons: [],
     enforcementRules: [
