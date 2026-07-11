@@ -584,6 +584,58 @@ export const telemetryWatermarks = pgTable("telemetry_watermarks", {
   uniqueIndex("telemetry_watermarks_carrier_idx").on(table.carrierAccountId),
 ]);
 
+/** Verdad de campo del operador — separada del ledger de hechos (Fase 0). */
+export const groundTruthDays = pgTable(
+  "ground_truth_days",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contractId: uuid("contract_id")
+      .notNull()
+      .references(() => serviceContracts.id, { onDelete: "cascade" }),
+    serviceDate: date("service_date").notNull(),
+    expectedAllCumplido: boolean("expected_all_cumplido").notNull().default(true),
+    declaredCumplidoCount: integer("declared_cumplido_count"),
+    notes: text("notes"),
+    recordedBy: text("recorded_by"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("ground_truth_days_contract_date_idx").on(table.contractId, table.serviceDate),
+  ],
+);
+
+export const ingestAlertKindEnum = pgEnum("ingest_alert_kind", [
+  "heartbeat_stale",
+  "watermark_lag",
+  "archive_error",
+  "rate_limit",
+]);
+
+/** Alertas operativas de ingesta (no son notificaciones de cliente). */
+export const ingestAlerts = pgTable(
+  "ingest_alerts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    carrierAccountId: uuid("carrier_account_id").references(() => accounts.id, {
+      onDelete: "cascade",
+    }),
+    kind: ingestAlertKindEnum("kind").notNull(),
+    severity: text("severity").notNull().default("warning"),
+    message: text("message").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true, mode: "date" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("ingest_alerts_carrier_created_idx").on(table.carrierAccountId, table.createdAt),
+    index("ingest_alerts_unresolved_idx").on(table.resolvedAt),
+  ],
+);
+
 export const clientCarrierAuthorizationsRelations = relations(
   clientCarrierAuthorizations,
   ({ one }) => ({

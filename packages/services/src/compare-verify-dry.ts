@@ -133,7 +133,7 @@ async function main() {
     const oldStatus = occ.complianceFact?.status ?? "sin_hecho";
     const name = profile.name ?? profile.code ?? occ.id.slice(0, 8);
     const unit =
-      units.find((u) => u.id === result.observedUnitId)?.name ??
+      units.find((u) => u.id === result.observedUnitId)?.label ??
       result.observedUnitId?.slice(0, 8) ??
       "—";
     const changed = oldStatus !== result.status;

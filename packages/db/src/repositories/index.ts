@@ -33,6 +33,8 @@ import {
   demoTemplates,
   telemetryPoints,
   telemetryWatermarks,
+  groundTruthDays,
+  ingestAlerts,
   clientCarrierAuthorizations,
 } from "../schema/index.js";
 import type { ContractPolicy, CreateContractInput, CreateServiceProfileInput } from "@jtel/domain";
@@ -1883,6 +1885,156 @@ export class TelemetryRepository {
       orderBy: (p, { asc }) => [asc(p.recordedAt)],
     });
   }
+
+  async listWatermarks() {
+    return this.db.query.telemetryWatermarks.findMany({
+      orderBy: (w, { asc }) => [asc(w.lastRecordedAt)],
+    });
+  }
+
+  /** Edad del punto más reciente por carrier (minutos). */
+  async latestPointAgeMinutes(carrierAccountId: string): Promise<number | null> {
+    const [row] = await this.db
+      .select({
+        latest: sql<Date | null>`max(${telemetryPoints.recordedAt})`,
+      })
+      .from(telemetryPoints)
+      .where(eq(telemetryPoints.carrierAccountId, carrierAccountId));
+    if (!row?.latest) return null;
+    const latest = row.latest instanceof Date ? row.latest : new Date(row.latest);
+    return Math.max(0, (Date.now() - latest.getTime()) / 60_000);
+  }
+
+  async countPointsSince(carrierAccountId: string, since: Date): Promise<number> {
+    const [row] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(telemetryPoints)
+      .where(
+        and(
+          eq(telemetryPoints.carrierAccountId, carrierAccountId),
+          gte(telemetryPoints.recordedAt, since),
+        ),
+      );
+    return row?.count ?? 0;
+  }
+}
+
+export class GroundTruthRepository {
+  constructor(private db: Database) {}
+
+  async upsert(data: {
+    contractId: string;
+    serviceDate: string;
+    expectedAllCumplido?: boolean;
+    declaredCumplidoCount?: number | null;
+    notes?: string | null;
+    recordedBy?: string | null;
+  }) {
+    const [row] = await this.db
+      .insert(groundTruthDays)
+      .values({
+        contractId: data.contractId,
+        serviceDate: data.serviceDate,
+        expectedAllCumplido: data.expectedAllCumplido ?? true,
+        declaredCumplidoCount: data.declaredCumplidoCount ?? null,
+        notes: data.notes ?? null,
+        recordedBy: data.recordedBy ?? null,
+      })
+      .onConflictDoUpdate({
+        target: [groundTruthDays.contractId, groundTruthDays.serviceDate],
+        set: {
+          expectedAllCumplido: data.expectedAllCumplido ?? true,
+          declaredCumplidoCount: data.declaredCumplidoCount ?? null,
+          notes: data.notes ?? null,
+          recordedBy: data.recordedBy ?? null,
+        },
+      })
+      .returning();
+    return row;
+  }
+
+  async listRecent(limit = 30) {
+    return this.db.query.groundTruthDays.findMany({
+      orderBy: (g, { desc }) => [desc(g.serviceDate), desc(g.createdAt)],
+      limit,
+    });
+  }
+
+  async findForContractDate(contractId: string, serviceDate: string) {
+    return this.db.query.groundTruthDays.findFirst({
+      where: and(
+        eq(groundTruthDays.contractId, contractId),
+        eq(groundTruthDays.serviceDate, serviceDate),
+      ),
+    });
+  }
+}
+
+export class IngestAlertRepository {
+  constructor(private db: Database) {}
+
+  async create(data: {
+    carrierAccountId?: string | null;
+    kind: "heartbeat_stale" | "watermark_lag" | "archive_error" | "rate_limit";
+    severity?: string;
+    message: string;
+    metadata?: Record<string, unknown>;
+  }) {
+    const [row] = await this.db
+      .insert(ingestAlerts)
+      .values({
+        carrierAccountId: data.carrierAccountId ?? null,
+        kind: data.kind,
+        severity: data.severity ?? "warning",
+        message: data.message,
+        metadata: data.metadata ?? {},
+      })
+      .returning();
+    return row;
+  }
+
+  async findOpenByKind(
+    kind: "heartbeat_stale" | "watermark_lag" | "archive_error" | "rate_limit",
+    carrierAccountId?: string | null,
+  ) {
+    const conditions = [eq(ingestAlerts.kind, kind), isNull(ingestAlerts.resolvedAt)];
+    if (carrierAccountId) {
+      conditions.push(eq(ingestAlerts.carrierAccountId, carrierAccountId));
+    }
+    return this.db.query.ingestAlerts.findFirst({
+      where: and(...conditions),
+      orderBy: (a, { desc }) => [desc(a.createdAt)],
+    });
+  }
+
+  async resolveOpen(
+    kind: "heartbeat_stale" | "watermark_lag" | "archive_error" | "rate_limit",
+    carrierAccountId?: string | null,
+  ) {
+    const conditions = [eq(ingestAlerts.kind, kind), isNull(ingestAlerts.resolvedAt)];
+    if (carrierAccountId) {
+      conditions.push(eq(ingestAlerts.carrierAccountId, carrierAccountId));
+    }
+    await this.db
+      .update(ingestAlerts)
+      .set({ resolvedAt: new Date() })
+      .where(and(...conditions));
+  }
+
+  async listRecent(limit = 40) {
+    return this.db.query.ingestAlerts.findMany({
+      orderBy: (a, { desc }) => [desc(a.createdAt)],
+      limit,
+    });
+  }
+
+  async listUnresolved(limit = 40) {
+    return this.db.query.ingestAlerts.findMany({
+      where: isNull(ingestAlerts.resolvedAt),
+      orderBy: (a, { desc }) => [desc(a.createdAt)],
+      limit,
+    });
+  }
 }
 
 export function createRepositories(db: Database) {
@@ -1904,6 +2056,8 @@ export function createRepositories(db: Database) {
     notifications: new NotificationRepository(db),
     demos: new DemoRepository(db),
     telemetry: new TelemetryRepository(db),
+    groundTruth: new GroundTruthRepository(db),
+    ingestAlerts: new IngestAlertRepository(db),
   };
 }
 
