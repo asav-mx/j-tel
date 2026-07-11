@@ -17,9 +17,30 @@ export type ExclusiveUnitClaim = {
   unitId: string;
   matchPct: number;
   arrivalAtMs: number;
+  /** Ventana operativa del servicio (no la de evidencia GPS). */
   windowStartMs: number;
   windowEndMs: number;
 };
+
+/**
+ * Ventana en la que el camión “ocupa” el servicio para exclusividad:
+ * desde (deadline − duración máx. de ruta) hasta (deadline + tolerancia).
+ * Más estrecha que la ventana de evidencia (márgenes GPS de 60+30 min),
+ * para no chocar dos viajes de la misma mañana que solo se rozan en márgenes.
+ */
+export function computeExclusiveContentionWindow(
+  deadline: Date,
+  policy: {
+    maxRouteDurationMinutes?: number;
+    toleranceMinutes?: number;
+  },
+): { startMs: number; endMs: number } {
+  const durationMin = Math.max(1, policy.maxRouteDurationMinutes ?? 60);
+  const toleranceMin = Math.max(0, policy.toleranceMinutes ?? 0);
+  const startMs = deadline.getTime() - durationMin * 60_000;
+  const endMs = deadline.getTime() + toleranceMin * 60_000;
+  return { startMs, endMs };
+}
 
 /** Dos ventanas se traslapan si comparten algún instante (semiabierto en el borde). */
 export function evidenceWindowsOverlap(
@@ -32,8 +53,8 @@ export function evidenceWindowsOverlap(
 }
 
 /**
- * Entre claims de la misma unidad, solo son conflicto si sus ventanas de
- * evidencia se traslapan. Misma unidad en días/turnos sin traslape = válido.
+ * Entre claims de la misma unidad, solo son conflicto si sus ventanas
+ * operativas se traslapan. Misma unidad en días/turnos sin traslape = válido.
  * Gana mayor match KML; empate → llegada más temprana.
  */
 export function pickExclusiveUnitLosers(
@@ -177,9 +198,9 @@ export class VerificationService {
    * Herramienta interna (J-Staff / scripts): recalcula hechos con force.
    * No se dispara desde la UI del cliente al guardar política.
    *
-   * `exclusiveUnits`: si varias rutas con ventanas traslapadas acreditan la
-   * misma unidad (calles compartidas), se queda en la de mayor match KML y el
-   * resto se reevalúa sin esa unidad.
+   * `exclusiveUnits`: si varias rutas con ventanas operativas traslapadas
+   * acreditan la misma unidad (calles compartidas), se queda en la de mayor
+   * match KML y el resto se reevalúa sin esa unidad.
    */
   async reverifyContract(
     contractId: string,
@@ -246,7 +267,7 @@ export class VerificationService {
 
   /**
    * Si la misma unidad quedó como observada en varios servicios con ventanas
-   * de evidencia traslapadas, se queda en el de mayor `observedRouteMatchPct`
+   * operativas traslapadas, se queda en el de mayor `observedRouteMatchPct`
    * (empate → llegada más temprana) y los perdedores se re-verifican
    * excluyendo las unidades ya asignadas en ventanas que se traslapan.
    */
@@ -258,17 +279,23 @@ export class VerificationService {
       for (const id of occurrenceIds) {
         const occ = await this.repos.occurrences.findById(id);
         const fact = occ?.complianceFact;
-        const trip = occ?.trip;
-        if (!fact || fact.status !== "cumplido" || !fact.observedUnitId || !trip) {
+        if (!fact || fact.status !== "cumplido" || !fact.observedUnitId) {
           continue;
         }
+        const policy =
+          (fact.contractPolicySnapshot as ContractPolicy | null | undefined) ??
+          (occ.profile?.contract?.policy as ContractPolicy | undefined);
+        const { startMs, endMs } = computeExclusiveContentionWindow(
+          occ.expectedDeadline,
+          policy ?? {},
+        );
         claims.push({
           occurrenceId: id,
           unitId: fact.observedUnitId,
           matchPct: fact.observedRouteMatchPct ?? 0,
           arrivalAtMs: fact.observedArrivalAt?.getTime() ?? Number.MAX_SAFE_INTEGER,
-          windowStartMs: trip.evidenceWindowStart.getTime(),
-          windowEndMs: trip.evidenceWindowEnd.getTime(),
+          windowStartMs: startMs,
+          windowEndMs: endMs,
         });
       }
 

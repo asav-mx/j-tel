@@ -4,6 +4,7 @@ import {
   pickExclusiveUnitLosers,
   evidenceWindowsOverlap,
   hasIncompleteEvidenceCoverage,
+  computeExclusiveContentionWindow,
   type ExclusiveUnitClaim,
 } from "./verification.js";
 
@@ -98,6 +99,42 @@ describe("pickExclusiveUnitLosers", () => {
     };
 
     const { losers } = pickExclusiveUnitLosers([day1, day2]);
+    expect(losers).toHaveLength(0);
+  });
+
+  it("dos servicios de la misma mañana que solo rozan márgenes GPS no conflictúan", () => {
+    // Deadlines 6:00 y 7:15 (hora local ficticia en UTC). Con duración 60 y
+    // tolerancia 5, ventanas operativas: [5:00–6:05] y [6:15–7:20] → sin traslape.
+    // Sus ventanas de evidencia SÍ se tocarían (~60 min antes / 30+grace después).
+    const early = computeExclusiveContentionWindow(
+      new Date("2026-07-09T12:00:00Z"),
+      { maxRouteDurationMinutes: 60, toleranceMinutes: 5 },
+    );
+    const later = computeExclusiveContentionWindow(
+      new Date("2026-07-09T13:15:00Z"),
+      { maxRouteDurationMinutes: 60, toleranceMinutes: 5 },
+    );
+    expect(
+      evidenceWindowsOverlap(early.startMs, early.endMs, later.startMs, later.endMs),
+    ).toBe(false);
+
+    const { losers } = pickExclusiveUnitLosers([
+      {
+        ...base,
+        occurrenceId: "occ-early",
+        matchPct: 95,
+        windowStartMs: early.startMs,
+        windowEndMs: early.endMs,
+      },
+      {
+        ...base,
+        occurrenceId: "occ-later",
+        matchPct: 90,
+        arrivalAtMs: 2_000,
+        windowStartMs: later.startMs,
+        windowEndMs: later.endMs,
+      },
+    ]);
     expect(losers).toHaveLength(0);
   });
 });
