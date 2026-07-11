@@ -151,6 +151,16 @@ export const contractPolicySchema = z.object({
   evidenceMarginMinutesAfter: z.number().int().nonnegative().default(30),
   /** Duración máxima esperada del recorrido de recolección (min). */
   maxRouteDurationMinutes: z.number().int().positive().default(60),
+  /**
+   * Cobertura temporal mínima (%) de la ventana de servicio para poder emitir
+   * no_cumplido. Por debajo → pendiente_evidencia. Default 80 (Fase 1).
+   */
+  evidenceMinCoveragePct: z.number().min(0).max(100).default(80),
+  /**
+   * Hueco continuo máximo (minutos) permitido en la ventana de servicio.
+   * Si el hueco es mayor → pendiente_evidencia. Default 10.
+   */
+  evidenceMaxGapMinutes: z.number().int().positive().default(10),
 });
 
 export type ContractPolicy = z.infer<typeof contractPolicySchema>;
@@ -290,6 +300,17 @@ export interface VerificationInput {
   evidencePoints: GpsPoint[];
   excusableReasons: ExcusableReason[];
   manualExcusable?: ExcusableReason | null;
+  /**
+   * Ventana sobre la que se mide cobertura temporal (típicamente operativa:
+   * deadline − duración ruta … deadline + tolerancia). Si no se envía, no se
+   * aplica la precondición de cobertura (compat tests viejos).
+   */
+  coverageWindowStart?: Date;
+  coverageWindowEnd?: Date;
+  /** Default 80. */
+  evidenceMinCoveragePct?: number;
+  /** Default 10. */
+  evidenceMaxGapMinutes?: number;
 }
 
 export interface VerificationResult {

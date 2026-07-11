@@ -505,6 +505,12 @@ export class VerificationService {
         imei: imeiToUnitId.get(p.imei) ?? p.imei,
       }));
 
+    // Ventana operativa = misma que exclusividad (deadline ± duración/tolerancia).
+    const coverageWindow = computeExclusiveContentionWindow(
+      occurrence.expectedDeadline,
+      policy,
+    );
+
     const verification = verifyService({
       occurrenceId,
       expectedDeadline: occurrence.expectedDeadline,
@@ -515,31 +521,13 @@ export class VerificationService {
       kmlWaypoints,
       evidencePoints: enrichedPoints,
       excusableReasons: policy.excusableReasons,
+      coverageWindowStart: new Date(coverageWindow.startMs),
+      coverageWindowEnd: new Date(coverageWindow.endMs),
+      evidenceMinCoveragePct: policy.evidenceMinCoveragePct ?? 80,
+      evidenceMaxGapMinutes: policy.evidenceMaxGapMinutes ?? 10,
     });
 
-    // Perdedor de asignación exclusiva: no_cumplido solo con evidencia completa.
-    // Si la memoria tiene un hueco conocido en la ventana → pendiente_evidencia.
-    let finalStatus = verification.status;
-    if (
-      opts.excludeUnitIds &&
-      opts.excludeUnitIds.length > 0 &&
-      verification.status === "no_cumplido"
-    ) {
-      const memoryPoints = await this.repos.telemetry.getForImeis(
-        imeis,
-        trip.evidenceWindowStart,
-        trip.evidenceWindowEnd,
-      );
-      if (
-        hasIncompleteEvidenceCoverage(
-          memoryPoints.map((p) => p.recordedAt),
-          trip.evidenceWindowStart,
-          trip.evidenceWindowEnd,
-        )
-      ) {
-        finalStatus = "pendiente_evidencia";
-      }
-    }
+    const finalStatus = verification.status;
 
     let observedUnitId: string | null = null;
     if (verification.observedUnitId && finalStatus === "cumplido") {
@@ -577,21 +565,7 @@ export class VerificationService {
       tripId: trip.id,
       serviceOccurrenceId: occurrenceId,
       action: "verificacion_automatica",
-      steps: [
-        ...verification.ledgerSteps,
-        ...(finalStatus !== verification.status
-          ? [
-              {
-                step: "exclusiva_cobertura",
-                result: finalStatus,
-                details: {
-                  reason: "hueco_conocido_en_memoria",
-                  excludedUnits: opts.excludeUnitIds,
-                },
-              },
-            ]
-          : []),
-      ],
+      steps: verification.ledgerSteps,
       metadata: {
         ingestStatus,
         ingestSource,

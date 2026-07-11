@@ -57,6 +57,8 @@ const POLICY: ContractPolicy = {
   evidenceMarginMinutesBefore: 60,
   evidenceMarginMinutesAfter: 30,
   maxRouteDurationMinutes: 60,
+  evidenceMinCoveragePct: 80,
+  evidenceMaxGapMinutes: 10,
 };
 
 function normalizeUmbrellaBaseUrl(raw: string): string {

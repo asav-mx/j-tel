@@ -39,6 +39,8 @@ export default async function ClienteReportesPage({
     enforcementRules: [],
     evidenceMarginMinutesBefore: 60,
     evidenceMarginMinutesAfter: 30,
+    evidenceMinCoveragePct: 80,
+    evidenceMaxGapMinutes: 10,
   }) as ContractPolicy;
 
   const report = buildMonthlyReport({

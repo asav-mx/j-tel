@@ -4,6 +4,7 @@ import {
   pointInPolygon,
   determineTiming,
   computeRouteMatchPct,
+  assessEvidenceCoverage,
 } from "./index.js";
 
 const geofence = [
@@ -62,19 +63,55 @@ describe("verifyService", () => {
   });
 
   it("returns no_cumplido when no unit serves route", () => {
+    const windowStart = new Date("2026-07-07T11:45:00Z");
+    const windowEnd = new Date("2026-07-07T12:50:00Z");
+    const points = [];
+    for (let m = 0; m <= 65; m += 2) {
+      points.push({
+        imei: "unit-1",
+        latitude: 31.8,
+        longitude: -106.5,
+        timestamp: new Date(windowStart.getTime() + m * 60_000),
+      });
+    }
     const result = verifyService({
       ...baseInput,
-      evidencePoints: [
-        {
-          imei: "unit-1",
-          latitude: 31.8000,
-          longitude: -106.5000,
-          timestamp: new Date("2026-07-07T12:44:00Z"),
-        },
-      ],
+      coverageWindowStart: windowStart,
+      coverageWindowEnd: windowEnd,
+      evidenceMinCoveragePct: 80,
+      evidenceMaxGapMinutes: 10,
+      evidencePoints: points,
     });
     expect(result.status).toBe("no_cumplido");
     expect(result.observedUnitId).toBeNull();
+  });
+
+  it("returns pendiente_evidencia when coverage has a large gap (never no_cumplido)", () => {
+    const windowStart = new Date("2026-07-07T11:45:00Z");
+    const windowEnd = new Date("2026-07-07T12:50:00Z");
+    const result = verifyService({
+      ...baseInput,
+      coverageWindowStart: windowStart,
+      coverageWindowEnd: windowEnd,
+      evidenceMinCoveragePct: 80,
+      evidenceMaxGapMinutes: 10,
+      evidencePoints: [
+        {
+          imei: "unit-1",
+          latitude: 31.8,
+          longitude: -106.5,
+          timestamp: new Date("2026-07-07T11:45:00Z"),
+        },
+        {
+          imei: "unit-1",
+          latitude: 31.8,
+          longitude: -106.5,
+          timestamp: new Date("2026-07-07T12:50:00Z"),
+        },
+      ],
+    });
+    expect(result.status).toBe("pendiente_evidencia");
+    expect(result.ledgerSteps.some((s) => s.step === "cobertura_evidencia")).toBe(true);
   });
 
   it("never returns no_cumplido without evidence", () => {
@@ -177,6 +214,46 @@ describe("verifyService", () => {
     });
     expect(pass.status).toBe("cumplido");
     expect(pass.observedRouteMatchPct).toBeCloseTo(100 / 3, 5);
+  });
+});
+
+describe("assessEvidenceCoverage", () => {
+  const start = new Date("2026-07-09T10:00:00Z");
+  const end = new Date("2026-07-09T11:00:00Z");
+
+  it("sin puntos = insuficiente", () => {
+    const a = assessEvidenceCoverage([], start, end);
+    expect(a.sufficient).toBe(false);
+    expect(a.coveragePct).toBe(0);
+  });
+
+  it("pings cada 2 min = suficiente", () => {
+    const points: Date[] = [];
+    for (let m = 0; m <= 60; m += 2) {
+      points.push(new Date(start.getTime() + m * 60_000));
+    }
+    const a = assessEvidenceCoverage(points, start, end, {
+      minCoveragePct: 80,
+      maxGapMinutes: 10,
+    });
+    expect(a.sufficient).toBe(true);
+    expect(a.coveragePct).toBe(100);
+  });
+
+  it("hueco de 20 min = insuficiente", () => {
+    const points = [
+      new Date("2026-07-09T10:00:00Z"),
+      new Date("2026-07-09T10:05:00Z"),
+      new Date("2026-07-09T10:25:00Z"),
+      new Date("2026-07-09T10:30:00Z"),
+      new Date("2026-07-09T11:00:00Z"),
+    ];
+    const a = assessEvidenceCoverage(points, start, end, {
+      minCoveragePct: 80,
+      maxGapMinutes: 10,
+    });
+    expect(a.sufficient).toBe(false);
+    expect(a.maxGapMs).toBeGreaterThan(10 * 60_000);
   });
 });
 

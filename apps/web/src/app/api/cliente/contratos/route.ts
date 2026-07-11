@@ -117,6 +117,8 @@ export async function POST(request: Request) {
       enforcementRules: buildEnforcementRule(formData),
       evidenceMarginMinutesBefore: toInt(formData.get("evidenceMarginMinutesBefore"), 60),
       evidenceMarginMinutesAfter: toInt(formData.get("evidenceMarginMinutesAfter"), 30),
+      evidenceMinCoveragePct: toInt(formData.get("evidenceMinCoveragePct"), 80),
+      evidenceMaxGapMinutes: toInt(formData.get("evidenceMaxGapMinutes"), 10),
     };
 
     const parsed = contractPolicySchema.safeParse(policyPayload);

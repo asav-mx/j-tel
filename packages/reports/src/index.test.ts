@@ -15,6 +15,8 @@ describe("reports", () => {
       evidenceMarginMinutesAfter: 30,
       arrivalAnticipationMinutes: 15,
       maxRouteDurationMinutes: 60,
+      evidenceMinCoveragePct: 80,
+      evidenceMaxGapMinutes: 10,
     };
 
     const rows = [

@@ -62,6 +62,8 @@ const TECMA_POLICY: ContractPolicy = {
   evidenceMarginMinutesBefore: 60,
   evidenceMarginMinutesAfter: 30,
   maxRouteDurationMinutes: 60,
+  evidenceMinCoveragePct: 80,
+  evidenceMaxGapMinutes: 10,
 };
 
 const HONEYWELL_POLICY: ContractPolicy = {
@@ -91,6 +93,8 @@ const HONEYWELL_POLICY: ContractPolicy = {
   evidenceMarginMinutesBefore: 90,
   evidenceMarginMinutesAfter: 45,
   maxRouteDurationMinutes: 60,
+  evidenceMinCoveragePct: 80,
+  evidenceMaxGapMinutes: 10,
 };
 
 async function seed() {
