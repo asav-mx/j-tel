@@ -33,6 +33,7 @@ import {
   demoTemplates,
   telemetryPoints,
   telemetryWatermarks,
+  telemetryImeiWatermarks,
   groundTruthDays,
   ingestAlerts,
   clientCarrierAuthorizations,
@@ -1930,6 +1931,67 @@ export class TelemetryRepository {
         ),
       );
     return row?.count ?? 0;
+  }
+
+  async getImeiWatermark(carrierAccountId: string, imei: string) {
+    return this.db.query.telemetryImeiWatermarks.findFirst({
+      where: and(
+        eq(telemetryImeiWatermarks.carrierAccountId, carrierAccountId),
+        eq(telemetryImeiWatermarks.imei, imei),
+      ),
+    });
+  }
+
+  async setImeiWatermark(carrierAccountId: string, imei: string, lastRecordedAt: Date) {
+    await this.db
+      .insert(telemetryImeiWatermarks)
+      .values({ carrierAccountId, imei, lastRecordedAt })
+      .onConflictDoUpdate({
+        target: [telemetryImeiWatermarks.carrierAccountId, telemetryImeiWatermarks.imei],
+        set: { lastRecordedAt, updatedAt: new Date() },
+      });
+  }
+
+  /**
+   * Detecta huecos > gapMinutes entre puntos consecutivos de un IMEI en [from, to].
+   */
+  async findGapsForImei(
+    imei: string,
+    from: Date,
+    to: Date,
+    gapMinutes: number,
+  ): Promise<Array<{ start: Date; end: Date; gapMinutes: number }>> {
+    const pts = await this.getForImei(imei, from, to);
+    if (pts.length === 0) {
+      return [{ start: from, end: to, gapMinutes: (to.getTime() - from.getTime()) / 60_000 }];
+    }
+    const gapMs = gapMinutes * 60_000;
+    const gaps: Array<{ start: Date; end: Date; gapMinutes: number }> = [];
+    const first = pts[0]!.recordedAt;
+    if (first.getTime() - from.getTime() > gapMs) {
+      gaps.push({
+        start: from,
+        end: first,
+        gapMinutes: (first.getTime() - from.getTime()) / 60_000,
+      });
+    }
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1]!.recordedAt;
+      const b = pts[i]!.recordedAt;
+      const delta = b.getTime() - a.getTime();
+      if (delta > gapMs) {
+        gaps.push({ start: a, end: b, gapMinutes: delta / 60_000 });
+      }
+    }
+    const last = pts[pts.length - 1]!.recordedAt;
+    if (to.getTime() - last.getTime() > gapMs) {
+      gaps.push({
+        start: last,
+        end: to,
+        gapMinutes: (to.getTime() - last.getTime()) / 60_000,
+      });
+    }
+    return gaps;
   }
 }
 

@@ -584,6 +584,28 @@ export const telemetryWatermarks = pgTable("telemetry_watermarks", {
   uniqueIndex("telemetry_watermarks_carrier_idx").on(table.carrierAccountId),
 ]);
 
+/** Marca de agua fina por IMEI (Fase 5 — relleno dirigido). */
+export const telemetryImeiWatermarks = pgTable(
+  "telemetry_imei_watermarks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    carrierAccountId: uuid("carrier_account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    imei: text("imei").notNull(),
+    lastRecordedAt: timestamp("last_recorded_at", { withTimezone: true, mode: "date" }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("telemetry_imei_watermarks_carrier_imei_idx").on(
+      table.carrierAccountId,
+      table.imei,
+    ),
+  ],
+);
+
 /** Verdad de campo del operador — separada del ledger de hechos (Fase 0). */
 export const groundTruthDays = pgTable(
   "ground_truth_days",

@@ -6,6 +6,7 @@ import type {
   GpsProviderConfig,
 } from "@jtel/gps-core";
 import type { GpsPoint } from "@jtel/domain";
+import { fullJitterMs, sleep, umbrellaTokenBucket } from "./rate-limit.js";
 
 /** Todas las respuestas de la API de Umbrella vienen envueltas así. */
 interface UmbrellaEnvelope<T> {
@@ -45,10 +46,6 @@ export function clearUmbrellaTokenCache() {
   sharedTokenCache.clear();
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export class UmbrellaGpsProvider implements GpsProvider {
   readonly name = "umbrella";
 
@@ -62,25 +59,31 @@ export class UmbrellaGpsProvider implements GpsProvider {
   }
 
   private async fetchJson<T>(url: string): Promise<T> {
-    // Umbrella admite ~10 llamadas/minuto. Ante 429 esperamos lo suficiente
-    // para que se renueve la cuota antes de reintentar.
-    const backoffsMs = [15_000, 30_000, 45_000];
+    // Token bucket ~8/min + backoff full-jitter ante 429/503.
+    const maxAttempts = 6;
     let lastStatus = 0;
 
-    for (let attempt = 0; attempt <= backoffsMs.length; attempt++) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await umbrellaTokenBucket.take();
       const response = await fetch(url);
       if (response.ok) {
         return response.json() as Promise<T>;
       }
       lastStatus = response.status;
-      if (response.status !== 429 || attempt === backoffsMs.length) {
+      const retryable = response.status === 429 || response.status === 503;
+      if (!retryable || attempt === maxAttempts - 1) {
         const body = await response.text().catch(() => "");
         const snippet = body.slice(0, 200).replace(/\s+/g, " ").trim();
         throw new Error(
           `Umbrella API error: ${response.status} ${response.statusText}${snippet ? ` — ${snippet}` : ""}`,
         );
       }
-      await sleep(backoffsMs[attempt]!);
+      const retryAfter = response.headers.get("retry-after");
+      const retryAfterMs = retryAfter ? Number(retryAfter) * 1000 : NaN;
+      const wait = Number.isFinite(retryAfterMs)
+        ? Math.min(60_000, Math.max(0, retryAfterMs))
+        : fullJitterMs(attempt, 1000, 60_000);
+      await sleep(wait);
     }
 
     throw new Error(`Umbrella API error: ${lastStatus}`);
@@ -138,9 +141,7 @@ export class UmbrellaGpsProvider implements GpsProvider {
     const maxPages = 50;
 
     for (let page = 0; page < maxPages; page++) {
-      // Umbrella admite máximo ~10 llamadas/minuto ("API calls quota exceeded").
-      // Espaciamos TODAS las páginas ≥6.5s para no tumbar el archivador ni el cron.
-      await sleep(6500);
+      // El token bucket en fetchJson espacia las llamadas (~8/min).
 
       let url = `${this.baseUrl}/api/HistoryLocation?Token=${encodeURIComponent(token)}`;
       url += `&BeginGMT=${encodeURIComponent(query.beginGmt.toISOString())}`;
@@ -276,3 +277,5 @@ export async function ingestEvidenceForTrip(
 
   return { pointCount: resolved.length, status };
 }
+
+export { fullJitterMs, sleep, TokenBucket, umbrellaTokenBucket } from "./rate-limit.js";

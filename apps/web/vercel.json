@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/ingest-heartbeat",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/gap-backfill",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

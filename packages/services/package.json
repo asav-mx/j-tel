@@ -18,7 +18,9 @@
     "archive": "tsx src/archive-run.ts",
     "backfill-telemetry": "tsx src/backfill-telemetry.ts",
     "reverify-day": "tsx src/reverify-day.ts",
-    "import-jrz-memory": "tsx src/import-jrz-memory.ts"
+    "import-jrz-memory": "tsx src/import-jrz-memory.ts",
+    "calibrate": "tsx src/calibrate-thresholds.ts",
+    "gap-backfill": "tsx src/gap-backfill-run.ts"
   },
   "dependencies": {
     "@jtel/db": "workspace:*",
