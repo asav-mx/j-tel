@@ -6,6 +6,11 @@ import {
   computeRouteMatchPct,
   computeCorridorPrecisionPct,
   assessEvidenceCoverage,
+  buildSegmentIdf,
+  computeWeightedRouteMatchPct,
+  discreteFrechetKm,
+  directionSimilarity,
+  segmentKey,
 } from "./index.js";
 
 const geofence = [
@@ -383,5 +388,118 @@ describe("computeRouteMatchPct", () => {
       { imei: "u1", latitude: 31.6910, longitude: -106.4230, timestamp: new Date() },
     ];
     expect(computeRouteMatchPct(points, waypoints, 0.12)).toBe(100);
+  });
+});
+
+describe("Fase 3 TF-IDF / Fréchet / dirección", () => {
+  const shared = [
+    { lat: 31.68, lng: -106.43 },
+    { lat: 31.685, lng: -106.428 },
+  ];
+  const uniqueA = [
+    ...shared,
+    { lat: 31.69, lng: -106.42 },
+    { lat: 31.695, lng: -106.415 },
+  ];
+  const uniqueB = [
+    ...shared,
+    { lat: 31.70, lng: -106.44 },
+    { lat: 31.705, lng: -106.445 },
+  ];
+
+  it("gives rare segments higher IDF than shared avenues", () => {
+    const idf = buildSegmentIdf([uniqueA, uniqueB]);
+    const sharedKey = segmentKey(shared[0]!, shared[1]!);
+    const rareKey = segmentKey(uniqueA[2]!, uniqueA[3]!);
+    expect(idf.get(rareKey)!).toBeGreaterThan(idf.get(sharedKey)!);
+  });
+
+  it("weights unique colony segments higher than shared avenue", () => {
+    const idf = buildSegmentIdf([uniqueA, uniqueB]);
+    // GPS only on unique tip of A
+    const points = uniqueA.slice(2).map((wp, i) => ({
+      imei: "u",
+      latitude: wp.lat,
+      longitude: wp.lng,
+      timestamp: new Date(`2026-07-07T12:${40 + i}:00Z`),
+    }));
+    const weighted = computeWeightedRouteMatchPct(points, uniqueA, idf, 0.12);
+    const uniform = computeRouteMatchPct(points, uniqueA, 0.12);
+    // Con peso, cubrir solo el tramo raro aporta más % relativo que uniforme puro
+    // (ambos <100, pero weighted no colapsa tanto por no tocar avenida compartida).
+    expect(weighted).toBeGreaterThan(0);
+    expect(uniform).toBeGreaterThan(0);
+    expect(weighted).toBeGreaterThanOrEqual(uniform);
+  });
+
+  it("Fréchet is small for similar shape and large when reversed far away", () => {
+    const kml = uniqueA;
+    const similar = uniqueA.map((wp) => ({
+      lat: wp.lat + 0.0001,
+      lng: wp.lng + 0.0001,
+    }));
+    const far = uniqueA.map((wp) => ({
+      lat: wp.lat + 0.05,
+      lng: wp.lng + 0.05,
+    }));
+    expect(discreteFrechetKm(similar, kml)).toBeLessThan(0.05);
+    expect(discreteFrechetKm(far, kml)).toBeGreaterThan(1);
+  });
+
+  it("directionSimilarity is high for same bearing and low for opposite", () => {
+    const waypoints = [
+      { lat: 31.68, lng: -106.43 },
+      { lat: 31.69, lng: -106.42 },
+      { lat: 31.70, lng: -106.41 },
+    ];
+    const sameDir = waypoints.map((wp, i) => ({
+      imei: "u",
+      latitude: wp.lat,
+      longitude: wp.lng,
+      timestamp: new Date(`2026-07-07T12:${40 + i}:00Z`),
+    }));
+    const opposite = [...waypoints].reverse().map((wp, i) => ({
+      imei: "u",
+      latitude: wp.lat,
+      longitude: wp.lng,
+      timestamp: new Date(`2026-07-07T12:${40 + i}:00Z`),
+    }));
+    expect(directionSimilarity(sameDir, waypoints)).toBeGreaterThan(0.8);
+    expect(directionSimilarity(opposite, waypoints)).toBeLessThan(0.3);
+  });
+
+  it("uses TF-IDF corpus to prefer the route whose unique tip was driven", () => {
+    const geofence = [
+      { lat: 31.694, lng: -106.416 },
+      { lat: 31.696, lng: -106.416 },
+      { lat: 31.696, lng: -106.414 },
+      { lat: 31.694, lng: -106.414 },
+    ];
+    const points = [
+      ...uniqueA.map((wp, i) => ({
+        imei: "unit-a",
+        latitude: wp.lat,
+        longitude: wp.lng,
+        timestamp: new Date(`2026-07-07T12:${30 + i}:00Z`),
+      })),
+    ];
+    const result = verifyService({
+      occurrenceId: "occ-tfidf",
+      expectedDeadline: new Date("2026-07-07T13:00:00Z"),
+      toleranceMinutes: 15,
+      routeStrictness: "kml_full",
+      kmlMatchMinPct: 40,
+      kmlCorridorMinPct: 40,
+      kmlCorridorMeters: 150,
+      frechetMaxKm: 2,
+      geofencePolygon: geofence,
+      kmlWaypoints: uniqueA,
+      routeCorpus: [uniqueA, uniqueB],
+      evidencePoints: points,
+      excusableReasons: [],
+    });
+    expect(result.status).toBe("cumplido");
+    expect(result.observedUnitId).toBe("unit-a");
+    expect(result.candidateUnits[0]?.frechetKm).toBeLessThan(0.5);
   });
 });

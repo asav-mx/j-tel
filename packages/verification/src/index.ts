@@ -143,6 +143,186 @@ export function computeCorridorPrecisionPct(
   return (inside / points.length) * 100;
 }
 
+/** Clave de segmento cuantizada (orden-independiente) para TF-IDF. */
+export function segmentKey(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+  precision = 4,
+): string {
+  const p1 = `${a.lat.toFixed(precision)},${a.lng.toFixed(precision)}`;
+  const p2 = `${b.lat.toFixed(precision)},${b.lng.toFixed(precision)}`;
+  return p1 < p2 ? `${p1}|${p2}` : `${p2}|${p1}`;
+}
+
+/** IDF por segmento sobre un corpus de rutas (segmentos raros → peso alto). */
+export function buildSegmentIdf(
+  corpus: Array<Array<{ lat: number; lng: number }>>,
+): Map<string, number> {
+  const N = Math.max(1, corpus.length);
+  const df = new Map<string, number>();
+  for (const route of corpus) {
+    const seen = new Set<string>();
+    for (let i = 0; i < route.length - 1; i++) {
+      seen.add(segmentKey(route[i]!, route[i + 1]!));
+    }
+    for (const s of seen) df.set(s, (df.get(s) ?? 0) + 1);
+  }
+  const idf = new Map<string, number>();
+  for (const [s, d] of df) {
+    idf.set(s, Math.log((N + 1) / (d + 1)) + 1);
+  }
+  return idf;
+}
+
+/**
+ * Métrica A ponderada: cobertura de segmentos KML con peso IDF.
+ * Un segmento cuenta como cubierto si algún GPS está a ≤ thresholdKm.
+ */
+export function computeWeightedRouteMatchPct(
+  points: GpsPoint[],
+  waypoints: Array<{ lat: number; lng: number }>,
+  idf: Map<string, number>,
+  thresholdKm = 0.12,
+): number {
+  if (waypoints.length < 2 || points.length === 0) {
+    return computeRouteMatchPct(points, waypoints, thresholdKm);
+  }
+
+  let weightSum = 0;
+  let matchedWeight = 0;
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const a = waypoints[i]!;
+    const b = waypoints[i + 1]!;
+    const key = segmentKey(a, b);
+    const w = idf.get(key) ?? 1;
+    weightSum += w;
+    const mid = { lat: (a.lat + b.lat) / 2, lng: (a.lng + b.lng) / 2 };
+    const hit = points.some((p) => {
+      const dSeg = distPointToSegmentKm(
+        { lat: p.latitude, lng: p.longitude },
+        a,
+        b,
+      );
+      const dMid = haversineKm(mid.lat, mid.lng, p.latitude, p.longitude);
+      return dSeg <= thresholdKm || dMid <= thresholdKm;
+    });
+    if (hit) matchedWeight += w;
+  }
+  if (weightSum <= 0) return 0;
+  return (matchedWeight / weightSum) * 100;
+}
+
+function downsamplePolyline<T extends { lat?: number; latitude?: number; lng?: number; longitude?: number }>(
+  points: T[],
+  maxPoints: number,
+): T[] {
+  if (points.length <= maxPoints) return points;
+  const out: T[] = [];
+  const step = (points.length - 1) / (maxPoints - 1);
+  for (let i = 0; i < maxPoints; i++) {
+    out.push(points[Math.round(i * step)]!);
+  }
+  return out;
+}
+
+function asLatLng(p: {
+  lat?: number;
+  lng?: number;
+  latitude?: number;
+  longitude?: number;
+}): { lat: number; lng: number } {
+  return {
+    lat: p.lat ?? p.latitude ?? 0,
+    lng: p.lng ?? p.longitude ?? 0,
+  };
+}
+
+/** Distancia de Fréchet discreta (km) entre dos polilíneas. */
+export function discreteFrechetKm(
+  trackA: Array<{ lat?: number; latitude?: number; lng?: number; longitude?: number }>,
+  trackB: Array<{ lat?: number; latitude?: number; lng?: number; longitude?: number }>,
+  maxPoints = 40,
+): number {
+  if (trackA.length === 0 || trackB.length === 0) return Infinity;
+  const a = downsamplePolyline(trackA, maxPoints).map(asLatLng);
+  const b = downsamplePolyline(trackB, maxPoints).map(asLatLng);
+  const n = a.length;
+  const m = b.length;
+  const ca: number[][] = Array.from({ length: n }, () => Array(m).fill(-1));
+
+  function c(i: number, j: number): number {
+    if (ca[i]![j]! > -0.5) return ca[i]![j]!;
+    const d = haversineKm(a[i]!.lat, a[i]!.lng, b[j]!.lat, b[j]!.lng);
+    let result: number;
+    if (i === 0 && j === 0) result = d;
+    else if (i > 0 && j === 0) result = Math.max(c(i - 1, 0), d);
+    else if (i === 0 && j > 0) result = Math.max(c(0, j - 1), d);
+    else {
+      result = Math.max(
+        Math.min(c(i - 1, j), c(i - 1, j - 1), c(i, j - 1)),
+        d,
+      );
+    }
+    ca[i]![j] = result;
+    return result;
+  }
+
+  return c(n - 1, m - 1);
+}
+
+function bearingUnit(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x =
+    Math.cos(lat1) * Math.sin(lat2) -
+    Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  const len = Math.hypot(x, y) || 1;
+  return { x: x / len, y: y / len };
+}
+
+/** Similitud de dirección media (coseno 0–1, negativos → 0). */
+export function directionSimilarity(
+  gps: GpsPoint[],
+  waypoints: Array<{ lat: number; lng: number }>,
+): number {
+  if (gps.length < 2 || waypoints.length < 2) return 0;
+  const gpsSorted = [...gps].sort(
+    (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
+  );
+  let gx = 0;
+  let gy = 0;
+  let gn = 0;
+  for (let i = 1; i < gpsSorted.length; i++) {
+    const u = bearingUnit(
+      { lat: gpsSorted[i - 1]!.latitude, lng: gpsSorted[i - 1]!.longitude },
+      { lat: gpsSorted[i]!.latitude, lng: gpsSorted[i]!.longitude },
+    );
+    gx += u.x;
+    gy += u.y;
+    gn += 1;
+  }
+  let kx = 0;
+  let ky = 0;
+  let kn = 0;
+  for (let i = 1; i < waypoints.length; i++) {
+    const u = bearingUnit(waypoints[i - 1]!, waypoints[i]!);
+    kx += u.x;
+    ky += u.y;
+    kn += 1;
+  }
+  if (gn === 0 || kn === 0) return 0;
+  gx /= gn;
+  gy /= gn;
+  kx /= kn;
+  ky /= kn;
+  const gLen = Math.hypot(gx, gy) || 1;
+  const kLen = Math.hypot(kx, ky) || 1;
+  const cos = (gx / gLen) * (kx / kLen) + (gy / gLen) * (ky / kLen);
+  return Math.max(0, Math.min(1, cos));
+}
+
 export function groupPointsByImei(points: GpsPoint[]): Map<string, GpsPoint[]> {
   const groups = new Map<string, GpsPoint[]>();
   for (const point of points) {
@@ -315,6 +495,15 @@ export function verifyService(input: VerificationInput): VerificationResult {
   const minCorridorPct = hasKml
     ? Math.min(100, Math.max(0, input.kmlCorridorMinPct ?? 60))
     : 0;
+  const frechetMaxKm = input.frechetMaxKm ?? 0.8;
+  const idf =
+    hasKml && input.routeCorpus && input.routeCorpus.length > 0
+      ? buildSegmentIdf(
+          input.routeCorpus.some((r) => r === input.kmlWaypoints)
+            ? input.routeCorpus
+            : [...input.routeCorpus, input.kmlWaypoints!],
+        )
+      : null;
 
   const byImei = groupPointsByImei(input.evidencePoints);
 
@@ -324,7 +513,9 @@ export function verifyService(input: VerificationInput): VerificationResult {
     );
     const arrivalAt = findGeofenceEntry(sorted, input.geofencePolygon);
     const routeMatchPct = hasKml
-      ? computeRouteMatchPct(sorted, input.kmlWaypoints!, corridorKm)
+      ? idf
+        ? computeWeightedRouteMatchPct(sorted, input.kmlWaypoints!, idf, corridorKm)
+        : computeRouteMatchPct(sorted, input.kmlWaypoints!, corridorKm)
       : arrivalAt
         ? 100
         : 0;
@@ -333,9 +524,25 @@ export function verifyService(input: VerificationInput): VerificationResult {
       : arrivalAt
         ? 100
         : 0;
+    const frechetKm = hasKml
+      ? discreteFrechetKm(
+          sorted.map((p) => ({ lat: p.latitude, lng: p.longitude })),
+          input.kmlWaypoints!,
+        )
+      : null;
+    const dirSim = hasKml
+      ? directionSimilarity(sorted, input.kmlWaypoints!)
+      : null;
 
+    // Fréchet solo filtra cuando hay trayectoria suficiente (≥3 puntos).
+    const shapeOk =
+      !hasKml ||
+      frechetKm === null ||
+      sorted.length < 3 ||
+      frechetKm <= frechetMaxKm;
     const servedRoute =
       arrivalAt !== null &&
+      shapeOk &&
       (!hasKml ||
         (routeMatchPct >= minKmlPct && corridorPrecisionPct >= minCorridorPct));
 
@@ -345,6 +552,8 @@ export function verifyService(input: VerificationInput): VerificationResult {
       arrivalAt,
       routeMatchPct,
       corridorPrecisionPct,
+      frechetKm,
+      directionSimilarity: dirSim,
     });
 
     steps.push({
@@ -355,10 +564,15 @@ export function verifyService(input: VerificationInput): VerificationResult {
         arrivalAt: arrivalAt?.toISOString(),
         routeMatchPct,
         corridorPrecisionPct,
+        frechetKm: frechetKm == null ? null : Number(frechetKm.toFixed(3)),
+        directionSimilarity: dirSim == null ? null : Number(dirSim.toFixed(3)),
+        weightedIdf: Boolean(idf),
         corridorMeters: corridorKm * 1000,
         hasKml,
         minKmlPct,
         minCorridorPct,
+        frechetMaxKm: hasKml ? frechetMaxKm : undefined,
+        shapeOk,
       },
     });
   }
@@ -366,12 +580,18 @@ export function verifyService(input: VerificationInput): VerificationResult {
   const serving = candidateUnits
     .filter((c) => c.servedRoute)
     .sort((a, b) => {
-      // Con KML: gana quien mejor combina A y B (el mínimo); empate → llegada.
+      // Con KML: gana quien mejor combina A y B (el mínimo); empate → Fréchet → dirección → llegada.
       if (hasKml) {
         const scoreA = Math.min(a.routeMatchPct, a.corridorPrecisionPct);
         const scoreB = Math.min(b.routeMatchPct, b.corridorPrecisionPct);
         const diff = scoreB - scoreA;
         if (Math.abs(diff) >= 1) return diff;
+        const fA = a.frechetKm ?? Infinity;
+        const fB = b.frechetKm ?? Infinity;
+        if (Math.abs(fA - fB) >= 0.05) return fA - fB;
+        const dA = a.directionSimilarity ?? 0;
+        const dB = b.directionSimilarity ?? 0;
+        if (Math.abs(dA - dB) >= 0.05) return dB - dA;
       }
       if (!a.arrivalAt) return 1;
       if (!b.arrivalAt) return -1;

@@ -1131,6 +1131,20 @@ export class ServiceProfileRepository {
     return rows.map((r) => r.unitId);
   }
 
+  /** Perfiles de un contrato (con routeShift para corpus TF-IDF). */
+  async findForContract(contractId: string) {
+    return this.db.query.serviceProfiles.findMany({
+      where: eq(serviceProfiles.contractId, contractId),
+      with: {
+        contract: true,
+        geofence: true,
+        possibleUnits: true,
+        routeShift: { with: { route: true, shift: true } },
+      },
+      orderBy: (p, { asc }) => [asc(p.name)],
+    });
+  }
+
   /** Perfiles de servicio de todos los contratos de un cliente. */
   async findForClient(clientAccountId: string) {
     const clientContracts = await this.db.query.serviceContracts.findMany({
