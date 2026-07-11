@@ -311,6 +311,16 @@ export interface VerificationInput {
   kmlCorridorMinPct?: number;
   geofencePolygon: Array<{ lat: number; lng: number }>;
   kmlWaypoints?: Array<{ lat: number; lng: number }>;
+  /**
+   * Corpus de rutas hermanas (mismo campus/contrato) para pesos TF-IDF de
+   * segmentos. Si se omite, A usa cobertura uniforme (Fase 2).
+   */
+  routeCorpus?: Array<Array<{ lat: number; lng: number }>>;
+  /**
+   * Distancia de Fréchet máxima aceptable (km) como filtro suave de forma.
+   * Default 0.8. Solo aplica con KML.
+   */
+  frechetMaxKm?: number;
   evidencePoints: GpsPoint[];
   excusableReasons: ExcusableReason[];
   manualExcusable?: ExcusableReason | null;
@@ -340,10 +350,14 @@ export interface VerificationResult {
     unitId: string;
     servedRoute: boolean;
     arrivalAt: Date | null;
-    /** Métrica A: % waypoints KML cubiertos por GPS. */
+    /** Métrica A: % waypoints KML cubiertos por GPS (uniforme o TF-IDF). */
     routeMatchPct: number;
     /** Métrica B: % puntos GPS dentro del corredor. */
     corridorPrecisionPct: number;
+    /** Distancia de Fréchet discreta (km); null sin KML. */
+    frechetKm?: number | null;
+    /** Similitud de dirección 0–1; null sin KML. */
+    directionSimilarity?: number | null;
   }>;
 }
 

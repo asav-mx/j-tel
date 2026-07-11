@@ -493,6 +493,21 @@ export class VerificationService {
       kmlWaypoints = byRoute?.waypoints;
     }
 
+    // Corpus de rutas del mismo contrato para TF-IDF (Fase 3).
+    const routeCorpus: Array<Array<{ lat: number; lng: number }>> = [];
+    const contractProfiles = await this.repos.profiles.findForContract(occurrence.contractId);
+    const seenRouteIds = new Set<string>();
+    for (const p of contractProfiles) {
+      const rid = p.routeShift?.routeId;
+      if (!rid || seenRouteIds.has(rid)) continue;
+      seenRouteIds.add(rid);
+      const kml = await this.repos.routes.getKmlVersionForDate(
+        rid,
+        occurrence.expectedDeadline,
+      );
+      if (kml?.waypoints?.length) routeCorpus.push(kml.waypoints);
+    }
+
     const excluded = new Set(opts.excludeUnitIds ?? []);
     const enrichedPoints = evidencePoints
       .filter((p) => {
@@ -521,6 +536,7 @@ export class VerificationService {
       kmlCorridorMinPct: policy.kmlCorridorMinPct ?? 60,
       geofencePolygon: geofence.polygon,
       kmlWaypoints,
+      routeCorpus: routeCorpus.length > 0 ? routeCorpus : undefined,
       evidencePoints: enrichedPoints,
       excusableReasons: policy.excusableReasons,
       coverageWindowStart: new Date(coverageWindow.startMs),
