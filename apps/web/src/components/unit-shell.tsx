@@ -16,14 +16,23 @@ import type { UnitConfigStepId } from "@/lib/config-wizard";
 
 export function unitNavLinks(unit: OperationalUnit, clientSlug: string, clientName: string) {
   const dash = unitDashboardHref(unit, clientSlug);
-  return [
+  const links = [
     { href: dash, label: "Panel" },
     { href: unitComplianceHref(unit, clientSlug), label: "Cumplimiento" },
+  ];
+  if (unit.kind === "plant_group") {
+    links.push({
+      href: withAccount(`${unitBasePath(unit)}/jornada`, clientSlug),
+      label: "Jornada",
+    });
+  }
+  links.push(
     { href: unitConfigHubHref(unit, clientSlug), label: "Configuración" },
     { href: unitContratosHref(unit, clientSlug), label: "Contratos" },
     { href: withAccount("/cliente/notificaciones", clientSlug), label: "Notificaciones" },
     { href: withAccount("/cliente", clientSlug), label: `← ${clientName}` },
-  ];
+  );
+  return links;
 }
 
 export function UnitShell({
