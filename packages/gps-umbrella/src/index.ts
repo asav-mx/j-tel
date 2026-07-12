@@ -6,6 +6,18 @@ import type {
   GpsProviderConfig,
 } from "@jtel/gps-core";
 import type { GpsPoint } from "@jtel/domain";
+import {
+  acquireToken,
+  fullJitterDelayMs,
+  parseRetryAfterMs,
+} from "./rate-limit.js";
+
+export {
+  acquireToken,
+  fullJitterDelayMs,
+  parseRetryAfterMs,
+  _resetRateLimitForTests,
+} from "./rate-limit.js";
 
 /** Todas las respuestas de la API de Umbrella vienen envueltas así. */
 interface UmbrellaEnvelope<T> {
@@ -62,25 +74,31 @@ export class UmbrellaGpsProvider implements GpsProvider {
   }
 
   private async fetchJson<T>(url: string): Promise<T> {
-    // Umbrella admite ~10 llamadas/minuto. Ante 429 esperamos lo suficiente
-    // para que se renueve la cuota antes de reintentar.
-    const backoffsMs = [15_000, 30_000, 45_000];
+    // ~8 req/min (token bucket) + full jitter ante 429/503.
+    const maxAttempts = 5;
     let lastStatus = 0;
 
-    for (let attempt = 0; attempt <= backoffsMs.length; attempt++) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await acquireToken("umbrella");
       const response = await fetch(url);
       if (response.ok) {
         return response.json() as Promise<T>;
       }
       lastStatus = response.status;
-      if (response.status !== 429 || attempt === backoffsMs.length) {
+      const retryable = response.status === 429 || response.status === 503;
+      if (!retryable || attempt === maxAttempts - 1) {
         const body = await response.text().catch(() => "");
         const snippet = body.slice(0, 200).replace(/\s+/g, " ").trim();
         throw new Error(
           `Umbrella API error: ${response.status} ${response.statusText}${snippet ? ` — ${snippet}` : ""}`,
         );
       }
-      await sleep(backoffsMs[attempt]!);
+      const retryAfter = parseRetryAfterMs(response.headers.get("retry-after"));
+      const wait =
+        retryAfter != null
+          ? Math.min(120_000, retryAfter)
+          : fullJitterDelayMs(attempt, { baseMs: 1000, capMs: 60_000 });
+      await sleep(wait);
     }
 
     throw new Error(`Umbrella API error: ${lastStatus}`);
@@ -104,7 +122,7 @@ export class UmbrellaGpsProvider implements GpsProvider {
       );
     }
 
-    sharedTokenCache.set(cacheKey, { token, expiresAt: Date.now() + 30 * 60 * 1000 });
+    sharedTokenCache.set(cacheKey, { token, expiresAt: Date.now() + 30 * 60_000 });
     return token;
   }
 
@@ -131,17 +149,11 @@ export class UmbrellaGpsProvider implements GpsProvider {
   async getHistoryLocations(token: string, query: HistoryLocationQuery): Promise<GpsPoint[]> {
     const allPoints: GpsPoint[] = [];
     let startIdx = query.startIdx ?? 0;
-    // Umbrella rechaza consultas con más de 100 registros por página
-    // ("Query records can not be more than 100"). Si se pide más, la API
-    // responde state:false y no llega ningún punto.
+    // Umbrella rechaza consultas con más de 100 registros por página.
     const limit = Math.min(query.limit ?? 100, 100);
     const maxPages = 50;
 
     for (let page = 0; page < maxPages; page++) {
-      // Umbrella admite máximo ~10 llamadas/minuto ("API calls quota exceeded").
-      // Espaciamos TODAS las páginas ≥6.5s para no tumbar el archivador ni el cron.
-      await sleep(6500);
-
       let url = `${this.baseUrl}/api/HistoryLocation?Token=${encodeURIComponent(token)}`;
       url += `&BeginGMT=${encodeURIComponent(query.beginGmt.toISOString())}`;
       url += `&EndGMT=${encodeURIComponent(query.endGmt.toISOString())}`;
@@ -183,13 +195,8 @@ export class UmbrellaGpsProvider implements GpsProvider {
     const timeStr = gps.l_datetime ?? loc.r_datetime;
     if (lat == null || lng == null || !timeStr) return null;
 
-    // No descartamos por gps_valid=false: este hardware marca así los reportes
-    // por celda o con el vehículo detenido, que igual traen coordenadas reales
-    // (justo la evidencia de "llegó y se quedó en el destino"). Sólo se
-    // descartan coordenadas nulas (0,0) que indican ausencia de posición.
     if (lat === 0 && lng === 0) return null;
 
-    // La API entrega fechas en GMT sin sufijo de zona; las interpretamos como UTC.
     const hasTz = /[zZ]|[+-]\d\d:?\d\d$/.test(timeStr);
     const timestamp = new Date(hasTz ? timeStr : `${timeStr}Z`);
     if (Number.isNaN(timestamp.getTime())) return null;

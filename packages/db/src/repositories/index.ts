@@ -33,6 +33,7 @@ import {
   demoTemplates,
   telemetryPoints,
   telemetryWatermarks,
+  telemetryImeiWatermarks,
   groundTruthDays,
   ingestAlerts,
   clientCarrierAuthorizations,
@@ -1904,6 +1905,61 @@ export class TelemetryRepository {
     return this.db.query.telemetryWatermarks.findMany({
       orderBy: (w, { asc }) => [asc(w.lastRecordedAt)],
     });
+  }
+
+  async getImeiWatermark(carrierAccountId: string, imei: string) {
+    return this.db.query.telemetryImeiWatermarks.findFirst({
+      where: and(
+        eq(telemetryImeiWatermarks.carrierAccountId, carrierAccountId),
+        eq(telemetryImeiWatermarks.imei, imei),
+      ),
+    });
+  }
+
+  async setImeiWatermark(carrierAccountId: string, imei: string, lastRecordedAt: Date) {
+    await this.db
+      .insert(telemetryImeiWatermarks)
+      .values({ carrierAccountId, imei, lastRecordedAt })
+      .onConflictDoUpdate({
+        target: [
+          telemetryImeiWatermarks.carrierAccountId,
+          telemetryImeiWatermarks.imei,
+        ],
+        set: { lastRecordedAt, updatedAt: new Date() },
+      });
+  }
+
+  /**
+   * Detecta huecos > maxGapMinutes en la memoria propia de un IMEI.
+   * Devuelve ventanas [gapStart, gapEnd] a rellenar.
+   */
+  async findGapsForImei(
+    imei: string,
+    from: Date,
+    to: Date,
+    maxGapMinutes: number,
+  ): Promise<Array<{ from: Date; to: Date; gapMinutes: number }>> {
+    const points = await this.getForImei(imei, from, to);
+    const maxGapMs = Math.max(1, maxGapMinutes) * 60_000;
+    const anchors: number[] = [from.getTime()];
+    for (const p of points) anchors.push(p.recordedAt.getTime());
+    anchors.push(to.getTime());
+    anchors.sort((a, b) => a - b);
+
+    const gaps: Array<{ from: Date; to: Date; gapMinutes: number }> = [];
+    for (let i = 1; i < anchors.length; i++) {
+      const a = anchors[i - 1]!;
+      const b = anchors[i]!;
+      const gap = b - a;
+      if (gap > maxGapMs) {
+        gaps.push({
+          from: new Date(a),
+          to: new Date(b),
+          gapMinutes: gap / 60_000,
+        });
+      }
+    }
+    return gaps;
   }
 
   /** Edad del punto más reciente por carrier (minutos). */

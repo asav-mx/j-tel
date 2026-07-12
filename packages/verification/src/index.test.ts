@@ -120,6 +120,36 @@ describe("verifyService", () => {
     expect(result.ledgerSteps.some((s) => s.step === "cobertura_evidencia")).toBe(true);
   });
 
+  it("no mezcla cobertura entre IMEIs de la flota (pendiente si ninguno cubre solo)", () => {
+    const windowStart = new Date("2026-07-07T11:45:00Z");
+    const windowEnd = new Date("2026-07-07T12:50:00Z");
+    // Dos IMEIs con un punto cada uno en extremos: juntos “cubren”, por IMEI no.
+    const result = verifyService({
+      ...baseInput,
+      coverageWindowStart: windowStart,
+      coverageWindowEnd: windowEnd,
+      evidenceMinCoveragePct: 80,
+      evidenceMaxGapMinutes: 10,
+      evidencePoints: [
+        {
+          imei: "unit-a",
+          latitude: 31.8,
+          longitude: -106.5,
+          timestamp: new Date("2026-07-07T11:45:00Z"),
+        },
+        {
+          imei: "unit-b",
+          latitude: 31.8,
+          longitude: -106.5,
+          timestamp: new Date("2026-07-07T12:50:00Z"),
+        },
+      ],
+    });
+    expect(result.status).toBe("pendiente_evidencia");
+    const cov = result.ledgerSteps.find((s) => s.step === "cobertura_evidencia");
+    expect(cov?.details).toMatchObject({ perImei: true });
+  });
+
   it("never returns no_cumplido without evidence", () => {
     const result = verifyService({ ...baseInput, evidencePoints: [] });
     expect(result.status).not.toBe("no_cumplido");

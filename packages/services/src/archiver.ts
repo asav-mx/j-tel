@@ -68,6 +68,18 @@ export class ArchiverService {
       try {
         results.push(await this.archiveCarrier(carrier.id, carrier.name, now));
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        try {
+          await this.repos.ingestAlerts.create({
+            carrierAccountId: carrier.id,
+            kind: "archive_error",
+            severity: "warning",
+            message: `Archivo falló: ${message.slice(0, 200)}`,
+            metadata: { at: now.toISOString() },
+          });
+        } catch {
+          /* ignore */
+        }
         results.push({
           carrierAccountId: carrier.id,
           carrierName: carrier.name,
@@ -76,7 +88,7 @@ export class ArchiverService {
           saved: 0,
           from: "",
           to: now.toISOString(),
-          error: err instanceof Error ? err.message : String(err),
+          error: message,
         });
       }
     }
@@ -134,8 +146,6 @@ export class ArchiverService {
       const chunkEnd = new Date(Math.min(cursor.getTime() + chunkMs, now.getTime()));
       if (chunkEnd <= cursor) break;
 
-      let chunkFetched = 0;
-
       for (let i = 0; i < imeis.length; i += this.imeiBatchSize) {
         const batch = imeis.slice(i, i + this.imeiBatchSize);
         let points;
@@ -147,12 +157,25 @@ export class ArchiverService {
           });
         } catch (err) {
           // Guardamos lo ya avanzado y salimos: la siguiente corrida continúa.
-          base.error = err instanceof Error ? err.message : String(err);
+          const message = err instanceof Error ? err.message : String(err);
+          base.error = message;
           base.chunks = chunks;
           base.to = cursor.toISOString();
+          if (/429|503|quota|exceeded|too many/i.test(message)) {
+            try {
+              await this.repos.ingestAlerts.create({
+                carrierAccountId,
+                kind: "rate_limit",
+                severity: "warning",
+                message: `Rate limit en archivo: ${message.slice(0, 180)}`,
+                metadata: { cursor: cursor.toISOString(), chunkEnd: chunkEnd.toISOString() },
+              });
+            } catch {
+              /* ignore */
+            }
+          }
           return base;
         }
-        chunkFetched += points.length;
         base.fetched += points.length;
         if (points.length === 0) continue;
 
@@ -194,14 +217,9 @@ export class ArchiverService {
         }
       }
 
-      // Trozo vacío (sin puntos en ningún lote) → saltar el hueco.
-      if (chunkFetched === 0) {
-        const current = await this.repos.telemetry.getWatermark(carrierAccountId);
-        if (!current || chunkEnd > current.lastRecordedAt) {
-          await this.repos.telemetry.setWatermark(carrierAccountId, chunkEnd);
-        }
-      }
-
+      // Trozo vacío: NO saltar watermark a chunkEnd (eso borraba huecos reales
+      // y el gap-backfill no los veía). Solo avanzamos el cursor local; la
+      // watermark queda en el último punto real.
       cursor = chunkEnd;
       chunks += 1;
     }

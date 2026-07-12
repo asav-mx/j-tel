@@ -447,17 +447,35 @@ export function verifyService(input: VerificationInput): VerificationResult {
     };
   }
 
-  // Precondición (Fase 1): sin cobertura suficiente → pendiente, nunca no_cumplido.
+  const byImei = groupPointsByImei(input.evidencePoints);
+
+  // Precondición (Fase 1): cobertura por IMEI (no flota mezclada).
+  // Mezclar toda la flota rellena huecos con unidades ajenas y produce no_cumplido falso.
   if (input.coverageWindowStart && input.coverageWindowEnd) {
-    const coverage = assessEvidenceCoverage(
-      input.evidencePoints.map((p) => p.timestamp),
-      input.coverageWindowStart,
-      input.coverageWindowEnd,
-      {
+    let best: {
+      imei: string;
+      coverage: ReturnType<typeof assessEvidenceCoverage>;
+    } | null = null;
+    for (const [imei, points] of byImei) {
+      const coverage = assessEvidenceCoverage(
+        points.map((p) => p.timestamp),
+        input.coverageWindowStart,
+        input.coverageWindowEnd,
+        {
+          minCoveragePct: input.evidenceMinCoveragePct,
+          maxGapMinutes: input.evidenceMaxGapMinutes,
+        },
+      );
+      if (!best || coverage.coveragePct > best.coverage.coveragePct) {
+        best = { imei, coverage };
+      }
+    }
+    const coverage =
+      best?.coverage ??
+      assessEvidenceCoverage([], input.coverageWindowStart, input.coverageWindowEnd, {
         minCoveragePct: input.evidenceMinCoveragePct,
         maxGapMinutes: input.evidenceMaxGapMinutes,
-      },
-    );
+      });
     steps.push({
       step: "cobertura_evidencia",
       result: coverage.sufficient ? "suficiente" : "insuficiente",
@@ -467,6 +485,8 @@ export function verifyService(input: VerificationInput): VerificationResult {
         minCoveragePct: input.evidenceMinCoveragePct ?? 80,
         maxGapMinutesAllowed: input.evidenceMaxGapMinutes ?? 10,
         pointCountInWindow: coverage.pointCount,
+        bestImei: best?.imei ?? null,
+        perImei: true,
       },
     });
     if (!coverage.sufficient) {
@@ -504,8 +524,6 @@ export function verifyService(input: VerificationInput): VerificationResult {
             : [...input.routeCorpus, input.kmlWaypoints!],
         )
       : null;
-
-  const byImei = groupPointsByImei(input.evidencePoints);
 
   for (const [imei, points] of byImei) {
     const sorted = [...points].sort(
