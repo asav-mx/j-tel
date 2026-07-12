@@ -2,6 +2,7 @@ import { getRepos } from "@/lib/db";
 import { Card } from "@/components/ui";
 import { UnitShell } from "@/components/unit-shell";
 import { OccurrenceTable, toOccurrenceRow } from "@/components/occurrence-table";
+import { ComplianceDateFilter } from "@/components/compliance-date-filter";
 import { ComplianceSelectFilter } from "@/components/compliance-select-filter";
 import type { UnitPageContext } from "@/lib/unit-context";
 import {
@@ -13,6 +14,10 @@ import { unitConfigStepHref, unitComplianceHref } from "@/lib/unit-routes";
 
 type StatusFilter = "all" | "sin_verificar" | "cumplido" | "no_cumplido" | "pendiente_evidencia";
 type DatePreset = "hoy_ayer" | "hoy" | "ayer" | "7d" | "todos";
+/** Preset corto o día concreto `YYYY-MM-DD`. */
+type FechaFilter = DatePreset | `${number}-${number}-${number}`;
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -29,13 +34,51 @@ function parseParam(
   key: string,
 ): string | null {
   const v = sp?.[key];
-  return typeof v === "string" && v.length > 0 ? v : null;
+  if (typeof v === "string" && v.length > 0) {
+    // Mangled copy-paste: account=tecma&fecha=2026-07-09 collapsed into one value.
+    if (key !== "account" && v.includes("&")) {
+      return v.split("&")[0] || null;
+    }
+    return v;
+  }
+
+  // Recover fecha (etc.) stuck inside account=tecma%26fecha%3D…
+  if (key !== "account" && typeof sp?.account === "string") {
+    const match = sp.account.match(new RegExp(`(?:^|&)${key}=([^&]+)`));
+    if (match?.[1]) return decodeURIComponent(match[1]);
+  }
+
+  return null;
 }
 
-function dateRangeForPreset(preset: DatePreset): { from?: Date; to?: Date; label: string } {
+function isIsoDate(value: string): value is `${number}-${number}-${number}` {
+  if (!ISO_DATE_RE.test(value)) return false;
+  const t = Date.parse(`${value}T00:00:00`);
+  return Number.isFinite(t);
+}
+
+function formatDayLabel(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`);
+  return d.toLocaleDateString("es-MX", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function dateRangeForFecha(fecha: FechaFilter): { from?: Date; to?: Date; label: string } {
+  if (isIsoDate(fecha)) {
+    return {
+      from: new Date(`${fecha}T00:00:00`),
+      to: new Date(`${fecha}T00:00:00`),
+      label: formatDayLabel(fecha),
+    };
+  }
+
   const today = todayIso();
   const yesterday = addDaysIso(today, -1);
-  switch (preset) {
+  switch (fecha) {
     case "hoy":
       return {
         from: new Date(`${today}T00:00:00`),
@@ -75,7 +118,7 @@ function chipClass(active: boolean): string {
 function complianceHref(
   base: string,
   params: {
-    fecha?: DatePreset;
+    fecha?: FechaFilter;
     estado?: StatusFilter;
     turno?: string | null;
     perfil?: string | null;
@@ -87,6 +130,21 @@ function complianceHref(
   if (params.turno) url.searchParams.set("turno", params.turno);
   if (params.perfil) url.searchParams.set("perfil", params.perfil);
   return `${url.pathname}${url.search}`;
+}
+
+function parseFechaFilter(raw: string | null): FechaFilter {
+  if (!raw) return "hoy_ayer";
+  if (isIsoDate(raw)) return raw;
+  if (
+    raw === "hoy" ||
+    raw === "ayer" ||
+    raw === "7d" ||
+    raw === "todos" ||
+    raw === "hoy_ayer"
+  ) {
+    return raw;
+  }
+  return "hoy_ayer";
 }
 
 export async function UnitComplianceView({
@@ -103,15 +161,8 @@ export async function UnitComplianceView({
   const baseHref = unitComplianceHref(unit, client.slug);
   const perfilesHref = unitConfigStepHref(unit, client.slug, "servicios");
 
-  const fechaRaw = parseParam(sp, "fecha") as DatePreset | null;
-  const fecha: DatePreset =
-    fechaRaw === "hoy" ||
-    fechaRaw === "ayer" ||
-    fechaRaw === "7d" ||
-    fechaRaw === "todos" ||
-    fechaRaw === "hoy_ayer"
-      ? fechaRaw
-      : "hoy_ayer";
+  const fecha = parseFechaFilter(parseParam(sp, "fecha"));
+  const fechaIso = isIsoDate(fecha) ? fecha : null;
 
   const estadoRaw = parseParam(sp, "estado") as StatusFilter | null;
   const estado: StatusFilter =
@@ -126,7 +177,7 @@ export async function UnitComplianceView({
   const turnoFilter = parseParam(sp, "turno");
   const perfilFilter = parseParam(sp, "perfil");
 
-  const range = dateRangeForPreset(fecha);
+  const range = dateRangeForFecha(fecha);
 
   const [occurrences, allProfiles, routeShifts] = await Promise.all([
     repos.occurrences.findForScope(scope, range.from, range.to),
@@ -233,7 +284,8 @@ export async function UnitComplianceView({
 
         <p className="text-sm text-[var(--muted)]">
           Servicios verificados de <span className="text-white">{unitLabel}</span> contra el GPS del
-          carrier. Por defecto ves <span className="text-white">hoy y ayer</span> — lo operativo.
+          carrier. Por defecto ves <span className="text-white">hoy y ayer</span>; usa el selector de
+          día para una fecha concreta.
         </p>
 
         <Card title="Cobertura de rutas">
@@ -291,6 +343,15 @@ export async function UnitComplianceView({
                 {p.label}
               </a>
             ))}
+            <ComplianceDateFilter
+              value={fechaIso}
+              filterState={{
+                baseHref,
+                estado,
+                turno: turnoFilter,
+                perfil: perfilFilter,
+              }}
+            />
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

@@ -5,10 +5,17 @@ type SearchParamsInput =
   | Record<string, string | string[] | undefined>
   | undefined;
 
+function cleanAccountSlug(raw: string): string {
+  // Chat/Glass often turn ?account=tecma&fecha=… into account=tecma%26fecha%3D…,
+  // so the value becomes "tecma&fecha=2026-07-09" (or similar). Keep only the slug.
+  return raw.trim().split("&")[0]?.split("#")[0]?.trim() ?? "";
+}
+
 function extractSlug(searchParams: Awaited<SearchParamsInput>): string | undefined {
   const account = searchParams?.account;
   if (typeof account === "string" && account.trim().length > 0) {
-    return account.trim();
+    const slug = cleanAccountSlug(account);
+    if (slug) return slug;
   }
 
   // Some chat clients / copy-paste turn ?account=tecma into ?account%3Dtecma, which
@@ -17,7 +24,8 @@ function extractSlug(searchParams: Awaited<SearchParamsInput>): string | undefin
     for (const key of Object.keys(searchParams)) {
       const match = key.match(/^account=(.+)$/);
       if (match?.[1]?.trim()) {
-        return match[1].trim();
+        const slug = cleanAccountSlug(match[1]);
+        if (slug) return slug;
       }
     }
   }
