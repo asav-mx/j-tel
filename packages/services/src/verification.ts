@@ -443,7 +443,10 @@ export class VerificationService {
         occ.expectedDeadline,
         policy,
       );
-      const occupied = occupiedUnitIdsForResidual(residualWindow, confidentClaims);
+      const occupied = occupiedUnitIdsForResidual(
+        { windowStartMs: residualWindow.startMs, windowEndMs: residualWindow.endMs },
+        confidentClaims,
+      );
       if (occupied.length === 0) continue;
 
       await this.verifyOccurrence(id, {
@@ -453,22 +456,8 @@ export class VerificationService {
         eliminationPass: true,
         eliminationExcludedUnitIds: occupied,
       });
-
-      // Si ahora quedó cumplido, entra al pool de ocupadas para residuales siguientes.
-      const refreshed = await this.repos.occurrences.findById(id);
-      const newFact = refreshed?.complianceFact;
-      if (newFact?.status === "cumplido" && newFact.observedUnitId) {
-        const { startMs, endMs } = computeExclusiveContentionWindow(
-          refreshed!.expectedDeadline,
-          (newFact.contractPolicySnapshot as ContractPolicy | undefined) ?? policy,
-        );
-        confidentClaims.push({
-          unitId: newFact.observedUnitId,
-          windowStartMs: startMs,
-          windowEndMs: endMs,
-          occurrenceId: id,
-        });
-      }
+      // Una sola ronda: no realimentar veredictos derivados a confidentClaims
+      // (evita cascada dependiente del orden de procesamiento).
     }
   }
 
