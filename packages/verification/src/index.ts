@@ -552,7 +552,8 @@ export function verifyService(input: VerificationInput): VerificationResult {
       ? directionSimilarity(sorted, input.kmlWaypoints!)
       : null;
 
-    // Fréchet solo filtra cuando hay trayectoria suficiente (≥3 puntos).
+    // Fréchet / dirección desambiguan el ranking; el match duro es geocerca + A∧B.
+    // Un tope duro de Fréchet descartaba recorridos reales con muestreo irregular.
     const shapeOk =
       !hasKml ||
       frechetKm === null ||
@@ -560,7 +561,6 @@ export function verifyService(input: VerificationInput): VerificationResult {
       frechetKm <= frechetMaxKm;
     const servedRoute =
       arrivalAt !== null &&
-      shapeOk &&
       (!hasKml ||
         (routeMatchPct >= minKmlPct && corridorPrecisionPct >= minCorridorPct));
 
