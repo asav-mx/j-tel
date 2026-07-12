@@ -53,6 +53,35 @@ export function evidenceWindowsOverlap(
 }
 
 /**
+ * Unidades ya acreditadas con confianza (`cumplido`) en ventanas que se
+ * traslapan con el residual. Se excluyen del universo de candidatas (eliminación).
+ * No dicta sentencia: el residual aún debe matchear la ruta con umbrales de política.
+ */
+export function occupiedUnitIdsForResidual(
+  residual: { windowStartMs: number; windowEndMs: number },
+  confidentClaims: Array<{
+    unitId: string;
+    windowStartMs: number;
+    windowEndMs: number;
+  }>,
+): string[] {
+  const occupied = new Set<string>();
+  for (const c of confidentClaims) {
+    if (
+      evidenceWindowsOverlap(
+        residual.windowStartMs,
+        residual.windowEndMs,
+        c.windowStartMs,
+        c.windowEndMs,
+      )
+    ) {
+      occupied.add(c.unitId);
+    }
+  }
+  return [...occupied];
+}
+
+/**
  * Entre claims de la misma unidad, solo son conflicto si sus ventanas
  * operativas se traslapan. Misma unidad en días/turnos sin traslape = válido.
  * Gana mayor match KML; empate → llegada más temprana.
@@ -198,6 +227,7 @@ export class VerificationService {
     if (verifiedIds.length > 0) {
       const exclusiveScopeIds = await this.collectExclusiveScopeIds(verifiedIds);
       await this.resolveExclusiveUnitClaims(exclusiveScopeIds);
+      await this.resolveEliminationPass(exclusiveScopeIds);
     }
 
     return results;
@@ -284,7 +314,8 @@ export class VerificationService {
 
     if (opts.exclusiveUnits) {
       await this.resolveExclusiveUnitClaims(targets.map((o) => o.id));
-      // Refrescar resultados tras la resolución exclusiva.
+      await this.resolveEliminationPass(targets.map((o) => o.id));
+      // Refrescar resultados tras la resolución exclusiva + eliminación.
       results.length = 0;
       for (const occ of targets) {
         const fresh = await this.repos.occurrences.findById(occ.id);
@@ -365,13 +396,81 @@ export class VerificationService {
     }
   }
 
+  /**
+   * Pasada de eliminación (Tarea A): para residuales `no_cumplido`, re-evalúa
+   * excluyendo unidades ya acreditadas en ventanas traslapadas.
+   * Umbrales A/B/corredor = política del contrato (sin relajar).
+   * Una sola candidata no basta: el GPS debe matchear la ruta.
+   */
+  private async resolveEliminationPass(occurrenceIds: string[]) {
+    const uniqueIds = [...new Set(occurrenceIds)];
+    const confidentClaims: Array<{
+      unitId: string;
+      windowStartMs: number;
+      windowEndMs: number;
+      occurrenceId: string;
+    }> = [];
+
+    for (const id of uniqueIds) {
+      const occ = await this.repos.occurrences.findById(id);
+      const fact = occ?.complianceFact;
+      if (!fact || fact.status !== "cumplido" || !fact.observedUnitId) continue;
+      const policy =
+        (fact.contractPolicySnapshot as ContractPolicy | null | undefined) ??
+        (occ.profile?.contract?.policy as ContractPolicy | undefined);
+      const { startMs, endMs } = computeExclusiveContentionWindow(
+        occ.expectedDeadline,
+        policy ?? {},
+      );
+      confidentClaims.push({
+        unitId: fact.observedUnitId,
+        windowStartMs: startMs,
+        windowEndMs: endMs,
+        occurrenceId: id,
+      });
+    }
+
+    for (const id of uniqueIds) {
+      const occ = await this.repos.occurrences.findById(id);
+      const fact = occ?.complianceFact;
+      if (!fact || fact.status !== "no_cumplido") continue;
+
+      const policy =
+        (fact.contractPolicySnapshot as ContractPolicy | null | undefined) ??
+        (occ.profile?.contract?.policy as ContractPolicy | undefined) ??
+        {};
+      const residualWindow = computeExclusiveContentionWindow(
+        occ.expectedDeadline,
+        policy,
+      );
+      const occupied = occupiedUnitIdsForResidual(
+        { windowStartMs: residualWindow.startMs, windowEndMs: residualWindow.endMs },
+        confidentClaims,
+      );
+      if (occupied.length === 0) continue;
+
+      await this.verifyOccurrence(id, {
+        force: true,
+        keepEvidence: true,
+        excludeUnitIds: occupied,
+        eliminationPass: true,
+        eliminationExcludedUnitIds: occupied,
+      });
+      // Una sola ronda: no realimentar veredictos derivados a confidentClaims
+      // (evita cascada dependiente del orden de procesamiento).
+    }
+  }
+
   async verifyOccurrence(
     occurrenceId: string,
     opts: {
       force?: boolean;
       keepEvidence?: boolean;
-      /** Unidades que no pueden ganar este servicio (asignación exclusiva). */
+      /** Unidades que no pueden ganar este servicio (asignación exclusiva / eliminación). */
       excludeUnitIds?: string[];
+      /** Pasada de eliminación: rastro interno en ledger (no visible al cliente). */
+      eliminationPass?: boolean;
+      eliminationExcludedUnitIds?: string[];
     } = {},
   ) {
     const occurrence = await this.repos.occurrences.findById(occurrenceId);
@@ -618,13 +717,26 @@ export class VerificationService {
     await this.repos.compliance.addLedgerEntry({
       tripId: trip.id,
       serviceOccurrenceId: occurrenceId,
-      action: "verificacion_automatica",
+      action: opts.eliminationPass
+        ? "eliminacion_candidatas"
+        : "verificacion_automatica",
       steps: verification.ledgerSteps,
       metadata: {
         ingestStatus,
         ingestSource,
         pointCount: ingestPointCount,
         candidateUnits: verification.candidateUnits,
+        ...(opts.eliminationPass
+          ? {
+              eliminationPass: true,
+              excludedOccupiedUnitIds: opts.eliminationExcludedUnitIds ?? opts.excludeUnitIds ?? [],
+              policyThresholds: {
+                kmlMatchMinPct: policy.kmlMatchMinPct ?? 60,
+                kmlCorridorMinPct: policy.kmlCorridorMinPct ?? 60,
+                kmlCorridorMeters: policy.kmlCorridorMeters ?? 120,
+              },
+            }
+          : {}),
       },
     });
 
