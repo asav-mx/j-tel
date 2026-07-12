@@ -5,8 +5,28 @@ import {
   evidenceWindowsOverlap,
   hasIncompleteEvidenceCoverage,
   computeExclusiveContentionWindow,
+  occupiedUnitIdsForResidual,
   type ExclusiveUnitClaim,
 } from "./verification.js";
+
+describe("occupiedUnitIdsForResidual", () => {
+  it("excluye unidades ocupadas en ventana traslapada", () => {
+    const residual = { windowStartMs: 100, windowEndMs: 200 };
+    const occupied = occupiedUnitIdsForResidual(residual, [
+      { unitId: "u1", windowStartMs: 150, windowEndMs: 250 },
+      { unitId: "u2", windowStartMs: 300, windowEndMs: 400 },
+    ]);
+    expect(occupied).toEqual(["u1"]);
+  });
+
+  it("misma unidad en turnos sin traslape no ocupa el residual", () => {
+    const residual = { windowStartMs: 1000, windowEndMs: 2000 };
+    const occupied = occupiedUnitIdsForResidual(residual, [
+      { unitId: "u1", windowStartMs: 0, windowEndMs: 500 },
+    ]);
+    expect(occupied).toEqual([]);
+  });
+});
 
 describe("VerificationService", () => {
   it("expone processPending e ingestEvidenceForOccurrence", () => {
@@ -289,7 +309,10 @@ describe("cambio de política no toca hechos definitivos", () => {
         saveFact: vi.fn().mockResolvedValue({ id: "fact-1" }),
         addLedgerEntry: vi.fn(),
       },
-      profiles: { getPossibleUnitIds: vi.fn().mockResolvedValue([]) },
+      profiles: {
+        getPossibleUnitIds: vi.fn().mockResolvedValue([]),
+        findForContract: vi.fn().mockResolvedValue([]),
+      },
       fleet: {
         getDevicesForCarrier: vi
           .fn()
@@ -335,6 +358,7 @@ describe("perdedor exclusivo sin alternativa", () => {
     const windowEnd = new Date("2026-07-09T11:00:00Z");
     const occ = {
       id: "occ-loser",
+      contractId: "contract-1",
       serviceDate: "2026-07-09",
       expectedDeadline: new Date("2026-07-09T10:45:00Z"),
       expectedGeofenceId: "geo-1",
@@ -381,7 +405,10 @@ describe("perdedor exclusivo sin alternativa", () => {
         saveFact,
         addLedgerEntry: vi.fn(),
       },
-      profiles: { getPossibleUnitIds: vi.fn().mockResolvedValue([]) },
+      profiles: {
+        getPossibleUnitIds: vi.fn().mockResolvedValue([]),
+        findForContract: vi.fn().mockResolvedValue([]),
+      },
       fleet: {
         getDevicesForCarrier: vi
           .fn()
@@ -460,6 +487,49 @@ describe("perdedor exclusivo sin alternativa", () => {
     expect(result.status).toBe("no_cumplido");
     expect(saveFact).toHaveBeenCalledWith(
       expect.objectContaining({ status: "no_cumplido" }),
+    );
+  });
+
+  it("pasada eliminación: candidata única que sí entra a geocerca → cumplido + ledger", async () => {
+    const evidencePoints = [];
+    const covStart = new Date("2026-07-09T09:45:00Z");
+    for (let m = 0; m <= 65; m += 2) {
+      evidencePoints.push({
+        imei: "imei-other",
+        latitude: 31.6909,
+        longitude: -106.4234,
+        recordedAt: new Date(covStart.getTime() + m * 60_000),
+        unitId: "unit-other",
+      });
+    }
+    const { repos, saveFact } = buildRepos({ evidencePoints });
+    const addLedger = repos.compliance.addLedgerEntry as ReturnType<typeof vi.fn>;
+
+    const service = new VerificationService(repos as never, {
+      umbrellaBaseUrl: "http://example.com",
+    });
+    const result = await service.verifyOccurrence("occ-loser", {
+      force: true,
+      keepEvidence: true,
+      excludeUnitIds: ["unit-winner"],
+      eliminationPass: true,
+      eliminationExcludedUnitIds: ["unit-winner"],
+    });
+    expect(result.status).toBe("cumplido");
+    expect(saveFact).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "cumplido", observedUnitId: "unit-other" }),
+    );
+    expect(addLedger).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "eliminacion_candidatas",
+        metadata: expect.objectContaining({
+          eliminationPass: true,
+          excludedOccupiedUnitIds: ["unit-winner"],
+          policyThresholds: expect.objectContaining({
+            kmlMatchMinPct: 60,
+          }),
+        }),
+      }),
     );
   });
 });
