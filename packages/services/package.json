@@ -19,6 +19,8 @@
     "backfill-telemetry": "tsx src/backfill-telemetry.ts",
     "gap-backfill": "tsx src/gap-backfill-run.ts",
     "calibrate": "tsx src/calibrate.ts",
+    "residual-report": "tsx src/residual-report.ts",
+    "label-residual": "tsx src/label-residual.ts",
     "reverify-day": "tsx src/reverify-day.ts",
     "import-jrz-memory": "tsx src/import-jrz-memory.ts"
   },

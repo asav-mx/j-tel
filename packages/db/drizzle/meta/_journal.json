@@ -71,6 +71,13 @@
       "when": 1784200000000,
       "tag": "0009_telemetry_imei_watermarks",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784300000000,
+      "tag": "0010_occurrence_ground_truth",
+      "breakpoints": true
     }
   ]
 }

@@ -35,6 +35,7 @@ import {
   telemetryWatermarks,
   telemetryImeiWatermarks,
   groundTruthDays,
+  occurrenceGroundTruth,
   ingestAlerts,
   clientCarrierAuthorizations,
 } from "../schema/index.js";
@@ -2040,6 +2041,57 @@ export class GroundTruthRepository {
   }
 }
 
+export class OccurrenceGroundTruthRepository {
+  constructor(private db: Database) {}
+
+  async upsert(data: {
+    occurrenceId: string;
+    operatorVerdict: "cumplido" | "no_hecho";
+    operatorUnitId?: string | null;
+    primaryCause?: string | null;
+    notes?: string | null;
+    recordedBy?: string | null;
+  }) {
+    const [row] = await this.db
+      .insert(occurrenceGroundTruth)
+      .values({
+        occurrenceId: data.occurrenceId,
+        operatorVerdict: data.operatorVerdict,
+        operatorUnitId: data.operatorUnitId ?? null,
+        primaryCause: data.primaryCause ?? null,
+        notes: data.notes ?? null,
+        recordedBy: data.recordedBy ?? null,
+        recordedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [occurrenceGroundTruth.occurrenceId],
+        set: {
+          operatorVerdict: data.operatorVerdict,
+          operatorUnitId: data.operatorUnitId ?? null,
+          primaryCause: data.primaryCause ?? null,
+          notes: data.notes ?? null,
+          recordedBy: data.recordedBy ?? null,
+          recordedAt: new Date(),
+        },
+      })
+      .returning();
+    return row;
+  }
+
+  async findByOccurrence(occurrenceId: string) {
+    return this.db.query.occurrenceGroundTruth.findFirst({
+      where: eq(occurrenceGroundTruth.occurrenceId, occurrenceId),
+    });
+  }
+
+  async listForDates(occurrenceIds: string[]) {
+    if (occurrenceIds.length === 0) return [];
+    return this.db.query.occurrenceGroundTruth.findMany({
+      where: inArray(occurrenceGroundTruth.occurrenceId, occurrenceIds),
+    });
+  }
+}
+
 export class IngestAlertRepository {
   constructor(private db: Database) {}
 
@@ -2127,6 +2179,7 @@ export function createRepositories(db: Database) {
     demos: new DemoRepository(db),
     telemetry: new TelemetryRepository(db),
     groundTruth: new GroundTruthRepository(db),
+    occurrenceGroundTruth: new OccurrenceGroundTruthRepository(db),
     ingestAlerts: new IngestAlertRepository(db),
   };
 }

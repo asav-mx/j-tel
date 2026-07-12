@@ -626,6 +626,36 @@ export const groundTruthDays = pgTable(
   ],
 );
 
+/** Veredicto fino del operador por ocurrencia (cierre de residuales). */
+export const occurrenceGtVerdictEnum = pgEnum("occurrence_gt_verdict", [
+  "cumplido",
+  "no_hecho",
+]);
+
+export const occurrenceGroundTruth = pgTable(
+  "occurrence_ground_truth",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    occurrenceId: uuid("occurrence_id")
+      .notNull()
+      .references(() => serviceOccurrences.id, { onDelete: "cascade" }),
+    operatorVerdict: occurrenceGtVerdictEnum("operator_verdict").notNull(),
+    operatorUnitId: uuid("operator_unit_id").references(() => units.id, {
+      onDelete: "set null",
+    }),
+    /** threshold | kml_geofence | exclusive_steal | wrong_unit | no_trip */
+    primaryCause: text("primary_cause"),
+    notes: text("notes"),
+    recordedBy: text("recorded_by"),
+    recordedAt: timestamp("recorded_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("occurrence_ground_truth_occurrence_idx").on(table.occurrenceId),
+  ],
+);
+
 export const ingestAlertKindEnum = pgEnum("ingest_alert_kind", [
   "heartbeat_stale",
   "watermark_lag",
