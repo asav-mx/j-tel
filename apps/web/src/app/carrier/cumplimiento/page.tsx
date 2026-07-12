@@ -5,6 +5,37 @@ import { resolveAccountByType, withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
 
+function chipClass(active: boolean): string {
+  return `rounded-full px-3 py-1 text-sm ${
+    active
+      ? "bg-[var(--accent)] text-black"
+      : "border border-white/10 hover:border-[var(--accent)]"
+  }`;
+}
+
+/** Etiqueta legible del chip: cliente · campus/planta (no solo el cliente). */
+function contractChipLabel(c: {
+  client?: { name: string } | null;
+  plant?: { code: string } | null;
+  plantGroup?: { name: string } | null;
+  name?: string | null;
+}): string {
+  const client = c.client?.name ?? "Cliente";
+  const scope = c.plant?.code ?? c.plantGroup?.name ?? null;
+  return scope ? `${client} · ${scope}` : client;
+}
+
+function cumplimientoHref(
+  slug: string | undefined,
+  opts: { contract?: string | null; vista?: "todos" | "dudosos" },
+): string {
+  const params = new URLSearchParams();
+  if (opts.contract) params.set("contract", opts.contract);
+  if (opts.vista === "dudosos") params.set("vista", "dudosos");
+  const qs = params.toString();
+  return withAccount(`/carrier/cumplimiento${qs ? `?${qs}` : ""}`, slug);
+}
+
 export default async function CarrierCumplimientoPage({
   searchParams,
 }: {
@@ -13,6 +44,7 @@ export default async function CarrierCumplimientoPage({
   const sp = searchParams ? await searchParams : undefined;
   const contractFilter =
     typeof sp?.contract === "string" && sp.contract.length > 0 ? sp.contract : null;
+  const vistaDudosos = sp?.vista === "dudosos";
 
   const repos = getRepos();
   const carrier = await resolveAccountByType("carrier", searchParams);
@@ -36,7 +68,17 @@ export default async function CarrierCumplimientoPage({
     ? contracts.find((c) => c.id === contractFilter)
     : null;
 
-  const rows = occurrences.map((occ) =>
+  // Dudosos = residuales no_cumplido (GPS suficiente; fallan match). Pendientes no van aquí.
+  const visible = vistaDudosos
+    ? occurrences.filter((o) => o.complianceFact?.status === "no_cumplido")
+    : occurrences;
+
+  const gtRows = vistaDudosos
+    ? await repos.occurrenceGroundTruth.listForDates(visible.map((o) => o.id))
+    : [];
+  const labeledIds = new Set(gtRows.map((g) => g.occurrenceId));
+
+  const rows = visible.map((occ) =>
     toOccurrenceRow(occ, "/carrier/servicio", carrier?.slug, {
       showClient: true,
       showPlant: true,
@@ -56,12 +98,10 @@ export default async function CarrierCumplimientoPage({
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-[var(--muted)]">Contrato:</span>
             <a
-              href={withAccount("/carrier/cumplimiento", carrier?.slug)}
-              className={`rounded-full px-3 py-1 text-sm ${
-                !contractFilter
-                  ? "bg-[var(--accent)] text-black"
-                  : "border border-white/10 hover:border-[var(--accent)]"
-              }`}
+              href={cumplimientoHref(carrier?.slug, {
+                vista: vistaDudosos ? "dudosos" : "todos",
+              })}
+              className={chipClass(!contractFilter)}
             >
               Todos
             </a>
@@ -70,19 +110,36 @@ export default async function CarrierCumplimientoPage({
               .map((c) => (
                 <a
                   key={c.id}
-                  href={withAccount(`/carrier/cumplimiento?contract=${c.id}`, carrier?.slug)}
-                  className={`rounded-full px-3 py-1 text-sm ${
-                    contractFilter === c.id
-                      ? "bg-[var(--accent)] text-black"
-                      : "border border-white/10 hover:border-[var(--accent)]"
-                  }`}
+                  href={cumplimientoHref(carrier?.slug, {
+                    contract: c.id,
+                    vista: vistaDudosos ? "dudosos" : "todos",
+                  })}
+                  className={chipClass(contractFilter === c.id)}
                 >
-                  {c.client?.name ?? "Cliente"}
-                  {c.plant ? ` · ${c.plant.code}` : ""}
+                  {contractChipLabel(c)}
                 </a>
               ))}
           </div>
         ) : null}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-[var(--muted)]">Vista:</span>
+          <a
+            href={cumplimientoHref(carrier?.slug, { contract: contractFilter })}
+            className={chipClass(!vistaDudosos)}
+          >
+            Todos
+          </a>
+          <a
+            href={cumplimientoHref(carrier?.slug, {
+              contract: contractFilter,
+              vista: "dudosos",
+            })}
+            className={chipClass(vistaDudosos)}
+          >
+            Dudosos
+          </a>
+        </div>
 
         {activeContract ? (
           <p className="text-sm text-[var(--muted)]">
@@ -94,7 +151,23 @@ export default async function CarrierCumplimientoPage({
           </p>
         ) : null}
 
-        <Card title="Servicios — mismo hecho que ve el cliente">
+        {vistaDudosos ? (
+          <p className="text-sm text-[var(--muted)]">
+            Servicios que el sistema marcó como no cumplidos. Abre el detalle para etiquetar
+            (calibración; no cambia lo que ve el cliente).
+            {labeledIds.size > 0
+              ? ` Ya etiquetados: ${labeledIds.size} de ${visible.length}.`
+              : null}
+          </p>
+        ) : null}
+
+        <Card
+          title={
+            vistaDudosos
+              ? "Dudosos — mismo hecho que ve el cliente"
+              : "Servicios — mismo hecho que ve el cliente"
+          }
+        >
           <OccurrenceTable
             rows={rows}
             showClient
