@@ -177,11 +177,13 @@ export class VerificationService {
   async processPending(now = new Date()) {
     const pending = await this.repos.occurrences.findPendingVerification(now);
     const results = [];
+    const verifiedIds: string[] = [];
 
     for (const row of pending) {
       try {
         const result = await this.verifyOccurrence(row.occurrence.id);
         results.push(result);
+        verifiedIds.push(row.occurrence.id);
       } catch (err) {
         results.push({
           occurrenceId: row.occurrence.id,
@@ -191,7 +193,41 @@ export class VerificationService {
       }
     }
 
+    // Misma lógica que reverify-day: tras el motor nuevo, repartir unidades
+    // exclusivas entre servicios con ventanas operativas traslapadas.
+    if (verifiedIds.length > 0) {
+      const exclusiveScopeIds = await this.collectExclusiveScopeIds(verifiedIds);
+      await this.resolveExclusiveUnitClaims(exclusiveScopeIds);
+    }
+
     return results;
+  }
+
+  /**
+   * Amplía el set verificado a todos los servicios del mismo contrato+fecha,
+   * para que la exclusividad vea el turno completo (no solo los recién vencidos).
+   */
+  private async collectExclusiveScopeIds(verifiedIds: string[]): Promise<string[]> {
+    const scopeKeys = new Set<string>();
+    const ids = new Set<string>(verifiedIds);
+
+    for (const id of verifiedIds) {
+      const occ = await this.repos.occurrences.findById(id);
+      const contractId = occ?.profile?.contractId;
+      if (!occ || !contractId) continue;
+      scopeKeys.add(`${contractId}|${occ.serviceDate}`);
+    }
+
+    for (const key of scopeKeys) {
+      const [contractId, serviceDate] = key.split("|");
+      if (!contractId || !serviceDate) continue;
+      const dayOccs = await this.repos.occurrences.findForContract(contractId);
+      for (const o of dayOccs) {
+        if (o.serviceDate === serviceDate) ids.add(o.id);
+      }
+    }
+
+    return [...ids];
   }
 
   /**
