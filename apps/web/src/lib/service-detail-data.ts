@@ -5,17 +5,17 @@ import {
   computeEvidenceWindow,
   type ContractPolicy,
 } from "@jtel/domain";
-import { cutTrackAtArrival } from "@/lib/map-evidence";
+import {
+  clipTrackToRoute,
+  cutTrackAtArrival,
+  downsampleMapPoints,
+} from "@/lib/map-evidence";
 
 export type MapPoint = { lat: number; lng: number; at: string };
 export type MapPolygon = Array<{ lat: number; lng: number }>;
 export type MapWaypoint = { lat: number; lng: number };
 
-export function downsampleMapPoints(points: MapPoint[], max = 400): MapPoint[] {
-  if (points.length <= max) return points;
-  const step = Math.ceil(points.length / max);
-  return points.filter((_, i) => i % step === 0 || i === points.length - 1);
-}
+export { clipTrackToRoute, downsampleMapPoints };
 
 export interface ServiceDetailData {
   occurrenceId: string;
@@ -89,37 +89,8 @@ function closestPoint(points: MapPoint[], target: Date): MapPoint | null {
   return best;
 }
 
-function haversineKm(
-  a: { lat: number; lng: number },
-  b: { lat: number; lng: number },
-): number {
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const x =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((a.lat * Math.PI) / 180) *
-      Math.cos((b.lat * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * 6371 * Math.asin(Math.sqrt(x));
-}
-
-/** Recorta el GPS al corredor del KML (sin el deambular por la ciudad). */
-export function clipTrackToRoute(
-  points: MapPoint[],
-  kml: MapWaypoint[],
-  corridorKm = 0.75,
-): MapPoint[] {
-  if (points.length === 0) return [];
-  if (kml.length === 0) return points;
-
-  const nearRoute = points.filter((p) =>
-    kml.some((wp) => haversineKm(p, wp) <= corridorKm),
-  );
-  return nearRoute.length >= 3 ? nearRoute : points;
-}
-
 /** Re-export del corte en llegada (regla Marco: evidencia dibujada termina en la geocerca). */
-export { cutTrackAtArrival } from "@/lib/map-evidence";
+export { cutTrackAtArrival };
 
 
 export async function loadServiceDetail(

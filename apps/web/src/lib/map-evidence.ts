@@ -91,3 +91,38 @@ export function cutTrackAtIndex(points: EvidencePoint[], index: number): Evidenc
   if (index < 0) return [];
   return points.slice(0, index + 1);
 }
+
+export function downsampleMapPoints<T>(points: T[], max = 400): T[] {
+  if (points.length <= max) return points;
+  const step = Math.ceil(points.length / max);
+  return points.filter((_, i) => i % step === 0 || i === points.length - 1);
+}
+
+function haversineKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) *
+      Math.cos((b.lat * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(x));
+}
+
+/** Recorta el GPS al corredor del KML (sin el deambular por la ciudad). */
+export function clipTrackToRoute<T extends { lat: number; lng: number }>(
+  points: T[],
+  kml: Array<{ lat: number; lng: number }>,
+  corridorKm = 0.75,
+): T[] {
+  if (points.length === 0) return [];
+  if (kml.length === 0) return points;
+
+  const nearRoute = points.filter((p) =>
+    kml.some((wp) => haversineKm(p, wp) <= corridorKm),
+  );
+  return nearRoute.length >= 3 ? nearRoute : points;
+}

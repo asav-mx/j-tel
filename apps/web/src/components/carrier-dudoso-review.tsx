@@ -8,8 +8,11 @@ import {
 } from "@/components/carrier-candidate-compare-map";
 import { CarrierDudosoLabelForm } from "@/components/carrier-dudoso-label-form";
 import type { UnitSuggestion } from "@/lib/carrier-unit-suggestions";
-import type { NamedGeofence } from "@/lib/map-evidence";
-import { clipTrackToRoute, downsampleMapPoints } from "@/lib/service-detail-data";
+import {
+  clipTrackToRoute,
+  downsampleMapPoints,
+  type NamedGeofence,
+} from "@/lib/map-evidence";
 
 type TrackSource = {
   unitId: string;
