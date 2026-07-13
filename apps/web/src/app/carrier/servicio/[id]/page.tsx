@@ -64,7 +64,9 @@ export default async function CarrierServicioPage({
   );
 
   const existingGt = await repos.occurrenceGroundTruth.findByOccurrence(id);
-  const showLabelForm = data.status === "no_cumplido";
+  // Solo dudosos reales (sin unidad observada) van al flujo de etiquetado.
+  const showLabelForm =
+    data.status === "no_cumplido" && !occurrence?.complianceFact?.observedUnitId;
 
   const evidencePoints = occurrence?.trip?.evidencePoints ?? [];
   const unitIdToImeis = new Map<string, string[]>();
