@@ -1231,6 +1231,56 @@ export class ServiceProfileRepository {
       .returning();
     return deleted ?? null;
   }
+
+  async updateProfile(
+    id: string,
+    clientAccountId: string,
+    data: {
+      name: string;
+      code?: string;
+      routeShiftId: string;
+      geofenceId: string;
+      activeDays: number[];
+    },
+  ): Promise<
+    | { ok: true; profile: typeof serviceProfiles.$inferSelect }
+    | { ok: false; reason: "not_found" | "duplicate_code" }
+  > {
+    const profile = await this.db.query.serviceProfiles.findFirst({
+      where: eq(serviceProfiles.id, id),
+      with: { contract: true },
+    });
+    if (!profile?.contract || profile.contract.clientAccountId !== clientAccountId) {
+      return { ok: false, reason: "not_found" };
+    }
+
+    let code = profile.code;
+    if (data.code !== undefined && data.code.trim().length > 0) {
+      code = data.code.trim().toUpperCase();
+      const existing = await this.db.query.serviceProfiles.findFirst({
+        where: eq(serviceProfiles.code, code),
+        columns: { id: true },
+      });
+      if (existing && existing.id !== id) {
+        return { ok: false, reason: "duplicate_code" };
+      }
+    }
+
+    const [updated] = await this.db
+      .update(serviceProfiles)
+      .set({
+        name: data.name,
+        code,
+        routeShiftId: data.routeShiftId,
+        geofenceId: data.geofenceId,
+        activeDays: data.activeDays,
+      })
+      .where(eq(serviceProfiles.id, id))
+      .returning();
+
+    if (!updated) return { ok: false, reason: "not_found" };
+    return { ok: true, profile: updated };
+  }
 }
 
 export class OccurrenceRepository {

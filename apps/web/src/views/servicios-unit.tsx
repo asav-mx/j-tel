@@ -30,6 +30,8 @@ const DAYS: Array<{ value: number; label: string }> = [
 
 const createdLabels: Record<string, string> = {
   perfil: "Perfil de servicio creado. Ya puedes generar sus ocurrencias.",
+  perfil_actualizado:
+    "Perfil actualizado. Los cambios aplican a ocurrencias futuras; las ya generadas conservan su configuración.",
   generado: "Ocurrencias generadas (ventana de 30 días).",
   generado_acotado: "Ocurrencias generadas (rango acotado a 30 días / vigencia del contrato).",
   ya_existian: "Esas fechas ya tenían ocurrencias; no se crearon duplicados.",
@@ -452,6 +454,105 @@ export async function ServiciosUnitView({
                       </p>
                     </>
                   )}
+                  <details className="mt-3 rounded-lg border border-white/10 p-3">
+                    <summary className="cursor-pointer text-xs text-[var(--accent)]">
+                      Editar perfil
+                    </summary>
+                    <ConfirmForm
+                      action="/api/cliente/servicios"
+                      method="post"
+                      className="mt-3 space-y-3"
+                      confirmMessage={confirmMessages.updateProfile(p.name)}
+                      pendingLabel="Guardando…"
+                    >
+                      <input type="hidden" name="clientSlug" value={client.slug} />
+                      <input type="hidden" name="action" value="update" />
+                      <input type="hidden" name="profileId" value={p.id} />
+                      {scopeHidden}
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <label className={labelClass}>
+                          Nombre del perfil
+                          <input
+                            name="name"
+                            required
+                            className={inputClass}
+                            defaultValue={p.name}
+                          />
+                        </label>
+                        <label className={labelClass}>
+                          Código
+                          <input name="code" className={inputClass} defaultValue={p.code ?? ""} />
+                        </label>
+                        <div className={labelClass}>
+                          Contrato
+                          <p className={`${inputClass} text-[var(--muted)]`}>
+                            {p.contract?.name ?? "—"} ·{" "}
+                            {p.contract?.carrier?.name ??
+                              (p.contract?.carrierAccountId
+                                ? carrierById.get(p.contract.carrierAccountId)?.name
+                                : null) ??
+                              "carrier"}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--muted)]">
+                            El contrato no se puede cambiar aquí.
+                          </p>
+                        </div>
+                        <label className={labelClass}>
+                          Ruta + turno
+                          <select
+                            name="routeShiftId"
+                            required
+                            className={inputClass}
+                            defaultValue={p.routeShiftId}
+                          >
+                            {routeShifts.map((rs) => (
+                              <option key={rs.id} value={rs.id}>
+                                {rs.route?.name ?? "—"} · {rs.shift?.name ?? "—"} · inicio{" "}
+                                {rs.shift?.startTime?.slice(0, 5) ?? "—"}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className={`${labelClass} md:col-span-2`}>
+                          Geocerca de destino
+                          <select
+                            name="geofenceId"
+                            required
+                            className={inputClass}
+                            defaultValue={p.geofenceId}
+                          >
+                            {geofences.map((g) => (
+                              <option key={g.id} value={g.id}>
+                                {geofenceOptionLabel(g)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                      <fieldset className="rounded-lg border border-white/10 p-3">
+                        <legend className="px-1 text-sm text-[var(--muted)]">Días activos</legend>
+                        <div className="flex flex-wrap gap-3">
+                          {DAYS.map((d) => (
+                            <label key={d.value} className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                name="activeDays"
+                                value={d.value}
+                                defaultChecked={(p.activeDays ?? [1, 2, 3, 4, 5]).includes(d.value)}
+                              />
+                              {d.label}
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
+                      <button
+                        type="submit"
+                        className="rounded-lg border border-white/10 px-3 py-2 text-xs hover:border-[var(--accent)]"
+                      >
+                        Guardar cambios
+                      </button>
+                    </ConfirmForm>
+                  </details>
                 </li>
               );
               })}
