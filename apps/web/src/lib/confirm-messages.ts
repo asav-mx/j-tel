@@ -25,4 +25,8 @@ export const confirmMessages = {
     `¿Eliminar el turno «${name}» (inicio ${time})? Solo es posible si no está programado en un perfil de servicio.`,
   deleteRoute: (name: string, shiftLabel: string) =>
     `¿Eliminar la ruta «${name}» (${shiftLabel})? Solo es posible si no está en un perfil de servicio.`,
+  updateGeofence: (name: string) =>
+    `¿Guardar cambios en la geocerca «${name}»? Aplica a perfiles y servicios futuros.`,
+  deleteGeofence: (name: string) =>
+    `¿Eliminar la geocerca «${name}»? Solo es posible si no está en un perfil o servicio generado.`,
 } as const;
