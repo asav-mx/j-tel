@@ -680,7 +680,12 @@ export class RouteRepository {
     return this.db.query.shifts.findFirst({ where });
   }
 
-  async findRouteShiftByNameAndShift(scope: OperationalScope, name: string, shiftId: string) {
+  async findRouteShiftByNameAndShift(
+    scope: OperationalScope,
+    name: string,
+    shiftId: string,
+    excludeRouteShiftId?: string,
+  ) {
     const cols = operationalScopeColumns(scope);
     const rsWhere =
       scope.kind === "plant"
@@ -690,7 +695,60 @@ export class RouteRepository {
       where: rsWhere,
       with: { route: true },
     });
-    return linked.find((rs) => rs.route?.name === name) ?? null;
+    return (
+      linked.find(
+        (rs) => rs.route?.name === name && rs.id !== excludeRouteShiftId,
+      ) ?? null
+    );
+  }
+
+  async updateRouteShift(
+    routeShiftId: string,
+    clientAccountId: string,
+    scope: OperationalScope,
+    data: { name: string; shiftId: string },
+  ): Promise<
+    | { ok: true }
+    | { ok: false; reason: "not_found" | "duplicate" | "invalid_shift" }
+  > {
+    const cols = operationalScopeColumns(scope);
+    const where =
+      scope.kind === "plant"
+        ? and(
+            eq(routeShifts.id, routeShiftId),
+            eq(routeShifts.clientAccountId, clientAccountId),
+            eq(routeShifts.plantId, cols.plantId!),
+          )
+        : and(
+            eq(routeShifts.id, routeShiftId),
+            eq(routeShifts.clientAccountId, clientAccountId),
+            eq(routeShifts.plantGroupId, cols.plantGroupId!),
+          );
+
+    const routeShift = await this.db.query.routeShifts.findFirst({
+      where,
+      with: { route: true },
+    });
+    if (!routeShift?.route) return { ok: false, reason: "not_found" };
+
+    const shift = await this.findShiftInScope(data.shiftId, clientAccountId, scope);
+    if (!shift) return { ok: false, reason: "invalid_shift" };
+
+    const duplicate = await this.findRouteShiftByNameAndShift(
+      scope,
+      data.name,
+      data.shiftId,
+      routeShiftId,
+    );
+    if (duplicate) return { ok: false, reason: "duplicate" };
+
+    await this.db.update(routes).set({ name: data.name }).where(eq(routes.id, routeShift.routeId));
+    await this.db
+      .update(routeShifts)
+      .set({ shiftId: data.shiftId })
+      .where(eq(routeShifts.id, routeShiftId));
+
+    return { ok: true };
   }
 
   async createRouteWithShift(data: {

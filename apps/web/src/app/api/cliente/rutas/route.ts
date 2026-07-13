@@ -130,6 +130,38 @@ export async function POST(request: Request) {
       return back(request, client.slug, scope, { created: "ruta" });
     }
 
+    if (action === "updateRouteShift") {
+      const routeShiftId = String(formData.get("routeShiftId") ?? "").trim();
+      const name = String(formData.get("name") ?? "").trim();
+      const shiftId = String(formData.get("shiftId") ?? "").trim();
+      if (!routeShiftId) {
+        return back(request, client.slug, scope, { error: "Ruta no indicada." });
+      }
+      if (!name) {
+        return back(request, client.slug, scope, { error: "El nombre de la ruta es obligatorio." });
+      }
+      if (!shiftId) {
+        return back(request, client.slug, scope, { error: "Elige un turno." });
+      }
+      const result = await repos.routes.updateRouteShift(routeShiftId, client.id, scope, {
+        name,
+        shiftId,
+      });
+      if (!result.ok) {
+        if (result.reason === "not_found") {
+          return back(request, client.slug, scope, { error: "Ruta no encontrada." });
+        }
+        if (result.reason === "invalid_shift") {
+          return back(request, client.slug, scope, { error: "Turno no válido para esta unidad." });
+        }
+        const shift = await repos.routes.findShiftInScope(shiftId, client.id, scope);
+        return back(request, client.slug, scope, {
+          error: `Ya existe la ruta «${name}» para el turno «${shift?.name ?? "elegido"}».`,
+        });
+      }
+      return back(request, client.slug, scope, { created: "ruta_actualizada" });
+    }
+
     if (action === "deleteRouteShift") {
       const routeShiftId = String(formData.get("routeShiftId") ?? "").trim();
       if (!routeShiftId) return back(request, client.slug, scope, { error: "Ruta no indicada." });

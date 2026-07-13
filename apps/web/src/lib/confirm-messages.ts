@@ -25,4 +25,6 @@ export const confirmMessages = {
     `¿Eliminar el turno «${name}» (inicio ${time})? Solo es posible si no está programado en un perfil de servicio.`,
   deleteRoute: (name: string, shiftLabel: string) =>
     `¿Eliminar la ruta «${name}» (${shiftLabel})? Solo es posible si no está en un perfil de servicio.`,
+  updateRoute: (name: string) =>
+    `¿Guardar cambios en la ruta «${name}»? Los servicios ya generados conservan su configuración; aplica a nuevos.`,
 } as const;
