@@ -4,9 +4,12 @@ type Option = { value: string; label: string };
 
 type FilterState = {
   baseHref: string;
-  fecha?: string;
+  desde?: string;
+  hasta?: string;
   estado?: string;
   turno?: string | null;
+  /** @deprecated compat enlaces viejos */
+  fecha?: string;
 };
 
 function buildComplianceHref(
@@ -14,6 +17,8 @@ function buildComplianceHref(
   perfil: string | null,
 ): string {
   const url = new URL(state.baseHref, "http://local");
+  if (state.desde) url.searchParams.set("desde", state.desde);
+  if (state.hasta) url.searchParams.set("hasta", state.hasta);
   if (state.fecha && state.fecha !== "hoy_ayer") url.searchParams.set("fecha", state.fecha);
   if (state.estado && state.estado !== "all") url.searchParams.set("estado", state.estado);
   if (state.turno) url.searchParams.set("turno", state.turno);

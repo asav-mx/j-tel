@@ -1,7 +1,12 @@
 import { getRepos } from "@/lib/db";
 import { ConfirmForm } from "@/components/confirm-form";
 import { AppNav, Card } from "@/components/ui";
+import { DateRangeFilter } from "@/components/date-range-filter";
 import { confirmMessages } from "@/lib/confirm-messages";
+import {
+  inServiceDateRange,
+  resolveDateRange,
+} from "@/lib/date-range";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +27,17 @@ export default async function JStaffSoportePage({
   const n = typeof sp?.n === "string" ? sp.n : null;
   const summary = typeof sp?.summary === "string" ? sp.summary : null;
 
+  const range = resolveDateRange(sp, { defaultDaysBack: 29 });
+
   const repos = getRepos();
-  const pending = await repos.occurrences.findPendingVerification(new Date());
+  const pendingAll = await repos.occurrences.findPendingVerification(new Date());
+  const pending = pendingAll
+    .filter((row) =>
+      inServiceDateRange(String(row.occurrence.serviceDate), range.fromIso, range.toIso),
+    )
+    .sort((a, b) =>
+      String(b.occurrence.serviceDate).localeCompare(String(a.occurrence.serviceDate)),
+    );
 
   const clients = await repos.accounts.listByType("client");
   const contracts = [];
@@ -102,17 +116,23 @@ export default async function JStaffSoportePage({
           </ConfirmForm>
         </Card>
 
-        <Card title="Pendientes de verificación (re-sync suave)">
+        <Card title={`Pendientes de verificación — ${range.label} (${pending.length})`}>
           <p className="mb-4 text-sm text-[var(--muted)]">
             Solo reintenta <span className="text-white">pendiente_evidencia</span>. Los hechos
             ya cerrados (cumplido / no cumplido) no se tocan aquí.
           </p>
-          <h3 className="mb-2 font-medium">Ocurrencias pendientes</h3>
+
+          <div className="mb-4">
+            <DateRangeFilter action="/jstaff/soporte" range={range} />
+          </div>
+
           <ul className="space-y-2 text-sm">
             {pending.length === 0 ? (
-              <li className="text-[var(--muted)]">Ninguna pendiente en este momento.</li>
+              <li className="text-[var(--muted)]">
+                Ninguna pendiente en este rango. Prueba ampliar Desde / Hasta.
+              </li>
             ) : (
-              pending.slice(0, 20).map((row) => (
+              pending.map((row) => (
                 <li key={row.occurrence.id} className="rounded border border-white/5 p-3">
                   <p>
                     {row.occurrence.serviceDate} · contrato {row.contract.name}

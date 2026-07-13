@@ -1,7 +1,9 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
 import { OccurrenceTable, toOccurrenceRow } from "@/components/occurrence-table";
+import { DateRangeFilter } from "@/components/date-range-filter";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
+import { resolveDateRange } from "@/lib/date-range";
 
 export const dynamic = "force-dynamic";
 
@@ -27,11 +29,18 @@ function contractChipLabel(c: {
 
 function cumplimientoHref(
   slug: string | undefined,
-  opts: { contract?: string | null; vista?: "todos" | "dudosos" },
+  opts: {
+    contract?: string | null;
+    vista?: "todos" | "dudosos";
+    desde?: string;
+    hasta?: string;
+  },
 ): string {
   const params = new URLSearchParams();
   if (opts.contract) params.set("contract", opts.contract);
   if (opts.vista === "dudosos") params.set("vista", "dudosos");
+  if (opts.desde) params.set("desde", opts.desde);
+  if (opts.hasta) params.set("hasta", opts.hasta);
   const qs = params.toString();
   return withAccount(`/carrier/cumplimiento${qs ? `?${qs}` : ""}`, slug);
 }
@@ -45,6 +54,7 @@ export default async function CarrierCumplimientoPage({
   const contractFilter =
     typeof sp?.contract === "string" && sp.contract.length > 0 ? sp.contract : null;
   const vistaDudosos = sp?.vista === "dudosos";
+  const range = resolveDateRange(sp, { defaultDaysBack: 6 });
 
   const repos = getRepos();
   const carrier = await resolveAccountByType("carrier", searchParams);
@@ -55,11 +65,17 @@ export default async function CarrierCumplimientoPage({
     if (contractFilter) {
       const match = contracts.find((c) => c.id === contractFilter);
       if (match) {
-        occurrences = await repos.occurrences.findForContract(contractFilter);
+        occurrences = await repos.occurrences.findForContract(
+          contractFilter,
+          range.from,
+          range.to,
+        );
       }
     } else {
       for (const c of contracts) {
-        occurrences.push(...(await repos.occurrences.findForContract(c.id)));
+        occurrences.push(
+          ...(await repos.occurrences.findForContract(c.id, range.from, range.to)),
+        );
       }
     }
   }
@@ -86,6 +102,13 @@ export default async function CarrierCumplimientoPage({
     }),
   );
 
+  const actionPath = "/carrier/cumplimiento";
+  const rangeHidden = {
+    account: carrier?.slug,
+    contract: contractFilter,
+    vista: vistaDudosos ? "dudosos" : undefined,
+  };
+
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-6xl space-y-6">
@@ -94,12 +117,20 @@ export default async function CarrierCumplimientoPage({
           links={[{ href: withAccount("/carrier", carrier?.slug), label: "← Panel" }]}
         />
 
+        <DateRangeFilter
+          action={actionPath}
+          range={range}
+          hidden={rangeHidden}
+        />
+
         {contracts.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-[var(--muted)]">Contrato:</span>
             <a
               href={cumplimientoHref(carrier?.slug, {
                 vista: vistaDudosos ? "dudosos" : "todos",
+                desde: range.fromIso,
+                hasta: range.toIso,
               })}
               className={chipClass(!contractFilter)}
             >
@@ -113,6 +144,8 @@ export default async function CarrierCumplimientoPage({
                   href={cumplimientoHref(carrier?.slug, {
                     contract: c.id,
                     vista: vistaDudosos ? "dudosos" : "todos",
+                    desde: range.fromIso,
+                    hasta: range.toIso,
                   })}
                   className={chipClass(contractFilter === c.id)}
                 >
@@ -125,7 +158,11 @@ export default async function CarrierCumplimientoPage({
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-[var(--muted)]">Vista:</span>
           <a
-            href={cumplimientoHref(carrier?.slug, { contract: contractFilter })}
+            href={cumplimientoHref(carrier?.slug, {
+              contract: contractFilter,
+              desde: range.fromIso,
+              hasta: range.toIso,
+            })}
             className={chipClass(!vistaDudosos)}
           >
             Todos
@@ -134,6 +171,8 @@ export default async function CarrierCumplimientoPage({
             href={cumplimientoHref(carrier?.slug, {
               contract: contractFilter,
               vista: "dudosos",
+              desde: range.fromIso,
+              hasta: range.toIso,
             })}
             className={chipClass(vistaDudosos)}
           >
@@ -164,8 +203,8 @@ export default async function CarrierCumplimientoPage({
         <Card
           title={
             vistaDudosos
-              ? "Dudosos — mismo hecho que ve el cliente"
-              : "Servicios — mismo hecho que ve el cliente"
+              ? `Dudosos — ${range.label} (${rows.length})`
+              : `Servicios — ${range.label} (${rows.length})`
           }
         >
           <OccurrenceTable

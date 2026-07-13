@@ -1,8 +1,10 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
+import { DateRangeFilter } from "@/components/date-range-filter";
 import { buildMonthlyReport, reportToCsv } from "@jtel/reports";
 import type { ContractPolicy } from "@jtel/domain";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
+import { resolveDateRange } from "@/lib/date-range";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +13,15 @@ export default async function ClienteReportesPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const sp = searchParams ? await searchParams : undefined;
+  // Por defecto mes corriente aproximado (últimos 30 días)
+  const range = resolveDateRange(sp, { defaultDaysBack: 29 });
+
   const repos = getRepos();
   const client = await resolveAccountByType("client", searchParams);
-  const occurrences = client ? await repos.occurrences.findForClientAccount(client.id) : [];
+  const occurrences = client
+    ? await repos.occurrences.findForClientAccount(client.id, range.from, range.to)
+    : [];
   const contracts = client ? await repos.contracts.findForClient(client.id) : [];
 
   const rows = occurrences
@@ -45,8 +53,10 @@ export default async function ClienteReportesPage({
     evidenceMaxGapMinutes: 10,
   }) as ContractPolicy;
 
+  const periodLabel = range.fromIso.slice(0, 7);
+
   const report = buildMonthlyReport({
-    period: new Date().toISOString().slice(0, 7),
+    period: periodLabel,
     accountName: client?.name ?? "Cliente",
     contractName: contracts[0]?.name ?? "Contrato",
     policy,
@@ -57,18 +67,25 @@ export default async function ClienteReportesPage({
 
   return (
     <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-4xl space-y-6">
         <AppNav
-          title="Reportes mensuales"
+          title="Reportes"
           links={[{ href: withAccount("/cliente/cumplimiento", client?.slug), label: "← Cumplimiento" }]}
         />
-        <Card title="Reporte generado automáticamente">
+
+        <DateRangeFilter
+          action="/cliente/reportes"
+          range={range}
+          hidden={{ account: client?.slug }}
+        />
+
+        <Card title={`Reporte — ${range.label}`}>
           <dl className="mb-4 grid grid-cols-2 gap-2 text-sm">
             <div>Total: {report.summary.total}</div>
             <div>Cumplidos: {report.summary.cumplido}</div>
             <div>No cumplidos: {report.summary.noCumplido}</div>
             <div>Pendientes: {report.summary.pendienteEvidencia}</div>
-            <div>Rebate mensual: {report.monthlyRebatePercent}%</div>
+            <div>Rebate del periodo: {report.monthlyRebatePercent}%</div>
           </dl>
           <pre className="whitespace-pre-wrap text-xs leading-relaxed text-[var(--muted)]">
             {csv}
