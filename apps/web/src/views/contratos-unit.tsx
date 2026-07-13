@@ -233,7 +233,7 @@ export async function ContratosUnitView({
                     </select>
                   </label>
                   <label className={labelClass}>
-                    Umbral match KML (%)
+                    Umbral match KML — métrica A (%)
                     <input
                       name="kmlMatchMinPct"
                       type="number"
@@ -243,8 +243,30 @@ export async function ContratosUnitView({
                       className={inputClass}
                     />
                     <span className="mt-1 block text-xs text-[var(--muted)]">
-                      % de waypoints del KML con GPS a ≤500 m. Ej. 60 = al menos 60 de 100.
+                      % de waypoints del KML con GPS dentro del corredor. Default: 60.
                     </span>
+                  </label>
+                  <label className={labelClass}>
+                    Radio del corredor KML (m)
+                    <input
+                      name="kmlCorridorMeters"
+                      type="number"
+                      min={10}
+                      max={500}
+                      defaultValue={120}
+                      className={inputClass}
+                    />
+                  </label>
+                  <label className={labelClass}>
+                    Umbral precisión — métrica B (%)
+                    <input
+                      name="kmlCorridorMinPct"
+                      type="number"
+                      min={0}
+                      max={100}
+                      defaultValue={60}
+                      className={inputClass}
+                    />
                   </label>
                   <label className={labelClass}>
                     Margen evidencia antes (min)
@@ -502,7 +524,7 @@ export async function ContratosUnitView({
                             </select>
                           </label>
                           <label className={labelClass}>
-                            Umbral match KML (%)
+                            Umbral match KML — métrica A (%)
                             <input
                               name="kmlMatchMinPct"
                               type="number"
@@ -512,7 +534,37 @@ export async function ContratosUnitView({
                               className={inputClass}
                             />
                             <span className="mt-1 block text-xs text-[var(--muted)]">
-                              % de waypoints del KML con GPS a ≤500 m.
+                              % de waypoints del KML con GPS dentro del corredor (radio abajo).
+                              Default recomendado: 60.
+                            </span>
+                          </label>
+                          <label className={labelClass}>
+                            Radio del corredor KML (m)
+                            <input
+                              name="kmlCorridorMeters"
+                              type="number"
+                              min={10}
+                              max={500}
+                              defaultValue={c.policy.kmlCorridorMeters ?? 120}
+                              className={inputClass}
+                            />
+                            <span className="mt-1 block text-xs text-[var(--muted)]">
+                              Distancia máxima GPS ↔ trazado. Default: 120 m.
+                            </span>
+                          </label>
+                          <label className={labelClass}>
+                            Umbral precisión — métrica B (%)
+                            <input
+                              name="kmlCorridorMinPct"
+                              type="number"
+                              min={0}
+                              max={100}
+                              defaultValue={c.policy.kmlCorridorMinPct ?? 60}
+                              className={inputClass}
+                            />
+                            <span className="mt-1 block text-xs text-[var(--muted)]">
+                              % de puntos GPS dentro del corredor. Cumple ruta si A y B pasan.
+                              Default: 60.
                             </span>
                           </label>
                           <label className={labelClass}>
