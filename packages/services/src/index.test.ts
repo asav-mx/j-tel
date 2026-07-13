@@ -533,3 +533,218 @@ describe("perdedor exclusivo sin alternativa", () => {
     );
   });
 });
+
+describe("Tarea 3 — contexto llegada fuera de ventana", () => {
+  const geofence = [
+    { lat: 31.6904, lng: -106.4244 },
+    { lat: 31.6924, lng: -106.4244 },
+    { lat: 31.6924, lng: -106.4214 },
+    { lat: 31.6904, lng: -106.4214 },
+  ];
+  const insideGeofence = { lat: 31.6914, lng: -106.4229 };
+  const outsideGeofence = { lat: 31.8, lng: -106.5 };
+
+  function buildOcc() {
+    return {
+      id: "occ-tardia",
+      contractId: "contract-1",
+      serviceDate: "2026-07-09",
+      expectedDeadline: new Date("2026-07-09T12:00:00Z"),
+      expectedGeofenceId: "geo-1",
+      referenceUnitId: null,
+      complianceFact: null,
+      trip: {
+        id: "trip-1",
+        evidenceWindowStart: new Date("2026-07-09T10:00:00Z"),
+        evidenceWindowEnd: new Date("2026-07-09T12:30:00Z"),
+        evidenceStatus: "en_espera" as const,
+      },
+      profile: {
+        id: "prof-1",
+        geofenceId: "geo-1",
+        geofence: { id: "geo-1", polygon: geofence },
+        contract: {
+          carrierAccountId: "carrier-1",
+          clientAccountId: "client-1",
+          policy: {
+            toleranceMinutes: 5,
+            verificationGraceMinutes: 15,
+            evidenceMarginMinutesAfter: 0,
+            routeStrictness: "destino_only" as const,
+            kmlMatchMinPct: 60,
+            excusableReasons: [] as string[],
+          },
+        },
+        routeShift: { routeId: "route-1" },
+      },
+      kmlVersionId: null,
+    };
+  }
+
+  function buildRepos(opts: {
+    extendedPoints: Array<{
+      imei: string;
+      latitude: number;
+      longitude: number;
+      recordedAt: Date;
+      unitId: string | null;
+    }>;
+    otherContracts?: unknown[];
+  }) {
+    const windowEnd = new Date("2026-07-09T12:30:00Z");
+    const addLedgerEntry = vi.fn().mockResolvedValue({ id: "ledger-1" });
+    // Puntos dentro de ventana: fuera de geocerca → no_cumplido sin llegada.
+    const inWindow = [
+      {
+        imei: "imei-1",
+        latitude: outsideGeofence.lat,
+        longitude: outsideGeofence.lng,
+        recordedAt: new Date("2026-07-09T11:00:00Z"),
+        unitId: "unit-1",
+      },
+    ];
+
+    const repos = {
+      occurrences: { findById: vi.fn().mockResolvedValue(buildOcc()) },
+      evidence: {
+        getPointsForTrip: vi
+          .fn()
+          .mockResolvedValueOnce([]) // existingPoints
+          .mockResolvedValue(inWindow), // storedPoints tras ingest
+        clearPointsForTrip: vi.fn(),
+        updateTripStatus: vi.fn(),
+        savePoints: vi.fn(),
+      },
+      compliance: {
+        deleteFactForOccurrence: vi.fn(),
+        saveFact: vi.fn().mockResolvedValue({ id: "fact-1" }),
+        addLedgerEntry,
+      },
+      profiles: {
+        getPossibleUnitIds: vi.fn().mockResolvedValue([]),
+        findForContract: vi
+          .fn()
+          .mockImplementation((contractId: string) =>
+            contractId === "contract-1"
+              ? Promise.resolve([])
+              : Promise.resolve([]),
+          ),
+      },
+      contracts: {
+        findForCarrier: vi.fn().mockResolvedValue(opts.otherContracts ?? []),
+      },
+      fleet: {
+        getDevicesForCarrier: vi
+          .fn()
+          .mockResolvedValue([{ id: "dev-1", imei: "imei-1", carrierAccountId: "carrier-1" }]),
+        getUnitsForCarrier: vi.fn().mockResolvedValue([{ id: "unit-1" }]),
+        resolveUnitAtTime: vi.fn().mockResolvedValue({ unitId: "unit-1" }),
+      },
+      telemetry: {
+        getForImeis: vi.fn().mockImplementation((_imeis: string[], from: Date) => {
+          // Ventana extendida empieza en windowEnd (12:30).
+          if (from.getTime() >= windowEnd.getTime()) {
+            return Promise.resolve(opts.extendedPoints);
+          }
+          return Promise.resolve(inWindow);
+        }),
+      },
+      routes: { getKmlVersionForDate: vi.fn().mockResolvedValue(null) },
+      notifications: { create: vi.fn() },
+    };
+    return { repos, addLedgerEntry };
+  }
+
+  it("anota geofenceId cuando la llegada tardía es a la geocerca del propio contrato", async () => {
+    const { repos, addLedgerEntry } = buildRepos({
+      extendedPoints: [
+        {
+          imei: "imei-1",
+          latitude: insideGeofence.lat,
+          longitude: insideGeofence.lng,
+          recordedAt: new Date("2026-07-09T12:45:00Z"),
+          unitId: "unit-1",
+        },
+      ],
+    });
+
+    const service = new VerificationService(repos as never, {
+      umbrellaBaseUrl: "http://example.com",
+    });
+    const result = await service.verifyOccurrence("occ-tardia");
+    // El hecho quedó sin llegada (no_cumplido o pendiente): el contexto aplica igual.
+    expect(result.status).not.toBe("cumplido");
+
+    const ctx = addLedgerEntry.mock.calls
+      .map((c) => c[0])
+      .find((e) => e.action === "contexto_calibracion");
+    expect(ctx).toBeTruthy();
+    expect(ctx.steps[0].step).toBe("llegada_fuera_ventana");
+    expect(ctx.steps[0].details.geofenceId).toBe("geo-1");
+    expect(ctx.steps[0].details.unitId).toBe("unit-1");
+    expect(ctx.steps[0].details.arrivalOutsideContractGeofence).toBeUndefined();
+    expect(ctx.metadata.source).toBe("memory");
+  });
+
+  it("flag neutro sin geofenceId cuando la llegada es a geocerca de otro contrato", async () => {
+    const otherPolygon = [
+      { lat: 32.0, lng: -107.0 },
+      { lat: 32.01, lng: -107.0 },
+      { lat: 32.01, lng: -106.99 },
+      { lat: 32.0, lng: -106.99 },
+    ];
+    const { repos, addLedgerEntry } = buildRepos({
+      extendedPoints: [
+        {
+          imei: "imei-1",
+          latitude: 32.005,
+          longitude: -106.995,
+          recordedAt: new Date("2026-07-09T12:50:00Z"),
+          unitId: "unit-1",
+        },
+      ],
+      otherContracts: [
+        {
+          id: "contract-2",
+        },
+      ],
+    });
+    // findForContract para contract-2 devuelve un perfil con geocerca ajena.
+    repos.profiles.findForContract = vi
+      .fn()
+      .mockImplementation((contractId: string) =>
+        contractId === "contract-2"
+          ? Promise.resolve([
+              { geofence: { id: "geo-2", polygon: otherPolygon } },
+            ])
+          : Promise.resolve([]),
+      );
+
+    const service = new VerificationService(repos as never, {
+      umbrellaBaseUrl: "http://example.com",
+    });
+    await service.verifyOccurrence("occ-tardia");
+
+    const ctx = addLedgerEntry.mock.calls
+      .map((c) => c[0])
+      .find((e) => e.action === "contexto_calibracion");
+    expect(ctx).toBeTruthy();
+    expect(ctx.steps[0].details.arrivalOutsideContractGeofence).toBe(true);
+    expect(ctx.steps[0].details.geofenceId).toBeUndefined();
+    expect(ctx.metadata.scope).toBe("other_contract");
+  });
+
+  it("no anota nada cuando no hay GPS extendido en memoria propia (cero Umbrella)", async () => {
+    const { repos, addLedgerEntry } = buildRepos({ extendedPoints: [] });
+
+    const service = new VerificationService(repos as never, {
+      umbrellaBaseUrl: "http://example.com",
+    });
+    await service.verifyOccurrence("occ-tardia");
+
+    const ctx = addLedgerEntry.mock.calls
+      .map((c) => c[0])
+      .find((e) => e.action === "contexto_calibracion");
+    expect(ctx).toBeUndefined();
+  });
+});
