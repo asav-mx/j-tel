@@ -2,6 +2,7 @@ import { NavBar, Card } from "@/components/ui";
 import { ServiceDetailView } from "@/components/service-detail-view";
 import { CarrierDudosoLabelForm } from "@/components/carrier-dudoso-label-form";
 import { loadServiceDetail } from "@/lib/service-detail-data";
+import { suggestionsFromLedger } from "@/lib/carrier-unit-suggestions";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { getRepos } from "@/lib/db";
 
@@ -30,11 +31,29 @@ export default async function CarrierServicioPage({
   });
 
   const repos = getRepos();
-  const units = await repos.fleet.getUnitsForCarrier(carrier.id);
+  const [units, assignments] = await Promise.all([
+    repos.fleet.getUnitsForCarrier(carrier.id),
+    repos.fleet.getActiveAssignmentsForCarrier(carrier.id),
+  ]);
+
   const unitOptions = units.map((u) => ({
     id: u.id,
     label: `${u.label}${u.plateNumber ? ` (${u.plateNumber})` : ""}`,
   }));
+
+  const imeiToUnitId = new Map<string, string>();
+  for (const a of assignments) {
+    const imei = a.device?.imei;
+    if (imei) imeiToUnitId.set(imei, a.unitId);
+  }
+
+  const suggestions = suggestionsFromLedger(
+    data.ledger,
+    unitOptions,
+    imeiToUnitId,
+    3,
+  );
+
   const existingGt = await repos.occurrenceGroundTruth.findByOccurrence(id);
   const showLabelForm = data.status === "no_cumplido";
 
@@ -62,6 +81,7 @@ export default async function CarrierServicioPage({
               occurrenceId={id}
               accountSlug={carrier.slug}
               units={unitOptions}
+              suggestions={suggestions}
               existing={
                 existingGt
                   ? {
