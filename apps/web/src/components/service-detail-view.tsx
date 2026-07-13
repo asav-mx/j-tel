@@ -22,12 +22,15 @@ export function ServiceDetailView({
   backLabel,
   contractHref,
   contractLabel,
+  hideEvidenceMap = false,
 }: {
   data: ServiceDetailData;
   backHref: string;
   backLabel: string;
   contractHref?: string;
   contractLabel?: string;
+  /** Carrier dudosos: el mapa de comparación vive fuera. */
+  hideEvidenceMap?: boolean;
 }) {
   return (
     <>
@@ -126,25 +129,27 @@ export function ServiceDetailView({
         </Card>
       </div>
 
-      <div className="mt-6">
-        <Card title={`Evidencia GPS (${data.pointCount} puntos en ruta)`}>
-          <p className="mb-3 text-sm text-[var(--muted)]">
-            Estado de ingesta: {data.evidenceStatus ?? "—"}
-            {data.unitPointsInWindow > data.pointCount
-              ? ` · ${data.unitPointsInWindow} pts en ventana del contrato; se muestran solo los del corredor KML / llegada.`
-              : null}
-            {data.pointCount === 0
-              ? " · Aún no hay puntos de la unidad observada en este viaje."
-              : " · Verde = GPS observado en ruta; morado punteado = KML esperado; azul = geocerca; amarillo = llegada."}
-          </p>
-          <ServiceEvidenceMap
-            points={data.mapPoints}
-            geofence={data.geofencePolygon}
-            arrival={data.arrivalPoint}
-            kmlWaypoints={data.kmlWaypoints}
-          />
-        </Card>
-      </div>
+      {!hideEvidenceMap ? (
+        <div className="mt-6">
+          <Card title={`Evidencia GPS (${data.pointCount} puntos en ruta)`}>
+            <p className="mb-3 text-sm text-[var(--muted)]">
+              Estado de ingesta: {data.evidenceStatus ?? "—"}
+              {data.unitPointsInWindow > data.pointCount
+                ? ` · ${data.unitPointsInWindow} pts en ventana del contrato; se muestran solo los del corredor KML / llegada.`
+                : null}
+              {data.pointCount === 0
+                ? " · Aún no hay puntos de la unidad observada en este viaje."
+                : " · Verde = GPS observado en ruta; morado punteado = KML esperado; azul = geocerca; amarillo = llegada."}
+            </p>
+            <ServiceEvidenceMap
+              points={data.mapPoints}
+              geofence={data.geofencePolygon}
+              arrival={data.arrivalPoint}
+              kmlWaypoints={data.kmlWaypoints}
+            />
+          </Card>
+        </div>
+      ) : null}
 
       {data.showEnforcement && data.enforcement.length > 0 ? (
         <div className="mt-6">
