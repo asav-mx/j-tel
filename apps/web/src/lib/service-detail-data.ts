@@ -10,6 +10,12 @@ export type MapPoint = { lat: number; lng: number; at: string };
 export type MapPolygon = Array<{ lat: number; lng: number }>;
 export type MapWaypoint = { lat: number; lng: number };
 
+export function downsampleMapPoints(points: MapPoint[], max = 400): MapPoint[] {
+  if (points.length <= max) return points;
+  const step = Math.ceil(points.length / max);
+  return points.filter((_, i) => i % step === 0 || i === points.length - 1);
+}
+
 export interface ServiceDetailData {
   occurrenceId: string;
   serviceDate: string;
@@ -97,7 +103,7 @@ function haversineKm(
 }
 
 /** Recorta el GPS al corredor del KML (sin el deambular por la ciudad). */
-function clipTrackToRoute(
+export function clipTrackToRoute(
   points: MapPoint[],
   kml: MapWaypoint[],
   corridorKm = 0.75,

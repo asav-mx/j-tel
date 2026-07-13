@@ -12,6 +12,7 @@ export function CarrierDudosoLabelForm({
   units,
   suggestions = [],
   existing,
+  onUnitFocus,
 }: {
   occurrenceId: string;
   accountSlug: string;
@@ -22,6 +23,7 @@ export function CarrierDudosoLabelForm({
     unitId: string | null;
     notes: string | null;
   } | null;
+  onUnitFocus?: (unitId: string | null) => void;
 }) {
   const router = useRouter();
   const [verdict, setVerdict] = useState<"cumplido" | "no_hecho" | "">(
@@ -39,7 +41,13 @@ export function CarrierDudosoLabelForm({
   function pickSuggestion(id: string) {
     setVerdict("cumplido");
     setUnitId(id);
+    onUnitFocus?.(id);
     setError(null);
+  }
+
+  function setUnit(id: string) {
+    setUnitId(id);
+    onUnitFocus?.(id || null);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -156,7 +164,7 @@ export function CarrierDudosoLabelForm({
           <select
             className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2"
             value={unitId}
-            onChange={(e) => setUnitId(e.target.value)}
+            onChange={(e) => setUnit(e.target.value)}
             required
           >
             <option value="">Selecciona…</option>
