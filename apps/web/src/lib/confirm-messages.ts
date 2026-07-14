@@ -9,6 +9,8 @@ export const confirmMessages = {
     `¿Crear perfil de servicio para ${unitLabel}? Verifica contrato, ruta y geocerca.`,
   deleteProfile: (name: string) =>
     `¿Eliminar el perfil «${name}»? Solo es posible si no tiene ocurrencias generadas.`,
+  updateProfile: (name: string) =>
+    `¿Guardar cambios en «${name}»? Aplica hacia adelante: las ocurrencias ya generadas conservan su configuración.`,
   generateOccurrencesTemplate: (name: string) =>
     `¿Generar ocurrencias para «${name}» del {fromDate} al {toDate}? Solo se materializan hasta 30 días adelante. Puede tardar; no pulses otra vez hasta ver el resultado.`,
   authorizeCarrierTemplate: (client: string) =>

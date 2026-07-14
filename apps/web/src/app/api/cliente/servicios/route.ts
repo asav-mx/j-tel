@@ -93,6 +93,87 @@ export async function POST(request: Request) {
     }
   }
 
+  if (action === "update") {
+    const profileId = String(formData.get("profileId") ?? "").trim();
+    const redirectScope = profileId ? await scopeForProfile(profileId) : formScope;
+    if (!profileId) {
+      return back(request, client.slug, redirectScope, { error: "Perfil no indicado." });
+    }
+
+    const profile = await repos.profiles.findById(profileId);
+    if (!profile?.contract || profile.contract.clientAccountId !== client.id) {
+      return back(request, client.slug, redirectScope, { error: "Perfil no encontrado." });
+    }
+
+    const scope = redirectScope
+      ? await repos.clients.resolveOperationalScope(client.id, redirectScope)
+      : null;
+    if (!scope) {
+      return back(request, client.slug, redirectScope, { error: "Unidad operativa no válida." });
+    }
+
+    const name = String(formData.get("name") ?? "").trim();
+    const codeRaw = String(formData.get("code") ?? "").trim();
+    const routeShiftId = String(formData.get("routeShiftId") ?? "").trim();
+    const geofenceId = String(formData.get("geofenceId") ?? "").trim();
+    const activeDays = formData
+      .getAll("activeDays")
+      .map((d) => Number(String(d)))
+      .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6);
+
+    const routeShift = routeShiftId ? await repos.routes.findRouteShiftById(routeShiftId) : null;
+    if (!routeShift || routeShift.clientAccountId !== client.id) {
+      return back(request, client.slug, scope, { error: "Ruta + turno no válidos." });
+    }
+    if (!scopedRowMatches(routeShift, scope)) {
+      return back(request, client.slug, scope, {
+        error: "La ruta + turno no pertenecen a esta unidad operativa.",
+      });
+    }
+
+    const geofence = geofenceId ? await repos.geofences.findById(geofenceId) : null;
+    if (!geofence) {
+      return back(request, client.slug, scope, { error: "Geocerca no encontrada." });
+    }
+
+    const memberPlantIds = await memberPlantIdsForScope(repos, client.id, scope);
+    if (!geofenceMatchesScope(geofence, scope, memberPlantIds)) {
+      return back(request, client.slug, scope, {
+        error: "La geocerca no corresponde a esta unidad operativa.",
+      });
+    }
+
+    const payload = {
+      routeShiftId,
+      geofenceId,
+      name,
+      ...(codeRaw ? { code: codeRaw } : {}),
+      activeDays: activeDays.length > 0 ? activeDays : [1, 2, 3, 4, 5],
+    };
+
+    const parsed = createServiceProfileSchema
+      .omit({ contractId: true, possibleUnitIds: true, referenceUnitId: true })
+      .safeParse(payload);
+    if (!parsed.success) {
+      const first = parsed.error.issues[0];
+      return back(request, client.slug, scope, {
+        error: `Revisa los datos: ${first?.path.join(".") || ""} ${first?.message ?? ""}`.trim(),
+      });
+    }
+
+    const result = await repos.profiles.updateProfile(profileId, client.id, parsed.data);
+    if (!result.ok) {
+      if (result.reason === "duplicate_code") {
+        return back(request, client.slug, scope, {
+          error: "Ese código ya lo usa otro perfil. Elige otro.",
+        });
+      }
+      return back(request, client.slug, scope, { error: "Perfil no encontrado." });
+    }
+
+    return back(request, client.slug, scope, { created: "perfil_actualizado" });
+  }
+
   if (action === "delete") {
     const profileId = String(formData.get("profileId") ?? "").trim();
     const redirectScope = profileId ? await scopeForProfile(profileId) : formScope;
@@ -106,6 +187,10 @@ export async function POST(request: Request) {
       });
     }
     return back(request, client.slug, redirectScope, { created: "eliminado" });
+  }
+
+  if (action !== "create") {
+    return back(request, client.slug, formScope, { error: "Acción no reconocida." });
   }
 
   if (!formScope) {
