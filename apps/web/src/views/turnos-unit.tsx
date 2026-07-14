@@ -21,6 +21,7 @@ const btnClass =
 
 const createdLabels: Record<string, string> = {
   turno: "Turno registrado. Ya puedes crear rutas vinculadas a este turno.",
+  turno_actualizado: "Turno actualizado.",
   turno_eliminado: "Turno eliminado.",
 };
 
@@ -137,19 +138,51 @@ export async function TurnosUnitView({
 
         <Card title={`Turnos registrados — ${operationalUnitLabel(unit)}`}>
           {shifts.length > 0 ? (
-            <ul className="space-y-1 text-sm">
+            <ul className="space-y-4 text-sm">
               {shifts.map((s) => (
                 <li
                   key={s.id}
-                  className="flex items-center justify-between gap-2 rounded border border-white/5 px-2 py-1.5"
+                  className="rounded-lg border border-white/10 p-4"
                 >
-                  <span>{s.name}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-[var(--muted)]">inicio {fmtTime(s.startTime)}</span>
+                  <ConfirmForm
+                    action="/api/cliente/turnos"
+                    method="post"
+                    confirmMessage={confirmMessages.updateShift(s.name)}
+                    className="grid gap-3 md:grid-cols-2"
+                  >
+                    <input type="hidden" name="clientSlug" value={client.slug} />
+                    {scopeHidden}
+                    <input type="hidden" name="action" value="updateShift" />
+                    <input type="hidden" name="shiftId" value={s.id} />
+                    <label className={labelClass}>
+                      Nombre del turno
+                      <input name="name" required className={inputClass} defaultValue={s.name} />
+                    </label>
+                    <label className={labelClass}>
+                      Hora de inicio
+                      <input
+                        name="startTime"
+                        required
+                        type="time"
+                        className={inputClass}
+                        defaultValue={fmtTime(s.startTime)}
+                      />
+                    </label>
+                    <div className="md:col-span-2">
+                      <button type="submit" className={btnClass}>
+                        Guardar cambios
+                      </button>
+                    </div>
+                  </ConfirmForm>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className="text-xs text-[var(--muted)]">
+                      Inicio actual: {fmtTime(s.startTime)}
+                    </span>
                     <ConfirmForm
                       action="/api/cliente/turnos"
                       method="post"
                       confirmMessage={confirmMessages.deleteShift(s.name, fmtTime(s.startTime))}
+                      className="inline"
                     >
                       <input type="hidden" name="clientSlug" value={client.slug} />
                       {scopeHidden}
@@ -157,7 +190,7 @@ export async function TurnosUnitView({
                       <input type="hidden" name="shiftId" value={s.id} />
                       <button
                         type="submit"
-                        className="rounded border border-red-500/30 px-2 py-0.5 text-xs text-red-200 hover:border-red-400"
+                        className="rounded border border-red-500/30 px-3 py-1 text-xs text-red-200 hover:border-red-400"
                       >
                         Eliminar
                       </button>

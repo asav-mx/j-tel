@@ -23,6 +23,8 @@ export const confirmMessages = {
     "¿Guardar cambios en {name}? Si cambias de grupo, puede afectar la unidad operativa.",
   deleteShift: (name: string, time: string) =>
     `¿Eliminar el turno «${name}» (inicio ${time})? Solo es posible si no está programado en un perfil de servicio.`,
+  updateShift: (name: string) =>
+    `¿Guardar cambios en el turno «${name}»? Los servicios ya generados conservan su hora; aplica a nuevos.`,
   deleteRoute: (name: string, shiftLabel: string) =>
     `¿Eliminar la ruta «${name}» (${shiftLabel})? Solo es posible si no está en un perfil de servicio.`,
   updateGeofence: (name: string) =>

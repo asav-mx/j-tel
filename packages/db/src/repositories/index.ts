@@ -1,4 +1,4 @@
-import { eq, and, or, gte, lte, isNull, inArray, sql } from "drizzle-orm";
+import { eq, and, or, gte, lte, isNull, inArray, sql, ne } from "drizzle-orm";
 import { computeExpectedDeadline, computeEvidenceWindow, suggestProfileCode } from "@jtel/domain";
 import type { OperationalScope, OperationalUnit } from "@jtel/domain";
 import { operationalScopeColumns } from "@jtel/domain";
@@ -791,9 +791,14 @@ export class RouteRepository {
     return { route, routeShift };
   }
 
-  async findShiftByNameAndTime(scope: OperationalScope, name: string, startTime: string) {
+  async findShiftByNameAndTime(
+    scope: OperationalScope,
+    name: string,
+    startTime: string,
+    excludeShiftId?: string,
+  ) {
     const cols = operationalScopeColumns(scope);
-    const where =
+    const base =
       scope.kind === "plant"
         ? and(
             eq(shifts.plantId, cols.plantId!),
@@ -805,7 +810,35 @@ export class RouteRepository {
             eq(shifts.name, name),
             eq(shifts.startTime, startTime),
           );
+    const where = excludeShiftId ? and(base, sql`${shifts.id} <> ${excludeShiftId}`) : base;
     return this.db.query.shifts.findFirst({ where });
+  }
+
+  async updateShift(
+    id: string,
+    clientAccountId: string,
+    scope: OperationalScope,
+    data: { name: string; startTime: string },
+  ): Promise<
+    | { ok: true }
+    | { ok: false; reason: "not_found" | "duplicate" }
+  > {
+    const existing = await this.findShiftInScope(id, clientAccountId, scope);
+    if (!existing) return { ok: false, reason: "not_found" };
+
+    const duplicate = await this.findShiftByNameAndTime(
+      scope,
+      data.name,
+      data.startTime,
+      id,
+    );
+    if (duplicate) return { ok: false, reason: "duplicate" };
+
+    await this.db
+      .update(shifts)
+      .set({ name: data.name, startTime: data.startTime })
+      .where(eq(shifts.id, id));
+    return { ok: true };
   }
 
   private async routeShiftDeleteBlockReason(
