@@ -1,5 +1,5 @@
 import { getRepos } from "@/lib/db";
-import type { ContractPolicy } from "@jtel/domain";
+import type { ContractPolicy, OperationalScope } from "@jtel/domain";
 import { computeExclusiveContentionWindow } from "@jtel/services";
 
 export type JornadaRoute = {
@@ -21,8 +21,8 @@ export type JornadaPayload = {
   turnoId: string;
   turnoName: string;
   turnoStartTime: string;
-  plantGroupId: string;
-  plantGroupName: string;
+  unitId: string;
+  unitName: string;
   accountSlug: string;
   routes: JornadaRoute[];
   stats: {
@@ -45,8 +45,23 @@ function downsample<T>(arr: T[], max: number): T[] {
   return out;
 }
 
+async function resolveScopeUnit(
+  repos: ReturnType<typeof getRepos>,
+  scope: OperationalScope,
+  clientAccountId: string,
+): Promise<{ id: string; name: string } | null> {
+  if (scope.kind === "plant") {
+    const plant = await repos.clients.getPlantById(scope.plantId);
+    if (!plant || plant.clientAccountId !== clientAccountId) return null;
+    return { id: plant.id, name: plant.name };
+  }
+  const group = await repos.clients.getPlantGroupById(scope.plantGroupId);
+  if (!group || group.clientAccountId !== clientAccountId) return null;
+  return { id: group.id, name: group.name };
+}
+
 export async function loadJornada(opts: {
-  plantGroupId: string;
+  scope: OperationalScope;
   accountSlug: string;
   fecha: string;
   turnoId: string;
@@ -55,15 +70,11 @@ export async function loadJornada(opts: {
   const account = await repos.accounts.findBySlug(opts.accountSlug);
   if (!account || account.type !== "client") return null;
 
-  const group = await repos.clients.getPlantGroupById(opts.plantGroupId);
-  if (!group || group.clientAccountId !== account.id) return null;
+  const unit = await resolveScopeUnit(repos, opts.scope, account.id);
+  if (!unit) return null;
 
   const day = new Date(`${opts.fecha}T00:00:00`);
-  const occurrences = await repos.occurrences.findForPlantGroup(
-    opts.plantGroupId,
-    day,
-    day,
-  );
+  const occurrences = await repos.occurrences.findForScope(opts.scope, day, day);
 
   const filtered = occurrences.filter(
     (o) =>
@@ -149,8 +160,8 @@ export async function loadJornada(opts: {
     turnoId: opts.turnoId,
     turnoName,
     turnoStartTime,
-    plantGroupId: group.id,
-    plantGroupName: group.name,
+    unitId: unit.id,
+    unitName: unit.name,
     accountSlug: account.slug,
     routes,
     stats,
