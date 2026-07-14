@@ -5,16 +5,17 @@ import {
   computeEvidenceWindow,
   type ContractPolicy,
 } from "@jtel/domain";
+import {
+  clipTrackToRoute,
+  cutTrackAtArrival,
+  downsampleMapPoints,
+} from "@/lib/map-evidence";
 
 export type MapPoint = { lat: number; lng: number; at: string };
 export type MapPolygon = Array<{ lat: number; lng: number }>;
 export type MapWaypoint = { lat: number; lng: number };
 
-export function downsampleMapPoints(points: MapPoint[], max = 400): MapPoint[] {
-  if (points.length <= max) return points;
-  const step = Math.ceil(points.length / max);
-  return points.filter((_, i) => i % step === 0 || i === points.length - 1);
-}
+export { clipTrackToRoute, downsampleMapPoints };
 
 export interface ServiceDetailData {
   occurrenceId: string;
@@ -88,34 +89,9 @@ function closestPoint(points: MapPoint[], target: Date): MapPoint | null {
   return best;
 }
 
-function haversineKm(
-  a: { lat: number; lng: number },
-  b: { lat: number; lng: number },
-): number {
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const x =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((a.lat * Math.PI) / 180) *
-      Math.cos((b.lat * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * 6371 * Math.asin(Math.sqrt(x));
-}
+/** Re-export del corte en llegada (regla Marco: evidencia dibujada termina en la geocerca). */
+export { cutTrackAtArrival };
 
-/** Recorta el GPS al corredor del KML (sin el deambular por la ciudad). */
-export function clipTrackToRoute(
-  points: MapPoint[],
-  kml: MapWaypoint[],
-  corridorKm = 0.75,
-): MapPoint[] {
-  if (points.length === 0) return [];
-  if (kml.length === 0) return points;
-
-  const nearRoute = points.filter((p) =>
-    kml.some((wp) => haversineKm(p, wp) <= corridorKm),
-  );
-  return nearRoute.length >= 3 ? nearRoute : points;
-}
 
 export async function loadServiceDetail(
   occurrenceId: string,
@@ -171,21 +147,26 @@ export async function loadServiceDetail(
   }));
 
   const mapPoints = clipTrackToRoute(allUnitPoints, kmlWaypoints);
+  // Regla transversal: si hay llegada registrada, no dibujar nada después.
+  const mapPointsCut = cutTrackAtArrival(mapPoints, fact?.observedArrivalAt ?? null);
 
   // Downsample para no saturar Leaflet (máx. ~400 puntos).
   const mapPointsDisplay =
-    mapPoints.length <= 400
-      ? mapPoints
-      : mapPoints.filter((_, i) => i % Math.ceil(mapPoints.length / 400) === 0 || i === mapPoints.length - 1);
+    mapPointsCut.length <= 400
+      ? mapPointsCut
+      : mapPointsCut.filter((_, i) => i % Math.ceil(mapPointsCut.length / 400) === 0 || i === mapPointsCut.length - 1);
 
   const geofence = occurrence.profile?.geofence;
   const geofencePolygon: MapPolygon = (geofence?.polygon as MapPolygon | undefined) ?? [];
 
   const arrivalPoint =
-    fact?.observedArrivalAt && mapPoints.length > 0
-      ? closestPoint(mapPoints, fact.observedArrivalAt)
+    fact?.observedArrivalAt && mapPointsCut.length > 0
+      ? closestPoint(mapPointsCut, fact.observedArrivalAt)
       : fact?.observedArrivalAt && allUnitPoints.length > 0
-        ? closestPoint(allUnitPoints, fact.observedArrivalAt)
+        ? closestPoint(
+            cutTrackAtArrival(allUnitPoints, fact.observedArrivalAt),
+            fact.observedArrivalAt,
+          )
         : null;
 
   const enforcement =
@@ -203,8 +184,8 @@ export async function loadServiceDetail(
   ]);
 
   const trip = occurrence.trip;
-  const evidenceFirstAt = mapPoints[0]?.at ?? null;
-  const evidenceLastAt = mapPoints[mapPoints.length - 1]?.at ?? null;
+  const evidenceFirstAt = mapPointsCut[0]?.at ?? null;
+  const evidenceLastAt = mapPointsCut[mapPointsCut.length - 1]?.at ?? null;
 
   const policyWindow = computeEvidenceWindow(occurrence.expectedDeadline, policy);
   const tripStart = trip?.evidenceWindowStart ?? null;

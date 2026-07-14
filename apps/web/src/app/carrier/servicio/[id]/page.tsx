@@ -2,19 +2,31 @@ import { NavBar } from "@/components/ui";
 import { ServiceDetailView } from "@/components/service-detail-view";
 import { CarrierDudosoReview } from "@/components/carrier-dudoso-review";
 import {
-  clipTrackToRoute,
-  downsampleMapPoints,
   loadServiceDetail,
   type MapPoint,
 } from "@/lib/service-detail-data";
 import { suggestionsFromLedger } from "@/lib/carrier-unit-suggestions";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { getRepos } from "@/lib/db";
-import type { CandidateTrack } from "@/components/carrier-candidate-compare-map";
+import {
+  calibrationViewEnd,
+  cutTrackAtArrival,
+  cutTrackAtIndex,
+  findFirstGeofenceEntry,
+  type NamedGeofence,
+} from "@/lib/map-evidence";
+import type { ContractPolicy } from "@jtel/domain";
 
 export const dynamic = "force-dynamic";
 
 const TRACK_COLORS = ["#22c55e", "#f59e0b", "#38bdf8"];
+
+function formatShort(iso: string): string {
+  return new Date(iso).toLocaleString("es-MX", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
 
 export default async function CarrierServicioPage({
   params,
@@ -64,7 +76,10 @@ export default async function CarrierServicioPage({
   );
 
   const existingGt = await repos.occurrenceGroundTruth.findByOccurrence(id);
-  const showLabelForm = data.status === "no_cumplido";
+  const fact = occurrence?.complianceFact;
+  const isDudosoSinUnidad =
+    data.status === "no_cumplido" && !fact?.observedUnitId;
+  const showLabelForm = isDudosoSinUnidad;
 
   const evidencePoints = occurrence?.trip?.evidencePoints ?? [];
   const unitIdToImeis = new Map<string, string[]>();
@@ -76,46 +91,73 @@ export default async function CarrierServicioPage({
     unitIdToImeis.set(a.unitId, list);
   }
 
-  // Si el viaje no tiene puntos por unidad, caemos a telemetría de la ventana.
+  const policy = (occurrence?.profile?.contract?.policy ?? {}) as ContractPolicy;
+  const deadline = occurrence?.expectedDeadline ?? new Date(data.expectedDeadline);
+  const tripStart =
+    occurrence?.trip?.evidenceWindowStart ??
+    (data.tripWindowStart ? new Date(data.tripWindowStart) : new Date(deadline));
+  const viewEnd = calibrationViewEnd(deadline, policy);
+
+  // Geocercas destino de TODOS los contratos de este carrier (solo lectura / calibración).
+  const carrierContracts = await repos.contracts.findForCarrier(carrier.id);
+  const geofenceById = new Map<string, NamedGeofence>();
+  for (const c of carrierContracts) {
+    const profiles = await repos.profiles.findForContract(c.id);
+    for (const p of profiles) {
+      const g = p.geofence;
+      if (!g || g.role !== "destino" || !g.polygon || g.polygon.length < 3) continue;
+      if (geofenceById.has(g.id)) continue;
+      const scopeLabel =
+        c.plantGroup?.name ?? c.plant?.code ?? c.client?.name ?? "destino";
+      geofenceById.set(g.id, {
+        id: g.id,
+        name: `${g.name} · ${scopeLabel}`,
+        polygon: g.polygon as Array<{ lat: number; lng: number }>,
+      });
+    }
+  }
+  // Asegura que la geocerca de ESTE servicio esté (aunque role no sea destino).
+  if (data.geofencePolygon.length >= 3) {
+    const selfId = occurrence?.profile?.geofence?.id ?? `self-${id}`;
+    if (!geofenceById.has(selfId)) {
+      geofenceById.set(selfId, {
+        id: selfId,
+        name: occurrence?.profile?.geofence?.name
+          ? `${occurrence.profile.geofence.name} · este servicio`
+          : "Destino de este servicio",
+        polygon: data.geofencePolygon,
+      });
+    }
+  }
+  const namedGeofences = [...geofenceById.values()];
+
+  // Telemetría en ventana de calibración (dudosos sin unidad) o viaje (con llegada).
   let telemetryByUnit = new Map<string, MapPoint[]>();
-  const needsTelemetry = suggestions.some((s) => {
-    const n = evidencePoints.filter(
-      (p) => p.unitId === s.unitId || imeiToUnitId.get(p.imei) === s.unitId,
-    ).length;
-    return n < 2;
-  });
-  if (
-    needsTelemetry &&
-    occurrence?.trip?.evidenceWindowStart &&
-    occurrence.trip.evidenceWindowEnd
-  ) {
-    const imeis = suggestions.flatMap((s) => unitIdToImeis.get(s.unitId) ?? []);
-    if (imeis.length > 0) {
-      const telem = await repos.telemetry.getForImeis(
-        imeis,
-        occurrence.trip.evidenceWindowStart,
-        occurrence.trip.evidenceWindowEnd,
-      );
-      const byUnit = new Map<string, MapPoint[]>();
-      for (const p of telem) {
-        const unitId = p.unitId ?? imeiToUnitId.get(p.imei);
-        if (!unitId) continue;
-        const list = byUnit.get(unitId) ?? [];
-        list.push({
-          lat: p.latitude,
-          lng: p.longitude,
-          at: p.recordedAt.toISOString(),
-        });
-        byUnit.set(unitId, list);
-      }
-      for (const [uid, pts] of byUnit) {
-        pts.sort((a, b) => a.at.localeCompare(b.at));
-        telemetryByUnit.set(uid, pts);
-      }
+  const loadFrom = tripStart;
+  const loadTo = isDudosoSinUnidad
+    ? viewEnd
+    : (occurrence?.trip?.evidenceWindowEnd ?? viewEnd);
+
+  const imeis = suggestions.flatMap((s) => unitIdToImeis.get(s.unitId) ?? []);
+  if (imeis.length > 0) {
+    const telem = await repos.telemetry.getForImeis(imeis, loadFrom, loadTo);
+    for (const p of telem) {
+      const unitId = p.unitId ?? imeiToUnitId.get(p.imei);
+      if (!unitId) continue;
+      const list = telemetryByUnit.get(unitId) ?? [];
+      list.push({
+        lat: p.latitude,
+        lng: p.longitude,
+        at: p.recordedAt.toISOString(),
+      });
+      telemetryByUnit.set(unitId, list);
+    }
+    for (const [, pts] of telemetryByUnit) {
+      pts.sort((a, b) => a.at.localeCompare(b.at));
     }
   }
 
-  const tracks: CandidateTrack[] = suggestions.map((s, i) => {
+  const trackSources = suggestions.map((s, i) => {
     let raw: MapPoint[] = evidencePoints
       .filter((p) => {
         if (p.unitId === s.unitId) return true;
@@ -128,18 +170,48 @@ export default async function CarrierServicioPage({
       }))
       .sort((a, b) => a.at.localeCompare(b.at));
 
-    if (raw.length < 2) {
-      raw = telemetryByUnit.get(s.unitId) ?? [];
+    // Preferir telemetría extendida cuando hay más puntos (calibración).
+    const telem = telemetryByUnit.get(s.unitId) ?? [];
+    if (telem.length > raw.length) raw = telem;
+    else if (raw.length < 2) raw = telem;
+
+    // Con llegada registrada: cortar ahí (regla transversal).
+    if (fact?.observedArrivalAt) {
+      raw = cutTrackAtArrival(raw, fact.observedArrivalAt);
     }
 
-    const clipped = clipTrackToRoute(raw, data.kmlWaypoints);
+    // Dudoso sin unidad: marcar primera entrada a cualquier geocerca del carrier y cortar.
+    let entry: {
+      lat: number;
+      lng: number;
+      at: string;
+      geofenceName: string;
+    } | null = null;
+    if (isDudosoSinUnidad && raw.length > 0) {
+      const hit = findFirstGeofenceEntry(raw, namedGeofences);
+      if (hit) {
+        entry = {
+          lat: hit.point.lat,
+          lng: hit.point.lng,
+          at: hit.point.at,
+          geofenceName: hit.geofence.name,
+        };
+        raw = cutTrackAtIndex(raw, hit.index);
+      }
+    }
+
     return {
       unitId: s.unitId,
       label: s.label,
       color: TRACK_COLORS[i % TRACK_COLORS.length]!,
-      points: downsampleMapPoints(clipped, 350),
+      points: raw,
+      entry,
     };
   });
+
+  const calibrationWindowLabel = `${formatShort(loadFrom.toISOString())} → ${formatShort(
+    loadTo.toISOString(),
+  )}`;
 
   return (
     <main className="min-h-screen p-8">
@@ -166,9 +238,10 @@ export default async function CarrierServicioPage({
             accountSlug={carrier.slug}
             units={unitOptions}
             suggestions={suggestions}
-            tracks={tracks}
+            trackSources={trackSources}
             kmlWaypoints={data.kmlWaypoints}
-            geofence={data.geofencePolygon}
+            geofences={namedGeofences}
+            calibrationWindowLabel={calibrationWindowLabel}
             existing={
               existingGt
                 ? {
