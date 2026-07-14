@@ -35,6 +35,9 @@ importers:
       '@jtel/services':
         specifier: workspace:*
         version: link:../../packages/services
+      '@jtel/verification':
+        specifier: workspace:*
+        version: link:../../packages/verification
       leaflet:
         specifier: ^1.9.4
         version: 1.9.4
