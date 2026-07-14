@@ -8,7 +8,7 @@ export const maxDuration = 120;
  * J-Staff: purga perfiles + ocurrencias (cascada) de una planta.
  * No borra el contrato ni la planta. Limpia geocercas huérfanas de esa planta.
  *
- * Confirmación: confirmar debe ser exactamente el código de la planta (ej. "47").
+ * Confirmación: código de planta exacto + frase "PURGAR".
  */
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -36,6 +36,17 @@ export async function POST(request: Request) {
           encodeURIComponent(
             `Confirmación incorrecta. Escribe exactamente el código de planta: ${plant.code}`,
           ),
+        request.url,
+      ),
+    );
+  }
+
+  const frase = String(formData.get("frase") ?? "").trim();
+  if (frase !== "PURGAR") {
+    return NextResponse.redirect(
+      new URL(
+        "/jstaff/soporte?error=" +
+          encodeURIComponent('Falta confirmar con la palabra exacta "PURGAR" (mayúsculas).'),
         request.url,
       ),
     );

@@ -1,5 +1,6 @@
 import { getRepos } from "@/lib/db";
 import { ConfirmForm } from "@/components/confirm-form";
+import { PurgePlantForm } from "@/components/purge-plant-form";
 import { AppNav, Card } from "@/components/ui";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { confirmMessages } from "@/lib/confirm-messages";
@@ -137,61 +138,21 @@ export default async function JStaffSoportePage({
 
         <Card title="Purgar perfiles de prueba (planta)">
           <p className="mb-4 text-sm text-[var(--muted)]">
-            Para cuando creaste muchos perfiles incorrectos y ya tienen los ~30 días generados (la
-            UI de cliente ya no deja borrar).{" "}
-            <span className="text-white">
-              Borra TODOS los perfiles de esa planta, sus ocurrencias y hechos
-            </span>
-            . El contrato queda. También limpia geocercas de la planta que ya nadie use.{" "}
-            <span className="text-amber-200">No hay deshacer.</span>
+            Solo para basura irrecuperable. Si solo elegiste mal la geocerca, NO uses esto: en
+            Configuración → Perfiles → «Aplicar a todos».
           </p>
           {plants.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">
               No hay plantas independientes (sin campus) para purgar.
             </p>
           ) : (
-            <ConfirmForm
-              action="/api/jstaff/purge-plant-profiles"
-              method="post"
-              className="grid gap-3 md:grid-cols-2"
-              confirmTemplate={confirmMessages.purgePlantProfiles(
-                "{__selectLabel:plantId}",
-                "el código de la planta",
-              )}
-              pendingLabel="Purgando perfiles…"
-            >
-              <label className="block text-sm md:col-span-2">
-                Planta
-                <select name="plantId" required className={inputClass} defaultValue="">
-                  <option value="" disabled>
-                    Elige planta…
-                  </option>
-                  {plants.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.clientName} · {p.name} ({p.code})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-sm md:col-span-2">
-                Escribe el código de la planta para confirmar (ej. 47)
-                <input
-                  name="confirmar"
-                  required
-                  className={inputClass}
-                  placeholder="47"
-                  autoComplete="off"
-                />
-              </label>
-              <div className="md:col-span-2">
-                <button
-                  type="submit"
-                  className="rounded-lg border border-red-500/40 bg-red-500/15 px-4 py-2 text-sm font-medium text-red-100 hover:bg-red-500/25"
-                >
-                  Purgar perfiles + ocurrencias
-                </button>
-              </div>
-            </ConfirmForm>
+            <PurgePlantForm
+              plants={plants.map((p) => ({
+                id: p.id,
+                code: p.code,
+                label: `${p.clientName} · ${p.name}`,
+              }))}
+            />
           )}
         </Card>
 
