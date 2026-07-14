@@ -60,6 +60,7 @@ export function MonitoreoLive({
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [refreshedAt, setRefreshedAt] = useState<number>(Date.now());
   const [paused, setPaused] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
@@ -112,6 +113,7 @@ export function MonitoreoLive({
       }).addTo(map);
       overlayRef.current = L.layerGroup().addTo(map);
       map.setView([31.69, -106.42], 12);
+      setMapReady(true);
       setRefreshedAt(Date.now());
     });
     return () => {
@@ -120,7 +122,10 @@ export function MonitoreoLive({
         mapRef.current.remove();
         mapRef.current = null;
         overlayRef.current = null;
+        leafletRef.current = null;
       }
+      setMapReady(false);
+      didFitRef.current = false;
     };
   }, []);
 
@@ -200,7 +205,7 @@ export function MonitoreoLive({
       map.fitBounds(bounds, { padding: [24, 24] });
       didFitRef.current = true;
     }
-  }, [visibleRoutes, showKml, showHuella, showGeocercas]);
+  }, [mapReady, visibleRoutes, showKml, showHuella, showGeocercas]);
 
   const secondsAgo = Math.max(0, Math.round((Date.now() - refreshedAt) / 1000));
 
