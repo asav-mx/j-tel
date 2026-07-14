@@ -35,4 +35,6 @@ export const confirmMessages = {
     `¿Guardar cambios en la geocerca «${name}»? Aplica a perfiles y servicios futuros.`,
   deleteGeofence: (name: string) =>
     `¿Eliminar la geocerca «${name}»? Solo es posible si no está en un perfil o servicio generado.`,
+  purgePlantProfiles: (plantLabel: string, code: string) =>
+    `¿PURGAR perfiles y ocurrencias de ${plantLabel}? Se borran TODOS los perfiles de esa planta, sus ~30 días de servicios y hechos. El contrato queda. Escribe el código «${code}» para confirmar.`,
 } as const;

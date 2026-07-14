@@ -487,11 +487,9 @@ export async function ServiciosUnitView({
                           Contrato
                           <p className={`${inputClass} text-[var(--muted)]`}>
                             {p.contract?.name ?? "—"} ·{" "}
-                            {p.contract?.carrier?.name ??
-                              (p.contract?.carrierAccountId
-                                ? carrierById.get(p.contract.carrierAccountId)?.name
-                                : null) ??
-                              "carrier"}
+                            {(p.contract?.carrierAccountId
+                              ? carrierById.get(p.contract.carrierAccountId)?.name
+                              : null) ?? "carrier"}
                           </p>
                           <p className="mt-1 text-xs text-[var(--muted)]">
                             El contrato no se puede cambiar aquí.
