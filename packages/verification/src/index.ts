@@ -323,6 +323,96 @@ export function directionSimilarity(
   return Math.max(0, Math.min(1, cos));
 }
 
+/**
+ * Parámetros de la identificación unidad↔ruta (match). Los umbrales y el
+ * corredor vienen de la política del contrato; nunca constantes de un archivo.
+ */
+export type RouteMatchParams = {
+  kmlWaypoints?: Array<{ lat: number; lng: number }>;
+  geofencePolygon: Array<{ lat: number; lng: number }>;
+  /** Radio del corredor en km (ya acotado por quien llama). */
+  corridorKm: number;
+  /** Umbral A (kmlMatchMinPct) — cobertura de ruta. */
+  minKmlPct: number;
+  /** Umbral B (kmlCorridorMinPct) — precisión de corredor. */
+  minCorridorPct: number;
+  /** Tope de Fréchet (km) para `shapeOk`. */
+  frechetMaxKm: number;
+  /** IDF por segmento para métrica A ponderada; null = A sin ponderar. */
+  idf?: Map<string, number> | null;
+};
+
+/** Evaluación de una unidad contra una ruta (misma matemática en todos lados). */
+export type RouteMatchEvaluation = {
+  arrivalAt: Date | null;
+  routeMatchPct: number;
+  corridorPrecisionPct: number;
+  frechetKm: number | null;
+  directionSimilarity: number | null;
+  shapeOk: boolean;
+  /** Sirvió la ruta: llegó a la geocerca y (sin KML) o (A ≥ umbral A ∧ B ≥ umbral B). */
+  servedRoute: boolean;
+};
+
+/**
+ * Identificación unidad↔ruta: ÚNICA implementación del match, compartida por el
+ * árbitro (`verifyService`) y por la torre (monitoreo en vivo). El árbitro la
+ * evalúa sobre la ventana de evidencia ya cerrada; la torre sobre la ventana
+ * truncada a `now`. Recibe los puntos GPS de UNA unidad, ya ordenados por tiempo.
+ *
+ * No debe existir una segunda implementación de esta lógica en ningún lado.
+ */
+export function evaluateUnitRouteMatch(
+  sortedPoints: GpsPoint[],
+  params: RouteMatchParams,
+): RouteMatchEvaluation {
+  const hasKml = (params.kmlWaypoints?.length ?? 0) > 0;
+  const arrivalAt = findGeofenceEntry(sortedPoints, params.geofencePolygon);
+  const routeMatchPct = hasKml
+    ? params.idf
+      ? computeWeightedRouteMatchPct(sortedPoints, params.kmlWaypoints!, params.idf, params.corridorKm)
+      : computeRouteMatchPct(sortedPoints, params.kmlWaypoints!, params.corridorKm)
+    : arrivalAt
+      ? 100
+      : 0;
+  const corridorPrecisionPct = hasKml
+    ? computeCorridorPrecisionPct(sortedPoints, params.kmlWaypoints!, params.corridorKm)
+    : arrivalAt
+      ? 100
+      : 0;
+  const frechetKm = hasKml
+    ? discreteFrechetKm(
+        sortedPoints.map((p) => ({ lat: p.latitude, lng: p.longitude })),
+        params.kmlWaypoints!,
+      )
+    : null;
+  const dirSim = hasKml
+    ? directionSimilarity(sortedPoints, params.kmlWaypoints!)
+    : null;
+
+  // Fréchet / dirección desambiguan el ranking; el match duro es geocerca + A∧B.
+  // Un tope duro de Fréchet descartaba recorridos reales con muestreo irregular.
+  const shapeOk =
+    !hasKml ||
+    frechetKm === null ||
+    sortedPoints.length < 3 ||
+    frechetKm <= params.frechetMaxKm;
+  const servedRoute =
+    arrivalAt !== null &&
+    (!hasKml ||
+      (routeMatchPct >= params.minKmlPct && corridorPrecisionPct >= params.minCorridorPct));
+
+  return {
+    arrivalAt,
+    routeMatchPct,
+    corridorPrecisionPct,
+    frechetKm,
+    directionSimilarity: dirSim,
+    shapeOk,
+    servedRoute,
+  };
+}
+
 export function groupPointsByImei(points: GpsPoint[]): Map<string, GpsPoint[]> {
   const groups = new Map<string, GpsPoint[]>();
   for (const point of points) {
@@ -529,40 +619,24 @@ export function verifyService(input: VerificationInput): VerificationResult {
     const sorted = [...points].sort(
       (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
     );
-    const arrivalAt = findGeofenceEntry(sorted, input.geofencePolygon);
-    const routeMatchPct = hasKml
-      ? idf
-        ? computeWeightedRouteMatchPct(sorted, input.kmlWaypoints!, idf, corridorKm)
-        : computeRouteMatchPct(sorted, input.kmlWaypoints!, corridorKm)
-      : arrivalAt
-        ? 100
-        : 0;
-    const corridorPrecisionPct = hasKml
-      ? computeCorridorPrecisionPct(sorted, input.kmlWaypoints!, corridorKm)
-      : arrivalAt
-        ? 100
-        : 0;
-    const frechetKm = hasKml
-      ? discreteFrechetKm(
-          sorted.map((p) => ({ lat: p.latitude, lng: p.longitude })),
-          input.kmlWaypoints!,
-        )
-      : null;
-    const dirSim = hasKml
-      ? directionSimilarity(sorted, input.kmlWaypoints!)
-      : null;
-
-    // Fréchet / dirección desambiguan el ranking; el match duro es geocerca + A∧B.
-    // Un tope duro de Fréchet descartaba recorridos reales con muestreo irregular.
-    const shapeOk =
-      !hasKml ||
-      frechetKm === null ||
-      sorted.length < 3 ||
-      frechetKm <= frechetMaxKm;
-    const servedRoute =
-      arrivalAt !== null &&
-      (!hasKml ||
-        (routeMatchPct >= minKmlPct && corridorPrecisionPct >= minCorridorPct));
+    // Identificación unidad↔ruta: única implementación compartida con la torre.
+    const {
+      arrivalAt,
+      routeMatchPct,
+      corridorPrecisionPct,
+      frechetKm,
+      directionSimilarity: dirSim,
+      shapeOk,
+      servedRoute,
+    } = evaluateUnitRouteMatch(sorted, {
+      kmlWaypoints: input.kmlWaypoints,
+      geofencePolygon: input.geofencePolygon,
+      corridorKm,
+      minKmlPct,
+      minCorridorPct,
+      frechetMaxKm,
+      idf,
+    });
 
     candidateUnits.push({
       unitId: imei,

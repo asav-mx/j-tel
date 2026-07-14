@@ -2,8 +2,7 @@ import { getRepos } from "@/lib/db";
 import type { ContractPolicy, GpsPoint, OperationalScope } from "@jtel/domain";
 import { computeEvidenceWindow } from "@jtel/domain";
 import {
-  computeCorridorPrecisionPct,
-  computeRouteMatchPct,
+  evaluateUnitRouteMatch,
   findGeofenceEntry,
   minDistanceToRouteKm,
 } from "@jtel/verification";
@@ -303,8 +302,20 @@ export async function loadMonitoreo(opts: {
       );
       if (inWindow.length < 2) continue;
       const pts = downsample(inWindow, 200);
-      const a = computeRouteMatchPct(pts, d.kml, d.corridorKm);
-      const b = computeCorridorPrecisionPct(pts, d.kml, d.corridorKm);
+      // Misma identificación unidad↔ruta que el árbitro (@jtel/verification):
+      // la torre NO mantiene una segunda matemática del match. Evaluada sobre
+      // la ventana truncada a `now`; umbrales de la política del contrato.
+      const evalRes = evaluateUnitRouteMatch(pts, {
+        kmlWaypoints: d.kml,
+        geofencePolygon: d.geofence,
+        corridorKm: d.corridorKm,
+        minKmlPct: d.matchMinPct,
+        minCorridorPct: d.corridorMinPct,
+        frechetMaxKm: 0.8,
+        idf: null,
+      });
+      const a = evalRes.routeMatchPct;
+      const b = evalRes.corridorPrecisionPct;
       // Identificación en vivo: la unidad va SOBRE el corredor (B ≥ umbral B del
       // contrato) y ya cubrió algo de la ruta (A > 0). A todavía puede estar por
       // debajo del umbral A del contrato porque el avance crece con el reloj.
