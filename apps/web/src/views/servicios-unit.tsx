@@ -31,7 +31,7 @@ const DAYS: Array<{ value: number; label: string }> = [
 const createdLabels: Record<string, string> = {
   perfil: "Perfil de servicio creado. Ya puedes generar sus ocurrencias.",
   perfil_actualizado:
-    "Perfil actualizado. Los cambios aplican a ocurrencias futuras; las ya generadas conservan su configuración.",
+    "Perfil actualizado. Los cambios aplican hacia adelante (verificación y monitoreo leen la geocerca actual del perfil).",
   generado: "Ocurrencias generadas (ventana de 30 días).",
   generado_acotado: "Ocurrencias generadas (rango acotado a 30 días / vigencia del contrato).",
   ya_existian: "Esas fechas ya tenían ocurrencias; no se crearon duplicados.",
@@ -222,11 +222,13 @@ export async function ServiciosUnitView({
         ) : null}
         {created ? (
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-            {created === "generado" || created === "generado_acotado"
-              ? `${createdLabels[created]} ${n ? `(${n} nuevas)` : ""}`
-              : created === "ya_existian"
-                ? `${createdLabels.ya_existian}${n ? ` (${n} días)` : ""}`
-                : createdLabels[created] ?? "Guardado."}
+            {created.startsWith("geocerca_actualizada_")
+              ? `Geocerca aplicada a ${created.replace("geocerca_actualizada_", "")} perfiles. Ya puedes eliminar la geocerca que no uses.`
+              : created === "generado" || created === "generado_acotado"
+                ? `${createdLabels[created]} ${n ? `(${n} nuevas)` : ""}`
+                : created === "ya_existian"
+                  ? `${createdLabels.ya_existian}${n ? ` (${n} días)` : ""}`
+                  : (createdLabels[created] ?? "Guardado.")}
           </div>
         ) : null}
 
@@ -335,7 +337,43 @@ export async function ServiciosUnitView({
           {profiles.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">Sin perfiles para esta unidad.</p>
           ) : (
-            <ul className="space-y-3 text-sm">
+            <>
+              {unit.kind === "plant" && geofences.length > 0 ? (
+                <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/10 p-4">
+                  <p className="mb-3 text-sm text-amber-100">
+                    ¿Todos los perfiles apuntan a la geocerca equivocada? Corrige de un jalón:
+                    elige la buena y se aplica a los {profiles.length} perfiles.
+                  </p>
+                  <ConfirmForm
+                    action="/api/cliente/servicios"
+                    method="post"
+                    className="flex flex-wrap items-end gap-3"
+                    confirmMessage={confirmMessages.bulkSetGeofence(operationalUnitLabel(unit))}
+                    pendingLabel="Aplicando geocerca…"
+                  >
+                    <input type="hidden" name="clientSlug" value={client.slug} />
+                    <input type="hidden" name="action" value="bulk_geofence" />
+                    {scopeHidden}
+                    <label className="min-w-[220px] flex-1 text-sm">
+                      Geocerca correcta
+                      <select name="geofenceId" required className={inputClass} defaultValue="">
+                        <option value="" disabled>
+                          Elige (ej. Tecma Planta 47)…
+                        </option>
+                        {geofences.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {geofenceOptionLabel(g)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button type="submit" className={btnClass}>
+                      Aplicar a todos los perfiles
+                    </button>
+                  </ConfirmForm>
+                </div>
+              ) : null}
+              <ul className="space-y-3 text-sm">
               {profiles.map((p) => {
                 const contractFrom = asIsoDate(p.contract?.validFrom);
                 const contractTo = asIsoDate(p.contract?.validTo);
@@ -454,9 +492,9 @@ export async function ServiciosUnitView({
                       </p>
                     </>
                   )}
-                  <details className="mt-3 rounded-lg border border-white/10 p-3">
-                    <summary className="cursor-pointer text-xs text-[var(--accent)]">
-                      Editar perfil
+                  <details className="mt-3 rounded-lg border border-[var(--accent)]/40 bg-black/20 p-3">
+                    <summary className="cursor-pointer list-none text-sm font-medium text-[var(--accent)]">
+                      ▸ Editar perfil / cambiar geocerca
                     </summary>
                     <ConfirmForm
                       action="/api/cliente/servicios"
@@ -555,6 +593,7 @@ export async function ServiciosUnitView({
               );
               })}
             </ul>
+            </>
           )}
         </Card>
 

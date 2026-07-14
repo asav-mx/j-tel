@@ -1532,6 +1532,39 @@ export class ServiceProfileRepository {
     if (!updated) return { ok: false, reason: "not_found" };
     return { ok: true, profile: updated };
   }
+
+  /**
+   * Cambia la geocerca de destino de TODOS los perfiles de los contratos
+   * de una planta. El motor lee la geocerca viva del perfil al verificar.
+   */
+  async bulkSetGeofenceForPlant(
+    plantId: string,
+    clientAccountId: string,
+    geofenceId: string,
+  ): Promise<{ updated: number }> {
+    const plant = await this.db.query.plants.findFirst({
+      where: and(eq(plants.id, plantId), eq(plants.clientAccountId, clientAccountId)),
+    });
+    if (!plant) return { updated: 0 };
+
+    const plantContracts = await this.db.query.serviceContracts.findMany({
+      where: and(
+        eq(serviceContracts.plantId, plantId),
+        eq(serviceContracts.clientAccountId, clientAccountId),
+      ),
+      columns: { id: true },
+    });
+    const contractIds = plantContracts.map((c) => c.id);
+    if (contractIds.length === 0) return { updated: 0 };
+
+    const updated = await this.db
+      .update(serviceProfiles)
+      .set({ geofenceId })
+      .where(inArray(serviceProfiles.contractId, contractIds))
+      .returning({ id: serviceProfiles.id });
+
+    return { updated: updated.length };
+  }
 }
 
 export class OccurrenceRepository {
