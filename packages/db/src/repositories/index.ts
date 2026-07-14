@@ -358,6 +358,72 @@ export class GeofenceRepository {
       orderBy: (g, { asc }) => [asc(g.name)],
     });
   }
+
+  async update(
+    id: string,
+    data: {
+      role?: "destino" | "base" | "caseta" | "otro";
+      name?: string;
+      polygon?: Array<{ lat: number; lng: number }>;
+    },
+  ) {
+    const patch: Record<string, unknown> = {};
+    if (data.role !== undefined) patch.role = data.role;
+    if (data.name !== undefined) patch.name = data.name;
+    if (data.polygon !== undefined) patch.polygon = data.polygon;
+    if (Object.keys(patch).length === 0) return null;
+
+    const [row] = await this.db
+      .update(geofences)
+      .set(patch)
+      .where(eq(geofences.id, id))
+      .returning();
+    return row ?? null;
+  }
+
+  /** Perfiles u ocurrencias ya generadas bloquean borrado. */
+  async deleteBlockReason(
+    geofenceId: string,
+  ): Promise<"profiles" | "occurrences" | null> {
+    const profile = await this.db.query.serviceProfiles.findFirst({
+      where: eq(serviceProfiles.geofenceId, geofenceId),
+      columns: { id: true },
+    });
+    if (profile) return "profiles";
+
+    const occ = await this.db.query.serviceOccurrences.findFirst({
+      where: eq(serviceOccurrences.expectedGeofenceId, geofenceId),
+      columns: { id: true },
+    });
+    if (occ) return "occurrences";
+    return null;
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const rows = await this.db.delete(geofences).where(eq(geofences.id, id)).returning();
+    return rows.length > 0;
+  }
+
+  /** Verifica que la geocerca pertenezca al cliente (planta o campus). */
+  async belongsToClient(geofenceId: string, clientAccountId: string): Promise<boolean> {
+    const g = await this.findById(geofenceId);
+    if (!g) return false;
+    if (g.ownerPlantId) {
+      const plant = await this.db.query.plants.findFirst({
+        where: eq(plants.id, g.ownerPlantId),
+        columns: { clientAccountId: true },
+      });
+      return plant?.clientAccountId === clientAccountId;
+    }
+    if (g.ownerPlantGroupId) {
+      const group = await this.db.query.plantGroups.findFirst({
+        where: eq(plantGroups.id, g.ownerPlantGroupId),
+        columns: { clientAccountId: true },
+      });
+      return group?.clientAccountId === clientAccountId;
+    }
+    return false;
+  }
 }
 
 export class FleetRepository {
