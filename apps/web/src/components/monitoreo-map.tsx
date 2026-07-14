@@ -185,15 +185,18 @@ export function MonitoreoLive({
       }
       if (r.currentPoint) {
         const isAlert = r.state === "alerta";
+        const isArrival = r.state === "llego";
         L.circleMarker([r.currentPoint.lat, r.currentPoint.lng], {
-          radius: 7,
-          color: isAlert ? "#ef4444" : color,
+          radius: isArrival ? 6 : 7,
+          color: isAlert ? "#ef4444" : isArrival ? "#fbbf24" : color,
           weight: 3,
-          fillColor: color,
+          fillColor: isArrival ? "#fbbf24" : color,
           fillOpacity: 0.9,
         })
           .bindTooltip(
-            `${r.matchedUnitLabel ?? "Unidad"} · ${STATE_LABEL[r.state]} · ${r.profileCode}`,
+            isArrival
+              ? `Llegada · ${r.profileCode} · ${r.matchedUnitLabel ?? "—"} (servicio terminado)`
+              : `${r.matchedUnitLabel ?? "Unidad"} · ${STATE_LABEL[r.state]} · ${r.profileCode}`,
             { sticky: true },
           )
           .addTo(overlay);

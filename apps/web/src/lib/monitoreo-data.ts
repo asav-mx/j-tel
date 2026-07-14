@@ -290,7 +290,22 @@ export async function loadMonitoreo(opts: {
       coveragePct = Math.round(match.routeMatchPct * 10) / 10;
       corridorPct = Math.round(match.corridorPct * 10) / 10;
 
-      const onCorridor = match.points.filter(
+      // Preferir llegada oficial del motor si ya existe; si no, detectar entrada a geocerca.
+      const officialArrival = o.complianceFact?.observedArrivalAt ?? null;
+      const entryDetected =
+        d.geofence.length >= 3 ? findGeofenceEntry(match.points, d.geofence) : null;
+      const arrivalCutoff: Date | null = officialArrival
+        ? new Date(officialArrival)
+        : entryDetected;
+      arrivalAt = arrivalCutoff ? arrivalCutoff.toISOString() : null;
+
+      // Recortar al momento de llegada: el servicio terminó ahí.
+      // No seguir transmitiendo GPS post-llegada (p. ej. casa del chofer).
+      const servicePoints = arrivalCutoff
+        ? match.points.filter((p) => p.timestamp.getTime() <= arrivalCutoff.getTime())
+        : match.points;
+
+      const onCorridor = servicePoints.filter(
         (p) =>
           minDistanceToRouteKm({ lat: p.latitude, lng: p.longitude }, d.kml) <=
           d.corridorKm,
@@ -303,30 +318,39 @@ export async function loadMonitoreo(opts: {
         })),
         150,
       );
-      const last = match.points[match.points.length - 1]!;
-      currentPoint = {
-        lat: last.latitude,
-        lng: last.longitude,
-        at: last.timestamp.toISOString(),
-      };
 
-      const entry =
-        d.geofence.length >= 3 ? findGeofenceEntry(match.points, d.geofence) : null;
-      arrivalAt = entry ? entry.toISOString() : null;
-
-      const lastOffRoute =
-        minDistanceToRouteKm({ lat: last.latitude, lng: last.longitude }, d.kml) >
-        d.corridorKm * OFF_CORRIDOR_FACTOR;
-
-      if (arrivalAt) {
+      if (arrivalCutoff) {
         state = "llego";
-      } else if (lastOffRoute) {
-        state = "alerta";
-        alertReason = "La unidad se salió del corredor de la ruta";
-      } else if (match.routeMatchPct >= ADVANCING_MIN_PCT) {
-        state = "avanzando";
+        // Marcador estático de llegada (último punto del servicio), NO la posición en vivo.
+        const arrivalPt =
+          servicePoints[servicePoints.length - 1] ??
+          match.points.find((p) => p.timestamp.getTime() >= arrivalCutoff.getTime()) ??
+          null;
+        currentPoint = arrivalPt
+          ? {
+              lat: arrivalPt.latitude,
+              lng: arrivalPt.longitude,
+              at: arrivalPt.timestamp.toISOString(),
+            }
+          : null;
       } else {
-        state = "en_ruta";
+        const last = servicePoints[servicePoints.length - 1]!;
+        currentPoint = {
+          lat: last.latitude,
+          lng: last.longitude,
+          at: last.timestamp.toISOString(),
+        };
+        const lastOffRoute =
+          minDistanceToRouteKm({ lat: last.latitude, lng: last.longitude }, d.kml) >
+          d.corridorKm * OFF_CORRIDOR_FACTOR;
+        if (lastOffRoute) {
+          state = "alerta";
+          alertReason = "La unidad se salió del corredor de la ruta";
+        } else if (match.routeMatchPct >= ADVANCING_MIN_PCT) {
+          state = "avanzando";
+        } else {
+          state = "en_ruta";
+        }
       }
     } else {
       const started = now.getTime() >= d.windowStart.getTime();
