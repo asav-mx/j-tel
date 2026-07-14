@@ -2,8 +2,8 @@ import { getRepos } from "@/lib/db";
 import { Card } from "@/components/ui";
 import { UnitShell } from "@/components/unit-shell";
 import { OccurrenceTable, toOccurrenceRow } from "@/components/occurrence-table";
-import { ComplianceDateFilter } from "@/components/compliance-date-filter";
 import { ComplianceSelectFilter } from "@/components/compliance-select-filter";
+import { DateRangeFilter } from "@/components/date-range-filter";
 import type { UnitPageContext } from "@/lib/unit-context";
 import {
   contractMatchesScope,
@@ -11,103 +11,16 @@ import {
 } from "@/lib/operational-scope";
 import { operationalScopeFromContract } from "@jtel/domain";
 import { unitConfigStepHref, unitComplianceHref } from "@/lib/unit-routes";
+import {
+  addDaysIso,
+  isIsoDate,
+  parseSearchParam,
+  resolveDateRange,
+  todayIso,
+  type DateRange,
+} from "@/lib/date-range";
 
 type StatusFilter = "all" | "sin_verificar" | "cumplido" | "no_cumplido" | "pendiente_evidencia";
-type DatePreset = "hoy_ayer" | "hoy" | "ayer" | "7d" | "todos";
-/** Preset corto o día concreto `YYYY-MM-DD`. */
-type FechaFilter = DatePreset | `${number}-${number}-${number}`;
-
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function addDaysIso(fromIso: string, days: number): string {
-  const d = new Date(`${fromIso}T00:00:00`);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-function parseParam(
-  sp: Record<string, string | string[] | undefined> | undefined,
-  key: string,
-): string | null {
-  const v = sp?.[key];
-  if (typeof v === "string" && v.length > 0) {
-    // Mangled copy-paste: account=tecma&fecha=2026-07-09 collapsed into one value.
-    if (key !== "account" && v.includes("&")) {
-      return v.split("&")[0] || null;
-    }
-    return v;
-  }
-
-  // Recover fecha (etc.) stuck inside account=tecma%26fecha%3D…
-  if (key !== "account" && typeof sp?.account === "string") {
-    const match = sp.account.match(new RegExp(`(?:^|&)${key}=([^&]+)`));
-    if (match?.[1]) return decodeURIComponent(match[1]);
-  }
-
-  return null;
-}
-
-function isIsoDate(value: string): value is `${number}-${number}-${number}` {
-  if (!ISO_DATE_RE.test(value)) return false;
-  const t = Date.parse(`${value}T00:00:00`);
-  return Number.isFinite(t);
-}
-
-function formatDayLabel(iso: string): string {
-  const d = new Date(`${iso}T12:00:00`);
-  return d.toLocaleDateString("es-MX", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function dateRangeForFecha(fecha: FechaFilter): { from?: Date; to?: Date; label: string } {
-  if (isIsoDate(fecha)) {
-    return {
-      from: new Date(`${fecha}T00:00:00`),
-      to: new Date(`${fecha}T00:00:00`),
-      label: formatDayLabel(fecha),
-    };
-  }
-
-  const today = todayIso();
-  const yesterday = addDaysIso(today, -1);
-  switch (fecha) {
-    case "hoy":
-      return {
-        from: new Date(`${today}T00:00:00`),
-        to: new Date(`${today}T00:00:00`),
-        label: "Hoy",
-      };
-    case "ayer":
-      return {
-        from: new Date(`${yesterday}T00:00:00`),
-        to: new Date(`${yesterday}T00:00:00`),
-        label: "Ayer",
-      };
-    case "7d":
-      return {
-        from: new Date(`${addDaysIso(today, -6)}T00:00:00`),
-        to: new Date(`${today}T00:00:00`),
-        label: "Últimos 7 días",
-      };
-    case "todos":
-      return { label: "Todos" };
-    case "hoy_ayer":
-    default:
-      return {
-        from: new Date(`${yesterday}T00:00:00`),
-        to: new Date(`${today}T00:00:00`),
-        label: "Hoy y ayer",
-      };
-  }
-}
 
 function chipClass(active: boolean): string {
   return active
@@ -118,33 +31,84 @@ function chipClass(active: boolean): string {
 function complianceHref(
   base: string,
   params: {
-    fecha?: FechaFilter;
+    desde?: string;
+    hasta?: string;
     estado?: StatusFilter;
     turno?: string | null;
     perfil?: string | null;
   },
 ): string {
   const url = new URL(base, "http://local");
-  if (params.fecha && params.fecha !== "hoy_ayer") url.searchParams.set("fecha", params.fecha);
+  if (params.desde) url.searchParams.set("desde", params.desde);
+  if (params.hasta) url.searchParams.set("hasta", params.hasta);
   if (params.estado && params.estado !== "all") url.searchParams.set("estado", params.estado);
   if (params.turno) url.searchParams.set("turno", params.turno);
   if (params.perfil) url.searchParams.set("perfil", params.perfil);
   return `${url.pathname}${url.search}`;
 }
 
-function parseFechaFilter(raw: string | null): FechaFilter {
-  if (!raw) return "hoy_ayer";
-  if (isIsoDate(raw)) return raw;
-  if (
-    raw === "hoy" ||
-    raw === "ayer" ||
-    raw === "7d" ||
-    raw === "todos" ||
-    raw === "hoy_ayer"
-  ) {
-    return raw;
+/** Compat: enlaces viejos `?fecha=7d|hoy|ayer|YYYY-MM-DD` → rango desde/hasta. */
+function rangeFromLegacyFecha(
+  sp: Record<string, string | string[] | undefined> | undefined,
+): DateRange | null {
+  const hasDesde = isIsoDate(parseSearchParam(sp, "desde"));
+  const hasHasta = isIsoDate(parseSearchParam(sp, "hasta"));
+  if (hasDesde || hasHasta) return null;
+
+  const fecha = parseSearchParam(sp, "fecha");
+  if (!fecha) return null;
+
+  const today = todayIso();
+  const yesterday = addDaysIso(today, -1);
+
+  if (isIsoDate(fecha)) {
+    return {
+      fromIso: fecha,
+      toIso: fecha,
+      from: new Date(`${fecha}T00:00:00`),
+      to: new Date(`${fecha}T00:00:00`),
+      label: fecha,
+    };
   }
-  return "hoy_ayer";
+  if (fecha === "hoy") {
+    return {
+      fromIso: today,
+      toIso: today,
+      from: new Date(`${today}T00:00:00`),
+      to: new Date(`${today}T00:00:00`),
+      label: "Hoy",
+    };
+  }
+  if (fecha === "ayer") {
+    return {
+      fromIso: yesterday,
+      toIso: yesterday,
+      from: new Date(`${yesterday}T00:00:00`),
+      to: new Date(`${yesterday}T00:00:00`),
+      label: "Ayer",
+    };
+  }
+  if (fecha === "7d") {
+    const fromIso = addDaysIso(today, -6);
+    return {
+      fromIso,
+      toIso: today,
+      from: new Date(`${fromIso}T00:00:00`),
+      to: new Date(`${today}T00:00:00`),
+      label: "Últimos 7 días",
+    };
+  }
+  if (fecha === "todos") {
+    const fromIso = addDaysIso(today, -365);
+    return {
+      fromIso,
+      toIso: today,
+      from: new Date(`${fromIso}T00:00:00`),
+      to: new Date(`${today}T00:00:00`),
+      label: "Último año",
+    };
+  }
+  return null;
 }
 
 export async function UnitComplianceView({
@@ -160,11 +124,9 @@ export async function UnitComplianceView({
   const unitLabel = operationalUnitLabel(unit);
   const baseHref = unitComplianceHref(unit, client.slug);
   const perfilesHref = unitConfigStepHref(unit, client.slug, "servicios");
+  const actionPath = baseHref.split("?")[0]!;
 
-  const fecha = parseFechaFilter(parseParam(sp, "fecha"));
-  const fechaIso = isIsoDate(fecha) ? fecha : null;
-
-  const estadoRaw = parseParam(sp, "estado") as StatusFilter | null;
+  const estadoRaw = parseSearchParam(sp, "estado") as StatusFilter | null;
   const estado: StatusFilter =
     estadoRaw === "sin_verificar" ||
     estadoRaw === "cumplido" ||
@@ -174,10 +136,11 @@ export async function UnitComplianceView({
       ? estadoRaw
       : "all";
 
-  const turnoFilter = parseParam(sp, "turno");
-  const perfilFilter = parseParam(sp, "perfil");
+  const turnoFilter = parseSearchParam(sp, "turno");
+  const perfilFilter = parseSearchParam(sp, "perfil");
 
-  const range = dateRangeForFecha(fecha);
+  const range =
+    rangeFromLegacyFecha(sp) ?? resolveDateRange(sp, { defaultDaysBack: 1 });
 
   const [occurrences, allProfiles, routeShifts] = await Promise.all([
     repos.occurrences.findForScope(scope, range.from, range.to),
@@ -197,7 +160,6 @@ export async function UnitComplianceView({
     profiles: profiles.length,
   };
 
-  // Turnos disponibles: de perfiles del alcance (y de rutas del alcance como respaldo).
   const shiftById = new Map<string, { id: string; name: string; startTime: string }>();
   for (const p of profiles) {
     const shift = p.routeShift?.shift;
@@ -219,8 +181,8 @@ export async function UnitComplianceView({
       });
     }
   }
-  const shifts = [...shiftById.values()].sort((a, b) =>
-    a.startTime.localeCompare(b.startTime) || a.name.localeCompare(b.name),
+  const shifts = [...shiftById.values()].sort(
+    (a, b) => a.startTime.localeCompare(b.startTime) || a.name.localeCompare(b.name),
   );
 
   const profilesForSelect = turnoFilter
@@ -254,14 +216,6 @@ export async function UnitComplianceView({
     toOccurrenceRow(occ, "/cliente/servicio", client.slug, { showPlant: false }),
   );
 
-  const datePresets: Array<{ id: DatePreset; label: string }> = [
-    { id: "hoy_ayer", label: "Hoy y ayer" },
-    { id: "hoy", label: "Hoy" },
-    { id: "ayer", label: "Ayer" },
-    { id: "7d", label: "7 días" },
-    { id: "todos", label: "Todos" },
-  ];
-
   const statusFilters: Array<{ id: StatusFilter; label: string }> = [
     { id: "all", label: "Todos" },
     { id: "sin_verificar", label: "Sin verificar" },
@@ -284,8 +238,7 @@ export async function UnitComplianceView({
 
         <p className="text-sm text-[var(--muted)]">
           Servicios verificados de <span className="text-white">{unitLabel}</span> contra el GPS del
-          carrier. Por defecto ves <span className="text-white">hoy y ayer</span>; usa el selector de
-          día para una fecha concreta.
+          carrier. Elige el rango de fechas que quieras revisar.
         </p>
 
         <Card title="Cobertura de rutas">
@@ -327,32 +280,16 @@ export async function UnitComplianceView({
         </div>
 
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-[var(--muted)]">Fecha:</span>
-            {datePresets.map((p) => (
-              <a
-                key={p.id}
-                href={complianceHref(baseHref, {
-                  fecha: p.id,
-                  estado,
-                  turno: turnoFilter,
-                  perfil: perfilFilter,
-                })}
-                className={chipClass(fecha === p.id)}
-              >
-                {p.label}
-              </a>
-            ))}
-            <ComplianceDateFilter
-              value={fechaIso}
-              filterState={{
-                baseHref,
-                estado,
-                turno: turnoFilter,
-                perfil: perfilFilter,
-              }}
-            />
-          </div>
+          <DateRangeFilter
+            action={actionPath}
+            range={range}
+            hidden={{
+              account: client.slug,
+              estado: estado !== "all" ? estado : undefined,
+              turno: turnoFilter,
+              perfil: perfilFilter,
+            }}
+          />
 
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-[var(--muted)]">Estado:</span>
@@ -360,7 +297,8 @@ export async function UnitComplianceView({
               <a
                 key={s.id}
                 href={complianceHref(baseHref, {
-                  fecha,
+                  desde: range.fromIso,
+                  hasta: range.toIso,
                   estado: s.id,
                   turno: turnoFilter,
                   perfil: perfilFilter,
@@ -377,7 +315,8 @@ export async function UnitComplianceView({
               <span className="text-sm text-[var(--muted)]">Turno:</span>
               <a
                 href={complianceHref(baseHref, {
-                  fecha,
+                  desde: range.fromIso,
+                  hasta: range.toIso,
                   estado,
                   turno: null,
                   perfil: perfilFilter,
@@ -390,37 +329,31 @@ export async function UnitComplianceView({
                 <a
                   key={s.id}
                   href={complianceHref(baseHref, {
-                    fecha,
+                    desde: range.fromIso,
+                    hasta: range.toIso,
                     estado,
                     turno: s.id,
-                    // Al cambiar turno, limpia perfil si ya no aplica
                     perfil: null,
                   })}
                   className={chipClass(turnoFilter === s.id)}
                 >
                   {s.name}
-                  {s.startTime ? ` · ${s.startTime}` : ""}
                 </a>
               ))}
             </div>
           ) : null}
 
-          {profiles.length > 0 ? (
+          {profileOptions.length > 0 ? (
             <ComplianceSelectFilter
               label="Perfil"
               name="perfil"
-              value={
-                perfilFilter &&
-                profilesForSelect.some((p) => p.id === perfilFilter || p.code === perfilFilter)
-                  ? profilesForSelect.find((p) => p.id === perfilFilter || p.code === perfilFilter)
-                      ?.id ?? null
-                  : null
-              }
-              allLabel="Todos los perfiles"
+              value={perfilFilter}
               options={profileOptions}
+              allLabel="Todos los perfiles"
               filterState={{
                 baseHref,
-                fecha,
+                desde: range.fromIso,
+                hasta: range.toIso,
                 estado,
                 turno: turnoFilter,
               }}
@@ -429,7 +362,7 @@ export async function UnitComplianceView({
         </div>
 
         <Card title={`Servicios — ${range.label} (${rows.length})`}>
-          <OccurrenceTable rows={rows} showPlant={false} showCarrier />
+          <OccurrenceTable rows={rows} showPlant={false} />
         </Card>
       </div>
     </main>

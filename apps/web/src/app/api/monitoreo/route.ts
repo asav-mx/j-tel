@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { loadJornada } from "@/lib/jornada-data";
+import { loadMonitoreo } from "@/lib/monitoreo-data";
 import type { OperationalScope } from "@jtel/domain";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     ? { kind: "plant", plantId }
     : { kind: "plant_group", plantGroupId: groupId };
 
-  const data = await loadJornada({
+  const data = await loadMonitoreo({
     scope,
     accountSlug: account,
     fecha,

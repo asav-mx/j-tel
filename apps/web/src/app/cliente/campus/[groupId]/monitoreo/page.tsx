@@ -1,9 +1,9 @@
 import { resolveCampusUnitPage } from "@/lib/unit-context";
-import { JornadaUnitView } from "@/views/jornada-unit";
+import { MonitoreoUnitView } from "@/views/monitoreo-unit";
 
 export const dynamic = "force-dynamic";
 
-export default async function CampusJornadaPage({
+export default async function CampusMonitoreoPage({
   params,
   searchParams,
 }: {
@@ -12,5 +12,5 @@ export default async function CampusJornadaPage({
 }) {
   const { groupId } = await params;
   const ctx = await resolveCampusUnitPage(groupId, searchParams);
-  return <JornadaUnitView ctx={ctx} searchParams={searchParams} />;
+  return <MonitoreoUnitView ctx={ctx} searchParams={searchParams} />;
 }

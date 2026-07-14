@@ -1680,9 +1680,13 @@ export class OccurrenceRepository {
     });
   }
 
-  async findForContract(contractId: string) {
+  async findForContract(contractId: string, from?: Date, to?: Date) {
+    const conditions = [eq(serviceOccurrences.contractId, contractId)];
+    if (from) conditions.push(gte(serviceOccurrences.serviceDate, from.toISOString().split("T")[0]!));
+    if (to) conditions.push(lte(serviceOccurrences.serviceDate, to.toISOString().split("T")[0]!));
+
     return this.db.query.serviceOccurrences.findMany({
-      where: eq(serviceOccurrences.contractId, contractId),
+      where: and(...conditions),
       with: {
         complianceFact: { with: { observedUnit: true } },
         trip: true,
