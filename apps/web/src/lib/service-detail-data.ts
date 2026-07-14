@@ -28,6 +28,8 @@ export interface ServiceDetailData {
   expectedDeadline: string;
   referenceUnitLabel: string;
   observedUnitLabel: string;
+  /** UUID de unidad observada (null = sin servicio detectado). */
+  observedUnitId: string | null;
   observedArrivalAt: string | null;
   timing: string | null;
   evidenceStatus: string | null;
@@ -208,6 +210,7 @@ export async function loadServiceDetail(
     expectedDeadline: occurrence.expectedDeadline.toISOString(),
     referenceUnitLabel,
     observedUnitLabel,
+    observedUnitId: fact?.observedUnitId ?? null,
     observedArrivalAt: fact?.observedArrivalAt?.toISOString() ?? null,
     timing: fact?.timing ?? null,
     evidenceStatus: trip?.evidenceStatus ?? null,
