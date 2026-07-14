@@ -198,7 +198,7 @@ export async function MonitoreoUnitView({
               {monitoreo.stats.total} rutas · {monitoreo.stats.cerrado} cerrado ·{" "}
               {monitoreo.stats.llego} llegó · {monitoreo.stats.avanzando} avanzando ·{" "}
               {monitoreo.stats.en_ruta} en ruta · {monitoreo.stats.programada} programada ·{" "}
-              <span className="text-red-300">{monitoreo.stats.alerta} alerta</span>
+              <span className="font-medium text-sky-200">{monitoreo.stats.alerta} alerta</span>
             </p>
             <MonitoreoLive initial={monitoreo} query={query} />
           </Card>

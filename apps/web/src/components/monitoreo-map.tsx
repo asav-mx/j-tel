@@ -8,20 +8,27 @@ import type {
   MonitoreoState,
 } from "@/lib/monitoreo-data";
 
+// Paleta de identidad de ruta: azules, cianes, púrpuras, magentas y grises —
+// "luz de radar". Deliberadamente SIN verde / rojo / ámbar, para no invadir
+// los colores del veredicto (cumplido / no cumplido / pendiente).
 const COLORS = [
-  "#e11d48",
-  "#ea580c",
-  "#ca8a04",
-  "#16a34a",
-  "#0891b2",
-  "#2563eb",
-  "#7c3aed",
-  "#db2777",
-  "#65a30d",
-  "#0d9488",
-  "#4f46e5",
-  "#c026d3",
+  "#38bdf8",
+  "#818cf8",
+  "#c084fc",
+  "#d946ef",
+  "#22d3ee",
+  "#60a5fa",
+  "#a78bfa",
+  "#2dd4bf",
+  "#7dd3fc",
+  "#94a3b8",
+  "#5eead4",
+  "#93c5fd",
 ];
+
+// Colores en vivo destacados (radar), nunca los del veredicto.
+const RADAR_ARRIVAL = "#22d3ee"; // cian — blip que alcanzó el destino
+const RADAR_ALERT = "#e0f2fe"; // casi-blanco — resalta por brillo, no por rojo
 
 const STATE_LABEL: Record<MonitoreoState, string> = {
   programada: "Programada",
@@ -32,14 +39,16 @@ const STATE_LABEL: Record<MonitoreoState, string> = {
   cerrado: "Cerrado",
 };
 
+// Estados en vivo en paleta de radar (azules/grises), distinguidos por brillo,
+// nunca por los colores del veredicto. "Alerta" resalta con un anillo, no rojo.
 const STATE_STYLE: Record<MonitoreoState, string> = {
-  programada: "bg-white/10 text-white/70",
+  programada: "bg-slate-500/15 text-slate-300",
   en_ruta: "bg-sky-500/20 text-sky-200",
-  avanzando: "bg-indigo-500/20 text-indigo-200",
-  llego: "bg-emerald-500/20 text-emerald-200",
-  alerta: "bg-red-500/25 text-red-200",
-  // Servicio con veredicto emitido: apagado / neutro. Sin estado en vivo.
-  cerrado: "bg-white/10 text-white/50",
+  avanzando: "bg-blue-500/25 text-blue-100",
+  llego: "bg-cyan-400/25 text-cyan-50",
+  alerta: "bg-slate-200/15 text-white ring-1 ring-sky-300/70",
+  // Servicio ya cerrado (con veredicto): apagado / neutro. Sin estado en vivo.
+  cerrado: "bg-white/5 text-white/40",
 };
 
 const REFRESH_MS = 45_000;
@@ -197,10 +206,10 @@ export function MonitoreoLive({
         const isAlert = r.state === "alerta";
         const isArrival = r.state === "llego";
         L.circleMarker([r.currentPoint.lat, r.currentPoint.lng], {
-          radius: isArrival ? 6 : 7,
-          color: isAlert ? "#ef4444" : isArrival ? "#fbbf24" : color,
-          weight: 3,
-          fillColor: isArrival ? "#fbbf24" : color,
+          radius: isAlert ? 9 : isArrival ? 6 : 7,
+          color: isAlert ? RADAR_ALERT : isArrival ? RADAR_ARRIVAL : color,
+          weight: isAlert ? 4 : 3,
+          fillColor: isArrival ? RADAR_ARRIVAL : color,
           fillOpacity: 0.9,
         })
           .bindTooltip(
@@ -233,6 +242,18 @@ export function MonitoreoLive({
 
   return (
     <div className="space-y-3">
+      {/* Leyenda permanente: la torre pronostica, no dictamina. Parte del diseño,
+          no un disclaimer chiquito. */}
+      <div className="flex items-center gap-2 rounded-lg border border-sky-400/30 bg-sky-400/5 px-4 py-3">
+        <span className="relative flex h-2.5 w-2.5">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-300/70" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-300" />
+        </span>
+        <p className="text-sm font-medium text-sky-100">
+          Vista en vivo. El veredicto se emite al cierre.
+        </p>
+      </div>
+
       <div className="flex flex-wrap items-center gap-4 text-sm">
         <label className="flex items-center gap-2">
           <input
@@ -286,28 +307,45 @@ export function MonitoreoLive({
       <div className="flex flex-wrap gap-2 text-xs">
         {data.routes.map((r) => {
           const off = hidden.has(r.occurrenceId);
+          const isClosed = r.state === "cerrado";
           return (
-            <button
+            <div
               key={r.occurrenceId}
-              type="button"
-              onClick={() => toggleRoute(r.occurrenceId)}
-              className={`flex items-center gap-2 rounded border px-2 py-1 ${
-                off ? "border-white/10 opacity-40" : "border-white/20"
+              className={`flex items-center gap-1.5 rounded border px-2 py-1 ${
+                off
+                  ? "border-white/10 opacity-40"
+                  : isClosed
+                    ? "border-white/10 bg-white/[0.02]"
+                    : "border-white/20"
               }`}
-              title={r.alertReason ?? undefined}
             >
-              <span
-                className="inline-block h-3 w-3 rounded-sm"
-                style={{ backgroundColor: colorFor(r) }}
-              />
-              <span>{r.profileCode}</span>
-              <span className={`rounded px-1.5 py-0.5 ${STATE_STYLE[r.state]}`}>
-                {STATE_LABEL[r.state]}
-                {r.state === "avanzando" || r.state === "en_ruta"
-                  ? ` ${r.coveragePct}%`
-                  : ""}
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => toggleRoute(r.occurrenceId)}
+                className="flex items-center gap-2"
+                title={r.alertReason ?? undefined}
+              >
+                <span
+                  className="inline-block h-3 w-3 rounded-sm"
+                  style={{ backgroundColor: colorFor(r), opacity: isClosed ? 0.4 : 1 }}
+                />
+                <span className={isClosed ? "text-white/45" : undefined}>{r.profileCode}</span>
+                <span className={`rounded px-1.5 py-0.5 ${STATE_STYLE[r.state]}`}>
+                  {STATE_LABEL[r.state]}
+                  {r.state === "avanzando" || r.state === "en_ruta"
+                    ? ` ${r.coveragePct}%`
+                    : ""}
+                </span>
+              </button>
+              {isClosed ? (
+                <a
+                  href={`/cliente/servicio/${r.occurrenceId}?account=${encodeURIComponent(data.accountSlug)}`}
+                  className="text-sky-300 hover:underline"
+                >
+                  expediente ↗
+                </a>
+              ) : null}
+            </div>
           );
         })}
       </div>
