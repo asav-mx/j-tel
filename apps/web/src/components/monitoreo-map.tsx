@@ -29,6 +29,7 @@ const STATE_LABEL: Record<MonitoreoState, string> = {
   avanzando: "Avanzando",
   llego: "Llegó",
   alerta: "Alerta",
+  cerrado: "Cerrado",
 };
 
 const STATE_STYLE: Record<MonitoreoState, string> = {
@@ -37,6 +38,8 @@ const STATE_STYLE: Record<MonitoreoState, string> = {
   avanzando: "bg-indigo-500/20 text-indigo-200",
   llego: "bg-emerald-500/20 text-emerald-200",
   alerta: "bg-red-500/25 text-red-200",
+  // Servicio con veredicto emitido: apagado / neutro. Sin estado en vivo.
+  cerrado: "bg-white/10 text-white/50",
 };
 
 const REFRESH_MS = 45_000;
@@ -176,9 +179,16 @@ export function MonitoreoLive({
       }
       if (showHuella && r.huella.length >= 2) {
         const latlngs = r.huella.map((p) => L.latLng(p.lat, p.lng));
-        L.polyline(latlngs, { color, weight: 4, opacity: 0.95 })
+        const isClosed = r.state === "cerrado";
+        L.polyline(latlngs, {
+          color,
+          weight: 4,
+          opacity: isClosed ? 0.45 : 0.95,
+        })
           .bindTooltip(
-            `Huella · ${r.profileCode} · ${r.matchedUnitLabel ?? "—"} · ${r.coveragePct}%`,
+            isClosed
+              ? `Huella · ${r.profileCode} · servicio cerrado`
+              : `Huella · ${r.profileCode} · ${r.matchedUnitLabel ?? "—"} · ${r.coveragePct}%`,
             { sticky: true },
           )
           .addTo(overlay);
