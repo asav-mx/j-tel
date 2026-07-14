@@ -7,6 +7,8 @@ export interface OccurrenceReportRow {
   shiftName: string;
   status: ComplianceStatus;
   timing: string | null;
+  /** Motivo legible: tarde | sin_servicio | a_tiempo | … */
+  motivo?: string | null;
   observedUnitLabel: string | null;
   observedArrivalAt: Date | null;
   lateExcusable: boolean;
@@ -117,18 +119,26 @@ export function buildMonthlyReport(input: {
 }
 
 export function reportToCsv(report: MonthlyComplianceReport): string {
-  const header = "Fecha,Ruta,Turno,Estado,Puntualidad,Unidad,Llegada,Excusable\n";
-  const lines = report.rows.map((r) =>
-    [
+  const header = "Fecha,Ruta,Turno,Estado,Motivo,Puntualidad,Unidad,Llegada,Excusable\n";
+  const lines = report.rows.map((r) => {
+    const motivo =
+      r.motivo ??
+      (r.status === "no_cumplido" && !r.observedUnitLabel
+        ? "sin_servicio"
+        : r.status === "no_cumplido"
+          ? "tarde"
+          : r.timing ?? r.status);
+    return [
       r.serviceDate,
       r.routeName,
       r.shiftName,
       r.status,
+      motivo,
       r.timing ?? "",
       r.observedUnitLabel ?? "",
       r.observedArrivalAt?.toISOString() ?? "",
       r.lateExcusable ? "si" : "no",
-    ].join(","),
-  );
+    ].join(",");
+  });
   return header + lines.join("\n");
 }

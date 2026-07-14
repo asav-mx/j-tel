@@ -19,13 +19,9 @@ export function unitNavLinks(unit: OperationalUnit, clientSlug: string, clientNa
   const links = [
     { href: dash, label: "Panel" },
     { href: unitComplianceHref(unit, clientSlug), label: "Cumplimiento" },
+    { href: withAccount(`${unitBasePath(unit)}/monitoreo`, clientSlug), label: "Monitoreo" },
+    { href: withAccount(`${unitBasePath(unit)}/jornada`, clientSlug), label: "Historial" },
   ];
-  if (unit.kind === "plant_group") {
-    links.push({
-      href: withAccount(`${unitBasePath(unit)}/jornada`, clientSlug),
-      label: "Jornada",
-    });
-  }
   links.push(
     { href: unitConfigHubHref(unit, clientSlug), label: "Configuración" },
     { href: unitContratosHref(unit, clientSlug), label: "Contratos" },

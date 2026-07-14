@@ -1,16 +1,16 @@
-import { resolveCampusUnitPage } from "@/lib/unit-context";
+import { resolvePlantUnitPage } from "@/lib/unit-context";
 import { JornadaUnitView } from "@/views/jornada-unit";
 
 export const dynamic = "force-dynamic";
 
-export default async function CampusJornadaPage({
+export default async function PlantJornadaPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ groupId: string }>;
+  params: Promise<{ plantId: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { groupId } = await params;
-  const ctx = await resolveCampusUnitPage(groupId, searchParams);
+  const { plantId } = await params;
+  const ctx = await resolvePlantUnitPage(plantId, searchParams);
   return <JornadaUnitView ctx={ctx} searchParams={searchParams} />;
 }

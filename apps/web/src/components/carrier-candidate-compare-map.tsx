@@ -2,22 +2,33 @@
 
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef } from "react";
+import type { NamedGeofence } from "@/lib/map-evidence";
 
 export type CandidateTrack = {
   unitId: string;
   label: string;
   color: string;
   points: Array<{ lat: number; lng: number; at?: string }>;
+  /** Entrada visual a geocerca (calibración). */
+  entry?: {
+    lat: number;
+    lng: number;
+    at: string;
+    geofenceName: string;
+  } | null;
 };
+
+const GEOFENCE_COLORS = ["#3b82f6", "#a855f7", "#14b8a6", "#f97316", "#eab308"];
 
 export function CarrierCandidateCompareMap({
   kmlWaypoints,
-  geofence,
+  geofences,
   tracks,
   focusUnitId,
 }: {
   kmlWaypoints: Array<{ lat: number; lng: number }>;
-  geofence: Array<{ lat: number; lng: number }>;
+  /** Geocercas destino de contratos del mismo carrier (con nombre). */
+  geofences: NamedGeofence[];
   tracks: CandidateTrack[];
   focusUnitId?: string | null;
 }) {
@@ -53,20 +64,22 @@ export function CarrierCandidateCompareMap({
 
       const bounds: [number, number][] = [];
 
-      if (geofence.length >= 3) {
-        const latlngs = geofence.map((p) => {
+      geofences.forEach((g, i) => {
+        if (g.polygon.length < 3) return;
+        const color = GEOFENCE_COLORS[i % GEOFENCE_COLORS.length]!;
+        const latlngs = g.polygon.map((p) => {
           bounds.push([p.lat, p.lng]);
           return L.latLng(p.lat, p.lng);
         });
         L.polygon(latlngs, {
-          color: "#3b82f6",
-          fillColor: "#3b82f6",
+          color,
+          fillColor: color,
           fillOpacity: 0.1,
           weight: 2,
         })
           .addTo(map)
-          .bindTooltip("Geocerca destino", { sticky: true });
-      }
+          .bindTooltip(g.name, { sticky: true });
+      });
 
       if (kmlWaypoints.length >= 2) {
         const latlngs = kmlWaypoints.map((p) => {
@@ -97,6 +110,25 @@ export function CarrierCandidateCompareMap({
         })
           .addTo(map)
           .bindTooltip(`GPS · ${track.label}`, { sticky: true });
+
+        if (track.entry && focused) {
+          bounds.push([track.entry.lat, track.entry.lng]);
+          L.circleMarker([track.entry.lat, track.entry.lng], {
+            radius: 8,
+            color: "#fff",
+            weight: 2,
+            fillColor: track.color,
+            fillOpacity: 1,
+          })
+            .addTo(map)
+            .bindTooltip(
+              `Entrada · ${track.entry.geofenceName} · ${new Date(track.entry.at).toLocaleTimeString("es-MX", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}`,
+              { permanent: false },
+            );
+        }
       }
 
       if (bounds.length > 0) {
@@ -113,7 +145,7 @@ export function CarrierCandidateCompareMap({
         mapRef.current = null;
       }
     };
-  }, [kmlWaypoints, geofence, tracks, focusUnitId]);
+  }, [kmlWaypoints, geofences, tracks, focusUnitId]);
 
   return (
     <div

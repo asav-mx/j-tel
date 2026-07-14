@@ -13,7 +13,9 @@ function back(
 }
 
 function toInt(value: unknown, fallback: number): number {
-  const n = Number(String(value ?? "").trim());
+  const raw = String(value ?? "").trim();
+  if (raw === "") return fallback;
+  const n = Number(raw);
   return Number.isFinite(n) ? Math.trunc(n) : fallback;
 }
 
@@ -105,22 +107,51 @@ export async function POST(request: Request) {
       plantGroupId: contract.plantGroupId,
     });
 
+    const existingPolicy = contract.policy;
+
     const policyPayload = {
-      toleranceMinutes: toInt(formData.get("toleranceMinutes"), 0),
-      arrivalAnticipationMinutes: toInt(formData.get("arrivalAnticipationMinutes"), 15),
-      maxRouteDurationMinutes: toInt(formData.get("maxRouteDurationMinutes"), 60),
-      verificationGraceMinutes: toInt(formData.get("verificationGraceMinutes"), 15),
-      routeStrictness: String(formData.get("routeStrictness") ?? "destino_only").trim(),
-      kmlMatchMinPct: toInt(formData.get("kmlMatchMinPct"), 60),
-      kmlCorridorMeters: toInt(formData.get("kmlCorridorMeters"), 120),
-      kmlCorridorMinPct: toInt(formData.get("kmlCorridorMinPct"), 60),
+      toleranceMinutes: toInt(formData.get("toleranceMinutes"), existingPolicy.toleranceMinutes),
+      arrivalAnticipationMinutes: toInt(
+        formData.get("arrivalAnticipationMinutes"),
+        existingPolicy.arrivalAnticipationMinutes ?? 15,
+      ),
+      maxRouteDurationMinutes: toInt(
+        formData.get("maxRouteDurationMinutes"),
+        existingPolicy.maxRouteDurationMinutes ?? 60,
+      ),
+      verificationGraceMinutes: toInt(
+        formData.get("verificationGraceMinutes"),
+        existingPolicy.verificationGraceMinutes ?? 15,
+      ),
+      routeStrictness: String(formData.get("routeStrictness") ?? existingPolicy.routeStrictness).trim(),
+      kmlMatchMinPct: toInt(formData.get("kmlMatchMinPct"), existingPolicy.kmlMatchMinPct ?? 60),
+      kmlCorridorMeters: toInt(
+        formData.get("kmlCorridorMeters"),
+        existingPolicy.kmlCorridorMeters ?? 120,
+      ),
+      kmlCorridorMinPct: toInt(
+        formData.get("kmlCorridorMinPct"),
+        existingPolicy.kmlCorridorMinPct ?? 60,
+      ),
       allowAlternateDestination: formData.get("allowAlternateDestination") === "on",
       excusableReasons: formData.getAll("excusableReasons").map((r) => String(r)),
       enforcementRules: buildEnforcementRule(formData),
-      evidenceMarginMinutesBefore: toInt(formData.get("evidenceMarginMinutesBefore"), 60),
-      evidenceMarginMinutesAfter: toInt(formData.get("evidenceMarginMinutesAfter"), 30),
-      evidenceMinCoveragePct: toInt(formData.get("evidenceMinCoveragePct"), 80),
-      evidenceMaxGapMinutes: toInt(formData.get("evidenceMaxGapMinutes"), 10),
+      evidenceMarginMinutesBefore: toInt(
+        formData.get("evidenceMarginMinutesBefore"),
+        existingPolicy.evidenceMarginMinutesBefore ?? 60,
+      ),
+      evidenceMarginMinutesAfter: toInt(
+        formData.get("evidenceMarginMinutesAfter"),
+        existingPolicy.evidenceMarginMinutesAfter ?? 30,
+      ),
+      evidenceMinCoveragePct: toInt(
+        formData.get("evidenceMinCoveragePct"),
+        existingPolicy.evidenceMinCoveragePct ?? 80,
+      ),
+      evidenceMaxGapMinutes: toInt(
+        formData.get("evidenceMaxGapMinutes"),
+        existingPolicy.evidenceMaxGapMinutes ?? 10,
+      ),
     };
 
     const parsed = contractPolicySchema.safeParse(policyPayload);
@@ -188,6 +219,8 @@ export async function POST(request: Request) {
   const verificationGraceMinutes = toInt(formData.get("verificationGraceMinutes"), 15);
   const routeStrictness = String(formData.get("routeStrictness") ?? "destino_only").trim();
   const kmlMatchMinPct = toInt(formData.get("kmlMatchMinPct"), 60);
+  const kmlCorridorMeters = toInt(formData.get("kmlCorridorMeters"), 120);
+  const kmlCorridorMinPct = toInt(formData.get("kmlCorridorMinPct"), 60);
   const evidenceMarginMinutesBefore = toInt(formData.get("evidenceMarginMinutesBefore"), 60);
   const evidenceMarginMinutesAfter = toInt(formData.get("evidenceMarginMinutesAfter"), 30);
   const allowAlternateDestination = formData.get("allowAlternateDestination") === "on";
