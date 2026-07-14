@@ -185,6 +185,7 @@ export async function loadMonitoreo(opts: {
 
   // Telemetría por carrier (una sola lectura por carrier, reutilizada en sus rutas).
   const unitLabelById = new Map<string, string>();
+  const unitCarrierById = new Map<string, string>();
   const pointsByUnit = new Map<string, GpsPoint[]>();
   const carrierIds = [
     ...new Set(occData.map((d) => d.carrierAccountId).filter((x): x is string => !!x)),
@@ -204,7 +205,10 @@ export async function loadMonitoreo(opts: {
       repos.fleet.getUnitsForCarrier(carrierId),
       repos.fleet.getDevicesForCarrier(carrierId),
     ]);
-    for (const u of units) unitLabelById.set(u.id, u.label);
+    for (const u of units) {
+      unitLabelById.set(u.id, u.label);
+      unitCarrierById.set(u.id, carrierId);
+    }
 
     const imeiToUnitId = new Map<string, string>();
     for (const d of devices) {
@@ -237,8 +241,8 @@ export async function loadMonitoreo(opts: {
   for (let i = 0; i < occData.length; i++) {
     const d = occData[i]!;
     if (d.kml.length < 2 || !d.carrierAccountId) continue;
-    const carrierUnitIds = [...pointsByUnit.keys()].filter((uid) =>
-      unitLabelById.has(uid),
+    const carrierUnitIds = [...pointsByUnit.keys()].filter(
+      (uid) => unitCarrierById.get(uid) === d.carrierAccountId,
     );
     for (const uid of carrierUnitIds) {
       const raw = pointsByUnit.get(uid) ?? [];

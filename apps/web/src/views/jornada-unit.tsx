@@ -7,11 +7,8 @@ import { getRepos } from "@/lib/db";
 import type { UnitPageContext } from "@/lib/unit-context";
 import { scopeToUnitPath } from "@/lib/unit-routes";
 import { operationalUnitLabel } from "@/lib/operational-scope";
+import { localDateIso } from "@/lib/local-time";
 import Link from "next/link";
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function parseParam(
   sp: Record<string, string | string[] | undefined> | undefined,
@@ -29,7 +26,7 @@ export async function JornadaUnitView({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = searchParams ? await searchParams : undefined;
-  const fecha = parseParam(sp, "fecha") ?? todayIso();
+  const fecha = parseParam(sp, "fecha") ?? localDateIso();
   const turno = parseParam(sp, "turno");
 
   const repos = getRepos();
@@ -73,10 +70,12 @@ export async function JornadaUnitView({
         <UnitShell client={ctx.client} unit={ctx.unit} title={`Historial — ${unitLabel}`} />
 
         <p className="text-sm text-[var(--muted)]">
-          Historial de una jornada pasada: rutas esperadas vs GPS observado.{" "}
+          Aquí ves el mapa de una jornada ya pasada (o de hoy): todas las rutas del turno vs GPS
+          observado — lo que antes se llamaba “Jornada”. El en vivo está en{" "}
           <Link href={monitoreoHref} className="text-[var(--accent)]">
-            Monitoreo en vivo →
-          </Link>{" "}
+            Monitoreo
+          </Link>
+          .{" "}
           <Link href={cumplimientoHref} className="text-[var(--accent)]">
             ← Cumplimiento
           </Link>
