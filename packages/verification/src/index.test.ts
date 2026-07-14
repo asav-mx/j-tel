@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   verifyService,
+  evaluateUnitRouteMatch,
   pointInPolygon,
   determineTiming,
   computeRouteMatchPct,
@@ -531,5 +532,96 @@ describe("Fase 3 TF-IDF / Fréchet / dirección", () => {
     expect(result.status).toBe("cumplido");
     expect(result.observedUnitId).toBe("unit-a");
     expect(result.candidateUnits[0]?.frechetKm).toBeLessThan(0.5);
+  });
+});
+
+describe("evaluateUnitRouteMatch (identificación unidad↔ruta compartida)", () => {
+  const params = {
+    geofencePolygon: geofence,
+    corridorKm: 0.12,
+    minKmlPct: 60,
+    minCorridorPct: 60,
+    frechetMaxKm: 0.8,
+    idf: null,
+  };
+
+  it("marca servedRoute cuando la unidad llega a la geocerca (sin KML)", () => {
+    const evalRes = evaluateUnitRouteMatch(
+      [
+        {
+          imei: "u",
+          latitude: 31.6909,
+          longitude: -106.4234,
+          timestamp: new Date("2026-07-07T12:44:00Z"),
+        },
+      ],
+      params,
+    );
+    expect(evalRes.arrivalAt).not.toBeNull();
+    expect(evalRes.servedRoute).toBe(true);
+    expect(evalRes.routeMatchPct).toBe(100);
+  });
+
+  it("no marca servedRoute si nunca entra a la geocerca", () => {
+    const evalRes = evaluateUnitRouteMatch(
+      [
+        {
+          imei: "u",
+          latitude: 31.5,
+          longitude: -106.5,
+          timestamp: new Date("2026-07-07T12:44:00Z"),
+        },
+      ],
+      params,
+    );
+    expect(evalRes.arrivalAt).toBeNull();
+    expect(evalRes.servedRoute).toBe(false);
+  });
+
+  it("es la MISMA matemática que verifyService (mismos A/B/arrival/servedRoute)", () => {
+    // Prueba de no-divergencia: el árbitro y la torre deben obtener idéntica
+    // evaluación por unidad. Si esto se rompe, hay una segunda implementación.
+    const kml = [
+      { lat: 31.68, lng: -106.43 },
+      { lat: 31.685, lng: -106.4265 },
+      { lat: 31.6909, lng: -106.4234 },
+    ];
+    const points = kml.map((wp, i) => ({
+      imei: "unit-1",
+      latitude: wp.lat,
+      longitude: wp.lng,
+      timestamp: new Date(`2026-07-07T12:${40 + i}:00Z`),
+    }));
+    const input = {
+      occurrenceId: "occ-shared",
+      expectedDeadline: new Date("2026-07-07T12:45:00Z"),
+      toleranceMinutes: 15,
+      routeStrictness: "kml_full" as const,
+      kmlMatchMinPct: 40,
+      kmlCorridorMinPct: 40,
+      kmlCorridorMeters: 150,
+      geofencePolygon: geofence,
+      kmlWaypoints: kml,
+      evidencePoints: points,
+      excusableReasons: [] as const,
+    };
+    const result = verifyService(input);
+    const corridorKm = Math.min(0.5, Math.max(0.01, 150 / 1000));
+    const evalRes = evaluateUnitRouteMatch(points, {
+      geofencePolygon: geofence,
+      kmlWaypoints: kml,
+      corridorKm,
+      minKmlPct: 40,
+      minCorridorPct: 40,
+      frechetMaxKm: 0.8,
+      idf: null,
+    });
+    const candidate = result.candidateUnits.find((c) => c.unitId === "unit-1")!;
+    expect(evalRes.routeMatchPct).toBe(candidate.routeMatchPct);
+    expect(evalRes.corridorPrecisionPct).toBe(candidate.corridorPrecisionPct);
+    expect(evalRes.servedRoute).toBe(candidate.servedRoute);
+    expect(evalRes.arrivalAt?.getTime() ?? null).toBe(
+      candidate.arrivalAt?.getTime() ?? null,
+    );
   });
 });
