@@ -1,4 +1,4 @@
-import { verifyService } from "@jtel/verification";
+import { verifyService, pointInPolygon } from "@jtel/verification";
 import { createUmbrellaProvider, ingestEvidenceForTrip } from "@jtel/gps-umbrella";
 import type { Repositories } from "@jtel/db";
 import type { ContractPolicy } from "@jtel/domain";
@@ -461,6 +461,164 @@ export class VerificationService {
     }
   }
 
+  /**
+   * Tarea 3 — contexto "llegada fuera de ventana" en el ledger.
+   *
+   * Condiciones (aprobadas por Asav, no relajar):
+   *  1. Solo se invoca cuando el hecho quedó SIN llegada (observedArrivalAt = null).
+   *  2. Confidencialidad entre clientes: `geofenceId` solo se escribe si la
+   *     geocerca es del contrato de ESTA ocurrencia. Si la unidad entró a la
+   *     geocerca de otro cliente, se escribe `arrivalOutsideContractGeofence: true`
+   *     sin identificar el destino.
+   *  3. Cero Umbrella: el GPS extendido se lee SOLO de la telemetría propia (Neon).
+   *     Si no hay dato en memoria propia, no se anota nada.
+   *
+   * No toca el veredicto ni los tres estados: solo agrega una entrada de ledger.
+   */
+  private async recordArrivalOutsideWindowContext(input: {
+    occurrenceId: string;
+    tripId: string;
+    carrierAccountId: string;
+    imeis: string[];
+    imeiToUnitId: Map<string, string>;
+    windowEnd: Date;
+    deadline: Date;
+    policy: ContractPolicy;
+    ownGeofence: { id: string | null; polygon: Array<{ lat: number; lng: number }> };
+  }): Promise<void> {
+    const grace = input.policy.verificationGraceMinutes ?? 15;
+    const marginAfter = input.policy.evidenceMarginMinutesAfter ?? 0;
+    const extendedEnd = new Date(input.deadline);
+    extendedEnd.setMinutes(
+      extendedEnd.getMinutes() + grace + Math.max(60, marginAfter),
+    );
+
+    // La ventana extendida empieza donde terminó la del veredicto.
+    if (extendedEnd.getTime() <= input.windowEnd.getTime()) return;
+    if (input.imeis.length === 0) return;
+
+    // (3) SOLO telemetría propia (Neon). Nunca Umbrella en vivo.
+    const points = await this.repos.telemetry.getForImeis(
+      input.imeis,
+      input.windowEnd,
+      extendedEnd,
+    );
+    if (points.length === 0) return;
+
+    const sorted = [...points].sort(
+      (a, b) => a.recordedAt.getTime() - b.recordedAt.getTime(),
+    );
+
+    const ownPolygon = input.ownGeofence.polygon;
+    const hasOwnPolygon = Array.isArray(ownPolygon) && ownPolygon.length >= 3;
+
+    // Primer punto que entra a la geocerca PROPIA del contrato.
+    let ownEntry: { at: Date; imei: string } | null = null;
+    if (hasOwnPolygon) {
+      for (const p of sorted) {
+        if (pointInPolygon({ lat: p.latitude, lng: p.longitude }, ownPolygon)) {
+          ownEntry = { at: p.recordedAt, imei: p.imei };
+          break;
+        }
+      }
+    }
+
+    if (ownEntry) {
+      const unitId = input.imeiToUnitId.get(ownEntry.imei) ?? null;
+      const minutesAfter = Math.round(
+        (ownEntry.at.getTime() - input.windowEnd.getTime()) / 60_000,
+      );
+      await this.repos.compliance.addLedgerEntry({
+        tripId: input.tripId,
+        serviceOccurrenceId: input.occurrenceId,
+        action: "contexto_calibracion",
+        steps: [
+          {
+            step: "llegada_fuera_ventana",
+            result: "info",
+            details: {
+              arrivalAt: ownEntry.at.toISOString(),
+              minutesAfterWindowEnd: minutesAfter,
+              geofenceId: input.ownGeofence.id,
+              ...(unitId ? { unitId } : {}),
+              note: "Llegada a la geocerca del contrato después del fin de ventana. Informativo; no cambia el veredicto.",
+            },
+          },
+        ],
+        metadata: { source: "memory", scope: "own_contract" },
+      });
+      return;
+    }
+
+    // (2) No entró a la geocerca propia. ¿Entró a alguna geocerca de OTRO
+    // contrato del mismo carrier? Solo para el flag neutro — jamás el destino.
+    const otherPolygons = await this.getOtherCarrierGeofencePolygons(
+      input.carrierAccountId,
+      input.ownGeofence.id,
+    );
+    if (otherPolygons.length === 0) return;
+
+    let neutralEntryAt: Date | null = null;
+    for (const p of sorted) {
+      const hit = otherPolygons.some((poly) =>
+        pointInPolygon({ lat: p.latitude, lng: p.longitude }, poly),
+      );
+      if (hit) {
+        neutralEntryAt = p.recordedAt;
+        break;
+      }
+    }
+    if (!neutralEntryAt) return;
+
+    const minutesAfter = Math.round(
+      (neutralEntryAt.getTime() - input.windowEnd.getTime()) / 60_000,
+    );
+    await this.repos.compliance.addLedgerEntry({
+      tripId: input.tripId,
+      serviceOccurrenceId: input.occurrenceId,
+      action: "contexto_calibracion",
+      steps: [
+        {
+          step: "llegada_fuera_ventana",
+          result: "info",
+          details: {
+            // Confidencialidad: sin geofenceId, sin nombre de destino.
+            arrivalOutsideContractGeofence: true,
+            arrivalAt: neutralEntryAt.toISOString(),
+            minutesAfterWindowEnd: minutesAfter,
+            note: "Se detectó llegada a una geocerca fuera de este contrato después del fin de ventana. Informativo; no identifica el destino ni cambia el veredicto.",
+          },
+        },
+      ],
+      metadata: { source: "memory", scope: "other_contract" },
+    });
+  }
+
+  /**
+   * Geocercas destino de OTROS contratos del mismo carrier (solo polígonos,
+   * sin id/nombre) para el flag neutro de confidencialidad. Excluye la propia.
+   */
+  private async getOtherCarrierGeofencePolygons(
+    carrierAccountId: string,
+    ownGeofenceId: string | null,
+  ): Promise<Array<Array<{ lat: number; lng: number }>>> {
+    const contracts = await this.repos.contracts.findForCarrier(carrierAccountId);
+    const polygons: Array<Array<{ lat: number; lng: number }>> = [];
+    const seen = new Set<string>();
+    for (const c of contracts) {
+      const profiles = await this.repos.profiles.findForContract(c.id);
+      for (const p of profiles) {
+        const g = p.geofence;
+        if (!g || !g.polygon || g.polygon.length < 3) continue;
+        if (ownGeofenceId && g.id === ownGeofenceId) continue;
+        if (seen.has(g.id)) continue;
+        seen.add(g.id);
+        polygons.push(g.polygon as Array<{ lat: number; lng: number }>);
+      }
+    }
+    return polygons;
+  }
+
   async verifyOccurrence(
     occurrenceId: string,
     opts: {
@@ -739,6 +897,35 @@ export class VerificationService {
           : {}),
       },
     });
+
+    // Tarea 3 (aprobada con 3 condiciones): contexto de calibración en el ledger.
+    // (1) SOLO cuando el hecho quedó sin llegada (observedArrivalAt = null).
+    // (2) Confidencialidad: geofenceId solo si es del contrato de esta ocurrencia;
+    //     entrada a geocerca de otro cliente → flag neutro, sin identificar destino.
+    // (3) Cero Umbrella: se lee EXCLUSIVAMENTE de la telemetría propia (Neon).
+    const savedArrivalAt =
+      finalStatus === "cumplido" ? verification.observedArrivalAt : null;
+    if (!savedArrivalAt) {
+      try {
+        await this.recordArrivalOutsideWindowContext({
+          occurrenceId,
+          tripId: trip.id,
+          carrierAccountId: contract.carrierAccountId,
+          imeis,
+          imeiToUnitId,
+          windowEnd: trip.evidenceWindowEnd,
+          deadline: occurrence.expectedDeadline,
+          policy,
+          ownGeofence: {
+            id: profile.geofenceId ?? occurrence.expectedGeofenceId ?? null,
+            polygon: geofence.polygon,
+          },
+        });
+      } catch (err) {
+        // El contexto es informativo; nunca debe tumbar la verificación.
+        console.error("[verify] recordArrivalOutsideWindowContext:", err);
+      }
+    }
 
     if (finalStatus === "pendiente_evidencia") {
       await this.repos.notifications.create({

@@ -1,6 +1,7 @@
 import { Card, StatusBadge } from "@/components/ui";
 import { ServiceEvidenceMap } from "@/components/service-evidence-map";
 import type { ServiceDetailData } from "@/lib/service-detail-data";
+import { noCumplidoDetailLine } from "@/lib/no-cumplido-motivo";
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return "—";
@@ -32,10 +33,27 @@ export function ServiceDetailView({
   /** Carrier dudosos: el mapa de comparación vive fuera. */
   hideEvidenceMap?: boolean;
 }) {
+  const noCumplidoDetalle = noCumplidoDetailLine({
+    status: data.status,
+    timing: data.timing,
+    observedUnitId: data.observedUnitId,
+    observedArrivalAt: data.observedArrivalAt,
+    expectedDeadline: data.expectedDeadline,
+    observedUnitLabel:
+      data.observedUnitLabel && data.observedUnitLabel !== "—"
+        ? data.observedUnitLabel
+        : null,
+  });
+
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <StatusBadge status={data.status} timing={data.timing} />
+        <div>
+          <StatusBadge status={data.status} timing={data.timing} />
+          {noCumplidoDetalle ? (
+            <p className="mt-1 text-xs text-[var(--muted)]">{noCumplidoDetalle}</p>
+          ) : null}
+        </div>
         <span className="text-sm text-[var(--muted)]">
           {data.clientName}
           {data.plantName ? ` · ${data.plantName}` : ""} · {data.carrierName}

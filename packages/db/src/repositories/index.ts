@@ -1,4 +1,4 @@
-import { eq, and, or, gte, lte, isNull, inArray, sql } from "drizzle-orm";
+import { eq, and, or, gte, lte, isNull, inArray, sql, ne } from "drizzle-orm";
 import { computeExpectedDeadline, computeEvidenceWindow, suggestProfileCode } from "@jtel/domain";
 import type { OperationalScope, OperationalUnit } from "@jtel/domain";
 import { operationalScopeColumns } from "@jtel/domain";
@@ -357,6 +357,72 @@ export class GeofenceRepository {
       where: or(...conditions),
       orderBy: (g, { asc }) => [asc(g.name)],
     });
+  }
+
+  async update(
+    id: string,
+    data: {
+      role?: "destino" | "base" | "caseta" | "otro";
+      name?: string;
+      polygon?: Array<{ lat: number; lng: number }>;
+    },
+  ) {
+    const patch: Record<string, unknown> = {};
+    if (data.role !== undefined) patch.role = data.role;
+    if (data.name !== undefined) patch.name = data.name;
+    if (data.polygon !== undefined) patch.polygon = data.polygon;
+    if (Object.keys(patch).length === 0) return null;
+
+    const [row] = await this.db
+      .update(geofences)
+      .set(patch)
+      .where(eq(geofences.id, id))
+      .returning();
+    return row ?? null;
+  }
+
+  /** Perfiles u ocurrencias ya generadas bloquean borrado. */
+  async deleteBlockReason(
+    geofenceId: string,
+  ): Promise<"profiles" | "occurrences" | null> {
+    const profile = await this.db.query.serviceProfiles.findFirst({
+      where: eq(serviceProfiles.geofenceId, geofenceId),
+      columns: { id: true },
+    });
+    if (profile) return "profiles";
+
+    const occ = await this.db.query.serviceOccurrences.findFirst({
+      where: eq(serviceOccurrences.expectedGeofenceId, geofenceId),
+      columns: { id: true },
+    });
+    if (occ) return "occurrences";
+    return null;
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const rows = await this.db.delete(geofences).where(eq(geofences.id, id)).returning();
+    return rows.length > 0;
+  }
+
+  /** Verifica que la geocerca pertenezca al cliente (planta o campus). */
+  async belongsToClient(geofenceId: string, clientAccountId: string): Promise<boolean> {
+    const g = await this.findById(geofenceId);
+    if (!g) return false;
+    if (g.ownerPlantId) {
+      const plant = await this.db.query.plants.findFirst({
+        where: eq(plants.id, g.ownerPlantId),
+        columns: { clientAccountId: true },
+      });
+      return plant?.clientAccountId === clientAccountId;
+    }
+    if (g.ownerPlantGroupId) {
+      const group = await this.db.query.plantGroups.findFirst({
+        where: eq(plantGroups.id, g.ownerPlantGroupId),
+        columns: { clientAccountId: true },
+      });
+      return group?.clientAccountId === clientAccountId;
+    }
+    return false;
   }
 }
 
@@ -783,9 +849,14 @@ export class RouteRepository {
     return { route, routeShift };
   }
 
-  async findShiftByNameAndTime(scope: OperationalScope, name: string, startTime: string) {
+  async findShiftByNameAndTime(
+    scope: OperationalScope,
+    name: string,
+    startTime: string,
+    excludeShiftId?: string,
+  ) {
     const cols = operationalScopeColumns(scope);
-    const where =
+    const base =
       scope.kind === "plant"
         ? and(
             eq(shifts.plantId, cols.plantId!),
@@ -797,7 +868,35 @@ export class RouteRepository {
             eq(shifts.name, name),
             eq(shifts.startTime, startTime),
           );
+    const where = excludeShiftId ? and(base, sql`${shifts.id} <> ${excludeShiftId}`) : base;
     return this.db.query.shifts.findFirst({ where });
+  }
+
+  async updateShift(
+    id: string,
+    clientAccountId: string,
+    scope: OperationalScope,
+    data: { name: string; startTime: string },
+  ): Promise<
+    | { ok: true }
+    | { ok: false; reason: "not_found" | "duplicate" }
+  > {
+    const existing = await this.findShiftInScope(id, clientAccountId, scope);
+    if (!existing) return { ok: false, reason: "not_found" };
+
+    const duplicate = await this.findShiftByNameAndTime(
+      scope,
+      data.name,
+      data.startTime,
+      id,
+    );
+    if (duplicate) return { ok: false, reason: "duplicate" };
+
+    await this.db
+      .update(shifts)
+      .set({ name: data.name, startTime: data.startTime })
+      .where(eq(shifts.id, id));
+    return { ok: true };
   }
 
   private async routeShiftDeleteBlockReason(
@@ -1672,9 +1771,13 @@ export class OccurrenceRepository {
     });
   }
 
-  async findForContract(contractId: string) {
+  async findForContract(contractId: string, from?: Date, to?: Date) {
+    const conditions = [eq(serviceOccurrences.contractId, contractId)];
+    if (from) conditions.push(gte(serviceOccurrences.serviceDate, from.toISOString().split("T")[0]!));
+    if (to) conditions.push(lte(serviceOccurrences.serviceDate, to.toISOString().split("T")[0]!));
+
     return this.db.query.serviceOccurrences.findMany({
-      where: eq(serviceOccurrences.contractId, contractId),
+      where: and(...conditions),
       with: {
         complianceFact: { with: { observedUnit: true } },
         trip: true,

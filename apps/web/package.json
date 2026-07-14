@@ -15,6 +15,7 @@
     "@jtel/domain": "workspace:*",
     "@jtel/reports": "workspace:*",
     "@jtel/services": "workspace:*",
+    "@jtel/verification": "workspace:*",
     "leaflet": "^1.9.4",
     "next": "^15.3.4",
     "react": "^19.1.0",

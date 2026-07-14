@@ -67,6 +67,34 @@ export async function POST(request: Request) {
     return back(request, client.slug, scope, { created: "turno" });
   }
 
+  if (action === "updateShift") {
+    const shiftId = String(formData.get("shiftId") ?? "").trim();
+    const name = String(formData.get("name") ?? "").trim();
+    const startTimeRaw = String(formData.get("startTime") ?? "").trim();
+    const startTime = startTimeRaw.length >= 5 ? startTimeRaw.slice(0, 5) : startTimeRaw;
+    if (!shiftId) return back(request, client.slug, scope, { error: "Turno no indicado." });
+    if (!name) return back(request, client.slug, scope, { error: "El nombre del turno es obligatorio." });
+    if (!TIME_RE.test(startTime)) {
+      return back(request, client.slug, scope, {
+        error: `Hora de inicio inválida (${startTimeRaw || "vacía"}). Usa formato HH:MM, ej. 07:00.`,
+      });
+    }
+    const startTimeDb = `${startTime}:00`;
+    const result = await repos.routes.updateShift(shiftId, client.id, scope, {
+      name,
+      startTime: startTimeDb,
+    });
+    if (!result.ok) {
+      if (result.reason === "not_found") {
+        return back(request, client.slug, scope, { error: "Turno no encontrado." });
+      }
+      return back(request, client.slug, scope, {
+        error: `Ya existe el turno «${name}» con inicio ${startTime}.`,
+      });
+    }
+    return back(request, client.slug, scope, { created: "turno_actualizado" });
+  }
+
   if (action === "deleteShift") {
     const shiftId = String(formData.get("shiftId") ?? "").trim();
     if (!shiftId) return back(request, client.slug, scope, { error: "Turno no indicado." });
