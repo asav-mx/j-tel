@@ -2,6 +2,7 @@ import { getRepos } from "@/lib/db";
 import { ConfirmForm } from "@/components/confirm-form";
 import { PurgePlantForm } from "@/components/purge-plant-form";
 import { PurgeProfileForm } from "@/components/purge-profile-form";
+import { ReverifyRangeForm } from "@/components/reverify-range-form";
 import { AppNav, Card } from "@/components/ui";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { confirmMessages } from "@/lib/confirm-messages";
@@ -40,34 +41,22 @@ export default async function JStaffSoportePage({
 
   const range = resolveDateRange(sp, { defaultDaysBack: 29 });
 
-  const repos = getRepos();
-  const pendingAll = await repos.occurrences.findPendingVerification(new Date());
-  const pending = pendingAll
-    .filter((row) =>
-      inServiceDateRange(String(row.occurrence.serviceDate), range.fromIso, range.toIso),
-    )
-    .sort((a, b) =>
-      String(b.occurrence.serviceDate).localeCompare(String(a.occurrence.serviceDate)),
-    );
-
-  const clients = await repos.accounts.listByType("client");
-  const contracts = [];
-  const plants = [];
-  for (const c of clients) {
-    contracts.push(...(await repos.contracts.findForClient(c.id)));
-    const clientPlants = await repos.clients.getPlantsForAccount(c.id);
-    for (const p of clientPlants) {
-      // Solo plantas independientes (no campus): ahí se generan perfiles “por planta”.
-      if (!p.plantGroupId) {
-        plants.push({ ...p, clientName: c.name, clientSlug: c.slug });
-      }
-    }
-  }
-  const activeContracts = contracts.filter(
-    (c) => c.status === "active" || c.status === "demo",
-  );
-
-  const profilesForPurge: Array<{
+  let loadError: string | null = null;
+  let pending: Awaited<
+    ReturnType<ReturnType<typeof getRepos>["occurrences"]["findPendingVerification"]>
+  > = [];
+  let activeContracts: Array<{
+    id: string;
+    name: string;
+    plantLabel: string;
+  }> = [];
+  let plants: Array<{
+    id: string;
+    name: string;
+    code: string;
+    clientName: string;
+  }> = [];
+  let profilesForPurge: Array<{
     id: string;
     code: string;
     name: string;
@@ -75,18 +64,65 @@ export default async function JStaffSoportePage({
     contractName: string;
     occurrenceCount: number;
   }> = [];
-  for (const plant of plants) {
-    const plantProfiles = await repos.profiles.listForPlant(plant.id);
-    for (const p of plantProfiles) {
-      profilesForPurge.push({
-        id: p.id,
-        code: p.code,
-        name: p.name,
-        plantId: plant.id,
-        contractName: p.contract?.name ?? "—",
-        occurrenceCount: p.occurrenceCount,
-      });
+
+  try {
+    const repos = getRepos();
+    const pendingAll = await repos.occurrences.findPendingVerification(new Date());
+    pending = pendingAll
+      .filter((row) =>
+        inServiceDateRange(String(row.occurrence.serviceDate), range.fromIso, range.toIso),
+      )
+      .sort((a, b) =>
+        String(b.occurrence.serviceDate).localeCompare(String(a.occurrence.serviceDate)),
+      );
+
+    const clients = await repos.accounts.listByType("client");
+    const contracts = [];
+    for (const c of clients) {
+      contracts.push(...(await repos.contracts.findForClient(c.id)));
+      const clientPlants = await repos.clients.getPlantsForAccount(c.id);
+      for (const p of clientPlants) {
+        if (!p.plantGroupId) {
+          plants.push({
+            id: p.id,
+            name: p.name,
+            code: p.code,
+            clientName: c.name,
+          });
+        }
+      }
     }
+
+    activeContracts = contracts
+      .filter((c) => c.status === "active" || c.status === "demo")
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        plantLabel: c.plant
+          ? `${c.plant.name} (${c.plant.code})`
+          : (c.plantGroup?.name ?? "—"),
+      }));
+
+    for (const plant of plants) {
+      try {
+        const plantProfiles = await repos.profiles.listForPlant(plant.id);
+        for (const p of plantProfiles) {
+          profilesForPurge.push({
+            id: p.id,
+            code: p.code,
+            name: p.name,
+            plantId: plant.id,
+            contractName: p.contract?.name ?? "—",
+            occurrenceCount: p.occurrenceCount,
+          });
+        }
+      } catch (err) {
+        console.error("[jstaff/soporte] listForPlant", plant.id, err);
+      }
+    }
+  } catch (err) {
+    console.error("[jstaff/soporte] load", err);
+    loadError = err instanceof Error ? err.message : "Error al cargar soporte.";
   }
 
   return (
@@ -94,9 +130,9 @@ export default async function JStaffSoportePage({
       <div className="mx-auto max-w-5xl space-y-6">
         <AppNav title="Compuerta de atención" links={[{ href: "/jstaff", label: "← Panel" }]} />
 
-        {error ? (
+        {error || loadError ? (
           <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-            {error}
+            {error ?? loadError}
           </div>
         ) : null}
         {resync === "ok" ? (
@@ -107,7 +143,7 @@ export default async function JStaffSoportePage({
         {resync === "skip" ? (
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
             No se recalculó: el hecho ya está cerrado ({status ?? "cumplido/no_cumplido"}).
-            Para reabrir un día cerrado usa «Re-verificar día» abajo.
+            Para reabrir un día cerrado usa «Re-verificar» abajo.
           </div>
         ) : null}
         {reverify === "ok" ? (
@@ -128,19 +164,36 @@ export default async function JStaffSoportePage({
           </div>
         ) : null}
 
-        <Card title="Re-verificar un día (con política actual)">
+        <Card title="Re-verificar resultados (rango)">
           <p className="mb-4 text-sm text-[var(--muted)]">
-            Usa esto cuando cambiaste la política y quieres recalcular un día ya cerrado.
-            <span className="text-white"> Sí sobrescribe</span> cumplido / no cumplido de esa
-            fecha. Puede tardar 1–2 minutos.
+            Para después de corregir geocercas: recalcula cumplido / no cumplido con la geocerca
+            actual, <span className="text-white">día por día</span>, sin volver a bajar GPS
+            (más estable; evita el error 500 por tiempo). Ideal para Tecma 47.
+          </p>
+          {activeContracts.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">No hay contratos activos.</p>
+          ) : (
+            <ReverifyRangeForm
+              contracts={activeContracts.map((c) => ({
+                id: c.id,
+                label: `${c.name} · ${c.plantLabel}`,
+              }))}
+            />
+          )}
+        </Card>
+
+        <Card title="Re-verificar un solo día">
+          <p className="mb-4 text-sm text-[var(--muted)]">
+            Misma lógica, una sola fecha. Usa evidencia guardada por defecto.
           </p>
           <ConfirmForm
             action="/api/jstaff/reverify-day"
             method="post"
             className="grid gap-3 md:grid-cols-2"
-            confirmTemplate="¿Re-verificar {serviceDate} del contrato elegido con la política actual? Se recalcularán los hechos de ese día."
+            confirmTemplate="¿Re-verificar {serviceDate} del contrato elegido? Se recalcularán los hechos de ese día con la geocerca/política actual."
             pendingLabel="Re-verificando día… (puede tardar)"
           >
+            <input type="hidden" name="keepEvidence" value="1" />
             <label className="block text-sm">
               Contrato
               <select name="contractId" required className={inputClass} defaultValue="">
@@ -149,7 +202,7 @@ export default async function JStaffSoportePage({
                 </option>
                 {activeContracts.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}
+                    {c.name} · {c.plantLabel}
                   </option>
                 ))}
               </select>

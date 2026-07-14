@@ -5,7 +5,14 @@ import { VerificationService } from "@jtel/services";
 
 export const maxDuration = 300;
 
-function back(request: Request, params: Record<string, string>) {
+function wantsJson(request: Request, formData: FormData) {
+  const format = String(formData.get("format") ?? "").trim().toLowerCase();
+  if (format === "json") return true;
+  const accept = request.headers.get("accept") ?? "";
+  return accept.includes("application/json");
+}
+
+function redirectBack(request: Request, params: Record<string, string>) {
   const url = new URL("/jstaff/soporte", request.url);
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value);
@@ -13,32 +20,46 @@ function back(request: Request, params: Record<string, string>) {
   return NextResponse.redirect(url, 303);
 }
 
+function jsonOk(body: Record<string, unknown>, status = 200) {
+  return NextResponse.json(body, { status });
+}
+
+function jsonErr(error: string, status = 400) {
+  return NextResponse.json({ ok: false, error }, { status });
+}
+
 /**
- * Re-verifica un día de un contrato con force (política actual).
- * Solo desde J-Staff — sobrescribe hechos cerrados de ese día.
+ * Re-verifica un día de un contrato con force (política / geocerca actual del perfil).
+ * Por defecto reutiliza evidencia ya guardada (rápido; ideal tras cambiar geocerca).
+ * keepEvidence=0 fuerza re-ingesta GPS.
+ *
+ * Respuesta: redirect HTML por defecto, o JSON si Accept: application/json / format=json.
  */
 export async function POST(request: Request) {
   const formData = await request.formData();
+  const asJson = wantsJson(request, formData);
   const contractId = String(formData.get("contractId") ?? "").trim();
   const serviceDate = String(formData.get("serviceDate") ?? "").trim();
+  const keepRaw = String(formData.get("keepEvidence") ?? "1").trim();
+  const keepEvidence = keepRaw !== "0" && keepRaw.toLowerCase() !== "false";
 
   if (!contractId || !/^\d{4}-\d{2}-\d{2}$/.test(serviceDate)) {
-    return back(request, {
-      error: "Elige contrato y fecha (YYYY-MM-DD).",
-    });
+    const msg = "Elige contrato y fecha (YYYY-MM-DD).";
+    return asJson ? jsonErr(msg) : redirectBack(request, { error: msg });
   }
 
   const repos = getRepos();
   const contract = await repos.contracts.findById(contractId);
   if (!contract) {
-    return back(request, { error: "Contrato no encontrado." });
+    const msg = "Contrato no encontrado.";
+    return asJson ? jsonErr(msg) : redirectBack(request, { error: msg });
   }
 
   try {
     const service = new VerificationService(repos, getUmbrellaConfig());
     const results = await service.reverifyContract(contractId, {
       serviceDate,
-      keepEvidence: false,
+      keepEvidence,
       exclusiveUnits: true,
     });
 
@@ -57,7 +78,19 @@ export async function POST(request: Request) {
       .map(([k, n]) => `${k}:${n}`)
       .join(", ");
 
-    return back(request, {
+    if (asJson) {
+      return jsonOk({
+        ok: true,
+        day: serviceDate,
+        n: results.length,
+        summary: summary || "sin resultados",
+        keepEvidence,
+        errors,
+        byStatus: Object.fromEntries(byStatus),
+      });
+    }
+
+    return redirectBack(request, {
       reverify: "ok",
       n: String(results.length),
       day: serviceDate,
@@ -66,8 +99,7 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("[jstaff/reverify-day]", err);
-    return back(request, {
-      error: err instanceof Error ? err.message : "Error al re-verificar.",
-    });
+    const msg = err instanceof Error ? err.message : "Error al re-verificar.";
+    return asJson ? jsonErr(msg, 500) : redirectBack(request, { error: msg });
   }
 }
