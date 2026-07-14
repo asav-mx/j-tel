@@ -59,5 +59,49 @@ describe("reports", () => {
     const csv = reportToCsv(report);
     expect(csv).toContain("cumplido");
     expect(csv).toContain("no_cumplido");
+    expect(csv).toContain("Motivo");
+    expect(csv).toContain("tarde");
+  });
+
+  it("marca sin_servicio cuando no_cumplido no tiene unidad", () => {
+    const policy = {
+      toleranceMinutes: 5,
+      verificationGraceMinutes: 15,
+      routeStrictness: "destino_only" as const,
+      kmlMatchMinPct: 60,
+      kmlCorridorMeters: 120,
+      kmlCorridorMinPct: 60,
+      allowAlternateDestination: false,
+      excusableReasons: [],
+      enforcementRules: [],
+      evidenceMarginMinutesBefore: 60,
+      evidenceMarginMinutesAfter: 30,
+      arrivalAnticipationMinutes: 15,
+      maxRouteDurationMinutes: 60,
+      evidenceMinCoveragePct: 80,
+      evidenceMaxGapMinutes: 10,
+    };
+
+    const report = buildMonthlyReport({
+      period: "2026-07",
+      accountName: "Tecma",
+      contractName: "Campus",
+      policy,
+      rows: [
+        {
+          serviceDate: "2026-07-09",
+          routeName: "Km 30",
+          shiftName: "T1",
+          status: "no_cumplido",
+          timing: null,
+          motivo: "sin_servicio",
+          lateExcusable: false,
+          observedUnitLabel: null,
+          observedArrivalAt: null,
+        },
+      ],
+    });
+
+    expect(reportToCsv(report)).toContain("sin_servicio");
   });
 });

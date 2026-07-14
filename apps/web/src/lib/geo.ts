@@ -45,3 +45,24 @@ export function parseNumber(value: unknown): number | null {
   const n = Number(normalized);
   return Number.isFinite(n) ? n : null;
 }
+
+/** Aproxima centro y radio de un polígono circular generado con `circlePolygon`. */
+export function inferCircleFromPolygon(
+  polygon: Array<{ lat: number; lng: number }>,
+): { lat: number; lng: number; radiusMeters: number } | null {
+  if (polygon.length < 3) return null;
+  const lat = polygon.reduce((s, p) => s + p.lat, 0) / polygon.length;
+  const lng = polygon.reduce((s, p) => s + p.lng, 0) / polygon.length;
+  const cosLat = Math.cos((lat * Math.PI) / 180);
+  const avgRadius =
+    polygon.reduce((s, p) => {
+      const dLat = (p.lat - lat) * EARTH_METERS_PER_DEGREE_LAT;
+      const dLng = (p.lng - lng) * EARTH_METERS_PER_DEGREE_LAT * (cosLat || 1e-6);
+      return s + Math.sqrt(dLat * dLat + dLng * dLng);
+    }, 0) / polygon.length;
+  return {
+    lat: Math.round(lat * 1e6) / 1e6,
+    lng: Math.round(lng * 1e6) / 1e6,
+    radiusMeters: Math.max(1, Math.round(avgRadius)),
+  };
+}

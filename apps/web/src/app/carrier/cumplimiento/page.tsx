@@ -1,9 +1,13 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
 import { OccurrenceTable, toOccurrenceRow } from "@/components/occurrence-table";
+import { DateRangeFilter } from "@/components/date-range-filter";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
+import { resolveDateRange } from "@/lib/date-range";
 
 export const dynamic = "force-dynamic";
+
+type Vista = "todos" | "tarde" | "sin_servicio";
 
 function chipClass(active: boolean): string {
   return `rounded-full px-3 py-1 text-sm ${
@@ -13,7 +17,6 @@ function chipClass(active: boolean): string {
   }`;
 }
 
-/** Etiqueta legible del chip: cliente · campus/planta (no solo el cliente). */
 function contractChipLabel(c: {
   client?: { name: string } | null;
   plant?: { code: string } | null;
@@ -25,13 +28,27 @@ function contractChipLabel(c: {
   return scope ? `${client} · ${scope}` : client;
 }
 
+function parseVista(raw: string | string[] | undefined): Vista {
+  if (raw === "tarde") return "tarde";
+  // Compat: ?vista=dudosos → sin servicio (dudosos reales)
+  if (raw === "sin_servicio" || raw === "dudosos") return "sin_servicio";
+  return "todos";
+}
+
 function cumplimientoHref(
   slug: string | undefined,
-  opts: { contract?: string | null; vista?: "todos" | "dudosos" },
+  opts: {
+    contract?: string | null;
+    vista?: Vista;
+    desde?: string;
+    hasta?: string;
+  },
 ): string {
   const params = new URLSearchParams();
   if (opts.contract) params.set("contract", opts.contract);
-  if (opts.vista === "dudosos") params.set("vista", "dudosos");
+  if (opts.vista && opts.vista !== "todos") params.set("vista", opts.vista);
+  if (opts.desde) params.set("desde", opts.desde);
+  if (opts.hasta) params.set("hasta", opts.hasta);
   const qs = params.toString();
   return withAccount(`/carrier/cumplimiento${qs ? `?${qs}` : ""}`, slug);
 }
@@ -44,7 +61,8 @@ export default async function CarrierCumplimientoPage({
   const sp = searchParams ? await searchParams : undefined;
   const contractFilter =
     typeof sp?.contract === "string" && sp.contract.length > 0 ? sp.contract : null;
-  const vistaDudosos = sp?.vista === "dudosos";
+  const vista = parseVista(sp?.vista);
+  const range = resolveDateRange(sp, { defaultDaysBack: 6 });
 
   const repos = getRepos();
   const carrier = await resolveAccountByType("carrier", searchParams);
@@ -55,11 +73,17 @@ export default async function CarrierCumplimientoPage({
     if (contractFilter) {
       const match = contracts.find((c) => c.id === contractFilter);
       if (match) {
-        occurrences = await repos.occurrences.findForContract(contractFilter);
+        occurrences = await repos.occurrences.findForContract(
+          contractFilter,
+          range.from,
+          range.to,
+        );
       }
     } else {
       for (const c of contracts) {
-        occurrences.push(...(await repos.occurrences.findForContract(c.id)));
+        occurrences.push(
+          ...(await repos.occurrences.findForContract(c.id, range.from, range.to)),
+        );
       }
     }
   }
@@ -68,14 +92,18 @@ export default async function CarrierCumplimientoPage({
     ? contracts.find((c) => c.id === contractFilter)
     : null;
 
-  // Dudosos = residuales no_cumplido (GPS suficiente; fallan match). Pendientes no van aquí.
-  const visible = vistaDudosos
-    ? occurrences.filter((o) => o.complianceFact?.status === "no_cumplido")
-    : occurrences;
+  const noCumplidos = occurrences.filter((o) => o.complianceFact?.status === "no_cumplido");
+  const visible =
+    vista === "tarde"
+      ? noCumplidos.filter((o) => !!o.complianceFact?.observedUnitId)
+      : vista === "sin_servicio"
+        ? noCumplidos.filter((o) => !o.complianceFact?.observedUnitId)
+        : occurrences;
 
-  const gtRows = vistaDudosos
-    ? await repos.occurrenceGroundTruth.listForDates(visible.map((o) => o.id))
-    : [];
+  const gtRows =
+    vista === "sin_servicio"
+      ? await repos.occurrenceGroundTruth.listForDates(visible.map((o) => o.id))
+      : [];
   const labeledIds = new Set(gtRows.map((g) => g.occurrenceId));
 
   const rows = visible.map((occ) =>
@@ -86,6 +114,20 @@ export default async function CarrierCumplimientoPage({
     }),
   );
 
+  const actionPath = "/carrier/cumplimiento";
+  const rangeHidden = {
+    account: carrier?.slug,
+    contract: contractFilter,
+    vista: vista !== "todos" ? vista : undefined,
+  };
+
+  const title =
+    vista === "tarde"
+      ? `Tarde — ${range.label} (${rows.length})`
+      : vista === "sin_servicio"
+        ? `Sin servicio detectado — ${range.label} (${rows.length})`
+        : `Servicios — ${range.label} (${rows.length})`;
+
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-6xl space-y-6">
@@ -94,12 +136,16 @@ export default async function CarrierCumplimientoPage({
           links={[{ href: withAccount("/carrier", carrier?.slug), label: "← Panel" }]}
         />
 
+        <DateRangeFilter action={actionPath} range={range} hidden={rangeHidden} />
+
         {contracts.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-[var(--muted)]">Contrato:</span>
             <a
               href={cumplimientoHref(carrier?.slug, {
-                vista: vistaDudosos ? "dudosos" : "todos",
+                vista,
+                desde: range.fromIso,
+                hasta: range.toIso,
               })}
               className={chipClass(!contractFilter)}
             >
@@ -112,7 +158,9 @@ export default async function CarrierCumplimientoPage({
                   key={c.id}
                   href={cumplimientoHref(carrier?.slug, {
                     contract: c.id,
-                    vista: vistaDudosos ? "dudosos" : "todos",
+                    vista,
+                    desde: range.fromIso,
+                    hasta: range.toIso,
                   })}
                   className={chipClass(contractFilter === c.id)}
                 >
@@ -125,19 +173,36 @@ export default async function CarrierCumplimientoPage({
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-[var(--muted)]">Vista:</span>
           <a
-            href={cumplimientoHref(carrier?.slug, { contract: contractFilter })}
-            className={chipClass(!vistaDudosos)}
+            href={cumplimientoHref(carrier?.slug, {
+              contract: contractFilter,
+              desde: range.fromIso,
+              hasta: range.toIso,
+            })}
+            className={chipClass(vista === "todos")}
           >
             Todos
           </a>
           <a
             href={cumplimientoHref(carrier?.slug, {
               contract: contractFilter,
-              vista: "dudosos",
+              vista: "tarde",
+              desde: range.fromIso,
+              hasta: range.toIso,
             })}
-            className={chipClass(vistaDudosos)}
+            className={chipClass(vista === "tarde")}
           >
-            Dudosos
+            Tarde
+          </a>
+          <a
+            href={cumplimientoHref(carrier?.slug, {
+              contract: contractFilter,
+              vista: "sin_servicio",
+              desde: range.fromIso,
+              hasta: range.toIso,
+            })}
+            className={chipClass(vista === "sin_servicio")}
+          >
+            Sin servicio detectado
           </a>
         </div>
 
@@ -151,23 +216,22 @@ export default async function CarrierCumplimientoPage({
           </p>
         ) : null}
 
-        {vistaDudosos ? (
+        {vista === "sin_servicio" ? (
           <p className="text-sm text-[var(--muted)]">
-            Servicios que el sistema marcó como no cumplidos. Abre el detalle para etiquetar
-            (calibración; no cambia lo que ve el cliente).
+            Dudosos reales: el sistema no encontró unidad que sirviera la ruta. Abre el
+            detalle para etiquetar (calibración; no cambia lo que ve el cliente).
             {labeledIds.size > 0
               ? ` Ya etiquetados: ${labeledIds.size} de ${visible.length}.`
               : null}
           </p>
         ) : null}
+        {vista === "tarde" ? (
+          <p className="text-sm text-[var(--muted)]">
+            No cumplidos con unidad y llegada ya identificadas. No requieren etiquetado.
+          </p>
+        ) : null}
 
-        <Card
-          title={
-            vistaDudosos
-              ? "Dudosos — mismo hecho que ve el cliente"
-              : "Servicios — mismo hecho que ve el cliente"
-          }
-        >
+        <Card title={title}>
           <OccurrenceTable
             rows={rows}
             showClient

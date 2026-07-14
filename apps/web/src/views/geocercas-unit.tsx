@@ -1,6 +1,9 @@
 import { getRepos } from "@/lib/db";
+import { ConfirmForm } from "@/components/confirm-form";
 import { UnitShell } from "@/components/unit-shell";
 import { Card } from "@/components/ui";
+import { confirmMessages } from "@/lib/confirm-messages";
+import { inferCircleFromPolygon } from "@/lib/geo";
 import type { UnitPageContext } from "@/lib/unit-context";
 import { operationalUnitLabel } from "@/lib/operational-scope";
 
@@ -11,6 +14,12 @@ const inputClass =
 const labelClass = "block text-sm";
 const btnClass =
   "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
+
+const createdLabels: Record<string, string> = {
+  geocerca: "Geocerca creada. Ya aparece en la lista.",
+  geocerca_actualizada: "Geocerca actualizada.",
+  geocerca_eliminada: "Geocerca eliminada.",
+};
 
 export async function GeocercasUnitView({
   ctx,
@@ -70,7 +79,7 @@ export async function GeocercasUnitView({
         ) : null}
         {created ? (
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-            Geocerca creada. Ya aparece en la lista.
+            {createdLabels[created] ?? "Guardado."}
           </div>
         ) : null}
 
@@ -78,6 +87,7 @@ export async function GeocercasUnitView({
           <form action="/api/cliente/geocercas" method="post" className="grid gap-3 md:grid-cols-2">
             <input type="hidden" name="clientSlug" value={client.slug} />
             <input type="hidden" name="ownerRef" value={ownerRef} />
+            <input type="hidden" name="action" value="create" />
             <label className={labelClass}>
               Tipo
               <select name="role" className={inputClass} defaultValue="destino">
@@ -131,19 +141,102 @@ export async function GeocercasUnitView({
               Aún no hay geocercas para esta unidad. Crea la primera arriba.
             </p>
           ) : (
-            <ul className="space-y-1 text-sm">
-              {unitGeofences.map((g) => (
-                <li
-                  key={g.id}
-                  className="flex items-center justify-between rounded border border-white/5 p-2"
-                >
-                  <span>{g.name}</span>
-                  <span className="text-xs text-[var(--muted)]">
-                    {g.role} · {g.polygon.length} vértices
-                    {g.ownerType === "plant_group" ? " · campus" : ""}
-                  </span>
-                </li>
-              ))}
+            <ul className="space-y-4 text-sm">
+              {unitGeofences.map((g) => {
+                const circle = inferCircleFromPolygon(g.polygon);
+                return (
+                  <li
+                    key={g.id}
+                    className="rounded-lg border border-white/10 p-4"
+                  >
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-medium">{g.name}</span>
+                      <span className="text-xs text-[var(--muted)]">
+                        {g.role} · {g.polygon.length} vértices
+                        {g.ownerType === "plant_group" ? " · campus" : ""}
+                      </span>
+                    </div>
+                    <ConfirmForm
+                      action="/api/cliente/geocercas"
+                      method="post"
+                      confirmMessage={confirmMessages.updateGeofence(g.name)}
+                      className="grid gap-3 md:grid-cols-2"
+                    >
+                      <input type="hidden" name="clientSlug" value={client.slug} />
+                      <input type="hidden" name="ownerRef" value={ownerRef} />
+                      <input type="hidden" name="action" value="update" />
+                      <input type="hidden" name="geofenceId" value={g.id} />
+                      <label className={labelClass}>
+                        Tipo
+                        <select name="role" className={inputClass} defaultValue={g.role}>
+                          <option value="destino">Destino (llegada)</option>
+                          <option value="base">Base</option>
+                          <option value="caseta">Caseta</option>
+                          <option value="otro">Otro</option>
+                        </select>
+                      </label>
+                      <label className={labelClass}>
+                        Nombre
+                        <input name="name" required className={inputClass} defaultValue={g.name} />
+                      </label>
+                      <label className={labelClass}>
+                        Radio (metros)
+                        <input
+                          name="radiusMeters"
+                          required
+                          className={inputClass}
+                          defaultValue={circle?.radiusMeters ?? 150}
+                          inputMode="decimal"
+                        />
+                      </label>
+                      <label className={labelClass}>
+                        Latitud
+                        <input
+                          name="lat"
+                          required
+                          className={inputClass}
+                          defaultValue={circle?.lat ?? ""}
+                          inputMode="decimal"
+                        />
+                      </label>
+                      <label className={labelClass}>
+                        Longitud
+                        <input
+                          name="lng"
+                          required
+                          className={inputClass}
+                          defaultValue={circle?.lng ?? ""}
+                          inputMode="decimal"
+                        />
+                      </label>
+                      <div className="md:col-span-2">
+                        <button type="submit" className={btnClass}>
+                          Guardar cambios
+                        </button>
+                      </div>
+                    </ConfirmForm>
+                    <div className="mt-2">
+                      <ConfirmForm
+                        action="/api/cliente/geocercas"
+                        method="post"
+                        confirmMessage={confirmMessages.deleteGeofence(g.name)}
+                        className="inline"
+                      >
+                        <input type="hidden" name="clientSlug" value={client.slug} />
+                        <input type="hidden" name="ownerRef" value={ownerRef} />
+                        <input type="hidden" name="action" value="delete" />
+                        <input type="hidden" name="geofenceId" value={g.id} />
+                        <button
+                          type="submit"
+                          className="rounded-lg border border-red-500/30 px-4 py-2 text-sm text-red-200 hover:border-red-400"
+                        >
+                          Eliminar
+                        </button>
+                      </ConfirmForm>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>
