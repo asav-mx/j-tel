@@ -195,9 +195,9 @@ export async function MonitoreoUnitView({
             title={`${monitoreo.turnoName} · ${monitoreo.fecha}${monitoreo.turnoStartTime ? ` · ${monitoreo.turnoStartTime}` : ""}`}
           >
             <p className="mb-4 text-sm text-[var(--muted)]">
-              {monitoreo.stats.total} rutas · {monitoreo.stats.llego} llegó ·{" "}
-              {monitoreo.stats.avanzando} avanzando · {monitoreo.stats.en_ruta} en ruta ·{" "}
-              {monitoreo.stats.programada} programada ·{" "}
+              {monitoreo.stats.total} rutas · {monitoreo.stats.cerrado} cerrado ·{" "}
+              {monitoreo.stats.llego} llegó · {monitoreo.stats.avanzando} avanzando ·{" "}
+              {monitoreo.stats.en_ruta} en ruta · {monitoreo.stats.programada} programada ·{" "}
               <span className="text-red-300">{monitoreo.stats.alerta} alerta</span>
             </p>
             <MonitoreoLive initial={monitoreo} query={query} />
