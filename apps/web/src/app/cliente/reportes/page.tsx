@@ -26,16 +26,26 @@ export default async function ClienteReportesPage({
 
   const rows = occurrences
     .filter((o) => o.complianceFact)
-    .map((o) => ({
-      serviceDate: o.serviceDate,
-      routeName: o.profile?.routeShift?.route?.name ?? "—",
-      shiftName: o.profile?.routeShift?.shift?.name ?? "—",
-      status: o.complianceFact!.status,
-      timing: o.complianceFact!.timing,
-      lateExcusable: o.complianceFact!.lateExcusable,
-      observedUnitLabel: o.complianceFact!.observedUnitId,
-      observedArrivalAt: o.complianceFact!.observedArrivalAt,
-    }));
+    .map((o) => {
+      const fact = o.complianceFact!;
+      const motivo =
+        fact.status === "no_cumplido" && !fact.observedUnitId
+          ? "sin_servicio"
+          : fact.status === "no_cumplido"
+            ? "tarde"
+            : fact.timing ?? fact.status;
+      return {
+        serviceDate: o.serviceDate,
+        routeName: o.profile?.routeShift?.route?.name ?? "—",
+        shiftName: o.profile?.routeShift?.shift?.name ?? "—",
+        status: fact.status,
+        timing: fact.timing,
+        motivo,
+        lateExcusable: fact.lateExcusable,
+        observedUnitLabel: fact.observedUnitId,
+        observedArrivalAt: fact.observedArrivalAt,
+      };
+    });
 
   const policy = (contracts[0]?.policy ?? {
     toleranceMinutes: 5,
