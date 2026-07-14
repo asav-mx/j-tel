@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ConfirmForm } from "@/components/confirm-form";
+import { confirmMessages } from "@/lib/confirm-messages";
 
 export type RouteShiftRow = {
   id: string;
@@ -18,6 +19,10 @@ export type RouteShiftRow = {
 type ShiftOption = { id: string; name: string; startTime: string };
 
 const PAGE_SIZE = 50;
+
+const labelClass = "block text-sm";
+const btnClass =
+  "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
 
 const inputClass =
   "mt-1 w-full rounded border border-white/10 bg-black/20 p-2 text-sm placeholder:text-white/30";
@@ -109,10 +114,7 @@ export function RouteShiftList({
       ) : (
         <ul className="divide-y divide-white/5 rounded border border-white/5 text-sm">
           {pageRows.map((r) => (
-            <li
-              key={r.id}
-              className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 hover:bg-white/[0.02]"
-            >
+            <li key={r.id} className="space-y-3 px-3 py-3 hover:bg-white/[0.02]">
               <div className="min-w-0">
                 <p className="font-medium truncate">
                   {r.routeName} · {r.shiftName}
@@ -122,7 +124,46 @@ export function RouteShiftList({
               <ConfirmForm
                 action="/api/cliente/rutas"
                 method="post"
+                confirmMessage={confirmMessages.updateRoute(r.routeName)}
+                className="grid gap-2 md:grid-cols-2"
+              >
+                <input type="hidden" name="clientSlug" value={clientSlug} />
+                {plantId ? <input type="hidden" name="plantId" value={plantId} /> : null}
+                {plantGroupId ? (
+                  <input type="hidden" name="plantGroupId" value={plantGroupId} />
+                ) : null}
+                <input type="hidden" name="action" value="updateRouteShift" />
+                <input type="hidden" name="routeShiftId" value={r.id} />
+                <label className={labelClass}>
+                  Nombre
+                  <input
+                    name="name"
+                    required
+                    className={inputClass}
+                    defaultValue={r.routeName}
+                  />
+                </label>
+                <label className={labelClass}>
+                  Turno
+                  <select name="shiftId" required className={inputClass} defaultValue={r.shiftId}>
+                    {shifts.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} · {s.startTime.slice(0, 5)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="md:col-span-2">
+                  <button type="submit" className={btnClass}>
+                    Guardar cambios
+                  </button>
+                </div>
+              </ConfirmForm>
+              <ConfirmForm
+                action="/api/cliente/rutas"
+                method="post"
                 confirmMessage={r.deleteMessage}
+                className="inline"
               >
                 <input type="hidden" name="clientSlug" value={clientSlug} />
                 {plantId ? <input type="hidden" name="plantId" value={plantId} /> : null}
@@ -133,7 +174,7 @@ export function RouteShiftList({
                 <input type="hidden" name="routeShiftId" value={r.id} />
                 <button
                   type="submit"
-                  className="rounded border border-red-500/30 px-2 py-0.5 text-xs text-red-200 hover:border-red-400"
+                  className="rounded border border-red-500/30 px-3 py-1.5 text-xs text-red-200 hover:border-red-400"
                 >
                   Eliminar
                 </button>

@@ -27,6 +27,8 @@ export const confirmMessages = {
     `¿Guardar cambios en el turno «${name}»? Los servicios ya generados conservan su hora; aplica a nuevos.`,
   deleteRoute: (name: string, shiftLabel: string) =>
     `¿Eliminar la ruta «${name}» (${shiftLabel})? Solo es posible si no está en un perfil de servicio.`,
+  updateRoute: (name: string) =>
+    `¿Guardar cambios en la ruta «${name}»? Los servicios ya generados conservan su configuración; aplica a nuevos.`,
   updateGeofence: (name: string) =>
     `¿Guardar cambios en la geocerca «${name}»? Aplica a perfiles y servicios futuros.`,
   deleteGeofence: (name: string) =>

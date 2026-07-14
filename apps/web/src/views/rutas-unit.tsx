@@ -23,6 +23,7 @@ const btnClass =
 const createdLabels: Record<string, string> = {
   ruta: "Ruta creada (turno + trazado). Ya puedes usarla en Perfiles de servicio.",
   kml: "Nueva versión de trazado guardada.",
+  ruta_actualizada: "Ruta actualizada.",
   ruta_eliminada: "Ruta eliminada.",
 };
 
