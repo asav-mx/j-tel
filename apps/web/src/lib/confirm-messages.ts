@@ -10,7 +10,9 @@ export const confirmMessages = {
   deleteProfile: (name: string) =>
     `¿Eliminar el perfil «${name}»? Solo es posible si no tiene ocurrencias generadas.`,
   updateProfile: (name: string) =>
-    `¿Guardar cambios en «${name}»? Aplica hacia adelante: las ocurrencias ya generadas conservan su configuración.`,
+    `¿Guardar cambios en «${name}»? La verificación y el monitoreo usarán la geocerca actual del perfil.`,
+  bulkSetGeofence: (unitLabel: string) =>
+    `¿Aplicar esta geocerca a TODOS los perfiles de ${unitLabel}? No borra perfiles ni ocurrencias.`,
   generateOccurrencesTemplate: (name: string) =>
     `¿Generar ocurrencias para «${name}» del {fromDate} al {toDate}? Solo se materializan hasta 30 días adelante. Puede tardar; no pulses otra vez hasta ver el resultado.`,
   authorizeCarrierTemplate: (client: string) =>
@@ -35,4 +37,6 @@ export const confirmMessages = {
     `¿Guardar cambios en la geocerca «${name}»? Aplica a perfiles y servicios futuros.`,
   deleteGeofence: (name: string) =>
     `¿Eliminar la geocerca «${name}»? Solo es posible si no está en un perfil o servicio generado.`,
+  purgePlantProfiles: (plantLabel: string, code: string) =>
+    `¿PURGAR perfiles y ocurrencias de ${plantLabel}? Se borran TODOS los perfiles de esa planta, sus ~30 días de servicios y hechos. El contrato queda. Escribe el código «${code}» para confirmar.`,
 } as const;

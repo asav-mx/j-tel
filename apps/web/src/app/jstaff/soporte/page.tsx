@@ -1,5 +1,6 @@
 import { getRepos } from "@/lib/db";
 import { ConfirmForm } from "@/components/confirm-form";
+import { PurgePlantForm } from "@/components/purge-plant-form";
 import { AppNav, Card } from "@/components/ui";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { confirmMessages } from "@/lib/confirm-messages";
@@ -22,10 +23,15 @@ export default async function JStaffSoportePage({
   const error = typeof sp?.error === "string" ? sp.error : null;
   const resync = typeof sp?.resync === "string" ? sp.resync : null;
   const reverify = typeof sp?.reverify === "string" ? sp.reverify : null;
+  const purge = typeof sp?.purge === "string" ? sp.purge : null;
   const status = typeof sp?.status === "string" ? sp.status : null;
   const day = typeof sp?.day === "string" ? sp.day : null;
   const n = typeof sp?.n === "string" ? sp.n : null;
   const summary = typeof sp?.summary === "string" ? sp.summary : null;
+  const purgedPlant = typeof sp?.plant === "string" ? sp.plant : null;
+  const purgedProfiles = typeof sp?.profiles === "string" ? sp.profiles : null;
+  const purgedOccs = typeof sp?.occs === "string" ? sp.occs : null;
+  const purgedGeofences = typeof sp?.geofences === "string" ? sp.geofences : null;
 
   const range = resolveDateRange(sp, { defaultDaysBack: 29 });
 
@@ -41,8 +47,16 @@ export default async function JStaffSoportePage({
 
   const clients = await repos.accounts.listByType("client");
   const contracts = [];
+  const plants = [];
   for (const c of clients) {
     contracts.push(...(await repos.contracts.findForClient(c.id)));
+    const clientPlants = await repos.clients.getPlantsForAccount(c.id);
+    for (const p of clientPlants) {
+      // Solo plantas independientes (no campus): ahí se generan perfiles “por planta”.
+      if (!p.plantGroupId) {
+        plants.push({ ...p, clientName: c.name, clientSlug: c.slug });
+      }
+    }
   }
   const activeContracts = contracts.filter(
     (c) => c.status === "active" || c.status === "demo",
@@ -72,6 +86,12 @@ export default async function JStaffSoportePage({
         {reverify === "ok" ? (
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
             Día {day} re-verificado ({n} servicios). Resumen: {summary}.
+          </div>
+        ) : null}
+        {purge === "ok" ? (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+            Purga lista en planta {purgedPlant}: {purgedProfiles} perfiles, {purgedOccs}{" "}
+            ocurrencias, {purgedGeofences} geocercas huérfanas.
           </div>
         ) : null}
 
@@ -114,6 +134,26 @@ export default async function JStaffSoportePage({
               </button>
             </div>
           </ConfirmForm>
+        </Card>
+
+        <Card title="Purgar perfiles de prueba (planta)">
+          <p className="mb-4 text-sm text-[var(--muted)]">
+            Solo para basura irrecuperable. Si solo elegiste mal la geocerca, NO uses esto: en
+            Configuración → Perfiles → «Aplicar a todos».
+          </p>
+          {plants.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">
+              No hay plantas independientes (sin campus) para purgar.
+            </p>
+          ) : (
+            <PurgePlantForm
+              plants={plants.map((p) => ({
+                id: p.id,
+                code: p.code,
+                label: `${p.clientName} · ${p.name}`,
+              }))}
+            />
+          )}
         </Card>
 
         <Card title={`Pendientes de verificación — ${range.label} (${pending.length})`}>

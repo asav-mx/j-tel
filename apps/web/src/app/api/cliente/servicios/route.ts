@@ -174,6 +174,40 @@ export async function POST(request: Request) {
     return back(request, client.slug, scope, { created: "perfil_actualizado" });
   }
 
+  if (action === "bulk_geofence") {
+    const geofenceId = String(formData.get("geofenceId") ?? "").trim();
+    if (!formScope || formScope.kind !== "plant" || !formScope.plantId) {
+      return back(request, client.slug, formScope, {
+        error: "La corrección masiva de geocerca solo aplica a planta (no campus).",
+      });
+    }
+    if (!geofenceId) {
+      return back(request, client.slug, formScope, { error: "Elige la geocerca correcta." });
+    }
+    const scope = await repos.clients.resolveOperationalScope(client.id, formScope);
+    if (!scope || scope.kind !== "plant") {
+      return back(request, client.slug, formScope, { error: "Unidad operativa no válida." });
+    }
+    const geofence = await repos.geofences.findById(geofenceId);
+    if (!geofence) {
+      return back(request, client.slug, scope, { error: "Geocerca no encontrada." });
+    }
+    const memberPlantIds = await memberPlantIdsForScope(repos, client.id, scope);
+    if (!geofenceMatchesScope(geofence, scope, memberPlantIds)) {
+      return back(request, client.slug, scope, {
+        error: "La geocerca no corresponde a esta planta.",
+      });
+    }
+    const { updated } = await repos.profiles.bulkSetGeofenceForPlant(
+      scope.plantId,
+      client.id,
+      geofenceId,
+    );
+    return back(request, client.slug, scope, {
+      created: `geocerca_actualizada_${updated}`,
+    });
+  }
+
   if (action === "delete") {
     const profileId = String(formData.get("profileId") ?? "").trim();
     const redirectScope = profileId ? await scopeForProfile(profileId) : formScope;

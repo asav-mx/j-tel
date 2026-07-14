@@ -1389,6 +1389,100 @@ export class ServiceProfileRepository {
     return deleted ?? null;
   }
 
+  /**
+   * J-Staff: borra perfiles (y por FK cascada sus ocurrencias/hechos/ledger)
+   * de todos los contratos de una planta. No borra el contrato ni la planta.
+   * Opcionalmente limpia geocercas de la planta que ya no estén en ningún perfil.
+   */
+  async purgePlantProfiles(plantId: string): Promise<{
+    plantName: string;
+    plantCode: string;
+    contracts: number;
+    profilesDeleted: number;
+    occurrencesDeleted: number;
+    geofencesDeleted: number;
+    profileCodes: string[];
+  }> {
+    const plant = await this.db.query.plants.findFirst({
+      where: eq(plants.id, plantId),
+    });
+    if (!plant) {
+      throw new Error("Planta no encontrada");
+    }
+
+    const plantContracts = await this.db.query.serviceContracts.findMany({
+      where: eq(serviceContracts.plantId, plantId),
+      columns: { id: true },
+    });
+    const contractIds = plantContracts.map((c) => c.id);
+    if (contractIds.length === 0) {
+      return {
+        plantName: plant.name,
+        plantCode: plant.code,
+        contracts: 0,
+        profilesDeleted: 0,
+        occurrencesDeleted: 0,
+        geofencesDeleted: 0,
+        profileCodes: [],
+      };
+    }
+
+    const profiles = await this.db.query.serviceProfiles.findMany({
+      where: inArray(serviceProfiles.contractId, contractIds),
+      columns: { id: true, code: true },
+    });
+    const profileIds = profiles.map((p) => p.id);
+    const profileCodes = profiles.map((p) => p.code);
+
+    let occurrencesDeleted = 0;
+    if (profileIds.length > 0) {
+      const occCount = await this.db
+        .select({ id: serviceOccurrences.id })
+        .from(serviceOccurrences)
+        .where(inArray(serviceOccurrences.serviceProfileId, profileIds));
+      occurrencesDeleted = occCount.length;
+
+      // Borrar perfiles: DB cascade elimina ocurrencias → trips → facts → ledger → GT.
+      await this.db
+        .delete(serviceProfiles)
+        .where(inArray(serviceProfiles.id, profileIds));
+    }
+
+    // Geocercas de la planta sin perfil que las referencie.
+    const plantGeofences = await this.db.query.geofences.findMany({
+      where: eq(geofences.ownerPlantId, plantId),
+      columns: { id: true },
+    });
+    let geofencesDeleted = 0;
+    for (const g of plantGeofences) {
+      const stillUsed = await this.db.query.serviceProfiles.findFirst({
+        where: eq(serviceProfiles.geofenceId, g.id),
+        columns: { id: true },
+      });
+      if (stillUsed) continue;
+      const occGeofence = await this.db.query.serviceOccurrences.findFirst({
+        where: eq(serviceOccurrences.expectedGeofenceId, g.id),
+        columns: { id: true },
+      });
+      if (occGeofence) continue;
+      const removed = await this.db
+        .delete(geofences)
+        .where(eq(geofences.id, g.id))
+        .returning({ id: geofences.id });
+      geofencesDeleted += removed.length;
+    }
+
+    return {
+      plantName: plant.name,
+      plantCode: plant.code,
+      contracts: contractIds.length,
+      profilesDeleted: profiles.length,
+      occurrencesDeleted,
+      geofencesDeleted,
+      profileCodes,
+    };
+  }
+
   async updateProfile(
     id: string,
     clientAccountId: string,
@@ -1437,6 +1531,39 @@ export class ServiceProfileRepository {
 
     if (!updated) return { ok: false, reason: "not_found" };
     return { ok: true, profile: updated };
+  }
+
+  /**
+   * Cambia la geocerca de destino de TODOS los perfiles de los contratos
+   * de una planta. El motor lee la geocerca viva del perfil al verificar.
+   */
+  async bulkSetGeofenceForPlant(
+    plantId: string,
+    clientAccountId: string,
+    geofenceId: string,
+  ): Promise<{ updated: number }> {
+    const plant = await this.db.query.plants.findFirst({
+      where: and(eq(plants.id, plantId), eq(plants.clientAccountId, clientAccountId)),
+    });
+    if (!plant) return { updated: 0 };
+
+    const plantContracts = await this.db.query.serviceContracts.findMany({
+      where: and(
+        eq(serviceContracts.plantId, plantId),
+        eq(serviceContracts.clientAccountId, clientAccountId),
+      ),
+      columns: { id: true },
+    });
+    const contractIds = plantContracts.map((c) => c.id);
+    if (contractIds.length === 0) return { updated: 0 };
+
+    const updated = await this.db
+      .update(serviceProfiles)
+      .set({ geofenceId })
+      .where(inArray(serviceProfiles.contractId, contractIds))
+      .returning({ id: serviceProfiles.id });
+
+    return { updated: updated.length };
   }
 }
 
