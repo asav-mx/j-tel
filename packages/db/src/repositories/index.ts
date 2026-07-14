@@ -1483,6 +1483,92 @@ export class ServiceProfileRepository {
     };
   }
 
+  /** Perfiles de una planta (para soporte J-Staff: borrar uno de prueba). */
+  async listForPlant(plantId: string) {
+    const plantContracts = await this.db.query.serviceContracts.findMany({
+      where: eq(serviceContracts.plantId, plantId),
+      columns: { id: true, name: true },
+    });
+    const contractIds = plantContracts.map((c) => c.id);
+    if (contractIds.length === 0) return [];
+
+    const profiles = await this.db.query.serviceProfiles.findMany({
+      where: inArray(serviceProfiles.contractId, contractIds),
+      with: {
+        contract: { columns: { id: true, name: true } },
+        geofence: { columns: { id: true, name: true } },
+        routeShift: { with: { route: true, shift: true } },
+      },
+      orderBy: (p, { asc }) => [asc(p.name)],
+    });
+
+    const counts = await this.occurrenceCoverageByProfile(profiles.map((p) => p.id));
+    return profiles.map((p) => ({
+      ...p,
+      occurrenceCount: counts.get(p.id)?.count ?? 0,
+    }));
+  }
+
+  /**
+   * J-Staff: borra UN perfil aunque tenga ocurrencias (cascada DB).
+   * No borra rutas/turnos/contrato/planta. Limpia geocerca huérfana si aplica.
+   */
+  async purgeProfileById(profileId: string): Promise<{
+    profileCode: string;
+    profileName: string;
+    plantCode: string | null;
+    plantName: string | null;
+    occurrencesDeleted: number;
+    geofenceDeleted: boolean;
+  }> {
+    const profile = await this.db.query.serviceProfiles.findFirst({
+      where: eq(serviceProfiles.id, profileId),
+      with: {
+        contract: { with: { plant: true } },
+      },
+    });
+    if (!profile) {
+      throw new Error("Perfil no encontrado");
+    }
+
+    const occCount = await this.db
+      .select({ id: serviceOccurrences.id })
+      .from(serviceOccurrences)
+      .where(eq(serviceOccurrences.serviceProfileId, profileId));
+    const occurrencesDeleted = occCount.length;
+    const geofenceId = profile.geofenceId;
+
+    await this.db.delete(serviceProfiles).where(eq(serviceProfiles.id, profileId));
+
+    let geofenceDeleted = false;
+    if (geofenceId) {
+      const stillUsed = await this.db.query.serviceProfiles.findFirst({
+        where: eq(serviceProfiles.geofenceId, geofenceId),
+        columns: { id: true },
+      });
+      const occGeofence = await this.db.query.serviceOccurrences.findFirst({
+        where: eq(serviceOccurrences.expectedGeofenceId, geofenceId),
+        columns: { id: true },
+      });
+      if (!stillUsed && !occGeofence) {
+        const removed = await this.db
+          .delete(geofences)
+          .where(eq(geofences.id, geofenceId))
+          .returning({ id: geofences.id });
+        geofenceDeleted = removed.length > 0;
+      }
+    }
+
+    return {
+      profileCode: profile.code,
+      profileName: profile.name,
+      plantCode: profile.contract?.plant?.code ?? null,
+      plantName: profile.contract?.plant?.name ?? null,
+      occurrencesDeleted,
+      geofenceDeleted,
+    };
+  }
+
   async updateProfile(
     id: string,
     clientAccountId: string,

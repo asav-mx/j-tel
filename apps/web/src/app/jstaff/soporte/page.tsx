@@ -1,6 +1,7 @@
 import { getRepos } from "@/lib/db";
 import { ConfirmForm } from "@/components/confirm-form";
 import { PurgePlantForm } from "@/components/purge-plant-form";
+import { PurgeProfileForm } from "@/components/purge-profile-form";
 import { AppNav, Card } from "@/components/ui";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { confirmMessages } from "@/lib/confirm-messages";
@@ -24,6 +25,7 @@ export default async function JStaffSoportePage({
   const resync = typeof sp?.resync === "string" ? sp.resync : null;
   const reverify = typeof sp?.reverify === "string" ? sp.reverify : null;
   const purge = typeof sp?.purge === "string" ? sp.purge : null;
+  const purgeOne = typeof sp?.purge_one === "string" ? sp.purge_one : null;
   const status = typeof sp?.status === "string" ? sp.status : null;
   const day = typeof sp?.day === "string" ? sp.day : null;
   const n = typeof sp?.n === "string" ? sp.n : null;
@@ -32,6 +34,9 @@ export default async function JStaffSoportePage({
   const purgedProfiles = typeof sp?.profiles === "string" ? sp.profiles : null;
   const purgedOccs = typeof sp?.occs === "string" ? sp.occs : null;
   const purgedGeofences = typeof sp?.geofences === "string" ? sp.geofences : null;
+  const purgedOneCode = typeof sp?.code === "string" ? sp.code : null;
+  const purgedOneName = typeof sp?.name === "string" ? sp.name : null;
+  const purgedOneOccs = typeof sp?.occs === "string" ? sp.occs : null;
 
   const range = resolveDateRange(sp, { defaultDaysBack: 29 });
 
@@ -61,6 +66,28 @@ export default async function JStaffSoportePage({
   const activeContracts = contracts.filter(
     (c) => c.status === "active" || c.status === "demo",
   );
+
+  const profilesForPurge: Array<{
+    id: string;
+    code: string;
+    name: string;
+    plantId: string;
+    contractName: string;
+    occurrenceCount: number;
+  }> = [];
+  for (const plant of plants) {
+    const plantProfiles = await repos.profiles.listForPlant(plant.id);
+    for (const p of plantProfiles) {
+      profilesForPurge.push({
+        id: p.id,
+        code: p.code,
+        name: p.name,
+        plantId: plant.id,
+        contractName: p.contract?.name ?? "—",
+        occurrenceCount: p.occurrenceCount,
+      });
+    }
+  }
 
   return (
     <main className="min-h-screen p-8">
@@ -92,6 +119,12 @@ export default async function JStaffSoportePage({
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
             Purga lista en planta {purgedPlant}: {purgedProfiles} perfiles, {purgedOccs}{" "}
             ocurrencias, {purgedGeofences} geocercas huérfanas.
+          </div>
+        ) : null}
+        {purgeOne === "ok" ? (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+            Perfil borrado: {purgedOneCode}
+            {purgedOneName ? ` («${purgedOneName}»)` : ""} · {purgedOneOccs ?? "0"} ocurrencias.
           </div>
         ) : null}
 
@@ -136,23 +169,34 @@ export default async function JStaffSoportePage({
           </ConfirmForm>
         </Card>
 
-        <Card title="Purgar perfiles de prueba (planta)">
+        <Card title="Borrar basura de prueba">
           <p className="mb-4 text-sm text-[var(--muted)]">
-            Solo para basura irrecuperable. Si solo elegiste mal la geocerca, NO uses esto: en
-            Configuración → Perfiles → «Aplicar a todos».
+            Desde el cliente no se puede eliminar un perfil que ya tiene ocurrencias (el botón
+            «Eliminar» desaparece). Aquí sí: un perfil, o toda la planta.
+            Si solo confundiste la geocerca, usa Configuración → Perfiles → «Aplicar a todos».
           </p>
           {plants.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">
               No hay plantas independientes (sin campus) para purgar.
             </p>
           ) : (
-            <PurgePlantForm
-              plants={plants.map((p) => ({
-                id: p.id,
-                code: p.code,
-                label: `${p.clientName} · ${p.name}`,
-              }))}
-            />
+            <div className="space-y-4">
+              <PurgeProfileForm
+                plants={plants.map((p) => ({
+                  id: p.id,
+                  code: p.code,
+                  label: `${p.clientName} · ${p.name}`,
+                }))}
+                profiles={profilesForPurge}
+              />
+              <PurgePlantForm
+                plants={plants.map((p) => ({
+                  id: p.id,
+                  code: p.code,
+                  label: `${p.clientName} · ${p.name}`,
+                }))}
+              />
+            </div>
           )}
         </Card>
 
