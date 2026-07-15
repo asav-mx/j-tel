@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# post-checkout — borra el cache de Next.js al cambiar de rama para evitar
+# bundles "frankenstein" (módulos de la rama anterior mezclados con la nueva).
+#
+# Git pasa 3 args: prev_HEAD new_HEAD is_branch_checkout
+# Solo actuamos en checkout de rama (tercer arg = 1), no en checkout de archivo.
+
+is_branch_checkout="$3"
+
+if [ "$is_branch_checkout" = "1" ]; then
+  next_dir="$(git rev-parse --show-toplevel)/apps/web/.next"
+  if [ -d "$next_dir" ]; then
+    rm -rf "$next_dir"
+  fi
+fi
