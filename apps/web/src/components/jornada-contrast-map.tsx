@@ -32,6 +32,7 @@ export function JornadaContrastMap({
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const [showExpected, setShowExpected] = useState(true);
   const [showObserved, setShowObserved] = useState(true);
+  const [showGeofences, setShowGeofences] = useState(true);
   const [observedOpacity, setObservedOpacity] = useState(0.55);
 
   const visible = useMemo(() => {
@@ -71,10 +72,35 @@ export function JornadaContrastMap({
 
       const expected = L.layerGroup();
       const observed = L.layerGroup();
+      const geofences = L.layerGroup();
       const bounds: [number, number][] = [];
+      const drawnGeo = new Set<string>();
 
       for (const r of visible) {
         const color = COLORS[r.colorIndex % COLORS.length]!;
+        if (showGeofences && r.geofencePolygon.length >= 3) {
+          const key = r.geofencePolygon.map((p) => `${p.lat},${p.lng}`).join("|");
+          if (!drawnGeo.has(key)) {
+            drawnGeo.add(key);
+            const latlngs = r.geofencePolygon.map((p) => {
+              bounds.push([p.lat, p.lng]);
+              return L.latLng(p.lat, p.lng);
+            });
+            L.polygon(latlngs, {
+              color: "#3b82f6",
+              weight: 2.5,
+              opacity: 0.95,
+              fillColor: "#3b82f6",
+              fillOpacity: 0.16,
+              dashArray: "6 4",
+            })
+              .bindTooltip(
+                r.geofenceName ? `Geocerca · ${r.geofenceName}` : `Geocerca · ${r.profileCode}`,
+                { sticky: true },
+              )
+              .addTo(geofences);
+          }
+        }
         if (showExpected && r.kmlWaypoints.length >= 2) {
           const latlngs = r.kmlWaypoints.map((p) => {
             bounds.push([p.lat, p.lng]);
@@ -100,13 +126,14 @@ export function JornadaContrastMap({
             opacity: observedOpacity,
           })
             .bindTooltip(
-              `Observado · ${r.profileCode} · ${r.observedUnitLabel ?? "—"}`,
+              `Observado · ${r.profileCode} · ${r.observedUnitLabel ?? "flota (sin unidad)"}`,
               { sticky: true },
             )
             .addTo(observed);
         }
       }
 
+      if (showGeofences) geofences.addTo(map);
       if (showExpected) expected.addTo(map);
       if (showObserved) observed.addTo(map);
       if (bounds.length > 0) {
@@ -123,11 +150,19 @@ export function JornadaContrastMap({
         mapRef.current = null;
       }
     };
-  }, [visible, showExpected, showObserved, observedOpacity]);
+  }, [visible, showExpected, showObserved, showGeofences, observedOpacity]);
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-4 text-sm">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={showGeofences}
+            onChange={(e) => setShowGeofences(e.target.checked)}
+          />
+          Geocercas destino
+        </label>
         <label className="flex items-center gap-2">
           <input
             type="checkbox"

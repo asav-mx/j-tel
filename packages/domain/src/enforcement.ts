@@ -22,12 +22,16 @@ export function computeEnforcement(
     }));
   }
 
+  const sinServicio = status === "no_cumplido" && timing == null;
+
   return policy.enforcementRules.map((rule) => {
     if (rule.type === "no_pago_viaje") {
       return {
         type: rule.type,
         applies: true,
-        description: `No se paga el viaje — retraso mayor a ${rule.toleranceMinutes} min sin causa excusable`,
+        description: sinServicio
+          ? "No se paga el viaje — sin servicio detectado en la ventana"
+          : `No se paga el viaje — retraso mayor a ${rule.toleranceMinutes} min sin causa excusable`,
       };
     }
 
@@ -35,7 +39,9 @@ export function computeEnforcement(
       return {
         type: rule.type,
         applies: true,
-        description: `Rebate aplicable — ${rule.baseRebatePercent}% base por ${rule.baseFailureCount} faltas`,
+        description: sinServicio
+          ? `Rebate aplicable — sin servicio detectado (${rule.baseRebatePercent}% base por ${rule.baseFailureCount} faltas)`
+          : `Rebate aplicable — ${rule.baseRebatePercent}% base por ${rule.baseFailureCount} faltas`,
         rebatePercent: rule.baseRebatePercent,
       };
     }
@@ -43,7 +49,9 @@ export function computeEnforcement(
     return {
       type: rule.type,
       applies: true,
-      description: "Reembolso aplicable según contrato",
+      description: sinServicio
+        ? "Reembolso aplicable — sin servicio detectado"
+        : "Reembolso aplicable según contrato",
     };
   });
 }
