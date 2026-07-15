@@ -19,6 +19,7 @@ describe("reports", () => {
       maxRouteDurationMinutes: 60,
       evidenceMinCoveragePct: 80,
       evidenceMaxGapMinutes: 10,
+      monitorPreAlertMinutes: 20,
     };
 
     const rows = [
@@ -80,6 +81,7 @@ describe("reports", () => {
       maxRouteDurationMinutes: 60,
       evidenceMinCoveragePct: 80,
       evidenceMaxGapMinutes: 10,
+      monitorPreAlertMinutes: 20,
     };
 
     const report = buildMonthlyReport({

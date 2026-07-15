@@ -171,6 +171,11 @@ export const contractPolicySchema = z.object({
    * Si el hueco es mayor → pendiente_evidencia. Default 10.
    */
   evidenceMaxGapMinutes: z.number().int().positive().default(10),
+  /**
+   * Minutos antes del deadline para disparar pre-alerta en la torre cuando
+   * una ruta aún no tiene unidad identificada. 0 = apagada.
+   */
+  monitorPreAlertMinutes: z.number().int().nonnegative().default(20),
 });
 
 export type ContractPolicy = z.infer<typeof contractPolicySchema>;

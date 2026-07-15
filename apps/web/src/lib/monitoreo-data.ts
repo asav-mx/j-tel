@@ -190,6 +190,7 @@ export async function loadMonitoreo(opts: {
     carrierAccountId: string | null;
     /** Hecho congelado: si existe, la torre no calcula nada sobre esta ocurrencia. */
     closed: boolean;
+    monitorPreAlertMinutes: number;
   };
   const occData: OccData[] = [];
   for (const o of filtered) {
@@ -218,6 +219,7 @@ export async function loadMonitoreo(opts: {
       corridorMinPct: policy.kmlCorridorMinPct ?? 60,
       carrierAccountId: o.contract?.carrierAccountId ?? null,
       closed: Boolean(o.complianceFact),
+      monitorPreAlertMinutes: policy.monitorPreAlertMinutes ?? 20,
     });
   }
 
@@ -462,13 +464,17 @@ export async function loadMonitoreo(opts: {
           }
         }
       } else {
-        // Sin unidad identificada: alerta solo cuando el deadline ya venció
-        // (derivado del deadline y la ventana de la política, sin minutos
-        // inventados). Antes del deadline sigue "programada".
         const started = now.getTime() >= d.windowStart.getTime();
         if (started && minutesToDeadline < 0) {
           state = "alerta";
           alertReason = "Sin unidad identificada y el turno ya venció";
+        } else if (
+          started &&
+          d.monitorPreAlertMinutes > 0 &&
+          minutesToDeadline <= d.monitorPreAlertMinutes
+        ) {
+          state = "alerta";
+          alertReason = `Sin unidad identificada, faltan ${Math.ceil(minutesToDeadline)} min`;
         } else {
           state = "programada";
         }

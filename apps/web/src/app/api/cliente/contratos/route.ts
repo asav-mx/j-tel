@@ -152,6 +152,10 @@ export async function POST(request: Request) {
         formData.get("evidenceMaxGapMinutes"),
         existingPolicy.evidenceMaxGapMinutes ?? 10,
       ),
+      monitorPreAlertMinutes: toInt(
+        formData.get("monitorPreAlertMinutes"),
+        existingPolicy.monitorPreAlertMinutes ?? 20,
+      ),
     };
 
     const parsed = contractPolicySchema.safeParse(policyPayload);
@@ -223,6 +227,7 @@ export async function POST(request: Request) {
   const kmlCorridorMinPct = toInt(formData.get("kmlCorridorMinPct"), 60);
   const evidenceMarginMinutesBefore = toInt(formData.get("evidenceMarginMinutesBefore"), 60);
   const evidenceMarginMinutesAfter = toInt(formData.get("evidenceMarginMinutesAfter"), 30);
+  const monitorPreAlertMinutes = toInt(formData.get("monitorPreAlertMinutes"), 20);
   const allowAlternateDestination = formData.get("allowAlternateDestination") === "on";
   const excusableReasons = formData.getAll("excusableReasons").map((r) => String(r));
 
@@ -246,6 +251,7 @@ export async function POST(request: Request) {
       enforcementRules: buildEnforcementRule(formData),
       evidenceMarginMinutesBefore,
       evidenceMarginMinutesAfter,
+      monitorPreAlertMinutes,
     },
   };
 

@@ -298,6 +298,19 @@ export async function ContratosUnitView({
                       className={inputClass}
                     />
                   </label>
+                  <label className={labelClass}>
+                    Pre-alerta torre (min)
+                    <input
+                      name="monitorPreAlertMinutes"
+                      type="number"
+                      min={0}
+                      defaultValue={20}
+                      className={inputClass}
+                    />
+                    <span className="mt-1 block text-xs text-[var(--muted)]">
+                      Minutos antes del deadline para avisar si no hay unidad. 0 = apagada.
+                    </span>
+                  </label>
                   <label className="mt-6 flex items-center gap-2 text-sm">
                     <input type="checkbox" name="allowAlternateDestination" />
                     Permitir destino alterno
@@ -596,6 +609,19 @@ export async function ContratosUnitView({
                               defaultValue={c.policy.maxRouteDurationMinutes ?? 60}
                               className={inputClass}
                             />
+                          </label>
+                          <label className={labelClass}>
+                            Pre-alerta torre (min)
+                            <input
+                              name="monitorPreAlertMinutes"
+                              type="number"
+                              min={0}
+                              defaultValue={c.policy.monitorPreAlertMinutes ?? 20}
+                              className={inputClass}
+                            />
+                            <span className="mt-1 block text-xs text-[var(--muted)]">
+                              Minutos antes del deadline para avisar si no hay unidad. 0 = apagada.
+                            </span>
                           </label>
                           <label className="mt-6 flex items-center gap-2 text-sm">
                             <input

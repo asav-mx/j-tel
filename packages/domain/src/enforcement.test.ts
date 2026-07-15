@@ -26,6 +26,7 @@ describe("enforcement", () => {
     maxRouteDurationMinutes: 60,
     evidenceMinCoveragePct: 80,
     evidenceMaxGapMinutes: 10,
+    monitorPreAlertMinutes: 20,
   };
 
   it("Honeywell: rebate 2% por 2 faltas, +1% cada una", () => {
