@@ -1,42 +1,33 @@
-name: Temporary ASR model fetch
+name: Temporary ASR model artifact
 
 on:
-  push:
+  pull_request:
     branches:
-      - tmp-asr-model-20260715
+      - main
     paths:
       - .github/workflows/tmp-asr-model-20260715.yml
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   fetch-model:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Check out temporary branch
-        uses: actions/checkout@v4
-        with:
-          ref: tmp-asr-model-20260715
-          fetch-depth: 1
-
-      - name: Download and encode Spanish Vosk model
+      - name: Download Spanish Vosk model
         shell: bash
         run: |
           set -euo pipefail
           curl -L --fail --retry 5 --retry-delay 2 \
-            -o /tmp/vosk-model-small-es-0.42.zip \
+            -o vosk-model-small-es-0.42.zip \
             https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip
-          base64 -w 0 /tmp/vosk-model-small-es-0.42.zip > tmp-vosk-model-small-es-0.42.b64.txt
-          sha256sum /tmp/vosk-model-small-es-0.42.zip > tmp-vosk-model-small-es-0.42.sha256.txt
+          echo "09b239888f633ef2f0b4e09736e3d9936acfd810bc65d53fad45261762c6511f  vosk-model-small-es-0.42.zip" | sha256sum --check
 
-      - name: Commit encoded model to temporary branch
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add tmp-vosk-model-small-es-0.42.b64.txt tmp-vosk-model-small-es-0.42.sha256.txt
-          git commit -m "chore: stage temporary Spanish ASR model"
-          git push origin HEAD:tmp-asr-model-20260715
+      - name: Upload temporary model artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vosk-model-small-es-0.42
+          path: vosk-model-small-es-0.42.zip
+          retention-days: 1
+          if-no-files-found: error
