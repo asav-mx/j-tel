@@ -19,10 +19,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --quiet 'huggingface_hub[cli]'
-          hf download Systran/faster-whisper-base \
-            --local-dir faster-whisper-base \
-            --exclude '*.md' '.gitattributes'
+          python -m pip install --quiet huggingface_hub
+          python - <<'PY'
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id='Systran/faster-whisper-base',
+              local_dir='faster-whisper-base',
+              ignore_patterns=['*.md', '.gitattributes'],
+          )
+          PY
           find faster-whisper-base -maxdepth 2 -type f -printf '%p %s bytes\n'
 
       - name: Upload temporary model artifact
