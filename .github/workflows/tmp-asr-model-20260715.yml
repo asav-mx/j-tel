@@ -1,4 +1,4 @@
-name: Temporary ASR model artifact
+name: Temporary Faster Whisper model artifact
 
 on:
   pull_request:
@@ -13,21 +13,22 @@ permissions:
 jobs:
   fetch-model:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - name: Download Spanish Vosk model
+      - name: Download Faster Whisper base model
         shell: bash
         run: |
           set -euo pipefail
-          curl -L --fail --retry 5 --retry-delay 2 \
-            -o vosk-model-small-es-0.42.zip \
-            https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip
-          echo "09b239888f633ef2f0b4e09736e3d9936acfd810bc65d53fad45261762c6511f  vosk-model-small-es-0.42.zip" | sha256sum --check
+          python -m pip install --quiet 'huggingface_hub[cli]'
+          hf download Systran/faster-whisper-base \
+            --local-dir faster-whisper-base \
+            --exclude '*.md' '.gitattributes'
+          find faster-whisper-base -maxdepth 2 -type f -printf '%p %s bytes\n'
 
       - name: Upload temporary model artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vosk-model-small-es-0.42
-          path: vosk-model-small-es-0.42.zip
+          name: faster-whisper-base
+          path: faster-whisper-base
           retention-days: 1
           if-no-files-found: error
