@@ -161,12 +161,19 @@ export function MonitoreoLive({
           bounds.push([p.lat, p.lng]);
           return L.latLng(p.lat, p.lng);
         });
-        L.polygon(latlngs, {
+        const poly = L.polygon(latlngs, {
           color: "#38bdf8",
-          weight: 1.5,
-          opacity: 0.8,
-          fillOpacity: 0.08,
-        }).addTo(overlay);
+          weight: 2.5,
+          opacity: 0.95,
+          fillColor: "#38bdf8",
+          fillOpacity: 0.18,
+          dashArray: "6 4",
+        });
+        const label = r.geofenceName
+          ? `Geocerca · ${r.geofenceName}`
+          : `Geocerca · ${r.profileCode}`;
+        poly.bindTooltip(label, { sticky: true });
+        poly.addTo(overlay);
       }
     }
 
@@ -240,6 +247,11 @@ export function MonitoreoLive({
     });
   }
 
+  const missingGeofence = useMemo(
+    () => visibleRoutes.filter((r) => r.geofencePolygon.length < 3).length,
+    [visibleRoutes],
+  );
+
   return (
     <div className="space-y-3">
       {/* Leyenda permanente: la torre pronostica, no dictamina. Parte del diseño,
@@ -254,6 +266,13 @@ export function MonitoreoLive({
         </p>
       </div>
 
+      {missingGeofence > 0 ? (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-50">
+          {missingGeofence} ruta(s) sin polígono de geocerca. Sin destino dibujado el motor no
+          puede marcar «llegó»: revisa Configuración → Perfiles / Geocercas.
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-4 text-sm">
         <label className="flex items-center gap-2">
           <input
@@ -261,7 +280,7 @@ export function MonitoreoLive({
             checked={showGeocercas}
             onChange={(e) => setShowGeocercas(e.target.checked)}
           />
-          Geocercas
+          Geocercas destino
         </label>
         <label className="flex items-center gap-2">
           <input

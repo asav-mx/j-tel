@@ -44,6 +44,8 @@ export type MonitoreoRoute = {
   /** Trazado esperado (fondo / marca de agua). */
   kmlWaypoints: LatLng[];
   geofencePolygon: LatLng[];
+  /** Nombre de la geocerca destino (para tooltip en mapa). */
+  geofenceName: string | null;
   /** Unidad pre-identificada en vivo (provisional, no veredicto). Null si cerrado. */
   matchedUnitId: string | null;
   matchedUnitLabel: string | null;
@@ -87,6 +89,20 @@ function downsample<T>(arr: T[], max: number): T[] {
   const out: T[] = [];
   const step = (arr.length - 1) / (max - 1);
   for (let i = 0; i < max; i++) out.push(arr[Math.round(i * step)]!);
+  return out;
+}
+
+/** Acepta {lat,lng} o variantes comunes al leer jsonb. */
+function normalizePolygon(raw: unknown): LatLng[] {
+  if (!Array.isArray(raw)) return [];
+  const out: LatLng[] = [];
+  for (const p of raw) {
+    if (!p || typeof p !== "object") continue;
+    const rec = p as Record<string, unknown>;
+    const lat = Number(rec.lat ?? rec.latitude);
+    const lng = Number(rec.lng ?? rec.longitude ?? rec.lon);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) out.push({ lat, lng });
+  }
   return out;
 }
 
@@ -164,13 +180,15 @@ export async function loadMonitoreo(opts: {
   const turnoName = shift?.name ?? "Turno";
   const turnoStartTime = String(shift?.startTime ?? "").slice(0, 5);
 
-  // Geocercas del alcance: para detectar llegada por ocurrencia (confidencialidad
-  // dentro del propio cliente).
+  // Geocercas del alcance (fallback). Preferimos la del perfil cargada con la
+  // ocurrencia: así Monitoreo muestra exactamente la misma geocerca que usa el
+  // árbitro, aunque el dueño del polígono no esté en findForScope.
   const scopeGeofences = await repos.geofences.findForScope(opts.scope, account.id);
-  const geofenceById = new Map<string, LatLng[]>();
+  const geofenceById = new Map<string, { polygon: LatLng[]; name: string }>();
   for (const g of scopeGeofences) {
-    if (Array.isArray(g.polygon) && g.polygon.length >= 3) {
-      geofenceById.set(g.id, g.polygon as LatLng[]);
+    const poly = normalizePolygon(g.polygon);
+    if (poly.length >= 3) {
+      geofenceById.set(g.id, { polygon: poly, name: g.name });
     }
   }
 
@@ -179,6 +197,7 @@ export async function loadMonitoreo(opts: {
     kml: LatLng[];
     corridorKm: number;
     geofence: LatLng[];
+    geofenceName: string | null;
     deadline: Date;
     windowStart: Date;
     /** Techo de la ventana: min(now, deadline + gracia + margen después). */
@@ -207,10 +226,20 @@ export async function loadMonitoreo(opts: {
       policy,
       now,
     );
+    const profileGeo = o.profile?.geofence;
+    const fromProfile = profileGeo ? normalizePolygon(profileGeo.polygon) : [];
+    const fromScope = geofenceById.get(o.profile?.geofenceId ?? "");
+    const geofence =
+      fromProfile.length >= 3 ? fromProfile : (fromScope?.polygon ?? []);
+    const geofenceName =
+      fromProfile.length >= 3
+        ? (profileGeo?.name ?? null)
+        : (fromScope?.name ?? null);
     occData.push({
       kml,
       corridorKm,
-      geofence: geofenceById.get(o.profile?.geofenceId ?? "") ?? [],
+      geofence,
+      geofenceName,
       deadline: o.expectedDeadline,
       windowStart,
       windowEnd,
@@ -486,6 +515,7 @@ export async function loadMonitoreo(opts: {
       minutesToDeadline,
       kmlWaypoints: downsample(d.kml, 120),
       geofencePolygon: d.geofence,
+      geofenceName: d.geofenceName,
       matchedUnitId,
       matchedUnitLabel: matchedUnitId ? (unitLabelById.get(matchedUnitId) ?? null) : null,
       coveragePct,
