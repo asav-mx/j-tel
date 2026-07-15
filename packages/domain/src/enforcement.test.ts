@@ -41,5 +41,17 @@ describe("enforcement", () => {
     };
     const outcomes = computeEnforcement("no_cumplido", "tarde", false, tecmaPolicy);
     expect(outcomes[0]?.applies).toBe(true);
+    expect(outcomes[0]?.description).toContain("retraso mayor a 5 min");
+  });
+
+  it("Tecma: no_pago por sin servicio (timing null) no habla de retraso", () => {
+    const tecmaPolicy = {
+      ...policy,
+      enforcementRules: [{ type: "no_pago_viaje" as const, toleranceMinutes: 5 }],
+    };
+    const outcomes = computeEnforcement("no_cumplido", null, false, tecmaPolicy);
+    expect(outcomes[0]?.applies).toBe(true);
+    expect(outcomes[0]?.description).toContain("sin servicio detectado");
+    expect(outcomes[0]?.description).not.toContain("retraso");
   });
 });

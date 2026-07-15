@@ -1,5 +1,5 @@
 import { getRepos } from "@/lib/db";
-import type { ContractPolicy, OperationalScope } from "@jtel/domain";
+import type { ContractPolicy, GpsPoint, OperationalScope } from "@jtel/domain";
 import { computeExclusiveContentionWindow } from "@jtel/services";
 
 export type JornadaRoute = {
@@ -12,6 +12,9 @@ export type JornadaRoute = {
   observedUnitLabel: string | null;
   expectedDeadline: string;
   kmlWaypoints: Array<{ lat: number; lng: number }>;
+  /** Destino del perfil — misma geocerca que Cumplimiento / árbitro. */
+  geofencePolygon: Array<{ lat: number; lng: number }>;
+  geofenceName: string | null;
   gpsTrack: Array<{ lat: number; lng: number; at: string }>;
   colorIndex: number;
 };
@@ -45,6 +48,19 @@ function downsample<T>(arr: T[], max: number): T[] {
   return out;
 }
 
+function normalizePolygon(raw: unknown): Array<{ lat: number; lng: number }> {
+  if (!Array.isArray(raw)) return [];
+  const out: Array<{ lat: number; lng: number }> = [];
+  for (const p of raw) {
+    if (!p || typeof p !== "object") continue;
+    const rec = p as Record<string, unknown>;
+    const lat = Number(rec.lat ?? rec.latitude);
+    const lng = Number(rec.lng ?? rec.longitude ?? rec.lon);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) out.push({ lat, lng });
+  }
+  return out;
+}
+
 async function resolveScopeUnit(
   repos: ReturnType<typeof getRepos>,
   scope: OperationalScope,
@@ -60,23 +76,26 @@ async function resolveScopeUnit(
   return { id: group.id, name: group.name };
 }
 
+/**
+ * Historial (contraste esperado vs observado).
+ * Producto genérico: planta independiente o campus — misma lógica.
+ */
 export async function loadJornada(opts: {
-  scope: OperationalScope;
   accountSlug: string;
+  scope: OperationalScope;
   fecha: string;
   turnoId: string;
 }): Promise<JornadaPayload | null> {
   const repos = getRepos();
   const account = await repos.accounts.findBySlug(opts.accountSlug);
-  if (!account || account.type !== "client") return null;
+  if (!account) return null;
 
   const unit = await resolveScopeUnit(repos, opts.scope, account.id);
   if (!unit) return null;
 
-  const day = new Date(`${opts.fecha}T00:00:00`);
-  const occurrences = await repos.occurrences.findForScope(opts.scope, day, day);
-
-  const filtered = occurrences.filter(
+  const day = new Date(`${opts.fecha}T12:00:00.000Z`);
+  const occs = await repos.occurrences.findForScope(opts.scope, day, day);
+  const filtered = occs.filter(
     (o) =>
       o.serviceDate === opts.fecha &&
       o.profile?.routeShift?.shiftId === opts.turnoId,
@@ -85,6 +104,67 @@ export async function loadJornada(opts: {
   const shift = filtered[0]?.profile?.routeShift?.shift;
   const turnoName = shift?.name ?? "Turno";
   const turnoStartTime = String(shift?.startTime ?? "").slice(0, 5);
+
+  // Telemetría por carrier (una lectura), reutilizada en rutas sin unidad
+  // observada — si no, el mapa de Historial quedaba vacío en no_cumplido.
+  const pointsByCarrierUnit = new Map<string, Map<string, GpsPoint[]>>();
+  const carrierIds = [
+    ...new Set(
+      filtered
+        .map((o) => o.contract?.carrierAccountId)
+        .filter((x): x is string => Boolean(x)),
+    ),
+  ];
+
+  for (const carrierId of carrierIds) {
+    const idxs = filtered
+      .map((o, i) => (o.contract?.carrierAccountId === carrierId ? i : -1))
+      .filter((i) => i >= 0);
+    if (idxs.length === 0) continue;
+
+    const windows = idxs.map((i) => {
+      const o = filtered[i]!;
+      const policy = (o.contract?.policy ?? {}) as ContractPolicy;
+      return computeExclusiveContentionWindow(o.expectedDeadline, policy);
+    });
+    const windowStart = new Date(Math.min(...windows.map((w) => w.startMs)));
+    const windowEnd = new Date(Math.max(...windows.map((w) => w.endMs)));
+    if (windowEnd.getTime() <= windowStart.getTime()) continue;
+
+    const [units, devices] = await Promise.all([
+      repos.fleet.getUnitsForCarrier(carrierId),
+      repos.fleet.getDevicesForCarrier(carrierId),
+    ]);
+    const imeiToUnitId = new Map<string, string>();
+    for (const d of devices) {
+      const a = await repos.fleet.resolveUnitAtTime(d.id, windowEnd);
+      if (a?.unitId) imeiToUnitId.set(d.imei, a.unitId);
+    }
+    const imeis = [...imeiToUnitId.keys()];
+    if (imeis.length === 0) continue;
+
+    const telem = await repos.telemetry.getForImeis(imeis, windowStart, windowEnd);
+    const byUnit = new Map<string, GpsPoint[]>();
+    for (const p of telem) {
+      const unitId = p.unitId ?? imeiToUnitId.get(p.imei);
+      if (!unitId) continue;
+      const list = byUnit.get(unitId) ?? [];
+      list.push({
+        latitude: p.latitude,
+        longitude: p.longitude,
+        timestamp: p.recordedAt,
+        imei: p.imei,
+      });
+      byUnit.set(unitId, list);
+    }
+    for (const [, pts] of byUnit) {
+      pts.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    }
+    pointsByCarrierUnit.set(carrierId, byUnit);
+
+    // Labels
+    void units;
+  }
 
   const routes: JornadaRoute[] = [];
   const unitMap = new Map<string, string>();
@@ -101,34 +181,55 @@ export async function loadJornada(opts: {
       kmlWaypoints = downsample(kml?.waypoints ?? [], 80);
     }
 
+    const geoRaw = profile?.geofence;
+    const geofencePolygon = normalizePolygon(geoRaw?.polygon);
+    const geofenceName = geoRaw?.name ?? null;
+
     let gpsTrack: JornadaRoute["gpsTrack"] = [];
     const observedUnitId = o.complianceFact?.observedUnitId ?? null;
-    if (observedUnitId && contract?.carrierAccountId) {
-      const units = await repos.fleet.getUnitsForCarrier(contract.carrierAccountId);
-      const unit = units.find((u) => u.id === observedUnitId);
-      if (unit) unitMap.set(unit.id, unit.label);
+    const carrierId = contract?.carrierAccountId ?? null;
+    const window = computeExclusiveContentionWindow(o.expectedDeadline, policy);
+    const byUnit = carrierId ? pointsByCarrierUnit.get(carrierId) : undefined;
 
-      const devices = await repos.fleet.getDevicesForCarrier(contract.carrierAccountId);
-      const window = computeExclusiveContentionWindow(o.expectedDeadline, policy);
-      const imeis: string[] = [];
-      for (const d of devices) {
-        const a = await repos.fleet.resolveUnitAtTime(d.id, o.expectedDeadline);
-        if (a?.unitId === observedUnitId) imeis.push(d.imei);
-      }
-      if (imeis.length > 0) {
-        const pts = await repos.telemetry.getForImeis(
-          imeis,
-          new Date(window.startMs),
-          new Date(window.endMs),
+    if (carrierId && byUnit) {
+      const units = await repos.fleet.getUnitsForCarrier(carrierId);
+      for (const u of units) unitMap.set(u.id, u.label);
+
+      if (observedUnitId) {
+        const pts = (byUnit.get(observedUnitId) ?? []).filter(
+          (p) =>
+            p.timestamp.getTime() >= window.startMs &&
+            p.timestamp.getTime() <= window.endMs,
         );
         gpsTrack = downsample(
           pts.map((p) => ({
             lat: p.latitude,
             lng: p.longitude,
-            at: p.recordedAt.toISOString(),
+            at: p.timestamp.toISOString(),
           })),
           120,
         );
+      } else if (o.complianceFact?.status === "no_cumplido" || !o.complianceFact) {
+        // Sin unidad: unir flota en ventana (diagnóstico). Misma necesidad en
+        // planta 47, campus u otra — no especializar por ejemplo.
+        const merged: Array<{ lat: number; lng: number; at: string }> = [];
+        for (const [, pts] of byUnit) {
+          for (const p of pts) {
+            if (
+              p.timestamp.getTime() < window.startMs ||
+              p.timestamp.getTime() > window.endMs
+            ) {
+              continue;
+            }
+            merged.push({
+              lat: p.latitude,
+              lng: p.longitude,
+              at: p.timestamp.toISOString(),
+            });
+          }
+        }
+        merged.sort((a, b) => a.at.localeCompare(b.at));
+        gpsTrack = downsample(merged, 160);
       }
     }
 
@@ -142,6 +243,8 @@ export async function loadJornada(opts: {
       observedUnitLabel: observedUnitId ? (unitMap.get(observedUnitId) ?? null) : null,
       expectedDeadline: o.expectedDeadline.toISOString(),
       kmlWaypoints,
+      geofencePolygon,
+      geofenceName,
       gpsTrack,
       colorIndex: i % PALETTE_SIZE,
     });

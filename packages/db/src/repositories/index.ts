@@ -2004,7 +2004,12 @@ export class OccurrenceRepository {
       with: {
         complianceFact: { with: { observedUnit: true } },
         trip: true,
-        profile: { with: { routeShift: { with: { route: true, shift: true } } } },
+        profile: {
+          with: {
+            geofence: true,
+            routeShift: { with: { route: true, shift: true } },
+          },
+        },
         contract: { with: { plant: true, plantGroup: true, carrier: true, client: true } },
       },
       orderBy: (o, { desc }) => [desc(o.serviceDate)],
@@ -2027,7 +2032,12 @@ export class OccurrenceRepository {
       with: {
         complianceFact: { with: { observedUnit: true } },
         trip: true,
-        profile: { with: { routeShift: { with: { route: true, shift: true } } } },
+        profile: {
+          with: {
+            geofence: true,
+            routeShift: { with: { route: true, shift: true } },
+          },
+        },
         contract: { with: { plant: true, plantGroup: true, carrier: true, client: true } },
       },
       orderBy: (o, { desc }) => [desc(o.serviceDate)],
@@ -2044,7 +2054,12 @@ export class OccurrenceRepository {
       with: {
         complianceFact: { with: { observedUnit: true } },
         trip: true,
-        profile: { with: { routeShift: { with: { route: true, shift: true } } } },
+        profile: {
+          with: {
+            geofence: true,
+            routeShift: { with: { route: true, shift: true } },
+          },
+        },
         contract: { with: { plant: true, plantGroup: true, carrier: true, client: true } },
       },
       orderBy: (o, { desc }) => [desc(o.serviceDate)],

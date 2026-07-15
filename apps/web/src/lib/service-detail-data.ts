@@ -49,6 +49,10 @@ export interface ServiceDetailData {
   evidenceLastAt: string | null;
   /** Puntos GPS de la unidad en toda la ventana del viaje. */
   unitPointsInWindow: number;
+  /** Origen del trazo en el mapa de evidencia. */
+  evidenceMapMode: "observed_unit" | "trip_fleet" | "empty";
+  /** Cuántos puntos crudos hay en el viaje (antes de filtrar por unidad). */
+  tripEvidencePointCount: number;
   pointCount: number;
   mapPoints: MapPoint[];
   /** Trazado esperado (KML) para comparar en el mapa. */
@@ -121,15 +125,40 @@ export async function loadServiceDetail(
 
   const fact = occurrence.complianceFact;
   const policy = contract.policy as ContractPolicy;
+  const trip = occurrence.trip;
 
-  const evidencePoints = occurrence.trip?.evidencePoints ?? [];
+  const evidencePoints = trip?.evidencePoints ?? [];
   const observedUnitId = fact?.observedUnitId ?? null;
+  const tripEvidencePointCount = evidencePoints.length;
 
-  // Mapa: solo la unidad observada, recortada al corredor KML / llegada
-  // (no todo lo que hizo en la ventana del contrato).
-  const unitEvidence = observedUnitId
-    ? evidencePoints.filter((p) => p.unitId === observedUnitId)
-    : [];
+  // Mapa (producto genérico — planta o campus):
+  // - Con unidad observada: solo su trazo (privacidad + claridad).
+  // - Sin unidad (no_cumplido / sin servicio / pendiente): mostrar TODA la
+  //   evidencia ingerida del viaje. Antes se vaciaba el mapa y parecía que
+  //   “no hubo GPS” aunque la ingesta estuviera disponible — bug transversal,
+  //   no exclusivo de campus.
+  let evidenceMapMode: ServiceDetailData["evidenceMapMode"] = "empty";
+  let unitEvidence = evidencePoints;
+  if (observedUnitId) {
+    const matched = evidencePoints.filter((p) => p.unitId === observedUnitId);
+    if (matched.length > 0) {
+      unitEvidence = matched;
+      evidenceMapMode = "observed_unit";
+    } else if (evidencePoints.length > 0) {
+      // Unidades sin unitId en puntos, o mismatch IMEI→unidad: no ocultar el GPS.
+      unitEvidence = evidencePoints;
+      evidenceMapMode = "trip_fleet";
+    } else {
+      unitEvidence = [];
+      evidenceMapMode = "empty";
+    }
+  } else if (evidencePoints.length > 0) {
+    unitEvidence = evidencePoints;
+    evidenceMapMode = "trip_fleet";
+  } else {
+    unitEvidence = [];
+    evidenceMapMode = "empty";
+  }
 
   const allUnitPoints: MapPoint[] = unitEvidence
     .map((p) => ({
@@ -138,6 +167,41 @@ export async function loadServiceDetail(
       at: p.recordedAt.toISOString(),
     }))
     .sort((a, b) => a.at.localeCompare(b.at));
+
+  // Si el viaje quedó sin evidence_points (p. ej. re-ingesta fallida) pero hay
+  // telemetría archivada del carrier, usarla — genérico para cualquier planta.
+  let mapSourcePoints = allUnitPoints;
+  if (mapSourcePoints.length === 0 && trip?.evidenceWindowStart && trip.evidenceWindowEnd) {
+    const devices = await repos.fleet.getDevicesForCarrier(contract.carrierAccountId);
+    const imeiToUnitId = new Map<string, string>();
+    for (const d of devices) {
+      const a = await repos.fleet.resolveUnitAtTime(d.id, occurrence.expectedDeadline);
+      if (a?.unitId) imeiToUnitId.set(d.imei, a.unitId);
+    }
+    const imeis =
+      observedUnitId != null
+        ? [...imeiToUnitId.entries()]
+            .filter(([, uid]) => uid === observedUnitId)
+            .map(([imei]) => imei)
+        : [...imeiToUnitId.keys()];
+    if (imeis.length > 0) {
+      const telem = await repos.telemetry.getForImeis(
+        imeis,
+        trip.evidenceWindowStart,
+        trip.evidenceWindowEnd,
+      );
+      mapSourcePoints = telem
+        .map((p) => ({
+          lat: p.latitude,
+          lng: p.longitude,
+          at: p.recordedAt.toISOString(),
+        }))
+        .sort((a, b) => a.at.localeCompare(b.at));
+      if (mapSourcePoints.length > 0) {
+        evidenceMapMode = observedUnitId ? "observed_unit" : "trip_fleet";
+      }
+    }
+  }
 
   const routeId = occurrence.profile?.routeShift?.routeId;
   const kmlVersion = routeId
@@ -148,7 +212,7 @@ export async function loadServiceDetail(
     lng: wp.lng,
   }));
 
-  const mapPoints = clipTrackToRoute(allUnitPoints, kmlWaypoints);
+  const mapPoints = clipTrackToRoute(mapSourcePoints, kmlWaypoints);
   // Regla transversal: si hay llegada registrada, no dibujar nada después.
   const mapPointsCut = cutTrackAtArrival(mapPoints, fact?.observedArrivalAt ?? null);
 
@@ -185,7 +249,6 @@ export async function loadServiceDetail(
     unitLabel(repos, contract.carrierAccountId, fact?.observedUnitId),
   ]);
 
-  const trip = occurrence.trip;
   const evidenceFirstAt = mapPointsCut[0]?.at ?? null;
   const evidenceLastAt = mapPointsCut[mapPointsCut.length - 1]?.at ?? null;
 
@@ -225,7 +288,10 @@ export async function loadServiceDetail(
     toleranceMinutes: policy.toleranceMinutes ?? null,
     evidenceFirstAt,
     evidenceLastAt,
-    unitPointsInWindow: allUnitPoints.length,
+    unitPointsInWindow: mapSourcePoints.length,
+    evidenceMapMode,
+    tripEvidencePointCount:
+      tripEvidencePointCount > 0 ? tripEvidencePointCount : mapSourcePoints.length,
     pointCount: mapPoints.length,
     mapPoints: mapPointsDisplay,
     kmlWaypoints,

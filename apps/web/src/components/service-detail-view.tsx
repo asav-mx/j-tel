@@ -152,12 +152,18 @@ export function ServiceDetailView({
           <Card title={`Evidencia GPS (${data.pointCount} puntos en ruta)`}>
             <p className="mb-3 text-sm text-[var(--muted)]">
               Estado de ingesta: {data.evidenceStatus ?? "—"}
-              {data.unitPointsInWindow > data.pointCount
+              {data.evidenceMapMode === "trip_fleet"
+                ? " · Sin unidad observada: se muestra la evidencia ingerida del viaje (flota en ventana) para diagnosticar."
+                : null}
+              {data.evidenceMapMode === "observed_unit" &&
+              data.unitPointsInWindow > data.pointCount
                 ? ` · ${data.unitPointsInWindow} pts en ventana del contrato; se muestran solo los del corredor KML / llegada.`
                 : null}
               {data.pointCount === 0
-                ? " · Aún no hay puntos de la unidad observada en este viaje."
-                : " · Verde = GPS observado en ruta; morado punteado = KML esperado; azul = geocerca; amarillo = llegada."}
+                ? data.tripEvidencePointCount === 0
+                  ? " · No hay puntos GPS ingeridos en este viaje."
+                  : " · Hay puntos ingeridos, pero ninguno queda en el corredor de la ruta / llegada."
+                : " · Verde = GPS observado; morado punteado = KML esperado; azul = geocerca; amarillo = llegada."}
             </p>
             <ServiceEvidenceMap
               points={data.mapPoints}
