@@ -86,7 +86,8 @@ export async function POST(request: Request) {
         n: String(result.createdIds.length),
         ...(result.skippedExisting > 0 ? { skipped: String(result.skippedExisting) } : {}),
       });
-    } catch {
+    } catch (err) {
+      console.error("[cliente/servicios] generar ocurrencias:", err);
       return back(request, client.slug, redirectScope, {
         error: "No se pudieron generar las ocurrencias.",
       });

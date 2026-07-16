@@ -251,7 +251,13 @@ export async function ingestEvidenceForTrip(
       });
       allPoints.push(...points);
     }
-  } catch {
+  } catch (err) {
+    // No perdemos el motivo: sin esto, "indisponible" era indistinguible de
+    // un timeout, un 429 o credenciales inválidas al depurar en producción.
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[umbrella] ingestEvidenceForTrip falló (trip ${input.tripId}): ${message}`,
+    );
     await input.updateStatus("indisponible");
     return { pointCount: 0, status: "indisponible" };
   }

@@ -19,7 +19,8 @@ export async function POST(request: Request) {
 
   try {
     await repos.fleet.createDevice(carrier.id, imei, label);
-  } catch {
+  } catch (err) {
+    console.error("[carrier/devices] createDevice:", err);
     return NextResponse.json(
       { error: "No se pudo registrar el GPS (¿IMEI duplicado?)" },
       { status: 400 },

@@ -143,7 +143,14 @@ export class CarrierRepository {
     let password: string;
     try {
       password = decryptSecret(profile.umbrellaPasswordEncrypted);
-    } catch {
+    } catch (err) {
+      // Descifrar falló (JTEL_SECRET_KEY ausente/rotada o dato corrupto). Es un
+      // problema de configuración, NO "sin credenciales": lo registramos para
+      // que sea diagnosticable en vez de fallar en silencio como si no existieran.
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(
+        `[carriers] no se pudieron descifrar las credenciales GPS del carrier ${accountId}: ${message}`,
+      );
       return null;
     }
 

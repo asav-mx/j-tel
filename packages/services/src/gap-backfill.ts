@@ -168,8 +168,13 @@ export class GapBackfillService {
                 message: `Rate limit Umbrella durante gap-backfill: ${msg.slice(0, 180)}`,
                 metadata: { imei: gap.imei, from: gap.from.toISOString(), to: gap.to.toISOString() },
               });
-            } catch {
-              /* ignore alert failures */
+            } catch (alertErr) {
+              // El error original ya quedó en result.errors; registramos que
+              // tampoco se pudo persistir la alerta en lugar de descartarlo.
+              console.error(
+                `[gap-backfill] no se pudo crear alerta rate_limit para ${carrier.id}:`,
+                alertErr,
+              );
             }
             break;
           }

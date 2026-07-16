@@ -77,8 +77,13 @@ export class ArchiverService {
             message: `Archivo falló: ${message.slice(0, 200)}`,
             metadata: { at: now.toISOString() },
           });
-        } catch {
-          /* ignore */
+        } catch (alertErr) {
+          // El error original ya viaja en el resultado; solo dejamos rastro de
+          // que además no se pudo registrar la alerta, en vez de ocultarlo.
+          console.error(
+            `[archiver] no se pudo crear alerta archive_error para ${carrier.id}:`,
+            alertErr,
+          );
         }
         results.push({
           carrierAccountId: carrier.id,
@@ -170,8 +175,11 @@ export class ArchiverService {
                 message: `Rate limit en archivo: ${message.slice(0, 180)}`,
                 metadata: { cursor: cursor.toISOString(), chunkEnd: chunkEnd.toISOString() },
               });
-            } catch {
-              /* ignore */
+            } catch (alertErr) {
+              console.error(
+                `[archiver] no se pudo crear alerta rate_limit para ${carrierAccountId}:`,
+                alertErr,
+              );
             }
           }
           return base;
