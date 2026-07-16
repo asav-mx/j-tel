@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { formStr } from "@/lib/form";
 import {
   createServiceProfileSchema,
   geofenceMatchesScope,
@@ -9,6 +9,7 @@ import {
 } from "@jtel/domain";
 import { configApiBack } from "@/lib/config-api-back";
 import { contractMatchesScope } from "@/lib/operational-scope";
+import { redirectWithParams } from "@/lib/redirect";
 
 function back(
   request: Request,
@@ -31,18 +32,16 @@ async function memberPlantIdsForScope(
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const clientSlug = String(formData.get("clientSlug") ?? "").trim();
-  const action = String(formData.get("action") ?? "create").trim();
-  const plantId = String(formData.get("plantId") ?? "").trim();
-  const plantGroupId = String(formData.get("plantGroupId") ?? "").trim();
+  const clientSlug = formStr(formData, "clientSlug");
+  const action = formStr(formData, "action", "create");
+  const plantId = formStr(formData, "plantId");
+  const plantGroupId = formStr(formData, "plantGroupId");
   const formScope = parseOperationalScope({ plantId, plantGroupId });
 
   const repos = getRepos();
   const client = await repos.accounts.findBySlug(clientSlug);
   if (!client || client.type !== "client") {
-    const url = new URL("/cliente", request.url);
-    url.searchParams.set("error", "Cliente no encontrado.");
-    return NextResponse.redirect(url, 303);
+    return redirectWithParams(request, "/cliente", { error: "Cliente no encontrado." });
   }
 
   async function scopeForProfile(profileId: string) {
@@ -52,9 +51,9 @@ export async function POST(request: Request) {
   }
 
   if (action === "generar") {
-    const profileId = String(formData.get("profileId") ?? "").trim();
-    const fromDate = String(formData.get("fromDate") ?? "").trim();
-    const toDate = String(formData.get("toDate") ?? "").trim();
+    const profileId = formStr(formData, "profileId");
+    const fromDate = formStr(formData, "fromDate");
+    const toDate = formStr(formData, "toDate");
     const redirectScope = profileId ? await scopeForProfile(profileId) : formScope;
     if (!profileId || !fromDate || !toDate) {
       return back(request, client.slug, redirectScope, { error: "Elige perfil y rango de fechas." });
@@ -94,7 +93,7 @@ export async function POST(request: Request) {
   }
 
   if (action === "update") {
-    const profileId = String(formData.get("profileId") ?? "").trim();
+    const profileId = formStr(formData, "profileId");
     const redirectScope = profileId ? await scopeForProfile(profileId) : formScope;
     if (!profileId) {
       return back(request, client.slug, redirectScope, { error: "Perfil no indicado." });
@@ -112,10 +111,10 @@ export async function POST(request: Request) {
       return back(request, client.slug, redirectScope, { error: "Unidad operativa no válida." });
     }
 
-    const name = String(formData.get("name") ?? "").trim();
-    const codeRaw = String(formData.get("code") ?? "").trim();
-    const routeShiftId = String(formData.get("routeShiftId") ?? "").trim();
-    const geofenceId = String(formData.get("geofenceId") ?? "").trim();
+    const name = formStr(formData, "name");
+    const codeRaw = formStr(formData, "code");
+    const routeShiftId = formStr(formData, "routeShiftId");
+    const geofenceId = formStr(formData, "geofenceId");
     const activeDays = formData
       .getAll("activeDays")
       .map((d) => Number(String(d)))
@@ -175,7 +174,7 @@ export async function POST(request: Request) {
   }
 
   if (action === "bulk_geofence") {
-    const geofenceId = String(formData.get("geofenceId") ?? "").trim();
+    const geofenceId = formStr(formData, "geofenceId");
     if (!formScope || formScope.kind !== "plant" || !formScope.plantId) {
       return back(request, client.slug, formScope, {
         error: "La corrección masiva de geocerca solo aplica a planta (no campus).",
@@ -209,7 +208,7 @@ export async function POST(request: Request) {
   }
 
   if (action === "delete") {
-    const profileId = String(formData.get("profileId") ?? "").trim();
+    const profileId = formStr(formData, "profileId");
     const redirectScope = profileId ? await scopeForProfile(profileId) : formScope;
     if (!profileId) {
       return back(request, client.slug, redirectScope, { error: "Perfil no indicado." });
@@ -236,11 +235,11 @@ export async function POST(request: Request) {
     return back(request, client.slug, formScope, { error: "Unidad operativa no válida." });
   }
 
-  const name = String(formData.get("name") ?? "").trim();
-  const codeRaw = String(formData.get("code") ?? "").trim();
-  const contractId = String(formData.get("contractId") ?? "").trim();
-  const routeShiftId = String(formData.get("routeShiftId") ?? "").trim();
-  const geofenceId = String(formData.get("geofenceId") ?? "").trim();
+  const name = formStr(formData, "name");
+  const codeRaw = formStr(formData, "code");
+  const contractId = formStr(formData, "contractId");
+  const routeShiftId = formStr(formData, "routeShiftId");
+  const geofenceId = formStr(formData, "geofenceId");
   const activeDays = formData
     .getAll("activeDays")
     .map((d) => Number(String(d)))

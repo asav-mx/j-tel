@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { formStr, toInt } from "@/lib/form";
 import { createContractSchema, contractPolicySchema, type EnforcementRules, parseOperationalScope, operationalScopeColumns } from "@jtel/domain";
 import { configApiBack } from "@/lib/config-api-back";
+import { redirectWithParams } from "@/lib/redirect";
 
 function back(
   request: Request,
@@ -12,15 +13,8 @@ function back(
   return configApiBack(request, slug, "contratos", scope, params);
 }
 
-function toInt(value: unknown, fallback: number): number {
-  const raw = String(value ?? "").trim();
-  if (raw === "") return fallback;
-  const n = Number(raw);
-  return Number.isFinite(n) ? Math.trunc(n) : fallback;
-}
-
 function buildEnforcementRule(formData: FormData): EnforcementRules[] {
-  const type = String(formData.get("enforcementType") ?? "").trim();
+  const type = formStr(formData, "enforcementType");
   const tolerance = toInt(formData.get("enforcementTolerance"), 0);
 
   if (type === "no_pago_viaje") {
@@ -38,7 +32,7 @@ function buildEnforcementRule(formData: FormData): EnforcementRules[] {
     ];
   }
   if (type === "reembolso") {
-    const amountRaw = String(formData.get("reembolsoAmount") ?? "").trim();
+    const amountRaw = formStr(formData, "reembolsoAmount");
     const amount = amountRaw ? Number(amountRaw) : undefined;
     return [{ type: "reembolso", ...(amount !== undefined && Number.isFinite(amount) ? { amount } : {}) }];
   }
@@ -47,19 +41,17 @@ function buildEnforcementRule(formData: FormData): EnforcementRules[] {
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const clientSlug = String(formData.get("clientSlug") ?? "").trim();
-  const action = String(formData.get("action") ?? "create").trim();
+  const clientSlug = formStr(formData, "clientSlug");
+  const action = formStr(formData, "action", "create");
 
   const repos = getRepos();
   const client = await repos.accounts.findBySlug(clientSlug);
   if (!client || client.type !== "client") {
-    const url = new URL("/cliente", request.url);
-    url.searchParams.set("error", "Cliente no encontrado.");
-    return NextResponse.redirect(url, 303);
+    return redirectWithParams(request, "/cliente", { error: "Cliente no encontrado." });
   }
 
   if (action === "activate") {
-    const contractId = String(formData.get("contractId") ?? "").trim();
+    const contractId = formStr(formData, "contractId");
     const contract = contractId ? await repos.contracts.findById(contractId) : null;
     if (!contract || contract.clientAccountId !== client.id) {
       return back(request, client.slug, null, { error: "Contrato no encontrado." });
@@ -73,9 +65,9 @@ export async function POST(request: Request) {
   }
 
   if (action === "updateValidity") {
-    const contractId = String(formData.get("contractId") ?? "").trim();
-    const validFrom = String(formData.get("validFrom") ?? "").trim();
-    const validTo = String(formData.get("validTo") ?? "").trim();
+    const contractId = formStr(formData, "contractId");
+    const validFrom = formStr(formData, "validFrom");
+    const validTo = formStr(formData, "validTo");
     const contract = contractId ? await repos.contracts.findById(contractId) : null;
     if (!contract || contract.clientAccountId !== client.id) {
       return back(request, client.slug, null, { error: "Contrato no encontrado." });
@@ -97,7 +89,7 @@ export async function POST(request: Request) {
   }
 
   if (action === "updatePolicy") {
-    const contractId = String(formData.get("contractId") ?? "").trim();
+    const contractId = formStr(formData, "contractId");
     const contract = contractId ? await repos.contracts.findById(contractId) : null;
     if (!contract || contract.clientAccountId !== client.id) {
       return back(request, client.slug, null, { error: "Contrato no encontrado." });
@@ -123,7 +115,7 @@ export async function POST(request: Request) {
         formData.get("verificationGraceMinutes"),
         existingPolicy.verificationGraceMinutes ?? 15,
       ),
-      routeStrictness: String(formData.get("routeStrictness") ?? existingPolicy.routeStrictness).trim(),
+      routeStrictness: formStr(formData, "routeStrictness", existingPolicy.routeStrictness),
       kmlMatchMinPct: toInt(formData.get("kmlMatchMinPct"), existingPolicy.kmlMatchMinPct ?? 60),
       kmlCorridorMeters: toInt(
         formData.get("kmlCorridorMeters"),
@@ -171,7 +163,7 @@ export async function POST(request: Request) {
   }
 
   if (action === "delete") {
-    const contractId = String(formData.get("contractId") ?? "").trim();
+    const contractId = formStr(formData, "contractId");
     const contract = contractId ? await repos.contracts.findById(contractId) : null;
     const scope = contract
       ? parseOperationalScope({
@@ -191,8 +183,8 @@ export async function POST(request: Request) {
     return back(request, client.slug, scope, { created: "eliminado" });
   }
 
-  const plantId = String(formData.get("plantId") ?? "").trim();
-  const plantGroupId = String(formData.get("plantGroupId") ?? "").trim();
+  const plantId = formStr(formData, "plantId");
+  const plantGroupId = formStr(formData, "plantGroupId");
   const scope = parseOperationalScope({ plantId, plantGroupId });
   if (!scope) {
     return back(request, client.slug, null, { error: "Elige una unidad operativa válida." });
@@ -209,15 +201,15 @@ export async function POST(request: Request) {
     return back(request, client.slug, resolved, { error: "Acción no reconocida." });
   }
 
-  const name = String(formData.get("name") ?? "").trim();
-  const carrierAccountId = String(formData.get("carrierAccountId") ?? "").trim();
-  const validFrom = String(formData.get("validFrom") ?? "").trim();
-  const validTo = String(formData.get("validTo") ?? "").trim();
+  const name = formStr(formData, "name");
+  const carrierAccountId = formStr(formData, "carrierAccountId");
+  const validFrom = formStr(formData, "validFrom");
+  const validTo = formStr(formData, "validTo");
   const arrivalAnticipationMinutes = toInt(formData.get("arrivalAnticipationMinutes"), 15);
   const maxRouteDurationMinutes = toInt(formData.get("maxRouteDurationMinutes"), 60);
   const toleranceMinutes = toInt(formData.get("toleranceMinutes"), 0);
   const verificationGraceMinutes = toInt(formData.get("verificationGraceMinutes"), 15);
-  const routeStrictness = String(formData.get("routeStrictness") ?? "destino_only").trim();
+  const routeStrictness = formStr(formData, "routeStrictness", "destino_only");
   const kmlMatchMinPct = toInt(formData.get("kmlMatchMinPct"), 60);
   const kmlCorridorMeters = toInt(formData.get("kmlCorridorMeters"), 120);
   const kmlCorridorMinPct = toInt(formData.get("kmlCorridorMinPct"), 60);

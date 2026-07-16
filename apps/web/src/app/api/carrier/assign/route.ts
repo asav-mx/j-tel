@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { formStr } from "@/lib/form";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const carrierSlug = String(formData.get("carrierSlug") ?? "").trim();
-  const unitId = String(formData.get("unitId") ?? "").trim();
-  const deviceId = String(formData.get("deviceId") ?? "").trim();
+  const carrierSlug = formStr(formData, "carrierSlug");
+  const unitId = formStr(formData, "unitId");
+  const deviceId = formStr(formData, "deviceId");
 
   if (!unitId || !deviceId) {
     return NextResponse.json(

@@ -1,20 +1,17 @@
-import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { formStr } from "@/lib/form";
+import { redirectWithParams } from "@/lib/redirect";
 
 function back(request: Request, params: Record<string, string>) {
-  const url = new URL("/jstaff/comercial", request.url);
-  for (const [key, value] of Object.entries(params)) {
-    if (value) url.searchParams.set(key, value);
-  }
-  return NextResponse.redirect(url, 303);
+  return redirectWithParams(request, "/jstaff/comercial", params, { skipEmpty: true });
 }
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const action = String(formData.get("action") ?? "authorize").trim();
-  const clientSlug = String(formData.get("clientSlug") ?? "").trim();
-  const carrierAccountId = String(formData.get("carrierAccountId") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim();
+  const action = formStr(formData, "action", "authorize");
+  const clientSlug = formStr(formData, "clientSlug");
+  const carrierAccountId = formStr(formData, "carrierAccountId");
+  const notes = formStr(formData, "notes");
 
   const repos = getRepos();
   const client = clientSlug ? await repos.accounts.findBySlug(clientSlug) : null;

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { formStr, formStrOrUndefined } from "@/lib/form";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const carrierSlug = String(formData.get("carrierSlug") ?? "").trim();
-  const imei = String(formData.get("imei") ?? "").trim();
-  const label = String(formData.get("label") ?? "").trim() || undefined;
+  const carrierSlug = formStr(formData, "carrierSlug");
+  const imei = formStr(formData, "imei");
+  const label = formStrOrUndefined(formData, "label");
 
   if (!imei) {
     return NextResponse.json({ error: "El IMEI es requerido" }, { status: 400 });

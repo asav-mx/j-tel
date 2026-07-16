@@ -1,14 +1,10 @@
-import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
 import { getUmbrellaConfig } from "@/lib/umbrella-config";
+import { redirectWithParams } from "@/lib/redirect";
 import { VerificationService } from "@jtel/services";
 
 function backToSoporte(request: Request, params: Record<string, string>) {
-  const url = new URL("/jstaff/soporte", request.url);
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value);
-  }
-  return NextResponse.redirect(url, 303);
+  return redirectWithParams(request, "/jstaff/soporte", params);
 }
 
 /**

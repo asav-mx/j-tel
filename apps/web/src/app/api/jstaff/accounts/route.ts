@@ -1,29 +1,14 @@
-import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
-
-/** Convierte cualquier nombre en un slug válido: "Mi Empresa S.A." → "mi-empresa-sa" */
-function slugify(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
-}
+import { formStr, slugify } from "@/lib/form";
+import { redirectWithParams } from "@/lib/redirect";
 
 function backToForm(request: Request, params: Record<string, string>) {
-  const url = new URL("/jstaff/cuentas", request.url);
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value);
-  }
-  // 303 fuerza GET después de un POST de formulario
-  return NextResponse.redirect(url, 303);
+  return redirectWithParams(request, "/jstaff/cuentas", params);
 }
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const name = String(formData.get("name") ?? "").trim();
+  const name = formStr(formData, "name");
   const rawType = String(formData.get("type") ?? "client");
   const type = rawType === "carrier" ? "carrier" : "client";
 
@@ -31,7 +16,7 @@ export async function POST(request: Request) {
     return backToForm(request, { error: "El nombre es obligatorio." });
   }
 
-  const slug = slugify(String(formData.get("slug") ?? "").trim() || name);
+  const slug = slugify(formStr(formData, "slug") || name);
   if (!slug) {
     return backToForm(request, {
       error: "El nombre debe contener letras o números.",

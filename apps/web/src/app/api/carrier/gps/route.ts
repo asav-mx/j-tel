@@ -1,30 +1,24 @@
-import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { formStr } from "@/lib/form";
+import { redirectWithParams } from "@/lib/redirect";
 import { isEncryptionConfigured } from "@jtel/db";
 
 function back(request: Request, slug: string, params: Record<string, string>) {
-  const url = new URL("/carrier/gps", request.url);
-  url.searchParams.set("account", slug);
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value);
-  }
-  return NextResponse.redirect(url, 303);
+  return redirectWithParams(request, "/carrier/gps", { account: slug, ...params });
 }
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const carrierSlug = String(formData.get("carrierSlug") ?? "").trim();
-  const provider = String(formData.get("provider") ?? "umbrella").trim() || "umbrella";
-  const userId = String(formData.get("userId") ?? "").trim();
+  const carrierSlug = formStr(formData, "carrierSlug");
+  const provider = formStr(formData, "provider", "umbrella") || "umbrella";
+  const userId = formStr(formData, "userId");
   const password = String(formData.get("password") ?? "");
-  const baseUrl = String(formData.get("baseUrl") ?? "").trim() || null;
+  const baseUrl = formStr(formData, "baseUrl") || null;
 
   const repos = getRepos();
   const carrier = await repos.accounts.findBySlug(carrierSlug);
   if (!carrier || carrier.type !== "carrier") {
-    const url = new URL("/carrier/gps", request.url);
-    url.searchParams.set("error", "Carrier no encontrado.");
-    return NextResponse.redirect(url, 303);
+    return redirectWithParams(request, "/carrier/gps", { error: "Carrier no encontrado." });
   }
 
   if (!isEncryptionConfigured()) {

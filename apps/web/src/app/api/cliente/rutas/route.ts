@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { formStr } from "@/lib/form";
 import { parseNumber } from "@/lib/geo";
 import { parseKmlWaypoints } from "@/lib/kml";
 import { parseOperationalScope, operationalScopeColumns } from "@jtel/domain";
 import { configApiBack } from "@/lib/config-api-back";
+import { redirectWithParams } from "@/lib/redirect";
 
 export const maxDuration = 60;
 
@@ -49,7 +50,7 @@ async function readKmlFromForm(formData: FormData): Promise<{
     const waypoints = parseKmlWaypoints(kmlContent);
     return { kmlContent, waypoints: waypoints.length > 0 ? waypoints : undefined };
   }
-  const waypointsText = String(formData.get("waypoints") ?? "").trim();
+  const waypointsText = formStr(formData, "waypoints");
   if (!waypointsText) return {};
   const waypoints = parseWaypoints(waypointsText);
   if (waypoints.length === 0) return {};
@@ -62,17 +63,15 @@ export async function POST(request: Request) {
 
   try {
     const formData = await request.formData();
-    clientSlug = String(formData.get("clientSlug") ?? "").trim();
-    const plantId = String(formData.get("plantId") ?? "").trim();
-    const plantGroupId = String(formData.get("plantGroupId") ?? "").trim();
-    const action = String(formData.get("action") ?? "").trim();
+    clientSlug = formStr(formData, "clientSlug");
+    const plantId = formStr(formData, "plantId");
+    const plantGroupId = formStr(formData, "plantGroupId");
+    const action = formStr(formData, "action");
 
     const repos = getRepos();
     const client = await repos.accounts.findBySlug(clientSlug);
     if (!client || client.type !== "client") {
-      const url = new URL("/cliente", request.url);
-      url.searchParams.set("error", "Cliente no encontrado.");
-      return NextResponse.redirect(url, 303);
+      return redirectWithParams(request, "/cliente", { error: "Cliente no encontrado." });
     }
 
     const parsedScope = parseOperationalScope({ plantId, plantGroupId });
@@ -88,8 +87,8 @@ export async function POST(request: Request) {
     const scopeCols = operationalScopeColumns(scope);
 
     if (action === "route") {
-      const name = String(formData.get("name") ?? "").trim();
-      const shiftId = String(formData.get("shiftId") ?? "").trim();
+      const name = formStr(formData, "name");
+      const shiftId = formStr(formData, "shiftId");
       if (!name) {
         return back(request, client.slug, scope, { error: "El nombre de la ruta es obligatorio." });
       }
@@ -131,9 +130,9 @@ export async function POST(request: Request) {
     }
 
     if (action === "updateRouteShift") {
-      const routeShiftId = String(formData.get("routeShiftId") ?? "").trim();
-      const name = String(formData.get("name") ?? "").trim();
-      const shiftId = String(formData.get("shiftId") ?? "").trim();
+      const routeShiftId = formStr(formData, "routeShiftId");
+      const name = formStr(formData, "name");
+      const shiftId = formStr(formData, "shiftId");
       if (!routeShiftId) {
         return back(request, client.slug, scope, { error: "Ruta no indicada." });
       }
@@ -163,7 +162,7 @@ export async function POST(request: Request) {
     }
 
     if (action === "deleteRouteShift") {
-      const routeShiftId = String(formData.get("routeShiftId") ?? "").trim();
+      const routeShiftId = formStr(formData, "routeShiftId");
       if (!routeShiftId) return back(request, client.slug, scope, { error: "Ruta no indicada." });
       const result = await repos.routes.deleteRouteShift(routeShiftId, client.id, scope);
       if (!result.ok) {
@@ -183,7 +182,7 @@ export async function POST(request: Request) {
     }
 
     if (action === "kml") {
-      const routeId = String(formData.get("routeId") ?? "").trim();
+      const routeId = formStr(formData, "routeId");
       if (!routeId) return back(request, client.slug, scope, { error: "Elige una ruta." });
       const kml = await readKmlFromForm(formData);
       if (kml.error) {
@@ -208,8 +207,6 @@ export async function POST(request: Request) {
         error: "Error al procesar la solicitud. Si subiste un archivo grande, prueba con .kml más pequeño.",
       });
     }
-    const url = new URL("/cliente", request.url);
-    url.searchParams.set("error", "Error al procesar la solicitud.");
-    return NextResponse.redirect(url, 303);
+    return redirectWithParams(request, "/cliente", { error: "Error al procesar la solicitud." });
   }
 }

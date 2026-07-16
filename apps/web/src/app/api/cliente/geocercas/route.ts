@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { formStr } from "@/lib/form";
 import { circlePolygon, parseNumber } from "@/lib/geo";
 import { parseOperationalScope } from "@jtel/domain";
 import { configApiBack } from "@/lib/config-api-back";
+import { redirectWithParams } from "@/lib/redirect";
 
 function back(
   request: Request,
@@ -26,8 +27,8 @@ function scopeFromOwnerRef(ownerRef: string) {
 }
 
 function parseGeofenceFields(formData: FormData) {
-  const name = String(formData.get("name") ?? "").trim();
-  const role = String(formData.get("role") ?? "destino").trim();
+  const name = formStr(formData, "name");
+  const role = formStr(formData, "role", "destino");
   const lat = parseNumber(formData.get("lat"));
   const lng = parseNumber(formData.get("lng"));
   const radius = parseNumber(formData.get("radiusMeters"));
@@ -56,22 +57,20 @@ function validateGeofenceFields(
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const clientSlug = String(formData.get("clientSlug") ?? "").trim();
-  const action = String(formData.get("action") ?? "create").trim();
+  const clientSlug = formStr(formData, "clientSlug");
+  const action = formStr(formData, "action", "create");
 
   const repos = getRepos();
   const client = await repos.accounts.findBySlug(clientSlug);
   if (!client || client.type !== "client") {
-    const url = new URL("/cliente", request.url);
-    url.searchParams.set("error", "Cliente no encontrado.");
-    return NextResponse.redirect(url, 303);
+    return redirectWithParams(request, "/cliente", { error: "Cliente no encontrado." });
   }
 
-  const ownerRef = String(formData.get("ownerRef") ?? "").trim();
+  const ownerRef = formStr(formData, "ownerRef");
   const { refKind, ownerId, redirectScope } = scopeFromOwnerRef(ownerRef);
 
   if (action === "update") {
-    const geofenceId = String(formData.get("geofenceId") ?? "").trim();
+    const geofenceId = formStr(formData, "geofenceId");
     if (!geofenceId) {
       return back(request, client.slug, redirectScope, { error: "Geocerca no indicada." });
     }
@@ -94,7 +93,7 @@ export async function POST(request: Request) {
   }
 
   if (action === "delete") {
-    const geofenceId = String(formData.get("geofenceId") ?? "").trim();
+    const geofenceId = formStr(formData, "geofenceId");
     if (!geofenceId) {
       return back(request, client.slug, redirectScope, { error: "Geocerca no indicada." });
     }

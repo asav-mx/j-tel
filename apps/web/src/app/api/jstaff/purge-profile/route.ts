@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { formStr } from "@/lib/form";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -10,9 +11,9 @@ export const maxDuration = 60;
  */
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const profileId = String(formData.get("profileId") ?? "").trim();
-  const confirmar = String(formData.get("confirmar") ?? "").trim();
-  const frase = String(formData.get("frase") ?? "").trim();
+  const profileId = formStr(formData, "profileId");
+  const confirmar = formStr(formData, "confirmar");
+  const frase = formStr(formData, "frase");
 
   if (!profileId) {
     return NextResponse.redirect(

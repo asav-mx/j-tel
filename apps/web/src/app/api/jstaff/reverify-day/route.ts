@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { formStr } from "@/lib/form";
 import { getUmbrellaConfig } from "@/lib/umbrella-config";
 import { VerificationService } from "@jtel/services";
 
 export const maxDuration = 300;
 
 function wantsJson(request: Request, formData: FormData) {
-  const format = String(formData.get("format") ?? "").trim().toLowerCase();
+  const format = formStr(formData, "format").toLowerCase();
   if (format === "json") return true;
   const accept = request.headers.get("accept") ?? "";
   return accept.includes("application/json");
@@ -38,9 +39,9 @@ function jsonErr(error: string, status = 400) {
 export async function POST(request: Request) {
   const formData = await request.formData();
   const asJson = wantsJson(request, formData);
-  const contractId = String(formData.get("contractId") ?? "").trim();
-  const serviceDate = String(formData.get("serviceDate") ?? "").trim();
-  const keepRaw = String(formData.get("keepEvidence") ?? "1").trim();
+  const contractId = formStr(formData, "contractId");
+  const serviceDate = formStr(formData, "serviceDate");
+  const keepRaw = formStr(formData, "keepEvidence", "1");
   const keepEvidence = keepRaw !== "0" && keepRaw.toLowerCase() !== "false";
 
   if (!contractId || !/^\d{4}-\d{2}-\d{2}$/.test(serviceDate)) {

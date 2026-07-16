@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { formStr } from "@/lib/form";
 import { parseOperationalScope, operationalScopeColumns } from "@jtel/domain";
 import { configApiBack } from "@/lib/config-api-back";
+import { redirectWithParams } from "@/lib/redirect";
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -16,17 +17,15 @@ function back(
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const clientSlug = String(formData.get("clientSlug") ?? "").trim();
-  const plantId = String(formData.get("plantId") ?? "").trim();
-  const plantGroupId = String(formData.get("plantGroupId") ?? "").trim();
-  const action = String(formData.get("action") ?? "").trim();
+  const clientSlug = formStr(formData, "clientSlug");
+  const plantId = formStr(formData, "plantId");
+  const plantGroupId = formStr(formData, "plantGroupId");
+  const action = formStr(formData, "action");
 
   const repos = getRepos();
   const client = await repos.accounts.findBySlug(clientSlug);
   if (!client || client.type !== "client") {
-    const url = new URL("/cliente", request.url);
-    url.searchParams.set("error", "Cliente no encontrado.");
-    return NextResponse.redirect(url, 303);
+    return redirectWithParams(request, "/cliente", { error: "Cliente no encontrado." });
   }
 
   const parsedScope = parseOperationalScope({ plantId, plantGroupId });
@@ -42,8 +41,8 @@ export async function POST(request: Request) {
   const scopeCols = operationalScopeColumns(scope);
 
   if (action === "shift") {
-    const name = String(formData.get("name") ?? "").trim();
-    const startTimeRaw = String(formData.get("startTime") ?? "").trim();
+    const name = formStr(formData, "name");
+    const startTimeRaw = formStr(formData, "startTime");
     const startTime = startTimeRaw.length >= 5 ? startTimeRaw.slice(0, 5) : startTimeRaw;
     if (!name) return back(request, client.slug, scope, { error: "El nombre del turno es obligatorio." });
     if (!TIME_RE.test(startTime)) {
@@ -68,9 +67,9 @@ export async function POST(request: Request) {
   }
 
   if (action === "updateShift") {
-    const shiftId = String(formData.get("shiftId") ?? "").trim();
-    const name = String(formData.get("name") ?? "").trim();
-    const startTimeRaw = String(formData.get("startTime") ?? "").trim();
+    const shiftId = formStr(formData, "shiftId");
+    const name = formStr(formData, "name");
+    const startTimeRaw = formStr(formData, "startTime");
     const startTime = startTimeRaw.length >= 5 ? startTimeRaw.slice(0, 5) : startTimeRaw;
     if (!shiftId) return back(request, client.slug, scope, { error: "Turno no indicado." });
     if (!name) return back(request, client.slug, scope, { error: "El nombre del turno es obligatorio." });
@@ -96,7 +95,7 @@ export async function POST(request: Request) {
   }
 
   if (action === "deleteShift") {
-    const shiftId = String(formData.get("shiftId") ?? "").trim();
+    const shiftId = formStr(formData, "shiftId");
     if (!shiftId) return back(request, client.slug, scope, { error: "Turno no indicado." });
     const result = await repos.routes.deleteShift(shiftId, client.id, scope);
     if (!result.ok) {
