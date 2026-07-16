@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
 import { getUmbrellaConfig } from "@/lib/umbrella-config";
+import { isAuthorizedCronRequest } from "@/lib/cron-auth";
 import { VerificationService } from "@jtel/services";
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET ?? "dev-cron-secret";
-
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

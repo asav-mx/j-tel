@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
 import { IngestHealthService } from "@jtel/services";
+import { isAuthorizedCronRequest } from "@/lib/cron-auth";
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET ?? "dev-cron-secret";
-
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
