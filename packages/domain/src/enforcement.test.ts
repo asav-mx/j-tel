@@ -12,6 +12,7 @@ describe("enforcement", () => {
     kmlCorridorMinPct: 60,
     allowAlternateDestination: false,
     excusableReasons: [],
+    permitirConsolidacion: false,
     enforcementRules: [
       {
         type: "rebate_escalonado" as const,
