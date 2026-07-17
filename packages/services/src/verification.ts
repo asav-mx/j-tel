@@ -312,7 +312,17 @@ export class VerificationService {
       }
     }
 
-    if (opts.exclusiveUnits) {
+    // Exclusividad: si el caller no lo especifica, derivar de la política del
+    // contrato. permitirConsolidacion = true → no exclusividad (una unidad
+    // puede acreditar varias rutas). Default: exclusivo.
+    const applyExclusive = opts.exclusiveUnits ??
+      (() => {
+        const sample = targets[0];
+        const pol = sample?.profile?.contract?.policy as ContractPolicy | undefined;
+        return !(pol?.permitirConsolidacion ?? false);
+      })();
+
+    if (applyExclusive) {
       await this.resolveExclusiveUnitClaims(targets.map((o) => o.id));
       await this.resolveEliminationPass(targets.map((o) => o.id));
       // Refrescar resultados tras la resolución exclusiva + eliminación.

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeEnforcement, computeMonthlyRebate } from "./enforcement.js";
+import { contractPolicySchema } from "./index.js";
 
 describe("enforcement", () => {
   const policy = {
@@ -53,5 +54,27 @@ describe("enforcement", () => {
     expect(outcomes[0]?.applies).toBe(true);
     expect(outcomes[0]?.description).toContain("sin servicio detectado");
     expect(outcomes[0]?.description).not.toContain("retraso");
+  });
+});
+
+describe("contractPolicySchema — permitirConsolidacion", () => {
+  const base = {
+    toleranceMinutes: 5,
+    routeStrictness: "destino_only" as const,
+  };
+
+  it("default es false (exclusividad)", () => {
+    const parsed = contractPolicySchema.parse(base);
+    expect(parsed.permitirConsolidacion).toBe(false);
+  });
+
+  it("acepta true (consolidación activada)", () => {
+    const parsed = contractPolicySchema.parse({ ...base, permitirConsolidacion: true });
+    expect(parsed.permitirConsolidacion).toBe(true);
+  });
+
+  it("acepta false explícito", () => {
+    const parsed = contractPolicySchema.parse({ ...base, permitirConsolidacion: false });
+    expect(parsed.permitirConsolidacion).toBe(false);
   });
 });

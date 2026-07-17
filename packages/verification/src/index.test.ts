@@ -198,7 +198,7 @@ describe("verifyService", () => {
     expect(result.observedRouteMatchPct).toBe(100);
   });
 
-  it("rejects geofence-only arrival when KML match is too low", () => {
+  it("rejects geofence-only arrival when KML match is too low (kml_full)", () => {
     const waypoints = [
       { lat: 31.6500, lng: -106.4500 },
       { lat: 31.6600, lng: -106.4400 },
@@ -206,6 +206,7 @@ describe("verifyService", () => {
     ];
     const result = verifyService({
       ...baseInput,
+      routeStrictness: "kml_full",
       kmlWaypoints: waypoints,
       evidencePoints: [
         {
@@ -220,7 +221,7 @@ describe("verifyService", () => {
     expect(result.observedUnitId).toBeNull();
   });
 
-  it("rejects high route coverage A when corridor precision B is low", () => {
+  it("rejects high route coverage A when corridor precision B is low (kml_full)", () => {
     // Waypoints en línea; la unidad toca todos (A alto) pero la mayoría del GPS
     // está lejos de la ruta (B bajo) → no sirvió.
     const waypoints = [
@@ -242,6 +243,7 @@ describe("verifyService", () => {
     }));
     const result = verifyService({
       ...baseInput,
+      routeStrictness: "kml_full",
       kmlWaypoints: waypoints,
       kmlCorridorMeters: 120,
       kmlMatchMinPct: 60,
@@ -278,7 +280,7 @@ describe("verifyService", () => {
     expect(cand.corridorPrecisionPct).toBe(100);
   });
 
-  it("honors configurable kmlMatchMinPct threshold", () => {
+  it("honors configurable kmlMatchMinPct threshold (kml_full)", () => {
     const waypoints = [
       { lat: 31.6800, lng: -106.4300 },
       { lat: 31.6850, lng: -106.4280 },
@@ -295,6 +297,7 @@ describe("verifyService", () => {
     ];
     const fail = verifyService({
       ...baseInput,
+      routeStrictness: "kml_full",
       kmlMatchMinPct: 60,
       kmlCorridorMinPct: 0,
       kmlWaypoints: waypoints,
@@ -304,6 +307,7 @@ describe("verifyService", () => {
 
     const pass = verifyService({
       ...baseInput,
+      routeStrictness: "kml_full",
       kmlMatchMinPct: 30,
       kmlCorridorMinPct: 0,
       kmlWaypoints: waypoints,
@@ -532,6 +536,148 @@ describe("Fase 3 TF-IDF / Fréchet / dirección", () => {
     expect(result.status).toBe("cumplido");
     expect(result.observedUnitId).toBe("unit-a");
     expect(result.candidateUnits[0]?.frechetKm).toBeLessThan(0.5);
+  });
+});
+
+describe("Modo Rutas — destino_only", () => {
+  const baseDestinoOnly = {
+    occurrenceId: "occ-do",
+    expectedDeadline: new Date("2026-07-07T12:45:00Z"),
+    toleranceMinutes: 5,
+    routeStrictness: "destino_only" as const,
+    geofencePolygon: geofence,
+    excusableReasons: [] as const,
+  };
+
+  const kmlWaypoints = [
+    { lat: 31.6800, lng: -106.4300 },
+    { lat: 31.6850, lng: -106.4280 },
+    { lat: 31.6909, lng: -106.4234 },
+  ];
+
+  it("cumplido: unidad llega a geocerca y cubre mínimo de ruta", () => {
+    // GPS sigue el KML y llega a la geocerca destino
+    const result = verifyService({
+      ...baseDestinoOnly,
+      kmlWaypoints,
+      kmlMatchMinPct: 40,
+      kmlCorridorMinPct: 40,
+      kmlCorridorMeters: 150,
+      evidencePoints: kmlWaypoints.map((wp, i) => ({
+        imei: "unit-1",
+        latitude: wp.lat,
+        longitude: wp.lng,
+        timestamp: new Date(`2026-07-07T12:${40 + i}:00Z`),
+      })),
+    });
+    expect(result.status).toBe("cumplido");
+    expect(result.observedUnitId).toBe("unit-1");
+    expect(result.routeStrictnessApplied).toBe("destino_only");
+  });
+
+  it("pendiente_evidencia: unidad llega a geocerca pero recorrido no alcanza mínimo de ninguna ruta", () => {
+    // Unidad llega al destino pero su recorrido por la ruta es 0% (no cubrió waypoints)
+    const farWaypoints = [
+      { lat: 31.6500, lng: -106.4500 },
+      { lat: 31.6600, lng: -106.4400 },
+      { lat: 31.6700, lng: -106.4350 },
+    ];
+    const result = verifyService({
+      ...baseDestinoOnly,
+      kmlWaypoints: farWaypoints,
+      kmlMatchMinPct: 60,
+      kmlCorridorMinPct: 60,
+      evidencePoints: [
+        {
+          imei: "unit-1",
+          latitude: 31.6909,
+          longitude: -106.4234,
+          timestamp: new Date("2026-07-07T12:44:00Z"),
+        },
+      ],
+    });
+    // Llegó a la geocerca pero no puede atribuirse a esta ruta → pendiente, no no_cumplido
+    expect(result.status).toBe("pendiente_evidencia");
+    expect(result.observedUnitId).toBeNull();
+    // Confirma que el ledger documenta el motivo correcto
+    const decision = result.ledgerSteps.find((s) => s.step === "decision");
+    expect(decision?.result).toBe("pendiente_evidencia");
+    expect(decision?.details).toHaveProperty("reason", "llegada_sin_atribucion");
+  });
+
+  it("no_cumplido: ninguna unidad llegó a la geocerca (sin señal de servicio)", () => {
+    const windowStart = new Date("2026-07-07T11:45:00Z");
+    const windowEnd = new Date("2026-07-07T12:50:00Z");
+    // GPS con cobertura suficiente pero lejos de la geocerca
+    const points = [];
+    for (let m = 0; m <= 65; m += 2) {
+      points.push({
+        imei: "unit-1",
+        latitude: 31.8,
+        longitude: -106.5,
+        timestamp: new Date(windowStart.getTime() + m * 60_000),
+      });
+    }
+    const result = verifyService({
+      ...baseDestinoOnly,
+      kmlWaypoints,
+      coverageWindowStart: windowStart,
+      coverageWindowEnd: windowEnd,
+      evidenceMinCoveragePct: 80,
+      evidenceMaxGapMinutes: 10,
+      evidencePoints: points,
+    });
+    // De verdad no hubo servicio — ninguna unidad llegó
+    expect(result.status).toBe("no_cumplido");
+    expect(result.observedUnitId).toBeNull();
+  });
+
+  it("el destino solo nunca acredita cumplido sin recorrido mínimo", () => {
+    // Contrato destino_only pero con umbral de ruta que la unidad no cumple
+    const result = verifyService({
+      ...baseDestinoOnly,
+      kmlWaypoints,
+      kmlMatchMinPct: 90,
+      kmlCorridorMinPct: 90,
+      evidencePoints: [
+        // Solo llega al último waypoint (destino), no cubre 90% de la ruta
+        {
+          imei: "unit-1",
+          latitude: 31.6909,
+          longitude: -106.4234,
+          timestamp: new Date("2026-07-07T12:44:00Z"),
+        },
+      ],
+    });
+    // Llegó pero no cubre → pendiente (nunca cumplido sin recorrido)
+    expect(result.status).toBe("pendiente_evidencia");
+    expect(result.status).not.toBe("cumplido");
+  });
+
+  it("kml_full con misma situación sigue dando no_cumplido (no pendiente)", () => {
+    // Misma situación que arriba pero con kml_full → no_cumplido (no pendiente)
+    const farWaypoints = [
+      { lat: 31.6500, lng: -106.4500 },
+      { lat: 31.6600, lng: -106.4400 },
+      { lat: 31.6700, lng: -106.4350 },
+    ];
+    const result = verifyService({
+      ...baseDestinoOnly,
+      routeStrictness: "kml_full",
+      kmlWaypoints: farWaypoints,
+      kmlMatchMinPct: 60,
+      kmlCorridorMinPct: 60,
+      evidencePoints: [
+        {
+          imei: "unit-1",
+          latitude: 31.6909,
+          longitude: -106.4234,
+          timestamp: new Date("2026-07-07T12:44:00Z"),
+        },
+      ],
+    });
+    // En kml_full: si no cubrió la ruta → no_cumplido directamente
+    expect(result.status).toBe("no_cumplido");
   });
 });
 
