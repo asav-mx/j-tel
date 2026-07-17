@@ -224,10 +224,14 @@ export class VerificationService {
 
     // Misma lógica que reverify-day: tras el motor nuevo, repartir unidades
     // exclusivas entre servicios con ventanas operativas traslapadas.
+    // Solo aplica a contratos sin permitirConsolidacion.
     if (verifiedIds.length > 0) {
       const exclusiveScopeIds = await this.collectExclusiveScopeIds(verifiedIds);
-      await this.resolveExclusiveUnitClaims(exclusiveScopeIds);
-      await this.resolveEliminationPass(exclusiveScopeIds);
+      const idsForExclusive = await this.filterByExclusivePolicy(exclusiveScopeIds);
+      if (idsForExclusive.length > 0) {
+        await this.resolveExclusiveUnitClaims(idsForExclusive);
+        await this.resolveEliminationPass(idsForExclusive);
+      }
     }
 
     return results;
@@ -258,6 +262,27 @@ export class VerificationService {
     }
 
     return [...ids];
+  }
+
+  /**
+   * Filtra ocurrencias cuyo contrato NO tiene permitirConsolidacion = true.
+   * Las que sí lo tienen se excluyen de la resolución exclusiva.
+   */
+  private async filterByExclusivePolicy(occurrenceIds: string[]): Promise<string[]> {
+    const result: string[] = [];
+    // Cache por contractId para no cargar la misma política N veces.
+    const cache = new Map<string, boolean>();
+    for (const id of occurrenceIds) {
+      const occ = await this.repos.occurrences.findById(id);
+      const contractId = occ?.profile?.contractId ?? occ?.contractId;
+      if (!contractId) { result.push(id); continue; }
+      if (!cache.has(contractId)) {
+        const pol = occ?.profile?.contract?.policy as ContractPolicy | undefined;
+        cache.set(contractId, pol?.permitirConsolidacion ?? false);
+      }
+      if (!cache.get(contractId)) result.push(id);
+    }
+    return result;
   }
 
   /**
@@ -312,7 +337,20 @@ export class VerificationService {
       }
     }
 
-    if (opts.exclusiveUnits) {
+    // Exclusividad: si el caller no lo especifica, derivar de la política del
+    // contrato. permitirConsolidacion = true → no exclusividad (una unidad
+    // puede acreditar varias rutas). Default: exclusivo.
+    // findForContract no carga relaciones profundas → cargar con findById.
+    const applyExclusive = opts.exclusiveUnits ??
+      await (async () => {
+        const firstTarget = targets[0];
+        if (!firstTarget) return true;
+        const full = await this.repos.occurrences.findById(firstTarget.id);
+        const pol = full?.profile?.contract?.policy as ContractPolicy | undefined;
+        return !(pol?.permitirConsolidacion ?? false);
+      })();
+
+    if (applyExclusive) {
       await this.resolveExclusiveUnitClaims(targets.map((o) => o.id));
       await this.resolveEliminationPass(targets.map((o) => o.id));
       // Refrescar resultados tras la resolución exclusiva + eliminación.

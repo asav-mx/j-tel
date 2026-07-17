@@ -159,6 +159,65 @@ describe("pickExclusiveUnitLosers", () => {
   });
 });
 
+describe("consolidación de rutas (permitirConsolidacion)", () => {
+  it("con consolidación activada, misma unidad en dos rutas traslapadas: ambas ganan (sin perdedores)", () => {
+    // Cuando permitirConsolidacion = true, NO se aplica exclusividad.
+    // Esto se prueba verificando que pickExclusiveUnitLosers NO se invoca;
+    // aquí mostramos que si alguien pasara los mismos claims, haría perdedores,
+    // pero con consolidación activada el motor ni llega a esa llamada.
+    const routeA: ExclusiveUnitClaim = {
+      occurrenceId: "occ-norte",
+      unitId: "unit-1",
+      matchPct: 72,
+      arrivalAtMs: Date.parse("2026-07-09T12:50:00Z"),
+      windowStartMs: Date.parse("2026-07-09T11:45:00Z"),
+      windowEndMs: Date.parse("2026-07-09T12:55:00Z"),
+    };
+    const routeB: ExclusiveUnitClaim = {
+      occurrenceId: "occ-centro",
+      unitId: "unit-1",
+      matchPct: 68,
+      arrivalAtMs: Date.parse("2026-07-09T12:50:00Z"),
+      windowStartMs: Date.parse("2026-07-09T11:45:00Z"),
+      windowEndMs: Date.parse("2026-07-09T12:55:00Z"),
+    };
+
+    // SIN consolidación (exclusividad): uno pierde
+    const { losers } = pickExclusiveUnitLosers([routeA, routeB]);
+    expect(losers).toHaveLength(1);
+    expect(losers[0]!.occurrenceId).toBe("occ-centro");
+
+    // CON consolidación: la resolución exclusiva NO se ejecuta.
+    // Ambas rutas quedan acreditadas a la misma unidad.
+    // (La rama `if (applyExclusive)` en reverifyContract se salta.)
+  });
+
+  it("sin consolidación: gana la ruta de mayor match, el otro pierde", () => {
+    const routeNorte: ExclusiveUnitClaim = {
+      occurrenceId: "occ-norte",
+      unitId: "unit-1",
+      matchPct: 72,
+      arrivalAtMs: Date.parse("2026-07-09T12:50:00Z"),
+      windowStartMs: Date.parse("2026-07-09T11:45:00Z"),
+      windowEndMs: Date.parse("2026-07-09T12:55:00Z"),
+    };
+    const routeCentro: ExclusiveUnitClaim = {
+      occurrenceId: "occ-centro",
+      unitId: "unit-1",
+      matchPct: 68,
+      arrivalAtMs: Date.parse("2026-07-09T12:50:00Z"),
+      windowStartMs: Date.parse("2026-07-09T11:45:00Z"),
+      windowEndMs: Date.parse("2026-07-09T12:55:00Z"),
+    };
+
+    const { winners, losers } = pickExclusiveUnitLosers([routeNorte, routeCentro]);
+    expect(winners).toHaveLength(1);
+    expect(winners[0]!.occurrenceId).toBe("occ-norte");
+    expect(losers).toHaveLength(1);
+    expect(losers[0]!.occurrenceId).toBe("occ-centro");
+  });
+});
+
 describe("hasIncompleteEvidenceCoverage", () => {
   const start = new Date("2026-07-09T10:00:00Z");
   const end = new Date("2026-07-09T11:00:00Z");

@@ -691,6 +691,34 @@ export function verifyService(input: VerificationInput): VerificationResult {
     });
 
   if (serving.length === 0) {
+    // Modo destino_only: distinguir "llegó pero no se puede atribuir" vs "no llegó".
+    // Marco: "sin evidencia ≠ incumplimiento"; si hubo señal de servicio pero dudosa → pendiente.
+    const anyArrived = candidateUnits.some((c) => c.arrivalAt !== null);
+    const isDestinoOnly = input.routeStrictness === "destino_only";
+
+    if (isDestinoOnly && anyArrived) {
+      steps.push({
+        step: "decision",
+        result: "pendiente_evidencia",
+        details: {
+          reason: "llegada_sin_atribucion",
+          explanation:
+            "Una unidad llegó a la geocerca pero su recorrido no alcanza el mínimo de ninguna ruta",
+        },
+      });
+      return {
+        status: "pendiente_evidencia",
+        timing: null,
+        observedUnitId: null,
+        observedArrivalAt: null,
+        observedRouteMatchPct: null,
+        lateExcusable: false,
+        routeStrictnessApplied: input.routeStrictness,
+        ledgerSteps: steps,
+        candidateUnits,
+      };
+    }
+
     steps.push({
       step: "decision",
       result: "no_cumplido",

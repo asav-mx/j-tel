@@ -171,6 +171,12 @@ export const contractPolicySchema = z.object({
    * Si el hueco es mayor → pendiente_evidencia. Default 10.
    */
   evidenceMaxGapMinutes: z.number().int().positive().default(10),
+  /**
+   * Permitir consolidación de rutas: una unidad puede cubrir varias rutas del
+   * turno (situaciones de fuerza operativa). El recorrido mínimo de cada ruta
+   * sigue siendo obligatorio. Default false (exclusividad).
+   */
+  permitirConsolidacion: z.boolean().default(false),
 });
 
 export type ContractPolicy = z.infer<typeof contractPolicySchema>;
