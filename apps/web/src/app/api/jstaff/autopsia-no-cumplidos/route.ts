@@ -15,6 +15,12 @@ export const maxDuration = 120;
  *
  * Reporte de solo lectura. No escribe en saveFact, no reverifica,
  * no llama a Umbrella. Las cubetas son etiquetas internas de análisis.
+ *
+ * TODO(seguridad): Este endpoint expone razonamiento confidencial del carrier
+ * (cubetas, señales, métricas internas) y debe restringirse a J-Staff.
+ * Hoy ningún endpoint ni página de /jstaff tiene protección de acceso
+ * (getJStaffMemberships existe en auth.ts pero nadie la invoca).
+ * Cuando se implemente auth para J-Staff, aplicarlo aquí también.
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
