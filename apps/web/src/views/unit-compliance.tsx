@@ -362,7 +362,7 @@ export async function UnitComplianceView({
         </div>
 
         <Card title={`Servicios — ${range.label} (${rows.length})`}>
-          <OccurrenceTable rows={rows} showPlant={false} />
+          <OccurrenceTable rows={rows} showPlant={false} showMotivo />
         </Card>
       </div>
     </main>

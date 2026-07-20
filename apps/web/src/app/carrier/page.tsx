@@ -141,6 +141,7 @@ export default async function CarrierDashboardPage({
               showPlant
               showCarrier={false}
               showEnforcement={false}
+              showMotivo
             />
           </Card>
         </div>
