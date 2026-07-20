@@ -374,23 +374,10 @@ export function buildSummary(rows: AutopsiaRow[]): AutopsiaSummary {
       llegadaFueraCount++;
     }
 
-    if (!row.raw.coverageStepExists || (row.raw.coveragePct !== null && row.raw.coveragePct < (100 - 1e-9))) {
-      // No tiene paso o lo tiene pero no fue 100% (insuficiente o parcial)
-      // Refinement: count those without step OR with insuficiente result
-    }
-  }
-
-  // Bandera: sin paso cobertura_evidencia o con resultado insuficiente
-  for (const row of rows) {
     if (!row.raw.coverageStepExists) {
       sinCoberturaStepOInsuficiente++;
-    } else {
-      // Check if the step existed but was insuficiente — those already went to pendiente_evidencia
-      // so they won't be in no_cumplido rows. Still, flag if coverage < policy threshold.
-      const policyCov = 80; // default; we store the actual in the signal details
-      if (row.raw.coveragePct !== null && row.raw.coveragePct < policyCov) {
-        sinCoberturaStepOInsuficiente++;
-      }
+    } else if (row.raw.coveragePct !== null && row.raw.coveragePct < 80) {
+      sinCoberturaStepOInsuficiente++;
     }
   }
 
@@ -438,11 +425,11 @@ export function reportToCsv(report: AutopsiaReport): string {
     csvRows.push(
       [
         row.serviceDate,
-        `"${row.profileName}"`,
-        `"${row.routeName ?? ""}"`,
+        '"' + row.profileName.replace(/"/g, '""') + '"',
+        '"' + (row.routeName ?? "").replace(/"/g, '""') + '"',
         row.referenceUnitId ?? "",
         row.mainBucket,
-        `"${secondaryBuckets}"`,
+        '"' + secondaryBuckets.replace(/"/g, '""') + '"',
         row.raw.observedUnitId ?? "",
         row.raw.routeMatchPct?.toFixed(1) ?? "",
         row.raw.corridorPrecisionPct?.toFixed(1) ?? "",

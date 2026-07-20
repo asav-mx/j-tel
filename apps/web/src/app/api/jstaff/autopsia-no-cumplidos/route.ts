@@ -40,10 +40,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Contrato no encontrado" }, { status: 404 });
   }
 
+  // UTC explícito: findForContract llama toISOString().split("T")[0] internamente,
+  // así que la zona horaria del Date importa. Sin Z, un servidor en UTC-6
+  // desplazaría el 'to' un día hacia adelante.
   const occurrences = await repos.occurrences.findForContract(
     contractId,
-    new Date(`${from}T00:00:00`),
-    new Date(`${to}T23:59:59`),
+    new Date(`${from}T00:00:00Z`),
+    new Date(`${to}T23:59:59Z`),
   );
 
   const noCumplidos = occurrences.filter(
@@ -61,15 +64,11 @@ export async function GET(request: Request) {
       evidenceMaxGapMinutes?: number;
     } | null;
 
-    // Ledger del trip (congelado, solo lectura)
-    const ledger = trip
-      ? await repos.compliance.getLedgerForTrip(trip.id)
-      : [];
-
-    // Puntos de evidencia del trip (para brinco GPS)
-    const evidencePoints = trip
-      ? await repos.evidence.getPointsForTrip(trip.id)
-      : [];
+    // Ledger + puntos en paralelo (evita N+1 secuencial)
+    const [ledger, evidencePoints] = await Promise.all([
+      trip ? repos.compliance.getLedgerForTrip(trip.id) : Promise.resolve([]),
+      trip ? repos.evidence.getPointsForTrip(trip.id) : Promise.resolve([]),
+    ]);
 
     const { mainBucket, signals, raw } = classifyOne(
       {
