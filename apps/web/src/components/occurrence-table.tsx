@@ -1,5 +1,6 @@
 import { StatusBadge } from "@/components/ui";
 import { withAccount } from "@/lib/account-context";
+import { noCumplidoDetailLine } from "@/lib/no-cumplido-motivo";
 
 export type OccurrenceRow = {
   id: string;
@@ -12,17 +13,21 @@ export type OccurrenceRow = {
   status: string | null | undefined;
   timing: string | null | undefined;
   observedUnitLabel: string;
+  /** Línea de motivo bajo el chip no_cumplido (solo lectura del hecho). */
+  motivo: string | null;
   detailHref: string;
 };
 
 type OccurrenceInput = {
   id: string;
   serviceDate: string;
+  expectedDeadline?: Date | null;
   profile?: { name?: string | null; code?: string | null } | null;
   complianceFact?: {
     status: "cumplido" | "no_cumplido" | "pendiente_evidencia";
     timing?: "temprano" | "a_tiempo" | "tarde" | null;
     observedUnitId?: string | null;
+    observedArrivalAt?: Date | null;
     observedUnit?: { label?: string | null; plateNumber?: string | null } | null;
   } | null;
   contract?: {
@@ -71,6 +76,14 @@ export function toOccurrenceRow(
     status: fact?.status,
     timing: fact?.timing ?? null,
     observedUnitLabel: formatObservedUnit(fact),
+    motivo: noCumplidoDetailLine({
+      status: fact?.status,
+      timing: fact?.timing,
+      observedUnitId: fact?.observedUnitId,
+      observedArrivalAt: fact?.observedArrivalAt,
+      expectedDeadline: occ.expectedDeadline,
+      observedUnitLabel: formatObservedUnit(fact),
+    }),
     detailHref: withAccount(`${detailPath}/${occ.id}`, accountSlug),
   };
 }
@@ -82,6 +95,7 @@ export function OccurrenceTable({
   showPlant = true,
   showEnforcement,
   showObservedUnit,
+  showMotivo = false,
 }: {
   rows: OccurrenceRow[];
   showClient?: boolean;
@@ -90,6 +104,8 @@ export function OccurrenceTable({
   /** @deprecated alias de showObservedUnit */
   showEnforcement?: boolean;
   showObservedUnit?: boolean;
+  /** Mostrar línea de motivo bajo el chip no_cumplido (planta y carrier). */
+  showMotivo?: boolean;
 }) {
   const showUnit = showObservedUnit ?? showEnforcement ?? true;
   if (rows.length === 0) {
@@ -126,6 +142,9 @@ export function OccurrenceTable({
               </td>
               <td className="py-3 pr-4">
                 <StatusBadge status={row.status} timing={row.timing} />
+                {showMotivo && row.motivo ? (
+                  <p className="mt-1 text-xs text-[var(--muted)]">{row.motivo}</p>
+                ) : null}
               </td>
               {showUnit ? (
                 <td className="py-3 pr-4 text-sm">{row.observedUnitLabel}</td>

@@ -238,6 +238,7 @@ export default async function CarrierCumplimientoPage({
             showPlant
             showCarrier={false}
             showEnforcement={false}
+            showMotivo
           />
         </Card>
       </div>
