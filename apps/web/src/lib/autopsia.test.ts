@@ -154,6 +154,21 @@ describe("autopsia — classifyOne", () => {
     expect(raw.maxGpsJumpMeters).toBeGreaterThan(10000);
   });
 
+  it("brinco_gps agrupa por IMEI: dos unidades lejos no es brinco", () => {
+    const fact = { status: "no_cumplido", observedUnitId: null, observedRouteMatchPct: null };
+    const ledger = makeLedger({
+      coverageStep: { result: "suficiente", details: { coveragePct: 100, maxGapMinutes: 1 } },
+    });
+    // Dos IMEIs distintos a 50km pero timestamps cercanos → NO es brinco
+    const points = [
+      { latitude: 31.7, longitude: -106.4, recordedAt: new Date("2026-07-09T06:00:00Z"), imei: "u1" },
+      { latitude: 32.15, longitude: -106.4, recordedAt: new Date("2026-07-09T06:00:10Z"), imei: "u2" },
+    ];
+    const { signals, raw } = classifyOne(fact, ledger, points, null);
+    expect(signals.some((s) => s.bucket === "brinco_gps?")).toBe(false);
+    expect(raw.maxGpsJumpMeters).toBeNull();
+  });
+
   it("variante_trazado: candidata llegó a geocerca pero no cubrió ruta", () => {
     const fact = { status: "no_cumplido", observedUnitId: null, observedRouteMatchPct: null };
     const ledger = makeLedger({

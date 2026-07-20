@@ -186,27 +186,37 @@ export function classifyOne(
   const elimEntry = ledger.find((e) => e.action === "eliminacion_candidatas");
   const elimExcluded = (elimEntry?.metadata?.excludedOccupiedUnitIds ?? []) as string[];
 
-  // --- Brinco GPS ---
+  // --- Brinco GPS (por IMEI, no flota mezclada) ---
+  // Agrupar por IMEI para no crear saltos falsos entre unidades distintas.
   let maxGpsJumpMeters: number | null = null;
   if (evidencePoints.length >= 2) {
-    const sorted = [...evidencePoints].sort(
-      (a, b) => a.recordedAt.getTime() - b.recordedAt.getTime(),
-    );
+    const byImei = new Map<string, EvidencePoint[]>();
+    for (const p of evidencePoints) {
+      const arr = byImei.get(p.imei) ?? [];
+      arr.push(p);
+      byImei.set(p.imei, arr);
+    }
     let maxJumpM = 0;
-    for (let i = 1; i < sorted.length; i++) {
-      const prev = sorted[i - 1]!;
-      const curr = sorted[i]!;
-      const distKm = haversineKm(
-        prev.latitude, prev.longitude,
-        curr.latitude, curr.longitude,
+    for (const [, points] of byImei) {
+      if (points.length < 2) continue;
+      const sorted = [...points].sort(
+        (a, b) => a.recordedAt.getTime() - b.recordedAt.getTime(),
       );
-      const dtHours =
-        (curr.recordedAt.getTime() - prev.recordedAt.getTime()) / 3_600_000;
-      if (dtHours > 0) {
-        const speedKmh = distKm / dtHours;
-        if (speedKmh > GPS_JUMP_SPEED_THRESHOLD_KMH) {
-          const jumpM = distKm * 1000;
-          if (jumpM > maxJumpM) maxJumpM = jumpM;
+      for (let i = 1; i < sorted.length; i++) {
+        const prev = sorted[i - 1]!;
+        const curr = sorted[i]!;
+        const distKm = haversineKm(
+          prev.latitude, prev.longitude,
+          curr.latitude, curr.longitude,
+        );
+        const dtHours =
+          (curr.recordedAt.getTime() - prev.recordedAt.getTime()) / 3_600_000;
+        if (dtHours > 0) {
+          const speedKmh = distKm / dtHours;
+          if (speedKmh > GPS_JUMP_SPEED_THRESHOLD_KMH) {
+            const jumpM = distKm * 1000;
+            if (jumpM > maxJumpM) maxJumpM = jumpM;
+          }
         }
       }
     }
