@@ -185,6 +185,7 @@ export async function POST(request: Request) {
     if (action === "kml") {
       const routeId = String(formData.get("routeId") ?? "").trim();
       if (!routeId) return back(request, client.slug, scope, { error: "Elige una ruta." });
+      const variantId = String(formData.get("variantId") ?? "").trim() || undefined;
       const kml = await readKmlFromForm(formData);
       if (kml.error) {
         return back(request, client.slug, scope, { error: kml.error });
@@ -194,10 +195,47 @@ export async function POST(request: Request) {
       }
       await repos.routes.addKmlVersion({
         routeId,
+        variantId,
         kmlContent: kml.kmlContent,
         waypoints: kml.waypoints,
       });
       return back(request, client.slug, scope, { created: "kml" });
+    }
+
+    // --- Variantes de trazado ---
+    // VARIANTE = caminos alternos que coexisten hoy (ej. MEX-45 o Panamericana).
+    // NO confundir con VERSIÓN = historia temporal de una variante.
+
+    if (action === "variant_create") {
+      const routeId = String(formData.get("routeId") ?? "").trim();
+      const variantName = String(formData.get("variantName") ?? "").trim();
+      if (!routeId) return back(request, client.slug, scope, { error: "Elige una ruta." });
+      if (!variantName) return back(request, client.slug, scope, { error: "Nombre de variante obligatorio." });
+
+      const kml = await readKmlFromForm(formData);
+      if (kml.error) return back(request, client.slug, scope, { error: kml.error });
+      if (!kml.kmlContent) {
+        return back(request, client.slug, scope, { error: "Sube un KML o pega waypoints para la variante." });
+      }
+
+      const variant = await repos.routes.createVariant({ routeId, name: variantName });
+      await repos.routes.addKmlVersion({
+        routeId,
+        variantId: variant.id,
+        kmlContent: kml.kmlContent,
+        waypoints: kml.waypoints,
+      });
+      return back(request, client.slug, scope, { created: "variante_creada" });
+    }
+
+    if (action === "variant_status") {
+      const variantId = String(formData.get("variantId") ?? "").trim();
+      const newStatus = String(formData.get("status") ?? "").trim();
+      if (!variantId || !["activa", "legacy"].includes(newStatus)) {
+        return back(request, client.slug, scope, { error: "Datos de variante inválidos." });
+      }
+      await repos.routes.updateVariantStatus(variantId, newStatus as "activa" | "legacy");
+      return back(request, client.slug, scope, { created: "variante_actualizada" });
     }
 
     return back(request, client.slug, scope, { error: "Acción no reconocida." });

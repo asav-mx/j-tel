@@ -10,7 +10,6 @@ describe("enforcement", () => {
     kmlMatchMinPct: 60,
     kmlCorridorMeters: 120,
     kmlCorridorMinPct: 60,
-    allowAlternateDestination: false,
     excusableReasons: [],
     permitirConsolidacion: false,
     enforcementRules: [

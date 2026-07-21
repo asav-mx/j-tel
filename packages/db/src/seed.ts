@@ -51,7 +51,6 @@ const TECMA_POLICY: ContractPolicy = {
   kmlMatchMinPct: 60,
   kmlCorridorMeters: 120,
   kmlCorridorMinPct: 60,
-  allowAlternateDestination: false,
   excusableReasons: [
     "lluvia_nieve",
     "marchas",
@@ -77,7 +76,6 @@ const HONEYWELL_POLICY: ContractPolicy = {
   kmlMatchMinPct: 60,
   kmlCorridorMeters: 120,
   kmlCorridorMinPct: 60,
-  allowAlternateDestination: false,
   excusableReasons: [
     "lluvia_nieve",
     "marchas",

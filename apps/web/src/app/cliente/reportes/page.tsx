@@ -54,7 +54,6 @@ export default async function ClienteReportesPage({
     kmlMatchMinPct: 60,
     kmlCorridorMeters: 120,
     kmlCorridorMinPct: 60,
-    allowAlternateDestination: false,
     excusableReasons: [],
     enforcementRules: [],
     evidenceMarginMinutesBefore: 60,

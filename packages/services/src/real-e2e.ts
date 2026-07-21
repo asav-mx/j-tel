@@ -53,7 +53,6 @@ const POLICY: ContractPolicy = {
   kmlMatchMinPct: 60,
   kmlCorridorMeters: 120,
   kmlCorridorMinPct: 60,
-  allowAlternateDestination: false,
   excusableReasons: [],
   enforcementRules: [{ type: "no_pago_viaje", toleranceMinutes: 10 }],
   evidenceMarginMinutesBefore: 60,

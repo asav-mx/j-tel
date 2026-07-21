@@ -153,7 +153,6 @@ export const contractPolicySchema = z.object({
    * (métrica B: precisión). Un match exige A ≥ kmlMatchMinPct Y B ≥ este umbral.
    */
   kmlCorridorMinPct: z.number().min(0).max(100).default(60),
-  allowAlternateDestination: z.boolean().default(false),
   excusableReasons: z.array(ExcusableReason).default([]),
   enforcementRules: z.array(enforcementRulesSchema).default([]),
   /** Ventana de observación GPS: empieza N min antes del deadline (ej. 60 → 5:45 si deadline 6:45). */
@@ -351,6 +350,8 @@ export interface VerificationResult {
   observedRouteMatchPct: number | null;
   lateExcusable: boolean;
   routeStrictnessApplied: RouteStrictness;
+  /** Variante de trazado que sirvió la unidad. Llenado por la capa de servicios, no por verifyService. */
+  servedVariantId?: string | null;
   ledgerSteps: LedgerStep[];
   candidateUnits: Array<{
     unitId: string;

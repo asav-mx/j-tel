@@ -133,7 +133,6 @@ export async function POST(request: Request) {
         formData.get("kmlCorridorMinPct"),
         existingPolicy.kmlCorridorMinPct ?? 60,
       ),
-      allowAlternateDestination: formData.get("allowAlternateDestination") === "on",
       excusableReasons: formData.getAll("excusableReasons").map((r) => String(r)),
       enforcementRules: buildEnforcementRule(formData),
       evidenceMarginMinutesBefore: toInt(
@@ -223,7 +222,6 @@ export async function POST(request: Request) {
   const kmlCorridorMinPct = toInt(formData.get("kmlCorridorMinPct"), 60);
   const evidenceMarginMinutesBefore = toInt(formData.get("evidenceMarginMinutesBefore"), 60);
   const evidenceMarginMinutesAfter = toInt(formData.get("evidenceMarginMinutesAfter"), 30);
-  const allowAlternateDestination = formData.get("allowAlternateDestination") === "on";
   const excusableReasons = formData.getAll("excusableReasons").map((r) => String(r));
 
   const payload = {
@@ -241,7 +239,6 @@ export async function POST(request: Request) {
       verificationGraceMinutes,
       routeStrictness,
       kmlMatchMinPct,
-      allowAlternateDestination,
       excusableReasons,
       enforcementRules: buildEnforcementRule(formData),
       evidenceMarginMinutesBefore,
