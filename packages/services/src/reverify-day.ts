@@ -37,7 +37,16 @@ async function main() {
   const repos = createRepositories(db);
 
   const contractIdEnv = process.env.CONTRACT_ID?.trim();
-  const filter = (process.env.CONTRACT ?? "santos dumont|campus santos").toLowerCase();
+  const contractEnv = process.env.CONTRACT?.trim();
+  if (!contractIdEnv && !contractEnv) {
+    console.error(
+      "ERROR: Define CONTRACT=<nombre_o_fragmento> o CONTRACT_ID=<uuid>.\n" +
+        "Ejemplo: CONTRACT=campus SERVICE_DATE=2026-07-22 pnpm --filter @jtel/services exec tsx src/reverify-day.ts\n" +
+        "El alcance debe ser explícito — no hay valor por defecto.",
+    );
+    process.exit(1);
+  }
+  const filter = contractEnv?.toLowerCase() ?? "";
   const clients = await repos.accounts.listByType("client");
   const contracts = [];
   for (const client of clients) {
@@ -87,24 +96,6 @@ async function main() {
     byStatus.set(s, (byStatus.get(s) ?? 0) + 1);
   }
   console.log("\nResumen:", Object.fromEntries(byStatus));
-
-  // Detalle Sierra Vista / Riberas 9
-  const occs = await repos.occurrences.findForContract(contract.id);
-  const focus = occs.filter(
-    (o) =>
-      o.serviceDate === serviceDate &&
-      /riberas.?9|sierra.?vista/i.test(
-        `${o.profile?.code ?? ""} ${o.profile?.name ?? ""} ${o.profile?.routeShift?.route?.name ?? ""}`,
-      ),
-  );
-  console.log("\nFoco Sierra Vista / Riberas 9:");
-  for (const o of focus) {
-    const f = o.complianceFact;
-    const unit = f?.observedUnit;
-    console.log(
-      `  ${o.profile?.code} → ${f?.status ?? "?"} ${f?.timing ?? ""} · unidad=${unit?.label ?? "-"} · match=${f?.observedRouteMatchPct?.toFixed?.(1) ?? f?.observedRouteMatchPct ?? "-"}%`,
-    );
-  }
 
   process.exit(0);
 }

@@ -39,7 +39,16 @@ function classify(a: number | null, b: number | null, minA: number, minB: number
 }
 
 async function main() {
-  const filter = (process.env.CONTRACT ?? "santos dumont|campus").toLowerCase();
+  const contractEnv = process.env.CONTRACT?.trim();
+  if (!contractEnv) {
+    console.error(
+      "ERROR: Define CONTRACT=<nombre_o_fragmento>.\n" +
+        "Ejemplo: CONTRACT=campus SERVICE_DATE=2026-07-22 pnpm --filter @jtel/services run residual-report\n" +
+        "El alcance debe ser explícito — no hay valor por defecto.",
+    );
+    process.exit(1);
+  }
+  const filter = contractEnv.toLowerCase();
   const dates = (process.env.SERVICE_DATE ?? "2026-07-09,2026-07-10")
     .split(",")
     .map((d) => d.trim())

@@ -350,7 +350,7 @@ export async function ServiciosUnitView({
                       Geocerca correcta
                       <select name="geofenceId" required className={inputClass} defaultValue="">
                         <option value="" disabled>
-                          Elige (ej. Tecma Planta 47)…
+                          Elige una geocerca…
                         </option>
                         {geofences.map((g) => (
                           <option key={g.id} value={g.id}>

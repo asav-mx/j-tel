@@ -23,7 +23,16 @@ for (const p of ["../../.env", ".env"]) {
 
 async function main() {
   const serviceDate = process.env.SERVICE_DATE ?? "2026-07-09";
-  const filter = (process.env.CONTRACT ?? "santos dumont|campus santos").toLowerCase();
+  const contractEnv = process.env.CONTRACT?.trim();
+  if (!contractEnv) {
+    console.error(
+      "ERROR: Define CONTRACT=<nombre_o_fragmento>.\n" +
+        "Ejemplo: CONTRACT='campus santos' SERVICE_DATE=2026-07-22 pnpm --filter @jtel/services exec tsx src/compare-verify-dry.ts\n" +
+        "El alcance debe ser explícito — no hay valor por defecto.",
+    );
+    process.exit(1);
+  }
+  const filter = contractEnv.toLowerCase();
 
   const db = createDb(process.env.DATABASE_URL!);
   const repos = createRepositories(db);
