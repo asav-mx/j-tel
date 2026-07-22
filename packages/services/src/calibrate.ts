@@ -30,7 +30,16 @@ function addDaysIso(fromIso: string, days: number): string {
 }
 
 async function main() {
-  const filter = (process.env.CONTRACT ?? "santos dumont|campus").toLowerCase();
+  const contractEnv = process.env.CONTRACT?.trim();
+  if (!contractEnv) {
+    console.error(
+      "ERROR: Define CONTRACT=<nombre_o_fragmento>.\n" +
+        "Ejemplo: CONTRACT=campus SERVICE_DATE=2026-07-22 pnpm --filter @jtel/services run calibrate\n" +
+        "El alcance debe ser explícito — no hay valor por defecto.",
+    );
+    process.exit(1);
+  }
+  const filter = contractEnv.toLowerCase();
   const single = process.env.SERVICE_DATE;
   const from = process.env.FROM ?? single;
   const to = process.env.TO ?? single;

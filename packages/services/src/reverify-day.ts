@@ -37,7 +37,16 @@ async function main() {
   const repos = createRepositories(db);
 
   const contractIdEnv = process.env.CONTRACT_ID?.trim();
-  const filter = (process.env.CONTRACT ?? "santos dumont|campus santos").toLowerCase();
+  const contractEnv = process.env.CONTRACT?.trim();
+  if (!contractIdEnv && !contractEnv) {
+    console.error(
+      "ERROR: Define CONTRACT=<nombre_o_fragmento> o CONTRACT_ID=<uuid>.\n" +
+        "Ejemplo: CONTRACT=campus SERVICE_DATE=2026-07-22 pnpm --filter @jtel/services exec tsx src/reverify-day.ts\n" +
+        "El alcance debe ser explícito — no hay valor por defecto.",
+    );
+    process.exit(1);
+  }
+  const filter = contractEnv?.toLowerCase() ?? "";
   const clients = await repos.accounts.listByType("client");
   const contracts = [];
   for (const client of clients) {
