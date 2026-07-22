@@ -380,7 +380,7 @@ describe("cambio de política no toca hechos definitivos", () => {
         resolveUnitAtTime: vi.fn().mockResolvedValue({ unitId: "unit-1" }),
       },
       telemetry: { getForImeis: vi.fn().mockResolvedValue([]) },
-      routes: { getKmlVersionForDate: vi.fn().mockResolvedValue(null) },
+      routes: { getKmlVersionForDate: vi.fn().mockResolvedValue(null), getActiveVariantVersionsForDate: vi.fn().mockResolvedValue([]) },
       carriers: { getGpsCredentials: vi.fn().mockResolvedValue(null) },
       notifications: { create: vi.fn() },
     };
@@ -478,7 +478,7 @@ describe("perdedor exclusivo sin alternativa", () => {
         resolveUnitAtTime: vi.fn().mockResolvedValue({ unitId: "unit-other" }),
       },
       telemetry: { getForImeis: vi.fn().mockResolvedValue([]) },
-      routes: { getKmlVersionForDate: vi.fn().mockResolvedValue(null) },
+      routes: { getKmlVersionForDate: vi.fn().mockResolvedValue(null), getActiveVariantVersionsForDate: vi.fn().mockResolvedValue([]) },
       carriers: { getGpsCredentials: vi.fn().mockResolvedValue(null) },
       notifications: { create: vi.fn() },
     };
@@ -708,7 +708,7 @@ describe("Tarea 3 — contexto llegada fuera de ventana", () => {
           return Promise.resolve(inWindow);
         }),
       },
-      routes: { getKmlVersionForDate: vi.fn().mockResolvedValue(null) },
+      routes: { getKmlVersionForDate: vi.fn().mockResolvedValue(null), getActiveVariantVersionsForDate: vi.fn().mockResolvedValue([]) },
       notifications: { create: vi.fn() },
     };
     return { repos, addLedgerEntry };
