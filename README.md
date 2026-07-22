@@ -47,3 +47,13 @@ curl -H "Authorization: Bearer dev-cron-secret" http://localhost:3000/api/cron/v
 ```
 
 <!-- deploy: credenciales GPS por carrier (JTEL_SECRET_KEY) -->
+
+## Git hooks
+
+Los hooks están versionados en `scripts/hooks/`. Actívalos una sola vez por clon:
+
+```bash
+git config core.hooksPath scripts/hooks
+```
+
+- **post-checkout** — borra `apps/web/.next` al cambiar de rama para evitar bundles con módulos cacheados de la rama anterior.
