@@ -10,13 +10,13 @@ import { dayForDateQuery, localDateIso, JTTEL_TZ } from "./index.js";
  * filtro de ocurrencias retornaba 0 rutas para el día pedido.
  */
 describe("dayForDateQuery — runtime UTC (simula Vercel)", () => {
-  it("fecha en verano (UTC-6): mismo día civil en Juárez", () => {
-    // Mediodía UTC = 06:00 Juárez en horario de verano (CDT, UTC-6).
+  it("fecha en verano (MDT, UTC-6): mismo día civil en Juárez", () => {
+    // Mediodía UTC = 06:00 Juárez en horario de verano (MDT, UTC-6).
     expect(localDateIso(dayForDateQuery("2026-07-22"), JTTEL_TZ)).toBe("2026-07-22");
   });
 
-  it("fecha en invierno (UTC-7): mismo día civil en Juárez", () => {
-    // Mediodía UTC = 05:00 Juárez en horario estándar (CST, UTC-7).
+  it("fecha en invierno (MST, UTC-7): mismo día civil en Juárez", () => {
+    // Mediodía UTC = 05:00 Juárez en horario estándar (MST, UTC-7).
     expect(localDateIso(dayForDateQuery("2026-01-15"), JTTEL_TZ)).toBe("2026-01-15");
   });
 
