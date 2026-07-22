@@ -143,41 +143,41 @@ export async function loadServiceDetail(
   // Carrier y J-Staff sí ven el GPS de flota (son sus propios datos).
   const isClientFace = !options.carrierAccountId && !options.isJStaff;
 
-  let evidenceMapMode: ServiceDetailData[“evidenceMapMode”] = “empty”;
+  let evidenceMapMode: ServiceDetailData["evidenceMapMode"] = "empty";
   let unitEvidence = evidencePoints;
   if (observedUnitId) {
     // Hay unidad observada: mostrar su trazo (todas las caras).
     const matched = evidencePoints.filter((p) => p.unitId === observedUnitId);
     if (matched.length > 0) {
       unitEvidence = matched;
-      evidenceMapMode = “observed_unit”;
+      evidenceMapMode = "observed_unit";
     } else if (evidencePoints.length > 0) {
       if (isClientFace) {
         // Cara cliente: no filtrar por unidad si no hay match → vaciar.
         unitEvidence = [];
-        evidenceMapMode = “empty”;
+        evidenceMapMode = "empty";
       } else {
         // Carrier/J-Staff: mostrar todo (mismatch IMEI→unidad, diagnóstico).
         unitEvidence = evidencePoints;
-        evidenceMapMode = “trip_fleet”;
+        evidenceMapMode = "trip_fleet";
       }
     } else {
       unitEvidence = [];
-      evidenceMapMode = “empty”;
+      evidenceMapMode = "empty";
     }
   } else if (evidencePoints.length > 0) {
     if (isClientFace) {
       // Sin unidad observada, cara cliente: NO mostrar flota.
       unitEvidence = [];
-      evidenceMapMode = “empty”;
+      evidenceMapMode = "empty";
     } else {
       // Carrier/J-Staff: mostrar flota para diagnóstico.
       unitEvidence = evidencePoints;
-      evidenceMapMode = “trip_fleet”;
+      evidenceMapMode = "trip_fleet";
     }
   } else {
     unitEvidence = [];
-    evidenceMapMode = “empty”;
+    evidenceMapMode = "empty";
   }
 
   const allUnitPoints: MapPoint[] = unitEvidence
