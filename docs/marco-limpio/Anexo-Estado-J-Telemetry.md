@@ -2,7 +2,7 @@
 
 **Qué es esto:** una foto del estado del producto para no cargar las decisiones en la cabeza. Cuelga del Marco Maestro (no lo reemplaza). El Marco sigue siendo la fuente de verdad de las leyes; esto solo registra dónde estamos, qué se decidió y qué falta. Se actualiza cuando cambie algo grande.
 
-**Fecha de este corte:** 20 de julio de 2026 (actualizado por la noche: PRs #46 y #47 mergeados; auditoría de nudos).
+**Fecha de este corte:** 21 de julio de 2026 (PRs #46, #47 y variantes mergeados).
 
 ---
 
@@ -38,6 +38,14 @@ Estas ya se decidieron y se están aplicando. Cuando haya calma, valorar cuáles
 
 - **J-Tel son DOS productos sobre un cimiento (recordatorio de Pieza 1-C):** el árbitro de cumplimiento (construido) y la plataforma de flota del carrier (casi sin construir). En el producto de flota, el carrier SÍ ve su flota todo el día, huecos incluidos — son sus datos, su cuenta. El tope de ventana es ley del árbitro, no del dueño viéndose a sí mismo. Única frontera que aplica en ambos: jamás ver otras cuentas.
 
+
+- **Un perfil de ruta = UN destino + N variantes de trazado.** El destino sigue siendo la identidad intocable; los caminos para llegar pueden ser varios. El motor evalúa contra todas las variantes `activas` y la unidad cumple si sirve por CUALQUIERA. El hecho registra cuál variante sirvió. Resuelve tráfico/accidentes/obras sin aflojar el veredicto. ✅ Construido (21 jul).
+  - **Variante ≠ versión.** Variante = caminos que coexisten hoy. Versión = historia temporal de una variante. No confundir.
+  - **Las variantes NO se descubren solas** — se registran a propósito: subiendo KML (ya existe) o promoviendo un trazo real ejecutado (Ficha 3, pendiente). Ambas vías son válidas y el catálogo guarda el `origen` de cada una.
+  - **Quién aprueba importa:** un trazo ejecutado es evidencia de lo que pasó, no permiso de que sea válido. La promoción va acompañada de aprobación de la planta (quien paga define qué caminos valen). Si el carrier pudiera promover sus propios desvíos, se rompería la confianza del veredicto.
+
+- **Toggle "Permitir destino alterno" ELIMINADO** (21 jul). Ningún contrato lo tenía activo (los 4 en `false`, los 484 hechos también), así que impacto cero. Basura peligrosa fuera del sistema.
+
 ---
 
 ## 2. Hallazgo clave de la sesión
@@ -57,6 +65,19 @@ Estas ya se decidieron y se están aplicando. Cuando haya calma, valorar cuáles
 
 **Bandera de salud confirmada:** `sinCoberturaStep0Insuficiente = 0` → ningún `no_cumplido` se coló sin pasar la precondición de cobertura. La precondición está sana.
 
+
+### Hallazgo del 21 jul — los dos rojos tercos son GENUINOS
+
+Riberas 9 y Haciendas I (21 jul, turno 1) se investigaron a fondo: **cero unidades sirvieron esas rutas**. Ni las ocupadas ni las libres se acercaron. Registrar una variante no los arreglaría — el servicio simplemente no se prestó. **El réferi tenía razón.** Buena señal: el motor no inventa falsos negativos ahí.
+
+**Firma del empalme geográfico (patrón útil):** unidad 9375 en Haciendas dio **A=81% pero B=43%**. Traducción: tocó la mayoría de los puntos de Haciendas pero la mayor parte de su recorrido fue por otro lado — iba haciendo una ruta más larga (ganó Sierra Vista ese día) y pasó de refilón. **A alto + B bajo = empalme, no variante.** Usar este patrón para distinguirlos y como munición en la plática con Tecma.
+
+**Recordatorio de qué miden A y B:** A = ¿pasaste por los puntos de la ruta? (cobertura). B = ¿te saliste del camino? (precisión). Se cumple solo si pasan las dos.
+
+### Validación end-to-end del multi-variante (21 jul)
+
+Prueba con SIERRA-VISTA-I: con una variante daba cumplido A=81%; al registrar una segunda variante extraída del trazo real, dio **cumplido A=100% B=100%**, `servedVariantId` persistido, y el ledger mostró ambas variantes evaluadas con sus scores. Desempate determinista funcionando. Regresión cero confirmada (14 servicios, 12/2, idéntico a antes de la migración).
+
 ---
 
 ## 3. Estado del trabajo en curso
@@ -64,6 +85,7 @@ Estas ya se decidieron y se están aplicando. Cuando haya calma, valorar cuáles
 - **PR #46 — Autopsia de no_cumplidos (reporte de solo lectura):** ✅ mergeado a `main` el 20 jul. Endpoint J-Staff `/api/jstaff/autopsia-no-cumplidos`. Solo lectura; no toca `saveFact`, no llama a Umbrella. Incluye TODO de seguridad anotado (ver deuda 1 abajo).
 - **PR #47 — Motivo bajo el chip `no_cumplido`:** ✅ mergeado a `main` el 20 jul. La línea "Llegada tarde (+N min, unidad X)" / "Sin servicio detectado en la ventana" aparece en lista y detalle, caras de planta/campus y carrier. Cliente corporativo intacto. Reutiliza `noCumplidoDetailLine`; cero cambios al motor.
 - **Tarea 3 (contexto "llegada fuera de ventana" en el ledger):** ✅ viva en el motor desde antes. Anota la llegada tardía sin cambiar el veredicto.
+- **Variantes de trazado (multi-KML):** ✅ mergeado el 21 jul. Migración 0011 aplicada: 50 variantes "Principal" creadas, 50/50 versiones vinculadas. Motor evalúa multi-variante. UI mínima de catálogo en J-Staff. Toggle de destino alterno eliminado de 15 archivos.
 - **Herramienta de trabajo:** ahora con **Devin** (Claude Code), no Cursor. Reglas escritas en las fichas (Devin obedece lo escrito): una rama por tarea, todo por PR, merge a `main` solo por Asav.
 
 ---
@@ -73,7 +95,7 @@ Estas ya se decidieron y se están aplicando. Cuando haya calma, valorar cuáles
 - **Seguimiento condicionado → CERRADO como innecesario.** Los datos de la autopsia lo mataron: el margen de 45 + Tarea 3 capturaron las 36 llegadas tardías completas, cero "sin rastro". No resuelve ningún problema real; construirlo sería peso muerto. Se archiva.
 - **Etiqueta de defensa del carrier → CERRADO como ya-resuelto.** El flujo de etiquetado ya existe para todo rojo sin unidad (empalmes/variantes incluidos). Los tardíos quedarán identificados con unidad+hora tras la Ficha 1. Todo rojo tiene identificación o canal de defensa. Pendiente evaporado.
 - **Encadenamiento del PR viejo de Cursor → VERIFICADO cerrado.** El código tiene "una sola ronda: no realimentar" en la pasada de eliminación. El fix entró.
-- **Toggle "Permitir destino alterno" → ELIMINADO (21 jul 2026, feat/variantes-trazado).** Campo `allowAlternateDestination` removido de `contractPolicySchema`, UI (contratos-unit), API de contratos, seed, y todos los tests. El destino es la identidad de la ruta — las variantes de trazado (mismo destino, otra calle) son el mecanismo correcto.
+- **Toggle "Permitir destino alterno" → MARCADO PARA ELIMINAR (basura peligrosa).** Contradice la ley "el destino es la identidad de la ruta". Permitiría que una unidad que fue a otro lado cuente como cumplida — puerta trasera que mata la confianza del veredicto. Herencia de intentos pasados. Se elimina de la política del contrato en la próxima ficha de motor. NO confundir con variantes de trazado (mismo destino, otra calle — eso sí es válido).
 
 **Notas de obsolescencia:**
 - `docs/Ficha-Handoff-Evidencia-Llegada.md` — su Tarea 4 dice "carrier y cliente"; QUEDA SUPERSEDED por la decisión del 20 jul (planta y carrier, cliente NO) y por el PR #47 ya mergeado. Ponerle nota "SUPERSEDED — ver Anexo" arriba para que Devin no siga la instrucción vieja.
@@ -104,7 +126,8 @@ Esto no bloquea el diagnóstico de hoy, pero SÍ bloquea salir a producción con
 1. **Autenticación / login — DEUDA CRÍTICA.** Hoy J-Telemetry no tiene puerta de entrada: ningún endpoint verifica quién entra; todo corre con un usuario de prueba fijo (`tecma_admin`). Existe `getJStaffMemberships()` en el código pero nadie la invoca. El endpoint de la autopsia quedó con un TODO de seguridad visible. **Aplica a TODOS los endpoints y páginas, no solo la autopsia.** Nada de esto sale a un cliente real sin login.
 2. **Autorización por rol × alcance:** que cada cara vea solo lo suyo, en código. Conecta directo con las leyes de confidencialidad. El Marco ya define los roles (Pieza 4); falta implementarlos.
 3. **UI de producto v1:** la interfaz actual está bien para pruebas internas, no para cliente. Acabado sobre el motor que ya funciona.
-4. **Historial/Monitoreo — mapa espagueti:** el mapa del historial del turno dibuja las 14+ rutas encimadas y queda ilegible. Ya tiene filtros de Unidad/Veredicto; el arreglo probable es de *defaults* (una ruta a la vez, filtro activado de inicio, u opacidad menor), no de arquitectura. Deuda de UI anotada el 20 jul para no olvidarla.
+4. **Guardas del catálogo de variantes (deuda del 21 jul):** el sistema permite dejar una ruta con CERO variantes activas (pasó con Riberas 9 al probar el toggle legacy). Debe impedirlo o advertir claramente — un clic no debe poder aflojar al réferi sin avisar. Además la lista de variantes es una lista plana enorme para 27 rutas × turnos: incómoda, necesita agrupación/búsqueda.
+5. **Historial/Monitoreo — mapa espagueti:** el mapa del historial del turno dibuja las 14+ rutas encimadas y queda ilegible. Ya tiene filtros de Unidad/Veredicto; el arreglo probable es de *defaults* (una ruta a la vez, filtro activado de inicio, u opacidad menor), no de arquitectura. Deuda de UI anotada el 20 jul para no olvidarla.
 
 ---
 
