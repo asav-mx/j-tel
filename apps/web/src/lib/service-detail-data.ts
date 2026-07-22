@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import {
   computeEnforcement,
   computeEvidenceWindow,
+  localTimeHHMM,
+  localDateTimeShort,
   type ContractPolicy,
 } from "@jtel/domain";
 import {
@@ -68,6 +70,8 @@ export interface ServiceDetailData {
   plantId: string | null;
   plantGroupId: string | null;
   contractName: string;
+  /** Zona horaria del contrato (para formatear horas en la UI). */
+  timeZone: string;
 }
 
 async function unitLabel(
@@ -249,8 +253,8 @@ export async function loadServiceDetail(
     unitLabel(repos, contract.carrierAccountId, fact?.observedUnitId),
   ]);
 
-  const evidenceFirstAt = mapPointsCut[0]?.at ?? null;
-  const evidenceLastAt = mapPointsCut[mapPointsCut.length - 1]?.at ?? null;
+  const evidenceFirstAtRaw = mapPointsCut[0]?.at ?? null;
+  const evidenceLastAtRaw = mapPointsCut[mapPointsCut.length - 1]?.at ?? null;
 
   const policyWindow = computeEvidenceWindow(occurrence.expectedDeadline, policy);
   const tripStart = trip?.evidenceWindowStart ?? null;
@@ -262,6 +266,8 @@ export async function loadServiceDetail(
         Math.abs(tripEnd.getTime() - policyWindow.windowEnd.getTime()) > 60_000),
   );
 
+  const tz = policy.timeZone ?? "America/Ciudad_Juarez";
+
   return {
     occurrenceId: occurrence.id,
     serviceDate: occurrence.serviceDate,
@@ -270,24 +276,26 @@ export async function loadServiceDetail(
     carrierName: carrier?.name ?? "—",
     plantName: plant?.name ?? null,
     status: fact?.status ?? null,
-    expectedDeadline: occurrence.expectedDeadline.toISOString(),
+    expectedDeadline: localTimeHHMM(occurrence.expectedDeadline, tz),
     referenceUnitLabel,
     observedUnitLabel,
     observedUnitId: fact?.observedUnitId ?? null,
-    observedArrivalAt: fact?.observedArrivalAt?.toISOString() ?? null,
+    observedArrivalAt: fact?.observedArrivalAt
+      ? localTimeHHMM(fact.observedArrivalAt, tz)
+      : null,
     timing: fact?.timing ?? null,
     evidenceStatus: trip?.evidenceStatus ?? null,
-    policyWindowStart: policyWindow.windowStart.toISOString(),
-    policyWindowEnd: policyWindow.windowEnd.toISOString(),
-    tripWindowStart: tripStart?.toISOString() ?? null,
-    tripWindowEnd: tripEnd?.toISOString() ?? null,
+    policyWindowStart: localTimeHHMM(policyWindow.windowStart, tz),
+    policyWindowEnd: localTimeHHMM(policyWindow.windowEnd, tz),
+    tripWindowStart: tripStart ? localTimeHHMM(tripStart, tz) : null,
+    tripWindowEnd: tripEnd ? localTimeHHMM(tripEnd, tz) : null,
     tripWindowDiffersFromPolicy,
     evidenceMarginBeforeMinutes: policy.evidenceMarginMinutesBefore ?? null,
     verificationGraceMinutes: policy.verificationGraceMinutes ?? null,
     evidenceMarginAfterMinutes: policy.evidenceMarginMinutesAfter ?? null,
     toleranceMinutes: policy.toleranceMinutes ?? null,
-    evidenceFirstAt,
-    evidenceLastAt,
+    evidenceFirstAt: evidenceFirstAtRaw ? localTimeHHMM(evidenceFirstAtRaw, tz) : null,
+    evidenceLastAt: evidenceLastAtRaw ? localTimeHHMM(evidenceLastAtRaw, tz) : null,
     unitPointsInWindow: mapSourcePoints.length,
     evidenceMapMode,
     tripEvidencePointCount:
@@ -305,5 +313,6 @@ export async function loadServiceDetail(
     plantId: contract.plantId ?? null,
     plantGroupId: contract.plantGroupId ?? null,
     contractName: contract.name,
+    timeZone: tz,
   };
 }

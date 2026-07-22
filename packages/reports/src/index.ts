@@ -1,5 +1,5 @@
 import type { ComplianceStatus, ContractPolicy, EnforcementOutcome } from "@jtel/domain";
-import { computeEnforcement, computeMonthlyRebate } from "@jtel/domain";
+import { computeEnforcement, computeMonthlyRebate, localDateTimeShort } from "@jtel/domain";
 
 export interface OccurrenceReportRow {
   serviceDate: string;
@@ -18,6 +18,7 @@ export interface MonthlyComplianceReport {
   period: string;
   accountName: string;
   contractName: string;
+  policy: ContractPolicy;
   summary: {
     total: number;
     cumplido: number;
@@ -105,6 +106,7 @@ export function buildMonthlyReport(input: {
     period: input.period,
     accountName: input.accountName,
     contractName: input.contractName,
+    policy: input.policy,
     summary: {
       total: input.rows.length,
       cumplido,
@@ -136,7 +138,9 @@ export function reportToCsv(report: MonthlyComplianceReport): string {
       motivo,
       r.timing ?? "",
       r.observedUnitLabel ?? "",
-      r.observedArrivalAt?.toISOString() ?? "",
+      r.observedArrivalAt
+        ? localDateTimeShort(r.observedArrivalAt, report.policy.timeZone)
+        : "",
       r.lateExcusable ? "si" : "no",
     ].join(",");
   });

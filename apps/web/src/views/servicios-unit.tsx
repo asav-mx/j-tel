@@ -9,6 +9,8 @@ import {
   operationalUnitLabel,
 } from "@/lib/operational-scope";
 import { operationalScopeFromContract } from "@jtel/domain";
+import { localDateIso } from "@/lib/local-time";
+import { todayIso, addDaysIso } from "@/lib/date-range";
 
 export const dynamic = "force-dynamic";
 
@@ -44,19 +46,9 @@ function asIsoDate(value: unknown): string | undefined {
   if (value == null) return undefined;
   if (typeof value === "string") return value.slice(0, 10);
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return value.toISOString().slice(0, 10);
+    return localDateIso(value);
   }
   return String(value).slice(0, 10);
-}
-
-function addDaysIso(fromIso: string, days: number): string {
-  const d = new Date(`${fromIso}T00:00:00`);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 /** Cuántos días del perfil caen en [from, to] (inclusive). */

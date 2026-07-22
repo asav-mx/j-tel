@@ -19,6 +19,7 @@ describe("reports", () => {
       maxRouteDurationMinutes: 60,
       evidenceMinCoveragePct: 80,
       evidenceMaxGapMinutes: 10,
+      timeZone: "America/Ciudad_Juarez",
     };
 
     const rows = [
@@ -80,6 +81,7 @@ describe("reports", () => {
       maxRouteDurationMinutes: 60,
       evidenceMinCoveragePct: 80,
       evidenceMaxGapMinutes: 10,
+      timeZone: "America/Ciudad_Juarez",
     };
 
     const report = buildMonthlyReport({

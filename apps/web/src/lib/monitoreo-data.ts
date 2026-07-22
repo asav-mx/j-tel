@@ -1,6 +1,6 @@
 import { getRepos } from "@/lib/db";
 import type { ContractPolicy, GpsPoint, OperationalScope } from "@jtel/domain";
-import { computeEvidenceWindow } from "@jtel/domain";
+import { computeEvidenceWindow, localTimeHHMM, JTTEL_TZ } from "@jtel/domain";
 import {
   evaluateUnitRouteMatch,
   findGeofenceEntry,
@@ -393,7 +393,9 @@ export async function loadMonitoreo(opts: {
       // El detalle del veredicto vive en Cumplimiento / el expediente.
       state = "cerrado";
       const fact = o.complianceFact!;
-      arrivalAt = fact.observedArrivalAt?.toISOString() ?? null;
+      arrivalAt = fact.observedArrivalAt
+        ? localTimeHHMM(fact.observedArrivalAt, JTTEL_TZ)
+        : null;
 
       if (fact.observedUnitId && o.trip) {
         const evidence = await repos.evidence.getPointsForTrip(o.trip.id);
@@ -432,7 +434,9 @@ export async function loadMonitoreo(opts: {
         // por entrada a la geocerca (frontera de evidencia).
         const entryDetected =
           d.geofence.length >= 3 ? findGeofenceEntry(match.points, d.geofence) : null;
-        arrivalAt = entryDetected ? entryDetected.toISOString() : null;
+        arrivalAt = entryDetected
+          ? localTimeHHMM(entryDetected, JTTEL_TZ)
+          : null;
 
         // Recortar al momento de llegada: el servicio terminó ahí.
         // No seguir transmitiendo GPS post-llegada (p. ej. casa del chofer).
@@ -511,7 +515,7 @@ export async function loadMonitoreo(opts: {
       colorIndex: i % PALETTE_SIZE,
       state,
       alertReason,
-      expectedDeadline: d.deadline.toISOString(),
+      expectedDeadline: localTimeHHMM(d.deadline, JTTEL_TZ),
       minutesToDeadline,
       kmlWaypoints: downsample(d.kml, 120),
       geofencePolygon: d.geofence,
@@ -549,7 +553,7 @@ export async function loadMonitoreo(opts: {
     unitId: unit.id,
     unitName: unit.name,
     accountSlug: account.slug,
-    generatedAt: now.toISOString(),
+    generatedAt: localTimeHHMM(now, JTTEL_TZ),
     routes,
     stats,
     units,

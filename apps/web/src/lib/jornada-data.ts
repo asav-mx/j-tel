@@ -1,5 +1,6 @@
 import { getRepos } from "@/lib/db";
 import type { ContractPolicy, GpsPoint, OperationalScope } from "@jtel/domain";
+import { localTimeHHMM, JTTEL_TZ } from "@jtel/domain";
 import { computeExclusiveContentionWindow } from "@jtel/services";
 
 export type JornadaRoute = {
@@ -241,7 +242,7 @@ export async function loadJornada(opts: {
       timing: o.complianceFact?.timing ?? null,
       observedUnitId,
       observedUnitLabel: observedUnitId ? (unitMap.get(observedUnitId) ?? null) : null,
-      expectedDeadline: o.expectedDeadline.toISOString(),
+      expectedDeadline: localTimeHHMM(o.expectedDeadline, JTTEL_TZ),
       kmlWaypoints,
       geofencePolygon,
       geofenceName,

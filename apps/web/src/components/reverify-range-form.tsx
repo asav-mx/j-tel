@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { localDateIso, JTTEL_TZ } from "@/lib/local-time";
 
 type ContractOption = {
   id: string;
@@ -39,11 +40,12 @@ type DayResult = {
  * Por defecto reusa evidencia GPS ya guardada y aplica geocerca/política actual.
  */
 export function ReverifyRangeForm({ contracts }: { contracts: ContractOption[] }) {
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  // Vista multi-contrato (el usuario elige contrato) → zona del despliegue.
+  const today = useMemo(() => localDateIso(new Date(), JTTEL_TZ), []);
   const defaultFrom = useMemo(() => {
     const d = new Date();
     d.setUTCDate(d.getUTCDate() - 13);
-    return d.toISOString().slice(0, 10);
+    return localDateIso(d, JTTEL_TZ);
   }, []);
 
   const [contractId, setContractId] = useState("");

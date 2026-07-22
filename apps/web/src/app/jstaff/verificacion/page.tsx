@@ -1,6 +1,7 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
 import { computeDayRecall } from "@jtel/services";
+import { localDateTimeShort } from "@jtel/domain";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -98,7 +99,7 @@ export default async function JStaffVerificacionPage() {
                   </p>
                   <p className="text-[var(--muted)]">{a.message}</p>
                   <p className="text-xs text-[var(--muted)]">
-                    {a.createdAt?.toISOString?.() ?? String(a.createdAt)}
+                    {a.createdAt ? localDateTimeShort(a.createdAt) : "—"}
                   </p>
                 </li>
               ))}

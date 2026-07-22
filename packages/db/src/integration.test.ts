@@ -20,6 +20,7 @@ const TECMA_POLICY: ContractPolicy = {
   maxRouteDurationMinutes: 60,
   evidenceMinCoveragePct: 80,
   evidenceMaxGapMinutes: 10,
+  timeZone: "America/Ciudad_Juarez",
 };
 
 const HONEYWELL_POLICY: ContractPolicy = {
@@ -45,6 +46,7 @@ const HONEYWELL_POLICY: ContractPolicy = {
   maxRouteDurationMinutes: 60,
   evidenceMinCoveragePct: 80,
   evidenceMaxGapMinutes: 10,
+  timeZone: "America/Ciudad_Juarez",
 };
 
 let dbAvailable = false;

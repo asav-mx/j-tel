@@ -2,6 +2,7 @@ import { verifyService, pointInPolygon } from "@jtel/verification";
 import { createUmbrellaProvider, ingestEvidenceForTrip } from "@jtel/gps-umbrella";
 import type { Repositories } from "@jtel/db";
 import type { ContractPolicy, VerificationResult } from "@jtel/domain";
+import { localDateIso, JTTEL_TZ } from "@jtel/domain";
 
 export interface VerificationServiceConfig {
   umbrellaBaseUrl: string;
@@ -310,7 +311,8 @@ export class VerificationService {
     const from = new Date(now);
     from.setHours(0, 0, 0, 0);
     from.setDate(from.getDate() - daysBack);
-    const fromIso = from.toISOString().slice(0, 10);
+    // Operación del sistema sin contrato en foco → zona del despliegue.
+    const fromIso = localDateIso(from, JTTEL_TZ);
     const keepEvidence = opts.keepEvidence ?? true;
 
     const occs = await this.repos.occurrences.findForContract(contractId);

@@ -16,16 +16,14 @@ import {
   type NamedGeofence,
 } from "@/lib/map-evidence";
 import type { ContractPolicy } from "@jtel/domain";
+import { localDateTimeShort, JTTEL_TZ } from "@jtel/domain";
 
 export const dynamic = "force-dynamic";
 
 const TRACK_COLORS = ["#22c55e", "#f59e0b", "#38bdf8"];
 
-function formatShort(iso: string): string {
-  return new Date(iso).toLocaleString("es-MX", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
+function formatShort(iso: string, timeZone: string = JTTEL_TZ): string {
+  return localDateTimeShort(iso, timeZone);
 }
 
 export default async function CarrierServicioPage({
@@ -210,8 +208,9 @@ export default async function CarrierServicioPage({
     };
   });
 
-  const calibrationWindowLabel = `${formatShort(loadFrom.toISOString())} → ${formatShort(
-    loadTo.toISOString(),
+  const tz = policy.timeZone ?? JTTEL_TZ;
+  const calibrationWindowLabel = `${formatShort(loadFrom.toISOString(), tz)} → ${formatShort(
+    loadTo.toISOString(), tz,
   )}`;
 
   return (

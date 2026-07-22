@@ -1,5 +1,52 @@
 import { z } from "zod";
 
+// ── Zona horaria ────────────────────────────────────────────────────────
+/**
+ * Zona horaria por defecto del despliegue j-tel.
+ * Usar solo cuando no hay un contrato en contexto (vistas multi-contrato,
+ * dashboard J-Staff, cron jobs del sistema).
+ * Para vistas de un contrato específico, usar `contract.policy.timeZone`.
+ */
+export const JTTEL_TZ = "America/Ciudad_Juarez";
+
+/**
+ * Fecha civil YYYY-MM-DD en la zona indicada.
+ * Esta es LA función canónica para resolver "qué día es" — no duplicar.
+ */
+export function localDateIso(now = new Date(), timeZone = JTTEL_TZ): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+/**
+ * Formatea un timestamp como "HH:MM" (24h) en la zona indicada.
+ * Para UI: deadlines, llegadas, ventanas, tooltips del mapa.
+ */
+export function localTimeHHMM(date: Date | string, timeZone = JTTEL_TZ): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(d);
+}
+
+/**
+ * Formatea un timestamp como "YYYY-MM-DD HH:MM" en la zona indicada.
+ * Para UI: tablas, expedientes, CSV.
+ */
+export function localDateTimeShort(date: Date | string, timeZone = JTTEL_TZ): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return "—";
+  return `${localDateIso(d, timeZone)} ${localTimeHHMM(d, timeZone)}`;
+}
+// ─────────────────────────────────────────────────────────────────────────
+
 export const AccountType = z.enum(["carrier", "client", "jstaff"]);
 export type AccountType = z.infer<typeof AccountType>;
 
@@ -176,6 +223,12 @@ export const contractPolicySchema = z.object({
    * sigue siendo obligatorio. Default false (exclusividad).
    */
   permitirConsolidacion: z.boolean().default(false),
+  /**
+   * Zona horaria IANA del contrato. Todas las horas de este contrato
+   * (deadline, ventana, llegada, reportes) se muestran en esta zona.
+   * Default: America/Ciudad_Juarez (zona actual de operación).
+   */
+  timeZone: z.string().default("America/Ciudad_Juarez"),
 });
 
 export type ContractPolicy = z.infer<typeof contractPolicySchema>;
