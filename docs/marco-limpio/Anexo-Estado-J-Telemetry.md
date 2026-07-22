@@ -2,7 +2,7 @@
 
 **Qué es esto:** una foto del estado del producto para no cargar las decisiones en la cabeza. Cuelga del Marco Maestro (no lo reemplaza). El Marco sigue siendo la fuente de verdad de las leyes; esto solo registra dónde estamos, qué se decidió y qué falta. Se actualiza cuando cambie algo grande.
 
-**Fecha de este corte:** 21 de julio de 2026 (PRs #46, #47 y variantes mergeados).
+**Fecha de este corte:** 21 de julio de 2026, noche (6 PRs mergeados en dos días).
 
 ---
 
@@ -46,6 +46,19 @@ Estas ya se decidieron y se están aplicando. Cuando haya calma, valorar cuáles
 
 - **Toggle "Permitir destino alterno" ELIMINADO** (21 jul). Ningún contrato lo tenía activo (los 4 en `false`, los 484 hechos también), así que impacto cero. Basura peligrosa fuera del sistema.
 
+
+- **Zona horaria configurable por contrato** (21 jul). Vive en la política del contrato, default Juárez. `JTTEL_TZ` pasa a ser default del despliegue, no fuente de verdad. Regla: si hay contrato en foco, se usa su zona; en vistas multi-contrato (J-Staff, corporativo) se usa la zona del despliegue. Los hechos congelados se muestran con la zona ACTUAL del contrato (para que una tabla se vea en un solo reloj). ✅ Construido.
+  - **El bug de fondo que resolvió:** el sistema calculaba "qué día es hoy" en UTC. Entre las 18:00 y medianoche hora de Juárez, devolvía el día siguiente — los turnos vespertinos podían caer en el día equivocado en filtros y reportes.
+
+- **El cliente jamás ve la operación interna del carrier — se aplicó en serio** (21 jul). Cuando un servicio no tiene unidad observada, la cara cliente/planta ya NO ve el GPS de flota. Ve KML + geocerca + un mensaje honesto ("el sistema no identificó una unidad sirviendo esta ruta en la ventana"). La bitácora técnica (ledger) también quedó oculta a la cara cliente — decisión aprobada. ✅ Construido.
+
+- **Tres categorías de unidad, no una** (decisión de Asav, 21 jul). Distinción clave para la confidencialidad:
+  1. **Unidad observada** — la que de verdad sirvió una ruta de ESA planta. La planta SÍ la ve, en vivo e histórico. Es la verdad operativa y parte del servicio que paga.
+  2. **Catálogo declarado** — las unidades que el carrier asigna a ese contrato (placas, seguros, documentación legal). La planta SÍ lo ve, pero es *declarativo*: el carrier puede servir con unidades distintas cualquier día. Sirve para inspecciones y cumplimiento legal, no para saber quién anduvo hoy.
+  3. **Inventario completo del carrier** — todas sus unidades. La planta NUNCA lo ve.
+  - El vehículo del catálogo declarado YA EXISTE en el esquema (`possibleUnits` del perfil de servicio) pero está vacío. Reutilizarlo, no inventar otro.
+  - *Ancla Marco:* "la unidad observada es la verdad; la de referencia es sólo plan".
+
 ---
 
 ## 2. Hallazgo clave de la sesión
@@ -86,6 +99,9 @@ Prueba con SIERRA-VISTA-I: con una variante daba cumplido A=81%; al registrar un
 - **PR #47 — Motivo bajo el chip `no_cumplido`:** ✅ mergeado a `main` el 20 jul. La línea "Llegada tarde (+N min, unidad X)" / "Sin servicio detectado en la ventana" aparece en lista y detalle, caras de planta/campus y carrier. Cliente corporativo intacto. Reutiliza `noCumplidoDetailLine`; cero cambios al motor.
 - **Tarea 3 (contexto "llegada fuera de ventana" en el ledger):** ✅ viva en el motor desde antes. Anota la llegada tardía sin cambiar el veredicto.
 - **Variantes de trazado (multi-KML):** ✅ mergeado el 21 jul. Migración 0011 aplicada: 50 variantes "Principal" creadas, 50/50 versiones vinculadas. Motor evalúa multi-variante. UI mínima de catálogo en J-Staff. Toggle de destino alterno eliminado de 15 archivos.
+- **Zona horaria (PR mergeado 21 jul):** timeZone en política del contrato, un solo reloj, display consistente. Regresión verificada: 54 hechos en 2 días, 0 cambios.
+- **Fuga de flota en cara cliente (PR mergeado 21 jul):** cerrada en detalle de servicio y jornada. Ledger oculto a cara cliente.
+- **Fuga de inventario de flota (EN CURSO):** rama `fix/fuga-inventario-flota`. Cierra las 4 fugas profundas que la auditoría encontró en `monitoreo-data.ts` y `jornada-data.ts` (lista completa de unidades + telemetría de toda la flota entregadas al cliente). Tiene parada obligatoria si limitar la telemetría rompe el emparejamiento en vivo.
 - **Herramienta de trabajo:** ahora con **Devin** (Claude Code), no Cursor. Reglas escritas en las fichas (Devin obedece lo escrito): una rama por tarea, todo por PR, merge a `main` solo por Asav.
 
 ---
@@ -127,7 +143,9 @@ Esto no bloquea el diagnóstico de hoy, pero SÍ bloquea salir a producción con
 2. **Autorización por rol × alcance:** que cada cara vea solo lo suyo, en código. Conecta directo con las leyes de confidencialidad. El Marco ya define los roles (Pieza 4); falta implementarlos.
 3. **UI de producto v1:** la interfaz actual está bien para pruebas internas, no para cliente. Acabado sobre el motor que ya funciona.
 4. **Guardas del catálogo de variantes (deuda del 21 jul):** el sistema permite dejar una ruta con CERO variantes activas (pasó con Riberas 9 al probar el toggle legacy). Debe impedirlo o advertir claramente — un clic no debe poder aflojar al réferi sin avisar. Además la lista de variantes es una lista plana enorme para 27 rutas × turnos: incómoda, necesita agrupación/búsqueda.
-5. **Historial/Monitoreo — mapa espagueti:** el mapa del historial del turno dibuja las 14+ rutas encimadas y queda ilegible. Ya tiene filtros de Unidad/Veredicto; el arreglo probable es de *defaults* (una ruta a la vez, filtro activado de inicio, u opacidad menor), no de arquitectura. Deuda de UI anotada el 20 jul para no olvidarla.
+5. **Tests corriendo dos veces (deuda de higiene, 21 jul):** el sistema de pruebas corre tanto la versión fuente como una copia compilada vieja en `dist/`. Eso mostró fallos fantasma dos veces en un día. Configurar que solo corra la versión fuente.
+6. **Smart quotes rompen el build:** las comillas tipográficas (U+201C/U+201D) que a veces se cuelan al escribir código hacen fallar el build de producción con "Unexpected character". Ya pasó una vez. Quedan dos archivos con ese carácter en texto (inofensivo hoy): `monitoreo-unit.tsx` y `jornada-unit.tsx`.
+7. **Historial/Monitoreo — mapa espagueti:** el mapa del historial del turno dibuja las 14+ rutas encimadas y queda ilegible. Ya tiene filtros de Unidad/Veredicto; el arreglo probable es de *defaults* (una ruta a la vez, filtro activado de inicio, u opacidad menor), no de arquitectura. Deuda de UI anotada el 20 jul para no olvidarla.
 
 ---
 
