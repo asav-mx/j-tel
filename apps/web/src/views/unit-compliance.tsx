@@ -9,7 +9,7 @@ import {
   contractMatchesScope,
   operationalUnitLabel,
 } from "@/lib/operational-scope";
-import { operationalScopeFromContract } from "@jtel/domain";
+import { operationalScopeFromContract, dayForDateQuery } from "@jtel/domain";
 import { unitConfigStepHref, unitComplianceHref } from "@/lib/unit-routes";
 import {
   addDaysIso,
@@ -65,8 +65,8 @@ function rangeFromLegacyFecha(
     return {
       fromIso: fecha,
       toIso: fecha,
-      from: new Date(`${fecha}T00:00:00`),
-      to: new Date(`${fecha}T00:00:00`),
+      from: dayForDateQuery(fecha),
+      to: dayForDateQuery(fecha),
       label: fecha,
     };
   }
@@ -74,8 +74,8 @@ function rangeFromLegacyFecha(
     return {
       fromIso: today,
       toIso: today,
-      from: new Date(`${today}T00:00:00`),
-      to: new Date(`${today}T00:00:00`),
+      from: dayForDateQuery(today),
+      to: dayForDateQuery(today),
       label: "Hoy",
     };
   }
@@ -83,8 +83,8 @@ function rangeFromLegacyFecha(
     return {
       fromIso: yesterday,
       toIso: yesterday,
-      from: new Date(`${yesterday}T00:00:00`),
-      to: new Date(`${yesterday}T00:00:00`),
+      from: dayForDateQuery(yesterday),
+      to: dayForDateQuery(yesterday),
       label: "Ayer",
     };
   }
@@ -93,8 +93,8 @@ function rangeFromLegacyFecha(
     return {
       fromIso,
       toIso: today,
-      from: new Date(`${fromIso}T00:00:00`),
-      to: new Date(`${today}T00:00:00`),
+      from: dayForDateQuery(fromIso),
+      to: dayForDateQuery(today),
       label: "Últimos 7 días",
     };
   }
@@ -103,8 +103,8 @@ function rangeFromLegacyFecha(
     return {
       fromIso,
       toIso: today,
-      from: new Date(`${fromIso}T00:00:00`),
-      to: new Date(`${today}T00:00:00`),
+      from: dayForDateQuery(fromIso),
+      to: dayForDateQuery(today),
       label: "Último año",
     };
   }

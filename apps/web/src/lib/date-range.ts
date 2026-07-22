@@ -28,7 +28,7 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-import { localDateIso, JTTEL_TZ } from "@jtel/domain";
+import { localDateIso, JTTEL_TZ, dayForDateQuery } from "@jtel/domain";
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -113,8 +113,8 @@ export function resolveDateRange(
   return {
     fromIso,
     toIso,
-    from: new Date(`${fromIso}T00:00:00`),
-    to: new Date(`${toIso}T00:00:00`),
+    from: dayForDateQuery(fromIso),
+    to: dayForDateQuery(toIso),
     label:
       fromIso === toIso
         ? fromIso
