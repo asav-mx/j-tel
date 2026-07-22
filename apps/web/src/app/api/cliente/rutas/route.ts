@@ -234,7 +234,15 @@ export async function POST(request: Request) {
       if (!variantId || !["activa", "legacy"].includes(newStatus)) {
         return back(request, client.slug, scope, { error: "Datos de variante inválidos." });
       }
-      await repos.routes.updateVariantStatus(variantId, newStatus as "activa" | "legacy");
+      const result = await repos.routes.updateVariantStatus(variantId, newStatus as "activa" | "legacy");
+      if (!result.ok) {
+        if (result.reason === "last_active") {
+          return back(request, client.slug, scope, {
+            error: "No se puede dejar la ruta sin variantes activas. El motor necesita al menos una para verificar.",
+          });
+        }
+        return back(request, client.slug, scope, { error: "Variante no encontrada." });
+      }
       return back(request, client.slug, scope, { created: "variante_actualizada" });
     }
 
