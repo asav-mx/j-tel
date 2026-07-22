@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { createDb } from "./index.js";
 import { createRepositories } from "./repositories/index.js";
 import type { ContractPolicy } from "@jtel/domain";
+import { localDateIso } from "@jtel/domain";
 
 for (const p of ["../../.env", ".env"]) {
   if (existsSync(p)) {
@@ -66,6 +67,7 @@ const TECMA_POLICY: ContractPolicy = {
   evidenceMinCoveragePct: 80,
   evidenceMaxGapMinutes: 10,
   permitirConsolidacion: false,
+  timeZone: "America/Ciudad_Juarez",
 };
 
 const HONEYWELL_POLICY: ContractPolicy = {
@@ -99,6 +101,7 @@ const HONEYWELL_POLICY: ContractPolicy = {
   evidenceMinCoveragePct: 80,
   evidenceMaxGapMinutes: 10,
   permitirConsolidacion: false,
+  timeZone: "America/Ciudad_Juarez",
 };
 
 async function seed() {
@@ -324,10 +327,10 @@ async function seed() {
   });
 
   const today = new Date();
-  const todayIso = today.toISOString().split("T")[0]!;
+  const todayIso = localDateIso(today);
   const yearAhead = new Date(today);
   yearAhead.setFullYear(yearAhead.getFullYear() + 1);
-  const yearAheadIso = yearAhead.toISOString().split("T")[0]!;
+  const yearAheadIso = localDateIso(yearAhead);
 
   const tecmaContract = await repos.contracts.create({
     carrierAccountId: juarezBus.id,

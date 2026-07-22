@@ -151,6 +151,7 @@ export async function POST(request: Request) {
         formData.get("evidenceMaxGapMinutes"),
         existingPolicy.evidenceMaxGapMinutes ?? 10,
       ),
+      timeZone: String(formData.get("timeZone") ?? existingPolicy.timeZone ?? "America/Ciudad_Juarez").trim(),
     };
 
     const parsed = contractPolicySchema.safeParse(policyPayload);
@@ -223,6 +224,7 @@ export async function POST(request: Request) {
   const evidenceMarginMinutesBefore = toInt(formData.get("evidenceMarginMinutesBefore"), 60);
   const evidenceMarginMinutesAfter = toInt(formData.get("evidenceMarginMinutesAfter"), 30);
   const excusableReasons = formData.getAll("excusableReasons").map((r) => String(r));
+  const timeZone = String(formData.get("timeZone") ?? "America/Ciudad_Juarez").trim();
 
   const payload = {
     carrierAccountId,
@@ -243,6 +245,7 @@ export async function POST(request: Request) {
       enforcementRules: buildEnforcementRule(formData),
       evidenceMarginMinutesBefore,
       evidenceMarginMinutesAfter,
+      timeZone,
     },
   };
 

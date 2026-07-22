@@ -33,6 +33,7 @@ import {
 import { createUmbrellaProvider } from "@jtel/gps-umbrella";
 import { verifyService, pointInPolygon } from "@jtel/verification";
 import type { ContractPolicy } from "@jtel/domain";
+import { localDateIso } from "@jtel/domain";
 
 for (const p of ["../../.env", ".env"]) {
   if (existsSync(p)) {
@@ -60,6 +61,7 @@ const POLICY: ContractPolicy = {
   maxRouteDurationMinutes: 60,
   evidenceMinCoveragePct: 80,
   evidenceMaxGapMinutes: 10,
+  timeZone: "America/Ciudad_Juarez",
 };
 
 function normalizeUmbrellaBaseUrl(raw: string): string {
@@ -286,8 +288,8 @@ async function main() {
     clientAccountId: client.id,
     plantId: plant.id,
     name: "Contrato PRUEBA REAL",
-    validFrom: new Date().toISOString().split("T")[0]!,
-    validTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]!,
+    validFrom: localDateIso(),
+    validTo: localDateIso(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)),
     policy: POLICY,
     status: "active",
   });

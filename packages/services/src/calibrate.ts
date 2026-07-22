@@ -21,10 +21,12 @@ for (const p of ["../../.env", ".env"]) {
   }
 }
 
+import { localDateIso, JTTEL_TZ } from "@jtel/domain";
+
 function addDaysIso(fromIso: string, days: number): string {
   const d = new Date(`${fromIso}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
+  return localDateIso(d, JTTEL_TZ);
 }
 
 async function main() {

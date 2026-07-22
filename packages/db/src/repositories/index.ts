@@ -41,6 +41,7 @@ import {
   clientCarrierAuthorizations,
 } from "../schema/index.js";
 import type { ContractPolicy, CreateContractInput, CreateServiceProfileInput } from "@jtel/domain";
+import { localDateIso, JTTEL_TZ } from "@jtel/domain";
 
 function suggestProfileCodeFromName(name: string): string {
   return suggestProfileCode(name);
@@ -1797,8 +1798,13 @@ export class OccurrenceRepository {
     return x;
   }
 
+  /**
+   * Fecha civil YYYY-MM-DD en zona del despliegue.
+   * Operaciones del sistema (cron, rolling window) no tienen contrato
+   * en contexto → usan JTTEL_TZ.
+   */
   private toIsoDate(d: Date): string {
-    return d.toISOString().split("T")[0]!;
+    return localDateIso(d, JTTEL_TZ);
   }
 
   /**
@@ -2099,8 +2105,8 @@ export class OccurrenceRepository {
     if (contractIds.length === 0) return [];
 
     const conditions = [inArray(serviceOccurrences.contractId, contractIds)];
-    if (from) conditions.push(gte(serviceOccurrences.serviceDate, from.toISOString().split("T")[0]!));
-    if (to) conditions.push(lte(serviceOccurrences.serviceDate, to.toISOString().split("T")[0]!));
+    if (from) conditions.push(gte(serviceOccurrences.serviceDate, localDateIso(from, JTTEL_TZ)));
+    if (to) conditions.push(lte(serviceOccurrences.serviceDate, localDateIso(to, JTTEL_TZ)));
 
     return this.queryOccurrencesWithRelations(conditions);
   }
@@ -2113,8 +2119,8 @@ export class OccurrenceRepository {
     if (contractIds.length === 0) return [];
 
     const conditions = [inArray(serviceOccurrences.contractId, contractIds)];
-    if (from) conditions.push(gte(serviceOccurrences.serviceDate, from.toISOString().split("T")[0]!));
-    if (to) conditions.push(lte(serviceOccurrences.serviceDate, to.toISOString().split("T")[0]!));
+    if (from) conditions.push(gte(serviceOccurrences.serviceDate, localDateIso(from, JTTEL_TZ)));
+    if (to) conditions.push(lte(serviceOccurrences.serviceDate, localDateIso(to, JTTEL_TZ)));
 
     return this.queryOccurrencesWithRelations(conditions);
   }
@@ -2150,8 +2156,8 @@ export class OccurrenceRepository {
     if (contractIds.length === 0) return [];
 
     const conditions = [inArray(serviceOccurrences.contractId, contractIds)];
-    if (from) conditions.push(gte(serviceOccurrences.serviceDate, from.toISOString().split("T")[0]!));
-    if (to) conditions.push(lte(serviceOccurrences.serviceDate, to.toISOString().split("T")[0]!));
+    if (from) conditions.push(gte(serviceOccurrences.serviceDate, localDateIso(from, JTTEL_TZ)));
+    if (to) conditions.push(lte(serviceOccurrences.serviceDate, localDateIso(to, JTTEL_TZ)));
 
     return this.db.query.serviceOccurrences.findMany({
       where: and(...conditions),
@@ -2172,8 +2178,8 @@ export class OccurrenceRepository {
 
   async findForContract(contractId: string, from?: Date, to?: Date) {
     const conditions = [eq(serviceOccurrences.contractId, contractId)];
-    if (from) conditions.push(gte(serviceOccurrences.serviceDate, from.toISOString().split("T")[0]!));
-    if (to) conditions.push(lte(serviceOccurrences.serviceDate, to.toISOString().split("T")[0]!));
+    if (from) conditions.push(gte(serviceOccurrences.serviceDate, localDateIso(from, JTTEL_TZ)));
+    if (to) conditions.push(lte(serviceOccurrences.serviceDate, localDateIso(to, JTTEL_TZ)));
 
     return this.db.query.serviceOccurrences.findMany({
       where: and(...conditions),

@@ -1,15 +1,9 @@
-/** Zona operativa j-tel (Campus / Juárez). */
-export const JTTEL_TZ = "America/Ciudad_Juarez";
-
-/** Fecha civil YYYY-MM-DD en zona operativa. */
-export function localDateIso(now = new Date(), timeZone = JTTEL_TZ): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
-}
+/**
+ * Re-exporta las utilidades de zona horaria desde @jtel/domain
+ * (una sola implementación canónica) y agrega helpers específicos de la UI.
+ */
+export { JTTEL_TZ, localDateIso } from "@jtel/domain";
+import { JTTEL_TZ } from "@jtel/domain";
 
 /** Minutos desde medianoche local (0–1439). */
 export function localMinutesSinceMidnight(now = new Date(), timeZone = JTTEL_TZ): number {

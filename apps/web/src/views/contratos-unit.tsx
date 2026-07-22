@@ -10,6 +10,7 @@ import {
   operationalUnitLabel,
 } from "@/lib/operational-scope";
 import { operationalScopeFromContract } from "@jtel/domain";
+import { localDateIso } from "@/lib/local-time";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,14 @@ const inputClass =
 const labelClass = "block text-sm";
 const btnClass =
   "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
+
+const MEXICO_TIMEZONES = [
+  { value: "America/Ciudad_Juarez", label: "Cd. Juárez (Mountain)" },
+  { value: "America/Mexico_City", label: "Ciudad de México (Central)" },
+  { value: "America/Tijuana", label: "Tijuana (Pacific)" },
+  { value: "America/Cancun", label: "Cancún (Eastern, sin horario de verano)" },
+  { value: "America/Hermosillo", label: "Hermosillo (Mountain, sin horario de verano)" },
+];
 
 const EXCUSABLES: Array<{ value: string; label: string }> = [
   { value: "lluvia_nieve", label: "Lluvia / nieve" },
@@ -87,10 +96,10 @@ export async function ContratosUnitView({
     authorizedCarriers.length > 0 &&
     authorizedCarriers.every((c) => openByCarrier.has(c.id));
 
-  const todayIso = new Date().toISOString().split("T")[0]!;
+  const todayIso = localDateIso();
   const yearAhead = new Date();
   yearAhead.setFullYear(yearAhead.getFullYear() + 1);
-  const yearAheadIso = yearAhead.toISOString().split("T")[0]!;
+  const yearAheadIso = localDateIso(yearAhead);;
 
   return (
     <main className="min-h-screen p-8">
@@ -297,6 +306,17 @@ export async function ContratosUnitView({
                       defaultValue={30}
                       className={inputClass}
                     />
+                  </label>
+                  <label className={labelClass}>
+                    Zona horaria
+                    <select name="timeZone" className={inputClass} defaultValue="America/Ciudad_Juarez">
+                      {MEXICO_TIMEZONES.map((tz) => (
+                        <option key={tz.value} value={tz.value}>{tz.label}</option>
+                      ))}
+                    </select>
+                    <span className="mt-1 block text-xs text-[var(--muted)]">
+                      Todas las horas de este contrato se muestran en esta zona.
+                    </span>
                   </label>
                 </div>
               </fieldset>
@@ -592,6 +612,21 @@ export async function ContratosUnitView({
                               defaultValue={c.policy.maxRouteDurationMinutes ?? 60}
                               className={inputClass}
                             />
+                          </label>
+                          <label className={labelClass}>
+                            Zona horaria
+                            <select
+                              name="timeZone"
+                              className={inputClass}
+                              defaultValue={c.policy.timeZone ?? "America/Ciudad_Juarez"}
+                            >
+                              {MEXICO_TIMEZONES.map((tz) => (
+                                <option key={tz.value} value={tz.value}>{tz.label}</option>
+                              ))}
+                            </select>
+                            <span className="mt-1 block text-xs text-[var(--muted)]">
+                              Todas las horas de este contrato se muestran en esta zona.
+                            </span>
                           </label>
                         </div>
                         <p className="mt-2 text-xs text-[var(--muted)]">
