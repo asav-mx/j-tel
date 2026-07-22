@@ -51,7 +51,7 @@ ALTER TABLE "route_kml_versions"
 -- 4. Migración de datos: para cada ruta que tiene KML, crear variante "Principal"
 --    y vincular las versiones existentes.
 INSERT INTO "route_kml_variants" ("route_id", "name", "status", "origin")
-  SELECT DISTINCT "route_id", 'Principal', 'activa', 'manual'
+  SELECT DISTINCT "route_id", 'Principal', 'activa'::"variant_status", 'manual'::"variant_origin"
   FROM "route_kml_versions";
 
 UPDATE "route_kml_versions" v
