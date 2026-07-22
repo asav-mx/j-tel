@@ -8,6 +8,7 @@ import type { UnitPageContext } from "@/lib/unit-context";
 import { scopeToUnitPath } from "@/lib/unit-routes";
 import { operationalUnitLabel } from "@/lib/operational-scope";
 import { localDateIso } from "@/lib/local-time";
+import { dayForDateQuery } from "@jtel/domain";
 import Link from "next/link";
 
 function parseParam(
@@ -30,7 +31,7 @@ export async function JornadaUnitView({
   const turno = parseParam(sp, "turno");
 
   const repos = getRepos();
-  const day = new Date(`${fecha}T00:00:00`);
+  const day = dayForDateQuery(fecha);
   const occs = await repos.occurrences.findForScope(ctx.scope, day, day);
 
   const shiftById = new Map<string, { id: string; name: string; startTime: string }>();
