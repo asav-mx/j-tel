@@ -101,7 +101,7 @@ Prueba con SIERRA-VISTA-I: con una variante daba cumplido A=81%; al registrar un
 - **Variantes de trazado (multi-KML):** ✅ mergeado el 21 jul. Migración 0011 aplicada: 50 variantes "Principal" creadas, 50/50 versiones vinculadas. Motor evalúa multi-variante. UI mínima de catálogo en J-Staff. Toggle de destino alterno eliminado de 15 archivos.
 - **Zona horaria (PR mergeado 21 jul):** timeZone en política del contrato, un solo reloj, display consistente. Regresión verificada: 54 hechos en 2 días, 0 cambios.
 - **Fuga de flota en cara cliente (PR mergeado 21 jul):** cerrada en detalle de servicio y jornada. Ledger oculto a cara cliente.
-- **Fuga de inventario de flota (PR abierto, pendiente de merge por Asav):** rama `fix/fuga-inventario-flota`. La fuga real estaba en `jornada-data.ts`: `unitMap` se llenaba con TODA la flota del carrier → ahora filtrado a unidades observadas únicamente. `monitoreo-data.ts` ya filtraba la respuesta (`usedUnits`); se añadió label de unidades cerradas y se documentó la separación interna/respuesta. `service-detail-data.ts` auditado: no era fuga (Tarea D). Punto de parada NO activado — el ficha permite cargar flota completa internamente para el emparejamiento en vivo. Regresión cero: compare-verify-dry sobre 27 rutas × 2 días → 0 cambios de veredicto.
+- **Fuga de inventario de flota:** ✅ mergeado a `main` el 22 jul en dos PRs desde la misma rama — PR #52 el código, PR #53 los docs. La fuga real estaba en `jornada-data.ts`: `unitMap` se llenaba con TODA la flota del carrier → ahora filtrado a unidades observadas únicamente. `monitoreo-data.ts` ya filtraba la respuesta (`usedUnits`); se añadió label de unidades cerradas y se documentó la separación interna/respuesta. `service-detail-data.ts` auditado: no era fuga (Tarea D). Punto de parada NO activado — la ficha permite cargar flota completa internamente para el emparejamiento en vivo. Regresión cero: compare-verify-dry sobre 27 rutas × 2 días → 0 cambios de veredicto.
 - **Herramienta de trabajo:** ahora con **Devin** (Claude Code), no Cursor. Reglas escritas en las fichas (Devin obedece lo escrito): una rama por tarea, todo por PR, merge a `main` solo por Asav.
 
 ---
@@ -146,7 +146,7 @@ Esto no bloquea el diagnóstico de hoy, pero SÍ bloquea salir a producción con
 5. **Tests corriendo dos veces (deuda de higiene, 21 jul):** el sistema de pruebas corre tanto la versión fuente como una copia compilada vieja en `dist/`. Eso mostró fallos fantasma dos veces en un día. Configurar que solo corra la versión fuente.
 6. **Smart quotes rompen el build:** las comillas tipográficas (U+201C/U+201D) que a veces se cuelan al escribir código hacen fallar el build de producción con "Unexpected character". Ya pasó una vez. Quedan dos archivos con ese carácter en texto (inofensivo hoy): `monitoreo-unit.tsx` y `jornada-unit.tsx`.
 7. **Historial/Monitoreo — mapa espagueti:** el mapa del historial del turno dibuja las 14+ rutas encimadas y queda ilegible. Ya tiene filtros de Unidad/Veredicto; el arreglo probable es de *defaults* (una ruta a la vez, filtro activado de inicio, u opacidad menor), no de arquitectura. Deuda de UI anotada el 20 jul para no olvidarla.
-8. **Discrepancia Monitoreo / Historial — 0 rutas en torre (hallazgo 22 jul):** Campus Santos Dumont, 2026-07-22, Primer Turno 06:00: Historial reporta 14 rutas sin verificar; Monitoreo reporta 0 programadas (y 0 en total). Pre-existente en `main` — el filtro de `loadMonitoreo` (`serviceDate === fecha && shiftId === turnoId`) es idéntico en ambas ramas, y `monitoreo-unit.tsx` no cambió. Causa probable: `pickActiveShift` devuelve un `shiftId` que no coincide con el `shiftId` almacenado en las ocurrencias de ese campus. Requiere investigación en rama aparte; no bloquea el PR actual.
+8. **Discrepancia Monitoreo / Historial — 0 rutas en torre (hallazgo 22 jul, ABIERTO):** Campus Santos Dumont, 2026-07-22, Primer Turno 06:00: Historial reporta 14 rutas sin verificar; Monitoreo reporta 0 programadas (y 0 en total). Confirmado pre-existente en `main` — no relacionado con los PRs de fuga de inventario. Causa probable: `pickActiveShift` devuelve un `shiftId` que no coincide con el `shiftId` almacenado en las ocurrencias del campus. Requiere ficha aparte.
 
 ---
 
@@ -155,3 +155,8 @@ Esto no bloquea el diagnóstico de hoy, pero SÍ bloquea salir a producción con
 - **Cuando termines una pieza:** táchala aquí y, si generó una ley nueva, súbela al Marco.
 - **Cuando arranques una ficha para Devin:** que la ficha referencie este anexo y el Marco, no la memoria del chat.
 - **Regla que no cambia:** lo que no está escrito (en el Marco o en una ficha), para Devin no existe. Este anexo es para ti; las fichas son para Devin.
+
+## 6. Reglas de trabajo aprendidas
+
+- **Una rama, un PR.** Dos PRs desde la misma rama hacen imposible saber qué ya entró a `main` y cuál sigue pendiente. Si necesitas separar código de docs, hazlo en ramas distintas.
+- **Antes de mergear, revisar la pestaña "Files changed".** Si el PR promete código y sólo trae documentos, algo se quedó fuera. No mergear hasta que los archivos cambien sean los esperados.
