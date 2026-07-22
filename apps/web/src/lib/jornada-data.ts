@@ -210,28 +210,10 @@ export async function loadJornada(opts: {
           })),
           120,
         );
-      } else if (o.complianceFact?.status === "no_cumplido" || !o.complianceFact) {
-        // Sin unidad: unir flota en ventana (diagnóstico). Misma necesidad en
-        // planta 47, campus u otra — no especializar por ejemplo.
-        const merged: Array<{ lat: number; lng: number; at: string }> = [];
-        for (const [, pts] of byUnit) {
-          for (const p of pts) {
-            if (
-              p.timestamp.getTime() < window.startMs ||
-              p.timestamp.getTime() > window.endMs
-            ) {
-              continue;
-            }
-            merged.push({
-              lat: p.latitude,
-              lng: p.longitude,
-              at: p.timestamp.toISOString(),
-            });
-          }
-        }
-        merged.sort((a, b) => a.at.localeCompare(b.at));
-        gpsTrack = downsample(merged, 160);
       }
+      // Sin unidad observada: la cara cliente NO ve GPS de flota del carrier
+      // (Pieza 4, Marco: "el cliente jamás ve la operación interna del carrier").
+      // El mapa muestra solo KML + geocerca como referencia.
     }
 
     routes.push({

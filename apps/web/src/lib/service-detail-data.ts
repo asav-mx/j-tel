@@ -72,6 +72,8 @@ export interface ServiceDetailData {
   contractName: string;
   /** Zona horaria del contrato (para formatear horas en la UI). */
   timeZone: string;
+  /** True = cara cliente sin unidad observada (GPS de flota ocultado). */
+  fleetHiddenForClient: boolean;
 }
 
 async function unitLabel(
@@ -105,7 +107,7 @@ export { cutTrackAtArrival };
 
 export async function loadServiceDetail(
   occurrenceId: string,
-  options: { carrierAccountId?: string; showEnforcement?: boolean } = {},
+  options: { carrierAccountId?: string; showEnforcement?: boolean; isJStaff?: boolean } = {},
 ): Promise<ServiceDetailData> {
   const repos = getRepos();
   const occurrence = await repos.occurrences.findById(occurrenceId);
@@ -135,30 +137,44 @@ export async function loadServiceDetail(
   const observedUnitId = fact?.observedUnitId ?? null;
   const tripEvidencePointCount = evidencePoints.length;
 
-  // Mapa (producto genérico — planta o campus):
-  // - Con unidad observada: solo su trazo (privacidad + claridad).
-  // - Sin unidad (no_cumplido / sin servicio / pendiente): mostrar TODA la
-  //   evidencia ingerida del viaje. Antes se vaciaba el mapa y parecía que
-  //   “no hubo GPS” aunque la ingesta estuviera disponible — bug transversal,
-  //   no exclusivo de campus.
+  // ── Quién consume: carrier/jstaff vs cliente ──────────────────────────
+  // El cliente JAMÁS ve la operación interna del carrier (Pieza 4, Marco).
+  // Sin unidad observada, la cara cliente muestra solo KML + geocerca.
+  // Carrier y J-Staff sí ven el GPS de flota (son sus propios datos).
+  const isClientFace = !options.carrierAccountId && !options.isJStaff;
+
   let evidenceMapMode: ServiceDetailData["evidenceMapMode"] = "empty";
   let unitEvidence = evidencePoints;
   if (observedUnitId) {
+    // Hay unidad observada: mostrar su trazo (todas las caras).
     const matched = evidencePoints.filter((p) => p.unitId === observedUnitId);
     if (matched.length > 0) {
       unitEvidence = matched;
       evidenceMapMode = "observed_unit";
     } else if (evidencePoints.length > 0) {
-      // Unidades sin unitId en puntos, o mismatch IMEI→unidad: no ocultar el GPS.
-      unitEvidence = evidencePoints;
-      evidenceMapMode = "trip_fleet";
+      if (isClientFace) {
+        // Cara cliente: no filtrar por unidad si no hay match → vaciar.
+        unitEvidence = [];
+        evidenceMapMode = "empty";
+      } else {
+        // Carrier/J-Staff: mostrar todo (mismatch IMEI→unidad, diagnóstico).
+        unitEvidence = evidencePoints;
+        evidenceMapMode = "trip_fleet";
+      }
     } else {
       unitEvidence = [];
       evidenceMapMode = "empty";
     }
   } else if (evidencePoints.length > 0) {
-    unitEvidence = evidencePoints;
-    evidenceMapMode = "trip_fleet";
+    if (isClientFace) {
+      // Sin unidad observada, cara cliente: NO mostrar flota.
+      unitEvidence = [];
+      evidenceMapMode = "empty";
+    } else {
+      // Carrier/J-Staff: mostrar flota para diagnóstico.
+      unitEvidence = evidencePoints;
+      evidenceMapMode = "trip_fleet";
+    }
   } else {
     unitEvidence = [];
     evidenceMapMode = "empty";
@@ -173,9 +189,17 @@ export async function loadServiceDetail(
     .sort((a, b) => a.at.localeCompare(b.at));
 
   // Si el viaje quedó sin evidence_points (p. ej. re-ingesta fallida) pero hay
-  // telemetría archivada del carrier, usarla — genérico para cualquier planta.
+  // telemetría archivada del carrier, usarla — solo carrier/jstaff cuando no
+  // hay unidad observada (cara cliente no ve flota).
   let mapSourcePoints = allUnitPoints;
-  if (mapSourcePoints.length === 0 && trip?.evidenceWindowStart && trip.evidenceWindowEnd) {
+  const canFallbackToFleetTelemetry =
+    !isClientFace || observedUnitId != null;
+  if (
+    canFallbackToFleetTelemetry &&
+    mapSourcePoints.length === 0 &&
+    trip?.evidenceWindowStart &&
+    trip.evidenceWindowEnd
+  ) {
     const devices = await repos.fleet.getDevicesForCarrier(contract.carrierAccountId);
     const imeiToUnitId = new Map<string, string>();
     for (const d of devices) {
@@ -296,10 +320,13 @@ export async function loadServiceDetail(
     toleranceMinutes: policy.toleranceMinutes ?? null,
     evidenceFirstAt: evidenceFirstAtRaw ? localTimeHHMM(evidenceFirstAtRaw, tz) : null,
     evidenceLastAt: evidenceLastAtRaw ? localTimeHHMM(evidenceLastAtRaw, tz) : null,
-    unitPointsInWindow: mapSourcePoints.length,
+    unitPointsInWindow:
+      isClientFace && evidenceMapMode === "empty" ? 0 : mapSourcePoints.length,
     evidenceMapMode,
     tripEvidencePointCount:
-      tripEvidencePointCount > 0 ? tripEvidencePointCount : mapSourcePoints.length,
+      isClientFace && evidenceMapMode === "empty"
+        ? 0
+        : tripEvidencePointCount > 0 ? tripEvidencePointCount : mapSourcePoints.length,
     pointCount: mapPoints.length,
     mapPoints: mapPointsDisplay,
     kmlWaypoints,
@@ -307,12 +334,13 @@ export async function loadServiceDetail(
     arrivalPoint,
     enforcement,
     showEnforcement: options.showEnforcement !== false,
-    ledger,
+    ledger: isClientFace ? [] : ledger,
     clientSlug: client?.slug ?? null,
     contractId: contract.id,
     plantId: contract.plantId ?? null,
     plantGroupId: contract.plantGroupId ?? null,
     contractName: contract.name,
     timeZone: tz,
+    fleetHiddenForClient: isClientFace && !observedUnitId,
   };
 }
