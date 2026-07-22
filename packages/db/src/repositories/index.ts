@@ -2021,32 +2021,48 @@ export class OccurrenceRepository {
    * Conserva hasta hoy+days inclusive (ventana rodante).
    * Cascada limpia trips / compliance / ledger.
    * Si `plantGroupId` se pasa, solo ese campus; si no, todas.
+   *
+   * GUARDA: nunca borra una ocurrencia que ya tenga un compliance_fact.
+   * Los hechos se calculan una vez y se congelan — son inmutables.
+   * Devuelve { cutoff, deleted, skipped } donde skipped = ocurrencias
+   * protegidas por la guarda (tenían hecho de cumplimiento).
    */
   async deleteBeyondHorizon(days: number = OccurrenceRepository.ROLLING_DAYS, plantGroupId?: string) {
     const lastKept = this.toIsoDate(this.addDays(new Date(), days));
 
-    let ids: string[];
+    let candidates: { id: string; factId: string | null }[];
     if (plantGroupId) {
       const rows = await this.db
-        .select({ id: serviceOccurrences.id })
+        .select({
+          id: serviceOccurrences.id,
+          factId: complianceFacts.id,
+        })
         .from(serviceOccurrences)
         .innerJoin(serviceContracts, eq(serviceOccurrences.contractId, serviceContracts.id))
+        .leftJoin(complianceFacts, eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id))
         .where(
           and(
             eq(serviceContracts.plantGroupId, plantGroupId),
             sql`${serviceOccurrences.serviceDate} > ${lastKept}`,
           ),
         );
-      ids = rows.map((r) => r.id);
+      candidates = rows;
     } else {
       const rows = await this.db
-        .select({ id: serviceOccurrences.id })
+        .select({
+          id: serviceOccurrences.id,
+          factId: complianceFacts.id,
+        })
         .from(serviceOccurrences)
+        .leftJoin(complianceFacts, eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id))
         .where(sql`${serviceOccurrences.serviceDate} > ${lastKept}`);
-      ids = rows.map((r) => r.id);
+      candidates = rows;
     }
 
-    if (ids.length === 0) return { cutoff: lastKept, deleted: 0 };
+    const ids = candidates.filter((c) => c.factId === null).map((c) => c.id);
+    const skipped = candidates.length - ids.length;
+
+    if (ids.length === 0) return { cutoff: lastKept, deleted: 0, skipped };
 
     // Borrar en lotes para no saturar el IN.
     const batchSize = 500;
@@ -2059,7 +2075,7 @@ export class OccurrenceRepository {
         .returning({ id: serviceOccurrences.id });
       deleted += removed.length;
     }
-    return { cutoff: lastKept, deleted };
+    return { cutoff: lastKept, deleted, skipped };
   }
 
   async findPendingVerification(now: Date) {

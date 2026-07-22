@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { createDb, createRepositories } from "../src/index.js";
+import { createDb, createRepositories, serviceOccurrences, trips } from "../src/index.js";
+import { eq } from "drizzle-orm";
 import type { ContractPolicy } from "@jtel/domain";
 
 const DATABASE_URL =
@@ -111,5 +112,156 @@ describe("contract policy validation", () => {
     expect(TECMA_POLICY.toleranceMinutes).toBe(5);
     expect(HONEYWELL_POLICY.toleranceMinutes).toBe(10);
     expect(HONEYWELL_POLICY.enforcementRules[0]?.type).toBe("rebate_escalonado");
+  });
+});
+
+describe("deleteBeyondHorizon — guarda de compliance_fact", () => {
+  /**
+   * Inserta ocurrencias directamente (sin pasar por generateForProfile ni sus
+   * restricciones de validTo). Así el test es autosuficiente.
+   *
+   * Usa claves foráneas de un perfil real del seed para satisfacer las FK
+   * de la tabla, pero inserta con fechas de servicio muy lejanas (hoy+200)
+   * que no chocan con el horizonte normal de la ventana rodante.
+   */
+  it("no borra ocurrencias que ya tienen compliance_fact", async () => {
+    if (!dbAvailable) return;
+
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    // Obtenemos un perfil real del seed para reutilizar sus FK.
+    const tecma = await repos.accounts.findBySlug("tecma");
+    if (!tecma) return;
+    const profiles = await repos.profiles.findForClient(tecma.id);
+    if (profiles.length === 0) return;
+    const profile = profiles[0]!;
+
+    // Fecha de servicio muy lejana → bien más allá del horizonte de 50 días.
+    const serviceDate = "2099-01-15";
+    const deadline = new Date("2099-01-15T08:00:00Z");
+    const windowStart = new Date("2099-01-15T07:00:00Z");
+    const windowEnd = new Date("2099-01-15T09:00:00Z");
+
+    // Insertar ocurrencia A (será protegida con hecho) y B (sin hecho).
+    const [occA, occB] = await db
+      .insert(serviceOccurrences)
+      .values([
+        {
+          serviceProfileId: profile.id,
+          contractId: profile.contractId,
+          routeShiftId: profile.routeShiftId,
+          serviceDate,
+          expectedDeadline: deadline,
+          expectedGeofenceId: profile.geofenceId,
+        },
+        {
+          serviceProfileId: profile.id,
+          contractId: profile.contractId,
+          routeShiftId: profile.routeShiftId,
+          serviceDate: "2099-01-16",
+          expectedDeadline: new Date("2099-01-16T08:00:00Z"),
+          expectedGeofenceId: profile.geofenceId,
+        },
+      ])
+      .returning();
+
+    if (!occA || !occB) throw new Error("No se pudieron insertar ocurrencias de test");
+
+    // Insertar un trip para occA (compliance_fact lo requiere).
+    const [tripA] = await db
+      .insert(trips)
+      .values({
+        serviceOccurrenceId: occA.id,
+        evidenceWindowStart: windowStart,
+        evidenceWindowEnd: windowEnd,
+        evidenceStatus: "en_espera",
+      })
+      .returning();
+
+    if (!tripA) throw new Error("No se pudo insertar el trip de test");
+
+    // Crear el compliance_fact para occA.
+    await repos.compliance.saveFact({
+      serviceOccurrenceId: occA.id,
+      tripId: tripA.id,
+      expectedDeadline: deadline,
+      expectedGeofenceId: profile.geofenceId,
+      referenceUnitId: null,
+      observedUnitId: null,
+      observedArrivalAt: null,
+      observedRouteMatchPct: null,
+      servedVariantId: null,
+      status: "no_cumplido",
+      timing: null,
+      lateExcusable: false,
+      excusableReason: null,
+      routeStrictnessApplied: "destino_only",
+      contractPolicySnapshot: TECMA_POLICY,
+    });
+
+    // Ejecutar la guarda con horizonte de 50 días.
+    // occA y occB están en 2099 → ambas son candidatas, pero occA tiene hecho.
+    const result = await repos.occurrences.deleteBeyondHorizon(50);
+
+    // occA debe sobrevivir (tiene hecho).
+    const stillExists = await repos.occurrences.findById(occA.id);
+    expect(stillExists).not.toBeNull();
+    expect(result.skipped).toBeGreaterThanOrEqual(1);
+
+    // occB debe haber sido borrada (sin hecho).
+    const gone = await repos.occurrences.findById(occB.id);
+    expect(gone).toBeNull();
+
+    // Limpieza: borrar el hecho y luego la ocurrencia A.
+    await repos.compliance.deleteFactForOccurrence(occA.id);
+    await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, occA.id));
+  });
+
+  it("ocurrencias sin compliance_fact sí se borran", async () => {
+    if (!dbAvailable) return;
+
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const tecma = await repos.accounts.findBySlug("tecma");
+    if (!tecma) return;
+    const profiles = await repos.profiles.findForClient(tecma.id);
+    if (profiles.length === 0) return;
+    const profile = profiles[0]!;
+
+    // Insertar dos ocurrencias sin hecho en fecha lejana.
+    const [occC, occD] = await db
+      .insert(serviceOccurrences)
+      .values([
+        {
+          serviceProfileId: profile.id,
+          contractId: profile.contractId,
+          routeShiftId: profile.routeShiftId,
+          serviceDate: "2099-02-10",
+          expectedDeadline: new Date("2099-02-10T08:00:00Z"),
+          expectedGeofenceId: profile.geofenceId,
+        },
+        {
+          serviceProfileId: profile.id,
+          contractId: profile.contractId,
+          routeShiftId: profile.routeShiftId,
+          serviceDate: "2099-02-11",
+          expectedDeadline: new Date("2099-02-11T08:00:00Z"),
+          expectedGeofenceId: profile.geofenceId,
+        },
+      ])
+      .returning();
+
+    if (!occC || !occD) throw new Error("No se pudieron insertar ocurrencias de test");
+
+    const result = await repos.occurrences.deleteBeyondHorizon(50);
+
+    expect(result.deleted).toBeGreaterThanOrEqual(2);
+
+    const goneC = await repos.occurrences.findById(occC.id);
+    const goneD = await repos.occurrences.findById(occD.id);
+    expect(goneC).toBeNull();
+    expect(goneD).toBeNull();
   });
 });
