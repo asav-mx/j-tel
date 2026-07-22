@@ -97,24 +97,6 @@ async function main() {
   }
   console.log("\nResumen:", Object.fromEntries(byStatus));
 
-  // Detalle Sierra Vista / Riberas 9
-  const occs = await repos.occurrences.findForContract(contract.id);
-  const focus = occs.filter(
-    (o) =>
-      o.serviceDate === serviceDate &&
-      /riberas.?9|sierra.?vista/i.test(
-        `${o.profile?.code ?? ""} ${o.profile?.name ?? ""} ${o.profile?.routeShift?.route?.name ?? ""}`,
-      ),
-  );
-  console.log("\nFoco Sierra Vista / Riberas 9:");
-  for (const o of focus) {
-    const f = o.complianceFact;
-    const unit = f?.observedUnit;
-    console.log(
-      `  ${o.profile?.code} → ${f?.status ?? "?"} ${f?.timing ?? ""} · unidad=${unit?.label ?? "-"} · match=${f?.observedRouteMatchPct?.toFixed?.(1) ?? f?.observedRouteMatchPct ?? "-"}%`,
-    );
-  }
-
   process.exit(0);
 }
 
