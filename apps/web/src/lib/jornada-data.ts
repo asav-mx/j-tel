@@ -106,8 +106,23 @@ export async function loadJornada(opts: {
   const turnoName = shift?.name ?? "Turno";
   const turnoStartTime = String(shift?.startTime ?? "").slice(0, 5);
 
-  // Telemetría por carrier (una lectura), reutilizada en rutas sin unidad
-  // observada — si no, el mapa de Historial quedaba vacío en no_cumplido.
+  // ── Tres categorías de unidades (Marco Pieza 4) ──────────────────────────
+  // 1. Unidad OBSERVADA: la que el árbitro identificó sirviendo a ESTA planta.
+  //    La planta SÍ la ve (verdad operativa del servicio que paga).
+  // 2. Catálogo declarado: unidades asignadas al contrato (possibleUnits del
+  //    perfil de servicio). La planta SÍ lo ve (declarativo / cumplimiento).
+  // 3. Inventario completo del carrier: NUNCA visible para la planta.
+  //
+  // Solo las unidades observadas salen en la respuesta (unitMap + units[]).
+  // Si el mapa queda vacío en un no_cumplido sin unidad observada, eso es
+  // CORRECTO: no hubo servicio detectado → no hay GPS que mostrar.
+  const observedUnitIds = new Set(
+    filtered
+      .map((o) => o.complianceFact?.observedUnitId)
+      .filter((x): x is string => Boolean(x)),
+  );
+
+  const unitMap = new Map<string, string>();
   const pointsByCarrierUnit = new Map<string, Map<string, GpsPoint[]>>();
   const carrierIds = [
     ...new Set(
@@ -132,14 +147,26 @@ export async function loadJornada(opts: {
     const windowEnd = new Date(Math.max(...windows.map((w) => w.endMs)));
     if (windowEnd.getTime() <= windowStart.getTime()) continue;
 
-    const [units, devices] = await Promise.all([
+    // Labels: se carga getUnitsForCarrier para buscar labels de las
+    // observadas por ID (no hay getUnitById). Solo las observadas entran
+    // a unitMap — el inventario completo NUNCA sale en la respuesta.
+    const [carrierUnits, devices] = await Promise.all([
       repos.fleet.getUnitsForCarrier(carrierId),
       repos.fleet.getDevicesForCarrier(carrierId),
     ]);
+    for (const u of carrierUnits) {
+      if (observedUnitIds.has(u.id)) unitMap.set(u.id, u.label);
+    }
+
+    // IMEI→unidad solo para observadas: no cargar telemetría del resto
+    // de la flota (el historial no hace emparejamiento, la unidad ya fue
+    // identificada por el árbitro en el hecho congelado).
     const imeiToUnitId = new Map<string, string>();
     for (const d of devices) {
       const a = await repos.fleet.resolveUnitAtTime(d.id, windowEnd);
-      if (a?.unitId) imeiToUnitId.set(d.imei, a.unitId);
+      if (a?.unitId && observedUnitIds.has(a.unitId)) {
+        imeiToUnitId.set(d.imei, a.unitId);
+      }
     }
     const imeis = [...imeiToUnitId.keys()];
     if (imeis.length === 0) continue;
@@ -162,13 +189,9 @@ export async function loadJornada(opts: {
       pts.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     }
     pointsByCarrierUnit.set(carrierId, byUnit);
-
-    // Labels
-    void units;
   }
 
   const routes: JornadaRoute[] = [];
-  const unitMap = new Map<string, string>();
 
   for (let i = 0; i < filtered.length; i++) {
     const o = filtered[i]!;
@@ -193,9 +216,6 @@ export async function loadJornada(opts: {
     const byUnit = carrierId ? pointsByCarrierUnit.get(carrierId) : undefined;
 
     if (carrierId && byUnit) {
-      const units = await repos.fleet.getUnitsForCarrier(carrierId);
-      for (const u of units) unitMap.set(u.id, u.label);
-
       if (observedUnitId) {
         const pts = (byUnit.get(observedUnitId) ?? []).filter(
           (p) =>
