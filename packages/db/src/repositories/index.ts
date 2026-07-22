@@ -767,13 +767,35 @@ export class RouteRepository {
     return variant!;
   }
 
-  async updateVariantStatus(variantId: string, status: "activa" | "legacy") {
+  async updateVariantStatus(
+    variantId: string,
+    status: "activa" | "legacy",
+  ): Promise<{ ok: true } | { ok: false; reason: "not_found" | "last_active" }> {
+    if (status === "legacy") {
+      const variant = await this.db.query.routeKmlVariants.findFirst({
+        where: eq(routeKmlVariants.id, variantId),
+        columns: { id: true, routeId: true },
+      });
+      if (!variant) return { ok: false, reason: "not_found" };
+
+      const otherActives = await this.db.query.routeKmlVariants.findMany({
+        where: and(
+          eq(routeKmlVariants.routeId, variant.routeId),
+          eq(routeKmlVariants.status, "activa"),
+          ne(routeKmlVariants.id, variantId),
+        ),
+        columns: { id: true },
+      });
+      if (otherActives.length === 0) return { ok: false, reason: "last_active" };
+    }
+
     const [updated] = await this.db
       .update(routeKmlVariants)
       .set({ status, updatedAt: new Date() })
       .where(eq(routeKmlVariants.id, variantId))
       .returning();
-    return updated;
+    if (!updated) return { ok: false, reason: "not_found" };
+    return { ok: true };
   }
 
   async getRoutesForScope(scope: OperationalScope) {
