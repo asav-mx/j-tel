@@ -1,7 +1,7 @@
 import { verifyService, pointInPolygon } from "@jtel/verification";
 import { createUmbrellaProvider, ingestEvidenceForTrip } from "@jtel/gps-umbrella";
 import type { Repositories } from "@jtel/db";
-import type { ContractPolicy } from "@jtel/domain";
+import type { ContractPolicy, VerificationResult } from "@jtel/domain";
 
 export interface VerificationServiceConfig {
   umbrellaBaseUrl: string;
@@ -807,24 +807,34 @@ export class VerificationService {
     }));
 
     const geofence = profile.geofence!;
-    // Cargar KML por routeId (no routeShiftId). Si la ocurrencia ya trae versión, úsala.
     const routeId = profile.routeShift?.routeId;
-    let kmlWaypoints: Array<{ lat: number; lng: number }> | undefined;
-    if (occurrence.kmlVersionId && routeId) {
-      const byId = await this.repos.routes.getKmlVersionForDate(
+
+    // --- Multi-variante: cargar TODAS las variantes activas con su versión vigente ---
+    // VARIANTE = caminos alternos que coexisten hoy (ej. MEX-45 o Panamericana).
+    // VERSIÓN  = historia temporal de una variante (versión vigente en la fecha del servicio).
+    // Se evalúa contra cada variante usando la misma implementación de match (evaluateUnitRouteMatch
+    // dentro de verifyService — NO se duplica).
+    const variants = routeId
+      ? await this.repos.routes.getActiveVariantVersionsForDate(routeId, occurrence.expectedDeadline)
+      : [];
+
+    // Fallback: si no hay variantes (ruta sin KML o pre-migración), usar getKmlVersionForDate.
+    if (variants.length === 0 && routeId) {
+      const fallback = await this.repos.routes.getKmlVersionForDate(
         routeId,
         occurrence.expectedDeadline,
       );
-      kmlWaypoints = byId?.waypoints;
-    } else if (routeId) {
-      const byRoute = await this.repos.routes.getKmlVersionForDate(
-        routeId,
-        occurrence.expectedDeadline,
-      );
-      kmlWaypoints = byRoute?.waypoints;
+      if (fallback?.waypoints?.length) {
+        variants.push({
+          variantId: "",
+          variantName: "Principal",
+          kmlVersionId: fallback.id,
+          waypoints: fallback.waypoints,
+        });
+      }
     }
 
-    // Corpus de rutas del mismo contrato para TF-IDF (Fase 3).
+    // Corpus de rutas hermanas para TF-IDF: solo variante "Principal" de cada ruta.
     const routeCorpus: Array<Array<{ lat: number; lng: number }>> = [];
     const contractProfiles = await this.repos.profiles.findForContract(occurrence.contractId);
     const seenRouteIds = new Set<string>();
@@ -847,17 +857,15 @@ export class VerificationService {
       })
       .map((p) => ({
         ...p,
-        // Agrupar por unidad cuando se conoce; si no, por IMEI.
         imei: imeiToUnitId.get(p.imei) ?? p.imei,
       }));
 
-    // Ventana operativa = misma que exclusividad (deadline ± duración/tolerancia).
     const coverageWindow = computeExclusiveContentionWindow(
       occurrence.expectedDeadline,
       policy,
     );
 
-    const verification = verifyService({
+    const baseInput = {
       occurrenceId,
       expectedDeadline: occurrence.expectedDeadline,
       toleranceMinutes: policy.toleranceMinutes,
@@ -866,7 +874,6 @@ export class VerificationService {
       kmlCorridorMeters: policy.kmlCorridorMeters ?? 120,
       kmlCorridorMinPct: policy.kmlCorridorMinPct ?? 60,
       geofencePolygon: geofence.polygon,
-      kmlWaypoints,
       routeCorpus: routeCorpus.length > 0 ? routeCorpus : undefined,
       evidencePoints: enrichedPoints,
       excusableReasons: policy.excusableReasons,
@@ -874,8 +881,92 @@ export class VerificationService {
       coverageWindowEnd: new Date(coverageWindow.endMs),
       evidenceMinCoveragePct: policy.evidenceMinCoveragePct ?? 80,
       evidenceMaxGapMinutes: policy.evidenceMaxGapMinutes ?? 10,
-    });
+    };
 
+    // --- Evaluación multi-variante ---
+    let verification: VerificationResult;
+    let servedVariantId: string | null = null;
+
+    if (variants.length <= 1) {
+      // 0 o 1 variante: flujo idéntico al anterior (regresión cero).
+      verification = verifyService({
+        ...baseInput,
+        kmlWaypoints: variants[0]?.waypoints,
+      });
+      if (verification.status === "cumplido" && variants[0]?.variantId) {
+        servedVariantId = variants[0].variantId;
+      }
+    } else {
+      // N variantes: evaluar cada una, elegir la mejor.
+      const variantResults: Array<{
+        variantId: string;
+        variantName: string;
+        result: VerificationResult;
+      }> = [];
+      for (const v of variants) {
+        const result = verifyService({
+          ...baseInput,
+          kmlWaypoints: v.waypoints,
+        });
+        variantResults.push({ variantId: v.variantId, variantName: v.variantName, result });
+      }
+
+      // Elegir mejor variante:
+      // 1. Prioridad: cumplido > todo lo demás.
+      // 2. Entre cumplidos: min(A,B) del winner → Fréchet → dirección → llegada → variantId (estabilidad).
+      // 3. Si ninguno cumplido: tomar el "mejor" no_cumplido (mismo ranking, para el ledger).
+      const cumplidos = variantResults.filter((v) => v.result.status === "cumplido");
+      const pool = cumplidos.length > 0 ? cumplidos : variantResults;
+
+      pool.sort((a, b) => {
+        const wa = a.result.candidateUnits.find((c) => c.unitId === a.result.observedUnitId);
+        const wb = b.result.candidateUnits.find((c) => c.unitId === b.result.observedUnitId);
+        const scoreA = wa ? Math.min(wa.routeMatchPct, wa.corridorPrecisionPct) : -1;
+        const scoreB = wb ? Math.min(wb.routeMatchPct, wb.corridorPrecisionPct) : -1;
+        const diff = scoreB - scoreA;
+        if (Math.abs(diff) >= 1) return diff;
+        const fA = wa?.frechetKm ?? Infinity;
+        const fB = wb?.frechetKm ?? Infinity;
+        if (Math.abs(fA - fB) >= 0.05) return fA - fB;
+        const dA = wa?.directionSimilarity ?? 0;
+        const dB = wb?.directionSimilarity ?? 0;
+        if (Math.abs(dA - dB) >= 0.05) return dB - dA;
+        const tA = a.result.observedArrivalAt?.getTime() ?? Infinity;
+        const tB = b.result.observedArrivalAt?.getTime() ?? Infinity;
+        if (tA !== tB) return tA - tB;
+        // Desempate determinista final: orden lexicográfico de variantId.
+        return a.variantId.localeCompare(b.variantId);
+      });
+
+      const best = pool[0]!;
+      verification = best.result;
+      if (verification.status === "cumplido") {
+        servedVariantId = best.variantId;
+      }
+
+      // Registrar evaluación multi-variante en el ledger.
+      verification.ledgerSteps.push({
+        step: "multi_variante",
+        result: `${variantResults.length}_evaluadas`,
+        details: {
+          variantCount: variantResults.length,
+          results: variantResults.map((v) => {
+            const w = v.result.candidateUnits.find((c) => c.unitId === v.result.observedUnitId);
+            return {
+              variantId: v.variantId,
+              variantName: v.variantName,
+              status: v.result.status,
+              bestUnit: v.result.observedUnitId,
+              routeMatchPct: v.result.observedRouteMatchPct,
+              corridorPrecisionPct: w?.corridorPrecisionPct,
+            };
+          }),
+          selectedVariantId: servedVariantId,
+        },
+      });
+    }
+
+    verification.servedVariantId = servedVariantId;
     const finalStatus = verification.status;
 
     let observedUnitId: string | null = null;
@@ -903,6 +994,7 @@ export class VerificationService {
         finalStatus === "cumplido" ? verification.observedArrivalAt : null,
       observedRouteMatchPct:
         finalStatus === "cumplido" ? verification.observedRouteMatchPct : null,
+      servedVariantId: finalStatus === "cumplido" ? servedVariantId : null,
       status: finalStatus,
       timing: finalStatus === "cumplido" ? verification.timing : null,
       lateExcusable: finalStatus === "cumplido" ? verification.lateExcusable : false,

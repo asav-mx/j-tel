@@ -188,7 +188,7 @@ El producto puede soportar o automatizar ese enforcement (y ustedes pueden opera
 
 
 Todo es configurable por contrato
-Tolerancia (5, 10 min…), excepciones excusables, qué tan estricto se mide la ruta (KML completo o sólo llegada), si permite destino alterno, la consecuencia (no-pago, rebate…), y cuándo se materializa el hecho.
+Tolerancia (5, 10 min…), excepciones excusables, qué tan estricto se mide la ruta (KML completo o sólo llegada), variantes de trazado aceptadas, la consecuencia (no-pago, rebate…), y cuándo se materializa el hecho.
 
 
 Las leyes de verificación (intocables)

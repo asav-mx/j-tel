@@ -16,6 +16,7 @@ import {
   routes,
   shifts,
   routeShifts,
+  routeKmlVariants,
   routeKmlVersions,
   serviceContracts,
   serviceProfiles,
@@ -574,12 +575,36 @@ export class RouteRepository {
 
   async addKmlVersion(data: {
     routeId: string;
+    variantId?: string;
     kmlContent: string;
     waypoints?: Array<{ lat: number; lng: number }>;
     validFrom?: Date;
   }) {
+    // Si no se pasa variantId, usar (o crear) la variante "Principal".
+    let variantId = data.variantId;
+    if (!variantId) {
+      const principal = await this.db.query.routeKmlVariants.findFirst({
+        where: and(
+          eq(routeKmlVariants.routeId, data.routeId),
+          eq(routeKmlVariants.name, "Principal"),
+        ),
+      });
+      if (principal) {
+        variantId = principal.id;
+      } else {
+        const [created] = await this.db
+          .insert(routeKmlVariants)
+          .values({ routeId: data.routeId, name: "Principal" })
+          .returning();
+        variantId = created!.id;
+      }
+    }
+
     const existing = await this.db.query.routeKmlVersions.findMany({
-      where: eq(routeKmlVersions.routeId, data.routeId),
+      where: and(
+        eq(routeKmlVersions.routeId, data.routeId),
+        eq(routeKmlVersions.variantId, variantId),
+      ),
       orderBy: (v, { asc }) => [asc(v.validFrom)],
     });
 
@@ -608,6 +633,7 @@ export class RouteRepository {
       .insert(routeKmlVersions)
       .values({
         routeId: data.routeId,
+        variantId,
         kmlContent: data.kmlContent,
         waypoints: data.waypoints ?? [],
         validFrom,
@@ -647,6 +673,106 @@ export class RouteRepository {
     if (earliest && earliest.validFrom > at) return earliest;
 
     return null;
+  }
+
+  /**
+   * Obtener todas las variantes ACTIVAS con su versión vigente en una fecha.
+   *
+   * VARIANTE = caminos alternos que coexisten hoy (ej. MEX-45 o Panamericana).
+   * VERSIÓN  = historia temporal de una variante (el trazado cambió → versión nueva).
+   *
+   * Reutiliza la misma lógica temporal de getKmlVersionForDate por variante.
+   */
+  async getActiveVariantVersionsForDate(routeId: string, at: Date) {
+    const variants = await this.db.query.routeKmlVariants.findMany({
+      where: and(
+        eq(routeKmlVariants.routeId, routeId),
+        eq(routeKmlVariants.status, "activa"),
+      ),
+    });
+
+    const results: Array<{
+      variantId: string;
+      variantName: string;
+      kmlVersionId: string;
+      waypoints: Array<{ lat: number; lng: number }>;
+    }> = [];
+
+    for (const variant of variants) {
+      // Misma lógica temporal que getKmlVersionForDate, filtrada por variante.
+      const exact = await this.db.query.routeKmlVersions.findFirst({
+        where: and(
+          eq(routeKmlVersions.variantId, variant.id),
+          lte(routeKmlVersions.validFrom, at),
+          or(isNull(routeKmlVersions.validTo), gte(routeKmlVersions.validTo, at)),
+        ),
+        orderBy: (v, { desc }) => [desc(v.validFrom)],
+      });
+
+      if (exact) {
+        results.push({
+          variantId: variant.id,
+          variantName: variant.name,
+          kmlVersionId: exact.id,
+          waypoints: exact.waypoints,
+        });
+        continue;
+      }
+
+      // Fallback: KML cargado después de la fecha del servicio.
+      const earliest = await this.db.query.routeKmlVersions.findFirst({
+        where: eq(routeKmlVersions.variantId, variant.id),
+        orderBy: (v, { asc }) => [asc(v.validFrom)],
+      });
+      if (earliest && earliest.validFrom > at) {
+        results.push({
+          variantId: variant.id,
+          variantName: variant.name,
+          kmlVersionId: earliest.id,
+          waypoints: earliest.waypoints,
+        });
+      }
+      // Variante activa sin ninguna versión KML → no se incluye (sin trazado).
+    }
+
+    return results;
+  }
+
+  async getVariantsForRoute(routeId: string) {
+    return this.db.query.routeKmlVariants.findMany({
+      where: eq(routeKmlVariants.routeId, routeId),
+      with: { kmlVersions: { columns: { id: true, validFrom: true, validTo: true } } },
+      orderBy: (v, { asc }) => [asc(v.createdAt)],
+    });
+  }
+
+  async createVariant(data: {
+    routeId: string;
+    name: string;
+    status?: "activa" | "legacy";
+    origin?: "manual" | "promovida_de_viaje";
+    originTripId?: string | null;
+  }) {
+    const [variant] = await this.db
+      .insert(routeKmlVariants)
+      .values({
+        routeId: data.routeId,
+        name: data.name,
+        status: data.status ?? "activa",
+        origin: data.origin ?? "manual",
+        originTripId: data.originTripId ?? null,
+      })
+      .returning();
+    return variant!;
+  }
+
+  async updateVariantStatus(variantId: string, status: "activa" | "legacy") {
+    const [updated] = await this.db
+      .update(routeKmlVariants)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(routeKmlVariants.id, variantId))
+      .returning();
+    return updated;
   }
 
   async getRoutesForScope(scope: OperationalScope) {
@@ -2090,6 +2216,7 @@ export class ComplianceRepository {
     observedUnitId?: string | null;
     observedArrivalAt?: Date | null;
     observedRouteMatchPct?: number | null;
+    servedVariantId?: string | null;
     status: "cumplido" | "no_cumplido" | "pendiente_evidencia";
     timing?: "temprano" | "a_tiempo" | "tarde" | null;
     lateExcusable: boolean;

@@ -25,6 +25,8 @@ const createdLabels: Record<string, string> = {
   kml: "Nueva versión de trazado guardada.",
   ruta_actualizada: "Ruta actualizada.",
   ruta_eliminada: "Ruta eliminada.",
+  variante_creada: "Variante de trazado creada.",
+  variante_actualizada: "Estado de variante actualizado.",
 };
 
 function fmtTime(t: string) {
@@ -68,11 +70,23 @@ export async function RutasUnitView({
   const isCampus = activeUnit.kind === "plant_group";
   const turnosHref = unitConfigStepHrefFor(unit, client.slug, "turnos");
 
+  // Cargar variantes para cada ruta (deduplicar por routeId).
+  const seenRouteIds = new Set<string>();
+  const variantsByRoute = new Map<string, Array<{ id: string; name: string; status: string; kmlVersions: Array<{ id: string }> }>>();
+  for (const rs of routeShifts) {
+    const rid = rs.route?.id;
+    if (!rid || seenRouteIds.has(rid)) continue;
+    seenRouteIds.add(rid);
+    const variants = await repos.routes.getVariantsForRoute(rid);
+    variantsByRoute.set(rid, variants);
+  }
+
   const routeRows = routeShifts.map((rs) => {
     const shiftStart = rs.shift?.startTime ?? "07:00:00";
     const deadline = computeExpectedDeadline("2026-01-01", shiftStart, anticipation);
     const dl = `${String(deadline.getHours()).padStart(2, "0")}:${String(deadline.getMinutes()).padStart(2, "0")}`;
     const kmlCount = rs.route?.kmlVersions?.length ?? 0;
+    const variants = variantsByRoute.get(rs.route?.id ?? "") ?? [];
     return {
       id: rs.id,
       routeId: rs.route?.id ?? "",
@@ -81,7 +95,8 @@ export async function RutasUnitView({
       shiftName: rs.shift?.name ?? "—",
       shiftStart: fmtTime(shiftStart),
       kmlCount,
-      meta: `Inicio ${fmtTime(shiftStart)} · deadline ~${dl} · ${kmlCount} trazado(s)`,
+      variants,
+      meta: `Inicio ${fmtTime(shiftStart)} · deadline ~${dl} · ${variants.length} variante(s) · ${kmlCount} versión(es)`,
       deleteMessage: confirmMessages.deleteRoute(
         rs.route?.name ?? "—",
         `${rs.shift?.name ?? "—"} · inicio ${fmtTime(shiftStart)}`,
@@ -302,6 +317,113 @@ export async function RutasUnitView({
               El trazado puede cambiar cuando se mueven puntos de recolección. Las versiones
               anteriores se conservan para auditoría.
             </p>
+          </Card>
+        ) : null}
+
+        {routeShifts.length > 0 ? (
+          <Card title="Variantes de trazado">
+            <p className="mb-3 text-xs text-[var(--muted)]">
+              <strong>Variante</strong> = caminos alternos que coexisten como válidos hoy (ej. por
+              MEX-45 o por la Panamericana). El motor evalúa contra todas las variantes{" "}
+              <span className="text-white">activas</span> — una unidad cumple si sirve por
+              CUALQUIERA de ellas. No confundir con <em>versión</em> (historia temporal de una
+              variante).
+            </p>
+
+            {routeRows.map((row) =>
+              row.variants.length > 0 ? (
+                <div key={row.routeId} className="mb-4 rounded border border-white/5 p-3">
+                  <p className="mb-2 text-sm font-medium text-white">
+                    {row.routeName} · {row.shiftName}
+                  </p>
+                  <ul className="space-y-1">
+                    {row.variants.map((v) => (
+                      <li key={v.id} className="flex items-center gap-2 text-sm">
+                        <span
+                          className={
+                            v.status === "activa"
+                              ? "rounded bg-emerald-500/20 px-1.5 py-0.5 text-xs text-emerald-300"
+                              : "rounded bg-white/10 px-1.5 py-0.5 text-xs text-white/50"
+                          }
+                        >
+                          {v.status}
+                        </span>
+                        <span className="text-white">{v.name}</span>
+                        <span className="text-[var(--muted)]">
+                          ({v.kmlVersions?.length ?? 0} versión(es))
+                        </span>
+                        <form
+                          action="/api/cliente/rutas"
+                          method="post"
+                          className="ml-auto"
+                        >
+                          <input type="hidden" name="clientSlug" value={client.slug} />
+                          {scopeHiddenFields}
+                          <input type="hidden" name="action" value="variant_status" />
+                          <input type="hidden" name="variantId" value={v.id} />
+                          <input
+                            type="hidden"
+                            name="status"
+                            value={v.status === "activa" ? "legacy" : "activa"}
+                          />
+                          <button
+                            type="submit"
+                            className="text-xs text-[var(--accent)] hover:underline"
+                          >
+                            {v.status === "activa" ? "→ legacy" : "→ activa"}
+                          </button>
+                        </form>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null,
+            )}
+
+            <details className="mt-4">
+              <summary className="cursor-pointer text-sm text-[var(--accent)]">
+                + Nueva variante de trazado
+              </summary>
+              <form
+                action="/api/cliente/rutas"
+                method="post"
+                encType="multipart/form-data"
+                className="mt-3 grid gap-3 md:grid-cols-2"
+              >
+                <input type="hidden" name="clientSlug" value={client.slug} />
+                {scopeHiddenFields}
+                <input type="hidden" name="action" value="variant_create" />
+                <div className="md:col-span-2">
+                  <label className={labelClass}>
+                    Ruta
+                    <RouteShiftSelect
+                      rows={routeRows}
+                      shifts={shiftOptions}
+                      name="routeId"
+                      required
+                    />
+                  </label>
+                </div>
+                <label className={labelClass}>
+                  Nombre de la variante
+                  <input
+                    name="variantName"
+                    required
+                    className={inputClass}
+                    placeholder="Ej. Alterna Panamericana"
+                  />
+                </label>
+                <label className={labelClass}>
+                  Archivo KML / KMZ
+                  <input name="kmlFile" type="file" accept=".kml,.kmz" required className={inputClass} />
+                </label>
+                <div className="md:col-span-2">
+                  <button type="submit" className={btnClass}>
+                    Crear variante
+                  </button>
+                </div>
+              </form>
+            </details>
           </Card>
         ) : null}
       </div>

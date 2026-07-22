@@ -36,6 +36,23 @@ export const routeStrictnessEnum = pgEnum("route_strictness", [
   "destino_only",
   "kml_full",
 ]);
+
+/**
+ * Estado de una VARIANTE de trazado.
+ *
+ * Distinción clave (no confundir):
+ *   • VARIANTE = caminos alternos que COEXISTEN como válidos hoy
+ *     (ej. Riveras-B por MEX-45 o por la Panamericana).
+ *   • VERSIÓN  = la historia temporal de UNA variante
+ *     (el trazado cambió → versión nueva; se juzga cada servicio
+ *      con la versión vigente en su fecha).
+ */
+export const variantStatusEnum = pgEnum("variant_status", ["activa", "legacy"]);
+export const variantOriginEnum = pgEnum("variant_origin", [
+  "manual",
+  /** Campo preparado para Tarea C / Ficha 3 — la maquinaria de promoción aún no existe. */
+  "promovida_de_viaje",
+]);
 export const geofenceRoleEnum = pgEnum("geofence_role", [
   "destino",
   "base",
@@ -251,12 +268,51 @@ export const routeShifts = pgTable("route_shifts", {
   uniqueIndex("route_shifts_unique_idx").on(table.routeId, table.shiftId),
 ]);
 
-/** Trazado de recolección versionado (KML/KMZ); puede actualizarse sin cambiar ruta/turno. */
+/**
+ * Catálogo de VARIANTES de trazado de una ruta.
+ *
+ * Una ruta = UN destino (identidad, intocable) + N trazados aceptados (variantes).
+ * El motor evalúa contra todas las variantes activas y una unidad cumple si
+ * sirve la ruta por CUALQUIERA de ellas.
+ *
+ * No confundir VARIANTE con VERSIÓN:
+ *   • VARIANTE = caminos alternos que coexisten como válidos hoy.
+ *   • VERSIÓN  = historia temporal de una variante (route_kml_versions).
+ */
+export const routeKmlVariants = pgTable("route_kml_variants", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  routeId: uuid("route_id")
+    .notNull()
+    .references(() => routes.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  status: variantStatusEnum("status").notNull().default("activa"),
+  origin: variantOriginEnum("origin").notNull().default("manual"),
+  /** Trip del que se promovió (si origin = promovida_de_viaje). Campo preparado; maquinaria en Tarea C.
+   *  FK definida en migración SQL (no en Drizzle) para evitar ciclo de tipos con trips. */
+  originTripId: uuid("origin_trip_id"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("route_kml_variants_route_name_idx").on(table.routeId, table.name),
+]);
+
+/**
+ * VERSIÓN temporal del trazado de una VARIANTE (KML/KMZ).
+ *
+ * Cada variante conserva su propio historial de versiones:
+ * el trazado puede actualizarse sin cambiar ruta/turno ni variante.
+ * Se juzga cada servicio con la versión vigente en su fecha.
+ *
+ * `routeId` se conserva (redundante con variant→route) para queries directos
+ * y compatibilidad con getKmlVersionForDate existente.
+ */
 export const routeKmlVersions = pgTable("route_kml_versions", {
   id: uuid("id").primaryKey().defaultRandom(),
   routeId: uuid("route_id")
     .notNull()
     .references(() => routes.id, { onDelete: "cascade" }),
+  /** Variante a la que pertenece esta versión. NULL solo en datos pre-migración no migrados. */
+  variantId: uuid("variant_id").references(() => routeKmlVariants.id, { onDelete: "cascade" }),
   kmlContent: text("kml_content").notNull(),
   waypoints: jsonb("waypoints").$type<Array<{ lat: number; lng: number }>>().notNull().default([]),
   validFrom: timestamp("valid_from", { withTimezone: true, mode: "date" }).notNull(),
@@ -431,6 +487,10 @@ export const complianceFacts = pgTable("compliance_facts", {
   }),
   observedArrivalAt: timestamp("observed_arrival_at", { withTimezone: true, mode: "date" }),
   observedRouteMatchPct: doublePrecision("observed_route_match_pct"),
+  /** Variante de trazado que sirvió la unidad. NULL para hechos pre-variantes y para no_cumplido/pendiente. */
+  servedVariantId: uuid("served_variant_id").references(() => routeKmlVariants.id, {
+    onDelete: "set null",
+  }),
   status: complianceStatusEnum("status").notNull(),
   timing: timingStatusEnum("timing"),
   lateExcusable: boolean("late_excusable").notNull().default(false),
@@ -779,6 +839,7 @@ export const routesRelations = relations(routes, ({ one, many }) => ({
     fields: [routes.plantGroupId],
     references: [plantGroups.id],
   }),
+  kmlVariants: many(routeKmlVariants),
   kmlVersions: many(routeKmlVersions),
 }));
 
@@ -790,10 +851,22 @@ export const shiftsRelations = relations(shifts, ({ one }) => ({
   }),
 }));
 
+export const routeKmlVariantsRelations = relations(routeKmlVariants, ({ one, many }) => ({
+  route: one(routes, {
+    fields: [routeKmlVariants.routeId],
+    references: [routes.id],
+  }),
+  kmlVersions: many(routeKmlVersions),
+}));
+
 export const routeKmlVersionsRelations = relations(routeKmlVersions, ({ one }) => ({
   route: one(routes, {
     fields: [routeKmlVersions.routeId],
     references: [routes.id],
+  }),
+  variant: one(routeKmlVariants, {
+    fields: [routeKmlVersions.variantId],
+    references: [routeKmlVariants.id],
   }),
 }));
 
@@ -890,5 +963,9 @@ export const complianceFactsRelations = relations(complianceFacts, ({ one }) => 
   observedUnit: one(units, {
     fields: [complianceFacts.observedUnitId],
     references: [units.id],
+  }),
+  servedVariant: one(routeKmlVariants, {
+    fields: [complianceFacts.servedVariantId],
+    references: [routeKmlVariants.id],
   }),
 }));

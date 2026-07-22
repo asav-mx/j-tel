@@ -298,10 +298,6 @@ export async function ContratosUnitView({
                       className={inputClass}
                     />
                   </label>
-                  <label className="mt-6 flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="allowAlternateDestination" />
-                    Permitir destino alterno
-                  </label>
                 </div>
               </fieldset>
 
@@ -596,14 +592,6 @@ export async function ContratosUnitView({
                               defaultValue={c.policy.maxRouteDurationMinutes ?? 60}
                               className={inputClass}
                             />
-                          </label>
-                          <label className="mt-6 flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              name="allowAlternateDestination"
-                              defaultChecked={c.policy.allowAlternateDestination}
-                            />
-                            Permitir destino alterno
                           </label>
                         </div>
                         <p className="mt-2 text-xs text-[var(--muted)]">
