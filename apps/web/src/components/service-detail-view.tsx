@@ -151,19 +151,29 @@ export function ServiceDetailView({
         <div className="mt-6">
           <Card title={`Evidencia GPS (${data.pointCount} puntos en ruta)`}>
             <p className="mb-3 text-sm text-[var(--muted)]">
-              Estado de ingesta: {data.evidenceStatus ?? "—"}
-              {data.evidenceMapMode === "trip_fleet"
-                ? " · Sin unidad observada: se muestra la evidencia ingerida del viaje (flota en ventana) para diagnosticar."
-                : null}
-              {data.evidenceMapMode === "observed_unit" &&
-              data.unitPointsInWindow > data.pointCount
-                ? ` · ${data.unitPointsInWindow} pts en ventana del contrato; se muestran solo los del corredor KML / llegada.`
-                : null}
-              {data.pointCount === 0
-                ? data.tripEvidencePointCount === 0
-                  ? " · No hay puntos GPS ingeridos en este viaje."
-                  : " · Hay puntos ingeridos, pero ninguno queda en el corredor de la ruta / llegada."
-                : " · Verde = GPS observado; morado punteado = KML esperado; azul = geocerca; amarillo = llegada."}
+              {data.fleetHiddenForClient ? (
+                // Cara cliente sin unidad observada: mensaje honesto sin revelar flota.
+                <>
+                  El sistema no identificó una unidad sirviendo esta ruta en la ventana.
+                  Se muestra el trazado esperado y la geocerca destino como referencia.
+                </>
+              ) : (
+                <>
+                  Estado de ingesta: {data.evidenceStatus ?? "—"}
+                  {data.evidenceMapMode === "trip_fleet"
+                    ? " · Sin unidad observada: se muestra la evidencia ingerida del viaje (flota en ventana) para diagnosticar."
+                    : null}
+                  {data.evidenceMapMode === "observed_unit" &&
+                  data.unitPointsInWindow > data.pointCount
+                    ? ` · ${data.unitPointsInWindow} pts en ventana del contrato; se muestran solo los del corredor KML / llegada.`
+                    : null}
+                  {data.pointCount === 0
+                    ? data.tripEvidencePointCount === 0
+                      ? " · No hay puntos GPS ingeridos en este viaje."
+                      : " · Hay puntos ingeridos, pero ninguno queda en el corredor de la ruta / llegada."
+                    : " · Verde = GPS observado; morado punteado = KML esperado; azul = geocerca; amarillo = llegada."}
+                </>
+              )}
             </p>
             <ServiceEvidenceMap
               points={data.mapPoints}
