@@ -22,6 +22,24 @@ export function localDateIso(now = new Date(), timeZone = JTTEL_TZ): string {
   }).format(now);
 }
 /**
+ * Construye la fecha de consulta para `findForScope` y funciones similares
+ * a partir de una cadena YYYY-MM-DD.
+ *
+ * Usa mediodía UTC (T12:00:00.000Z) — no medianoche — porque el cambio de
+ * día UTC cruza la tarde civil de Juárez (18:00 h del día anterior cuando
+ * el reloj marca 00:00 UTC). Mediodía UTC = 06:00 Juárez en verano y
+ * 05:00 Juárez en invierno: siempre el mismo día civil en cualquier zona
+ * entre UTC-12 y UTC+12.
+ *
+ * Es la pareja canónica de `localDateIso`:
+ *   `string → Date`  (esta función, para armar consultas a la BD)
+ *   `Date → string`  (`localDateIso`, para resolver "qué día es")
+ */
+export function dayForDateQuery(fechaIso: string): Date {
+  return new Date(`${fechaIso}T12:00:00.000Z`);
+}
+
+/**
  * Formatea un timestamp como "HH:MM" (24h) en la zona indicada.
  * Para UI: deadlines, llegadas, ventanas, tooltips del mapa.
  */
