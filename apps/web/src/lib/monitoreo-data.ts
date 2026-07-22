@@ -250,12 +250,37 @@ export async function loadMonitoreo(opts: {
     });
   }
 
-  // Telemetría por carrier (una sola lectura por carrier, reutilizada en sus
-  // rutas). SOLO para ocurrencias abiertas: las cerradas no leen telemetría.
+  // ── Labels de unidades (TODOS los carriers) ─────────────────────────────
+  // Se cargan labels de todos los carriers (abiertos y cerrados) porque las
+  // cerradas necesitan etiquetar su unidad observada (del hecho congelado).
+  // Las labels son de uso INTERNO: solo salen en la respuesta para unidades
+  // que resulten observadas o emparejadas. El inventario completo del
+  // carrier NUNCA llega al cliente (Marco Pieza 4).
   const unitLabelById = new Map<string, string>();
   const unitCarrierById = new Map<string, string>();
   const pointsByUnit = new Map<string, GpsPoint[]>();
-  const carrierIds = [
+  const allCarrierIds = [
+    ...new Set(
+      occData
+        .map((d) => d.carrierAccountId)
+        .filter((x): x is string => !!x),
+    ),
+  ];
+  for (const carrierId of allCarrierIds) {
+    const carrierUnits = await repos.fleet.getUnitsForCarrier(carrierId);
+    for (const u of carrierUnits) {
+      unitLabelById.set(u.id, u.label);
+      unitCarrierById.set(u.id, carrierId);
+    }
+  }
+
+  // ── Telemetría en vivo (solo carriers con ocurrencias ABIERTAS) ─────────
+  // Las cerradas usan la evidencia congelada del viaje, no telemetría en
+  // vivo. Se carga la flota COMPLETA del carrier internamente porque el
+  // motor de emparejamiento necesita evaluar todas las candidatas antes de
+  // saber cuál ganó. Solo las emparejadas salen en la respuesta — las
+  // candidatas descartadas nunca llegan al cliente.
+  const openCarrierIds = [
     ...new Set(
       occData
         .filter((d) => !d.closed)
@@ -264,7 +289,7 @@ export async function loadMonitoreo(opts: {
     ),
   ];
 
-  for (const carrierId of carrierIds) {
+  for (const carrierId of openCarrierIds) {
     const idxs = occData
       .map((d, i) => (!d.closed && d.carrierAccountId === carrierId ? i : -1))
       .filter((i) => i >= 0);
@@ -278,14 +303,7 @@ export async function loadMonitoreo(opts: {
     );
     if (windowEnd.getTime() <= windowStart.getTime()) continue;
 
-    const [units, devices] = await Promise.all([
-      repos.fleet.getUnitsForCarrier(carrierId),
-      repos.fleet.getDevicesForCarrier(carrierId),
-    ]);
-    for (const u of units) {
-      unitLabelById.set(u.id, u.label);
-      unitCarrierById.set(u.id, carrierId);
-    }
+    const devices = await repos.fleet.getDevicesForCarrier(carrierId);
 
     const imeiToUnitId = new Map<string, string>();
     for (const d of devices) {
@@ -393,6 +411,9 @@ export async function loadMonitoreo(opts: {
       // El detalle del veredicto vive en Cumplimiento / el expediente.
       state = "cerrado";
       const fact = o.complianceFact!;
+      // Unidad observada del hecho congelado — la planta SÍ la ve
+      // (es la verdad operativa del servicio que pagó).
+      matchedUnitId = fact.observedUnitId ?? null;
       arrivalAt = fact.observedArrivalAt
         ? localTimeHHMM(fact.observedArrivalAt, JTTEL_TZ)
         : null;
@@ -540,6 +561,14 @@ export async function loadMonitoreo(opts: {
     cerrado: routes.filter((r) => r.state === "cerrado").length,
   };
 
+  // Incluir unidades observadas de ocurrencias cerradas (su unidad viene
+  // del hecho congelado, no del emparejamiento en vivo).
+  for (const route of routes) {
+    if (route.matchedUnitId) usedUnits.add(route.matchedUnitId);
+  }
+
+  // Solo unidades observadas/emparejadas — el inventario completo del
+  // carrier NUNCA llega a la respuesta (Marco Pieza 4).
   const units = [...usedUnits].map((id) => ({
     id,
     label: unitLabelById.get(id) ?? id,

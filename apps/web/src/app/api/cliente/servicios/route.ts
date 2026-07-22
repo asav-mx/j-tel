@@ -290,7 +290,19 @@ export async function POST(request: Request) {
     });
   }
 
-  // Flota: la asigna el carrier. El cliente no elige ni ve unidades aquí.
+  // ── Tres categorías de unidades (Marco Pieza 4) ──────────────────────────
+  // 1. Unidad OBSERVADA: identificada por el árbitro sirviendo ESA planta.
+  //    La planta SÍ la ve (verdad operativa).
+  // 2. Catálogo DECLARADO (possibleUnitIds / serviceProfileUnits): unidades
+  //    que el carrier asigna a este contrato. La planta SÍ lo ve (declarativo,
+  //    inspecciones, cumplimiento legal). Si está vacío, el motor evalúa TODA
+  //    la flota del carrier (ver verification.ts → getPossibleUnitIds).
+  //    Hoy se guarda vacío — la pantalla de asignación es una ficha aparte.
+  // 3. Inventario COMPLETO del carrier: NUNCA visible para la planta.
+  //    Ni la lista, ni etiquetas, ni telemetría, ni conteos.
+  //
+  // NO entregar getUnitsForCarrier a la cara cliente bajo ningún concepto.
+  // Si un mapa queda vacío sin unidad observada, eso es correcto.
   const payload = {
     contractId,
     routeShiftId,
