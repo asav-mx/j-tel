@@ -1,6 +1,6 @@
 import { getRepos } from "@/lib/db";
 import type { ContractPolicy, GpsPoint, OperationalScope } from "@jtel/domain";
-import { computeEvidenceWindow, localTimeHHMM, JTTEL_TZ } from "@jtel/domain";
+import { computeEvidenceWindow, dayForDateQuery, localTimeHHMM, JTTEL_TZ } from "@jtel/domain";
 import {
   evaluateUnitRouteMatch,
   findGeofenceEntry,
@@ -168,7 +168,7 @@ export async function loadMonitoreo(opts: {
   const unit = await resolveScopeUnit(repos, opts.scope, account.id);
   if (!unit) return null;
 
-  const day = new Date(`${opts.fecha}T00:00:00`);
+  const day = dayForDateQuery(opts.fecha);
   const occurrences = await repos.occurrences.findForScope(opts.scope, day, day);
   const filtered = occurrences.filter(
     (o) =>
