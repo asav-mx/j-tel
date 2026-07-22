@@ -137,6 +137,24 @@ El operador descubre la inconsistencia por inspección visual y tiene que re-ver
 
 ---
 
+## Recomendación (no implementar aún)
+
+Al guardar un cambio de política de contrato (`updatePolicy`), el sistema debería:
+
+1. **Detectar** cuántos servicios ya juzgados (`cumplido` / `no_cumplido`) dentro del
+   periodo vigente del contrato fueron evaluados bajo los parámetros anteriores.
+2. **Mostrar** al usuario de J-Staff un aviso explícito:
+   *"Este cambio afecta N servicios ya juzgados. ¿Re-verificar con la política nueva?"*
+3. **La acción sigue siendo humana y auditada.** El sistema nunca re-verifica
+   automáticamente hechos congelados. El operador decide, confirma, y la re-verificación
+   queda registrada con `force=true` en el ledger — igual que hoy con `reverify-day`.
+
+Esto cierra el hueco de visibilidad sin romper la ley de hechos congelados: el operador
+se entera de que hay hechos stale en el momento del cambio, no después por inspección
+visual.
+
+---
+
 ## Archivos auditados (sin modificaciones)
 
 | Archivo | Relevancia |
