@@ -95,6 +95,8 @@ Fondo de tinta, paneles de papel oscuro. La regla dura:
 
 **El acero separa medición de juicio.** Un dato es acero; un veredicto es verde/ámbar/rojo. Así el color nunca miente sobre qué clase de cosa estás viendo.
 
+**Los estados operativos (activa/legacy, encendido/apagado, conectado/sin señal) usan acero y tenue. Verde, ámbar y rojo jamás marcan estados operativos — solo veredictos y sus consecuencias.**
+
 ### Tipografía
 
 Tres papeles, sin excepción:

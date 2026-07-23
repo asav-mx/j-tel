@@ -389,7 +389,7 @@ export async function RutasUnitView({
                           {activas.length === 0 && (
                             <span
                               className="font-mono text-[10.5px] uppercase tracking-[.1em]"
-                              style={{ color: "#E5484D" }}
+                              style={{ color: "#E3A81F" }}
                             >
                               sin activas — motor sin trazado
                             </span>
@@ -411,7 +411,7 @@ export async function RutasUnitView({
                                         <span
                                           style={{
                                             display: "inline-block",
-                                            border: "1.5px solid #34C77B",
+                                            border: "1.5px solid #7A9CB8",
                                             borderRadius: "2px",
                                             padding: "3.5px 10px 2.5px",
                                             fontFamily:
@@ -420,8 +420,7 @@ export async function RutasUnitView({
                                             fontWeight: 500,
                                             letterSpacing: ".13em",
                                             textTransform: "uppercase",
-                                            color: "#34C77B",
-                                            background: "rgba(52,199,123,.07)",
+                                            color: "#7A9CB8",
                                           }}
                                         >
                                           Activa
