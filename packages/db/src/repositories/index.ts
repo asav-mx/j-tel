@@ -1935,11 +1935,17 @@ export class OccurrenceRepository {
     };
 
     const rows: Row[] = [];
-    const current = new Date(start);
-    while (current <= end) {
-      const dayOfWeek = current.getDay();
+    // Iteramos sobre fechas civiles como strings para que el DOW check y el
+    // service_date salgan del mismo calendario. Con el enfoque anterior
+    // (`current: Date` en UTC midnight + `toIsoDate`) el DOW venía del día UTC
+    // pero el service_date del día Juárez — un día antes en verano (UTC-6).
+    let currentIso = start.toISOString().slice(0, 10);
+    const endIso = end.toISOString().slice(0, 10);
+    while (currentIso <= endIso) {
+      // Mediodía UTC nunca toca un cambio de día entre UTC-12 y UTC+12.
+      const dayOfWeek = new Date(`${currentIso}T12:00:00.000Z`).getUTCDay();
       if (activeDays.includes(dayOfWeek)) {
-        const serviceDate = this.toIsoDate(current);
+        const serviceDate = currentIso;
         const deadline = computeExpectedDeadline(
           serviceDate,
           shift.startTime,
@@ -1959,7 +1965,10 @@ export class OccurrenceRepository {
           windowEnd,
         });
       }
-      current.setDate(current.getDate() + 1);
+      // Avanzar al siguiente día civil: noon UTC + 1 día = noon UTC del siguiente.
+      const d = new Date(`${currentIso}T12:00:00.000Z`);
+      d.setUTCDate(d.getUTCDate() + 1);
+      currentIso = d.toISOString().slice(0, 10);
     }
 
     if (rows.length === 0) {
@@ -2002,9 +2011,11 @@ export class OccurrenceRepository {
    */
   async renewRollingWindow(days: number = OccurrenceRepository.ROLLING_DAYS) {
     const today = this.startOfDay(new Date());
-    const todayIso = this.toIsoDate(today);
+    // .toISOString().slice(0,10): en UTC runtime, startOfDay = midnight UTC → fecha UTC.
+    // No usar toIsoDate (= localDateIso) que daría el día anterior en Juárez.
+    const todayIso = today.toISOString().slice(0, 10);
     const horizon = this.addDays(today, days);
-    const horizonIso = this.toIsoDate(horizon);
+    const horizonIso = horizon.toISOString().slice(0, 10);
 
     const profiles = await this.db.query.serviceProfiles.findMany({
       where: eq(serviceProfiles.active, true),
@@ -2062,7 +2073,7 @@ export class OccurrenceRepository {
         profileName: profile.name,
         created: result.createdIds.length,
         skipped: result.skippedExisting,
-        from: this.toIsoDate(from),
+        from: from.toISOString().slice(0, 10),
         to: targetIso,
       });
     }
