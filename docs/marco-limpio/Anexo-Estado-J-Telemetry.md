@@ -2,7 +2,7 @@
 
 **Qué es esto:** una foto del estado del producto para no cargar las decisiones en la cabeza. Cuelga del Marco Maestro (no lo reemplaza). El Marco sigue siendo la fuente de verdad de las leyes; esto solo registra dónde estamos, qué se decidió y qué falta. Se actualiza cuando cambie algo grande.
 
-**Fecha de este corte:** 23 de julio de 2026 (PR #65 abierto; auditoría de verificación 21–23 jul completada).
+**Fecha de este corte:** 23 de julio de 2026 (PRs #53–#65 mergeados a `main`; el generador de ocurrencias — los tres tramos del reloj — cerrado y en producción; auditoría de verificación 21–23 jul completada; 0 PRs abiertos en el remoto).
 
 ---
 
@@ -103,6 +103,10 @@ Prueba con SIERRA-VISTA-I: con una variante daba cumplido A=81%; al registrar un
   - **Impacto en rebate — CERRADO (22 jul):** el corrimiento de fechas llegó al conteo que alimenta `computeMonthlyRebate`, pero el impacto monetario fue 0 porque ningún contrato tenía `rebate_escalonado` activo. Sin reportes guardados ni exportados con datos corridos. El Tramo 2 de la ficha de arreglo protege el cálculo hacia adelante si alguna vez se activa un contrato con rebate escalonado.
 - **Fuga de flota en cara cliente (PR mergeado 21 jul):** cerrada en detalle de servicio y jornada. Ledger oculto a cara cliente.
 - **Fuga de inventario de flota:** ✅ mergeado a `main` el 22 jul en dos PRs desde la misma rama — PR #52 el código, PR #53 los docs. La fuga real estaba en `jornada-data.ts`: `unitMap` se llenaba con TODA la flota del carrier → ahora filtrado a unidades observadas únicamente. `monitoreo-data.ts` ya filtraba la respuesta (`usedUnits`); se añadió label de unidades cerradas y se documentó la separación interna/respuesta. `service-detail-data.ts` auditado: no era fuga (Tarea D). Punto de parada NO activado — la ficha permite cargar flota completa internamente para el emparejamiento en vivo. Regresión cero: compare-verify-dry sobre 27 rutas × 2 días → 0 cambios de veredicto.
+- **Guarda de integridad en `deleteBeyondHorizon` (PR #62, mergeado):** el recorte de la ventana rodante ya **nunca borra una ocurrencia que tenga hecho**, sin importar `TRIM_DAYS`. Un hecho congelado es evidencia; el mantenimiento del horizonte no puede pisarlo. La guarda protege por diseño, no por casualidad.
+- **Limpieza de nombres de cliente en scripts de diagnóstico (PR #60, mergeado):** se eliminó un bloque de debug hardcodeado en `reverify-day` y se exige `CONTRACT` explícito en las herramientas de diagnóstico. Ningún script de diagnóstico asume un cliente por default.
+- **Skill de UI al repo (PR #59, mergeado):** `j-telemetry-ui` — el lenguaje visual y las reglas de interfaz — vive ahora en el repo como skill. Cualquier pantalla, componente, correo o vista que un humano vea dentro de J-Telemetry pasa por él.
+- **Confirmado con evidencia: ningún cambio de código de estos dos días movió un veredicto.** `compare-verify-dry` con día de control sobre las 27 rutas × varios días → 0 cambios de veredicto en todos los PRs (fuga de inventario, un-solo-reloj, generador). Los hechos congelados quedaron intactos; los fixes tocaron vistas, límites y generación, nunca el árbitro.
 - **Herramienta de trabajo:** ahora con **Devin** (Claude Code), no Cursor. Reglas escritas en las fichas (Devin obedece lo escrito): una rama por tarea, todo por PR, merge a `main` solo por Asav.
 
 ---
@@ -116,7 +120,26 @@ Prueba con SIERRA-VISTA-I: con una variante daba cumplido A=81%; al registrar un
 
 **Notas de obsolescencia:**
 - `docs/Ficha-Handoff-Evidencia-Llegada.md` — su Tarea 4 dice "carrier y cliente"; QUEDA SUPERSEDED por la decisión del 20 jul (planta y carrier, cliente NO) y por el PR #47 ya mergeado. Ponerle nota "SUPERSEDED — ver Anexo" arriba para que Devin no siga la instrucción vieja.
-- **~6 PRs zombis abiertos en GitHub** (ramas viejas de Cursor). Revisar y cerrar sin merge los que ya no apliquen. No urge, pero anotado para no confundir a Devin.
+- **PRs zombis → CERRADOS.** Se cerraron sin merge **nueve** PRs zombis (ramas viejas de Cursor que ya no aplicaban). **El remoto queda con 0 PRs abiertos.** Quedan ramas viejas colgadas en el remoto (sin PR asociado) — candidatas a borrar.
+
+---
+
+## 3c. La saga del reloj — tres tramos (CERRADA)
+
+El bug que más frentes tocó en estos dos días. Cerrado en su totalidad con los PRs #56, #58, #61 y #65. Se documenta completo porque es el arquetipo del error que **no debe volver** — y la sección 7 fija la regla que lo evita.
+
+**Síntoma visible:** la Torre (Monitoreo) mostraba **0 rutas** donde el Historial reportaba 14. Un turno entero desaparecía de la vista en vivo. La primera hipótesis (`pickActiveShift` devolviendo un `shiftId` que no cuadraba con las ocurrencias) **quedó descartada**: el diagnóstico #56 confirmó la causa real.
+
+**Causa raíz (una sola, con muchas caras):** el sistema construía fechas civiles como `new Date(`${fecha}T00:00:00`)` **sin `Z`**. Sin la `Z`, el runtime interpreta ese instante en la zona **local** del proceso. En Vercel (UTC) `T00:00:00` es medianoche UTC, pero la lógica que decidía "qué día es hoy" y qué rango consultar terminaba corrida un día en las horas peligrosas (tarde/noche de Juárez), y las vistas y el generador leían/escribían el día equivocado. El mismo error, sembrado en varios lugares.
+
+**Los tres tramos (los de la Ficha de Arreglo Un Solo Reloj — misma causa, tres capas):**
+1. **Tramo 1 — La torre (PR #58).** `monitoreo-data.ts` consultaba el día en UTC; se reemplazó la construcción manual de `Date` por `dayForDateQuery`. Aquí murió el síntoma de la Torre con 0 rutas. (Diagnóstico previo: #56.)
+2. **Tramo 2 — Las pantallas (PR #61, parada obligatoria).** Las vistas del ledger y filtros por día leían con el mismo `Date` sin `Z`; migradas a `dayForDateQuery`. Un solo reloj en el display: los hechos congelados se muestran con la zona actual del contrato.
+3. **Tramo 3 — Generación de ocurrencias (PR #65, Opus, parada dura).** `generateForProfile` iteraba el calendario con aritmética de `Date` dependiente del runtime TZ; ahora usa `civilDatesInRange` (strings civiles puras) para las fechas de servicio y `addDaysIso` para el horizonte, y `renewRollingWindow` calcula "hoy" civil. El generador quedó sobre **un solo calendario**. (Era el tramo peligroso: podía haber creado ocurrencias con `service_date` corrido — se verificó que no quedaron datos torcidos.)
+
+**Ventana de exposición:** durante **9 días (13–22 jul)**, la cara de Cumplimiento pudo mostrar el **día anterior** en filtros y reportes en las horas peligrosas. **Impacto monetario: $0** — ningún contrato tenía `rebate_escalonado` activo, así que ningún cálculo de rebate ni reporte exportado salió con datos corridos. El corrimiento fue de *display y de rango de consulta*, nunca de un hecho congelado (la verdad se calcula una vez y se guarda; los hechos no se recalcularon).
+
+**Estado:** los tres tramos en producción. La deuda residual (fronteras de `generateForProfile`/`renewRollingWindow` que aún reciben/construyen `Date`) queda anotada en la sección 4-B, punto 9 — el núcleo de aritmética civil ya es puro; faltan los bordes.
 
 ---
 
@@ -137,7 +160,9 @@ Estos son los frentes abiertos. NO se construyen todos ahora — se vuelven fich
    **Aprobación de variantes por la planta (Ficha 3 — diseño acordado 20 jul, por construir):** en vez de que la planta revise cada servicio desviado, aprueba el CATÁLOGO de trazados una vez. El sistema detecta el patrón ("Riveras-B llega por otra calle en N servicios"), lo propone con mapa, la planta acepta → el KML entra al catálogo del perfil → de ahí en adelante automático. Control donde debe (quien paga define qué caminos valen), trabajo de una vez, no diario. Política hacia adelante; no reverdea hechos viejos. UI, depende de la Ficha 2.
 4. **Seguimiento condicionado** (congelado, esperando datos): si el margen de 45 min no captura suficientes llegadas tardías, evaluar seguir midiendo a la unidad que demostró arrancar la ruta (arranque de KML + dirección coherente), con tope duro = duración máx. de ruta. Toca el árbitro → ficha con parada obligatoria. **No construir hasta que los datos lo justifiquen.**
 
-5. **~4% de los hechos congelados no son reproducibles por el motor actual (hallazgo auditoría 23 jul — SIN INVESTIGAR):** En el compare-verify-dry de 21, 22 y 23 jul, cada fecha muestra exactamente 1 de 27 servicios donde el motor hoy dice `no_cumplido` (`unit=— A=— B=—`) pero el hecho guardado dice `cumplido`. Hipótesis: el motor de dry-run usa el KML/geocerca ACTUAL, no el que estaba vigente cuando se generó el veredicto original. Si la geocerca o el trazado de esa ruta se actualizó después de la verificación, el motor hoy no encuentra candidatas donde antes sí las encontró — el hecho congelado y el motor divergen por diferencia de estado del catálogo, no por bug de código. **Relevante para Ficha 4 (defensa del carrier):** si el carrier impugna un `no_cumplido`, el sistema no puede reproducir fielmente la evaluación del día D con los datos del día D. No investigado, no bloqueante. Requiere ficha aparte con aprobación explícita.
+5. **~4% de los hechos congelados no son reproducibles por el motor actual (hallazgo auditoría 23 jul — SIN INVESTIGAR):** En el compare-verify-dry de 21, 22 y 23 jul, cada fecha muestra exactamente 1 de 27 servicios donde el motor hoy dice `no_cumplido` (`unit=— A=— B=—`) pero el hecho guardado dice `cumplido`. Hipótesis: el motor de dry-run usa el KML/geocerca ACTUAL, no el que estaba vigente cuando se generó el veredicto original. Si la geocerca o el trazado de esa ruta se actualizó después de la verificación, el motor hoy no encuentra candidatas donde antes sí las encontró — el hecho congelado y el motor divergen por diferencia de estado del catálogo, no por bug de código. **Relevante para Ficha 4 (defensa del carrier):** si el carrier impugna un `no_cumplido`, el sistema no puede reproducir fielmente la evaluación del día D con los datos del día D. **Y bloquea cualquier asistente que explique veredictos:** un copiloto que "explica por qué salió rojo" leyendo el motor de hoy daría una explicación que no corresponde al hecho sellado — mentiría sin querer. Mientras el motor no pueda reproducir el estado del catálogo del día D, ningún asistente puede narrar el porqué de un veredicto viejo. No investigado, no bloqueante para la operación de hoy. Requiere ficha aparte con aprobación explícita.
+
+6. **Planta 47 — el motor está sano; los KMLs no corresponden al recorrido real (hallazgo, ref. `Ficha-Diagnostico-Identificacion-Unidad.md`):** la 47 identifica y resuelve unidades bien, y las unidades sí llegan a la geocerca de la planta. Lo que falla es el **match de ruta (métrica A / cobertura del KML)**: ninguna unidad cubre el KML importado por encima del umbral → todo cae en `no_cumplido` (99 servicios), y por diseño un `no_cumplido` nunca acredita unidad ("Unidad observada: —"). **No es bug de código, no es ruta borrada, no es perfil huérfano** (geocerca de 24 puntos válida, 21 perfiles con KML vigente de 67–192 waypoints). Es que **los KMLs importados el 14-jul no coinciden geométricamente con el recorrido real de los camiones**. El arreglo es de datos (re-importar/corregir trazados), no de motor. Ficha con parada; no tocar el árbitro.
 
 ### Columna B — Infraestructura para producción (deuda estructural)
 Esto no bloquea el diagnóstico de hoy, pero SÍ bloquea salir a producción con clientes reales. Ya está **diseñado en la Pieza 4 del Marco**; falta construirlo.
@@ -149,19 +174,56 @@ Esto no bloquea el diagnóstico de hoy, pero SÍ bloquea salir a producción con
 5. **Tests corriendo dos veces (deuda de higiene, 21 jul):** el sistema de pruebas corre tanto la versión fuente como una copia compilada vieja en `dist/`. Eso mostró fallos fantasma dos veces en un día. Configurar que solo corra la versión fuente.
 6. **Smart quotes rompen el build:** las comillas tipográficas (U+201C/U+201D) que a veces se cuelan al escribir código hacen fallar el build de producción con "Unexpected character". Ya pasó una vez. Quedan dos archivos con ese carácter en texto (inofensivo hoy): `monitoreo-unit.tsx` y `jornada-unit.tsx`.
 7. **Historial/Monitoreo — mapa espagueti:** el mapa del historial del turno dibuja las 14+ rutas encimadas y queda ilegible. Ya tiene filtros de Unidad/Veredicto; el arreglo probable es de *defaults* (una ruta a la vez, filtro activado de inicio, u opacidad menor), no de arquitectura. Deuda de UI anotada el 20 jul para no olvidarla.
-8. **Discrepancia Monitoreo / Historial — 0 rutas en torre (hallazgo 22 jul, ABIERTO):** Campus Santos Dumont, 2026-07-22, Primer Turno 06:00: Historial reporta 14 rutas sin verificar; Monitoreo reporta 0 programadas (y 0 en total). Confirmado pre-existente en `main` — no relacionado con los PRs de fuga de inventario. Causa probable: `pickActiveShift` devuelve un `shiftId` que no coincide con el `shiftId` almacenado en las ocurrencias del campus. Requiere ficha aparte.
+8. ~~**Discrepancia Monitoreo / Historial — 0 rutas en torre**~~ ✅ **CERRADO** por la saga del reloj (ver 3c). La causa no era `pickActiveShift`: era la fecha civil construida sin `Z` e interpretada en UTC. Los frentes de vistas (#58, #61) y de generación (#65) lo cerraron. La Torre vuelve a mostrar las rutas del turno.
 
-9. **`renewRollingWindow` y `generateForProfile` aún intercambian objetos `Date` donde deberían pasar fechas civiles como string (hallazgo 23 jul):** Internamente quedan varios saltos por `Date` que dependen del runtime TZ — por ejemplo `new Date(`${maxDate}T00:00:00`)` sin `Z` para calcular `next`, y el hecho de que `generateForProfile` recibe `Date` en vez de strings. Correcto en UTC (Vercel), frágil fuera. Deuda de diseño — no urgente, no tocar sin ficha.
+9. **`renewRollingWindow` y `generateForProfile` aún intercambian objetos `Date` en las fronteras donde deberían pasar fechas civiles como string (deuda residual de la saga del reloj):** el núcleo ya es aritmética civil pura (`civilDatesInRange`, `addDaysIso`, "hoy" civil) tras #65, pero los **bordes** siguen en `Date`: `generateForProfile` recibe `fromDate: Date, toDate: Date` y clampa el rango del contrato con `new Date(`${validFrom}T00:00:00`)` **sin `Z`** ([index.ts:1899-1900](packages/db/src/repositories/index.ts#L1899-L1900)); el seed también llama pasando `Date`. Correcto en UTC (Vercel), frágil fuera. Deuda de diseño — no urgente, no tocar sin ficha. La regla de la sección 7 (funciones civiles canónicas) es lo que cierra este flanco cuando se toque.
+
+10. **Horas de turno guardadas en UTC por parche manual, no por diseño (hallazgo 23 jul, TRAMPA LATENTE):** las horas de turno en producción quedaron en UTC por un parche manual, pero el formulario de alta dice "ej. 07:00" **sin avisar en qué zona**. El próximo turno que alguien dé de alta escribiendo "07:00" va a quedar **6 horas corrido** respecto a los existentes. Además el seed tiene las horas en hora de **Juárez** — inconsistente con producción. Hay que decidir y hacer explícita la zona del formulario (y alinear seed ↔ producción) antes de que se cree un turno nuevo. Ficha aparte.
+
+11. **`computeExpectedDeadline` funciona por compensación, no por corrección (hallazgo 23 jul — NO TOCAR SIN FICHA):** el cálculo de deadline hoy da el resultado correcto porque **compensa** un desfase previo, no porque la aritmética esté limpia. Arreglarlo "bien" movería **todos** los deadlines de golpe — y con ellos, potencialmente, veredictos hacia adelante. Es deuda que solo se toca con ficha, parada obligatoria y medición de regresión. No es un fix de una línea.
+
+12. **No hay base de datos local — los tests de integración pasan por omisión, no por verificación (hallazgo 23 jul):** sin BD local, la suite de integración no ejecuta contra datos reales; **pasa porque se salta**, no porque verifique. Da una señal verde falsa. Cualquier afirmación de "los tests pasan" para lógica que toca la BD no es evidencia hasta que haya una BD de integración corriendo de verdad. Relacionado con la deuda de higiene del punto 5 (tests corriendo dos veces).
 
 ---
 
-## 5. Cómo usar este anexo
+## 5. Horizonte estratégico (confirmado contra el Marco)
+
+Frentes mayores que no son fichas de "camino a v1" sino líneas de dirección del producto. Cada uno se contrastó contra el Marco antes de anotarlo.
+
+- **Propiedad de los datos — ya es ley del Marco.** El Marco lo declara literal: *"La data procesada de la operación es de la empresa (la plataforma) y así se estipula en el contrato."* No es aspiración; es la base legal del archivo propio.
+  - **Fase 1 corriendo:** el archivador ya corre **cada 10 min** llenando `telemetry_points` con `carrierAccountId`, `deviceId`, `unitId` y `source` por punto. Estamos construyendo el activo de datos propio, punto por punto.
+  - **Pendiente — fase 2:** que el **verificador lea del archivo propio** (`telemetry_points`) en vez de Umbrella en vivo. Cuando eso pase, dejamos de depender de un tercero para reproducir la verdad, y la reproducibilidad del día D (ver 4-A punto 5) deja de ser un problema estructural.
+
+- **Lenore — el copiloto en vivo. Línea de producto propia, no una feature.** Vive **arriba** de la operación (predice y avisa), mientras el árbitro vive **después** de ella (juzga con hechos sellados). Alcance: proyección de llegada tarde, no-show anticipado, sugerencia de unidad cercana para el coordinador, y alertas auditables ("te avisamos 14 veces, 11 se salvaron").
+  - **Orden:** va **después de `auth-rbac`** (Columna B). Sin login ni roles, un copiloto no puede respetar fronteras.
+  - **Regla dura, sin excepción:** **la alerta jamás toca el veredicto.** Lenore opera y avisa; el juez sella la verdad. Son dos planos que no se cruzan. (Ver también sección 7, regla de AI/asistentes.)
+  - **Semilla para Lenore:** cuando se toque el archivador, dejar `telemetry_points` **cómoda para consultas de "últimos 15 minutos"** (índices/orden por tiempo). El copiloto vive de la ventana reciente; que la consulta salga barata desde el diseño.
+
+- **Pasajeros identificables = datos personales (LFPDPPP).** Cualquier feature que identifique pasajeros cruza la ley de protección de datos. **Conteos anónimos primero**; identidad solo con diseño legal explícito (consentimiento, propósito, contrato). No se cuela por conveniencia de producto.
+
+---
+
+## 6. Cómo usar este anexo
 
 - **Cuando termines una pieza:** táchala aquí y, si generó una ley nueva, súbela al Marco.
 - **Cuando arranques una ficha para Devin:** que la ficha referencie este anexo y el Marco, no la memoria del chat.
 - **Regla que no cambia:** lo que no está escrito (en el Marco o en una ficha), para Devin no existe. Este anexo es para ti; las fichas son para Devin.
 
-## 6. Reglas de trabajo aprendidas
+## 7. Reglas de trabajo aprendidas
 
-- **Una rama, un PR.** Dos PRs desde la misma rama hacen imposible saber qué ya entró a `main` y cuál sigue pendiente. Si necesitas separar código de docs, hazlo en ramas distintas.
-- **Antes de mergear, revisar la pestaña "Files changed".** Si el PR promete código y sólo trae documentos, algo se quedó fuera. No mergear hasta que los archivos cambien sean los esperados.
+1. **Una rama, un PR.** Dos PRs desde la misma rama hacen imposible saber qué ya entró a `main` y cuál sigue pendiente. Si necesitas separar código de docs, hazlo en ramas distintas.
+2. **Antes de mergear, revisar la pestaña "Files changed".** El título no es evidencia. Si el PR promete código y sólo trae documentos, algo se quedó fuera. No mergear hasta que los archivos cambiados sean los esperados.
+3. **Un solo frente mergea a `main` a la vez.** El otro construye en su rama y espera turno. Dos frentes mergeando en paralelo hacen imposible saber qué versión de la verdad quedó.
+4. **Trabajo que toca la lógica del árbitro o del catálogo pasa por validación contra el Marco antes de mergear** — aunque venga del frente de diseño. El Marco es la ley; ninguna cara de UI ni conveniencia de producto la afloja.
+5. **Un test que pasa con el código roto no es una guarda.** Se prueba primero contra la versión rota: si pasa igual, no está midiendo nada. (Corolario vigente: sin BD local, la suite de integración pasa por omisión — ver 4-B punto 12.)
+6. **AI / asistentes: nunca en el veredicto.** Leen hechos sellados y **explican**; no juzgan. Cada afirmación de un asistente debe poder señalar el hecho de donde salió. Respetan las mismas fronteras de confidencialidad que las pantallas (el cliente jamás ve la operación interna del carrier). Se consulta sobre datos propios; **no se entrenan modelos con ellos.**
+
+**Regla de fechas civiles (la que evita que la saga del reloj vuelva en un sexto lugar):**
+
+Para toda fecha civil (YYYY-MM-DD) se usan las tres funciones canónicas de `@jtel/domain`, **nunca** se construye un `Date` a mano ni se convierte de ida y vuelta:
+
+- **`dayForDateQuery(fechaIso): Date`** — string civil → `Date` anclado a mediodía UTC, para armar consultas por día a la BD.
+- **`civilDatesInRange(fromIso, toIso, activeDays): string[]`** — itera fechas civiles en un rango filtrando por día de la semana, todo en strings; nunca cruza cambio de día.
+- **`addDaysIso(fechaIso, days): string`** — aritmética de días puramente UTC (`setUTCDate`), cero `setHours`, cero dependencia del runtime TZ.
+
+Todas anclan **mediodía UTC** para que `getUTCDay()`/el string salgan del mismo calendario en cualquier zona entre UTC-12 y UTC+12. **Nunca** `new Date(`${fecha}T00:00:00`)` sin `Z`: esa es exactamente la firma del bug (se interpreta en la zona local del proceso). Esto no es nota histórica — es la regla que se aplica cada vez que se toca una fecha civil.
