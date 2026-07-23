@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { createDb, createRepositories, serviceOccurrences, trips } from "../src/index.js";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import type { ContractPolicy } from "@jtel/domain";
 
 const DATABASE_URL =
@@ -263,5 +263,64 @@ describe("deleteBeyondHorizon — guarda de compliance_fact", () => {
     const goneD = await repos.occurrences.findById(occD.id);
     expect(goneC).toBeNull();
     expect(goneD).toBeNull();
+  });
+});
+
+describe("generateForProfile — alineación de calendario (TZ=UTC simula Vercel)", () => {
+  /**
+   * Regresión del bug de zona horaria en el generador de ocurrencias.
+   *
+   * Código roto: el bucle itera `current: Date` en UTC midnight y llama
+   * `toIsoDate(current) = localDateIso(midnight UTC, Juárez)` → da el día
+   * ANTERIOR en Juárez (medianoche UTC = 18:00 Juárez del día previo en verano).
+   * Resultado: domingos insertados, viernes faltantes para perfiles L-V.
+   *
+   * Código arreglado: ambos, el check de DOW y el service_date, salen del
+   * mismo string de fecha civil (sin conversión Date → Juárez).
+   *
+   * El caso exacto de la simulación del diagnóstico: cron del 26-jul generando
+   * desde 2026-08-22 (sáb) hasta 2026-08-24 (lun). El único día hábil L-V
+   * en el rango es lun-24; el código roto insertaba "2026-08-23" (dom Juárez).
+   */
+  it("rango sáb-22 a lun-24 ago-2026: inserta lun-24, no dom-23", async () => {
+    if (!dbAvailable) return;
+
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const tecma = await repos.accounts.findBySlug("tecma");
+    if (!tecma) return;
+    const profiles = await repos.profiles.findForClient(tecma.id);
+    if (profiles.length === 0) return;
+    const profile = profiles[0]!; // activeDays=[1,2,3,4,5] (L-V)
+
+    // fromDate = sáb 2026-08-22T00:00:00Z, toDate = lun 2026-08-24T00:00:00Z
+    // — mismos instantes que construye renewRollingWindow con startOfDay en UTC.
+    const from = new Date("2026-08-22T00:00:00.000Z");
+    const to = new Date("2026-08-24T00:00:00.000Z");
+
+    const result = await repos.occurrences.generateForProfile(profile.id, from, to);
+
+    try {
+      // Solo lunes-24 es día hábil en el rango → debe generarse exactamente 1.
+      expect(result.createdIds.length).toBe(1);
+
+      const [row] = await db
+        .select({ serviceDate: serviceOccurrences.serviceDate })
+        .from(serviceOccurrences)
+        .where(eq(serviceOccurrences.id, result.createdIds[0]!));
+
+      // Con código roto:    row.serviceDate = "2026-08-23" (dom Juárez) → falla.
+      // Con código arreglado: row.serviceDate = "2026-08-24" (lun)       → pasa.
+      expect(row?.serviceDate).toBe("2026-08-24");
+      expect(row?.serviceDate).not.toBe("2026-08-23");
+    } finally {
+      // Cascade limpia el trip asociado.
+      if (result.createdIds.length > 0) {
+        await db
+          .delete(serviceOccurrences)
+          .where(inArray(serviceOccurrences.id, result.createdIds));
+      }
+    }
   });
 });

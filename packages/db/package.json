@@ -19,7 +19,7 @@
     "seed": "tsx src/seed.ts",
     "trim-far": "tsx src/trim-far-occurrences.ts",
     "studio": "drizzle-kit studio",
-    "test": "vitest run"
+    "test": "TZ=UTC vitest run"
   },
   "dependencies": {
     "@jtel/domain": "workspace:*",

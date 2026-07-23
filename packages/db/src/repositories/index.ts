@@ -41,7 +41,7 @@ import {
   clientCarrierAuthorizations,
 } from "../schema/index.js";
 import type { ContractPolicy, CreateContractInput, CreateServiceProfileInput } from "@jtel/domain";
-import { localDateIso, JTTEL_TZ } from "@jtel/domain";
+import { localDateIso, JTTEL_TZ, civilDatesInRange, addDaysIso } from "@jtel/domain";
 
 function suggestProfileCodeFromName(name: string): string {
   return suggestProfileCode(name);
@@ -1935,31 +1935,23 @@ export class OccurrenceRepository {
     };
 
     const rows: Row[] = [];
-    const current = new Date(start);
-    while (current <= end) {
-      const dayOfWeek = current.getDay();
-      if (activeDays.includes(dayOfWeek)) {
-        const serviceDate = this.toIsoDate(current);
-        const deadline = computeExpectedDeadline(
-          serviceDate,
-          shift.startTime,
-          anticipation,
-        );
-        const { windowStart, windowEnd } = computeEvidenceWindow(deadline, policy);
-        rows.push({
-          serviceProfileId: profileId,
-          contractId: profile.contractId,
-          routeShiftId: profile.routeShiftId,
-          kmlVersionId: kmlVersion?.id,
-          serviceDate,
-          expectedDeadline: deadline,
-          expectedGeofenceId: profile.geofenceId,
-          referenceUnitId: profile.referenceUnitId,
-          windowStart,
-          windowEnd,
-        });
-      }
-      current.setDate(current.getDate() + 1);
+    const startIso = start.toISOString().slice(0, 10);
+    const endIso = end.toISOString().slice(0, 10);
+    for (const serviceDate of civilDatesInRange(startIso, endIso, activeDays)) {
+      const deadline = computeExpectedDeadline(serviceDate, shift.startTime, anticipation);
+      const { windowStart, windowEnd } = computeEvidenceWindow(deadline, policy);
+      rows.push({
+        serviceProfileId: profileId,
+        contractId: profile.contractId,
+        routeShiftId: profile.routeShiftId,
+        kmlVersionId: kmlVersion?.id,
+        serviceDate,
+        expectedDeadline: deadline,
+        expectedGeofenceId: profile.geofenceId,
+        referenceUnitId: profile.referenceUnitId,
+        windowStart,
+        windowEnd,
+      });
     }
 
     if (rows.length === 0) {
@@ -2001,10 +1993,13 @@ export class OccurrenceRepository {
    * genera el tramo faltante hasta min(hoy+days, vigencia del contrato).
    */
   async renewRollingWindow(days: number = OccurrenceRepository.ROLLING_DAYS) {
-    const today = this.startOfDay(new Date());
-    const todayIso = this.toIsoDate(today);
-    const horizon = this.addDays(today, days);
-    const horizonIso = this.toIsoDate(horizon);
+    // localDateIso(new Date(), JTTEL_TZ): fecha civil Juárez en el instante exacto
+    // en que corre la función — correcto en verano (00:00 Juárez = 06:00 UTC)
+    // y en invierno (23:00 Juárez = 06:00 UTC, un día antes del UTC date).
+    // addDaysIso: aritmética puramente UTC (setUTCDate), sin setHours ni TZ local.
+    const todayIso = localDateIso(new Date(), JTTEL_TZ);
+    const horizonIso = addDaysIso(todayIso, days);
+    const today = new Date(`${todayIso}T00:00:00.000Z`); // solo para comparación Date con `from`
 
     const profiles = await this.db.query.serviceProfiles.findMany({
       where: eq(serviceProfiles.active, true),
@@ -2062,7 +2057,7 @@ export class OccurrenceRepository {
         profileName: profile.name,
         created: result.createdIds.length,
         skipped: result.skippedExisting,
-        from: this.toIsoDate(from),
+        from: from.toISOString().slice(0, 10),
         to: targetIso,
       });
     }
