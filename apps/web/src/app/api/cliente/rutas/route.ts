@@ -218,7 +218,10 @@ export async function POST(request: Request) {
         return back(request, client.slug, scope, { error: "Sube un KML o pega waypoints para la variante." });
       }
 
-      const variant = await repos.routes.createVariant({ routeId, name: variantName });
+      const variant = await repos.routes.createVariant(client.id, scope, { routeId, name: variantName });
+      if (!variant) {
+        return back(request, client.slug, scope, { error: "Ruta no válida para esta unidad." });
+      }
       await repos.routes.addKmlVersion({
         routeId,
         variantId: variant.id,
@@ -234,7 +237,12 @@ export async function POST(request: Request) {
       if (!variantId || !["activa", "legacy"].includes(newStatus)) {
         return back(request, client.slug, scope, { error: "Datos de variante inválidos." });
       }
-      const result = await repos.routes.updateVariantStatus(variantId, newStatus as "activa" | "legacy");
+      const result = await repos.routes.updateVariantStatus(
+        variantId,
+        client.id,
+        scope,
+        newStatus as "activa" | "legacy",
+      );
       if (!result.ok) {
         if (result.reason === "last_active") {
           return back(request, client.slug, scope, {
