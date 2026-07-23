@@ -65,6 +65,19 @@ export function civilDatesInRange(
 }
 
 /**
+ * Suma `days` días a una fecha civil YYYY-MM-DD y devuelve el resultado como string.
+ *
+ * Ancla mediodía UTC — mismo principio que `dayForDateQuery` y `civilDatesInRange`.
+ * Usa `setUTCDate`/`getUTCDate` para que la aritmética sea puramente UTC:
+ * cero `setHours`, cero dependencia del runtime TZ.
+ */
+export function addDaysIso(fechaIso: string, days: number): string {
+  const d = new Date(`${fechaIso}T12:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
  * Formatea un timestamp como "HH:MM" (24h) en la zona indicada.
  * Para UI: deadlines, llegadas, ventanas, tooltips del mapa.
  */

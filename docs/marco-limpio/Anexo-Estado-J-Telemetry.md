@@ -151,6 +151,8 @@ Esto no bloquea el diagnóstico de hoy, pero SÍ bloquea salir a producción con
 7. **Historial/Monitoreo — mapa espagueti:** el mapa del historial del turno dibuja las 14+ rutas encimadas y queda ilegible. Ya tiene filtros de Unidad/Veredicto; el arreglo probable es de *defaults* (una ruta a la vez, filtro activado de inicio, u opacidad menor), no de arquitectura. Deuda de UI anotada el 20 jul para no olvidarla.
 8. **Discrepancia Monitoreo / Historial — 0 rutas en torre (hallazgo 22 jul, ABIERTO):** Campus Santos Dumont, 2026-07-22, Primer Turno 06:00: Historial reporta 14 rutas sin verificar; Monitoreo reporta 0 programadas (y 0 en total). Confirmado pre-existente en `main` — no relacionado con los PRs de fuga de inventario. Causa probable: `pickActiveShift` devuelve un `shiftId` que no coincide con el `shiftId` almacenado en las ocurrencias del campus. Requiere ficha aparte.
 
+9. **`renewRollingWindow` y `generateForProfile` aún intercambian objetos `Date` donde deberían pasar fechas civiles como string (hallazgo 23 jul):** Internamente quedan varios saltos por `Date` que dependen del runtime TZ — por ejemplo `new Date(`${maxDate}T00:00:00`)` sin `Z` para calcular `next`, y el hecho de que `generateForProfile` recibe `Date` en vez de strings. Correcto en UTC (Vercel), frágil fuera. Deuda de diseño — no urgente, no tocar sin ficha.
+
 ---
 
 ## 5. Cómo usar este anexo

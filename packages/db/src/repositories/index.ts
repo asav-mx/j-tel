@@ -41,7 +41,7 @@ import {
   clientCarrierAuthorizations,
 } from "../schema/index.js";
 import type { ContractPolicy, CreateContractInput, CreateServiceProfileInput } from "@jtel/domain";
-import { localDateIso, JTTEL_TZ, civilDatesInRange } from "@jtel/domain";
+import { localDateIso, JTTEL_TZ, civilDatesInRange, addDaysIso } from "@jtel/domain";
 
 function suggestProfileCodeFromName(name: string): string {
   return suggestProfileCode(name);
@@ -1996,10 +1996,10 @@ export class OccurrenceRepository {
     // localDateIso(new Date(), JTTEL_TZ): fecha civil Juárez en el instante exacto
     // en que corre la función — correcto en verano (00:00 Juárez = 06:00 UTC)
     // y en invierno (23:00 Juárez = 06:00 UTC, un día antes del UTC date).
+    // addDaysIso: aritmética puramente UTC (setUTCDate), sin setHours ni TZ local.
     const todayIso = localDateIso(new Date(), JTTEL_TZ);
-    const today = new Date(`${todayIso}T00:00:00.000Z`); // ancla UTC al día civil Juárez
-    const horizon = this.addDays(today, days);
-    const horizonIso = horizon.toISOString().slice(0, 10);
+    const horizonIso = addDaysIso(todayIso, days);
+    const today = new Date(`${todayIso}T00:00:00.000Z`); // solo para comparación Date con `from`
 
     const profiles = await this.db.query.serviceProfiles.findMany({
       where: eq(serviceProfiles.active, true),

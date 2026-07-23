@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dayForDateQuery, localDateIso, JTTEL_TZ, civilDatesInRange } from "./index.js";
+import { dayForDateQuery, localDateIso, JTTEL_TZ, civilDatesInRange, addDaysIso } from "./index.js";
 
 /**
  * Suite de regresión para `dayForDateQuery`.
@@ -82,6 +82,16 @@ describe("calendar loop — DOW/serviceDate (TZ=UTC simula Vercel)", () => {
       "2026-08-21",
       "2026-08-24",
     ]);
+  });
+
+  it("addDaysIso: cruza fin de mes sin setHours ni TZ local", () => {
+    // 2026-01-30 + 3 días = 2026-02-02 (enero tiene 31 días, cruza a febrero)
+    expect(addDaysIso("2026-01-30", 3)).toBe("2026-02-02");
+  });
+
+  it("addDaysIso: cruza fin de año sin setHours ni TZ local", () => {
+    // 2026-12-30 + 3 días = 2027-01-02
+    expect(addDaysIso("2026-12-30", 3)).toBe("2027-01-02");
   });
 
   it("arreglo: bucle viernes-21 a lunes-24, genera vie-21 y lun-24, omite sáb/dom", () => {
