@@ -40,6 +40,31 @@ export function dayForDateQuery(fechaIso: string): Date {
 }
 
 /**
+ * Devuelve las fechas civiles YYYY-MM-DD en [fromIso, toIso] cuyo día de la
+ * semana (0=Dom … 6=Sáb) esté en `activeDays`.
+ *
+ * Itera sobre strings de fecha civil — el DOW y el string salen del mismo
+ * calendario. Usa mediodía UTC para derivar el DOW: nunca cruza cambio de día
+ * entre UTC-12 y UTC+12, por lo que getUTCDay() es siempre el día civil correcto.
+ */
+export function civilDatesInRange(
+  fromIso: string,
+  toIso: string,
+  activeDays: number[],
+): string[] {
+  const result: string[] = [];
+  let current = fromIso;
+  while (current <= toIso) {
+    if (activeDays.includes(new Date(`${current}T12:00:00.000Z`).getUTCDay()))
+      result.push(current);
+    const d = new Date(`${current}T12:00:00.000Z`);
+    d.setUTCDate(d.getUTCDate() + 1);
+    current = d.toISOString().slice(0, 10);
+  }
+  return result;
+}
+
+/**
  * Formatea un timestamp como "HH:MM" (24h) en la zona indicada.
  * Para UI: deadlines, llegadas, ventanas, tooltips del mapa.
  */

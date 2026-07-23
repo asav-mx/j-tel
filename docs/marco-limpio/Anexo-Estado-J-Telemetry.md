@@ -2,7 +2,7 @@
 
 **Qué es esto:** una foto del estado del producto para no cargar las decisiones en la cabeza. Cuelga del Marco Maestro (no lo reemplaza). El Marco sigue siendo la fuente de verdad de las leyes; esto solo registra dónde estamos, qué se decidió y qué falta. Se actualiza cuando cambie algo grande.
 
-**Fecha de este corte:** 22 de julio de 2026 (7 PRs mergeados + 1 PR abierto pendiente de merge).
+**Fecha de este corte:** 23 de julio de 2026 (PR #65 abierto; auditoría de verificación 21–23 jul completada).
 
 ---
 
@@ -136,6 +136,8 @@ Estos son los frentes abiertos. NO se construyen todos ahora — se vuelven fich
 
    **Aprobación de variantes por la planta (Ficha 3 — diseño acordado 20 jul, por construir):** en vez de que la planta revise cada servicio desviado, aprueba el CATÁLOGO de trazados una vez. El sistema detecta el patrón ("Riveras-B llega por otra calle en N servicios"), lo propone con mapa, la planta acepta → el KML entra al catálogo del perfil → de ahí en adelante automático. Control donde debe (quien paga define qué caminos valen), trabajo de una vez, no diario. Política hacia adelante; no reverdea hechos viejos. UI, depende de la Ficha 2.
 4. **Seguimiento condicionado** (congelado, esperando datos): si el margen de 45 min no captura suficientes llegadas tardías, evaluar seguir midiendo a la unidad que demostró arrancar la ruta (arranque de KML + dirección coherente), con tope duro = duración máx. de ruta. Toca el árbitro → ficha con parada obligatoria. **No construir hasta que los datos lo justifiquen.**
+
+5. **~4% de los hechos congelados no son reproducibles por el motor actual (hallazgo auditoría 23 jul — SIN INVESTIGAR):** En el compare-verify-dry de 21, 22 y 23 jul, cada fecha muestra exactamente 1 de 27 servicios donde el motor hoy dice `no_cumplido` (`unit=— A=— B=—`) pero el hecho guardado dice `cumplido`. Hipótesis: el motor de dry-run usa el KML/geocerca ACTUAL, no el que estaba vigente cuando se generó el veredicto original. Si la geocerca o el trazado de esa ruta se actualizó después de la verificación, el motor hoy no encuentra candidatas donde antes sí las encontró — el hecho congelado y el motor divergen por diferencia de estado del catálogo, no por bug de código. **Relevante para Ficha 4 (defensa del carrier):** si el carrier impugna un `no_cumplido`, el sistema no puede reproducir fielmente la evaluación del día D con los datos del día D. No investigado, no bloqueante. Requiere ficha aparte con aprobación explícita.
 
 ### Columna B — Infraestructura para producción (deuda estructural)
 Esto no bloquea el diagnóstico de hoy, pero SÍ bloquea salir a producción con clientes reales. Ya está **diseñado en la Pieza 4 del Marco**; falta construirlo.

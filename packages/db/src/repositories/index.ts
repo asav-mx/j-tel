@@ -41,7 +41,7 @@ import {
   clientCarrierAuthorizations,
 } from "../schema/index.js";
 import type { ContractPolicy, CreateContractInput, CreateServiceProfileInput } from "@jtel/domain";
-import { localDateIso, JTTEL_TZ } from "@jtel/domain";
+import { localDateIso, JTTEL_TZ, civilDatesInRange } from "@jtel/domain";
 
 function suggestProfileCodeFromName(name: string): string {
   return suggestProfileCode(name);
@@ -1935,40 +1935,23 @@ export class OccurrenceRepository {
     };
 
     const rows: Row[] = [];
-    // Iteramos sobre fechas civiles como strings para que el DOW check y el
-    // service_date salgan del mismo calendario. Con el enfoque anterior
-    // (`current: Date` en UTC midnight + `toIsoDate`) el DOW venía del día UTC
-    // pero el service_date del día Juárez — un día antes en verano (UTC-6).
-    let currentIso = start.toISOString().slice(0, 10);
+    const startIso = start.toISOString().slice(0, 10);
     const endIso = end.toISOString().slice(0, 10);
-    while (currentIso <= endIso) {
-      // Mediodía UTC nunca toca un cambio de día entre UTC-12 y UTC+12.
-      const dayOfWeek = new Date(`${currentIso}T12:00:00.000Z`).getUTCDay();
-      if (activeDays.includes(dayOfWeek)) {
-        const serviceDate = currentIso;
-        const deadline = computeExpectedDeadline(
-          serviceDate,
-          shift.startTime,
-          anticipation,
-        );
-        const { windowStart, windowEnd } = computeEvidenceWindow(deadline, policy);
-        rows.push({
-          serviceProfileId: profileId,
-          contractId: profile.contractId,
-          routeShiftId: profile.routeShiftId,
-          kmlVersionId: kmlVersion?.id,
-          serviceDate,
-          expectedDeadline: deadline,
-          expectedGeofenceId: profile.geofenceId,
-          referenceUnitId: profile.referenceUnitId,
-          windowStart,
-          windowEnd,
-        });
-      }
-      // Avanzar al siguiente día civil: noon UTC + 1 día = noon UTC del siguiente.
-      const d = new Date(`${currentIso}T12:00:00.000Z`);
-      d.setUTCDate(d.getUTCDate() + 1);
-      currentIso = d.toISOString().slice(0, 10);
+    for (const serviceDate of civilDatesInRange(startIso, endIso, activeDays)) {
+      const deadline = computeExpectedDeadline(serviceDate, shift.startTime, anticipation);
+      const { windowStart, windowEnd } = computeEvidenceWindow(deadline, policy);
+      rows.push({
+        serviceProfileId: profileId,
+        contractId: profile.contractId,
+        routeShiftId: profile.routeShiftId,
+        kmlVersionId: kmlVersion?.id,
+        serviceDate,
+        expectedDeadline: deadline,
+        expectedGeofenceId: profile.geofenceId,
+        referenceUnitId: profile.referenceUnitId,
+        windowStart,
+        windowEnd,
+      });
     }
 
     if (rows.length === 0) {
@@ -2010,10 +1993,11 @@ export class OccurrenceRepository {
    * genera el tramo faltante hasta min(hoy+days, vigencia del contrato).
    */
   async renewRollingWindow(days: number = OccurrenceRepository.ROLLING_DAYS) {
-    const today = this.startOfDay(new Date());
-    // .toISOString().slice(0,10): en UTC runtime, startOfDay = midnight UTC → fecha UTC.
-    // No usar toIsoDate (= localDateIso) que daría el día anterior en Juárez.
-    const todayIso = today.toISOString().slice(0, 10);
+    // localDateIso(new Date(), JTTEL_TZ): fecha civil Juárez en el instante exacto
+    // en que corre la función — correcto en verano (00:00 Juárez = 06:00 UTC)
+    // y en invierno (23:00 Juárez = 06:00 UTC, un día antes del UTC date).
+    const todayIso = localDateIso(new Date(), JTTEL_TZ);
+    const today = new Date(`${todayIso}T00:00:00.000Z`); // ancla UTC al día civil Juárez
     const horizon = this.addDays(today, days);
     const horizonIso = horizon.toISOString().slice(0, 10);
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dayForDateQuery, localDateIso, JTTEL_TZ } from "./index.js";
+import { dayForDateQuery, localDateIso, JTTEL_TZ, civilDatesInRange } from "./index.js";
 
 /**
  * Suite de regresión para `dayForDateQuery`.
@@ -67,6 +67,21 @@ describe("calendar loop — DOW/serviceDate (TZ=UTC simula Vercel)", () => {
 
     expect(generated).toEqual(["2026-08-24"]); // solo lunes ✓
     expect(generated).not.toContain("2026-08-23"); // domingo nunca se genera ✓
+  });
+
+  it("civilDatesInRange: rango sáb-22 a lun-24, L-V → solo lun-24 (guarda de regresión)", () => {
+    // FALLA con implementación rota (localDateIso sobre midnight UTC → dom-23).
+    // PASA con implementación correcta (noon UTC → lun-24).
+    expect(civilDatesInRange("2026-08-22", "2026-08-24", [1, 2, 3, 4, 5])).toEqual([
+      "2026-08-24",
+    ]);
+  });
+
+  it("civilDatesInRange: rango vie-21 a lun-24, L-V → [vie-21, lun-24]", () => {
+    expect(civilDatesInRange("2026-08-21", "2026-08-24", [1, 2, 3, 4, 5])).toEqual([
+      "2026-08-21",
+      "2026-08-24",
+    ]);
   });
 
   it("arreglo: bucle viernes-21 a lunes-24, genera vie-21 y lun-24, omite sáb/dom", () => {
