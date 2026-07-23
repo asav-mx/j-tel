@@ -104,6 +104,22 @@ export async function RutasUnitView({
     };
   });
 
+  // Agrupar por turno para el catálogo de variantes.
+  const shiftGroups = new Map<
+    string,
+    { shiftName: string; shiftStart: string; routes: typeof routeRows }
+  >();
+  for (const row of routeRows) {
+    if (!shiftGroups.has(row.shiftId)) {
+      shiftGroups.set(row.shiftId, {
+        shiftName: row.shiftName,
+        shiftStart: row.shiftStart,
+        routes: [],
+      });
+    }
+    shiftGroups.get(row.shiftId)!.routes.push(row);
+  }
+
   const shiftOptions = shifts.map((s) => ({
     id: s.id,
     name: s.name,
@@ -321,109 +337,227 @@ export async function RutasUnitView({
         ) : null}
 
         {routeShifts.length > 0 ? (
-          <Card title="Variantes de trazado">
-            <p className="mb-3 text-xs text-[var(--muted)]">
-              <strong>Variante</strong> = caminos alternos que coexisten como válidos hoy (ej. por
-              MEX-45 o por la Panamericana). El motor evalúa contra todas las variantes{" "}
-              <span className="text-white">activas</span> — una unidad cumple si sirve por
-              CUALQUIERA de ellas. No confundir con <em>versión</em> (historia temporal de una
-              variante).
+          <Card
+            title={`Catálogo de variantes — ${routeRows.reduce((n, r) => n + r.variants.length, 0)} variante(s) · ${routeRows.reduce((n, r) => n + r.variants.filter((v) => v.status === "activa").length, 0)} activa(s)`}
+          >
+            <p className="mb-5 text-xs text-[var(--muted)]">
+              <strong className="text-white">Variante</strong> = caminos alternos que coexisten hoy
+              (MEX-45, Panamericana…). El motor evalúa contra todas las{" "}
+              <span className="text-white">activas</span> — la unidad cumple si sirve cualquiera de
+              ellas. <strong className="text-white">Versión</strong> = historia temporal de una
+              variante; las anteriores se conservan para auditoría.
             </p>
 
-            {routeRows.map((row) =>
-              row.variants.length > 0 ? (
-                <div key={row.routeId} className="mb-4 rounded border border-white/5 p-3">
-                  <p className="mb-2 text-sm font-medium text-white">
-                    {row.routeName} · {row.shiftName}
-                  </p>
-                  <ul className="space-y-1">
-                    {row.variants.map((v) => (
-                      <li key={v.id} className="flex items-center gap-2 text-sm">
-                        <span
-                          className={
-                            v.status === "activa"
-                              ? "rounded bg-emerald-500/20 px-1.5 py-0.5 text-xs text-emerald-300"
-                              : "rounded bg-white/10 px-1.5 py-0.5 text-xs text-white/50"
-                          }
-                        >
-                          {v.status}
-                        </span>
-                        <span className="text-white">{v.name}</span>
-                        <span className="text-[var(--muted)]">
-                          ({v.kmlVersions?.length ?? 0} versión(es))
-                        </span>
-                        <form
-                          action="/api/cliente/rutas"
-                          method="post"
-                          className="ml-auto"
-                        >
-                          <input type="hidden" name="clientSlug" value={client.slug} />
-                          {scopeHiddenFields}
-                          <input type="hidden" name="action" value="variant_status" />
-                          <input type="hidden" name="variantId" value={v.id} />
-                          <input
-                            type="hidden"
-                            name="status"
-                            value={v.status === "activa" ? "legacy" : "activa"}
-                          />
-                          <button
-                            type="submit"
-                            className="text-xs text-[var(--accent)] hover:underline"
-                          >
-                            {v.status === "activa" ? "→ legacy" : "→ activa"}
-                          </button>
-                        </form>
-                      </li>
-                    ))}
-                  </ul>
+            {Array.from(shiftGroups.entries()).map(([sid, group]) => (
+              <div key={sid} className="mb-8">
+                {/* Encabezado de turno */}
+                <div className="mb-3 flex flex-wrap items-baseline gap-x-3 border-b border-white/5 pb-2">
+                  <span
+                    className="font-mono text-xs font-medium uppercase tracking-widest"
+                    style={{ color: "#7A9CB8" }}
+                  >
+                    {group.shiftName}
+                  </span>
+                  <span className="font-mono text-xs tabular-nums text-[var(--muted)]">
+                    inicio {group.shiftStart}
+                  </span>
+                  <span className="font-mono text-xs text-[var(--muted)]">
+                    · {group.routes.length} ruta{group.routes.length !== 1 ? "s" : ""}
+                  </span>
                 </div>
-              ) : null,
-            )}
 
-            <details className="mt-4">
-              <summary className="cursor-pointer text-sm text-[var(--accent)]">
-                + Nueva variante de trazado
-              </summary>
-              <form
-                action="/api/cliente/rutas"
-                method="post"
-                encType="multipart/form-data"
-                className="mt-3 grid gap-3 md:grid-cols-2"
-              >
-                <input type="hidden" name="clientSlug" value={client.slug} />
-                {scopeHiddenFields}
-                <input type="hidden" name="action" value="variant_create" />
-                <div className="md:col-span-2">
-                  <label className={labelClass}>
-                    Ruta
-                    <RouteShiftSelect
-                      rows={routeRows}
-                      shifts={shiftOptions}
-                      name="routeId"
-                      required
-                    />
-                  </label>
+                <div className="space-y-3 border-l border-white/5 pl-3">
+                  {group.routes.map((row) => {
+                    const activas = row.variants.filter((v) => v.status === "activa");
+                    const legacyCount = row.variants.filter((v) => v.status === "legacy").length;
+                    return (
+                      <div
+                        key={row.routeId}
+                        className="rounded border border-white/5"
+                        style={{ background: "rgba(0,0,0,.15)" }}
+                      >
+                        {/* Encabezado de ruta */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-white/5 px-3 py-2">
+                          <span className="text-sm font-medium text-white">{row.routeName}</span>
+                          <span
+                            className="font-mono text-xs tabular-nums"
+                            style={{ color: "#7A9CB8" }}
+                          >
+                            {activas.length} activa{activas.length !== 1 ? "s" : ""}
+                            {legacyCount > 0 ? ` · ${legacyCount} legacy` : ""}
+                          </span>
+                          {activas.length === 0 && (
+                            <span
+                              className="font-mono text-[10.5px] uppercase tracking-[.1em]"
+                              style={{ color: "#E3A81F" }}
+                            >
+                              sin activas — motor sin trazado
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Tabla de variantes */}
+                        {row.variants.length > 0 && (
+                          <table className="w-full text-sm">
+                            <tbody className="divide-y divide-white/5">
+                              {row.variants.map((v) => {
+                                const isLastActive =
+                                  v.status === "activa" && activas.length === 1;
+                                const vCount = v.kmlVersions?.length ?? 0;
+                                return (
+                                  <tr key={v.id}>
+                                    <td className="w-32 px-3 py-2">
+                                      {v.status === "activa" ? (
+                                        <span
+                                          style={{
+                                            display: "inline-block",
+                                            border: "1.5px solid #7A9CB8",
+                                            borderRadius: "2px",
+                                            padding: "3.5px 10px 2.5px",
+                                            fontFamily:
+                                              '"IBM Plex Mono",ui-monospace,monospace',
+                                            fontSize: "10.5px",
+                                            fontWeight: 500,
+                                            letterSpacing: ".13em",
+                                            textTransform: "uppercase",
+                                            color: "#7A9CB8",
+                                          }}
+                                        >
+                                          Activa
+                                        </span>
+                                      ) : (
+                                        <span
+                                          style={{
+                                            display: "inline-block",
+                                            border: "1.5px solid #71808F",
+                                            borderRadius: "2px",
+                                            padding: "3.5px 10px 2.5px",
+                                            fontFamily:
+                                              '"IBM Plex Mono",ui-monospace,monospace',
+                                            fontSize: "10.5px",
+                                            fontWeight: 500,
+                                            letterSpacing: ".13em",
+                                            textTransform: "uppercase",
+                                            color: "#71808F",
+                                          }}
+                                        >
+                                          Legacy
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-2 text-white">{v.name}</td>
+                                    <td className="px-3 py-2 font-mono text-xs tabular-nums text-[var(--muted)]">
+                                      {vCount} versión{vCount !== 1 ? "es" : ""}
+                                    </td>
+                                    <td className="px-3 py-2 text-right">
+                                      {isLastActive ? (
+                                        <span
+                                          className="text-xs text-[var(--muted)]"
+                                          title="Única variante activa — el motor necesita al menos una para verificar"
+                                        >
+                                          única activa
+                                        </span>
+                                      ) : (
+                                        <form
+                                          action="/api/cliente/rutas"
+                                          method="post"
+                                          className="inline"
+                                        >
+                                          <input
+                                            type="hidden"
+                                            name="clientSlug"
+                                            value={client.slug}
+                                          />
+                                          {scopeHiddenFields}
+                                          <input
+                                            type="hidden"
+                                            name="action"
+                                            value="variant_status"
+                                          />
+                                          <input
+                                            type="hidden"
+                                            name="variantId"
+                                            value={v.id}
+                                          />
+                                          <input
+                                            type="hidden"
+                                            name="status"
+                                            value={v.status === "activa" ? "legacy" : "activa"}
+                                          />
+                                          <button
+                                            type="submit"
+                                            className="text-xs hover:underline"
+                                            style={{ color: "#4C9AE0" }}
+                                          >
+                                            {v.status === "activa" ? "→ legacy" : "→ activa"}
+                                          </button>
+                                        </form>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        )}
+
+                        {row.variants.length === 0 && (
+                          <p className="px-3 py-2 text-xs text-[var(--muted)]">
+                            Sin variantes — sube un KML en "Actualizar trazado" para crear la
+                            variante Principal automáticamente.
+                          </p>
+                        )}
+
+                        {/* Form de nueva variante, anclado a esta ruta */}
+                        <details className="border-t border-white/5">
+                          <summary
+                            className="cursor-pointer px-3 py-2 text-xs hover:underline"
+                            style={{ color: "#4C9AE0" }}
+                          >
+                            + Nueva variante
+                          </summary>
+                          <form
+                            action="/api/cliente/rutas"
+                            method="post"
+                            encType="multipart/form-data"
+                            className="grid gap-3 px-3 pb-3 pt-2 md:grid-cols-2"
+                          >
+                            <input type="hidden" name="clientSlug" value={client.slug} />
+                            {scopeHiddenFields}
+                            <input type="hidden" name="action" value="variant_create" />
+                            <input type="hidden" name="routeId" value={row.routeId} />
+                            <label className={labelClass}>
+                              Nombre de la variante
+                              <input
+                                name="variantName"
+                                required
+                                className={inputClass}
+                                placeholder="Ej. Alterna Panamericana"
+                              />
+                            </label>
+                            <label className={labelClass}>
+                              Archivo KML / KMZ
+                              <input
+                                name="kmlFile"
+                                type="file"
+                                accept=".kml,.kmz"
+                                required
+                                className={inputClass}
+                              />
+                            </label>
+                            <div className="md:col-span-2">
+                              <button type="submit" className={btnClass}>
+                                Crear variante
+                              </button>
+                            </div>
+                          </form>
+                        </details>
+                      </div>
+                    );
+                  })}
                 </div>
-                <label className={labelClass}>
-                  Nombre de la variante
-                  <input
-                    name="variantName"
-                    required
-                    className={inputClass}
-                    placeholder="Ej. Alterna Panamericana"
-                  />
-                </label>
-                <label className={labelClass}>
-                  Archivo KML / KMZ
-                  <input name="kmlFile" type="file" accept=".kml,.kmz" required className={inputClass} />
-                </label>
-                <div className="md:col-span-2">
-                  <button type="submit" className={btnClass}>
-                    Crear variante
-                  </button>
-                </div>
-              </form>
-            </details>
+              </div>
+            ))}
           </Card>
         ) : null}
       </div>

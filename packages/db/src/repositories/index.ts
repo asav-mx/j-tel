@@ -747,13 +747,36 @@ export class RouteRepository {
     });
   }
 
-  async createVariant(data: {
-    routeId: string;
-    name: string;
-    status?: "activa" | "legacy";
-    origin?: "manual" | "promovida_de_viaje";
-    originTripId?: string | null;
-  }) {
+  async createVariant(
+    clientAccountId: string,
+    scope: OperationalScope,
+    data: {
+      routeId: string;
+      name: string;
+      status?: "activa" | "legacy";
+      origin?: "manual" | "promovida_de_viaje";
+      originTripId?: string | null;
+    },
+  ) {
+    const cols = operationalScopeColumns(scope);
+    const ownerWhere =
+      scope.kind === "plant"
+        ? and(
+            eq(routes.id, data.routeId),
+            eq(routes.clientAccountId, clientAccountId),
+            eq(routes.plantId, cols.plantId!),
+          )
+        : and(
+            eq(routes.id, data.routeId),
+            eq(routes.clientAccountId, clientAccountId),
+            eq(routes.plantGroupId, cols.plantGroupId!),
+          );
+    const route = await this.db.query.routes.findFirst({
+      where: ownerWhere,
+      columns: { id: true },
+    });
+    if (!route) return null;
+
     const [variant] = await this.db
       .insert(routeKmlVariants)
       .values({
@@ -767,13 +790,50 @@ export class RouteRepository {
     return variant!;
   }
 
-  async updateVariantStatus(variantId: string, status: "activa" | "legacy") {
+  async updateVariantStatus(
+    variantId: string,
+    clientAccountId: string,
+    scope: OperationalScope,
+    status: "activa" | "legacy",
+  ): Promise<{ ok: true } | { ok: false; reason: "not_found" | "last_active" }> {
+    const cols = operationalScopeColumns(scope);
+
+    const variant = await this.db.query.routeKmlVariants.findFirst({
+      where: eq(routeKmlVariants.id, variantId),
+      columns: { id: true, routeId: true, status: true },
+      with: {
+        route: { columns: { clientAccountId: true, plantId: true, plantGroupId: true } },
+      },
+    });
+
+    const owned =
+      variant &&
+      (scope.kind === "plant"
+        ? variant.route.clientAccountId === clientAccountId &&
+          variant.route.plantId === cols.plantId
+        : variant.route.clientAccountId === clientAccountId &&
+          variant.route.plantGroupId === cols.plantGroupId);
+    if (!owned) return { ok: false, reason: "not_found" };
+
+    if (status === "legacy") {
+      const otherActives = await this.db.query.routeKmlVariants.findMany({
+        where: and(
+          eq(routeKmlVariants.routeId, variant.routeId),
+          eq(routeKmlVariants.status, "activa"),
+          ne(routeKmlVariants.id, variantId),
+        ),
+        columns: { id: true },
+      });
+      if (otherActives.length === 0) return { ok: false, reason: "last_active" };
+    }
+
     const [updated] = await this.db
       .update(routeKmlVariants)
       .set({ status, updatedAt: new Date() })
       .where(eq(routeKmlVariants.id, variantId))
       .returning();
-    return updated;
+    if (!updated) return { ok: false, reason: "not_found" };
+    return { ok: true };
   }
 
   async getRoutesForScope(scope: OperationalScope) {
