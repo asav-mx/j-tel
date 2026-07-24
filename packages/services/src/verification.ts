@@ -704,6 +704,9 @@ export class VerificationService {
     const resolvedActorKind = opts.actorKind ?? "system:cron";
     const resolvedActorId = opts.actorId ?? null;
     let pendingHistoryId: string | null = null;
+    // Guardamos el hecho pendiente para archivar condicionalmente después de saveFact,
+    // solo si el nuevo estado es distinto (ver comentario en el bloque post-saveFact).
+    let pendingRetryFact: { serviceOccurrenceId: string; status: string; timing: string | null } | null = null;
 
     // Sin force: cumplido/no_cumplido son definitivos; pendiente se reintenta.
     if (occurrence.complianceFact) {
@@ -714,7 +717,8 @@ export class VerificationService {
         return { occurrenceId, skipped: true, status: occurrence.complianceFact.status };
       }
       if (opts.force) {
-        // Re-juicio deliberado: archivar antes de borrar.
+        // Re-juicio deliberado: archivar antes de borrar. Siempre archiva aunque el
+        // resultado no cambie — alguien decidió revisarlo, y eso es información.
         if (!opts.actorKind) {
           throw new Error(
             `verifyOccurrence con force:true requiere actorKind (occurrenceId: ${occurrenceId})`,
@@ -726,7 +730,11 @@ export class VerificationService {
           resolvedActorId,
         );
       } else {
-        // Retry de pendiente_evidencia: borrar sin archivar (no hay veredicto establecido).
+        // Retry de pendiente_evidencia: borrar ahora, decidir si archivar DESPUÉS de
+        // conocer el nuevo estado. El cron corre cada minuto — un GPS sin señal
+        // durante 6 horas generaría 360 filas idénticas si archiváramos siempre.
+        // Solo se archiva cuando el estado cambia (transición real que el carrier necesita ver).
+        pendingRetryFact = occurrence.complianceFact;
         await this.repos.compliance.deleteFactForOccurrence(occurrenceId);
       }
       if (!reuseEvidence) {
@@ -1047,6 +1055,17 @@ export class VerificationService {
     // Enlazar la fila de historial al hecho sucesor recién creado.
     if (pendingHistoryId) {
       await this.repos.compliance.updateHistorySuccessor(pendingHistoryId, fact.id);
+    }
+
+    // Retry pendiente→cambio: archivar ahora que ya sabemos el nuevo estado.
+    // Si el estado NO cambió (pendiente→pendiente), no se archiva — ver comentario arriba.
+    if (pendingRetryFact && fact.status !== pendingRetryFact.status) {
+      const retryHistoryId = await this.repos.compliance.insertHistoryEntry(
+        pendingRetryFact,
+        resolvedActorKind,
+        resolvedActorId,
+      );
+      await this.repos.compliance.updateHistorySuccessor(retryHistoryId, fact.id);
     }
 
     await this.repos.compliance.addLedgerEntry({

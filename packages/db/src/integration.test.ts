@@ -627,6 +627,90 @@ describe("Pieza 1 — Historia de Hechos", () => {
     }
   });
 
+  it("retry pendiente→pendiente: no archiva; retry pendiente→resuelto: sí archiva", async () => {
+    // Verifica la regla: archivar solo cuando cambió algo, nunca por seguir igual.
+    // Un GPS sin señal puede generar 360 reintentos/hora — archivando siempre serían
+    // 360 filas idénticas. Solo se archiva en la transición real.
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    // ── Caso A: pendiente→pendiente (cron reintenta, GPS sigue sin datos) ──────
+    const { occ: occA } = await createTestFact(
+      db, repos, "2099-03-05", "2099-03-05T08:00:00Z",
+    );
+    // Simular retry: leer el hecho actual, borrarlo, insertar uno nuevo igual
+    const oldFactA = await db.query.complianceFacts.findFirst({
+      where: (f, { eq: e }) => e(f.serviceOccurrenceId, occA.id),
+    });
+    if (!oldFactA) throw new Error("setup: no fact A");
+
+    try {
+      await repos.compliance.deleteFactForOccurrence(occA.id);
+      await repos.compliance.saveFact({
+        serviceOccurrenceId: occA.id,
+        tripId: oldFactA.tripId!,
+        expectedDeadline: oldFactA.expectedDeadline,
+        expectedGeofenceId: oldFactA.expectedGeofenceId,
+        referenceUnitId: null, observedUnitId: null, observedArrivalAt: null,
+        observedRouteMatchPct: null, servedVariantId: null,
+        status: "no_cumplido", // mismo que el original
+        timing: null, lateExcusable: false, excusableReason: null,
+        routeStrictnessApplied: "destino_only",
+        contractPolicySnapshot: POLICY_FIXTURE,
+      });
+      // Sin llamar a insertHistoryEntry — la condición fact.status !== oldFact.status es false
+      const historyA = await repos.compliance.getFactHistory(occA.id);
+      expect(historyA).toHaveLength(0);
+    } finally {
+      await repos.compliance.deleteFactForOccurrence(occA.id);
+      await db.delete(complianceFactHistory).where(eq(complianceFactHistory.serviceOccurrenceId, occA.id));
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, occA.id));
+    }
+
+    // ── Caso B: pendiente→resuelto (GPS vuelve, transición real) ───────────────
+    const { occ: occB } = await createTestFact(
+      db, repos, "2099-03-06", "2099-03-06T08:00:00Z",
+    );
+    const oldFactB = await db.query.complianceFacts.findFirst({
+      where: (f, { eq: e }) => e(f.serviceOccurrenceId, occB.id),
+    });
+    if (!oldFactB) throw new Error("setup: no fact B");
+
+    try {
+      await repos.compliance.deleteFactForOccurrence(occB.id);
+      await repos.compliance.saveFact({
+        serviceOccurrenceId: occB.id,
+        tripId: oldFactB.tripId!,
+        expectedDeadline: oldFactB.expectedDeadline,
+        expectedGeofenceId: oldFactB.expectedGeofenceId,
+        referenceUnitId: null, observedUnitId: null, observedArrivalAt: null,
+        observedRouteMatchPct: null, servedVariantId: null,
+        status: "cumplido", // CAMBIO de estado
+        timing: "a_tiempo", lateExcusable: false, excusableReason: null,
+        routeStrictnessApplied: "destino_only",
+        contractPolicySnapshot: POLICY_FIXTURE,
+      });
+      const newFactB = await db.query.complianceFacts.findFirst({
+        where: (f, { eq: e }) => e(f.serviceOccurrenceId, occB.id),
+      });
+      if (!newFactB) throw new Error("saveFact B no insertó");
+
+      // Archivar porque fact.status !== oldFact.status
+      const historyId = await repos.compliance.insertHistoryEntry(oldFactB, "system:cron", null);
+      await repos.compliance.updateHistorySuccessor(historyId, newFactB.id);
+
+      const historyB = await repos.compliance.getFactHistory(occB.id);
+      expect(historyB).toHaveLength(1);
+      expect(historyB[0]?.status).toBe("no_cumplido");
+      expect(historyB[0]?.actorKind).toBe("system:cron");
+      expect(historyB[0]?.replacedByFactId).toBe(newFactB.id);
+    } finally {
+      await repos.compliance.deleteFactForOccurrence(occB.id);
+      await db.delete(complianceFactHistory).where(eq(complianceFactHistory.serviceOccurrenceId, occB.id));
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, occB.id));
+    }
+  });
+
   it("getFactHistory devuelve versiones en orden replaced_at ASC", async () => {
     const db = createDb(DATABASE_URL);
     const repos = createRepositories(db);

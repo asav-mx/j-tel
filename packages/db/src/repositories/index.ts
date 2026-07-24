@@ -2310,7 +2310,7 @@ export class ComplianceRepository {
     return fact!;
   }
 
-  /** Borra el hecho sin archivar — solo para retries de pendiente_evidencia y tests. */
+  /** Borra el hecho sin archivar — para retries de pendiente y limpieza en tests. */
   async deleteFactForOccurrence(serviceOccurrenceId: string) {
     await this.db
       .delete(complianceFacts)
@@ -2352,6 +2352,30 @@ export class ComplianceRepository {
       .delete(complianceFacts)
       .where(eq(complianceFacts.serviceOccurrenceId, serviceOccurrenceId));
 
+    return historyRow!.id;
+  }
+
+  /**
+   * Inserta en historial usando datos de un hecho ya cargado en memoria.
+   * No relee de DB ni borra el hecho vigente — úsalo cuando ya eliminaste el hecho
+   * y sólo necesitas archivar retroactivamente si el estado cambió.
+   */
+  async insertHistoryEntry(
+    existingFact: { serviceOccurrenceId: string; status: string; timing: string | null },
+    actorKind: string,
+    actorId: string | null,
+  ): Promise<string> {
+    const [historyRow] = await this.db
+      .insert(complianceFactHistory)
+      .values({
+        serviceOccurrenceId: existingFact.serviceOccurrenceId,
+        status: existingFact.status,
+        timing: existingFact.timing,
+        factSnapshot: existingFact as unknown as Record<string, unknown>,
+        actorKind,
+        actorId,
+      })
+      .returning({ id: complianceFactHistory.id });
     return historyRow!.id;
   }
 
