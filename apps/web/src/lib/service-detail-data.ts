@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import {
   computeEnforcement,
   computeEvidenceWindow,
-  localTimeHHMM,
   localDateTimeShort,
   type ContractPolicy,
 } from "@jtel/domain";
@@ -300,26 +299,26 @@ export async function loadServiceDetail(
     carrierName: carrier?.name ?? "—",
     plantName: plant?.name ?? null,
     status: fact?.status ?? null,
-    expectedDeadline: localTimeHHMM(occurrence.expectedDeadline, tz),
+    expectedDeadline: localDateTimeShort(occurrence.expectedDeadline, tz),
     referenceUnitLabel,
     observedUnitLabel,
     observedUnitId: fact?.observedUnitId ?? null,
     observedArrivalAt: fact?.observedArrivalAt
-      ? localTimeHHMM(fact.observedArrivalAt, tz)
+      ? localDateTimeShort(fact.observedArrivalAt, tz)
       : null,
     timing: fact?.timing ?? null,
     evidenceStatus: trip?.evidenceStatus ?? null,
-    policyWindowStart: localTimeHHMM(policyWindow.windowStart, tz),
-    policyWindowEnd: localTimeHHMM(policyWindow.windowEnd, tz),
-    tripWindowStart: tripStart ? localTimeHHMM(tripStart, tz) : null,
-    tripWindowEnd: tripEnd ? localTimeHHMM(tripEnd, tz) : null,
+    policyWindowStart: localDateTimeShort(policyWindow.windowStart, tz),
+    policyWindowEnd: localDateTimeShort(policyWindow.windowEnd, tz),
+    tripWindowStart: tripStart ? localDateTimeShort(tripStart, tz) : null,
+    tripWindowEnd: tripEnd ? localDateTimeShort(tripEnd, tz) : null,
     tripWindowDiffersFromPolicy,
     evidenceMarginBeforeMinutes: policy.evidenceMarginMinutesBefore ?? null,
     verificationGraceMinutes: policy.verificationGraceMinutes ?? null,
     evidenceMarginAfterMinutes: policy.evidenceMarginMinutesAfter ?? null,
     toleranceMinutes: policy.toleranceMinutes ?? null,
-    evidenceFirstAt: evidenceFirstAtRaw ? localTimeHHMM(evidenceFirstAtRaw, tz) : null,
-    evidenceLastAt: evidenceLastAtRaw ? localTimeHHMM(evidenceLastAtRaw, tz) : null,
+    evidenceFirstAt: evidenceFirstAtRaw ? localDateTimeShort(evidenceFirstAtRaw, tz) : null,
+    evidenceLastAt: evidenceLastAtRaw ? localDateTimeShort(evidenceLastAtRaw, tz) : null,
     unitPointsInWindow:
       isClientFace && evidenceMapMode === "empty" ? 0 : mapSourcePoints.length,
     evidenceMapMode,

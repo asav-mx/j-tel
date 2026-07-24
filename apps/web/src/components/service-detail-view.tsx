@@ -3,14 +3,6 @@ import { ServiceEvidenceMap } from "@/components/service-evidence-map";
 import type { ServiceDetailData } from "@/lib/service-detail-data";
 import { noCumplidoDetailLine } from "@/lib/no-cumplido-motivo";
 
-function formatDateTime(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("es-MX", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-}
-
 const timingLabels: Record<string, string> = {
   temprano: "Temprano",
   a_tiempo: "A tiempo",
@@ -37,8 +29,8 @@ export function ServiceDetailView({
     status: data.status,
     timing: data.timing,
     observedUnitId: data.observedUnitId,
-    observedArrivalAt: data.observedArrivalAt,
-    expectedDeadline: data.expectedDeadline,
+    observedArrivalAt: null,
+    expectedDeadline: null,
     observedUnitLabel:
       data.observedUnitLabel && data.observedUnitLabel !== "—"
         ? data.observedUnitLabel
@@ -61,7 +53,7 @@ export function ServiceDetailView({
       </div>
 
       <p className="mb-6 text-sm text-[var(--muted)]">
-        {data.profileName} · Deadline {formatDateTime(data.expectedDeadline)}
+        {data.profileName} · Deadline {data.expectedDeadline}
         {contractHref ? (
           <>
             {" · "}
@@ -77,7 +69,7 @@ export function ServiceDetailView({
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-[var(--muted)]">Deadline</dt>
-              <dd>{formatDateTime(data.expectedDeadline)}</dd>
+              <dd>{data.expectedDeadline}</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-[var(--muted)]">Tolerancia</dt>
@@ -89,7 +81,7 @@ export function ServiceDetailView({
               <dt className="text-[var(--muted)]">Ventana (política)</dt>
               <dd className="text-right">
                 {data.policyWindowStart && data.policyWindowEnd
-                  ? `${formatDateTime(data.policyWindowStart)} → ${formatDateTime(data.policyWindowEnd)}`
+                  ? `${data.policyWindowStart} → ${data.policyWindowEnd}`
                   : "—"}
               </dd>
             </div>
@@ -107,7 +99,7 @@ export function ServiceDetailView({
               <div className="flex justify-between gap-4">
                 <dt className="text-[var(--muted)]">Ventana usada en este viaje</dt>
                 <dd className="text-right text-amber-200/90">
-                  {formatDateTime(data.tripWindowStart)} → {formatDateTime(data.tripWindowEnd)}
+                  {data.tripWindowStart} → {data.tripWindowEnd}
                   <span className="mt-0.5 block text-xs text-[var(--muted)]">
                     Congelada al generar el servicio (antes de tu cambio de política).
                   </span>
@@ -129,7 +121,7 @@ export function ServiceDetailView({
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-[var(--muted)]">Llegada</dt>
-              <dd>{formatDateTime(data.observedArrivalAt)}</dd>
+              <dd>{data.observedArrivalAt ?? "—"}</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-[var(--muted)]">Puntualidad</dt>
@@ -139,7 +131,7 @@ export function ServiceDetailView({
               <dt className="text-[var(--muted)]">GPS en ruta</dt>
               <dd className="text-right">
                 {data.evidenceFirstAt && data.evidenceLastAt
-                  ? `${formatDateTime(data.evidenceFirstAt)} → ${formatDateTime(data.evidenceLastAt)}`
+                  ? `${data.evidenceFirstAt} → ${data.evidenceLastAt}`
                   : "—"}
               </dd>
             </div>
