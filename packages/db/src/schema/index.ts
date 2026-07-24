@@ -502,6 +502,9 @@ export const complianceFacts = pgTable("compliance_facts", {
   materializedAt: timestamp("materialized_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
+/** Fila completa de un hecho de cumplimiento. La foto que archiva la Pieza 1 debe ser fiel a esto. */
+export type ComplianceFact = typeof complianceFacts.$inferSelect;
+
 export const complianceFactHistory = pgTable("compliance_fact_history", {
   id: uuid("id").primaryKey().defaultRandom(),
   serviceOccurrenceId: uuid("service_occurrence_id").notNull(),

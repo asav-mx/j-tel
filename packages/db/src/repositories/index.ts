@@ -41,6 +41,7 @@ import {
   ingestAlerts,
   clientCarrierAuthorizations,
 } from "../schema/index.js";
+import type { ComplianceFact } from "../schema/index.js";
 import type { ContractPolicy, CreateContractInput, CreateServiceProfileInput } from "@jtel/domain";
 import { localDateIso, JTTEL_TZ, civilDatesInRange, addDaysIso } from "@jtel/domain";
 
@@ -2359,9 +2360,12 @@ export class ComplianceRepository {
    * Inserta en historial usando datos de un hecho ya cargado en memoria.
    * No relee de DB ni borra el hecho vigente — úsalo cuando ya eliminaste el hecho
    * y sólo necesitas archivar retroactivamente si el estado cambió.
+   *
+   * `existingFact` es el hecho COMPLETO (no un subconjunto): la foto de fact_snapshot
+   * debe ser fiel a la fila, y tiparlo así evita que un caller futuro archive de menos.
    */
   async insertHistoryEntry(
-    existingFact: { serviceOccurrenceId: string; status: string; timing: string | null },
+    existingFact: ComplianceFact,
     actorKind: string,
     actorId: string | null,
   ): Promise<string> {

@@ -1,6 +1,6 @@
 import { verifyService, pointInPolygon } from "@jtel/verification";
 import { createUmbrellaProvider, ingestEvidenceForTrip } from "@jtel/gps-umbrella";
-import type { Repositories } from "@jtel/db";
+import type { ComplianceFact, Repositories } from "@jtel/db";
 import type { ContractPolicy, VerificationResult } from "@jtel/domain";
 import { localDateIso, JTTEL_TZ } from "@jtel/domain";
 
@@ -704,9 +704,9 @@ export class VerificationService {
     const resolvedActorKind = opts.actorKind ?? "system:cron";
     const resolvedActorId = opts.actorId ?? null;
     let pendingHistoryId: string | null = null;
-    // Guardamos el hecho pendiente para archivar condicionalmente después de saveFact,
-    // solo si el nuevo estado es distinto (ver comentario en el bloque post-saveFact).
-    let pendingRetryFact: { serviceOccurrenceId: string; status: string; timing: string | null } | null = null;
+    // Guardamos el hecho pendiente COMPLETO para archivar condicionalmente después de
+    // saveFact, solo si el veredicto cambió (ver comentario en el bloque post-saveFact).
+    let pendingRetryFact: ComplianceFact | null = null;
 
     // Sin force: cumplido/no_cumplido son definitivos; pendiente se reintenta.
     if (occurrence.complianceFact) {
@@ -733,7 +733,10 @@ export class VerificationService {
         // Retry de pendiente_evidencia: borrar ahora, decidir si archivar DESPUÉS de
         // conocer el nuevo estado. El cron corre cada minuto — un GPS sin señal
         // durante 6 horas generaría 360 filas idénticas si archiváramos siempre.
-        // Solo se archiva cuando el estado cambia (transición real que el carrier necesita ver).
+        // Regla (decisión de diseño, no accidente): se versiona SOLO cuando cambia el
+        // VEREDICTO (pendiente → cumplido/no_cumplido). Un retry que reúne más evidencia
+        // pero deja el veredicto igual NO genera versión — la historia registra cambios
+        // de resultado, no de insumos.
         pendingRetryFact = occurrence.complianceFact;
         await this.repos.compliance.deleteFactForOccurrence(occurrenceId);
       }
@@ -1057,8 +1060,8 @@ export class VerificationService {
       await this.repos.compliance.updateHistorySuccessor(pendingHistoryId, fact.id);
     }
 
-    // Retry pendiente→cambio: archivar ahora que ya sabemos el nuevo estado.
-    // Si el estado NO cambió (pendiente→pendiente), no se archiva — ver comentario arriba.
+    // Retry con cambio de veredicto: archivar ahora que ya sabemos el nuevo estado.
+    // Si el veredicto NO cambió (pendiente→pendiente), no se versiona — ver comentario arriba.
     if (pendingRetryFact && fact.status !== pendingRetryFact.status) {
       const retryHistoryId = await this.repos.compliance.insertHistoryEntry(
         pendingRetryFact,
