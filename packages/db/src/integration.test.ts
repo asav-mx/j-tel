@@ -1,10 +1,27 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { createDb, createRepositories, serviceOccurrences, trips } from "../src/index.js";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { ContractPolicy } from "@jtel/domain";
 
-const DATABASE_URL =
-  process.env.DATABASE_URL ?? "postgresql://jtel:jtel_dev@localhost:5432/jtel";
+// Candado: falla antes de correr cualquier test si apunta a producción
+const PROD_URL = process.env.DATABASE_URL;
+const TEST_URL = process.env.DATABASE_URL_TEST;
+
+if (!TEST_URL) {
+  throw new Error(
+    "[integration] DATABASE_URL_TEST no está definida. " +
+      "Apunta a una rama de Neon de prueba antes de correr tests de integración. " +
+      "Ejemplo: pnpm --filter @jtel/db test:integration",
+  );
+}
+if (PROD_URL && TEST_URL === PROD_URL) {
+  throw new Error(
+    "[integration] DATABASE_URL_TEST es idéntica a DATABASE_URL (producción). " +
+      "Los tests de integración se niegan a correr contra la base de datos de producción.",
+  );
+}
+
+const DATABASE_URL = TEST_URL;
 
 const TECMA_POLICY: ContractPolicy = {
   toleranceMinutes: 5,
@@ -50,23 +67,16 @@ const HONEYWELL_POLICY: ContractPolicy = {
   timeZone: "America/Ciudad_Juarez",
 };
 
-let dbAvailable = false;
-
 beforeAll(async () => {
-  try {
-    const db = createDb(DATABASE_URL);
-    const repos = createRepositories(db);
-    await repos.accounts.findBySlug("tecma");
-    dbAvailable = true;
-  } catch {
-    dbAvailable = false;
-  }
+  const db = createDb(DATABASE_URL);
+  const repos = createRepositories(db);
+  // Verifica conectividad antes de correr los tests; falla ruidosamente si la
+  // rama de Neon no está disponible (en lugar de pasar en silencio).
+  await repos.accounts.findBySlug("tecma");
 });
 
 describe("multi-cuenta e contratos", () => {
   it("planta A no ve ocurrencias de planta B", async () => {
-    if (!dbAvailable) return;
-
     const db = createDb(DATABASE_URL);
     const repos = createRepositories(db);
     const tecma = await repos.accounts.findBySlug("tecma");
@@ -88,8 +98,6 @@ describe("multi-cuenta e contratos", () => {
   });
 
   it("contratos tienen tolerancias distintas", async () => {
-    if (!dbAvailable) return;
-
     const db = createDb(DATABASE_URL);
     const repos = createRepositories(db);
     const tecma = await repos.accounts.findBySlug("tecma");
@@ -125,12 +133,9 @@ describe("deleteBeyondHorizon — guarda de compliance_fact", () => {
    * que no chocan con el horizonte normal de la ventana rodante.
    */
   it("no borra ocurrencias que ya tienen compliance_fact", async () => {
-    if (!dbAvailable) return;
-
     const db = createDb(DATABASE_URL);
     const repos = createRepositories(db);
 
-    // Obtenemos un perfil real del seed para reutilizar sus FK.
     const tecma = await repos.accounts.findBySlug("tecma");
     if (!tecma) return;
     const profiles = await repos.profiles.findForClient(tecma.id);
@@ -219,8 +224,6 @@ describe("deleteBeyondHorizon — guarda de compliance_fact", () => {
   });
 
   it("ocurrencias sin compliance_fact sí se borran", async () => {
-    if (!dbAvailable) return;
-
     const db = createDb(DATABASE_URL);
     const repos = createRepositories(db);
 
@@ -283,8 +286,6 @@ describe("generateForProfile — alineación de calendario (TZ=UTC simula Vercel
    * en el rango es lun-24; el código roto insertaba "2026-08-23" (dom Juárez).
    */
   it("rango sáb-22 a lun-24 ago-2026: inserta lun-24, no dom-23", async () => {
-    if (!dbAvailable) return;
-
     const db = createDb(DATABASE_URL);
     const repos = createRepositories(db);
 
