@@ -184,6 +184,8 @@ Esto no bloquea el diagnóstico de hoy, pero SÍ bloquea salir a producción con
 
 12. **No hay base de datos local — los tests de integración pasan por omisión, no por verificación (hallazgo 23 jul):** sin BD local, la suite de integración no ejecuta contra datos reales; **pasa porque se salta**, no porque verifique. Da una señal verde falsa. Cualquier afirmación de "los tests pasan" para lógica que toca la BD no es evidencia hasta que haya una BD de integración corriendo de verdad. Relacionado con la deuda de higiene del punto 5 (tests corriendo dos veces).
 
+13. **El detalle numérico bajo el chip rojo se perdió (hallazgo 24 jul):** `noCumplidoDetailLine` calcula minutos de retraso a partir de `observedArrivalAt` y `expectedDeadline`, pero `service-detail-data.ts` los entrega **ya formateados como texto** — no se les puede restar nada. El cálculo falla en silencio y siempre cae al label genérico ("Llegada tarde (unidad X)") en vez de "Llegada tarde (+N min, unidad X)". Introducido por `1c9181b` (PR #50, 21 jul); degrada la feature del PR #47 (20 jul). **Causa de fondo:** el cargador formatea todo a texto, así que nada río abajo puede calcular. **El valor que se muestra y el valor con el que se calcula son dos cosas distintas — el cargador debe entregar ambos.** Arreglo: que `service-detail-data.ts` exponga también los valores crudos (ISO o `Date`) para cálculo, además de los strings de despliegue. Ficha aparte.
+
 ---
 
 ## 5. Horizonte estratégico (confirmado contra el Marco)
@@ -227,3 +229,5 @@ Para toda fecha civil (YYYY-MM-DD) se usan las tres funciones canónicas de `@jt
 - **`addDaysIso(fechaIso, days): string`** — aritmética de días puramente UTC (`setUTCDate`), cero `setHours`, cero dependencia del runtime TZ.
 
 Todas anclan **mediodía UTC** para que `getUTCDay()`/el string salgan del mismo calendario en cualquier zona entre UTC-12 y UTC+12. **Nunca** `new Date(`${fecha}T00:00:00`)` sin `Z`: esa es exactamente la firma del bug (se interpreta en la zona local del proceso). Esto no es nota histórica — es la regla que se aplica cada vez que se toca una fecha civil.
+
+7. **El valor que se muestra y el valor con el que se calcula son dos cosas distintas.** Una capa de datos que formatea todo a texto rompe cualquier cálculo río abajo — nada que reciba un string puede restarle minutos a otro string. Cada dato que necesite tanto mostrarse como calcularse expone dos versiones: el string de despliegue y el valor crudo (ISO / `Date`) para cálculo. No son lo mismo; no deben serlo. (Patrón violado en PR #50 — ver Columna B punto 13.)
