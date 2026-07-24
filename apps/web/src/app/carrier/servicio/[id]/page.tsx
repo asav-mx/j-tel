@@ -91,10 +91,8 @@ export default async function CarrierServicioPage({
   }
 
   const policy = (occurrence?.profile?.contract?.policy ?? {}) as ContractPolicy;
-  const deadline = occurrence?.expectedDeadline ?? new Date(data.expectedDeadline);
-  const tripStart =
-    occurrence?.trip?.evidenceWindowStart ??
-    (data.tripWindowStart ? new Date(data.tripWindowStart) : new Date(deadline));
+  const deadline = occurrence?.expectedDeadline ?? new Date(0);
+  const tripStart = occurrence?.trip?.evidenceWindowStart ?? deadline;
   const viewEnd = calibrationViewEnd(deadline, policy);
 
   // Geocercas destino de TODOS los contratos de este carrier (solo lectura / calibración).
