@@ -100,7 +100,7 @@ J-Tel vende a **dos tipos de cuenta, y ambos son clientes comerciales**:
 
 ## 5. Pendientes de definición
 
-- **Lenore** — mencionado como AI interno / copiloto. No existe en ningún documento del proyecto. Definir: qué es, qué audita, dónde vive. Asiento natural: la "capa programable" del carrier (Marco, Pieza 2). *(Pendiente de que Asav lo describa.)*
+- **Lenore** — definida. Ver sección 7. Pendientes solo: nombre comercial final y sesión de diseño propia.
 - **Tiers comerciales** — el orden natural ya existe (carrier básico → carrier verificado → cliente → fase 2); precios y nombres, después.
 - **Renglón contractual de uso de datos** — J-Tel usa data agregada para mejorar el motor. Va en contrato/términos, con abogado.
 
@@ -113,3 +113,57 @@ J-Tel vende a **dos tipos de cuenta, y ambos son clientes comerciales**:
 3. No afirma lo que no midió: sin sensor no hay conteo de pasajeros; sin asignación declarada no hay chofer–viaje; sin evidencia no hay incumplimiento.
 4. No resucita al monitorista: la torre es awareness y prealerta, nunca vigilancia para juzgar.
 5. El código nunca conoce nombres — cuentas, plantas, rutas, calles y personas son datos, no constantes.
+
+---
+
+## 7. Lenore — el copiloto (línea de producto propia)
+
+**Qué es:** J-Tel es el juez — espera a que el viaje termine y dicta veredicto.
+Lenore es el copiloto — ve el viaje mientras ocurre y avisa antes de que truene.
+La torre muestra puntitos; Lenore interpreta. Es de cara al cliente (ambas cuentas),
+no herramienta interna.
+
+**Dos superficies, no una con permisos apagados:**
+- **Planta:** el riesgo y la llegada. "Esta ruta, a este paso, llega 6:52 — cuatro
+  minutos después del límite." Y la feature que nadie pide porque nadie sabe que se
+  puede: "tu gente ya viene, llega en 12 minutos."
+- **Carrier (coordinador):** lo mismo MÁS la acción. Qué unidad cercana puede cubrir,
+  cuál va a fallar antes de que falle.
+
+**Capacidades (catálogo inicial):**
+- **Proyección de tarde** — "a este paso llega 6:52". Proyección, nunca veredicto
+  anticipado.
+- **No-show anticipado** (la joya) — "faltan 20 minutos para la ventana y ninguna
+  unidad va en dirección a esa ruta". Es el único hallazgo de J-Tel que cambia el
+  resultado en vez de reportarlo — convierte un incumplimiento seguro en un servicio
+  salvado, y puede hacerlo precisamente porque actúa antes de que exista veredicto.
+- **Sugerencia al coordinador** — "la 9204 está a 8 minutos y sale de su servicio
+  en 5". El sistema sugiere, el humano decide. Nunca despacha solo.
+- **Degradación silenciosa** — la ruta que ningún día falla pero cuya curva apunta
+  a fallar.
+- **El ciclo de valor medido** — cada alerta se registra CON SU DESENLACE (se salvó
+  o no). Al mes: "te avisamos 14 veces; 11 se salvaron." El valor del copiloto en
+  pesos. Es lo que renueva contratos. Requisito estructural desde el día uno: sin
+  registro de desenlace, el reporte no existe.
+
+**Las reglas (no negociables, coherentes con el skill y el Marco):**
+1. **Muralla china:** la alerta jamás toca el veredicto. El copiloto vive arriba de
+   la operación; el juez, después de ella. Si un día una alerta "ayuda" al árbitro,
+   el árbitro deja de ser confiable.
+2. **Proyección, no juicio:** nunca "va a incumplir". Y color: las alertas van en
+   acero — verde/ámbar/rojo son de veredictos (regla ya en el skill j-telemetry-ui).
+3. **Cada señal en su cara:** la planta nunca ve la flota del carrier, ni siquiera
+   para explicar una sugerencia.
+4. **Orden por horizonte:** "ahora", "en 20 minutos", "en 3 semanas" — no por
+   gravedad.
+5. **Pasajeros identificables = datos personales (LFPDPPP):** conteos anónimos
+   primero; identidad solo con diseño legal explícito.
+
+**Antecedente en el producto:** "sugerencias de unidad al carrier" ya existe
+(PR #11) para resolver dudosos DESPUÉS del hecho. Lenore es la versión en vivo y
+anticipatoria. Antes de diseñar, revisar esa pantalla: el concepto ya tiene un
+lenguaje y no deben contradecirse.
+
+**Cuándo:** después de `auth-rbac` (las alertas a coordinadores requieren saber
+quién es quién). Es línea de producto propia con su propia sesión de diseño —
+no una feature ni una pantalla más.
