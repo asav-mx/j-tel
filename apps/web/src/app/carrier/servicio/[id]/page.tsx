@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { NavBar } from "@/components/ui";
 import { ServiceDetailView } from "@/components/service-detail-view";
 import { CarrierDudosoReview } from "@/components/carrier-dudoso-review";
@@ -54,6 +55,7 @@ export default async function CarrierServicioPage({
     repos.fleet.getActiveAssignmentsForCarrier(carrier.id),
     repos.occurrences.findById(id),
   ]);
+  if (!occurrence) notFound();
 
   const unitOptions = units.map((u) => ({
     id: u.id,
@@ -91,10 +93,9 @@ export default async function CarrierServicioPage({
   }
 
   const policy = (occurrence?.profile?.contract?.policy ?? {}) as ContractPolicy;
-  const deadline = occurrence?.expectedDeadline ?? new Date(data.expectedDeadline);
-  const tripStart =
-    occurrence?.trip?.evidenceWindowStart ??
-    (data.tripWindowStart ? new Date(data.tripWindowStart) : new Date(deadline));
+  const deadline = occurrence.expectedDeadline;
+  // copia defensiva: calibrationViewEnd crea su propia copia internamente, pero un Date compartido es trampa
+  const tripStart = occurrence.trip?.evidenceWindowStart ?? new Date(deadline);
   const viewEnd = calibrationViewEnd(deadline, policy);
 
   // Geocercas destino de TODOS los contratos de este carrier (solo lectura / calibración).
