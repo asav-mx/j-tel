@@ -43,29 +43,9 @@ Cuando entra un re-juicio: `UPDATE … SET is_current = false, superseded_by = <
 
 ---
 
-### Opción B — tabla de historial separada (RECOMENDADA)
+### Opción B — tabla de historial separada ✅ APROBADA
 
 `compliance_facts` no cambia de estructura. El UNIQUE constraint se queda. La tabla siempre tiene exactamente una fila por ocurrencia — la vigente.
-
-Nueva tabla `compliance_fact_history`:
-
-```sql
-CREATE TABLE "compliance_fact_history" (
-  "id"                    uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-  "service_occurrence_id" uuid NOT NULL,
-  "fact_snapshot"         jsonb NOT NULL,        -- copia del hecho completo al momento de ser superado
-  "replaced_by_fact_id"   uuid REFERENCES compliance_facts(id) ON DELETE set null,
-  "actor_user_id"         text NOT NULL,          -- UUID humano o etiqueta de proceso (nunca null)
-  "replaced_at"           timestamptz DEFAULT now() NOT NULL
-);
-
-CREATE INDEX ON compliance_fact_history (service_occurrence_id);
-```
-
-Cuando entra un re-juicio:
-1. Copiar la fila vigente de `compliance_facts` a `compliance_fact_history` como JSONB + metadata.
-2. DELETE de `compliance_facts` (igual que hoy, pero ya no borra para siempre).
-3. INSERT del hecho nuevo.
 
 **Por qué esta opción:**
 
@@ -73,63 +53,116 @@ Cuando entra un re-juicio:
 2. **La invariante la garantiza la base, no el código.** El UNIQUE constraint sigue activo. No hay índice parcial que dependa de un booleano. Un bug en la lógica de re-juicio no puede producir dos hechos "vigentes" silenciosamente.
 3. **El Marco es más legible.** `compliance_facts` = la verdad vigente siempre. `compliance_fact_history` = el expediente de lo que fue. Dos conceptos distintos, dos tablas distintas.
 4. **La migración es aditiva.** Añadir una tabla nueva no toca nada existente. Quitar una constraint UNIQUE sí.
-5. **La puerta `deleteFactForOccurrence` desaparece naturalmente.** Se reemplaza por `archiveAndDeleteFact(occurrenceId, actorUserId)` — que copia antes de borrar. No hay función pública que borre sin archivar.
+5. **La puerta `deleteFactForOccurrence` desaparece naturalmente.** Se reemplaza por `archiveAndDeleteFact(occurrenceId, actor)` — que copia antes de borrar. No hay función pública que borre sin archivar.
 
-**Única limitación:** caminar la cadena completa (versión 1 → 2 → 3) requiere queries en dos tablas. Para el caso de uso previsto (auditoría, rebate del carrier) esto es aceptable — no es un hot path.
+**Única limitación conocida:** caminar la cadena completa (versión 1 → 2 → 3) requiere queries en dos tablas. Para el caso de uso previsto (auditoría, rebate del carrier) esto es aceptable — no es un hot path.
 
 ---
 
-## 🛑 PARADA 1 — Aprobación de esquema
+## DDL de la nueva tabla
 
-**El trabajo de construcción no comienza hasta que Asav apruebe el esquema propuesto.**
+```sql
+CREATE TABLE "compliance_fact_history" (
+  "id"                    uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  "service_occurrence_id" uuid NOT NULL,
 
-Pregunta de diseño abierta para Asav antes de proceder:
+  -- Columnas reales para queries sin abrir JSON
+  "status"                text NOT NULL,   -- 'cumplido' | 'no_cumplido' | 'pendiente_evidencia'
+  "timing"                text,            -- 'temprano' | 'a_tiempo' | 'tarde' | null
 
-> **`actor_user_id` en `compliance_fact_history` es `text NOT NULL`.** Propongo `text` en vez de `uuid` porque los actores automáticos (procesos del sistema) no tienen UUID de usuario — son etiquetas fijas como `"system:exclusivity-pass"`. Si `actor_user_id` fuera `uuid`, los actores automáticos requerirían UUIDs ficticios o una columna separada. Con `text`, los humanos pasan su UUID como string y los procesos pasan su etiqueta. ¿Aceptado?
+  -- Snapshot completo del hecho en el momento de ser superado
+  "fact_snapshot"         jsonb NOT NULL,
+
+  -- Vínculo al hecho sucesor (puede quedar null si el sucesor también fue re-juzgado — ver nota)
+  "replaced_by_fact_id"   uuid REFERENCES compliance_facts(id) ON DELETE set null,
+
+  -- Autoría del re-juicio (dos columnas, nunca una)
+  "actor_kind"            text NOT NULL,   -- 'human' | 'system:exclusivity-pass' | 'system:elimination-pass' | 'system:cli' | 'system:e2e'
+  "actor_id"              text,            -- id del humano cuando actor_kind = 'human'; null en automáticos
+
+  "replaced_at"           timestamptz DEFAULT now() NOT NULL
+);
+
+CREATE INDEX ON compliance_fact_history (service_occurrence_id);
+```
+
+### Por qué dos columnas de actor, no una
+
+El Marco dice: *"el veredicto no cambia solo ni en silencio; sí puede haber re-juicio explícito y auditado."* Un humano apretando re-verificar es explícito. Un pase automático de exclusividad no — es el sistema acomodando sus cuentas.
+
+Cuando el carrier impugne, la primera pregunta será "¿esto lo decidió una persona o fue el sistema?". Con dos columnas se contesta mirando. Con una sola cadena de texto, comparando prefijos.
+
+`actor_id` es `text` (no `uuid`) porque el sistema de autenticación aún no está implementado y los ids de los usuarios probablemente no serán UUID.
+
+### Nota sobre `replaced_by_fact_id` y la cadena de versiones
+
+`replaced_by_fact_id` apunta al hecho sucesor en `compliance_facts`. **Pero cuando ese sucesor también es re-juzgado, la FK se pone en `null` (ON DELETE SET NULL)** — el sucesor dejó de existir en `compliance_facts`.
+
+Consecuencia: **la cadena NO se puede caminar de forma confiable siguiendo `replaced_by_fact_id`**. Para reconstruir el orden cronológico de versiones de una ocurrencia, la consulta correcta es:
+
+```sql
+SELECT * FROM compliance_fact_history
+WHERE service_occurrence_id = $1
+ORDER BY replaced_at ASC;
+```
+
+El vínculo `replaced_by_fact_id` existe para el caso de auditoría donde el sucesor aún está vigente — es útil pero no es el eje de la cadena. `replaced_at` es el eje.
+
+---
+
+## Hallazgo colateral: `ledger_entries.actor_user_id` tiene el tipo equivocado
+
+`ledger_entries.actor_user_id` está definido como `uuid`. Esto es el tipo incorrecto y explica por qué **nunca se pudo poblar**: los actores automáticos del sistema (`"system:exclusivity-pass"`, etc.) no tienen UUID — son etiquetas de texto. Y los actores humanos, cuando existan, pueden producir IDs de texto que tampoco caben en `uuid`.
+
+La construcción incluye una migración adicional: `ALTER COLUMN actor_user_id TYPE text`. El ledger también adoptará las dos columnas `actor_kind` + `actor_id` — o en su defecto, `actor_user_id text` para no romper el esquema existente del ledger.
+
+**Decisión pendiente para la construcción:** ¿el ledger adopta la misma separación `actor_kind` / `actor_id`, o se migra `actor_user_id` a `text` y se agrega `actor_kind` como columna nueva? Ambas son aditivas. Se decide al arrancar la construcción.
 
 ---
 
 ## Cambios por capa (post-aprobación)
 
-### 1. Migración de base de datos
+### 1. Migraciones de base de datos
 
-Una sola migración nueva (número siguiente en drizzle):
+Dos migraciones consecutivas (números siguientes en drizzle):
 
-```sql
-CREATE TABLE "compliance_fact_history" ( … );
-```
+**Migración A:** `CREATE TABLE compliance_fact_history (…)` — aditiva, sin tocar nada existente.
 
-Sin tocar `compliance_facts`. Sin `ALTER TABLE`. Sin quitar constraints.
+**Migración B:** Corregir `ledger_entries.actor_user_id`:
+- `ALTER COLUMN actor_user_id TYPE text` (de `uuid` a `text`)
+- Agregar `actor_kind text` si se decide la separación en dos columnas
+
+Sin `ALTER TABLE` en `compliance_facts`. Sin quitar constraints.
 
 ### 2. Repositorio — `packages/db/src/repositories/index.ts`
 
-- **`archiveAndDeleteFact(occurrenceId: string, actorUserId: string): Promise<void>`**
-  Reemplaza a `deleteFactForOccurrence`. Copia la fila vigente a `compliance_fact_history` (serializada como JSONB) + metadata, luego hace el DELETE.
+- **`archiveAndDeleteFact(occurrenceId: string, actorKind: string, actorId: string | null): Promise<void>`**
+  Reemplaza a `deleteFactForOccurrence`. Copia la fila vigente a `compliance_fact_history` (con `status`, `timing`, JSON completo, y actor) luego hace el DELETE.
 
 - **`deleteFactForOccurrence`** — eliminada del repositorio. No quedará ruta de código que borre un hecho sin archivar.
 
 - **`getFactHistory(occurrenceId: string): Promise<FactHistoryRow[]>`**
-  Para auditoría y UI de expediente.
+  Para auditoría y UI de expediente. Devuelve en orden `replaced_at ASC`.
 
 ### 3. Motor de verificación — `packages/services/src/verification.ts`
 
-- `verifyOccurrence` recibe nuevo parámetro opcional `actorUserId?: string`.
-- En el camino de re-juicio (`force: true`), llama `archiveAndDeleteFact(occurrenceId, resolvedActorUserId)`.
-- Si `actorUserId` es undefined en un re-juicio (i.e., llega null cuando debería tener valor), **la operación falla ruidosamente** con error explícito antes de tocar datos.
-- Los seis caminos de re-juicio pasan su actor:
+- `verifyOccurrence` recibe nuevos parámetros: `actorKind?: string`, `actorId?: string | null`.
+- En el camino de re-juicio (`force: true`), llama `archiveAndDeleteFact(occurrenceId, resolvedActorKind, resolvedActorId)`.
+- Si `actorKind` es undefined en un re-juicio, **la operación falla ruidosamente** con error explícito antes de tocar datos.
+- Los seis caminos pasan su actor — **tanto a `compliance_fact_history` como al ledger**:
 
-| Camino | Actor que pasa |
-|--------|----------------|
-| Cron `/api/cron/verify` | No aplica — nunca llama con `force: true` |
-| J-Staff UI `/api/jstaff/reverify-day` | `session.userId` (string UUID) |
-| CLI `reverify-day.ts` | `"system:cli-reverify-day"` |
-| `real-e2e.ts` | `"system:test-e2e"` |
-| `resolveExclusiveUnitClaims` | `"system:exclusivity-pass"` |
-| `resolveEliminationPass` | `"system:elimination-pass"` |
+| Camino | `actor_kind` | `actor_id` |
+|--------|-------------|-----------|
+| Cron `/api/cron/verify` | No aplica — nunca `force: true` | — |
+| J-Staff UI `/api/jstaff/reverify-day` | `"human"` | `session.userId` |
+| CLI `reverify-day.ts` | `"system:cli"` | `null` |
+| `real-e2e.ts` | `"system:e2e"` | `null` |
+| `resolveExclusiveUnitClaims` | `"system:exclusivity-pass"` | `null` |
+| `resolveEliminationPass` | `"system:elimination-pass"` | `null` |
 
 ### 4. Endpoint J-Staff
 
-`/api/jstaff/reverify-day/route.ts` extrae `session.userId` y lo pasa hacia abajo a través de `reverifyContract` → `verifyOccurrence`.
+`/api/jstaff/reverify-day/route.ts` extrae `session.userId` y lo pasa hacia abajo a través de `reverifyContract` → `verifyOccurrence` con `actorKind: "human"`.
 
 ### 5. La primera verificación no cambia
 
@@ -143,7 +176,7 @@ Antes de abrir el PR de construcción, listar TODOS los lectores de `compliance_
 
 Lectores conocidos a auditar:
 - `repos.occurrences.findById` — incluye el fact en el join
-- `loadServiceDetail` (service-detail-data.ts)
+- `loadServiceDetail` ([service-detail-data.ts](../../apps/web/src/lib/service-detail-data.ts))
 - `processPending` / `verifyOccurrence` — lee `occurrence.complianceFact`
 - `resolveExclusiveUnitClaims`
 - `resolveEliminationPass`
@@ -160,15 +193,18 @@ Criterio: si el lector funciona sin cambios con el esquema Opción B (una sola f
 ```
 □ Re-juzgar una ocurrencia:
     → compliance_facts: sigue con 1 fila (el nuevo hecho)
-    → compliance_fact_history: 1 fila (el hecho anterior, serializado)
-    → history.actor_user_id: el actor correcto, nunca null
+    → compliance_fact_history: 1 fila (hecho anterior serializado)
+    → history.actor_kind: el kind correcto
+    → history.actor_id: id del humano o null para automáticos
+    → ledger: entrada con actor_kind/actor_id poblados
 
-□ Re-juzgar sin actorUserId → error explícito antes de cualquier escritura
+□ Re-juzgar sin actorKind → error explícito antes de cualquier escritura
 
 □ Re-juzgar tres veces la misma ocurrencia:
     → compliance_facts: 1 fila (el más reciente)
-    → compliance_fact_history: 3 filas
-    → replaced_by_fact_id apunta a la fila vigente (o null si el hecho vigente fue re-juzgado de nuevo)
+    → compliance_fact_history: 3 filas ordenadas por replaced_at
+    → replaced_by_fact_id: null en las dos más antiguas (el sucesor fue re-juzgado),
+      no-null solo en la más reciente (su sucesor aún está vigente)
 
 □ Los lectores devuelven el vigente aunque existan entradas de historial
     (compliance_facts sin cambio → lectores sin cambio → este test pasa sin modificar lectores)
@@ -177,6 +213,10 @@ Criterio: si el lector funciona sin cambios con el esquema Opción B (una sola f
     → compliance_fact_history: 0 filas nuevas
     → compliance_facts: 1 fila nueva
     → Comportamiento idéntico al actual
+
+□ Query de auditoría por ocurrencia devuelve versiones en orden replaced_at ASC
+□ Query "¿cuántos veredictos voltearon de cumplido a no_cumplido?" funciona con
+  columnas reales sin abrir JSON
 
 □ Suite completa TZ=UTC pasa sin regresiones
 □ compare-verify-dry: 0 cambios (el criterio de juicio no se toca)
