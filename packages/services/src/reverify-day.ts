@@ -88,6 +88,8 @@ async function main() {
     serviceDate,
     keepEvidence: false,
     exclusiveUnits: true,
+    actorKind: "system:cli",
+    actorId: null,
   });
 
   const byStatus = new Map<string, number>();

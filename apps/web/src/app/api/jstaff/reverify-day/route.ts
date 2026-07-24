@@ -61,6 +61,9 @@ export async function POST(request: Request) {
       serviceDate,
       keepEvidence,
       exclusiveUnits: true,
+      // TODO: reemplazar null con session.userId cuando se implemente autenticación J-Staff.
+      actorKind: "human",
+      actorId: null,
     });
 
     const byStatus = new Map<string, number>();

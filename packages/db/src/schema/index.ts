@@ -502,6 +502,20 @@ export const complianceFacts = pgTable("compliance_facts", {
   materializedAt: timestamp("materialized_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
+export const complianceFactHistory = pgTable("compliance_fact_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  serviceOccurrenceId: uuid("service_occurrence_id").notNull(),
+  status: text("status").notNull(),
+  timing: text("timing"),
+  factSnapshot: jsonb("fact_snapshot").notNull(),
+  replacedByFactId: uuid("replaced_by_fact_id").references(() => complianceFacts.id, {
+    onDelete: "set null",
+  }),
+  actorKind: text("actor_kind").notNull(),
+  actorId: text("actor_id"),
+  replacedAt: timestamp("replaced_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+});
+
 export const ledgerEntries = pgTable("ledger_entries", {
   id: uuid("id").primaryKey().defaultRandom(),
   tripId: uuid("trip_id")
@@ -510,7 +524,8 @@ export const ledgerEntries = pgTable("ledger_entries", {
   serviceOccurrenceId: uuid("service_occurrence_id")
     .notNull()
     .references(() => serviceOccurrences.id, { onDelete: "cascade" }),
-  actorUserId: uuid("actor_user_id"),
+  actorKind: text("actor_kind").notNull(),
+  actorId: text("actor_id"),
   action: text("action").notNull(),
   steps: jsonb("steps").$type<import("@jtel/domain").LedgerStep[]>().notNull().default([]),
   metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),

@@ -304,6 +304,9 @@ export class VerificationService {
       /** Default true. false = re-ingerir desde memoria. */
       keepEvidence?: boolean;
       exclusiveUnits?: boolean;
+      /** Quién pidió el re-juicio. */
+      actorKind?: string;
+      actorId?: string | null;
     } = {},
   ) {
     const daysBack = opts.daysBack ?? 14;
@@ -328,7 +331,12 @@ export class VerificationService {
     for (const occ of targets) {
       try {
         results.push(
-          await this.verifyOccurrence(occ.id, { force: true, keepEvidence }),
+          await this.verifyOccurrence(occ.id, {
+            force: true,
+            keepEvidence,
+            actorKind: opts.actorKind,
+            actorId: opts.actorId,
+          }),
         );
       } catch (err) {
         results.push({
@@ -431,6 +439,8 @@ export class VerificationService {
           force: true,
           keepEvidence: true,
           excludeUnitIds,
+          actorKind: "system:exclusivity-pass",
+          actorId: null,
         });
       }
     }
@@ -495,6 +505,8 @@ export class VerificationService {
         excludeUnitIds: occupied,
         eliminationPass: true,
         eliminationExcludedUnitIds: occupied,
+        actorKind: "system:elimination-pass",
+        actorId: null,
       });
       // Una sola ronda: no realimentar veredictos derivados a confidentClaims
       // (evita cascada dependiente del orden de procesamiento).
@@ -525,6 +537,8 @@ export class VerificationService {
     deadline: Date;
     policy: ContractPolicy;
     ownGeofence: { id: string | null; polygon: Array<{ lat: number; lng: number }> };
+    actorKind: string;
+    actorId: string | null;
   }): Promise<void> {
     const grace = input.policy.verificationGraceMinutes ?? 15;
     const marginAfter = input.policy.evidenceMarginMinutesAfter ?? 0;
@@ -571,6 +585,8 @@ export class VerificationService {
       await this.repos.compliance.addLedgerEntry({
         tripId: input.tripId,
         serviceOccurrenceId: input.occurrenceId,
+        actorKind: input.actorKind,
+        actorId: input.actorId,
         action: "contexto_calibracion",
         steps: [
           {
@@ -616,6 +632,8 @@ export class VerificationService {
     await this.repos.compliance.addLedgerEntry({
       tripId: input.tripId,
       serviceOccurrenceId: input.occurrenceId,
+      actorKind: input.actorKind,
+      actorId: input.actorId,
       action: "contexto_calibracion",
       steps: [
         {
@@ -669,6 +687,9 @@ export class VerificationService {
       /** Pasada de eliminación: rastro interno en ledger (no visible al cliente). */
       eliminationPass?: boolean;
       eliminationExcludedUnitIds?: string[];
+      /** Quién pidió este re-juicio. Requerido cuando force:true. */
+      actorKind?: string;
+      actorId?: string | null;
     } = {},
   ) {
     const occurrence = await this.repos.occurrences.findById(occurrenceId);
@@ -680,6 +701,10 @@ export class VerificationService {
     const existingPoints = await this.repos.evidence.getPointsForTrip(trip.id);
     const reuseEvidence = Boolean(opts.keepEvidence && existingPoints.length > 0);
 
+    const resolvedActorKind = opts.actorKind ?? "system:cron";
+    const resolvedActorId = opts.actorId ?? null;
+    let pendingHistoryId: string | null = null;
+
     // Sin force: cumplido/no_cumplido son definitivos; pendiente se reintenta.
     if (occurrence.complianceFact) {
       if (
@@ -688,7 +713,22 @@ export class VerificationService {
       ) {
         return { occurrenceId, skipped: true, status: occurrence.complianceFact.status };
       }
-      await this.repos.compliance.deleteFactForOccurrence(occurrenceId);
+      if (opts.force) {
+        // Re-juicio deliberado: archivar antes de borrar.
+        if (!opts.actorKind) {
+          throw new Error(
+            `verifyOccurrence con force:true requiere actorKind (occurrenceId: ${occurrenceId})`,
+          );
+        }
+        pendingHistoryId = await this.repos.compliance.archiveAndDeleteFact(
+          occurrenceId,
+          resolvedActorKind,
+          resolvedActorId,
+        );
+      } else {
+        // Retry de pendiente_evidencia: borrar sin archivar (no hay veredicto establecido).
+        await this.repos.compliance.deleteFactForOccurrence(occurrenceId);
+      }
       if (!reuseEvidence) {
         await this.repos.evidence.clearPointsForTrip(trip.id);
         await this.repos.evidence.updateTripStatus(trip.id, "en_espera");
@@ -1004,9 +1044,16 @@ export class VerificationService {
       contractPolicySnapshot: policy,
     });
 
+    // Enlazar la fila de historial al hecho sucesor recién creado.
+    if (pendingHistoryId) {
+      await this.repos.compliance.updateHistorySuccessor(pendingHistoryId, fact.id);
+    }
+
     await this.repos.compliance.addLedgerEntry({
       tripId: trip.id,
       serviceOccurrenceId: occurrenceId,
+      actorKind: resolvedActorKind,
+      actorId: resolvedActorId,
       action: opts.eliminationPass
         ? "eliminacion_candidatas"
         : "verificacion_automatica",
@@ -1052,6 +1099,8 @@ export class VerificationService {
             id: profile.geofenceId ?? occurrence.expectedGeofenceId ?? null,
             polygon: geofence.polygon,
           },
+          actorKind: resolvedActorKind,
+          actorId: resolvedActorId,
         });
       } catch (err) {
         // El contexto es informativo; nunca debe tumbar la verificación.
