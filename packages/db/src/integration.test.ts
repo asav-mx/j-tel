@@ -1,10 +1,33 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { createDb, createRepositories, serviceOccurrences, trips } from "../src/index.js";
-import { eq, and, inArray } from "drizzle-orm";
+import {
+  createDb,
+  createRepositories,
+  serviceOccurrences,
+  trips,
+  complianceFactHistory,
+} from "../src/index.js";
+import { eq, inArray } from "drizzle-orm";
 import type { ContractPolicy } from "@jtel/domain";
 
-const DATABASE_URL =
-  process.env.DATABASE_URL ?? "postgresql://jtel:jtel_dev@localhost:5432/jtel";
+// Candado: falla antes de correr cualquier test si apunta a producción
+const PROD_URL = process.env.DATABASE_URL;
+const TEST_URL = process.env.DATABASE_URL_TEST;
+
+if (!TEST_URL) {
+  throw new Error(
+    "[integration] DATABASE_URL_TEST no está definida. " +
+      "Apunta a una rama de Neon de prueba antes de correr tests de integración. " +
+      "Ejemplo: pnpm --filter @jtel/db test:integration",
+  );
+}
+if (PROD_URL && TEST_URL === PROD_URL) {
+  throw new Error(
+    "[integration] DATABASE_URL_TEST es idéntica a DATABASE_URL (producción). " +
+      "Los tests de integración se niegan a correr contra la base de datos de producción.",
+  );
+}
+
+const DATABASE_URL = TEST_URL;
 
 const TECMA_POLICY: ContractPolicy = {
   toleranceMinutes: 5,
@@ -50,23 +73,16 @@ const HONEYWELL_POLICY: ContractPolicy = {
   timeZone: "America/Ciudad_Juarez",
 };
 
-let dbAvailable = false;
-
 beforeAll(async () => {
-  try {
-    const db = createDb(DATABASE_URL);
-    const repos = createRepositories(db);
-    await repos.accounts.findBySlug("tecma");
-    dbAvailable = true;
-  } catch {
-    dbAvailable = false;
-  }
+  const db = createDb(DATABASE_URL);
+  const repos = createRepositories(db);
+  // Verifica conectividad antes de correr los tests; falla ruidosamente si la
+  // rama de Neon no está disponible (en lugar de pasar en silencio).
+  await repos.accounts.findBySlug("tecma");
 });
 
 describe("multi-cuenta e contratos", () => {
   it("planta A no ve ocurrencias de planta B", async () => {
-    if (!dbAvailable) return;
-
     const db = createDb(DATABASE_URL);
     const repos = createRepositories(db);
     const tecma = await repos.accounts.findBySlug("tecma");
@@ -88,8 +104,6 @@ describe("multi-cuenta e contratos", () => {
   });
 
   it("contratos tienen tolerancias distintas", async () => {
-    if (!dbAvailable) return;
-
     const db = createDb(DATABASE_URL);
     const repos = createRepositories(db);
     const tecma = await repos.accounts.findBySlug("tecma");
@@ -125,23 +139,29 @@ describe("deleteBeyondHorizon — guarda de compliance_fact", () => {
    * que no chocan con el horizonte normal de la ventana rodante.
    */
   it("no borra ocurrencias que ya tienen compliance_fact", async () => {
-    if (!dbAvailable) return;
-
     const db = createDb(DATABASE_URL);
     const repos = createRepositories(db);
 
-    // Obtenemos un perfil real del seed para reutilizar sus FK.
     const tecma = await repos.accounts.findBySlug("tecma");
     if (!tecma) return;
     const profiles = await repos.profiles.findForClient(tecma.id);
     if (profiles.length === 0) return;
     const profile = profiles[0]!;
 
-    // Fecha de servicio muy lejana → bien más allá del horizonte de 50 días.
     const serviceDate = "2099-01-15";
     const deadline = new Date("2099-01-15T08:00:00Z");
     const windowStart = new Date("2099-01-15T07:00:00Z");
     const windowEnd = new Date("2099-01-15T09:00:00Z");
+
+    // Pre-limpieza: eliminar datos residuales de corridas anteriores.
+    const staleA = await db.query.serviceOccurrences.findFirst({
+      where: (o, { and, eq: e }) =>
+        and(e(o.serviceProfileId, profile.id), e(o.serviceDate, serviceDate)),
+    });
+    if (staleA) {
+      await repos.compliance.deleteFactForOccurrence(staleA.id);
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, staleA.id));
+    }
 
     // Insertar ocurrencia A (será protegida con hecho) y B (sin hecho).
     const [occA, occB] = await db
@@ -168,59 +188,51 @@ describe("deleteBeyondHorizon — guarda de compliance_fact", () => {
 
     if (!occA || !occB) throw new Error("No se pudieron insertar ocurrencias de test");
 
-    // Insertar un trip para occA (compliance_fact lo requiere).
-    const [tripA] = await db
-      .insert(trips)
-      .values({
+    try {
+      const [tripA] = await db
+        .insert(trips)
+        .values({
+          serviceOccurrenceId: occA.id,
+          evidenceWindowStart: windowStart,
+          evidenceWindowEnd: windowEnd,
+          evidenceStatus: "en_espera",
+        })
+        .returning();
+      if (!tripA) throw new Error("No se pudo insertar el trip de test");
+
+      await repos.compliance.saveFact({
         serviceOccurrenceId: occA.id,
-        evidenceWindowStart: windowStart,
-        evidenceWindowEnd: windowEnd,
-        evidenceStatus: "en_espera",
-      })
-      .returning();
+        tripId: tripA.id,
+        expectedDeadline: deadline,
+        expectedGeofenceId: profile.geofenceId,
+        referenceUnitId: null,
+        observedUnitId: null,
+        observedArrivalAt: null,
+        observedRouteMatchPct: null,
+        servedVariantId: null,
+        status: "no_cumplido",
+        timing: null,
+        lateExcusable: false,
+        excusableReason: null,
+        routeStrictnessApplied: "destino_only",
+        contractPolicySnapshot: TECMA_POLICY,
+      });
 
-    if (!tripA) throw new Error("No se pudo insertar el trip de test");
+      const result = await repos.occurrences.deleteBeyondHorizon(50);
 
-    // Crear el compliance_fact para occA.
-    await repos.compliance.saveFact({
-      serviceOccurrenceId: occA.id,
-      tripId: tripA.id,
-      expectedDeadline: deadline,
-      expectedGeofenceId: profile.geofenceId,
-      referenceUnitId: null,
-      observedUnitId: null,
-      observedArrivalAt: null,
-      observedRouteMatchPct: null,
-      servedVariantId: null,
-      status: "no_cumplido",
-      timing: null,
-      lateExcusable: false,
-      excusableReason: null,
-      routeStrictnessApplied: "destino_only",
-      contractPolicySnapshot: TECMA_POLICY,
-    });
+      const stillExists = await repos.occurrences.findById(occA.id);
+      expect(stillExists).not.toBeUndefined();
+      expect(result.skipped).toBeGreaterThanOrEqual(1);
 
-    // Ejecutar la guarda con horizonte de 50 días.
-    // occA y occB están en 2099 → ambas son candidatas, pero occA tiene hecho.
-    const result = await repos.occurrences.deleteBeyondHorizon(50);
-
-    // occA debe sobrevivir (tiene hecho).
-    const stillExists = await repos.occurrences.findById(occA.id);
-    expect(stillExists).not.toBeNull();
-    expect(result.skipped).toBeGreaterThanOrEqual(1);
-
-    // occB debe haber sido borrada (sin hecho).
-    const gone = await repos.occurrences.findById(occB.id);
-    expect(gone).toBeNull();
-
-    // Limpieza: borrar el hecho y luego la ocurrencia A.
-    await repos.compliance.deleteFactForOccurrence(occA.id);
-    await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, occA.id));
+      const gone = await repos.occurrences.findById(occB.id);
+      expect(gone).toBeUndefined();
+    } finally {
+      await repos.compliance.deleteFactForOccurrence(occA.id);
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, occA.id));
+    }
   });
 
   it("ocurrencias sin compliance_fact sí se borran", async () => {
-    if (!dbAvailable) return;
-
     const db = createDb(DATABASE_URL);
     const repos = createRepositories(db);
 
@@ -229,6 +241,17 @@ describe("deleteBeyondHorizon — guarda de compliance_fact", () => {
     const profiles = await repos.profiles.findForClient(tecma.id);
     if (profiles.length === 0) return;
     const profile = profiles[0]!;
+
+    // Pre-limpieza: eliminar residuos de corridas anteriores.
+    for (const date of ["2099-02-10", "2099-02-11"]) {
+      const stale = await db.query.serviceOccurrences.findFirst({
+        where: (o, { and, eq: e }) =>
+          and(e(o.serviceProfileId, profile.id), e(o.serviceDate, date)),
+      });
+      if (stale) {
+        await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, stale.id));
+      }
+    }
 
     // Insertar dos ocurrencias sin hecho en fecha lejana.
     const [occC, occD] = await db
@@ -261,8 +284,8 @@ describe("deleteBeyondHorizon — guarda de compliance_fact", () => {
 
     const goneC = await repos.occurrences.findById(occC.id);
     const goneD = await repos.occurrences.findById(occD.id);
-    expect(goneC).toBeNull();
-    expect(goneD).toBeNull();
+    expect(goneC).toBeUndefined();
+    expect(goneD).toBeUndefined();
   });
 });
 
@@ -283,8 +306,6 @@ describe("generateForProfile — alineación de calendario (TZ=UTC simula Vercel
    * en el rango es lun-24; el código roto insertaba "2026-08-23" (dom Juárez).
    */
   it("rango sáb-22 a lun-24 ago-2026: inserta lun-24, no dom-23", async () => {
-    if (!dbAvailable) return;
-
     const db = createDb(DATABASE_URL);
     const repos = createRepositories(db);
 
@@ -321,6 +342,420 @@ describe("generateForProfile — alineación de calendario (TZ=UTC simula Vercel
           .delete(serviceOccurrences)
           .where(inArray(serviceOccurrences.id, result.createdIds));
       }
+    }
+  });
+});
+
+// ─── Pieza 1: Historia de Hechos ──────────────────────────────────────────────
+// Estos tests verifican los invariantes de archiveAndDeleteFact, updateHistorySuccessor
+// y getFactHistory. Toda la evidencia sale de DB real (Neon test branch).
+describe("Pieza 1 — Historia de Hechos", () => {
+  const POLICY_FIXTURE: ContractPolicy = {
+    toleranceMinutes: 5,
+    verificationGraceMinutes: 15,
+    routeStrictness: "destino_only",
+    kmlMatchMinPct: 60,
+    kmlCorridorMeters: 120,
+    kmlCorridorMinPct: 60,
+    excusableReasons: [],
+    enforcementRules: [],
+    evidenceMarginMinutesBefore: 60,
+    evidenceMarginMinutesAfter: 30,
+    arrivalAnticipationMinutes: 15,
+    maxRouteDurationMinutes: 60,
+    evidenceMinCoveragePct: 80,
+    evidenceMaxGapMinutes: 10,
+    timeZone: "America/Ciudad_Juarez",
+  };
+
+  /** Crea una ocurrencia + trip + compliance_fact de prueba en el futuro lejano. */
+  async function createTestFact(
+    db: ReturnType<typeof createDb>,
+    repos: ReturnType<typeof createRepositories>,
+    serviceDate: string,
+    deadlineIso: string,
+    status: "cumplido" | "no_cumplido" = "no_cumplido",
+  ) {
+    const tecma = await repos.accounts.findBySlug("tecma");
+    if (!tecma) throw new Error("Cuenta tecma no encontrada en test branch");
+    const profiles = await repos.profiles.findForClient(tecma.id);
+    if (profiles.length === 0) throw new Error("Sin perfiles en test branch");
+    const profile = profiles[0]!;
+
+    const deadline = new Date(deadlineIso);
+    const windowStart = new Date(deadline.getTime() - 60 * 60 * 1000);
+    const windowEnd = new Date(deadline.getTime() + 30 * 60 * 1000);
+
+    const [occ] = await db
+      .insert(serviceOccurrences)
+      .values({
+        serviceProfileId: profile.id,
+        contractId: profile.contractId,
+        routeShiftId: profile.routeShiftId,
+        serviceDate,
+        expectedDeadline: deadline,
+        expectedGeofenceId: profile.geofenceId,
+      })
+      .returning();
+    if (!occ) throw new Error("No se pudo insertar ocurrencia");
+
+    const [trip] = await db
+      .insert(trips)
+      .values({
+        serviceOccurrenceId: occ.id,
+        evidenceWindowStart: windowStart,
+        evidenceWindowEnd: windowEnd,
+        evidenceStatus: "en_espera",
+      })
+      .returning();
+    if (!trip) throw new Error("No se pudo insertar trip");
+
+    await repos.compliance.saveFact({
+      serviceOccurrenceId: occ.id,
+      tripId: trip.id,
+      expectedDeadline: deadline,
+      expectedGeofenceId: profile.geofenceId,
+      referenceUnitId: null,
+      observedUnitId: null,
+      observedArrivalAt: null,
+      observedRouteMatchPct: null,
+      servedVariantId: null,
+      status,
+      timing: null,
+      lateExcusable: false,
+      excusableReason: null,
+      routeStrictnessApplied: "destino_only",
+      contractPolicySnapshot: POLICY_FIXTURE,
+    });
+
+    return { occ, trip };
+  }
+
+  it("re-juicio: compliance_facts 1 fila, compliance_fact_history 1 fila con actor", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+    const { occ, trip } = await createTestFact(
+      db, repos, "2099-03-01", "2099-03-01T08:00:00Z", "no_cumplido",
+    );
+
+    try {
+      // Primer re-juicio
+      const historyId = await repos.compliance.archiveAndDeleteFact(
+        occ.id, "human", "usuario-test-123",
+      );
+      await repos.compliance.saveFact({
+        serviceOccurrenceId: occ.id,
+        tripId: trip.id,
+        expectedDeadline: new Date("2099-03-01T08:00:00Z"),
+        expectedGeofenceId: occ.expectedGeofenceId,
+        referenceUnitId: null,
+        observedUnitId: null,
+        observedArrivalAt: null,
+        observedRouteMatchPct: null,
+        servedVariantId: null,
+        status: "cumplido",
+        timing: "a_tiempo",
+        lateExcusable: false,
+        excusableReason: null,
+        routeStrictnessApplied: "destino_only",
+        contractPolicySnapshot: POLICY_FIXTURE,
+      });
+      const newFact = await db.query.complianceFacts.findFirst({
+        where: (f, { eq }) => eq(f.serviceOccurrenceId, occ.id),
+      });
+      if (!newFact) throw new Error("saveFact no insertó");
+      await repos.compliance.updateHistorySuccessor(historyId, newFact.id);
+
+      // compliance_facts: exactamente 1 fila (la nueva)
+      const current = await db.query.complianceFacts.findFirst({
+        where: (f, { eq }) => eq(f.serviceOccurrenceId, occ.id),
+      });
+      expect(current).not.toBeNull();
+      expect(current?.status).toBe("cumplido");
+
+      // compliance_fact_history: exactamente 1 fila
+      const history = await repos.compliance.getFactHistory(occ.id);
+      expect(history).toHaveLength(1);
+      expect(history[0]?.actorKind).toBe("human");
+      expect(history[0]?.actorId).toBe("usuario-test-123");
+      expect(history[0]?.status).toBe("no_cumplido");
+      expect(history[0]?.replacedByFactId).toBe(newFact.id);
+    } finally {
+      await repos.compliance.deleteFactForOccurrence(occ.id);
+      await db.delete(complianceFactHistory).where(eq(complianceFactHistory.serviceOccurrenceId, occ.id));
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, occ.id));
+    }
+  });
+
+  it("tres re-juicios: 3 filas en historial, replaced_by_fact_id correcto", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+    const { occ, trip } = await createTestFact(
+      db, repos, "2099-03-02", "2099-03-02T08:00:00Z", "no_cumplido",
+    );
+
+    try {
+      const factData = {
+        serviceOccurrenceId: occ.id,
+        tripId: trip.id,
+        expectedDeadline: new Date("2099-03-02T08:00:00Z"),
+        expectedGeofenceId: occ.expectedGeofenceId,
+        referenceUnitId: null as null,
+        observedUnitId: null as null,
+        observedArrivalAt: null as null,
+        observedRouteMatchPct: null as null,
+        servedVariantId: null as null,
+        timing: null as null,
+        lateExcusable: false,
+        excusableReason: null as null,
+        routeStrictnessApplied: "destino_only" as const,
+        contractPolicySnapshot: POLICY_FIXTURE,
+      };
+
+      // Re-juicio 1
+      const h1 = await repos.compliance.archiveAndDeleteFact(occ.id, "system:cli", null);
+      await repos.compliance.saveFact({ ...factData, status: "cumplido" });
+      const f1 = (await db.query.complianceFacts.findFirst({ where: (f, { eq }) => eq(f.serviceOccurrenceId, occ.id) }))!;
+      await repos.compliance.updateHistorySuccessor(h1, f1.id);
+
+      // Re-juicio 2
+      const h2 = await repos.compliance.archiveAndDeleteFact(occ.id, "system:exclusivity-pass", null);
+      await repos.compliance.saveFact({ ...factData, status: "no_cumplido" });
+      const f2 = (await db.query.complianceFacts.findFirst({ where: (f, { eq }) => eq(f.serviceOccurrenceId, occ.id) }))!;
+      await repos.compliance.updateHistorySuccessor(h2, f2.id);
+
+      // Re-juicio 3
+      const h3 = await repos.compliance.archiveAndDeleteFact(occ.id, "human", "admin-xyz");
+      await repos.compliance.saveFact({ ...factData, status: "cumplido" });
+      const f3 = (await db.query.complianceFacts.findFirst({ where: (f, { eq }) => eq(f.serviceOccurrenceId, occ.id) }))!;
+      await repos.compliance.updateHistorySuccessor(h3, f3.id);
+
+      // compliance_facts: 1 fila (la más reciente)
+      const current = await db.query.complianceFacts.findFirst({
+        where: (f, { eq }) => eq(f.serviceOccurrenceId, occ.id),
+      });
+      expect(current?.status).toBe("cumplido");
+
+      // compliance_fact_history: 3 filas ordenadas
+      const history = await repos.compliance.getFactHistory(occ.id);
+      expect(history).toHaveLength(3);
+
+      // Orden replaced_at ASC: no_cumplido → cumplido → no_cumplido
+      expect(history[0]?.status).toBe("no_cumplido"); // original
+      expect(history[1]?.status).toBe("cumplido");    // después del 1er re-juicio
+      expect(history[2]?.status).toBe("no_cumplido"); // después del 2do re-juicio
+
+      // replaced_by_fact_id: null en las dos más antiguas (el sucesor fue re-juzgado)
+      // El 3er re-juicio (h3) apunta a f3 que aún está vigente → no-null
+      expect(history[0]?.replacedByFactId).toBeNull();
+      expect(history[1]?.replacedByFactId).toBeNull();
+      expect(history[2]?.replacedByFactId).toBe(f3.id);
+    } finally {
+      await repos.compliance.deleteFactForOccurrence(occ.id);
+      await db.delete(complianceFactHistory).where(eq(complianceFactHistory.serviceOccurrenceId, occ.id));
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, occ.id));
+    }
+  });
+
+  it("primera verificación (sin hecho previo): historial queda vacío", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const tecma = await repos.accounts.findBySlug("tecma");
+    if (!tecma) return;
+    const profiles = await repos.profiles.findForClient(tecma.id);
+    if (profiles.length === 0) return;
+    const profile = profiles[0]!;
+
+    const deadline = new Date("2099-03-03T08:00:00Z");
+    const [occ] = await db
+      .insert(serviceOccurrences)
+      .values({
+        serviceProfileId: profile.id,
+        contractId: profile.contractId,
+        routeShiftId: profile.routeShiftId,
+        serviceDate: "2099-03-03",
+        expectedDeadline: deadline,
+        expectedGeofenceId: profile.geofenceId,
+      })
+      .returning();
+    if (!occ) throw new Error("No se pudo insertar ocurrencia");
+
+    const [trip] = await db
+      .insert(trips)
+      .values({
+        serviceOccurrenceId: occ.id,
+        evidenceWindowStart: new Date(deadline.getTime() - 3600_000),
+        evidenceWindowEnd: new Date(deadline.getTime() + 1800_000),
+        evidenceStatus: "en_espera",
+      })
+      .returning();
+    if (!trip) throw new Error("No se pudo insertar trip");
+
+    try {
+      // Primera verificación: saveFact sin archiveAndDeleteFact
+      await repos.compliance.saveFact({
+        serviceOccurrenceId: occ.id,
+        tripId: trip.id,
+        expectedDeadline: deadline,
+        expectedGeofenceId: occ.expectedGeofenceId,
+        referenceUnitId: null,
+        observedUnitId: null,
+        observedArrivalAt: null,
+        observedRouteMatchPct: null,
+        servedVariantId: null,
+        status: "no_cumplido",
+        timing: null,
+        lateExcusable: false,
+        excusableReason: null,
+        routeStrictnessApplied: "destino_only",
+        contractPolicySnapshot: POLICY_FIXTURE,
+      });
+
+      // Historial debe estar vacío — no se archivó nada
+      const history = await repos.compliance.getFactHistory(occ.id);
+      expect(history).toHaveLength(0);
+
+      // El hecho vigente sí existe
+      const current = await db.query.complianceFacts.findFirst({
+        where: (f, { eq }) => eq(f.serviceOccurrenceId, occ.id),
+      });
+      expect(current?.status).toBe("no_cumplido");
+    } finally {
+      await repos.compliance.deleteFactForOccurrence(occ.id);
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, occ.id));
+    }
+  });
+
+  it("retry pendiente→pendiente: no archiva; retry pendiente→resuelto: sí archiva", async () => {
+    // Verifica la regla: archivar solo cuando cambió algo, nunca por seguir igual.
+    // Un GPS sin señal puede generar 360 reintentos/hora — archivando siempre serían
+    // 360 filas idénticas. Solo se archiva en la transición real.
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    // ── Caso A: pendiente→pendiente (cron reintenta, GPS sigue sin datos) ──────
+    const { occ: occA } = await createTestFact(
+      db, repos, "2099-03-05", "2099-03-05T08:00:00Z",
+    );
+    // Simular retry: leer el hecho actual, borrarlo, insertar uno nuevo igual
+    const oldFactA = await db.query.complianceFacts.findFirst({
+      where: (f, { eq: e }) => e(f.serviceOccurrenceId, occA.id),
+    });
+    if (!oldFactA) throw new Error("setup: no fact A");
+
+    try {
+      await repos.compliance.deleteFactForOccurrence(occA.id);
+      await repos.compliance.saveFact({
+        serviceOccurrenceId: occA.id,
+        tripId: oldFactA.tripId!,
+        expectedDeadline: oldFactA.expectedDeadline,
+        expectedGeofenceId: oldFactA.expectedGeofenceId,
+        referenceUnitId: null, observedUnitId: null, observedArrivalAt: null,
+        observedRouteMatchPct: null, servedVariantId: null,
+        status: "no_cumplido", // mismo que el original
+        timing: null, lateExcusable: false, excusableReason: null,
+        routeStrictnessApplied: "destino_only",
+        contractPolicySnapshot: POLICY_FIXTURE,
+      });
+      // Sin llamar a insertHistoryEntry — la condición fact.status !== oldFact.status es false
+      const historyA = await repos.compliance.getFactHistory(occA.id);
+      expect(historyA).toHaveLength(0);
+    } finally {
+      await repos.compliance.deleteFactForOccurrence(occA.id);
+      await db.delete(complianceFactHistory).where(eq(complianceFactHistory.serviceOccurrenceId, occA.id));
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, occA.id));
+    }
+
+    // ── Caso B: pendiente→resuelto (GPS vuelve, transición real) ───────────────
+    const { occ: occB } = await createTestFact(
+      db, repos, "2099-03-06", "2099-03-06T08:00:00Z",
+    );
+    const oldFactB = await db.query.complianceFacts.findFirst({
+      where: (f, { eq: e }) => e(f.serviceOccurrenceId, occB.id),
+    });
+    if (!oldFactB) throw new Error("setup: no fact B");
+
+    try {
+      await repos.compliance.deleteFactForOccurrence(occB.id);
+      await repos.compliance.saveFact({
+        serviceOccurrenceId: occB.id,
+        tripId: oldFactB.tripId!,
+        expectedDeadline: oldFactB.expectedDeadline,
+        expectedGeofenceId: oldFactB.expectedGeofenceId,
+        referenceUnitId: null, observedUnitId: null, observedArrivalAt: null,
+        observedRouteMatchPct: null, servedVariantId: null,
+        status: "cumplido", // CAMBIO de estado
+        timing: "a_tiempo", lateExcusable: false, excusableReason: null,
+        routeStrictnessApplied: "destino_only",
+        contractPolicySnapshot: POLICY_FIXTURE,
+      });
+      const newFactB = await db.query.complianceFacts.findFirst({
+        where: (f, { eq: e }) => e(f.serviceOccurrenceId, occB.id),
+      });
+      if (!newFactB) throw new Error("saveFact B no insertó");
+
+      // Archivar porque fact.status !== oldFact.status
+      const historyId = await repos.compliance.insertHistoryEntry(oldFactB, "system:cron", null);
+      await repos.compliance.updateHistorySuccessor(historyId, newFactB.id);
+
+      const historyB = await repos.compliance.getFactHistory(occB.id);
+      expect(historyB).toHaveLength(1);
+      expect(historyB[0]?.status).toBe("no_cumplido");
+      expect(historyB[0]?.actorKind).toBe("system:cron");
+      expect(historyB[0]?.replacedByFactId).toBe(newFactB.id);
+    } finally {
+      await repos.compliance.deleteFactForOccurrence(occB.id);
+      await db.delete(complianceFactHistory).where(eq(complianceFactHistory.serviceOccurrenceId, occB.id));
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, occB.id));
+    }
+  });
+
+  it("getFactHistory devuelve versiones en orden replaced_at ASC", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+    const { occ, trip } = await createTestFact(
+      db, repos, "2099-03-04", "2099-03-04T08:00:00Z", "cumplido",
+    );
+
+    try {
+      const factData = {
+        serviceOccurrenceId: occ.id,
+        tripId: trip.id,
+        expectedDeadline: new Date("2099-03-04T08:00:00Z"),
+        expectedGeofenceId: occ.expectedGeofenceId,
+        referenceUnitId: null as null,
+        observedUnitId: null as null,
+        observedArrivalAt: null as null,
+        observedRouteMatchPct: null as null,
+        servedVariantId: null as null,
+        timing: null as null,
+        lateExcusable: false,
+        excusableReason: null as null,
+        routeStrictnessApplied: "destino_only" as const,
+        contractPolicySnapshot: POLICY_FIXTURE,
+      };
+
+      await repos.compliance.archiveAndDeleteFact(occ.id, "system:cli", null);
+      await repos.compliance.saveFact({ ...factData, status: "no_cumplido" });
+      await repos.compliance.archiveAndDeleteFact(occ.id, "human", "auditor-1");
+      await repos.compliance.saveFact({ ...factData, status: "cumplido" });
+
+      const history = await repos.compliance.getFactHistory(occ.id);
+      expect(history).toHaveLength(2);
+
+      // replaced_at debe ser estrictamente creciente
+      const [first, second] = history;
+      expect(first!.replacedAt.getTime()).toBeLessThan(second!.replacedAt.getTime());
+
+      // Primer actor: system:cli; segundo: human
+      expect(first!.actorKind).toBe("system:cli");
+      expect(second!.actorKind).toBe("human");
+      expect(second!.actorId).toBe("auditor-1");
+    } finally {
+      await repos.compliance.deleteFactForOccurrence(occ.id);
+      await db.delete(complianceFactHistory).where(eq(complianceFactHistory.serviceOccurrenceId, occ.id));
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, occ.id));
     }
   });
 });

@@ -24,6 +24,7 @@ import {
   serviceOccurrences,
   trips,
   complianceFacts,
+  complianceFactHistory,
   ledgerEntries,
   evidencePoints,
   userMemberships,
@@ -40,6 +41,7 @@ import {
   ingestAlerts,
   clientCarrierAuthorizations,
 } from "../schema/index.js";
+import type { ComplianceFact } from "../schema/index.js";
 import type { ContractPolicy, CreateContractInput, CreateServiceProfileInput } from "@jtel/domain";
 import { localDateIso, JTTEL_TZ, civilDatesInRange, addDaysIso } from "@jtel/domain";
 
@@ -2309,19 +2311,101 @@ export class ComplianceRepository {
     return fact!;
   }
 
-  /** Borra el hecho de cumplimiento (p. ej. para reintentar pendiente_evidencia). */
+  /** Borra el hecho sin archivar — para retries de pendiente y limpieza en tests. */
   async deleteFactForOccurrence(serviceOccurrenceId: string) {
     await this.db
       .delete(complianceFacts)
       .where(eq(complianceFacts.serviceOccurrenceId, serviceOccurrenceId));
   }
 
+  /**
+   * Copia el hecho vigente a compliance_fact_history y luego lo borra de
+   * compliance_facts. Llama ANTES de saveFact en cualquier re-juicio.
+   * Devuelve el id de la fila de historial para poder actualizar
+   * replaced_by_fact_id una vez que el hecho sucesor existe.
+   */
+  async archiveAndDeleteFact(
+    serviceOccurrenceId: string,
+    actorKind: string,
+    actorId: string | null,
+  ): Promise<string> {
+    const current = await this.db.query.complianceFacts.findFirst({
+      where: eq(complianceFacts.serviceOccurrenceId, serviceOccurrenceId),
+    });
+    if (!current) {
+      throw new Error(`archiveAndDeleteFact: no hay hecho vigente para ${serviceOccurrenceId}`);
+    }
+
+    const [historyRow] = await this.db
+      .insert(complianceFactHistory)
+      .values({
+        serviceOccurrenceId,
+        status: current.status,
+        timing: current.timing,
+        factSnapshot: current as unknown as Record<string, unknown>,
+        replacedByFactId: null,
+        actorKind,
+        actorId,
+      })
+      .returning({ id: complianceFactHistory.id });
+
+    await this.db
+      .delete(complianceFacts)
+      .where(eq(complianceFacts.serviceOccurrenceId, serviceOccurrenceId));
+
+    return historyRow!.id;
+  }
+
+  /**
+   * Inserta en historial usando datos de un hecho ya cargado en memoria.
+   * No relee de DB ni borra el hecho vigente — úsalo cuando ya eliminaste el hecho
+   * y sólo necesitas archivar retroactivamente si el estado cambió.
+   *
+   * `existingFact` es el hecho COMPLETO (no un subconjunto): la foto de fact_snapshot
+   * debe ser fiel a la fila, y tiparlo así evita que un caller futuro archive de menos.
+   */
+  async insertHistoryEntry(
+    existingFact: ComplianceFact,
+    actorKind: string,
+    actorId: string | null,
+  ): Promise<string> {
+    const [historyRow] = await this.db
+      .insert(complianceFactHistory)
+      .values({
+        serviceOccurrenceId: existingFact.serviceOccurrenceId,
+        status: existingFact.status,
+        timing: existingFact.timing,
+        factSnapshot: existingFact as unknown as Record<string, unknown>,
+        actorKind,
+        actorId,
+      })
+      .returning({ id: complianceFactHistory.id });
+    return historyRow!.id;
+  }
+
+  /** Actualiza el vínculo al hecho sucesor en la fila de historial recién creada. */
+  async updateHistorySuccessor(historyId: string, newFactId: string) {
+    await this.db
+      .update(complianceFactHistory)
+      .set({ replacedByFactId: newFactId })
+      .where(eq(complianceFactHistory.id, historyId));
+  }
+
+  /** Devuelve el historial de versiones de una ocurrencia en orden cronológico. */
+  async getFactHistory(serviceOccurrenceId: string) {
+    return this.db.query.complianceFactHistory.findMany({
+      where: eq(complianceFactHistory.serviceOccurrenceId, serviceOccurrenceId),
+      orderBy: (h, { asc }) => [asc(h.replacedAt)],
+    });
+  }
+
   async addLedgerEntry(data: {
     tripId: string;
     serviceOccurrenceId: string;
+    actorKind: string;
+    actorId?: string | null;
     action: string;
     steps: import("@jtel/domain").LedgerStep[];
-    actorUserId?: string;
     metadata?: Record<string, unknown>;
   }) {
     const [entry] = await this.db.insert(ledgerEntries).values(data).returning();

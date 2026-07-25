@@ -1,6 +1,6 @@
 import { verifyService, pointInPolygon } from "@jtel/verification";
 import { createUmbrellaProvider, ingestEvidenceForTrip } from "@jtel/gps-umbrella";
-import type { Repositories } from "@jtel/db";
+import type { ComplianceFact, Repositories } from "@jtel/db";
 import type { ContractPolicy, VerificationResult } from "@jtel/domain";
 import { localDateIso, JTTEL_TZ } from "@jtel/domain";
 
@@ -153,6 +153,28 @@ export function hasIncompleteEvidenceCoverage(
   return false;
 }
 
+type VerifyOccurrenceOpts =
+  | {
+      force?: false | undefined;
+      keepEvidence?: boolean;
+      excludeUnitIds?: string[];
+      eliminationPass?: boolean;
+      eliminationExcludedUnitIds?: string[];
+      actorKind?: string;
+      actorId?: string | null;
+    }
+  | {
+      force: true;
+      /** "decision" → archiva siempre; "maintenance" → archiva solo si cambia el veredicto. */
+      actorIntent: "decision" | "maintenance";
+      keepEvidence?: boolean;
+      excludeUnitIds?: string[];
+      eliminationPass?: boolean;
+      eliminationExcludedUnitIds?: string[];
+      actorKind?: string;
+      actorId?: string | null;
+    };
+
 export class VerificationService {
   // Un proveedor por carrier (cacheado por corrida) para reutilizar el token y
   // evitar 429. Cada carrier puede usar un proveedor/credenciales distintos.
@@ -304,6 +326,10 @@ export class VerificationService {
       /** Default true. false = re-ingerir desde memoria. */
       keepEvidence?: boolean;
       exclusiveUnits?: boolean;
+      /** Quién pidió el re-juicio. */
+      actorKind?: string;
+      actorId?: string | null;
+      actorIntent?: "decision" | "maintenance";
     } = {},
   ) {
     const daysBack = opts.daysBack ?? 14;
@@ -328,7 +354,13 @@ export class VerificationService {
     for (const occ of targets) {
       try {
         results.push(
-          await this.verifyOccurrence(occ.id, { force: true, keepEvidence }),
+          await this.verifyOccurrence(occ.id, {
+            force: true,
+            actorIntent: opts.actorIntent ?? "decision",
+            keepEvidence,
+            actorKind: opts.actorKind,
+            actorId: opts.actorId,
+          }),
         );
       } catch (err) {
         results.push({
@@ -429,8 +461,11 @@ export class VerificationService {
         ];
         await this.verifyOccurrence(occurrenceId, {
           force: true,
+          actorIntent: "maintenance",
           keepEvidence: true,
           excludeUnitIds,
+          actorKind: "system:exclusivity-pass",
+          actorId: null,
         });
       }
     }
@@ -491,10 +526,13 @@ export class VerificationService {
 
       await this.verifyOccurrence(id, {
         force: true,
+        actorIntent: "maintenance",
         keepEvidence: true,
         excludeUnitIds: occupied,
         eliminationPass: true,
         eliminationExcludedUnitIds: occupied,
+        actorKind: "system:elimination-pass",
+        actorId: null,
       });
       // Una sola ronda: no realimentar veredictos derivados a confidentClaims
       // (evita cascada dependiente del orden de procesamiento).
@@ -525,6 +563,8 @@ export class VerificationService {
     deadline: Date;
     policy: ContractPolicy;
     ownGeofence: { id: string | null; polygon: Array<{ lat: number; lng: number }> };
+    actorKind: string;
+    actorId: string | null;
   }): Promise<void> {
     const grace = input.policy.verificationGraceMinutes ?? 15;
     const marginAfter = input.policy.evidenceMarginMinutesAfter ?? 0;
@@ -571,6 +611,8 @@ export class VerificationService {
       await this.repos.compliance.addLedgerEntry({
         tripId: input.tripId,
         serviceOccurrenceId: input.occurrenceId,
+        actorKind: input.actorKind,
+        actorId: input.actorId,
         action: "contexto_calibracion",
         steps: [
           {
@@ -616,6 +658,8 @@ export class VerificationService {
     await this.repos.compliance.addLedgerEntry({
       tripId: input.tripId,
       serviceOccurrenceId: input.occurrenceId,
+      actorKind: input.actorKind,
+      actorId: input.actorId,
       action: "contexto_calibracion",
       steps: [
         {
@@ -661,15 +705,7 @@ export class VerificationService {
 
   async verifyOccurrence(
     occurrenceId: string,
-    opts: {
-      force?: boolean;
-      keepEvidence?: boolean;
-      /** Unidades que no pueden ganar este servicio (asignación exclusiva / eliminación). */
-      excludeUnitIds?: string[];
-      /** Pasada de eliminación: rastro interno en ledger (no visible al cliente). */
-      eliminationPass?: boolean;
-      eliminationExcludedUnitIds?: string[];
-    } = {},
+    opts: VerifyOccurrenceOpts = {},
   ) {
     const occurrence = await this.repos.occurrences.findById(occurrenceId);
     if (!occurrence?.trip) {
@@ -680,6 +716,13 @@ export class VerificationService {
     const existingPoints = await this.repos.evidence.getPointsForTrip(trip.id);
     const reuseEvidence = Boolean(opts.keepEvidence && existingPoints.length > 0);
 
+    const resolvedActorKind = opts.actorKind ?? "system:cron";
+    const resolvedActorId = opts.actorId ?? null;
+    let pendingHistoryId: string | null = null;
+    // Guardamos el hecho pendiente COMPLETO para archivar condicionalmente después de
+    // saveFact, solo si el veredicto cambió (ver comentario en el bloque post-saveFact).
+    let pendingRetryFact: ComplianceFact | null = null;
+
     // Sin force: cumplido/no_cumplido son definitivos; pendiente se reintenta.
     if (occurrence.complianceFact) {
       if (
@@ -688,7 +731,28 @@ export class VerificationService {
       ) {
         return { occurrenceId, skipped: true, status: occurrence.complianceFact.status };
       }
-      await this.repos.compliance.deleteFactForOccurrence(occurrenceId);
+      if (opts.force && opts.actorIntent === "decision") {
+        // Decisión explícita (human / system:cli): archiva siempre, aunque el resultado
+        // no cambie — alguien decidió revisarlo, y eso es información.
+        pendingHistoryId = await this.repos.compliance.archiveAndDeleteFact(
+          occurrenceId,
+          resolvedActorKind,
+          resolvedActorId,
+        );
+      } else {
+        // Retry (sin force) o pasada automática con actorIntent:"maintenance"
+        // (exclusivity-pass / elimination-pass): no archivar ahora; decidir
+        // post-saveFact solo si el veredicto cambió.
+        // Regla (diseño, no accidente): se versiona SOLO cuando cambia el VEREDICTO.
+        // Un GPS sin señal 6 h = 360 reintentos idénticos; archivar cada uno
+        // inundaría la historia. Las pasadas automáticas son mecánicas — no representan
+        // una decisión aunque usen force:true.
+        // Se pela `observedUnit` (relación anidada del findById, no columna de la tabla)
+        // para que la foto quede en la forma plana de compliance_facts.
+        const { observedUnit: _observedUnit, ...factRow } = occurrence.complianceFact;
+        pendingRetryFact = factRow;
+        await this.repos.compliance.deleteFactForOccurrence(occurrenceId);
+      }
       if (!reuseEvidence) {
         await this.repos.evidence.clearPointsForTrip(trip.id);
         await this.repos.evidence.updateTripStatus(trip.id, "en_espera");
@@ -1004,9 +1068,27 @@ export class VerificationService {
       contractPolicySnapshot: policy,
     });
 
+    // Enlazar la fila de historial al hecho sucesor recién creado.
+    if (pendingHistoryId) {
+      await this.repos.compliance.updateHistorySuccessor(pendingHistoryId, fact.id);
+    }
+
+    // Retry con cambio de veredicto: archivar ahora que ya sabemos el nuevo estado.
+    // Si el veredicto NO cambió (pendiente→pendiente), no se versiona — ver comentario arriba.
+    if (pendingRetryFact && fact.status !== pendingRetryFact.status) {
+      const retryHistoryId = await this.repos.compliance.insertHistoryEntry(
+        pendingRetryFact,
+        resolvedActorKind,
+        resolvedActorId,
+      );
+      await this.repos.compliance.updateHistorySuccessor(retryHistoryId, fact.id);
+    }
+
     await this.repos.compliance.addLedgerEntry({
       tripId: trip.id,
       serviceOccurrenceId: occurrenceId,
+      actorKind: resolvedActorKind,
+      actorId: resolvedActorId,
       action: opts.eliminationPass
         ? "eliminacion_candidatas"
         : "verificacion_automatica",
@@ -1052,6 +1134,8 @@ export class VerificationService {
             id: profile.geofenceId ?? occurrence.expectedGeofenceId ?? null,
             polygon: geofence.polygon,
           },
+          actorKind: resolvedActorKind,
+          actorId: resolvedActorId,
         });
       } catch (err) {
         // El contexto es informativo; nunca debe tumbar la verificación.

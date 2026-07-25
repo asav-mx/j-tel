@@ -25,7 +25,8 @@ export async function POST(
   const service = new VerificationService(repos, getUmbrellaConfig());
 
   try {
-    const result = await service.verifyOccurrence(id);
+    // TODO: reemplazar null con session.userId cuando se implemente autenticación.
+    const result = await service.verifyOccurrence(id, { actorKind: "human", actorId: null });
     if (result.skipped) {
       return backToSoporte(request, {
         resync: "skip",

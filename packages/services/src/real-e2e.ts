@@ -409,6 +409,8 @@ async function main() {
     await repos.compliance.addLedgerEntry({
       tripId: trip.id,
       serviceOccurrenceId: occId,
+      actorKind: "system:e2e",
+      actorId: null,
       action: "verificacion_prueba_real",
       steps: result.ledgerSteps,
       metadata: { pointCount: points.length },

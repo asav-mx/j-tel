@@ -78,6 +78,8 @@ export async function POST(request: Request) {
   await repos.compliance.addLedgerEntry({
     tripId: occurrence.trip.id,
     serviceOccurrenceId: occurrenceId,
+    actorKind: "human",
+    actorId: null,
     action: "etiquetado_carrier_gt",
     steps: [
       {
