@@ -309,13 +309,36 @@ describe("cambio de política no toca hechos definitivos", () => {
 
   it("sin force, pendiente_evidencia no se salta (sí borra y reevalúa)", async () => {
     const deleteFact = vi.fn().mockResolvedValue(undefined);
+    // Forma real de repos.occurrences.findById: complianceFact trae `observedUnit`
+    // anidado (relación de la query), que NO es una columna de compliance_facts.
+    // La foto que se archiva debe pelar esa relación — ver assertion abajo.
+    const complianceFactWithRelation = {
+      id: "fact-old",
+      serviceOccurrenceId: "occ-pendiente",
+      tripId: "trip-1",
+      expectedDeadline: new Date("2026-07-01T12:00:00Z"),
+      expectedGeofenceId: "geo-1",
+      referenceUnitId: null,
+      observedUnitId: null,
+      observedArrivalAt: null,
+      observedRouteMatchPct: null,
+      servedVariantId: null,
+      status: "pendiente_evidencia" as const,
+      timing: null,
+      lateExcusable: false,
+      excusableReason: null,
+      routeStrictnessApplied: "destino_only" as const,
+      contractPolicySnapshot: {},
+      materializedAt: new Date("2026-07-01T09:00:00Z"),
+      observedUnit: null,
+    };
     const occ = {
       id: "occ-pendiente",
       serviceDate: "2026-07-01",
       expectedDeadline: new Date("2026-07-01T12:00:00Z"),
       expectedGeofenceId: "geo-1",
       referenceUnitId: null,
-      complianceFact: { status: "pendiente_evidencia" as const },
+      complianceFact: complianceFactWithRelation,
       trip: {
         id: "trip-1",
         evidenceWindowStart: new Date("2026-07-01T10:00:00Z"),
@@ -365,7 +388,10 @@ describe("cambio de política no toca hechos definitivos", () => {
       },
       compliance: {
         deleteFactForOccurrence: deleteFact,
-        saveFact: vi.fn().mockResolvedValue({ id: "fact-1" }),
+        // Cambia el veredicto (pendiente → cumplido): dispara el archivado del retry.
+        saveFact: vi.fn().mockResolvedValue({ id: "fact-1", status: "cumplido" }),
+        insertHistoryEntry: vi.fn().mockResolvedValue("history-1"),
+        updateHistorySuccessor: vi.fn().mockResolvedValue(undefined),
         addLedgerEntry: vi.fn(),
       },
       profiles: {
@@ -393,6 +419,190 @@ describe("cambio de política no toca hechos definitivos", () => {
     });
     expect(deleteFact).toHaveBeenCalledWith("occ-pendiente");
     expect(result.skipped).toBe(false);
+
+    // El veredicto cambió (pendiente → cumplido): sí archiva.
+    expect(repos.compliance.insertHistoryEntry).toHaveBeenCalledTimes(1);
+    const archivedSnapshot = repos.compliance.insertHistoryEntry.mock.calls[0]![0];
+    // Misma forma que archiveAndDeleteFact (fila plana de compliance_facts):
+    // sin `observedUnit` (relación anidada que solo añade findById, no una columna).
+    expect(archivedSnapshot).not.toHaveProperty("observedUnit");
+    expect(Object.keys(archivedSnapshot).sort()).toEqual(
+      Object.keys(complianceFactWithRelation)
+        .filter((k) => k !== "observedUnit")
+        .sort(),
+    );
+  });
+});
+
+describe("actorIntent: decision vs maintenance (force:true)", () => {
+  const existingFact = {
+    id: "fact-old",
+    serviceOccurrenceId: "occ-1",
+    tripId: "trip-1",
+    expectedDeadline: new Date("2026-07-01T12:00:00Z"),
+    expectedGeofenceId: "geo-1",
+    referenceUnitId: null,
+    observedUnitId: null,
+    observedArrivalAt: null,
+    observedRouteMatchPct: null,
+    servedVariantId: null,
+    status: "cumplido" as const,
+    timing: "a_tiempo" as const,
+    lateExcusable: false,
+    excusableReason: null,
+    routeStrictnessApplied: "destino_only" as const,
+    contractPolicySnapshot: {},
+    materializedAt: new Date("2026-07-01T09:00:00Z"),
+    observedUnit: null,
+  };
+
+  function buildOcc() {
+    return {
+      id: "occ-1",
+      contractId: "contract-1",
+      serviceDate: "2026-07-01",
+      expectedDeadline: new Date("2026-07-01T12:00:00Z"),
+      expectedGeofenceId: "geo-1",
+      referenceUnitId: null,
+      complianceFact: existingFact,
+      trip: {
+        id: "trip-1",
+        evidenceWindowStart: new Date("2026-07-01T10:00:00Z"),
+        evidenceWindowEnd: new Date("2026-07-01T13:00:00Z"),
+        evidenceStatus: "disponible" as const,
+      },
+      profile: {
+        id: "prof-1",
+        geofence: {
+          polygon: [
+            { lat: 31.69, lng: -106.43 },
+            { lat: 31.7, lng: -106.43 },
+            { lat: 31.7, lng: -106.42 },
+            { lat: 31.69, lng: -106.42 },
+          ],
+        },
+        contract: {
+          carrierAccountId: "carrier-1",
+          clientAccountId: "client-1",
+          policy: {
+            toleranceMinutes: 5,
+            routeStrictness: "destino_only" as const,
+            kmlMatchMinPct: 60,
+            excusableReasons: [] as string[],
+          },
+        },
+        routeShift: null,
+      },
+    };
+  }
+
+  // Punto dentro de la geocerca del fixture → verifyService retorna "cumplido".
+  const evidencePoint = {
+    imei: "imei-1",
+    latitude: 31.695,
+    longitude: -106.425,
+    recordedAt: new Date("2026-07-01T11:00:00Z"),
+    unitId: "unit-1",
+  };
+
+  function buildRepos(newFactStatus: "cumplido" | "no_cumplido" | "pendiente_evidencia") {
+    return {
+      occurrences: { findById: vi.fn().mockResolvedValue(buildOcc()) },
+      evidence: {
+        // Primera llamada = existingPoints (para reuseEvidence); demás = storedPoints.
+        // Con keepEvidence:true y existingPoints.length > 0, reuseEvidence = true
+        // y el motor nunca llama a Umbrella.
+        getPointsForTrip: vi.fn().mockResolvedValue([evidencePoint]),
+        clearPointsForTrip: vi.fn(),
+        updateTripStatus: vi.fn(),
+        savePoints: vi.fn(),
+      },
+      compliance: {
+        archiveAndDeleteFact: vi.fn().mockResolvedValue("history-1"),
+        deleteFactForOccurrence: vi.fn().mockResolvedValue(undefined),
+        saveFact: vi.fn().mockResolvedValue({ id: "fact-new", status: newFactStatus }),
+        insertHistoryEntry: vi.fn().mockResolvedValue("history-2"),
+        updateHistorySuccessor: vi.fn().mockResolvedValue(undefined),
+        addLedgerEntry: vi.fn(),
+      },
+      profiles: {
+        getPossibleUnitIds: vi.fn().mockResolvedValue([]),
+        findForContract: vi.fn().mockResolvedValue([]),
+      },
+      fleet: {
+        getDevicesForCarrier: vi.fn().mockResolvedValue([]),
+        getUnitsForCarrier: vi.fn().mockResolvedValue([{ id: "unit-1" }]),
+        resolveUnitAtTime: vi.fn().mockResolvedValue(null),
+      },
+      telemetry: { getForImeis: vi.fn().mockResolvedValue([]) },
+      routes: {
+        getKmlVersionForDate: vi.fn().mockResolvedValue(null),
+        getActiveVariantVersionsForDate: vi.fn().mockResolvedValue([]),
+      },
+      carriers: { getGpsCredentials: vi.fn().mockResolvedValue(null) },
+      notifications: { create: vi.fn() },
+    };
+  }
+
+  it("decision: archiva siempre aunque el veredicto no cambie (cumplido → cumplido)", async () => {
+    const repos = buildRepos("cumplido");
+    const service = new VerificationService(repos as never, {
+      umbrellaBaseUrl: "http://example.com",
+    });
+
+    await service.verifyOccurrence("occ-1", {
+      force: true,
+      actorIntent: "decision",
+      actorKind: "human",
+      actorId: null,
+      keepEvidence: true,
+    });
+
+    expect(repos.compliance.archiveAndDeleteFact).toHaveBeenCalledTimes(1);
+    expect(repos.compliance.deleteFactForOccurrence).not.toHaveBeenCalled();
+    expect(repos.compliance.insertHistoryEntry).not.toHaveBeenCalled();
+    // updateHistorySuccessor se llama para enlazar el pendingHistoryId al hecho nuevo.
+    expect(repos.compliance.updateHistorySuccessor).toHaveBeenCalledTimes(1);
+  });
+
+  it("maintenance: no archiva cuando el veredicto no cambia (cumplido → cumplido)", async () => {
+    const repos = buildRepos("cumplido");
+    const service = new VerificationService(repos as never, {
+      umbrellaBaseUrl: "http://example.com",
+    });
+
+    await service.verifyOccurrence("occ-1", {
+      force: true,
+      actorIntent: "maintenance",
+      actorKind: "system:exclusivity-pass",
+      actorId: null,
+      keepEvidence: true,
+    });
+
+    expect(repos.compliance.archiveAndDeleteFact).not.toHaveBeenCalled();
+    expect(repos.compliance.deleteFactForOccurrence).toHaveBeenCalledTimes(1);
+    expect(repos.compliance.insertHistoryEntry).not.toHaveBeenCalled();
+    expect(repos.compliance.updateHistorySuccessor).not.toHaveBeenCalled();
+  });
+
+  it("maintenance: archiva cuando el veredicto cambia (cumplido → no_cumplido)", async () => {
+    const repos = buildRepos("no_cumplido");
+    const service = new VerificationService(repos as never, {
+      umbrellaBaseUrl: "http://example.com",
+    });
+
+    await service.verifyOccurrence("occ-1", {
+      force: true,
+      actorIntent: "maintenance",
+      actorKind: "system:exclusivity-pass",
+      actorId: null,
+      keepEvidence: true,
+    });
+
+    expect(repos.compliance.archiveAndDeleteFact).not.toHaveBeenCalled();
+    expect(repos.compliance.deleteFactForOccurrence).toHaveBeenCalledTimes(1);
+    expect(repos.compliance.insertHistoryEntry).toHaveBeenCalledTimes(1);
+    expect(repos.compliance.updateHistorySuccessor).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -511,6 +721,7 @@ describe("perdedor exclusivo sin alternativa", () => {
     });
     const result = await service.verifyOccurrence("occ-loser", {
       force: true,
+      actorIntent: "maintenance",
       keepEvidence: true,
       excludeUnitIds: ["unit-winner"],
     });
@@ -540,6 +751,7 @@ describe("perdedor exclusivo sin alternativa", () => {
     });
     const result = await service.verifyOccurrence("occ-loser", {
       force: true,
+      actorIntent: "maintenance",
       keepEvidence: true,
       excludeUnitIds: ["unit-winner"],
     });
@@ -569,6 +781,7 @@ describe("perdedor exclusivo sin alternativa", () => {
     });
     const result = await service.verifyOccurrence("occ-loser", {
       force: true,
+      actorIntent: "maintenance",
       keepEvidence: true,
       excludeUnitIds: ["unit-winner"],
       eliminationPass: true,

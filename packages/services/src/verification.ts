@@ -153,6 +153,28 @@ export function hasIncompleteEvidenceCoverage(
   return false;
 }
 
+type VerifyOccurrenceOpts =
+  | {
+      force?: false | undefined;
+      keepEvidence?: boolean;
+      excludeUnitIds?: string[];
+      eliminationPass?: boolean;
+      eliminationExcludedUnitIds?: string[];
+      actorKind?: string;
+      actorId?: string | null;
+    }
+  | {
+      force: true;
+      /** "decision" → archiva siempre; "maintenance" → archiva solo si cambia el veredicto. */
+      actorIntent: "decision" | "maintenance";
+      keepEvidence?: boolean;
+      excludeUnitIds?: string[];
+      eliminationPass?: boolean;
+      eliminationExcludedUnitIds?: string[];
+      actorKind?: string;
+      actorId?: string | null;
+    };
+
 export class VerificationService {
   // Un proveedor por carrier (cacheado por corrida) para reutilizar el token y
   // evitar 429. Cada carrier puede usar un proveedor/credenciales distintos.
@@ -307,6 +329,7 @@ export class VerificationService {
       /** Quién pidió el re-juicio. */
       actorKind?: string;
       actorId?: string | null;
+      actorIntent?: "decision" | "maintenance";
     } = {},
   ) {
     const daysBack = opts.daysBack ?? 14;
@@ -333,6 +356,7 @@ export class VerificationService {
         results.push(
           await this.verifyOccurrence(occ.id, {
             force: true,
+            actorIntent: opts.actorIntent ?? "decision",
             keepEvidence,
             actorKind: opts.actorKind,
             actorId: opts.actorId,
@@ -437,6 +461,7 @@ export class VerificationService {
         ];
         await this.verifyOccurrence(occurrenceId, {
           force: true,
+          actorIntent: "maintenance",
           keepEvidence: true,
           excludeUnitIds,
           actorKind: "system:exclusivity-pass",
@@ -501,6 +526,7 @@ export class VerificationService {
 
       await this.verifyOccurrence(id, {
         force: true,
+        actorIntent: "maintenance",
         keepEvidence: true,
         excludeUnitIds: occupied,
         eliminationPass: true,
@@ -679,18 +705,7 @@ export class VerificationService {
 
   async verifyOccurrence(
     occurrenceId: string,
-    opts: {
-      force?: boolean;
-      keepEvidence?: boolean;
-      /** Unidades que no pueden ganar este servicio (asignación exclusiva / eliminación). */
-      excludeUnitIds?: string[];
-      /** Pasada de eliminación: rastro interno en ledger (no visible al cliente). */
-      eliminationPass?: boolean;
-      eliminationExcludedUnitIds?: string[];
-      /** Quién pidió este re-juicio. Requerido cuando force:true. */
-      actorKind?: string;
-      actorId?: string | null;
-    } = {},
+    opts: VerifyOccurrenceOpts = {},
   ) {
     const occurrence = await this.repos.occurrences.findById(occurrenceId);
     if (!occurrence?.trip) {
@@ -716,28 +731,26 @@ export class VerificationService {
       ) {
         return { occurrenceId, skipped: true, status: occurrence.complianceFact.status };
       }
-      if (opts.force) {
-        // Re-juicio deliberado: archivar antes de borrar. Siempre archiva aunque el
-        // resultado no cambie — alguien decidió revisarlo, y eso es información.
-        if (!opts.actorKind) {
-          throw new Error(
-            `verifyOccurrence con force:true requiere actorKind (occurrenceId: ${occurrenceId})`,
-          );
-        }
+      if (opts.force && opts.actorIntent === "decision") {
+        // Decisión explícita (human / system:cli): archiva siempre, aunque el resultado
+        // no cambie — alguien decidió revisarlo, y eso es información.
         pendingHistoryId = await this.repos.compliance.archiveAndDeleteFact(
           occurrenceId,
           resolvedActorKind,
           resolvedActorId,
         );
       } else {
-        // Retry de pendiente_evidencia: borrar ahora, decidir si archivar DESPUÉS de
-        // conocer el nuevo estado. El cron corre cada minuto — un GPS sin señal
-        // durante 6 horas generaría 360 filas idénticas si archiváramos siempre.
-        // Regla (decisión de diseño, no accidente): se versiona SOLO cuando cambia el
-        // VEREDICTO (pendiente → cumplido/no_cumplido). Un retry que reúne más evidencia
-        // pero deja el veredicto igual NO genera versión — la historia registra cambios
-        // de resultado, no de insumos.
-        pendingRetryFact = occurrence.complianceFact;
+        // Retry (sin force) o pasada automática con actorIntent:"maintenance"
+        // (exclusivity-pass / elimination-pass): no archivar ahora; decidir
+        // post-saveFact solo si el veredicto cambió.
+        // Regla (diseño, no accidente): se versiona SOLO cuando cambia el VEREDICTO.
+        // Un GPS sin señal 6 h = 360 reintentos idénticos; archivar cada uno
+        // inundaría la historia. Las pasadas automáticas son mecánicas — no representan
+        // una decisión aunque usen force:true.
+        // Se pela `observedUnit` (relación anidada del findById, no columna de la tabla)
+        // para que la foto quede en la forma plana de compliance_facts.
+        const { observedUnit: _observedUnit, ...factRow } = occurrence.complianceFact;
+        pendingRetryFact = factRow;
         await this.repos.compliance.deleteFactForOccurrence(occurrenceId);
       }
       if (!reuseEvidence) {
