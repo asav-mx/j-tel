@@ -190,6 +190,22 @@ otra anticipa el futuro y no puede estarlo.
 **Qué lo desbloquea.** Nombre comercial final y sesión de diseño propia. Dos superficies
 distintas, no una con permisos apagados.
 
+**Caso de uso concreto — asistente de configuración de contratos (v2).** La política de
+un contrato tiene **17 campos**: métrica A y métrica B del corredor KML, márgenes de
+evidencia antes y después, gracia de verificación, cobertura mínima, hueco máximo,
+duración máxima de ruta, estrictez, tolerancia, anticipación, hora de cierre, motivos
+excusables, reglas de enforcement, consolidación, zona horaria. Un cliente nuevo se
+paraliza frente a esa pantalla, y con razón: son perillas escritas en el idioma del
+motor, no en el de la operación.
+
+Lenore traduciría cada perilla a lenguaje humano y sugeriría un valor a partir de cómo
+opera esa planta. Es el argumento más fuerte a favor del copiloto que tenemos hasta
+ahora, porque no inventa una necesidad: la pantalla ya existe y ya intimida.
+
+Ojo con el límite: Lenore **sugiere**, el cliente decide y el contrato guarda. Una
+perilla que el copiloto fije solo se saltaría la ley de que la UI guarda el acuerdo,
+no lo decide.
+
 ## Retención de Neon
 
 **Qué es.** Política de cuánto tiempo se conserva la telemetría cruda y qué se hace
