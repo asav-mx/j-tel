@@ -27,6 +27,7 @@ Si algo se aplaza sin razón escrita, no se aplazó: se olvidó.
 | [Historia del sello en Cierre del turno](#historia-del-sello-en-cierre-del-turno) | v1.1 |
 | [Medición honesta de kilómetros con brincos de GPS](#medición-honesta-de-kilómetros-con-brincos-de-gps) | v1.1 |
 | [El ledger debe colgar del hecho](#el-ledger-debe-colgar-del-hecho) | Cuando una cara cliente dependa del ledger |
+| [Distinguir "sin hora de cierre" de "no configurado"](#distinguir-sin-hora-de-cierre-de-no-configurado) | Si empieza a importar |
 | [Compuerta per-candidata](#compuerta-per-candidata) | Por definir |
 | [Migración B](#migración-b) | Cuando exista auth-rbac |
 | [Datos sintéticos en producción](#datos-sintéticos-en-producción) | Por definir |
@@ -95,6 +96,27 @@ para algo que no tolere un hueco.
 **Dónde toca.** `packages/db/src/schema/index.ts` — `ledgerEntries`;
 `getLedgerForTrip` en `packages/db/src/repositories/index.ts`;
 `apps/web/src/lib/autopsia.ts`.
+
+## Distinguir "sin hora de cierre" de "no configurado"
+
+**Qué es.** Poder saber, mirando un hecho sellado, si su contrato **no tenía** la
+perilla de hora de cierre porque todavía no existía, o si la tenía y nadie la
+configuró.
+
+**Por qué se aplazó.** `shiftCloseMinutesAfterStart` entró a la política como campo
+opcional, aditivo, sin `ALTER TABLE` — la política vive en un `jsonb`, así que los
+hechos sellados antes de que existiera la perilla simplemente no traen la llave. El
+problema es que un contrato actual que dejó la casilla vacía tampoco la trae: los dos
+casos se ven idénticos. En v1 no duele, porque la pantalla trata ambos igual y usa el
+caso de borde del turno histórico sin hora de cierre.
+
+**Qué lo desbloquea.** Que alguna decisión dependa de la diferencia — por ejemplo, un
+reporte que quiera contar cuántos contratos vigentes siguen sin configurar el cierre.
+La salida sería sellar la versión del esquema de política junto al hecho, no adivinar
+por ausencia de llave.
+
+**Dónde toca.** `packages/domain/src/index.ts` — `contractPolicySchema`;
+`compliance_facts.contract_policy_snapshot`.
 
 ## Compuerta per-candidata
 
