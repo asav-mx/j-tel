@@ -23,6 +23,11 @@ pnpm dev
 
 Abrir http://localhost:3000
 
+> **Seed y producción.** `pnpm db:seed` hace `TRUNCATE` de TODAS las tablas antes de
+> sembrar. Por eso exige `SEED_DATABASE_URL` (definida en `.env.example`) apuntando a
+> una base de desarrollo/demo: si falta, o si es idéntica a `DATABASE_URL`, el seed se
+> niega a correr. Nunca vacía producción por accidente.
+
 ## Estructura
 
 - `apps/web` — UI cliente, carrier, J-Staff + API
