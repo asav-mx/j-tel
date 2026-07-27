@@ -29,11 +29,17 @@ La métrica de una pantalla no es cuántos datos tiene, sino **cuántos obligan 
 
 Regla práctica: **todo número va acompañado de su lectura.** Cobertura 74.2% no va solo — va junto a "umbral del contrato: 70.0%". Una llegada 06:52:14 va junto a "deadline + tolerancia: 06:50:00". El usuario lee, no calcula.
 
+En el expediente, "todo número con su lectura" significa la **medición JUNTO a su umbral**, nunca uno sin el otro: "cobertura 94.2% · umbral del contrato 60.0%". Mostrar solo el umbral (la regla) o solo la medición es medio dato. Igual con las etiquetas: no "Temprano" sino "Temprano · 10 min antes". El carrier que se defiende necesita ver por cuánto pasó o falló — esa es la mitad que decide si el árbitro le parece justo.
+
 ### Exactitud, no redondeo
 
 Los tableros redondean ("~94%", "unos 7 minutos"). Los instrumentos no.
 
 Escribe **94.2%**, **06:43:11**, **21.1%**, **7:14 min**. La precisión no es un detalle técnico: es la textura que separa medición de opinión. Un número redondeado se lee como estimación, y una estimación se discute.
+
+**Fechas completas en evidencia.** En cualquier contexto que sirva de evidencia (expediente, bitácora, historia del sello, lectura de hechos), toda hora lleva su fecha completa: `2026-07-24 05:40`, nunca solo `05:40`. Un turno nocturno cruza la medianoche, y una hora sin fecha no sostiene un caso.
+
+**Las duraciones se escriben como duraciones, nunca con formato de hora.** Un delta dice `10 min antes`, `2 h 14 min de retraso` — jamás `10:00 antes`, que se lee como hora del día. La regla completa: los instantes llevan fecha; los intervalos llevan unidad.
 
 ---
 
@@ -43,7 +49,7 @@ Cualquier propuesta que rompa una de estas está mal por definición, sin import
 
 1. **Tres veredictos de cara al cliente y nada más:** `cumplido` · `no cumplido` · `pendiente por evidencia`. Nunca un cuarto estado, nunca "cumplido parcial". Todo detalle fino (tarde, excusable, hueco de GPS) va como **motivo debajo** del veredicto, jamás como estado nuevo ni como color distinto del chip.
 2. **El hecho se calcula una vez y se congela.** Nada en la UI puede sugerir que un veredicto se recalcula al abrir una pantalla. La única forma de que cambie es una **re-verificación explícita y auditada**, con nombre de quién la pidió y hora.
-3. **Confidencialidad entre cuentas, absoluta.** Una planta jamás ve otra planta. Un carrier jamás ve otro carrier. **El cliente jamás ve la operación interna del carrier** — candidatas evaluadas, flota completa, diagnósticos, sugerencias de calibración. Si una unidad entra a la geocerca de otro cliente, el ledger registra solo `arrivalOutsideContractGeofence: true`; el nombre del otro cliente no entra a ningún expediente.
+3. **Confidencialidad entre cuentas, absoluta.** Una planta jamás ve otra planta. Un carrier jamás ve otro carrier. **El cliente jamás ve la operación interna del carrier** — candidatas evaluadas, flota completa, diagnósticos, sugerencias de calibración. Si una unidad entra a la geocerca de otro cliente, el ledger registra solo `arrivalOutsideContractGeofence: true`; el nombre del otro cliente no entra a ningún expediente. (En mapas esto se hace cumplir por capa — ver "Mapas · Audiencia declarada por capa".)
 4. **La geocerca es la frontera de la evidencia.** Las trazas se cortan en `observedArrivalAt`. Lo que la unidad hizo después de llegar no se muestra a nadie, en ninguna cara. Protege al carrier y al chofer.
 5. **El auditado no edita el veredicto.** El carrier aporta calibración y defensa; su input nunca cambia lo que ve el cliente.
 6. **Todo umbral y tolerancia es configurable por contrato.** La UI **guarda** el acuerdo, no lo decide. Nunca hornees un número en un componente.
@@ -128,11 +134,58 @@ Borde marcado, hueco adentro, versalitas espaciadas, mono. Se lee como una **imp
 Va donde se muestre un veredicto. Dice cuándo se decidió y que nadie lo tocó desde entonces.
 
 ```
-Sellado 06:50:00 · nadie lo ha tocado desde entonces
-Re-verificado 09:14:22 · a petición de M. Ríos
+Verificado y sellado · 2026-07-24 06:50:00
+Verificado de nuevo · 2026-07-24 09:14:22 · a petición de J-Staff
 ```
 
 Mono, tenue, borde punteado. Es la ley 2 hecha visible, y es el diferenciador contra el sistema anterior que recalculaba la verdad al abrir la pantalla.
+
+### La historia del sello
+
+Un resultado puede verificarse más de una vez. Cuando genera versión, el expediente lo cuenta — nunca lo esconde. Dos formas:
+
+- **Verificado y sellado** (lo normal, la mayoría): marca gris punteada con su fecha, sin cajón. El silencio es el mensaje.
+- **Verificado de nuevo** (hubo versión): marca **azul**, con la causa. Se abre un cajón "Historia del sello · N versiones" con la vigente arriba (con su firma y motivo) y la anterior tachada pero legible.
+
+**Quién y por qué son dos datos distintos, y el motor guarda ambos:**
+
+- **Quién** (el actor): una persona, o un proceso del sistema.
+- **Por qué** (la intención): una decisión, o mantenimiento.
+
+La pantalla lee la intención guardada — NUNCA la adivina del nombre del actor. El caso que lo demuestra: un script que corre un operador a mano es nombre de proceso con intención de decisión. Si la pantalla dedujera del nombre, mentiría.
+
+Cómo se muestra cada combinación en la versión:
+
+| Actor | Intención | En pantalla |
+|---|---|---|
+| Persona | Decisión | La causa + la firma ("tras aceptar IN-0312 · J-Staff") |
+| Proceso | Decisión | La causa + el nombre del proceso ("re-verificación manual · CLI") |
+| Proceso | Mantenimiento que CAMBIÓ el resultado | El nombre del proceso como firma |
+
+(Mantenimiento que no cambia el resultado no genera versión — no aparece aquí.)
+
+**La regla:** lo que decide o cambia el resultado se ve; lo que solo lo mantiene se registra en el ledger y no aparece en pantalla. La distinción NO es humano/máquina — es decidió/mantuvo. **Ninguna versión del sello se borra jamás.**
+
+**Realidad pre-autenticación:** hasta que exista auth-rbac, el sistema sabe que fue una persona pero no cuál — el identificador viaja vacío. La firma honesta mientras tanto es el rol ("J-Staff"), nunca un nombre inventado ni un campo que finja precisión. Cuando auth-rbac exista, la firma se completa sola con el nombre real. Ningún mockup ni ejemplo del skill debe mostrar nombres propios de firmante hasta entonces.
+
+Miniatura: dondequiera que aparezca un resultado verificado de nuevo fuera del expediente (tabla de Cumplimiento, Cierre del turno), un punto azul junto al chip lo indica sin abrir nada.
+
+---
+
+## La voz — cómo se nombran las cosas en pantalla
+
+Dos verbos son de la casa y todo cuelga de ellos: **verificar** (lo que hace el sistema) y **sellar** (lo que congela el hecho). Nada de lenguaje de juzgado en las caras de cliente y carrier.
+
+| No se escribe en pantalla | Se escribe | En la marca |
+|---|---|---|
+| Veredicto | **Resultado** | cumplido · no cumplido · pendiente por evidencia |
+| "Sellado, nadie lo ha tocado" | **Verificado y sellado** | Verificado y sellado · 2026-07-24 06:50:00 |
+| Re-verificado / re-juicio | **Verificado de nuevo** + la causa | Verificado de nuevo · 2026-07-24 09:14:22 · tras aceptar IN-0312 · J-Staff |
+| Sustituido / vigente | **anterior / vigente** | Historia del sello · 2 versiones |
+
+**"Veredicto" sigue siendo el término del motor y del Marco** — es correcto en código, en el schema y en la lógica del árbitro. Simplemente no se escribe en una pantalla que ve el cliente o el carrier. La interfaz habla llano; el motor conserva su jerga.
+
+El silencio es mensaje: si la marca solo dice "Verificado y sellado" con su fecha, la ausencia de más texto significa que no hubo más. No hace falta prometer que nada cambió.
 
 ---
 
@@ -144,6 +197,8 @@ Todo lo que la interfaz señala — un servicio con consecuencia, un patrón que
 2. **La evidencia** — densa y exacta, con su gráfico propio y sus umbrales al lado.
 3. **La consecuencia** — qué cuesta: dinero, servicios, un escalón de contrato. Sin esto es una alerta, no un hallazgo.
 4. **La acción** — una sola, con el rol que la ejecuta al lado.
+
+**La lectura no dictamina.** Cuando el sistema adjunta evidencia a algo que las partes van a disputar (una queja, una defensa), adjunta hechos y **declara explícitamente qué NO responde**. Formato obligatorio: lo que la evidencia dice (medido, exacto) + lo que la evidencia no responde. El sistema hace imposible mentir; no falla a favor de nadie.
 
 ### El gráfico se elige por el dato, no por el formato
 
@@ -184,6 +239,30 @@ Mismos chips, mismos colores, mismo mono. Cambia el aire según para qué es la 
 - **Denso** — tablas de revisión de decenas de filas. Apretado, columnas alineadas, números en mono.
 
 Ambos son correctos. Lo incorrecto es mezclarlos en una sola vista sin razón.
+
+---
+
+## Mapas
+
+**Todo mapa se construye como capas apagables, nunca como dibujo fijo.** Cada tipo de data es una capa independiente que se prende y apaga: recorridos, trazados contratados, resultados con consecuencia, huecos de señal, quejas, geocercas, kilómetro muerto. Un mapa que dibuja todo junto y fijo se vuelve ilegible en cuanto crece.
+
+**Excepciones por default.** El mapa arranca mostrando solo lo que requiere atención; lo que cerró limpio se enciende a demanda. Catorce rutas encimadas no son un mapa, son un espagueti — y el problema no se resuelve dibujando mejor, se resuelve no dibujando lo que ya está bien. Mismo principio que la lista: excepciones primero, lo limpio en cajón.
+
+**Las capas se agrupan por pregunta, no por tipo de dato** (la operación · los resultados · lo cualitativo · el territorio), para que el usuario piense "qué quiero saber" y no "qué archivo prendo".
+
+**Las capas de fase futura se muestran apagadas con su requisito** ("Demanda por zona · requiere conteo"). El instrumento enseña lo que va a poder hacer.
+
+Colores: cada capa obedece la regla general — medición en acero, resultados en verde/ámbar/rojo, avisos del sistema en azul. Por eso las capas se pueden mezclar sin volverse ruido: el color siempre dice qué clase de cosa se está viendo.
+
+### Audiencia declarada por capa (ley del Marco, no preferencia)
+
+**Cada capa declara su audiencia: carrier · planta · corporativo · J-Staff.**
+
+Un mapa por capas apagables es un multiplicador de riesgo de confidencialidad: si las capas se prenden y apagan, tarde o temprano alguien prende una capa de carrier en una vista de planta. El Marco es tajante — el cliente jamás ve la operación interna del carrier, y el trazo se corta en la llegada.
+
+- **La audiencia la hace cumplir el código, no el diseño.** No es un filtro visual ni una decisión de quien arma la pantalla: la capa no existe para quien no le corresponde.
+- **Una capa sin audiencia declarada no se construye.**
+- Ejemplo: kilómetro muerto es capa de carrier y solo de carrier. Recorrido posterior a la geocerca no es capa de nadie del lado cliente.
 
 ---
 
