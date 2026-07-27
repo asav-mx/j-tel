@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { sql } from "drizzle-orm";
 import { createDb } from "./index.js";
 import { createRepositories } from "./repositories/index.js";
+import { resolveSeedDatabaseUrl } from "./seed-guard.js";
 import type { ContractPolicy } from "@jtel/domain";
 import { localDateIso } from "@jtel/domain";
 
@@ -105,9 +106,9 @@ const HONEYWELL_POLICY: ContractPolicy = {
 };
 
 async function seed() {
-  const db = createDb(
-    process.env.DATABASE_URL ?? "postgresql://jtel:jtel_dev@localhost:5432/jtel",
-  );
+  // Candado: el seed hace TRUNCATE de TODAS las tablas. Exige SEED_DATABASE_URL
+  // explícita y distinta de DATABASE_URL (producción). Ver seed-guard.ts.
+  const db = createDb(resolveSeedDatabaseUrl());
   const repos = createRepositories(db);
 
   console.log("Limpiando datos previos...");
