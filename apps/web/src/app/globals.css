@@ -1,6 +1,47 @@
 @import "tailwindcss";
 
+/*
+ * Tokens del lenguaje de interfaz de J-Telemetry.
+ * Fuente de verdad: skill j-telemetry-ui (el Marco manda sobre el skill).
+ *
+ * Reglas duras que estos tokens hacen cumplir:
+ *  - Los tres colores de veredicto (--verde, --ambar, --rojo) NO se usan para
+ *    nada más: ni botones, ni enlaces, ni gráficas, ni decoración.
+ *  - --acero es TODO LO MEDIDO (trazas, tendencias, cifras de métrica). Separa
+ *    medición de juicio: un dato es acero; un veredicto es verde/ámbar/rojo.
+ *  - --azul es acción/enlace/aviso del sistema. Jamás un veredicto.
+ */
 :root {
+  /* — Superficies — */
+  --fondo: #0a0d10; /* fondo de la app */
+  --panel: #0f1318; /* paneles y tarjetas */
+  --rejilla: rgba(255, 255, 255, 0.05); /* rejilla de fondo de gráficos */
+  --linea: rgba(255, 255, 255, 0.1); /* separadores */
+
+  /* — Texto — */
+  --texto: #eaeef2; /* lo que importa leer */
+  --tenue: #71808f; /* apoyo, etiquetas, datos secundarios */
+
+  /* — Medición vs. juicio — */
+  --acero: #7a9cb8; /* TODO LO MEDIDO */
+  --verde: #34c77b; /* cumplido — nada más */
+  --ambar: #e3a81f; /* pendiente por evidencia, y motivos con costo */
+  --rojo: #e5484d; /* no cumplido — nada más */
+  --azul: #4c9ae0; /* enlaces, avisos, acciones — jamás un veredicto */
+
+  /* — Tipografía: tres papeles (ver skill).
+   *   Estos tokens son el vocabulario; el *cargado* de las familias (Archivo,
+   *   IBM Plex Sans/Mono) se hace aparte en layout.tsx. Hasta entonces caen a
+   *   los fallbacks del sistema. --fuente-mono es para toda medición
+   *   (horas, %, folios), con tabular-nums en el componente. — */
+  --fuente-archivo: "Archivo", system-ui, sans-serif; /* afirmaciones: cifras, títulos */
+  --fuente-sans: "IBM Plex Sans", system-ui, sans-serif; /* lectura de corrido */
+  --fuente-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; /* medición */
+
+  /* — Tokens heredados —
+   *   Aún referenciados por componentes existentes (var(--muted) ×235,
+   *   var(--accent) ×95, etc.). Se conservan SIN tocar para no regresionar las
+   *   pantallas actuales. Migrarlos a los canónicos de arriba es un paso aparte. */
   --background: #0f1419;
   --foreground: #e7ecf1;
   --card: #1a2332;
