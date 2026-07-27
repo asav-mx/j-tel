@@ -28,6 +28,7 @@ Si algo se aplaza sin razón escrita, no se aplazó: se olvidó.
 | [Medición honesta de kilómetros con brincos de GPS](#medición-honesta-de-kilómetros-con-brincos-de-gps) | v1.1 |
 | [El ledger debe colgar del hecho](#el-ledger-debe-colgar-del-hecho) | Cuando una cara cliente dependa del ledger |
 | [Distinguir "sin hora de cierre" de "no configurado"](#distinguir-sin-hora-de-cierre-de-no-configurado) | Si empieza a importar |
+| [Gesto explícito para borrar la hora de cierre](#gesto-explícito-para-borrar-la-hora-de-cierre) | Si más gente configura contratos |
 | [Compuerta per-candidata](#compuerta-per-candidata) | Por definir |
 | [Migración B](#migración-b) | Cuando exista auth-rbac |
 | [Datos sintéticos en producción](#datos-sintéticos-en-producción) | Por definir |
@@ -117,6 +118,24 @@ por ausencia de llave.
 
 **Dónde toca.** `packages/domain/src/index.ts` — `contractPolicySchema`;
 `compliance_facts.contract_policy_snapshot`.
+
+## Gesto explícito para borrar la hora de cierre
+
+**Qué es.** Que quitar la hora de cierre de un contrato exija una acción deliberada —
+una casilla de "sin hora de cierre", o una confirmación aparte— en vez de dejar el
+campo vacío.
+
+**Por qué se aplazó.** Hoy vaciar la casilla borra el valor, y esa es la única forma
+de poder revertir una hora de cierre ya configurada. El riesgo es que un descuido la
+borre sin que nadie lo note. En v1 no importa: la configuración de contratos la toca
+una sola persona, y el texto de ayuda avisa que vacío quita la hora.
+
+**Qué lo desbloquea.** Que más de una persona configure contratos. Ahí el descuido
+deja de ser hipotético.
+
+**Dónde toca.** `apps/web/src/views/contratos-unit.tsx` — la perilla en el alta y en
+la edición de política; `apps/web/src/app/api/cliente/contratos/route.ts` —
+`toOptionalInt`.
 
 ## Compuerta per-candidata
 
