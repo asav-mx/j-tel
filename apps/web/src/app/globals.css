@@ -30,13 +30,15 @@
   --azul: #4c9ae0; /* enlaces, avisos, acciones — jamás un veredicto */
 
   /* — Tipografía: tres papeles (ver skill).
-   *   Estos tokens son el vocabulario; el *cargado* de las familias (Archivo,
-   *   IBM Plex Sans/Mono) se hace aparte en layout.tsx. Hasta entonces caen a
-   *   los fallbacks del sistema. --fuente-mono es para toda medición
-   *   (horas, %, folios), con tabular-nums en el componente. — */
-  --fuente-archivo: "Archivo", system-ui, sans-serif; /* afirmaciones: cifras, títulos */
-  --fuente-sans: "IBM Plex Sans", system-ui, sans-serif; /* lectura de corrido */
-  --fuente-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; /* medición */
+   *   Las familias las carga next/font en layout.tsx y las publica como
+   *   --fuente-*-cargada sobre <html>. Estos tokens son el vocabulario que
+   *   consumen los componentes: ninguno debe nombrar una familia directamente.
+   *   El fallback del sistema queda detrás por si la carga falla.
+   *   --fuente-mono es para toda medición (horas, %, folios), con
+   *   font-variant-numeric: tabular-nums en el componente. — */
+  --fuente-archivo: var(--fuente-archivo-cargada), system-ui, sans-serif; /* afirmaciones: cifras, títulos */
+  --fuente-sans: var(--fuente-sans-cargada), system-ui, sans-serif; /* lectura de corrido */
+  --fuente-mono: var(--fuente-mono-cargada), ui-monospace, SFMono-Regular, monospace; /* medición */
 
   /* — Tokens heredados —
    *   Aún referenciados por componentes existentes (var(--muted) ×235,
@@ -55,5 +57,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--fuente-sans);
 }
