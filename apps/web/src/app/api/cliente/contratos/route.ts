@@ -19,6 +19,21 @@ function toInt(value: unknown, fallback: number): number {
   return Number.isFinite(n) ? Math.trunc(n) : fallback;
 }
 
+/**
+ * Para perillas OPCIONALES: un campo vacío es `undefined`, no un default.
+ *
+ * `toInt` no sirve aquí — su fallback volvería indistinguible "sin configurar"
+ * de un número, y además haría imposible borrar el valor una vez puesto.
+ * Devolver `undefined` deja la llave fuera del jsonb de la política, que es
+ * exactamente lo que significa "este contrato no lo configuró".
+ */
+function toOptionalInt(value: unknown): number | undefined {
+  const raw = String(value ?? "").trim();
+  if (raw === "") return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? Math.trunc(n) : undefined;
+}
+
 function buildEnforcementRule(formData: FormData): EnforcementRules[] {
   const type = String(formData.get("enforcementType") ?? "").trim();
   const tolerance = toInt(formData.get("enforcementTolerance"), 0);
@@ -114,6 +129,11 @@ export async function POST(request: Request) {
       arrivalAnticipationMinutes: toInt(
         formData.get("arrivalAnticipationMinutes"),
         existingPolicy.arrivalAnticipationMinutes ?? 15,
+      ),
+      // Opcional: vacío BORRA el valor, no cae al anterior. Es la única forma
+      // de que el contrato pueda volver a "sin hora de cierre".
+      shiftCloseMinutesAfterStart: toOptionalInt(
+        formData.get("shiftCloseMinutesAfterStart"),
       ),
       maxRouteDurationMinutes: toInt(
         formData.get("maxRouteDurationMinutes"),
@@ -214,6 +234,9 @@ export async function POST(request: Request) {
   const validFrom = String(formData.get("validFrom") ?? "").trim();
   const validTo = String(formData.get("validTo") ?? "").trim();
   const arrivalAnticipationMinutes = toInt(formData.get("arrivalAnticipationMinutes"), 15);
+  const shiftCloseMinutesAfterStart = toOptionalInt(
+    formData.get("shiftCloseMinutesAfterStart"),
+  );
   const maxRouteDurationMinutes = toInt(formData.get("maxRouteDurationMinutes"), 60);
   const toleranceMinutes = toInt(formData.get("toleranceMinutes"), 0);
   const verificationGraceMinutes = toInt(formData.get("verificationGraceMinutes"), 15);
@@ -237,6 +260,10 @@ export async function POST(request: Request) {
     policy: {
       toleranceMinutes,
       arrivalAnticipationMinutes,
+      // Solo viaja si el usuario lo puso: `undefined` no llega al jsonb.
+      ...(shiftCloseMinutesAfterStart !== undefined
+        ? { shiftCloseMinutesAfterStart }
+        : {}),
       maxRouteDurationMinutes,
       verificationGraceMinutes,
       routeStrictness,

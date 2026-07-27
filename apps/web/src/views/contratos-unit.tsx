@@ -221,6 +221,22 @@ export async function ContratosUnitView({
                     </span>
                   </label>
                   <label className={labelClass}>
+                    Minutos de cierre del turno tras la hora de entrada
+                    <input
+                      name="shiftCloseMinutesAfterStart"
+                      type="number"
+                      min={0}
+                      placeholder="sin configurar"
+                      className={inputClass}
+                    />
+                    <span className="mt-1 block text-xs text-[var(--muted)]">
+                      A esa hora se sella el turno. Ej. turno 7:00 y 120 min →
+                      cierra 9:00. Una unidad que llega después no retrasa el
+                      cierre: el turno se sella igual y ese servicio carga su
+                      propio resultado. Vacío = sin hora de cierre.
+                    </span>
+                  </label>
+                  <label className={labelClass}>
                     Tolerancia puntualidad (min)
                     <input name="toleranceMinutes" type="number" min={0} defaultValue={5} className={inputClass} />
                   </label>
@@ -507,6 +523,24 @@ export async function ContratosUnitView({
                               defaultValue={c.policy.arrivalAnticipationMinutes ?? 15}
                               className={inputClass}
                             />
+                          </label>
+                          <label className={labelClass}>
+                            Minutos de cierre del turno tras la hora de entrada
+                            <input
+                              name="shiftCloseMinutesAfterStart"
+                              type="number"
+                              min={0}
+                              placeholder="sin configurar"
+                              defaultValue={c.policy.shiftCloseMinutesAfterStart ?? ""}
+                              className={inputClass}
+                            />
+                            <span className="mt-1 block text-xs text-[var(--muted)]">
+                              A esa hora se sella el turno. Ej. turno 7:00 y 120 min →
+                              cierra 9:00. Una unidad que llega después no retrasa el
+                              cierre: el turno se sella igual y ese servicio carga su
+                              propio resultado. Déjalo vacío para quitar la hora de
+                              cierre.
+                            </span>
                           </label>
                           <label className={labelClass}>
                             Tolerancia puntualidad (min)

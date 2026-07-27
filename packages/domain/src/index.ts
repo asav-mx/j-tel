@@ -239,6 +239,21 @@ export const contractPolicySchema = z.object({
   toleranceMinutes: z.number().int().nonnegative(),
   /** Minutos antes del inicio del turno en que debe estar en geocerca (deadline). */
   arrivalAnticipationMinutes: z.number().int().nonnegative().default(15),
+  /**
+   * Minutos DESPUÉS del inicio del turno en que el turno se sella.
+   *
+   * El cierre lo define el contrato, no la última llegada: una unidad que llega
+   * después de esta hora no retrasa el cierre — el turno se sella igual y ese
+   * servicio carga su propio veredicto.
+   *
+   * Opcional a propósito. La política vive dentro de `contract_policy_snapshot`
+   * (jsonb), así que los hechos sellados antes de que existiera esta perilla
+   * simplemente no traen la llave y siguen siendo válidos. La pantalla trata la
+   * ausencia como "turno histórico sin hora de cierre" y lo dice; nunca inventa
+   * una hora. Ver `docs/DESPUES.md` — hoy la ausencia no distingue "no existía
+   * la perilla" de "nadie la configuró".
+   */
+  shiftCloseMinutesAfterStart: z.number().int().nonnegative().optional(),
   verificationGraceMinutes: z.number().int().nonnegative().default(15),
   routeStrictness: RouteStrictness,
   /**
