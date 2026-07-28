@@ -24,7 +24,8 @@ Si algo se aplaza sin razón escrita, no se aplazó: se olvidó.
 
 | Entrada | Horizonte |
 |---|---|
-| [Planta 47 casi no produce cumplidos](#planta-47-casi-no-produce-cumplidos) | **PRIORIDAD 1 — justo después de Cierre del turno** |
+| [El vigilante vive dentro de lo vigilado](#el-vigilante-vive-dentro-de-lo-vigilado) | **PRIORIDAD 1 — Fase 0, antes de Cierre del turno** |
+| [Planta 47 casi no produce cumplidos](#planta-47-casi-no-produce-cumplidos) | **PRIORIDAD 2 — después de Cierre del turno** |
 | [Historia del sello en Cierre del turno](#historia-del-sello-en-cierre-del-turno) | v1.1 |
 | [Medición honesta de kilómetros con brincos de GPS](#medición-honesta-de-kilómetros-con-brincos-de-gps) | v1.1 |
 | [El ledger debe colgar del hecho](#el-ledger-debe-colgar-del-hecho) | Cuando una cara cliente dependa del ledger |
@@ -35,6 +36,36 @@ Si algo se aplaza sin razón escrita, no se aplazó: se olvidó.
 | [Retención de Neon](#retención-de-neon) | Por definir |
 
 ---
+
+## El vigilante vive dentro de lo vigilado
+
+**Qué es.** Todo lo que avisa de que J-Telemetry está sano corre **dentro** de
+J-Telemetry: el heartbeat de ingesta es un cron de Vercel y escribe sus alertas en
+la misma base que vigila. Cuando falla la base o falla Vercel, el vigilante cae con
+todo lo demás y **el silencio se vuelve indistinguible de la salud**.
+
+**Cómo se demostró.** El 2026-07-28, una rotación de contraseña dejó a los crones sin
+acceso a la base. Archivado y verificación se detuvieron a las 20:00 UTC del 27 y no
+volvieron hasta el redeploy de las ~09:00 UTC del 28: **13 horas.** La primera alerta
+se creó a las 11:01 del 28 — *quince horas después del inicio*, y solo porque para
+entonces el heartbeat ya había revivido. Nadie fue avisado en todo ese tiempo. El
+incidente se descubrió porque una persona abrió Monitoreo y vio cero unidades.
+
+**La lección, que sobrevive a la Fase 0.** Un vigilante no puede compartir **ningún**
+componente con lo vigilado: ni el runtime, ni la base, ni las credenciales. Si
+comparte uno, existe un fallo que los apaga a los dos. Cualquier alerta futura se
+diseña contra esta regla.
+
+**Qué se construye ya (Fase 0, no aplazado).** Vigilante externo, entrega de alertas
+críticas fuera de la plataforma, crones que no mientan, y semáforo de salud en la
+portada de J-Staff. Va antes de Cierre del turno.
+
+**Qué sí queda aplazado.** Escalamiento por turnos y guardias, canal de voz o SMS, y
+vigilancia del propio vigilante. Fase 0 cubre un solo destinatario y un solo canal;
+con más gente de operación eso deja de alcanzar.
+
+**Dónde toca.** `vercel.json` — los cinco crones; `apps/web/src/app/api/cron/`;
+`packages/services/src/ingest-health.ts`; tabla `ingest_alerts`.
 
 ## Planta 47 casi no produce cumplidos
 
