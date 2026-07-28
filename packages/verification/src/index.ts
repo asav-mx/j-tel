@@ -438,6 +438,15 @@ export function determineTiming(
 
 export type EvidenceCoverageAssessment = {
   coveragePct: number;
+  /**
+   * Milisegundos de la ventana efectivamente cubiertos por señal.
+   *
+   * Es `coveragePct` sin redondear. Existe porque agregar cobertura de varios
+   * servicios exige ponderar por la duración de cada ventana —Σ cubiertos / Σ
+   * totales—, y un promedio de porcentajes ya redondeados engaña cuando las
+   * ventanas duran distinto.
+   */
+  coveredMs: number;
   maxGapMs: number;
   windowMs: number;
   pointCount: number;
@@ -466,6 +475,7 @@ export function assessEvidenceCoverage(
   if (windowMs <= 0) {
     return {
       coveragePct: 100,
+      coveredMs: 0,
       maxGapMs: 0,
       windowMs: 0,
       pointCount: 0,
@@ -481,6 +491,7 @@ export function assessEvidenceCoverage(
   if (sorted.length === 0) {
     return {
       coveragePct: 0,
+      coveredMs: 0,
       maxGapMs: windowMs,
       windowMs,
       pointCount: 0,
@@ -504,6 +515,7 @@ export function assessEvidenceCoverage(
 
   return {
     coveragePct,
+    coveredMs,
     maxGapMs: largestGap,
     windowMs,
     pointCount: sorted.length,
@@ -575,6 +587,13 @@ export function verifyService(input: VerificationInput): VerificationResult {
         minCoveragePct: input.evidenceMinCoveragePct ?? 80,
         maxGapMinutesAllowed: input.evidenceMaxGapMinutes ?? 10,
         pointCountInWindow: coverage.pointCount,
+        // Sin redondear y en milisegundos, a propósito: agregar cobertura de
+        // varios servicios se hace Σ cubiertos / Σ totales, y ponderar con
+        // porcentajes ya redondeados arrastra error. Aditivos: los hechos
+        // sellados antes de esto no los traen, y quien lea debe derivar la
+        // ventana de expectedDeadline + la política congelada cuando falten.
+        windowMs: coverage.windowMs,
+        coveredMs: coverage.coveredMs,
         bestImei: best?.imei ?? null,
         perImei: true,
       },
