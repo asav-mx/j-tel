@@ -9,7 +9,7 @@ import type {
 
 const EARTH_RADIUS_KM = 6371;
 
-function haversineKm(
+export function haversineKm(
   lat1: number,
   lng1: number,
   lat2: number,
