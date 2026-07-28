@@ -246,6 +246,8 @@ export async function POST(request: Request) {
   const kmlCorridorMinPct = toInt(formData.get("kmlCorridorMinPct"), 60);
   const evidenceMarginMinutesBefore = toInt(formData.get("evidenceMarginMinutesBefore"), 60);
   const evidenceMarginMinutesAfter = toInt(formData.get("evidenceMarginMinutesAfter"), 30);
+  const evidenceMinCoveragePct = toInt(formData.get("evidenceMinCoveragePct"), 80);
+  const evidenceMaxGapMinutes = toInt(formData.get("evidenceMaxGapMinutes"), 10);
   const excusableReasons = formData.getAll("excusableReasons").map((r) => String(r));
   const timeZone = String(formData.get("timeZone") ?? "America/Ciudad_Juarez").trim();
 
@@ -268,10 +270,17 @@ export async function POST(request: Request) {
       verificationGraceMinutes,
       routeStrictness,
       kmlMatchMinPct,
+      // kmlCorridorMeters y kmlCorridorMinPct se leían del formulario pero no
+      // llegaban al payload: lo que el usuario escribía al crear el contrato se
+      // perdía en silencio y el contrato nacía con el default del esquema.
+      kmlCorridorMeters,
+      kmlCorridorMinPct,
       excusableReasons,
       enforcementRules: buildEnforcementRule(formData),
       evidenceMarginMinutesBefore,
       evidenceMarginMinutesAfter,
+      evidenceMinCoveragePct,
+      evidenceMaxGapMinutes,
       timeZone,
     },
   };

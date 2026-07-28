@@ -324,6 +324,37 @@ export async function ContratosUnitView({
                     />
                   </label>
                   <label className={labelClass}>
+                    Cobertura mínima de la ventana (%)
+                    <input
+                      name="evidenceMinCoveragePct"
+                      type="number"
+                      min={0}
+                      max={100}
+                      defaultValue={80}
+                      className={inputClass}
+                    />
+                    <span className="mt-1 block text-xs text-[var(--muted)]">
+                      Qué tanto de la ventana necesita señal para poder dictar un
+                      resultado. Por debajo, el servicio queda pendiente por
+                      evidencia — nunca no cumplido. Default: 80.
+                    </span>
+                  </label>
+                  <label className={labelClass}>
+                    Hueco máximo de señal (min)
+                    <input
+                      name="evidenceMaxGapMinutes"
+                      type="number"
+                      min={1}
+                      defaultValue={10}
+                      className={inputClass}
+                    />
+                    <span className="mt-1 block text-xs text-[var(--muted)]">
+                      El silencio continuo más largo que se tolera dentro de la
+                      ventana. Si se supera, el servicio queda pendiente por
+                      evidencia. Default: 10.
+                    </span>
+                  </label>
+                  <label className={labelClass}>
                     Zona horaria
                     <select name="timeZone" className={inputClass} defaultValue="America/Ciudad_Juarez">
                       {MEXICO_TIMEZONES.map((tz) => (
@@ -636,6 +667,37 @@ export async function ContratosUnitView({
                               defaultValue={c.policy.evidenceMarginMinutesAfter ?? 30}
                               className={inputClass}
                             />
+                          </label>
+                          <label className={labelClass}>
+                            Cobertura mínima de la ventana (%)
+                            <input
+                              name="evidenceMinCoveragePct"
+                              type="number"
+                              min={0}
+                              max={100}
+                              defaultValue={c.policy.evidenceMinCoveragePct ?? 80}
+                              className={inputClass}
+                            />
+                            <span className="mt-1 block text-xs text-[var(--muted)]">
+                              Qué tanto de la ventana necesita señal para poder dictar
+                              un resultado. Por debajo, el servicio queda pendiente por
+                              evidencia — nunca no cumplido. Default: 80.
+                            </span>
+                          </label>
+                          <label className={labelClass}>
+                            Hueco máximo de señal (min)
+                            <input
+                              name="evidenceMaxGapMinutes"
+                              type="number"
+                              min={1}
+                              defaultValue={c.policy.evidenceMaxGapMinutes ?? 10}
+                              className={inputClass}
+                            />
+                            <span className="mt-1 block text-xs text-[var(--muted)]">
+                              El silencio continuo más largo que se tolera dentro de la
+                              ventana. Si se supera, el servicio queda pendiente por
+                              evidencia. Default: 10.
+                            </span>
                           </label>
                           <label className={labelClass}>
                             Duración máx. de ruta (min)
