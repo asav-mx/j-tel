@@ -24,6 +24,7 @@ Si algo se aplaza sin razón escrita, no se aplazó: se olvidó.
 
 | Entrada | Horizonte |
 |---|---|
+| [Planta 47 casi no produce cumplidos](#planta-47-casi-no-produce-cumplidos) | **PRIORIDAD 1 — justo después de Cierre del turno** |
 | [Historia del sello en Cierre del turno](#historia-del-sello-en-cierre-del-turno) | v1.1 |
 | [Medición honesta de kilómetros con brincos de GPS](#medición-honesta-de-kilómetros-con-brincos-de-gps) | v1.1 |
 | [El ledger debe colgar del hecho](#el-ledger-debe-colgar-del-hecho) | Cuando una cara cliente dependa del ledger |
@@ -34,6 +35,39 @@ Si algo se aplaza sin razón escrita, no se aplazó: se olvidó.
 | [Retención de Neon](#retención-de-neon) | Por definir |
 
 ---
+
+## Planta 47 casi no produce cumplidos
+
+**Qué es.** El contrato de Planta 47 sella casi puros no cumplidos. Medido sobre la
+base el 2026-07-28, de **285 hechos sellados: 242 no cumplidos, 42 pendientes por
+evidencia y 1 solo cumplido.** Es decir, el 99.6% de los servicios no logra
+acreditarse. El otro contrato de la misma cuenta, en campus, va en 36.9% de no
+cumplidos sobre 363 hechos — misma planta cliente, mismo carrier, resultado
+radicalmente distinto.
+
+Esto es lo que estaba inflando el número global de no cumplidos, no los datos de
+experimento. Archivar las cuentas demo mueve el total de 58.8% a 58.0%: casi nada.
+
+**Hipótesis a verificar — NO está medida.** Que los KML cargados no correspondan a
+las rutas que las unidades recorren de verdad, así que la métrica de corredor falla
+aunque el servicio se haya prestado. Si es cierto, el caso es exactamente el de
+`docs/Ficha-Handoff-Variantes-Trazado.md`: derivar variantes de trazado a partir de
+trazas reales en vez de exigir que el KML cargado sea el único camino válido.
+
+Sostiene la hipótesis, sin probarla: el corredor de ese contrato cambió a media
+corrida (hay hechos sellados con `120 m / 50 %` y otros con `120 m / 60 %`), lo que
+sugiere que alguien ya estaba moviendo perillas buscando que cuadrara.
+
+**Por qué se aplazó.** Es terreno del motor —la lógica del árbitro y la métrica de
+ruta—, así que entra bajo parada obligatoria. Y no se puede resolver desde el código:
+necesita a la Planta para confirmar qué camino recorren realmente las unidades. Sin
+ese dato, cualquier ajuste de umbral es adivinar.
+
+**Qué lo desbloquea.** Cierre del turno primero. Después, sesión con la Planta para
+contrastar trazas reales contra los KML cargados.
+
+**Dónde toca.** `route_kml_versions.waypoints`; la métrica de corredor en
+`packages/verification/src`; `docs/Ficha-Handoff-Variantes-Trazado.md`.
 
 ## Historia del sello en Cierre del turno
 
