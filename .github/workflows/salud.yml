@@ -1,0 +1,108 @@
+name: Vigilante de salud
+
+# Corre en GitHub, fuera de Vercel y fuera de Neon. Esa independencia es todo el
+# punto: el 2026-07-28 una rotación de contraseña dejó los crones sin acceso
+# durante 13 horas y nadie se enteró, porque el heartbeat que vigilaba era
+# también un cron de Vercel y cayó con lo demás.
+#
+# Requisito único: la variable de repositorio SALUD_URL con la URL pública de
+# /api/salud (Settings -> Secrets and variables -> Actions -> Variables).
+# Si además defines el secreto SALUD_TOKEN, se manda como Bearer.
+
+on:
+  schedule:
+    # Cada 15 min. GitHub puede retrasarlo bajo carga; no importa, el fallo que
+    # buscamos dura horas, no minutos.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+concurrency:
+  group: vigilante-salud
+  cancel-in-progress: false
+
+jobs:
+  sondear:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comprobar que SALUD_URL está configurada
+        if: vars.SALUD_URL == ''
+        run: |
+          echo "::error::Falta la variable de repositorio SALUD_URL."
+          exit 1
+
+      - name: Sondear /api/salud
+        id: sondeo
+        run: |
+          set +e
+          RESP=$(curl -sS --max-time 30 -w '\n%{http_code}' \
+            ${SALUD_TOKEN:+-H "Authorization: Bearer $SALUD_TOKEN"} \
+            "$SALUD_URL")
+          CURL_RC=$?
+          set -e
+
+          if [ $CURL_RC -ne 0 ]; then
+            # Ni siquiera respondió: para el caso que nos importa eso es
+            # exactamente igual de grave que un 503.
+            echo "codigo=000" >> "$GITHUB_OUTPUT"
+            {
+              echo 'cuerpo<<FIN'
+              echo "No hubo respuesta de $SALUD_URL (curl salió con $CURL_RC)."
+              echo 'FIN'
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CODIGO=$(echo "$RESP" | tail -n1)
+          CUERPO=$(echo "$RESP" | sed '$d')
+          echo "codigo=$CODIGO" >> "$GITHUB_OUTPUT"
+          {
+            echo 'cuerpo<<FIN'
+            echo "$CUERPO"
+            echo 'FIN'
+          } >> "$GITHUB_OUTPUT"
+        env:
+          SALUD_URL: ${{ vars.SALUD_URL }}
+          SALUD_TOKEN: ${{ secrets.SALUD_TOKEN }}
+
+      - name: Abrir o actualizar el aviso
+        if: steps.sondeo.outputs.codigo != '200'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CODIGO: ${{ steps.sondeo.outputs.codigo }}
+          CUERPO: ${{ steps.sondeo.outputs.cuerpo }}
+          CORRIDA: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITULO="Ingesta en riesgo — /api/salud responde $CODIGO"
+          EXISTENTE=$(gh issue list --label salud --state open --limit 1 --json number --jq '.[0].number // empty')
+
+          MENSAJE=$(printf '**%s** · el sondeo respondió \`%s\`.\n\n```json\n%s\n```\n\n[Ver la corrida](%s)' \
+            "$(date -u '+%Y-%m-%d %H:%M:%S UTC')" "$CODIGO" "$CUERPO" "$CORRIDA")
+
+          if [ -n "$EXISTENTE" ]; then
+            # Un solo issue por incidente: comentar, no inundar de duplicados.
+            gh issue comment "$EXISTENTE" --body "$MENSAJE"
+          else
+            gh issue create --title "$TITULO" --label salud --body "$MENSAJE"
+          fi
+
+      - name: Cerrar el aviso si volvió la salud
+        if: steps.sondeo.outputs.codigo == '200'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CORRIDA: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          EXISTENTE=$(gh issue list --label salud --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTENTE" ]; then
+            # Avisar del cierre es tan importante como avisar de la caída: sin
+            # el aviso de "ya volvió", uno aprende a ignorar el canal.
+            gh issue close "$EXISTENTE" --comment "Salud restablecida el $(date -u '+%Y-%m-%d %H:%M:%S UTC'). [Ver la corrida]($CORRIDA)"
+          fi
+
+      - name: Fallar la corrida si está enfermo
+        if: steps.sondeo.outputs.codigo != '200'
+        run: |
+          echo "::error::/api/salud respondió ${{ steps.sondeo.outputs.codigo }}"
+          exit 1
