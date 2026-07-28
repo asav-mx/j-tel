@@ -92,3 +92,44 @@ export function Card({
     </section>
   );
 }
+
+/**
+ * Marca de cuenta demo. Es un estado operativo, no un resultado: va en tenue,
+ * nunca en verde/ámbar/rojo, que están reservados a los veredictos.
+ */
+export function DemoChip() {
+  return (
+    <span className="ml-2 rounded-sm border border-white/15 px-1.5 py-0.5 align-middle text-[10px] uppercase tracking-wider text-[var(--muted)]">
+      demo
+    </span>
+  );
+}
+
+/**
+ * Interruptor de cuentas demo para las pantallas de J-Staff.
+ *
+ * Las demo existen y J-Staff puede verlas — solo no estorban por default.
+ * Si no hay ninguna, no se dibuja nada: un interruptor que no apaga nada
+ * es ruido.
+ */
+export function DemoToggle({
+  mostrando,
+  ocultas,
+  href,
+}: {
+  mostrando: boolean;
+  ocultas: number;
+  href: string;
+}) {
+  if (!mostrando && ocultas === 0) return null;
+  return (
+    <p className="mb-3 text-xs text-[var(--muted)]">
+      {mostrando
+        ? "Mostrando las cuentas demo. "
+        : `${ocultas} cuenta${ocultas === 1 ? "" : "s"} demo oculta${ocultas === 1 ? "" : "s"}. `}
+      <Link href={href} className="text-[var(--accent)]">
+        {mostrando ? "Ocultarlas" : "Mostrarlas"}
+      </Link>
+    </p>
+  );
+}
