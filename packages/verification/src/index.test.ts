@@ -356,6 +356,61 @@ describe("assessEvidenceCoverage", () => {
     expect(a.sufficient).toBe(false);
     expect(a.maxGapMs).toBeGreaterThan(10 * 60_000);
   });
+
+  it("coveredMs es coveragePct sin redondear", () => {
+    const points = [
+      new Date("2026-07-09T10:00:00Z"),
+      new Date("2026-07-09T10:05:00Z"),
+      new Date("2026-07-09T10:25:00Z"),
+      new Date("2026-07-09T10:30:00Z"),
+      new Date("2026-07-09T11:00:00Z"),
+    ];
+    const a = assessEvidenceCoverage(points, start, end, { maxGapMinutes: 10 });
+    // El hueco de 20 min y el de 30 min no cuentan; sí los tramos de 5 min.
+    expect(a.windowMs).toBe(60 * 60_000);
+    expect(a.coveredMs).toBe(10 * 60_000);
+    expect(a.coveredMs / a.windowMs * 100).toBeCloseTo(a.coveragePct, 10);
+  });
+
+  it("ventana sin puntos: coveredMs en cero, no en la ventana entera", () => {
+    const a = assessEvidenceCoverage([], start, end);
+    expect(a.coveredMs).toBe(0);
+    expect(a.windowMs).toBe(60 * 60_000);
+    expect(a.maxGapMs).toBe(60 * 60_000);
+  });
+
+  it("ventana de duración cero no divide entre cero", () => {
+    const a = assessEvidenceCoverage([], start, start);
+    expect(a.windowMs).toBe(0);
+    expect(a.coveredMs).toBe(0);
+    expect(a.coveragePct).toBe(100);
+  });
+
+  it("agregar ponderando por duración no es promediar porcentajes", () => {
+    // Ventana corta con cobertura perfecta + ventana larga con la mitad.
+    const corta = assessEvidenceCoverage(
+      [new Date(start.getTime()), new Date(start.getTime() + 60_000)],
+      start,
+      new Date(start.getTime() + 60_000),
+      { maxGapMinutes: 10 },
+    );
+    const larga = assessEvidenceCoverage(
+      [
+        new Date(start.getTime()),
+        new Date(start.getTime() + 30 * 60_000),
+        new Date(start.getTime() + 90 * 60_000),
+      ],
+      start,
+      new Date(start.getTime() + 90 * 60_000),
+      { maxGapMinutes: 40 },
+    );
+    const ponderada =
+      ((corta.coveredMs + larga.coveredMs) / (corta.windowMs + larga.windowMs)) * 100;
+    const promedioSimple = (corta.coveragePct + larga.coveragePct) / 2;
+    // El promedio simple sobrevalora: la ventana corta pesa lo mismo que una
+    // 90 veces más larga. Esta es justo la trampa que coveredMs evita.
+    expect(promedioSimple).toBeGreaterThan(ponderada);
+  });
 });
 
 describe("pointInPolygon", () => {
