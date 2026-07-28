@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getRepos } from "@/lib/db";
-import { AppNav, Card } from "@/components/ui";
+import { AppNav, Card, DemoChip, DemoToggle } from "@/components/ui";
 import { withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
@@ -14,10 +14,16 @@ export default async function JStaffCuentasPage({
   const error = typeof sp?.error === "string" ? sp.error : null;
   const created = typeof sp?.created === "string" ? sp.created : null;
 
+  const mostrarDemo = sp?.demo === "1";
+
   const repos = getRepos();
-  const accounts = await repos.accounts.listAll();
+  // Se piden todas y se filtra aquí para poder contar cuántas se ocultaron.
+  const todas = await repos.accounts.listAll();
+  const accounts = mostrarDemo ? todas : todas.filter((a) => !a.isDemo);
+  const demoOcultas = todas.length - accounts.length;
   const carriers = accounts.filter((a) => a.type === "carrier");
   const clients = accounts.filter((a) => a.type === "client");
+  const demoHref = mostrarDemo ? "/jstaff/cuentas" : "/jstaff/cuentas?demo=1";
 
   return (
     <main className="min-h-screen p-8">
@@ -74,6 +80,7 @@ export default async function JStaffCuentasPage({
 
           <div className="space-y-6">
             <Card title={`Carriers (${carriers.length})`}>
+              <DemoToggle mostrando={mostrarDemo} ocultas={demoOcultas} href={demoHref} />
               {carriers.length === 0 ? (
                 <p className="text-sm text-[var(--muted)]">Sin carriers todavía.</p>
               ) : (
@@ -84,7 +91,10 @@ export default async function JStaffCuentasPage({
                       className="flex items-center justify-between rounded border border-white/5 p-3"
                     >
                       <div>
-                        <p className="font-medium">{a.name}</p>
+                        <p className="font-medium">
+                          {a.name}
+                          {a.isDemo ? <DemoChip /> : null}
+                        </p>
                         <p className="text-xs text-[var(--muted)]">{a.slug}</p>
                       </div>
                       <Link
@@ -110,7 +120,10 @@ export default async function JStaffCuentasPage({
                       className="flex items-center justify-between rounded border border-white/5 p-3"
                     >
                       <div>
-                        <p className="font-medium">{a.name}</p>
+                        <p className="font-medium">
+                          {a.name}
+                          {a.isDemo ? <DemoChip /> : null}
+                        </p>
                         <p className="text-xs text-[var(--muted)]">{a.slug}</p>
                       </div>
                       <div className="flex gap-3 text-sm">

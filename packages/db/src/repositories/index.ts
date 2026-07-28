@@ -74,15 +74,32 @@ export class AccountRepository {
     return this.db.query.accounts.findFirst({ where: eq(accounts.id, id) });
   }
 
-  async listByType(type: "carrier" | "client" | "jstaff") {
+  /**
+   * `includeDemo` va en `true` por omisión A PROPÓSITO.
+   *
+   * De estas listas cuelgan tanto pantallas como el pipeline (archivador,
+   * relleno de huecos, ingesta, re-verificación). Si el default excluyera las
+   * cuentas demo, esas cuentas dejarían de ingerirse y de verificarse sin que
+   * nadie lo pidiera — archivar es sacarlas de la vista, no apagarles el motor.
+   * Quien quiera ocultarlas lo dice explícitamente.
+   */
+  async listByType(
+    type: "carrier" | "client" | "jstaff",
+    opts: { includeDemo?: boolean } = {},
+  ) {
+    const soloReales = opts.includeDemo === false;
     return this.db.query.accounts.findMany({
-      where: eq(accounts.type, type),
+      where: soloReales
+        ? and(eq(accounts.type, type), eq(accounts.isDemo, false))
+        : eq(accounts.type, type),
       orderBy: (table, { asc }) => [asc(table.name)],
     });
   }
 
-  async listAll() {
+  async listAll(opts: { includeDemo?: boolean } = {}) {
+    const soloReales = opts.includeDemo === false;
     return this.db.query.accounts.findMany({
+      where: soloReales ? eq(accounts.isDemo, false) : undefined,
       orderBy: (table, { asc }) => [asc(table.type), asc(table.name)],
     });
   }

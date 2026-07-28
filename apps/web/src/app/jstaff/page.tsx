@@ -1,13 +1,23 @@
 import { getRepos } from "@/lib/db";
-import { AppNav, Card } from "@/components/ui";
+import { AppNav, Card, DemoChip, DemoToggle } from "@/components/ui";
 import { withAccount } from "@/lib/account-context";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default async function JStaffDashboardPage() {
+export default async function JStaffDashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = searchParams ? await searchParams : undefined;
+  const mostrarDemo = sp?.demo === "1";
+
   const repos = getRepos();
-  const accounts = await repos.accounts.listAll();
+  // Se piden todas y se filtra aquí para poder contar cuántas se ocultaron.
+  const todas = await repos.accounts.listAll();
+  const accounts = mostrarDemo ? todas : todas.filter((a) => !a.isDemo);
+  const demoOcultas = todas.length - accounts.length;
 
   const templates = await repos.demos.getTemplates();
 
@@ -28,10 +38,18 @@ export default async function JStaffDashboardPage() {
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card title="Multi-cuenta">
+            <DemoToggle
+              mostrando={mostrarDemo}
+              ocultas={demoOcultas}
+              href={mostrarDemo ? "/jstaff" : "/jstaff?demo=1"}
+            />
             <ul className="space-y-2 text-sm">
               {accounts.map((a) => (
                 <li key={a!.id} className="flex justify-between rounded border border-white/5 p-3">
-                  <span>{a!.name}</span>
+                  <span>
+                    {a!.name}
+                    {a!.isDemo ? <DemoChip /> : null}
+                  </span>
                   <span className="text-[var(--muted)]">
                     {a!.type}{" "}
                     {a!.type === "carrier" ? (

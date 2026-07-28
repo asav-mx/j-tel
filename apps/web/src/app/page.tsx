@@ -13,8 +13,10 @@ export default async function HomePage() {
   } else {
     try {
       const repos = getRepos();
-      clients = await repos.accounts.listByType("client");
-      carriers = await repos.accounts.listByType("carrier");
+      // Sin cuentas demo: esta es la entrada, no el panel del operador.
+      // Para verlas está /jstaff con su interruptor.
+      clients = await repos.accounts.listByType("client", { includeDemo: false });
+      carriers = await repos.accounts.listByType("carrier", { includeDemo: false });
     } catch (err) {
       dbError =
         err instanceof Error
