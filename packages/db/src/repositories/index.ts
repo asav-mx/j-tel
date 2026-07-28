@@ -2732,6 +2732,78 @@ export class TelemetryRepository {
       );
     return row?.count ?? 0;
   }
+
+  /**
+   * Puntos de un carrier en una ventana, para observar su propia flota.
+   *
+   * Nativo al índice `telemetry_points_carrier_recorded_idx`: medido el
+   * 2026-07-28, 16 487 filas de una ventana de 6 h en 22 ms. Solo las columnas
+   * que la pantalla dibuja — traer las demás multiplica el payload sin usarlas.
+   *
+   * El filtro es por `carrierAccountId`, que es columna de la propia fila y no
+   * un join: no existe camino por el que se cuele el dato de otro carrier.
+   *
+   * Se lee `unitId` tal como quedó estampado al ingerir, sin volver a resolver
+   * la asignación vigente. Un GPS que cambió de camión no reescribe el pasado.
+   */
+  async getForCarrierWindow(carrierAccountId: string, from: Date, to: Date) {
+    return this.db
+      .select({
+        unitId: telemetryPoints.unitId,
+        imei: telemetryPoints.imei,
+        latitude: telemetryPoints.latitude,
+        longitude: telemetryPoints.longitude,
+        recordedAt: telemetryPoints.recordedAt,
+      })
+      .from(telemetryPoints)
+      .where(
+        and(
+          eq(telemetryPoints.carrierAccountId, carrierAccountId),
+          gte(telemetryPoints.recordedAt, from),
+          lte(telemetryPoints.recordedAt, to),
+        ),
+      );
+  }
+
+  /**
+   * Último punto conocido por unidad, en toda la historia del carrier.
+   *
+   * Es lo que separa "dejó de reportar el 25 de julio" de "nunca ha reportado
+   * un solo punto". Sin esta consulta las dos se ven idénticas, y son
+   * problemas distintos con dueños distintos.
+   *
+   * CARA A PROPÓSITO. No hay índice por `unit_id`, así que barre las filas del
+   * carrier: medido el 2026-07-28, **462 ms sobre 2 276 884 filas**. Se aceptó
+   * el costo porque acotarla mentiría — con un horizonte de 7 días, 2 de las 9
+   * unidades que sí tienen historia aparecerían como "nunca reportó", que es
+   * justamente la confusión que esta pantalla existe para deshacer.
+   *
+   * Crece ~51 000 filas por día. Cuando deje de ser tolerable, la salida es un
+   * índice `(carrier_account_id, unit_id, recorded_at DESC)`, no recortar la
+   * ventana. Quien la llame debe saltársela si no hay unidades mudas.
+   */
+  async getLastPointPerUnit(carrierAccountId: string): Promise<Map<string, Date>> {
+    const rows = await this.db
+      .select({
+        unitId: telemetryPoints.unitId,
+        ultimo: sql<Date>`max(${telemetryPoints.recordedAt})`,
+      })
+      .from(telemetryPoints)
+      .where(
+        and(
+          eq(telemetryPoints.carrierAccountId, carrierAccountId),
+          sql`${telemetryPoints.unitId} is not null`,
+        ),
+      )
+      .groupBy(telemetryPoints.unitId);
+
+    const porUnidad = new Map<string, Date>();
+    for (const r of rows) {
+      if (!r.unitId || !r.ultimo) continue;
+      porUnidad.set(r.unitId, r.ultimo instanceof Date ? r.ultimo : new Date(r.ultimo));
+    }
+    return porUnidad;
+  }
 }
 
 export class GroundTruthRepository {
