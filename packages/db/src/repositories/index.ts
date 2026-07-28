@@ -2435,6 +2435,34 @@ export class ComplianceRepository {
       orderBy: (entries, { asc }) => [asc(entries.createdAt)],
     });
   }
+
+  /**
+   * Ledger de UNA ocurrencia, no de todo el viaje.
+   *
+   * `getLedgerForTrip` trae el historial completo del viaje; para leer la
+   * medición de un servicio eso es traer de más —la tabla ronda las 120 mil
+   * filas— y además obliga a filtrar por ocurrencia en memoria. Aquí se filtra
+   * en la base, apoyado en `ledger_entries_occurrence_idx`.
+   *
+   * `sinceMaterializedAt` acota a las entradas que pueden pertenecer al hecho
+   * vigente: el motor escribe el hecho antes que su entrada, así que nada
+   * anterior al sello puede ser suyo. Quién es exactamente lo decide
+   * `pairLedgerEntryWithFact`, que es puro y se prueba aparte.
+   */
+  async getLedgerForOccurrence(
+    serviceOccurrenceId: string,
+    opts: { sinceMaterializedAt?: Date } = {},
+  ) {
+    return this.db.query.ledgerEntries.findMany({
+      where: opts.sinceMaterializedAt
+        ? and(
+            eq(ledgerEntries.serviceOccurrenceId, serviceOccurrenceId),
+            gte(ledgerEntries.createdAt, opts.sinceMaterializedAt),
+          )
+        : eq(ledgerEntries.serviceOccurrenceId, serviceOccurrenceId),
+      orderBy: (entries, { asc }) => [asc(entries.createdAt)],
+    });
+  }
 }
 
 export class EvidenceRepository {
