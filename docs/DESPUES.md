@@ -58,6 +58,13 @@ de estas leyes está mal escrita, y se corrige la entrada.
    operativa, aprendida a lo caro el 27–28 de julio: la rotación dejó a los crones sin
    acceso 13 horas y nadie se enteró.
 
+6. **Todo `no_cumplido` enseña lo que SÍ ocurrió.** No basta con decir el porqué
+   medido: hay que mostrar **el recorrido real de las unidades del carrier en esa
+   ventana**, aunque ninguna haya hecho match. La [Ley 2](#leyes-de-producto) llevada
+   hasta el final — el porqué sin el qué sigue siendo una acusación que el acusado no
+   puede revisar. Si el expediente no puede enseñar dónde estuvieron los camiones, no
+   es un expediente.
+
 ---
 
 ## Índice
@@ -73,7 +80,8 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Expediente del no cumplido](#expediente-del-no-cumplido) | Consecuencia de la Ley 2 |
 | [Lenore v1 — vigía y narradora](#lenore-v1--vigía-y-narradora) | Entra en el demo |
 | [El vigilante vive dentro de lo vigilado](#el-vigilante-vive-dentro-de-lo-vigilado) | Fase 0 — parcialmente construido |
-| [Planta 47 casi no produce cumplidos](#planta-47-casi-no-produce-cumplidos) | Requiere sesión con la Planta |
+| [Planta 47 casi no produce cumplidos](#planta-47-casi-no-produce-cumplidos) | **Causa medida — corrección de configuración** |
+| [Ponderación de la cobertura por valor del tramo](#ponderación-de-la-cobertura-por-valor-del-tramo) | Hipótesis medible, sin caso todavía |
 | [Pendientes puntuales de v1](#pendientes-puntuales-de-v1) | En cola |
 
 ### 2 · v1.1 — inmediatamente después del demo
@@ -205,6 +213,21 @@ Cuatro piezas:
    *Bonus:* las paradas detectadas son puntos de abordaje inferidos — habilita el modo
    pasajero sin tener que registrar pasajeros.
 
+   **Requisito medido (2026-07-28): el detector de paradas se basa en POSICIÓN, no en
+   velocidad.** No porque el campo `speed` mienta —se midió y es mayormente fiel: solo
+   el **5.1%** de los tramos con movimiento real por encima de 15 km/h reportan cero, y
+   ninguno de los 56 equipos se queda pegado en cero—. El 69% de ceros del día completo
+   era flota estacionada; **dentro de las ventanas de servicio baja a 42.3%**, y de esos
+   ceros la mayoría son racimos en sitios fijos (1 236 de 1 765 en una ventana medida),
+   con 342 concentrados en el último 20% del recorrido: la espera en planta.
+
+   La razón real para usar posición es otra, y es más dura: **la resolución del ping no
+   alcanza**. Con un intervalo de 40 a 73 segundos, una parada de abordaje de 20 o 30
+   segundos deja un punto o ninguno. Detectando por posición se encontraron las mismas
+   dos paradas que detectando por velocidad — el límite no es el campo, es el muestreo.
+   Posición además no depende de lo que el proveedor decida mandar. Conecta con la
+   [compuerta de densidad](#compuerta-de-densidad-de-observación).
+
 2. **Diff estructural contra el KML.** Dónde dejó el trazado, cuántos kilómetros por
    fuera, dónde lo retomó, qué tramo omitió. **Números auditables** — este es
    literalmente el "porqué medido" que exige la Ley 2.
@@ -313,35 +336,87 @@ radicalmente distinto.
 Esto es lo que estaba inflando el número global de no cumplidos, no los datos de
 experimento. Archivar las cuentas demo mueve el total de 58.8% a 58.0%: casi nada.
 
-**Hipótesis a verificar — NO está medida.** Que los KML cargados no correspondan a
-las rutas que las unidades recorren de verdad, así que la métrica de corredor falla
-aunque el servicio se haya prestado.
+**LA CAUSA ESTÁ MEDIDA — 2026-07-28. No es el catálogo ni el motor: es la hora.**
 
-**Qué la sostiene, sin probarla.** Dos cosas. La primera, que el corredor de ese
-contrato cambió a media corrida (hay hechos sellados con `120 m / 50%` y otros con
-`120 m / 60%`), lo que sugiere que alguien ya estaba moviendo perillas buscando que
-cuadrara. La segunda, nueva del forense del 28 de julio: en Riveras 9 los días rojos
-fallan por **corredor** con densidad sana —B entre 22.6% y 38.2%, contra 96.4% el día
-verde—, que es exactamente la firma de "la unidad fue por otro camino". Es la misma
-forma del problema, en otro contrato. **No prueba nada sobre Planta 47**; sube la
-apuesta.
+El contrato de Planta 47 (`Tecma 47 - Transporte Personal`) es **el único de los cuatro
+activos que trae `timeZone` en su política** (`America/Ciudad_Juarez`). Y es justamente
+el que calcula mal sus ventanas:
 
-**Por qué sigue aplazado.** No se puede resolver desde el código: necesita a la Planta
-para confirmar qué camino recorren realmente las unidades. Sin ese dato, cualquier
-ajuste de umbral es adivinar — y el forense del 28 ya demostró que mover umbrales no
-salva nada cuando lo que falla es el corredor.
+| Contrato | `timeZone` | Turno inicia | Deadline calculado |
+|---|---|---|---|
+| TECMA Campus Santos Dumont | (ninguna) | 06:00 | 11:40 UTC = **05:40 local** ✓ |
+| Tecma 47 — Planta 47 | `America/Ciudad_Juarez` | 06:00 | 05:45 UTC = **23:45 local** ✗ |
 
-**Qué lo desbloquea.** La [vista de flota](#vista-de-flota-del-carrier) —que permite
-ver los trazos reales sin depender del match— y después una sesión con la Planta para
-contrastarlos contra los KML cargados. El
-[diff estructural](#identificación-que-se-explica) convierte esa sesión en números en
-vez de impresiones.
+**Seis horas de corrimiento, hacia la noche anterior.** El contrato vigila la ventana
+04:45–06:30 UTC, que en Juárez son las 22:45–00:30. Ahí no pasa nada, y por eso nunca
+encuentra a nadie.
+
+**La prueba de que el servicio sí se presta.** El 2026-07-27, la unidad 9180 cubre el
+**69% del inicio del trazado `Riveras 9 - A` a las 11:00 UTC (05:00 local)** y el **83%
+a las 22:00 UTC (16:00 local)**. En la ventana que el contrato sí vigila, la mejor
+cobertura de cualquier unidad es de **0% a 19%**, y el perfil `RIVERAS-9-B` marca **0%
+todos los días** del 21 al 28 de julio.
+
+Los camiones hacen la ruta. El contrato los busca a la hora equivocada.
+
+**Lo que esto invalida.** La hipótesis anterior —que los KML no correspondan a las rutas
+reales— **ya no hace falta para explicar Planta 47**, y la sesión con la Planta deja de
+ser el desbloqueo. Puede seguir siendo cierta en otros contratos; aquí no era la causa.
+
+**Lo que queda por entender, y es lo delicado.** Poner `timeZone` **empeoró** el
+cálculo: el contrato sin zona acierta y el contrato con zona se corre seis horas. Eso
+apunta a que la conversión se aplica invertida o dos veces en algún punto del camino
+entre la política, `computeExpectedDeadline` y la generación de ocurrencias. **Está
+medido el síntoma, no el código.** Encontrar el punto exacto es terreno del motor y
+entra bajo parada obligatoria.
+
+**Por qué no se corrige solo quitando la perilla.** Quitar `timeZone` de Planta 47
+probablemente arregle sus ventanas hoy, pero deja la falla viva para el primer contrato
+que de verdad opere en otra zona — y la deja viva en silencio, porque un hecho sellado
+con la hora equivocada se ve idéntico a uno correcto. Ver
+[3 de 4 contratos activos sin `timeZone`](#3-de-4-contratos-activos-sin-timezone).
+
+**Qué lo desbloquea.** Ubicar dónde se aplica la conversión y por qué se invierte. Con
+eso decidido, la corrección de Planta 47 es un cambio de configuración y una
+re-verificación de sus hechos — que **sí cambiaría veredictos, así que no se toca sin
+decisión explícita**.
 
 **Por qué no puede quedarse afuera de v1.** Con 285 hechos al 99.6% de no cumplido, la
-[meta del demo](#meta-del-demo) es inalcanzable mientras este contrato siga así.
+[meta del demo](#meta-del-demo) es inalcanzable mientras este contrato siga así. Y
+ahora sabemos que la mayoría de esos rojos **son falsos**: acusan a un carrier que sí
+prestó el servicio.
 
-**Dónde toca.** `route_kml_versions.waypoints`; la métrica de corredor en
-`packages/verification/src`; `docs/Ficha-Handoff-Variantes-Trazado.md`.
+**Dónde toca.** `service_contracts.policy` → `timeZone`; `computeExpectedDeadline` en
+`packages/domain/src/index.ts`; la generación de ocurrencias; `trips.evidence_window_*`.
+
+## Ponderación de la cobertura por valor del tramo
+
+**Qué es.** Que la cobertura no se promedie pareja a lo largo de la ruta: que los tramos
+de recolección —donde sube la gente— pesen más que los de traslado a la planta. La razón
+de Asav: una unidad puede recoger a todos perfectamente y desviarse solo en el traslado,
+y un score global la condena por el tramo que menos importa.
+
+**Por qué se aplazó.** Se midió el 2026-07-28 sobre RIBERAS-9-I en el 21, 24 y 27 de
+julio, dividiendo el trazado en diez tramos de igual distancia, y **quedó refutada en
+ese caso — al revés de lo esperado**: el fallo no estaba repartido parejo ni
+concentrado al final, sino que **los primeros 13.6 km (el 60% de la ruta) tenían
+cobertura cero**. Ponderar más la recolección habría hecho ver **peor** a esa ruta, no
+mejor, porque lo que faltaba era justamente la recolección.
+
+**Por qué no se descarta.** Refutada en ese caso, no en general. El escenario que
+describe —recoger bien y desviarse en el traslado— simplemente no ocurría ahí: ninguna
+unidad recogía bien. La hipótesis sigue viva y ahora es **barata de probar**, porque el
+instrumento ya está construido.
+
+**Qué lo desbloquea.** Encontrar una ruta donde **una sola unidad cubra el trazado
+completo y aun así el score quede corto**. Ahí la ponderación prueba algo. Mientras no
+exista ese caso, es una perilla sin evidencia que la pida.
+
+**Cómo se mide, para no repetir el diseño.** Tramos de **igual distancia sobre el
+trazado**, no por número de waypoints ni por paradas detectadas. Segmentar por paradas
+presupone dónde termina la recolección, y entonces la medición ya no puede contradecir
+a quien la diseñó. Las paradas son la unidad correcta del producto; el kilómetro es el
+instrumento neutro de la medición.
 
 ## Pendientes puntuales de v1
 
