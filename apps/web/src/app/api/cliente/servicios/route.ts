@@ -6,6 +6,7 @@ import {
   operationalScopeFromContract,
   parseOperationalScope,
   scopedRowMatches,
+  dayForDateQuery,
 } from "@jtel/domain";
 import { configApiBack } from "@/lib/config-api-back";
 import { contractMatchesScope } from "@/lib/operational-scope";
@@ -59,8 +60,12 @@ export async function POST(request: Request) {
     if (!profileId || !fromDate || !toDate) {
       return back(request, client.slug, redirectScope, { error: "Elige perfil y rango de fechas." });
     }
-    const from = new Date(`${fromDate}T00:00:00`);
-    const to = new Date(`${toDate}T00:00:00`);
+    // Mediodía UTC vía la función canónica: construir la fecha a mano la
+    // resolvería en la zona del proceso, que es el defecto que corrió los
+    // deadlines seis horas. Aquí solo acota un rango, pero el patrón no se
+    // repite ni donde no muerde.
+    const from = dayForDateQuery(fromDate);
+    const to = dayForDateQuery(toDate);
     if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
       return back(request, client.slug, redirectScope, { error: "Rango de fechas inválido." });
     }

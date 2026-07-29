@@ -21,6 +21,56 @@ export function localDateIso(now = new Date(), timeZone = JTTEL_TZ): string {
     day: "2-digit",
   }).format(now);
 }
+/** Desplazamiento de una zona respecto a UTC, en ms, para un instante dado. */
+function desplazamientoMs(instante: Date, timeZone: string): number {
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(instante);
+  const v = (t: string) => Number(partes.find((p) => p.type === t)?.value ?? "0");
+  return (
+    Date.UTC(v("year"), v("month") - 1, v("day"), v("hour"), v("minute"), v("second")) -
+    instante.getTime()
+  );
+}
+
+/**
+ * Una fecha civil y unos minutos desde su medianoche, en una zona, al instante
+ * real que les corresponde.
+ *
+ * Esta es LA función canónica para ir de "tal día a tal hora, allá" a un
+ * instante — la pareja que faltaba de `localDateIso` y `dayForDateQuery`.
+ *
+ * **Nunca construir estas fechas a mano.** `new Date(\`${fecha}T00:00:00\`)`,
+ * sin marca de zona, se resuelve en la zona del proceso que corre: el mismo
+ * código da un instante en una laptop y otro seis horas distinto en Vercel.
+ * Ese fue el bug que produjo 294 hechos sellados con la hora equivocada, con
+ * un solo cumplido entre ellos.
+ *
+ * `minutos` puede ser negativo o pasar de 1440: se interpreta como
+ * desplazamiento desde la medianoche civil y puede caer en otro día.
+ *
+ * Dos pasadas a propósito: la primera conjetura el desplazamiento con la hora
+ * equivocada, la segunda lo corrige. Sin eso, los dos días del año en que
+ * cambia el horario salen con una hora de error.
+ */
+export function instanteZonificado(
+  fechaIso: string,
+  minutos: number,
+  timeZone: string = JTTEL_TZ,
+): Date {
+  const [anio, mes, dia] = fechaIso.slice(0, 10).split("-").map(Number);
+  const civil = Date.UTC(anio!, mes! - 1, dia!, 0, 0, 0) + minutos * 60_000;
+  const primera = civil - desplazamientoMs(new Date(civil), timeZone);
+  return new Date(civil - desplazamientoMs(new Date(primera), timeZone));
+}
+
 /**
  * Construye la fecha de consulta para `findForScope` y funciones similares
  * a partir de una cadena YYYY-MM-DD.
@@ -310,16 +360,23 @@ export function parseTimeToMinutes(time: string): number {
   return (h ?? 0) * 60 + (m ?? 0);
 }
 
-/** Deadline = inicio del turno − anticipación de llegada (contrato). */
+/**
+ * Deadline = inicio del turno − anticipación de llegada (contrato).
+ *
+ * `timeZone` es la del contrato; sin ella cae a la del despliegue. **No es
+ * opcional por comodidad**: la hora del turno es una hora civil del lugar
+ * donde opera el carrier, y resolverla sin zona explícita hace que el
+ * resultado dependa de en qué máquina corrió el generador. Ver
+ * `instanteZonificado`.
+ */
 export function computeExpectedDeadline(
   serviceDate: string,
   shiftStartTime: string,
   arrivalAnticipationMinutes: number,
+  timeZone: string = JTTEL_TZ,
 ): Date {
   const minutes = parseTimeToMinutes(shiftStartTime) - arrivalAnticipationMinutes;
-  const d = new Date(`${serviceDate}T00:00:00`);
-  d.setMinutes(minutes);
-  return d;
+  return instanteZonificado(serviceDate, minutes, timeZone);
 }
 
 export function computeEvidenceWindow(

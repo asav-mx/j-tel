@@ -22,6 +22,9 @@
  */
 
 import { haversineKm } from "@jtel/verification";
+import { instanteZonificado } from "@jtel/domain";
+
+export { instanteZonificado };
 
 /**
  * Velocidad implícita por encima de la cual un tramo es un salto del equipo y
@@ -30,44 +33,6 @@ import { haversineKm } from "@jtel/verification";
  * el tramo descartado deja un hueco en la suma y no hay regla para rellenarlo.
  */
 export const SALTO_GPS_KMH = 300;
-
-/** Desplazamiento de una zona respecto a UTC, en ms, para un instante dado. */
-function desplazamientoMs(instante: Date, timeZone: string): number {
-  const partes = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(instante);
-  const v = (t: string) => Number(partes.find((p) => p.type === t)?.value ?? "0");
-  return (
-    Date.UTC(v("year"), v("month") - 1, v("day"), v("hour"), v("minute"), v("second")) -
-    instante.getTime()
-  );
-}
-
-/**
- * Una fecha civil y unos minutos desde medianoche, en una zona, al instante
- * real que les corresponde.
- *
- * Dos pasadas a propósito: la primera conjetura el desplazamiento con la hora
- * equivocada, la segunda lo corrige. Sin eso, los dos días del año en que
- * cambia el horario salen con una hora de error.
- */
-export function instanteZonificado(
-  fechaIso: string,
-  minutos: number,
-  timeZone: string,
-): Date {
-  const [anio, mes, dia] = fechaIso.split("-").map(Number);
-  const civil = Date.UTC(anio!, mes! - 1, dia!, 0, 0, 0) + minutos * 60_000;
-  const primera = civil - desplazamientoMs(new Date(civil), timeZone);
-  return new Date(civil - desplazamientoMs(new Date(primera), timeZone));
-}
 
 /**
  * Ventana de observación a partir de una fecha civil y un rango de horas.
