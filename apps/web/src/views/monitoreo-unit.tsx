@@ -91,7 +91,7 @@ export async function MonitoreoUnitView({
       : "";
 
   const basePath = scopeToUnitPath(ctx.scope);
-  const historialHref = withAccount(`${basePath}/jornada`, ctx.client.slug);
+  const historialHref = withAccount(`${basePath}/cierre`, ctx.client.slug);
   const liveHref = withAccount(`${basePath}/monitoreo`, ctx.client.slug);
   const unitLabel = operationalUnitLabel(ctx.unit);
 
