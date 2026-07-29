@@ -120,6 +120,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 
 | Entrada | Horizonte |
 |---|---|
+| [El loop de aprendizaje de la operación](#el-loop-de-aprendizaje-de-la-operación) | **Marco — gobierna varias entradas** |
 | [Lenore — el copiloto](#lenore--el-copiloto) | Línea de producto propia |
 | [Lenore-auditora](#lenore-auditora) | **Caso de uso estrella** |
 | [Lenore-copiloto de configuración](#lenore-copiloto-de-configuración) | v2 |
@@ -541,6 +542,10 @@ de su trazado con `Riveras 9 - A`, o sea son caminos distintos, no ida y vuelta.
 **Qué lo desbloquea.** Confirmar con la Planta la hora real de ese servicio y a qué
 turno pertenecen esas rutas. Es una conversación, no código.
 
+**Y es el tercer caso del mismo patrón.** Un valor declarado que la operación contradice
+todos los días, detectado a mano por una persona que fue a buscarlo. Ver
+[El loop de aprendizaje de la operación](#el-loop-de-aprendizaje-de-la-operación).
+
 **Dónde toca.** `shifts.start_time`; `route_shifts` — la asignación ruta↔turno; nada de
 `packages/verification`.
 
@@ -612,6 +617,10 @@ reconstrucción era una consulta.
 **Qué lo desbloquea.** Nada técnico — es una decisión de prioridad. **Requisito antes
 del segundo cliente:** con un solo cliente y una sola persona configurando, la memoria
 humana todavía alcanza. Con dos, no.
+
+**Es además prerrequisito de otra cosa más grande.** Sin esta historia, *"la
+configuración aprendió"* es indistinguible de *"alguien le movió"*. Ver
+[El loop de aprendizaje de la operación](#el-loop-de-aprendizaje-de-la-operación).
 
 **Dónde toca.** `route_kml_versions`, `service_contracts.policy`, `service_profiles`.
 
@@ -815,6 +824,192 @@ callar. Ahí hace falta un tercer estado explícito.
 
 # 3 · v2 — línea Lenore completa
 
+## El loop de aprendizaje de la operación
+
+**Qué es.** J-Tel ve **la misma operación repetirse todos los días**. Cada valor
+declarado —la hora de un turno, el radio del corredor, el trazado de una ruta, la
+unidad asignada— es una **hipótesis sobre esa operación**. Cuando lo declarado y lo
+observado divergen de forma sostenida, eso no es ruido: es **información que hoy se
+desperdicia**.
+
+La forma es siempre la misma:
+
+> **declarado ↔ observado → divergencia sostenida → propuesta → aprobación humana → la
+> configuración aprende**
+
+**Por qué es marco y no tarea.** Esta entrada no se construye. Es la **forma
+compartida** de varias entradas que ya viven en este archivo y que hasta hoy estaban
+sueltas. Se escribe para que la siguiente que aparezca se reconozca como parte de lo
+mismo y no se vuelva a diseñar desde cero.
+
+**No es teórico: ya lo pagamos tres veces.** Los tres hallazgos del 28 de julio de 2026
+son exactamente esta forma, resuelta a mano por una persona en vez de por el sistema:
+
+| Caso | Declarado | Observado | Cómo se detectó |
+|---|---|---|---|
+| [Zona horaria en el deadline](#el-deadline-depende-de-dónde-corre-el-generador) | ventana 22:45–00:30 local | la ruta se recorre a las 05:00 | forense de un día entero |
+| Anticipación vieja en 40 ocurrencias del Campus | la política dice 20 min | las ocurrencias traen 15 | comparación fila por fila |
+| [Turno B declarado 18:00](#turno-b-de-planta-47-declarado-1800-operado-1400) | ventana 16:45–18:30 | 14:00, 11 de 14 días | barrido de 24 horas |
+
+Ninguno de los tres necesitó un dato que no tuviéramos. Los tres estaban repitiéndose
+todos los días, a la vista, y nadie los estaba mirando.
+
+### Las tres capas
+
+**Capa 1 — lo declarado que debe coincidir con la realidad.** El loop **corrige la
+declaración**: hora del turno · asignación ruta↔turno · trazado y variantes (Ficha 3) ·
+unidad habitual por ruta · días activos · geocerca de destino · puntos de abordaje
+inferidos.
+
+**Capa 2 — umbrales que deben calibrarse, no adivinarse.** El loop **afina la
+perilla**: radio del corredor desde la dispersión real del GPS · umbrales A y B ·
+[umbral de densidad](#compuerta-de-densidad-de-observación) desde la geometría de ping ×
+velocidad × separación de waypoints · duración máxima desde la distribución observada ·
+márgenes de evidencia desde la distribución real de llegadas.
+
+**Capa 3 — lo que el loop revela de la operación misma.** Aquí **informa, no corrige**,
+y esto es **producto nuevo**: rutas que se hacen más lentas semana a semana · equipos
+GPS que se degradan antes de enmudecer, o sea mantenimiento predictivo · reasignación de
+flota detectada · patrones por día de la semana · velocidades y congestión por calle y
+por hora · rutas crónicamente tarde con su causa medida.
+
+**Esta capa es valor que el cliente y el carrier querrían aunque no hubiera contrato que
+verificar.** Es la única de las tres que no depende de que exista un árbitro.
+
+### La trampa
+
+**No se pueden calibrar umbrales contra la operación que se juzga.** Afinar el corredor
+hasta que todo pase convierte al árbitro en decorado: el sistema deja de medir
+cumplimiento y empieza a medir su propia tolerancia. La calibración se mide contra una
+vara externa, **nunca contra el deseo de que se vayan los rojos**.
+
+Y esa vara externa no es "verdad de campo" a secas. Tiene dueño, y son dos.
+
+### Quién calibra qué
+
+| Lado | Qué se calibra | Quién | Por qué le toca |
+|---|---|---|---|
+| **Normativo** — qué cuenta como cumplido | variantes de ruta, tolerancias, motivos excusables, desviación aceptable | **La planta** | Los servicios son para ella: los solicita y los paga. El estándar de cumplimiento es una **definición contractual suya**, no un hecho de la naturaleza. El carrier tiene incentivo de aflojar el umbral; la planta no. |
+| **Factual** — si observamos bien | identificación, cobertura, unidad correcta, huecos | **El carrier** | Es su operación. La planta sabe si su gente llegó; **no sabe si el camión fue el 9180**. Solo el carrier sabe eso. |
+| — | nada | **El árbitro** | No calibra. **Aplica.** |
+
+En palabras de Asav: *"las solicitudes son juzgadas conforme a lo que el cliente defina,
+y el árbitro es imparcial hacia el resultado."*
+
+**Esto extiende el Marco, no agrega una regla nueva.** La planta ya define geocercas,
+turnos, rutas y contratos —**lo que se verifica**—; el carrier ya configura flota y GPS
+—**cómo atiende**—. El loop no reparte poder nuevo: pone a cada lado a calibrar lo que
+ya le pertenece.
+
+**Y los dos calibran de forma distinta, que es lo que impide que se rompa.**
+
+- La planta **aprueba**. Su aprobación es normativa: define la vara. Se sella como hecho.
+- El carrier **señala**. Su señalamiento es factual: apunta dónde buscar. Lo verifica la
+  matemática.
+
+Ninguno de los dos mueve la compuerta de observación. La frase, en las dos direcciones:
+
+> La planta puede decir *"ese camino alterno cuenta"*; no puede decir *"nuestro GPS ve
+> mejor de lo que ve."*
+> El carrier puede decir *"fue la unidad 9180"*; no puede decir *"sí se hizo,
+> créanme."*
+
+Si las dos cosas se mezclan, alguien afloja la compuerta de densidad *"porque la planta
+aprobó"* —o *"porque el carrier lo asegura"*— y el sistema emite veredictos sobre lo que
+no observó, rompiendo la [Ley 1](#leyes-de-producto).
+
+### El dicho del carrier no es evidencia
+
+**Es una hipótesis a verificar.** Si el carrier pudiera decir *"sí se hizo"* y el
+veredicto cambiara, el juzgado le estaría preguntando al acusado si es culpable.
+
+Lo que sí puede hacer son tres cosas, y las tres son legítimas:
+
+1. **Señalar evidencia que existe y no se consideró** — *"fue la unidad 9180"*.
+2. **Aportar contexto que cae en un motivo excusable** — ya previsto en el Marco.
+3. **Proponer que un camino alterno se reconozca** — y esa propuesta va **a la planta**,
+   porque es normativa.
+
+Las tres son **punteros hacia evidencia**, no afirmaciones que sustituyan a la
+evidencia, y las tres se verifican con la misma matemática que juzga a todos. **El
+carrier dirige la búsqueda; la matemática dictamina.** Es la
+[Ley 3](#leyes-de-producto) extendida: la matemática decide, **las partes aportan**.
+
+### Lo que esto conecta
+
+Tres cosas que ya estaban en el backlog, sueltas, y que resultan ser **el lado factual
+del mismo loop**:
+
+| Pieza | Dónde vive hoy | Qué le falta |
+|---|---|---|
+| El circuito de defensa del carrier | `docs/Pieza3-Expediente-Contenido-Canonico.md` ya le reserva el hueco: la cara del carrier incluye *"su vista de defensa"* | que el señalamiento salga de la pantalla y llegue a alguien |
+| **Ficha 4 — defensa del carrier** | `docs/marco-limpio/Anexo-Estado-J-Telemetry.md` | el circuito completo: coordinador reporta → planta acepta → re-juicio auditado |
+| La etiqueta de calibración | **construida**, hoy solo para rojos sin unidad | el carrier ya dice *"sí se hizo"* — pero **solo calibra y no llega a nadie** |
+
+**Y un bloqueo real que hay que decir en voz alta.** El Anexo ya lo registra y lo marca
+como relevante para la Ficha 4: **~4% de los hechos congelados no son reproducibles por
+el motor actual** (hallazgo del 23 de julio, sin investigar). Si el carrier impugna un
+`no_cumplido`, hoy el sistema **no puede reproducir la evaluación del día D con los datos
+del día D** — el dry-run usa el catálogo de hoy. Un circuito de defensa montado sobre un
+motor que no reproduce el pasado le contesta al carrier con algo que no corresponde al
+hecho sellado. Emparenta con
+[la versión del motor en el hecho](#la-versión-del-motor-en-el-hecho).
+
+### Las dos consecuencias
+
+**(a) Cada aprobación de la planta se sella como un hecho** — quién, cuándo, qué aprobó y
+**desde qué fecha aplica**. Es la Pieza 1 aplicada a las aprobaciones. Sin ese registro,
+el argumento de imparcialidad se cae ante la primera disputa: *"usted aprobó esa
+variante"* no se sostiene si no hay dónde leerlo. Lo mismo del otro lado: **un re-juicio
+pedido por defensa queda archivado con quién lo pidió, cuándo y por qué** — auditable por
+construcción, porque la Pieza 1 ya guarda la historia del sello.
+
+**(b) Mientras una propuesta espera aprobación, el servicio se juzga contra la vara
+vigente y sale rojo si no la cumple** — pero el expediente muestra que hay una variante
+pendiente. Es la fórmula que ya está en el Marco: **rojo honesto + motivo claro +
+aprobación rápida hacia adelante**. Un rojo que se retiene *"por si acaso la aprueban"*
+es un veredicto que no afirma nada.
+
+### La métrica que sale del diseño
+
+**Tasa de acierto de las disputas del carrier.** Sale gratis del circuito de defensa y es
+**la señal más limpia de calidad de identificación que podemos tener**:
+
+- Disputa y **la matemática le da la razón** → nuestra identificación falló ahí. Es un
+  falso negativo con nombre, fecha y ruta.
+- Disputa y **la matemática lo desmiente** → está confundido, o probando suerte.
+
+**Un carrier que dispute 50 veces y acierte 45 nos está diciendo que el motor está
+ciego.** Ninguna métrica interna diría eso con esa claridad, porque todas las que
+tenemos las calcula el mismo motor que estaría fallando.
+
+Con una condición: la métrica solo es honesta si el re-juicio es reproducible. Ver el
+bloqueo de arriba.
+
+### Los tres prerrequisitos
+
+Dejan de ser opcionales el día que se decida construir el loop:
+
+1. **[El descriptor del viaje](#identificación-que-se-explica)** — no se detectan
+   patrones en lo que no se describe. Sin esqueleto del viaje no hay "hora habitual" ni
+   "camino habitual" que comparar contra lo declarado.
+2. **[La historia de cambios de configuración](#historia-de-cambios-de-configuración)** —
+   es a la configuración lo que la Pieza 1 es a los veredictos. Sin ella, *"la
+   configuración aprendió"* es indistinguible de *"alguien le movió"*.
+3. **Una superficie de propuestas** — dónde aparece *"detectamos esto, ¿lo apruebas?"*
+   con su mapa y sus números. Es **la razón de ser de Lenore**, y donde se cruzan
+   [Lenore-detección de deriva](#lenore-detección-de-deriva) y
+   [Lenore-copiloto de configuración](#lenore-copiloto-de-configuración).
+
+**Qué lo desbloquea.** Los tres prerrequisitos, en ese orden. Y una precondición que no
+es técnica: **nada de esto se construye antes de que el árbitro sea confiable.** Un loop
+de aprendizaje montado sobre un motor que se equivoca aprende los errores más rápido de
+lo que los corrige.
+
+**Dónde toca.** `docs/marco-limpio/Anexo-Estado-J-Telemetry.md` — Fichas 2, 3 y 4;
+`docs/Pieza3-Expediente-Contenido-Canonico.md` — la vista de defensa del carrier; la
+etiqueta de calibración ya construida; `compliance_fact_history`; `ledger_entries`.
+
 ## Lenore — el copiloto
 
 **Qué es.** Línea de producto propia. J-Tel es el juez: espera a que el viaje termine
@@ -892,6 +1087,11 @@ comportamiento por ruta; ninguna de las dos existe todavía.
 
 **Por qué duele no tenerla.** Riveras 9 se degradó a lo largo de dos semanas y nadie lo
 vio hasta que alguien contó los rojos a mano.
+
+**Dónde encaja.** Es la superficie de la capa 3 del
+[loop de aprendizaje](#el-loop-de-aprendizaje-de-la-operación) — la que informa sin
+corregir. Detectar la deriva es la mitad; la otra mitad es que la propuesta llegue a
+quien puede aprobarla.
 
 ## Lenore-copiloto general en J-Staff
 
