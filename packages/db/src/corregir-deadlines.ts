@@ -12,8 +12,13 @@
  * pasado a acusación irreversible.
  *
  *   pnpm --filter @jtel/db corregir-deadlines              # simulacro
+ *   pnpm --filter @jtel/db corregir-deadlines --sql        # imprime el SQL
  *   pnpm --filter @jtel/db corregir-deadlines --aplicar    # escribe
  *   pnpm --filter @jtel/db corregir-deadlines --aplicar --con-deriva
+ *
+ * `--sql` existe porque quien tiene permiso de escritura trabaja desde la
+ * consola de Neon, no desde una terminal. El SQL lleva las mismas guardas
+ * dentro del WHERE y queda además como registro exacto de qué se cambió.
  *
  * Se corrige EN SITIO. Borrar y recrear arrastraría el viaje en cascada sin
  * ninguna necesidad: el índice único es `(service_profile_id, service_date)`,
@@ -22,11 +27,14 @@
 
 import { and, eq, gt, sql } from "drizzle-orm";
 import { computeEvidenceWindow, JTTEL_TZ, type ContractPolicy } from "@jtel/domain";
-import { createDb, type Database } from "./index.js";
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
+import * as schema from "./schema/index.js";
+import type { Database } from "./index.js";
 import { clasificarDiferencia, type CausaDeDiferencia } from "./deadline-diff.js";
 import { serviceOccurrences, complianceFacts, trips } from "./schema/index.js";
 
-type Fila = {
+export type Fila = {
   occurrenceId: string;
   contrato: string;
   serviceDate: string;
@@ -137,21 +145,150 @@ function resumir(plan: Fila[], conDeriva: boolean) {
   return { zona, deriva };
 }
 
+/** Literal timestamptz para SQL, siempre en UTC y sin ambigüedad de zona. */
+function ts(d: Date): string {
+  return `'${d.toISOString()}'::timestamptz`;
+}
+
+/**
+ * Imprime el SQL de la corrección en vez de ejecutarla.
+ *
+ * Existe porque quien tiene permiso de escritura sobre la base trabaja desde
+ * la consola de Neon, no desde una terminal con el proyecto instalado. El SQL
+ * lleva las MISMAS guardas que el camino programático, dentro del `WHERE`: no
+ * basta con que el plan fuera seguro cuando se calculó, tiene que seguir
+ * siéndolo cuando alguien lo pegue y lo corra.
+ *
+ * Va dentro de una transacción y termina con una verificación antes del
+ * COMMIT, para que se pueda abortar si los números no cuadran.
+ */
+export function generarSql(filas: Fila[], conDeriva: boolean): string {
+  if (filas.length === 0) return "-- No hay nada que corregir.";
+  const porCausa = new Map<string, number>();
+  for (const f of filas) porCausa.set(f.causa, (porCausa.get(f.causa) ?? 0) + 1);
+
+  const L: string[] = [];
+  L.push("-- ═══════════════════════════════════════════════════════════════════");
+  L.push("-- Corrección de deadlines — generada por @jtel/db corregir-deadlines");
+  L.push(`-- Ocurrencias a corregir: ${filas.length}`);
+  for (const [c, n] of porCausa) L.push(`--   ${c}: ${n}`);
+  L.push(`--   deriva incluida: ${conDeriva ? "sí" : "no"}`);
+  L.push("--");
+  L.push("-- Las guardas viajan DENTRO del WHERE: si una ocurrencia se selló");
+  L.push("-- entre que se generó este SQL y que se corre, no se toca.");
+  L.push("-- Revisa los conteos de la verificación ANTES de hacer COMMIT.");
+  L.push("-- ═══════════════════════════════════════════════════════════════════");
+  L.push("");
+  L.push("BEGIN;");
+  L.push("");
+
+  L.push("-- 1 · Deadline de las ocurrencias");
+  L.push("WITH nuevos(id, deadline) AS (VALUES");
+  L.push(
+    filas.map((f) => `  ('${f.occurrenceId}'::uuid, ${ts(f.correcto)})`).join(",\n"),
+  );
+  L.push("), aplicado AS (");
+  L.push("  UPDATE service_occurrences o");
+  L.push("     SET expected_deadline = n.deadline");
+  L.push("    FROM nuevos n");
+  L.push("   WHERE o.id = n.id");
+  L.push("     AND o.expected_deadline > now()");
+  L.push("     AND NOT EXISTS (");
+  L.push("       SELECT 1 FROM compliance_facts cf WHERE cf.service_occurrence_id = o.id)");
+  L.push("  RETURNING o.id");
+  L.push(")");
+  L.push("SELECT count(*) AS ocurrencias_corregidas FROM aplicado;");
+  L.push("");
+
+  const conViaje = filas.filter((f) => f.tripId && f.ventana);
+  if (conViaje.length === 0) {
+    // Sin viajes no se emite el bloque: un VALUES vacío es SQL inválido, y
+    // esto se pega a mano en una consola.
+    L.push("-- 2 · Ventana de evidencia: ninguna de estas ocurrencias tiene viaje.");
+    L.push("");
+  } else {
+  L.push("-- 2 · Ventana de evidencia de los viajes");
+  L.push("WITH nuevas(id, inicio, fin) AS (VALUES");
+  L.push(
+    conViaje
+      .map((f) => `  ('${f.tripId}'::uuid, ${ts(f.ventana!.inicio)}, ${ts(f.ventana!.fin)})`)
+      .join(",\n"),
+  );
+  L.push("), aplicado AS (");
+  L.push("  UPDATE trips t");
+  L.push("     SET evidence_window_start = n.inicio, evidence_window_end = n.fin");
+  L.push("    FROM nuevas n");
+  L.push("   WHERE t.id = n.id");
+  L.push("     AND t.evidence_status = 'en_espera'");
+  L.push("     AND NOT EXISTS (SELECT 1 FROM evidence_points ep WHERE ep.trip_id = t.id)");
+  L.push("     AND NOT EXISTS (");
+  L.push("       SELECT 1 FROM compliance_facts cf");
+  L.push("        WHERE cf.service_occurrence_id = t.service_occurrence_id)");
+  L.push("  RETURNING t.id");
+  L.push(")");
+  L.push("SELECT count(*) AS viajes_corregidos FROM aplicado;");
+  L.push("");
+  }
+
+  L.push("-- 3 · Verificación: deadline y ventana tienen que quedar coherentes.");
+  L.push("--     'descuadradas' debe ser 0. Si no lo es, ROLLBACK.");
+  L.push("SELECT count(*) AS descuadradas");
+  L.push("  FROM service_occurrences o");
+  L.push("  JOIN trips t ON t.service_occurrence_id = o.id");
+  L.push(`  JOIN (VALUES\n${filas.map((f) => `    ('${f.occurrenceId}'::uuid, ${ts(f.correcto)})`).join(",\n")}\n  ) AS n(id, deadline) ON n.id = o.id`);
+  L.push(" WHERE o.expected_deadline IS DISTINCT FROM n.deadline;");
+  L.push("");
+  L.push("-- Si los tres números cuadran:");
+  L.push("COMMIT;");
+  L.push("-- Si no:");
+  L.push("-- ROLLBACK;");
+  L.push("");
+  return L.join("\n");
+}
+
 export async function main() {
   const aplicar = process.argv.includes("--aplicar");
   const conDeriva = process.argv.includes("--con-deriva");
+  const soloSql = process.argv.includes("--sql");
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("Falta DATABASE_URL");
 
-  const db = createDb(url);
+  // Cliente propio en vez de createDb: hay que poder cerrarlo. Con
+  // `--sql` la salida son miles de líneas, y `process.exit()` sobre una
+  // tubería las corta a medias — un SQL truncado y sin COMMIT.
+  const cliente = postgres(url, { max: 1 });
+  const db = drizzle(cliente, { schema }) as unknown as Database;
+  try {
+    await correr(db, { aplicar, conDeriva, soloSql });
+  } finally {
+    await cliente.end();
+  }
+}
+
+async function correr(
+  db: Database,
+  { aplicar, conDeriva, soloSql }: { aplicar: boolean; conDeriva: boolean; soloSql: boolean },
+) {
   const plan = await planear(db);
 
   console.log(`\n${"=".repeat(76)}`);
-  console.log(`  CORRECCIÓN DE DEADLINES — ${aplicar ? "APLICANDO" : "SIMULACRO (no escribe nada)"}`);
+  const modo = soloSql
+    ? "SQL PARA LA CONSOLA (no escribe nada)"
+    : aplicar
+      ? "APLICANDO"
+      : "SIMULACRO (no escribe nada)";
+  console.log(`  CORRECCIÓN DE DEADLINES — ${modo}`);
   console.log(`${"=".repeat(76)}`);
   const { zona, deriva } = resumir(plan, conDeriva);
 
   const aTocar = conDeriva ? [...zona, ...deriva] : zona;
+
+  if (soloSql) {
+    console.log(`\n  (el SQL sale abajo; nada se escribe desde aquí)\n`);
+    console.log(generarSql(aTocar, conDeriva));
+    return;
+  }
+
   console.log(`\n  === ejemplo del cambio ===`);
   for (const f of aTocar.slice(0, 3)) {
     console.log(`  ${f.contrato.slice(0, 32)} · ${f.serviceDate} · ${f.causa} (${f.difMinutos > 0 ? "+" : ""}${f.difMinutos} min)`);
