@@ -20,7 +20,8 @@
     "trim-far": "tsx src/trim-far-occurrences.ts",
     "studio": "drizzle-kit studio",
     "test": "TZ=UTC vitest run",
-    "test:integration": "TZ=UTC vitest run --config vitest.integration.config.ts"
+    "test:integration": "TZ=UTC vitest run --config vitest.integration.config.ts",
+    "corregir-deadlines": "tsx src/corregir-deadlines.ts"
   },
   "dependencies": {
     "@jtel/domain": "workspace:*",
