@@ -12,3 +12,10 @@ export type Database = ReturnType<typeof createDb>;
 export * from "./schema/index.js";
 export { createRepositories, type Repositories } from "./repositories/index.js";
 export { isEncryptionConfigured } from "./crypto.js";
+export {
+  pairLedgerEntryWithFact,
+  SEALING_LEDGER_ACTIONS,
+  DEFAULT_PAIRING_TOLERANCE_MS,
+  type LedgerPairing,
+  type PairableLedgerEntry,
+} from "./ledger-pairing.js";
