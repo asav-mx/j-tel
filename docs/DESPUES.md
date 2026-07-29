@@ -111,6 +111,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [3 de 4 contratos activos sin `timeZone`](#3-de-4-contratos-activos-sin-timezone) | Antes de operar en otra zona |
 | [Retención de Neon](#retención-de-neon) | Por definir |
 | [El vigilante se apaga tras 60 días de repo inactivo](#el-vigilante-se-apaga-tras-60-días-de-repo-inactivo) | Vigilar |
+| [`apps/web` no tiene corredor de pruebas](#appsweb-no-tiene-corredor-de-pruebas) | Antes de mover lógica a la web |
 | [Migrar `autopsia.ts` al emparejamiento nuevo](#migrar-autopsiats-al-emparejamiento-nuevo) | Herramienta interna |
 | [Los 15 pendientes del 28-jul se quedan pendientes](#los-15-pendientes-del-28-jul-se-quedan-pendientes) | Decidido, no se toca |
 
@@ -746,6 +747,35 @@ confirme *"sigo vivo"* en vez de solo gritar cuando algo falla. La Fase 0 no lo 
 a propósito.
 
 **Dónde toca.** `.github/workflows/salud.yml`.
+
+## `apps/web` no tiene corredor de pruebas
+
+**Qué es.** `apps/web/package.json` no declara script `test` ni depende de vitest, pero
+el repositorio contiene dos archivos de prueba dentro de la app:
+`src/lib/autopsia.test.ts` y `src/lib/date-range.test.ts`. **Nunca corren**, y son los
+**únicos dos errores de `tsc --noEmit`** que quedan en el repo — no encuentran el módulo
+`vitest`.
+
+**Por qué es peor que un descuido.** Un archivo de prueba que existe y no corre es peor
+que no tener pruebas: da la impresión de que algo está cubierto cuando no lo está. Y los
+errores permanentes de `tsc` entrenan a ignorar la salida del compilador, que es
+justamente donde aparecerían los errores reales.
+
+**Por qué se aplazó.** Configurar vitest en una app de Next con React 19 y Tailwind 4 no
+es una línea, y arrastra decisiones —entorno jsdom o node, cómo se resuelven los alias
+`@/`— que merecen su propio rato.
+
+**Mientras tanto, la regla que se está siguiendo.** Toda lógica que valga la pena probar
+vive en un paquete, no en la app. La ventana y la zona horaria del
+[recorrido de la flota](#vista-de-flota-del-carrier) se pusieron en `@jtel/services` por
+esto, no por gusto: ahí sí se prueban.
+
+**Qué lo desbloquea.** Que haga falta lógica en la app que no se pueda sacar a un
+paquete. Ese día se configura vitest o se borran los dos archivos huérfanos — lo que no
+puede seguir es el estado actual, que finge cobertura.
+
+**Dónde toca.** `apps/web/package.json`; `apps/web/src/lib/autopsia.test.ts`;
+`apps/web/src/lib/date-range.test.ts`.
 
 ## Migrar `autopsia.ts` al emparejamiento nuevo
 
