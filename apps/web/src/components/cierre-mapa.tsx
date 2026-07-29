@@ -19,7 +19,12 @@ const COLOR = {
   rojo: "#E5484D",
   ambar: "#E3A81F",
   acero: "#7A9CB8",
-  verde: "#34C77B",
+  /**
+   * La geocerca es territorio, no resultado: va en gris de apoyo.
+   * Verde, ámbar y rojo están reservados para veredictos y no se prestan ni
+   * para dibujar el destino.
+   */
+  tenue: "#71808F",
 } as const;
 
 function colorDe(s: ServicioDelCierre): string {
@@ -73,7 +78,13 @@ export function CierreMapa({
             geocercasDibujadas.add(clave);
             L.polygon(
               s.geofencePolygon.map((p) => [p.lat, p.lng] as [number, number]),
-              { color: COLOR.verde, weight: 1.5, opacity: 0.7, fill: false },
+              {
+                color: COLOR.tenue,
+                weight: 1.5,
+                opacity: 0.6,
+                dashArray: "3 4",
+                fill: false,
+              },
             ).addTo(grupo);
           }
         }
@@ -131,6 +142,7 @@ export function CierreMapa({
           <Marca color={COLOR.rojo} texto="No cumplido" />
           <Marca color={COLOR.ambar} texto="Pendiente por evidencia · tarde" />
           <Marca color={COLOR.acero} texto="Recorrido real y rutas limpias" />
+          <Marca color={COLOR.tenue} texto="Destino · geocerca" punteada />
         </div>
         {nLimpios > 0 ? (
           <button
@@ -180,10 +192,21 @@ function etiqueta(s: ServicioDelCierre): string {
   return "cumplido";
 }
 
-function Marca({ color, texto }: { color: string; texto: string }) {
+function Marca({
+  color,
+  texto,
+  punteada,
+}: {
+  color: string;
+  texto: string;
+  punteada?: boolean;
+}) {
   return (
     <span className="flex items-center gap-2">
-      <i className="block h-[3px] w-[15px]" style={{ background: color }} />
+      <i
+        className="block h-0 w-[15px]"
+        style={{ borderTop: `3px ${punteada ? "dashed" : "solid"} ${color}` }}
+      />
       {texto}
     </span>
   );

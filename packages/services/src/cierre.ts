@@ -69,10 +69,14 @@ export function mayorHueco(
  * unidad. `10:00` se lee como hora del día; `10 min` no se puede confundir.
  */
 export function formatearDuracion(minutos: number): string {
-  const total = Math.abs(minutos);
-  const horas = Math.floor(total / 60);
-  const min = Math.floor(total % 60);
-  const seg = Math.round((total % 1) * 60);
+  // Se redondea UNA vez, a segundos totales, y de ahí se parte. Redondear los
+  // segundos por separado del minuto produce "1:60 min" y "60 s": el segundo
+  // sube a 60 pero el minuto ya quedó fijo. La partición va después del
+  // redondeo, nunca al revés.
+  const totalSeg = Math.round(Math.abs(minutos) * 60);
+  const horas = Math.floor(totalSeg / 3600);
+  const min = Math.floor((totalSeg % 3600) / 60);
+  const seg = totalSeg % 60;
 
   if (horas > 0) {
     return min > 0 ? `${horas} h ${min} min` : `${horas} h`;
@@ -165,6 +169,17 @@ export function titularDelTurno(c: ConteoTurno): string {
   if (c.sin_verificar === c.total) return "El turno todavía no cierra.";
 
   const conConsecuencia = c.no_cumplido + c.pendiente_evidencia + c.tarde;
+
+  // Mientras quede un servicio sin verificar, el turno NO cerró — y decir que
+  // cerró limpio sería afirmar sobre lo que todavía no se juzgó. El pendiente
+  // se dice en voz alta en vez de esconderse detrás de los que ya salieron.
+  if (c.sin_verificar > 0) {
+    const cola = `${c.sin_verificar} sin verificar todavía`;
+    if (conConsecuencia === 0) return `El turno va limpio · ${cola}.`;
+    if (conConsecuencia === 1) return `Un servicio te necesita · ${cola}.`;
+    return `${conConsecuencia} servicios te necesitan · ${cola}.`;
+  }
+
   if (conConsecuencia === 0) return "El turno cerró limpio.";
   if (conConsecuencia === 1) return "El turno cerró. Un servicio te necesita.";
   return `El turno cerró. ${conConsecuencia} servicios te necesitan.`;

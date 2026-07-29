@@ -87,6 +87,22 @@ describe("formatearDuracion", () => {
   it("el signo lo pone quien lo escribe, no la duración", () => {
     expect(formatearDuracion(-3.5)).toBe("3:30 min");
   });
+
+  it("nunca escribe 60 segundos: el redondeo arrastra el minuto", () => {
+    expect(formatearDuracion(0.999)).toBe("1 min");
+    expect(formatearDuracion(1.999)).toBe("2 min");
+    expect(formatearDuracion(59.999)).toBe("1 h");
+    expect(formatearDuracion(0.9917)).toBe("1 min");
+  });
+
+  it("ningún valor del rango produce un ':60' ni un '60 s'", () => {
+    for (let i = 0; i <= 7200; i++) {
+      const texto = formatearDuracion(i / 60);
+      expect(texto, `minutos = ${i / 60}`).not.toMatch(/:60\b/);
+      expect(texto, `minutos = ${i / 60}`).not.toBe("60 s");
+      expect(texto, `minutos = ${i / 60}`).not.toMatch(/\b60 min\b/);
+    }
+  });
 });
 
 describe("margen y límite", () => {
@@ -147,6 +163,39 @@ describe("contarTurno y titular", () => {
 
   it("el titular se sostiene con el conteo, sin depender del ledger", () => {
     expect(titularDelTurno(contarTurno(turno))).toBe("El turno cerró. 3 servicios te necesitan.");
+  });
+
+  it("no declara cerrado un turno que todavía tiene servicios sin verificar", () => {
+    expect(
+      titularDelTurno(
+        contarTurno([
+          { estado: "cumplido", timing: "a_tiempo" },
+          { estado: null, timing: null },
+        ]),
+      ),
+    ).toBe("El turno va limpio · 1 sin verificar todavía.");
+  });
+
+  it("con consecuencias y pendientes, dice las dos cosas", () => {
+    expect(
+      titularDelTurno(
+        contarTurno([
+          { estado: "no_cumplido", timing: null },
+          { estado: null, timing: null },
+          { estado: null, timing: null },
+        ]),
+      ),
+    ).toBe("Un servicio te necesita · 2 sin verificar todavía.");
+
+    expect(
+      titularDelTurno(
+        contarTurno([
+          { estado: "no_cumplido", timing: null },
+          { estado: "pendiente_evidencia", timing: null },
+          { estado: null, timing: null },
+        ]),
+      ),
+    ).toBe("2 servicios te necesitan · 1 sin verificar todavía.");
   });
 
   it("distingue singular, limpio, vacío y todavía abierto", () => {
