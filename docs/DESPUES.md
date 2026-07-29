@@ -96,7 +96,8 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Expediente del no cumplido](#expediente-del-no-cumplido) | Consecuencia de la Ley 2 |
 | [Lenore v1 — vigía y narradora](#lenore-v1--vigía-y-narradora) | Entra en el demo |
 | [El vigilante vive dentro de lo vigilado](#el-vigilante-vive-dentro-de-lo-vigilado) | Fase 0 — parcialmente construido |
-| [Planta 47 casi no produce cumplidos](#planta-47-casi-no-produce-cumplidos) | **Causa medida — corrección de configuración** |
+| [Planta 47 casi no produce cumplidos](#planta-47-casi-no-produce-cumplidos) | **Diagnóstico cerrado — dos causas medidas** |
+| [Turno B de Planta 47: declarado 18:00, operado ~14:00](#turno-b-de-planta-47-declarado-1800-operado-1400) | **Decisión de configuración con la Planta** |
 | [Ponderación de la cobertura por valor del tramo](#ponderación-de-la-cobertura-por-valor-del-tramo) | Hipótesis medible, sin caso todavía |
 | [Pendientes puntuales de v1](#pendientes-puntuales-de-v1) | En cola |
 
@@ -229,9 +230,20 @@ en rojo y 8 pasarían a pendiente. Corregirlos reescribe historia y es **decisi�
 Asav**, que la toma cuando el resto esté estable. La Pieza 1 hace que sea auditable si
 se decide.
 
-**Lo que queda después.** Corregida la hora, Planta 47 quedaría cerca del 58% de no
-cumplido contra un 47.2% de línea base. **Sigue habiendo algo más**, y recién entonces
-se puede buscar sin el ruido de las seis horas.
+**DIAGNÓSTICO CERRADO — 2026-07-28.** Planta 47 **nunca fue el motor, ni el catálogo,
+ni los umbrales.** Son **dos errores de configuración apilados**:
+
+| Causa | Servicios que explica | Estado |
+|---|---:|---|
+| Zona horaria en el cálculo del deadline | **69 de 248** | Corregida en código; datos pendientes de aplicar |
+| [Turno B declarado 18:00, operado ~14:00](#turno-b-de-planta-47-declarado-1800-operado-1400) | **36 más** | Requiere decisión con la Planta |
+
+Corregidos los dos, Planta 47 quedaría **cerca del 40% de no cumplido, que es
+exactamente donde está el Campus** — residuo operativo normal, no una anomalía.
+
+Medido con la ventana corregida: 126 servicios, 27.0% cumplido y 68.3% no cumplido,
+contra 59.9% y 40.1% del Campus como control. De los 86 fallos, 40 caen por A y B a la
+vez, 28 solo por A, 18 solo por B y 6 porque ninguna unidad entró a la geocerca.
 
 **Dónde toca.** `computeExpectedDeadline` en `packages/domain/src/index.ts:314`;
 `generateForProfile` en `packages/db/src/repositories/index.ts:1960`;
@@ -482,6 +494,55 @@ prestó el servicio.
 
 **Dónde toca.** `service_contracts.policy` → `timeZone`; `computeExpectedDeadline` en
 `packages/domain/src/index.ts`; la generación de ocurrencias; `trips.evidence_window_*`.
+
+## Turno B de Planta 47: declarado 18:00, operado ~14:00
+
+**Qué es.** Las seis rutas `- B` del contrato de Planta 47 fallan **6 de 6 días, el
+100%**, incluso después de corregir la zona horaria. Son **36 de los 86 fallos
+restantes**. La causa está medida: **el trazado se recorre alrededor de las 14:00
+locales y el contrato lo vigila entre las 16:45 y las 18:30.**
+
+**El barrido de 24 horas, 27 de julio de 2026:**
+
+| Ruta | Mejor cobertura, y a qué hora local | Ventana vigilada |
+|---|---|---|
+| Huertas - B | **74% a las 14:00** | 16:45–18:30 |
+| Juarez Nuevo - B | **68% a las 14:00** | 16:45–18:30 |
+| Km 30 - B | 52% a las 17:00 | 16:45–18:30 |
+| Riveras 9 - B | **ninguna hora llega al 40%** | — |
+
+El control descarta que sea un problema del instrumento: `Centro - A` marca **63% a
+las 05:00**, justo dentro de la ventana del Turno A. Ahí el reloj sí cuadra.
+
+**Es consistente, no errático.** Medido día por día del 15 al 28 de julio, la hora de
+máxima cobertura es **las 14:00 en casi todos los días con dato**: Huertas 11 de 14
+días, Juarez Nuevo 12 de 14, Riveras 9 - B las 7 veces que aparece. No es una
+operación que varíe: es una hora fija distinta de la declarada. Hay un segundo pico
+ocasional a las 00:00 en dos rutas, que queda por explicar.
+
+**No es un bug.** El código calcula bien lo que se le declara. Es un horario declarado
+que la operación no sigue — la misma familia que
+[el deadline sin zona](#el-deadline-depende-de-dónde-corre-el-generador), pero del lado
+de los datos, no del código.
+
+**La pista que apunta al arreglo, y es más barato de lo que parece.** Tecma ya tiene un
+turno **"Segundo Turno" a las 15:30**, con 8 rutas colgadas. Un servicio que llega para
+un turno de 15:30 se opera justo alrededor de las 14:00. **Es probable que las rutas
+`- B` estén colgadas del turno equivocado**, y entonces el arreglo es reasignarlas, no
+cambiar el horario de "Turno B" — que además afectaría a las otras rutas que sí
+dependen de él.
+
+**Qué NO se puede decidir desde la base.** Cuál de los dos está mal: el horario
+declarado o la asignación de rutas al turno. Y dos datos acotan la pregunta: tres de
+las seis rutas `- B` **no tienen par `- A`** (Huertas, San José, San José Auxiliar), así
+que "B" no es simplemente el regreso de "A"; y `Riveras 9 - B` solo comparte el **9%**
+de su trazado con `Riveras 9 - A`, o sea son caminos distintos, no ida y vuelta.
+
+**Qué lo desbloquea.** Confirmar con la Planta la hora real de ese servicio y a qué
+turno pertenecen esas rutas. Es una conversación, no código.
+
+**Dónde toca.** `shifts.start_time`; `route_shifts` — la asignación ruta↔turno; nada de
+`packages/verification`.
 
 ## Ponderación de la cobertura por valor del tramo
 
