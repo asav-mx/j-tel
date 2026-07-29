@@ -98,6 +98,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [El vigilante vive dentro de lo vigilado](#el-vigilante-vive-dentro-de-lo-vigilado) | Fase 0 — parcialmente construido |
 | [Planta 47 casi no produce cumplidos](#planta-47-casi-no-produce-cumplidos) | **Diagnóstico cerrado — dos causas medidas** |
 | [Turno B de Planta 47: declarado 18:00, operado ~14:00](#turno-b-de-planta-47-declarado-1800-operado-1400) | **Decisión de configuración con la Planta** |
+| [El hecho debe bastarse a sí mismo](#el-hecho-debe-bastarse-a-sí-mismo) | **Bloquea a Lenore-narradora** |
 | [Ponderación de la cobertura por valor del tramo](#ponderación-de-la-cobertura-por-valor-del-tramo) | Hipótesis medible, sin caso todavía |
 | [Pendientes puntuales de v1](#pendientes-puntuales-de-v1) | En cola |
 
@@ -113,6 +114,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Qué pasa si la política cambia con la ventana abierta](#qué-pasa-si-la-política-cambia-con-la-ventana-abierta) | **Al Marco Maestro** |
 | [`/cliente/*` no tiene autenticación](#cliente-no-tiene-autenticación) | **Bloqueante antes del segundo cliente** |
 | [El enforcement usa la política de hoy, no la congelada](#el-enforcement-usa-la-política-de-hoy-no-la-congelada) | Antes de encender enforcement |
+| [La herramienta de geocercas solo captura círculos](#la-herramienta-de-geocercas-solo-captura-círculos) | Un solo trabajo con el versionado |
 | [Gesto explícito para borrar la hora de cierre](#gesto-explícito-para-borrar-la-hora-de-cierre) | Si más gente configura contratos |
 | [Distinguir "sin hora de cierre" de "no configurado"](#distinguir-sin-hora-de-cierre-de-no-configurado) | v1.1 |
 
@@ -388,6 +390,11 @@ legítima vuelve a salir roja mañana.
 - **Lenore-narradora** — el diff estructural contado en cristiano dentro del
   expediente. Entran hechos medidos, sale lenguaje, **etiquetado como lectura**.
 
+⚠ **La narradora está bloqueada hasta que
+[el hecho se baste a sí mismo](#el-hecho-debe-bastarse-a-sí-mismo).** Narrar un veredicto
+viejo leyendo el catálogo de hoy es mentir sin querer. Sobre hechos sellados **después**
+de esa corrección no hay bloqueo — el problema es del pasado, no del diseño.
+
 **Por qué ahora.** Son las dos que no tocan el veredicto, y por eso no chocan con la
 Ley 3. Todo lo demás de Lenore es v2 y vive en la sección 3.
 
@@ -548,6 +555,86 @@ todos los días, detectado a mano por una persona que fue a buscarlo. Ver
 
 **Dónde toca.** `shifts.start_time`; `route_shifts` — la asignación ruta↔turno; nada de
 `packages/verification`.
+
+## El hecho debe bastarse a sí mismo
+
+**Qué es.** Un hecho sellado tendría que contener —o referenciar de forma inmutable—
+**todo lo que hizo falta para producirlo**. Hoy no: para explicarse tiene que salir a
+buscar cosas del catálogo que pudieron cambiar debajo de él. Ese es el problema
+completo, y todos los síntomas sueltos son la misma cosa.
+
+**Por qué sube de categoría.** El Anexo ya registraba el hallazgo del 23 de julio —**~4%
+de los hechos congelados no son reproducibles por el motor actual**— y lo marcaba como
+relevante para la Ficha 4. No lo habíamos conectado con lo demás. No bloquea solo el
+circuito de defensa y la [tasa de acierto de las
+disputas](#el-loop-de-aprendizaje-de-la-operación): **bloquea toda la línea Lenore que
+narre veredictos pasados, incluida [Lenore-narradora](#lenore-v1--vigía-y-narradora),
+que está en v1.** Cita textual del Anexo:
+
+> *"un copiloto que explica por qué salió rojo leyendo el motor de hoy daría una
+> explicación que no corresponde al hecho sellado — mentiría sin querer."*
+
+**El inventario de lo que le falta cargar**, medido sobre producción el 2026-07-28:
+
+| Qué | Estado | Medido |
+|---|---|---|
+| Política del contrato | ✅ **se congela** | `contract_policy_snapshot`, byte a byte |
+| Unidad de cada punto de evidencia | ✅ **anclada** | `evidence_points.unit_id`, escrito al anclar |
+| Asignación equipo ↔ unidad | ✅ **temporal** | `device_assignments` con `valid_from`/`valid_to`; el motor la resuelve por fecha |
+| Versión de trazado usada | 🟡 **referenciada, pero decorativa** | `kml_version_id` poblado en **688 de 744** hechos (92.5%) — **y el motor no la lee**: re-resuelve por fecha con `getKmlVersionForDate` |
+| Conjunto de variantes evaluadas | ❌ **no se congela** | `route_kml_variants.status = 'activa'` es bandera de **hoy**, no de entonces. 50 variantes, **las 50 nacidas después del primer sello** |
+| Forma de la geocerca | ❌ **no se versiona, y el campo miente** | ver abajo |
+| Versión del motor | ❌ | [ya en backlog](#la-versión-del-motor-en-el-hecho) |
+
+**La geocerca es el peor caso, y está medido.** No es solo que no se versione —`geofences`
+no tiene tabla de versiones **ni columna `updated_at`**, así que una edición del polígono
+no deja rastro de ninguna clase—. Es que **el campo que el hecho guarda no es el que el
+motor usó**:
+
+- El motor juzga con `profile.geofence` — la geocerca **vigente** del perfil.
+- El hecho registra `occurrence.expectedGeofenceId` — la que se copió **al generar la
+  ocurrencia**.
+
+Cuando esos dos difieren, el expediente afirma algo falso. Y difieren:
+**294 de los 744 hechos sellados (39.5%) registran una geocerca llamada `VOID`, cuyo
+polígono está a 4.22 km de `Tecma Planta 47`**, que es contra la que realmente se
+juzgaron. Son todos los hechos de Planta 47.
+
+**Cuidado con la conclusión fácil: los veredictos NO están mal por esto.** Los 294 se
+sellaron el 20, 27 y 28 de julio, y el perfil ya apuntaba a `Tecma Planta 47` desde el
+15 de julio. El motor usó la geocerca correcta. **Lo que está mal es el registro**, no el
+juicio — y por eso es el ejemplo más limpio del problema: quien audite ese expediente
+reconstruye con `VOID` y obtiene otra cosa.
+
+De paso queda explicado el mecanismo del ~4%: las 546 ocurrencias de Planta 47 generadas
+el 14 de julio se quedaron con `VOID` congelado, y las 189 generadas del 15 en adelante
+ya traen `Tecma Planta 47`. Es la [Ley 7](#leyes-de-producto) otra vez — se corrigió la
+configuración y las ocurrencias ya generadas no se enteraron.
+
+**La consecuencia que lo hace manejable, y es la buena noticia.** El bloqueo es **solo
+para hechos viejos**. En cuanto el hecho se baste a sí mismo, **todo lo sellado de ahí en
+adelante es reproducible** y Lenore puede narrarlo sin mentir. No hay que resolver el
+pasado para desbloquear el futuro: hay que **marcarlo**, que es la regla de abajo.
+
+**La regla para los hechos que no se puedan reproducir.** El expediente **lo dice**:
+*"el catálogo cambió después del sello; esta evaluación no es reproducible"*. No muestra
+una reconstrucción falsa, y no calla. Es la misma disciplina que los
+[64 hechos sin umbral en el snapshot](#64-hechos-pre-12-jul-sin-umbral-en-el-snapshot):
+un hueco declarado antes que un número inventado. Y es la [Ley 1](#leyes-de-producto)
+aplicada a la explicación, no al veredicto — si no lo vimos, no lo afirmamos; si no
+podemos reconstruirlo, tampoco.
+
+**Qué lo desbloquea.** Nada externo: es trabajo de esquema y de motor, en tres piezas
+independientes que se pueden hacer por separado —congelar la geocerca (o versionarla),
+congelar el conjunto de variantes evaluadas, y hacer que el motor **lea** la versión de
+trazado que el hecho ya referencia en vez de re-resolverla—. Emparenta con
+[la herramienta de geocercas](#la-herramienta-de-geocercas-solo-captura-círculos), que
+toca el mismo camino de escritura.
+
+**Dónde toca.** `packages/services/src/verification.ts:875` — `const geofence =
+profile.geofence!`, y `:1056` — `expectedGeofenceId: occurrence.expectedGeofenceId`;
+`getActiveVariantVersionsForDate` en `packages/db/src/repositories/index.ts:706`;
+`compliance_facts`; `geofences`; `route_kml_variants.status`.
 
 ## Ponderación de la cobertura por valor del tramo
 
@@ -790,6 +877,39 @@ se encienda, no antes.
 
 **Dónde toca.** `apps/web/src/lib/service-detail-data.ts:132` y `:267`;
 `packages/domain/src/enforcement.ts`.
+
+## La herramienta de geocercas solo captura círculos
+
+**Qué es.** El motor soporta formas arbitrarias —`polygon` es una lista de puntos y la
+verificación usa `pointInPolygon`—, pero **la pantalla no deja dibujar**. No hay mapa:
+es un formulario con **centro (lat, lng) y radio en metros**, y un consejo de *"en Google
+Maps, clic derecho sobre el punto"*. `circlePolygon` genera 24 vértices alrededor del
+centro. Por eso todas las geocercas de la base tienen exactamente 24 vértices o 4.
+
+**Y hay una trampa peor que la limitación.** Al editar, la pantalla corre
+`inferCircleFromPolygon` —promedia el centro y el radio— y **vuelve a generar un
+círculo**. Si alguien metiera un polígono irregular por SQL, **la siguiente edición desde
+la pantalla lo redondearía y no habría manera de recuperarlo**: no hay versiones ni
+`updated_at`. La forma se perdería en silencio.
+
+**Por qué importa ahora.** Asav necesita **formas irregulares para campus y parques
+industriales**, que no son redondos. Un círculo sobre un campus alargado o mete calle
+pública adentro o deja andenes afuera; las dos cosas mueven veredictos.
+
+**Es un solo trabajo con el versionado, no dos.** Ambas cosas tocan el mismo camino: la
+escritura de la geocerca. Versionar significa que el editor **deje de sobrescribir y
+empiece a agregar**; dibujar significa que lo que se agrega puede tener cualquier forma.
+Y se necesitan juntas: **una forma irregular editada en sitio es irrecuperable, mientras
+que un círculo al menos se puede volver a derivar de centro y radio.** Hacer el dibujo
+sin el versionado empeora el problema en vez de arreglarlo. Ver
+[El hecho debe bastarse a sí mismo](#el-hecho-debe-bastarse-a-sí-mismo).
+
+**Qué lo desbloquea.** Decisión de prioridad. Leaflet ya está en el proyecto y ya se
+dibuja encima de mapas en varias pantallas, así que el editor no parte de cero.
+
+**Dónde toca.** `apps/web/src/views/geocercas-unit.tsx`;
+`apps/web/src/app/api/cliente/geocercas/route.ts`; `circlePolygon` e
+`inferCircleFromPolygon` en `apps/web/src/lib/geo.ts`; `geofences.polygon`.
 
 ## Gesto explícito para borrar la hora de cierre
 
