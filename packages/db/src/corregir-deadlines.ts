@@ -108,6 +108,13 @@ async function planear(db: Database): Promise<Fila[]> {
   return plan;
 }
 
+/**
+ * El resumen humano. Bajo `--sql` sale por stderr, no por stdout: así
+ * `corregir-deadlines --sql > correccion.sql` deja un archivo que se pega tal
+ * cual en la consola de Neon, sin encabezados que Postgres no sabe leer.
+ */
+let narrar: (linea?: string) => void = (l = "") => console.log(l);
+
 function resumir(plan: Fila[], conDeriva: boolean) {
   const grupos = new Map<string, { n: number; difs: Set<number> }>();
   for (const f of plan) {
@@ -117,30 +124,30 @@ function resumir(plan: Fila[], conDeriva: boolean) {
     g.difs.add(f.difMinutos);
     grupos.set(k, g);
   }
-  console.log("\n  contrato                              causa    n     corrimiento");
-  console.log("  " + "-".repeat(74));
+  narrar("\n  contrato                              causa    n     corrimiento");
+  narrar("  " + "-".repeat(74));
   for (const [k, g] of [...grupos].sort()) {
     const [c, causa] = k.split("|");
-    console.log(
+    narrar(
       `  ${c!.slice(0, 36).padEnd(38)}${causa!.padEnd(9)}${String(g.n).padStart(4)}     ${[...g.difs].sort((a, b) => a - b).join(" / ")} min`,
     );
   }
-  console.log("  " + "-".repeat(74));
+  narrar("  " + "-".repeat(74));
 
   const bloqueadas = plan.filter((f) => f.bloqueo);
   const zona = plan.filter((f) => f.causa === "zona" && !f.bloqueo);
   const deriva = plan.filter((f) => f.causa === "deriva" && !f.bloqueo);
-  console.log(`\n  a corregir por ZONA:    ${zona.length}`);
-  console.log(
+  narrar(`\n  a corregir por ZONA:    ${zona.length}`);
+  narrar(
     `  a corregir por DERIVA:  ${deriva.length}   ${conDeriva ? "(incluidas)" : "(NO se tocan — falta --con-deriva)"}`,
   );
   if (bloqueadas.length) {
-    console.log(`\n  BLOQUEADAS, no se tocan: ${bloqueadas.length}`);
+    narrar(`\n  BLOQUEADAS, no se tocan: ${bloqueadas.length}`);
     const porQue = new Map<string, number>();
     for (const f of bloqueadas) porQue.set(f.bloqueo!, (porQue.get(f.bloqueo!) ?? 0) + 1);
-    for (const [b, n] of porQue) console.log(`    ${n} — ${b}`);
+    for (const [b, n] of porQue) narrar(`    ${n} — ${b}`);
   } else {
-    console.log(`\n  bloqueadas: ninguna`);
+    narrar(`\n  bloqueadas: ninguna`);
   }
   return { zona, deriva };
 }
@@ -269,39 +276,42 @@ async function correr(
   db: Database,
   { aplicar, conDeriva, soloSql }: { aplicar: boolean; conDeriva: boolean; soloSql: boolean },
 ) {
+  // Bajo `--sql`, stdout es del SQL y de nadie más.
+  if (soloSql) narrar = (l = "") => console.error(l);
+
   const plan = await planear(db);
 
-  console.log(`\n${"=".repeat(76)}`);
+  narrar(`\n${"=".repeat(76)}`);
   const modo = soloSql
     ? "SQL PARA LA CONSOLA (no escribe nada)"
     : aplicar
       ? "APLICANDO"
       : "SIMULACRO (no escribe nada)";
-  console.log(`  CORRECCIÓN DE DEADLINES — ${modo}`);
-  console.log(`${"=".repeat(76)}`);
+  narrar(`  CORRECCIÓN DE DEADLINES — ${modo}`);
+  narrar(`${"=".repeat(76)}`);
   const { zona, deriva } = resumir(plan, conDeriva);
 
   const aTocar = conDeriva ? [...zona, ...deriva] : zona;
 
   if (soloSql) {
-    console.log(`\n  (el SQL sale abajo; nada se escribe desde aquí)\n`);
+    narrar(`\n  (el SQL va a stdout; este resumen va a stderr)\n`);
     console.log(generarSql(aTocar, conDeriva));
     return;
   }
 
-  console.log(`\n  === ejemplo del cambio ===`);
+  narrar(`\n  === ejemplo del cambio ===`);
   for (const f of aTocar.slice(0, 3)) {
-    console.log(`  ${f.contrato.slice(0, 32)} · ${f.serviceDate} · ${f.causa} (${f.difMinutos > 0 ? "+" : ""}${f.difMinutos} min)`);
-    console.log(
+    narrar(`  ${f.contrato.slice(0, 32)} · ${f.serviceDate} · ${f.causa} (${f.difMinutos > 0 ? "+" : ""}${f.difMinutos} min)`);
+    narrar(
       `     deadline ${f.guardado.toISOString().slice(0, 16).replace("T", " ")} → ${f.correcto.toISOString().slice(0, 16).replace("T", " ")} UTC`,
     );
-    console.log(
+    narrar(
       `     ventana  ${f.ventana!.inicio.toISOString().slice(11, 16)} → ${f.ventana!.fin.toISOString().slice(11, 16)} UTC`,
     );
   }
 
   if (!aplicar) {
-    console.log(`\n  SIMULACRO. No se escribió nada. Agrega --aplicar para ejecutar.\n`);
+    narrar(`\n  SIMULACRO. No se escribió nada. Agrega --aplicar para ejecutar.\n`);
     return;
   }
 
@@ -333,8 +343,8 @@ async function correr(
       via += r2.length;
     }
   }
-  console.log(`\n  ocurrencias corregidas: ${occ}`);
-  console.log(`  viajes corregidos:      ${via}\n`);
+  narrar(`\n  ocurrencias corregidas: ${occ}`);
+  narrar(`  viajes corregidos:      ${via}\n`);
 }
 
 // Solo corre si se invoca directamente, no al importarlo desde una prueba.
