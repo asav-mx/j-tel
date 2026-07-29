@@ -22,6 +22,13 @@ export function unitNavLinks(unit: OperationalUnit, clientSlug: string, clientNa
     { href: withAccount(`${unitBasePath(unit)}/monitoreo`, clientSlug), label: "Monitoreo" },
     { href: withAccount(`${unitBasePath(unit)}/cierre`, clientSlug), label: "Cierre del turno" },
   ];
+  // Cara planta únicamente por ahora — campus no tiene esta ruta todavía.
+  if (unit.kind === "plant") {
+    links.push({
+      href: withAccount(`${unitBasePath(unit)}/pendiente-por-evidencia`, clientSlug),
+      label: "Pendiente por evidencia",
+    });
+  }
   links.push(
     { href: unitConfigHubHref(unit, clientSlug), label: "Configuración" },
     { href: unitContratosHref(unit, clientSlug), label: "Contratos" },
