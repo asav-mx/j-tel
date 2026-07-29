@@ -74,6 +74,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | Entrada | Estado |
 |---|---|
 | [Meta del demo](#meta-del-demo) | La cifra que hay que sostener |
+| [El deadline depende de dónde corre el generador](#el-deadline-depende-de-dónde-corre-el-generador) | **PRIORIDAD 1 — bug en producción** |
 | [Vista de flota del carrier](#vista-de-flota-del-carrier) | **PRIORIDAD 1 — en curso** |
 | [Compuerta de densidad de observación](#compuerta-de-densidad-de-observación) | Diseño aprobado, sin construir |
 | [Identificación que se explica](#identificación-que-se-explica) | El corazón de v1 |
@@ -93,6 +94,8 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Historia del sello en Cierre del turno](#historia-del-sello-en-cierre-del-turno) | v1.1 |
 | [Medición honesta de kilómetros con brincos de GPS](#medición-honesta-de-kilómetros-con-brincos-de-gps) | v1.1 |
 | [Compuerta per-candidata](#compuerta-per-candidata) | v1.1 |
+| [`/cliente/*` no tiene autenticación](#cliente-no-tiene-autenticación) | **Bloqueante antes del segundo cliente** |
+| [El enforcement usa la política de hoy, no la congelada](#el-enforcement-usa-la-política-de-hoy-no-la-congelada) | Antes de encender enforcement |
 | [Gesto explícito para borrar la hora de cierre](#gesto-explícito-para-borrar-la-hora-de-cierre) | Si más gente configura contratos |
 | [Distinguir "sin hora de cierre" de "no configurado"](#distinguir-sin-hora-de-cierre-de-no-configurado) | v1.1 |
 
@@ -143,6 +146,81 @@ una métrica de vanidad: es el argumento.
 **Ojo con la trampa.** 90% de veredictos *emitidos* no es la meta —eso se logra
 aflojando umbrales—. La meta es 90% de veredictos *correctos*, y un pendiente honesto
 cuenta como correcto cuando la observación de verdad no alcanzaba.
+
+## El deadline depende de dónde corre el generador
+
+**Qué es.** `computeExpectedDeadline` construye la fecha así:
+
+```ts
+const d = new Date(`${serviceDate}T00:00:00`);   // domain/index.ts:320 — sin Z
+```
+
+Sin marca de zona, eso se resuelve **en la zona del proceso que corre**. El mismo
+contrato, el mismo turno y la misma fecha producen deadlines distintos según dónde se
+generó la ocurrencia. Medido: `new Date("2026-07-21T00:00:00")` da `06:00Z` en una
+máquina en horario de Juárez y `00:00Z` en Vercel, que corre en UTC. **Seis horas.**
+
+**No es una bifurcación por contrato.** `computeExpectedDeadline` no recibe ni lee
+`timeZone`, y hay un solo camino de generación. `policy.timeZone` se usa
+**exclusivamente para formatear texto en pantalla**. Que Planta 47 fuera el único
+contrato con la zona declarada resultó ser coincidencia.
+
+**Cómo se demostró.** Los cuatro contratos activos tienen ocurrencias con las dos
+bases, separadas por **cuándo** se crearon:
+
+| Base usada | Creadas | Origen |
+|---|---|---|
+| 06:00 (correcta) | 2026-07-10 03:07 y 17:50 | corridas sueltas desde una máquina en Juárez |
+| 00:00 (rota) | 2026-07-11 06:00 → 07-27 06:01 | el cron `0 6 * * *` de Vercel, en UTC |
+
+Planta 47 está afectada al 100% por una razón banal: **su contrato se creó el 14 de
+julio**, después de la última corrida local, así que todas sus ocurrencias salieron del
+cron.
+
+**El daño, medido.** El veredicto sigue a la base, no al carrier:
+
+| Base del cálculo | hechos | cumplidos | % no cumplido |
+|---|---:|---:|---:|
+| Juárez (correcta) | 360 | 177 | 47.2% |
+| **UTC (rota)** | **294** | **1** | **84.4%** |
+
+**Un solo cumplido en 294 hechos sellados.**
+
+**Y sigue ocurriendo.** El cron corre todos los días a las 06:00 UTC y agrega
+ocurrencias nuevas con la base rota. Al 2026-07-28 hay **843 ocurrencias futuras** con
+el deadline corrido —441 de Planta 47, 351 del Campus, 36 de PRUEBA REAL, 15 de
+Honeywell— esperando su turno de juicio.
+
+**Por qué es el peor de la familia.** La saga del reloj afectaba lo que se mostraba:
+impacto monetario cero, ningún veredicto se movió. Este vive en el **cálculo del
+deadline**, así que mueve veredictos y produce acusaciones falsas contra un carrier
+real. Misma familia, otra gravedad.
+
+**Qué se está construyendo.** `instanteZonificado` sube a `@jtel/domain` con sus
+pruebas de horario de verano; `computeExpectedDeadline` recibe `timeZone` y delega,
+con Juárez por omisión; se corrige el mismo patrón en
+`apps/web/src/app/api/cliente/servicios/route.ts`. La guarda es una prueba que corre el
+cálculo bajo `TZ=UTC` y bajo `TZ=America/Ciudad_Juarez` y **exige resultado idéntico** —
+ese es el invariante que se violó, y no se puede satisfacer por accidente.
+
+**El orden importa: primero el código, después los datos.** Corregir las 843 antes de
+arreglar la función es achicar con la llave abierta — el cron vuelve a llenarlas a la
+mañana siguiente.
+
+**Qué NO se toca.** Los **294 hechos ya sellados**, de los cuales 248 son no cumplidos.
+Simulado con la ventana corregida, **69 se volverían cumplidos (27.8%)**, 171 seguirían
+en rojo y 8 pasarían a pendiente. Corregirlos reescribe historia y es **decisión de
+Asav**, que la toma cuando el resto esté estable. La Pieza 1 hace que sea auditable si
+se decide.
+
+**Lo que queda después.** Corregida la hora, Planta 47 quedaría cerca del 58% de no
+cumplido contra un 47.2% de línea base. **Sigue habiendo algo más**, y recién entonces
+se puede buscar sin el ruido de las seis horas.
+
+**Dónde toca.** `computeExpectedDeadline` en `packages/domain/src/index.ts:314`;
+`generateForProfile` en `packages/db/src/repositories/index.ts:1960`;
+`apps/web/src/app/api/cliente/servicios/route.ts:62`; el cron
+`/api/cron/renew-occurrences`.
 
 ## Vista de flota del carrier
 
@@ -536,6 +614,56 @@ ledger y conviene corregirlas de una vez, no en dos pasadas.
 
 **Dónde toca.** `assessEvidenceCoverage` en `packages/verification/src`; el paso
 `cobertura_evidencia` del ledger.
+
+## `/cliente/*` no tiene autenticación
+
+**Qué es.** Las rutas de cara al cliente no están protegidas. El único middleware que
+las toca (`apps/web/src/middleware.ts`) solo **repara parámetros `?account=` mal
+pegados**; no verifica identidad. Cualquiera con la URL ve **cualquier cuenta**
+cambiando el parámetro, y `resolveAccountByType` cae a la primera cuenta del tipo
+cuando no se pasa ninguno.
+
+**Por qué es grave.** Choca de frente con la ley del Marco de que las cuentas son
+privadas: el carrier no ve a otros carriers, el cliente no ve a otros clientes. Hoy esa
+promesa la sostiene el desconocimiento de la URL, no el sistema. Y tiene un efecto
+secundario que ya mordió: **no hay bitácora de acceso**, así que ante la pregunta
+"¿este cliente ya vio esto?" la base no puede responder — solo se puede preguntar.
+
+**Por qué se aplazó.** El proyecto ha corrido con una sola cuenta real por tipo y con
+Clerk instalado pero sin cablear a los caminos de datos. Mientras el círculo de gente
+con la URL es el equipo, el riesgo es teórico.
+
+**Qué lo desbloquea.** Auth-rbac cableado a las rutas de cara al cliente.
+**Bloqueante antes del segundo cliente**: el día que dos clientes distintos tengan URL,
+el riesgo deja de ser teórico y se vuelve una fuga.
+
+**Dónde toca.** `apps/web/src/middleware.ts`; `apps/web/src/lib/account-context.ts` —
+`resolveAccountByType`; `packages/auth-rbac`.
+
+## El enforcement usa la política de hoy, no la congelada
+
+**Qué es.** `loadServiceDetail` calcula las consecuencias con `contract.policy`
+—la política **vigente**— en vez de `fact.contractPolicySnapshot`, que es la que
+gobernó el veredicto. Un servicio de hace tres semanas se muestra con las reglas de
+hoy.
+
+**Por qué es un problema de ley, no de estética.** El Marco dice que el hecho se
+computa una vez y se congela. Si alguien agrega una regla de no pago hoy, la pantalla
+la aplica retroactivamente a hechos que se sellaron cuando esa regla no existía — y el
+expediente deja de ser reproducible.
+
+**Por qué se aplazó.** El impacto hoy es bajo: el enforcement **no se persiste en
+ningún lado** —es función pura al momento de pintar—, no viaja en el CSV del reporte
+mensual, y la única superficie que lo muestra es el detalle de servicio de cara al
+cliente. Nada ha salido de la pantalla.
+
+**Qué lo desbloquea.** Encender enforcement. La decisión de producto es que **primero
+el árbitro confiable y después el enforcement** —encenderlo antes multiplica los
+errores en vez de corregirlos—, así que esto se corrige en el mismo movimiento en que
+se encienda, no antes.
+
+**Dónde toca.** `apps/web/src/lib/service-detail-data.ts:132` y `:267`;
+`packages/domain/src/enforcement.ts`.
 
 ## Gesto explícito para borrar la hora de cierre
 
