@@ -1957,7 +1957,16 @@ export class OccurrenceRepository {
     const startIso = start.toISOString().slice(0, 10);
     const endIso = end.toISOString().slice(0, 10);
     for (const serviceDate of civilDatesInRange(startIso, endIso, activeDays)) {
-      const deadline = computeExpectedDeadline(serviceDate, shift.startTime, anticipation);
+      // La zona SIEMPRE explícita. Sin ella el deadline sale distinto según
+      // dónde corra el generador —una laptop en Juárez o un cron de Vercel en
+      // UTC— y esas seis horas produjeron 294 hechos sellados a la hora
+      // equivocada, con un solo cumplido entre todos.
+      const deadline = computeExpectedDeadline(
+        serviceDate,
+        shift.startTime,
+        anticipation,
+        policy.timeZone,
+      );
       const { windowStart, windowEnd } = computeEvidenceWindow(deadline, policy);
       rows.push({
         serviceProfileId: profileId,

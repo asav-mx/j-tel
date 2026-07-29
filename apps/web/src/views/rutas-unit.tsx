@@ -5,7 +5,7 @@ import { Card } from "@/components/ui";
 import { RouteShiftList, RouteShiftSelect } from "@/components/route-shift-list";
 import { confirmMessages } from "@/lib/confirm-messages";
 import { unitConfigStepHrefFor } from "@/lib/config-wizard";
-import { computeExpectedDeadline } from "@jtel/domain";
+import { computeExpectedDeadline, localTimeHHMM, JTTEL_TZ } from "@jtel/domain";
 import type { UnitPageContext } from "@/lib/unit-context";
 import {
   contractMatchesScope,
@@ -83,8 +83,10 @@ export async function RutasUnitView({
 
   const routeRows = routeShifts.map((rs) => {
     const shiftStart = rs.shift?.startTime ?? "07:00:00";
-    const deadline = computeExpectedDeadline("2026-01-01", shiftStart, anticipation);
-    const dl = `${String(deadline.getHours()).padStart(2, "0")}:${String(deadline.getMinutes()).padStart(2, "0")}`;
+    // Vista previa de la hora de corte. Zona explícita en el cálculo y en el
+    // formato: getHours() leía el reloj del servidor.
+    const deadline = computeExpectedDeadline("2026-01-01", shiftStart, anticipation, JTTEL_TZ);
+    const dl = localTimeHHMM(deadline, JTTEL_TZ);
     const kmlCount = rs.route?.kmlVersions?.length ?? 0;
     const variants = variantsByRoute.get(rs.route?.id ?? "") ?? [];
     return {
