@@ -5,3 +5,4 @@ export * from "./ingest-health.js";
 export * from "./gap-backfill.js";
 export * from "./salud.js";
 export * from "./recorrido.js";
+export * from "./cierre.js";

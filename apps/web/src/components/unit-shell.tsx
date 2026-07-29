@@ -20,7 +20,7 @@ export function unitNavLinks(unit: OperationalUnit, clientSlug: string, clientNa
     { href: dash, label: "Panel" },
     { href: unitComplianceHref(unit, clientSlug), label: "Cumplimiento" },
     { href: withAccount(`${unitBasePath(unit)}/monitoreo`, clientSlug), label: "Monitoreo" },
-    { href: withAccount(`${unitBasePath(unit)}/jornada`, clientSlug), label: "Historial" },
+    { href: withAccount(`${unitBasePath(unit)}/cierre`, clientSlug), label: "Cierre del turno" },
   ];
   links.push(
     { href: unitConfigHubHref(unit, clientSlug), label: "Configuración" },

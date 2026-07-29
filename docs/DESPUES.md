@@ -99,6 +99,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Planta 47 casi no produce cumplidos](#planta-47-casi-no-produce-cumplidos) | **Diagnóstico cerrado — dos causas medidas** |
 | [Turno B de Planta 47: declarado 18:00, operado ~14:00](#turno-b-de-planta-47-declarado-1800-operado-1400) | **Decisión de configuración con la Planta** |
 | [El hecho debe bastarse a sí mismo](#el-hecho-debe-bastarse-a-sí-mismo) | **Bloquea a Lenore-narradora** |
+| [Cierre del turno](#cierre-del-turno) | **Construida contra el molde aprobado** |
 | [Ponderación de la cobertura por valor del tramo](#ponderación-de-la-cobertura-por-valor-del-tramo) | Hipótesis medible, sin caso todavía |
 | [Pendientes puntuales de v1](#pendientes-puntuales-de-v1) | En cola |
 
@@ -673,9 +674,51 @@ sigue abierta hasta `deadline + gracia + margen` (45 min). Si es cierto, sella c
 evidencia incompleta y viola la Ley 1 sin que nadie lo note. **Es solo lectura y hay
 que medirlo antes de construir nada encima.**
 
-**Cierre del turno.** PR #87 en pausa. Se retoma cuando el motor de identificación
-esté estable — sellar un turno con identificación que no se explica es apilar sobre
-arena.
+## Cierre del turno
+
+**Qué es.** El resumen de un turno ya juzgado, construido contra el molde visual
+aprobado. **Absorbe el antiguo Historial** —lo que el producto llamaba "la
+Jornada"—: el mapa de contraste sigue ahí, pero deja de ser la portada.
+
+**La ley de la pantalla.** Entrega un resultado ya dado; nunca pone al usuario a
+trabajarlo. El estado de entrada es el resultado del turno, tranquilo. El detalle
+—mapa, tabla de los limpios— es un cajón que se abre por elección.
+
+**El mapa dibuja solo lo que tiene excepción.** Catorce rutas encimadas no son un
+mapa, son un espagueti, y eso no se arregla dibujando mejor sino no dibujando lo
+que ya está bien. La línea base es el **trazado contratado** coloreado por
+resultado —no el recorrido observado—, porque un `no_cumplido` no tiene unidad
+acreditada y el mapa se vaciaría justo en las excepciones que importan. El
+recorrido real se dibuja encima solo donde el árbitro selló una unidad, cortado en
+la llegada.
+
+**Qué NO trae, a propósito.** El bloque de consecuencias —*"el viaje no se paga"*,
+*"descuenta bajo la cláusula de tolerancia"*— es enforcement, y está parqueado por
+decisión de producto hasta que el árbitro sea confiable. El hueco queda reservado
+en la estructura, como el circuito de defensa en el expediente. Ver
+[el enforcement usa la política de hoy](#el-enforcement-usa-la-política-de-hoy-no-la-congelada).
+
+Tampoco trae **"excusado"**: `late_excusable` existe en el hecho y está en `false`
+en los 744 hechos de la base, porque el flujo que lo alimenta —el carrier reporta
+motivo, la planta lo acepta— está fuera de v1. **No se reserva espacio para una
+palabra que no va a aparecer.** Lo que sí entra es temprano / a tiempo / tarde,
+que existe en los 239 cumplidos.
+
+**Lo que queda pendiente.** El emparejamiento con el ledger falla seguido —ver
+[El ledger debe colgar del hecho](#el-ledger-debe-colgar-del-hecho)—, así que la
+línea de cobertura del titular va a faltar con frecuencia. La pantalla se diseñó
+para sostenerse sin ella.
+
+**Dónde toca.** `packages/services/src/cierre.ts`; `apps/web/src/lib/cierre-data.ts`;
+`apps/web/src/views/cierre-unit.tsx`; `apps/web/src/components/cierre-mapa.tsx`;
+`/cliente/{planta,campus}/[id]/cierre`.
+
+## Pendientes puntuales de v1 (continuación)
+
+**Sellado del turno.** El PR #87 trajo el emparejamiento con el hecho y ya está en
+`main`. Lo que sigue en pausa es **sellar** el turno como acto —no mostrarlo—, que
+se retoma cuando el motor de identificación esté estable: sellar un turno con
+identificación que no se explica es apilar sobre arena.
 
 **Medidor de calidad del proveedor.** Densidad de pings por equipo por día, con alerta
 y gráfica. No es solo diagnóstico interno: es el **expediente para negociar con
@@ -1257,6 +1300,24 @@ por fecha contra el `materializedAt` vigente. Es frágil, y ya muerde:
 `apps/web/src/lib/autopsia.ts` toma la **primera** entrada que encuentra, sin
 emparejar — para una herramienta interna de análisis pasa, para una cara cliente no.
 Son **121 587 filas**, así que la migración no es gratis.
+
+**Medido el 2026-07-29, y es peor de lo que sabíamos.** Solo **341 de ~700
+ocurrencias tienen una sola entrada de verificación**. El resto acumula varias, y
+el caso extremo es una ocurrencia con **126 entradas**. Emparejar por fecha no es
+frágil en teoría: falla seguido y en la mayoría de los casos.
+
+| Entradas por ocurrencia | Ocurrencias |
+|---|---:|
+| 1 — empareja limpio | 341 |
+| 2 a 6 | 340 |
+| 7 o más | 43 |
+| máximo observado | **126** |
+
+**Esto le sube la prioridad.** Ya muerde en una cara de cliente:
+[Cierre del turno](#cierre-del-turno) necesita la cobertura que produjo cada sello
+y, cuando no puede atribuirla, escribe *"medición de cobertura no disponible"* con
+su razón. Es honesto, pero va a aparecer seguido — y el titular de esa pantalla se
+tuvo que diseñar para no depender de esa cifra justamente por esto.
 
 En v1 el Cierre del turno empareja por fecha y, cuando no puede hacerlo con certeza,
 **no muestra el número**: dice "medición no disponible". Un hueco honesto antes que
