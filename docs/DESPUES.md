@@ -65,6 +65,21 @@ de estas leyes está mal escrita, y se corrige la entrada.
    puede revisar. Si el expediente no puede enseñar dónde estuvieron los camiones, no
    es un expediente.
 
+7. **Hasta que el veredicto se sella, la política está viva.** El congelamiento ocurre
+   en el **juicio**, no en el calendario. Una ocurrencia que todavía no tiene hecho
+   sellado refleja la política vigente; un servicio que aún no pasó no tiene nada que
+   congelar. En palabras de Asav: *"¿cuál es el punto de cambiar los valores si no se
+   usan para juzgar?"*
+
+   Lo que la regla evita es concreto: si la ocurrencia se queda con el valor viejo,
+   **cambiar una perilla no tiene efecto y nada avisa** — que es exactamente lo que nos
+   confundió con el corredor durante dos semanas.
+
+   ⚠ **Pregunta abierta para el Marco Maestro.** El Marco no define esta regla hoy.
+   Queda escrita aquí como decisión de producto y hay que llevarla a ratificación,
+   junto con su arista: [qué pasa si la política cambia con la ventana
+   abierta](#qué-pasa-si-la-política-cambia-con-la-ventana-abierta).
+
 ---
 
 ## Índice
@@ -94,6 +109,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Historia del sello en Cierre del turno](#historia-del-sello-en-cierre-del-turno) | v1.1 |
 | [Medición honesta de kilómetros con brincos de GPS](#medición-honesta-de-kilómetros-con-brincos-de-gps) | v1.1 |
 | [Compuerta per-candidata](#compuerta-per-candidata) | v1.1 |
+| [Qué pasa si la política cambia con la ventana abierta](#qué-pasa-si-la-política-cambia-con-la-ventana-abierta) | **Al Marco Maestro** |
 | [`/cliente/*` no tiene autenticación](#cliente-no-tiene-autenticación) | **Bloqueante antes del segundo cliente** |
 | [El enforcement usa la política de hoy, no la congelada](#el-enforcement-usa-la-política-de-hoy-no-la-congelada) | Antes de encender enforcement |
 | [Gesto explícito para borrar la hora de cierre](#gesto-explícito-para-borrar-la-hora-de-cierre) | Si más gente configura contratos |
@@ -614,6 +630,46 @@ ledger y conviene corregirlas de una vez, no en dos pasadas.
 
 **Dónde toca.** `assessEvidenceCoverage` en `packages/verification/src`; el paso
 `cobertura_evidencia` del ledger.
+
+## Qué pasa si la política cambia con la ventana abierta
+
+**Qué es.** La [Ley 7](#leyes-de-producto) dice que una ocurrencia sin juzgar refleja
+la política vigente. Falta el caso intermedio: **la ventana ya se abrió y está
+anclando evidencia** cuando alguien mueve una perilla. Recalcular podría **descartar
+puntos ya observados**, y eso choca de frente con la Ley 1.
+
+**La propuesta, en tres estados y un invariante.**
+
+| Estado | Condición | Qué pasa con un cambio de política |
+|---|---|---|
+| **Programada** | Cero evidencia anclada | Se recomputa. La política vigente manda. |
+| **Recogiendo** | Hay evidencia anclada | Se recomputa **solo si la ventana nueva contiene a la anterior**. Si no, el cambio se **difiere** a la siguiente ocurrencia. |
+| **Sellada** | Hay hecho | Congelada. Lo dice el Marco. |
+
+El invariante que sostiene los tres: **ningún cambio de configuración descarta una
+observación ya hecha.** Ampliar la ventana no pierde nada —solo suma—, así que se
+permite; recortarla o desplazarla sí perdería, así que espera.
+
+El estado se decide por **evidencia anclada, no por reloj**: "la ventana ya abrió" es
+una condición temporal ambigua; "tiene puntos" es un hecho que se consulta.
+
+**Y lo que hace que la regla no se muerda la cola: un cambio diferido tiene que
+verse.** En la pantalla de contratos, algo como *"esta política aplica desde la próxima
+ocurrencia; N ocurrencias en curso conservan la anterior"*. Sin ese aviso volvemos al
+problema exacto que originó la Ley 7 — mover una perilla, que no pase nada, y que nadie
+avise.
+
+**Qué está construido hoy.** La forma **estricta**: `corregir-deadlines` bloquea
+cualquier ocurrencia con evidencia anclada y la reporta con su motivo, en vez de
+recomputarla. Es más conservadora que la propuesta y no muerde: al 2026-07-28 hay
+**cero** ocurrencias futuras con evidencia. La versión con superconjunto se construye
+cuando exista el primer caso, no antes.
+
+**Qué lo desbloquea.** Ratificación en el Marco Maestro. Mientras tanto gana la forma
+estricta, que nunca descarta nada.
+
+**Dónde toca.** `packages/db/src/corregir-deadlines.ts`;
+`packages/db/src/deadline-diff.ts`; la pantalla de contratos.
 
 ## `/cliente/*` no tiene autenticación
 
