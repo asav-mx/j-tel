@@ -178,6 +178,55 @@ export function earliestObservedRouteFraction(
   return earliest;
 }
 
+export type ObservableRouteSpan = {
+  /** Waypoints del tramo que la evidencia sí alcanzó a observar. */
+  waypoints: Array<{ lat: number; lng: number }>;
+  /** Dónde empieza el tramo observable sobre la ruta (0 = el origen). */
+  fromFraction: number;
+  /** Qué fracción de la ruta representa el tramo observable (1 = toda). */
+  observableFraction: number;
+};
+
+/**
+ * Recorta el KML al tramo que la evidencia alcanzó a observar: del primer
+ * waypoint con evidencia cercana en adelante.
+ *
+ * El prefijo que se descarta es el que la ventana nunca miró — calificarlo
+ * es cobrar por preguntas que no se entregaron. Del primer punto observado
+ * hacia adelante NO se descarta nada: ahí el motor sí estaba mirando, así
+ * que un hueco en ese tramo sigue siendo un fallo real. Por eso esto no
+ * afloja el estándar, solo deja de castigar lo no observado.
+ */
+export function observableRouteSpan(
+  points: GpsPoint[],
+  waypoints: Array<{ lat: number; lng: number }>,
+  thresholdKm: number,
+): ObservableRouteSpan {
+  const full = { waypoints, fromFraction: 0, observableFraction: 1 };
+  if (waypoints.length === 0 || points.length === 0) return full;
+
+  const fractions = cumulativeRouteFractions(waypoints);
+  let firstIndex = -1;
+  for (let i = 0; i < waypoints.length; i++) {
+    const wp = waypoints[i]!;
+    const seen = points.some(
+      (p) => haversineKm(wp.lat, wp.lng, p.latitude, p.longitude) <= thresholdKm,
+    );
+    if (seen) {
+      firstIndex = i;
+      break;
+    }
+  }
+  if (firstIndex <= 0) return full;
+
+  const fromFraction = fractions[firstIndex]!;
+  return {
+    waypoints: waypoints.slice(firstIndex),
+    fromFraction,
+    observableFraction: 1 - fromFraction,
+  };
+}
+
 /**
  * Métrica B — precisión de corredor: % de puntos GPS cuya distancia mínima
  * a la polilínea KML es ≤ thresholdKm.
@@ -395,6 +444,13 @@ export type RouteMatchParams = {
   minCorridorPct: number;
   /** Tope de Fréchet (km) para `shapeOk`. */
   frechetMaxKm: number;
+  /**
+   * Fracción mínima de la ruta que el tramo observable debe representar para
+   * poder acreditar. Sin este piso, recortar el KML al tramo observado dejaría
+   * que un solo punto pegado al destino diera 100% sobre un tramo de un
+   * waypoint. Default 1 − DEFAULT_KML_ORIGIN_TOLERANCE_FRACTION.
+   */
+  minObservableFraction?: number;
   /** IDF por segmento para métrica A ponderada; null = A sin ponderar. */
   idf?: Map<string, number> | null;
 };
@@ -409,6 +465,12 @@ export type RouteMatchEvaluation = {
   shapeOk: boolean;
   /** Sirvió la ruta: llegó a la geocerca y (sin KML) o (A ≥ umbral A ∧ B ≥ umbral B). */
   servedRoute: boolean;
+  /**
+   * Qué fracción de la ruta representa el tramo sobre el que se calculó A
+   * (1 = la ruta completa). Se declara aparte, nunca se mezcla con el
+   * porcentaje: un 78% sobre el 60% de la ruta no es un 78% de la ruta.
+   */
+  observableFraction: number;
 };
 
 /**
@@ -425,13 +487,25 @@ export function evaluateUnitRouteMatch(
 ): RouteMatchEvaluation {
   const hasKml = (params.kmlWaypoints?.length ?? 0) > 0;
   const arrivalAt = findGeofenceEntry(sortedPoints, params.geofencePolygon);
+
+  // El match se califica sobre el tramo que la evidencia alcanzó a observar,
+  // no contra el KML completo — el prefijo no observado no se cobra. El
+  // umbral (params.minKmlPct) no se toca: se aplica igual, solo que sobre
+  // una pregunta honesta.
+  const span = hasKml
+    ? observableRouteSpan(sortedPoints, params.kmlWaypoints!, params.corridorKm)
+    : { waypoints: [], fromFraction: 0, observableFraction: 1 };
+  const scoredWaypoints = span.waypoints;
+
   const routeMatchPct = hasKml
     ? params.idf
-      ? computeWeightedRouteMatchPct(sortedPoints, params.kmlWaypoints!, params.idf, params.corridorKm)
-      : computeRouteMatchPct(sortedPoints, params.kmlWaypoints!, params.corridorKm)
+      ? computeWeightedRouteMatchPct(sortedPoints, scoredWaypoints, params.idf, params.corridorKm)
+      : computeRouteMatchPct(sortedPoints, scoredWaypoints, params.corridorKm)
     : arrivalAt
       ? 100
       : 0;
+  // B mide qué fracción de los PUNTOS GPS cae en el corredor; el prefijo no
+  // observado no aporta puntos, así que va contra el KML completo sin sesgo.
   const corridorPrecisionPct = hasKml
     ? computeCorridorPrecisionPct(sortedPoints, params.kmlWaypoints!, params.corridorKm)
     : arrivalAt
@@ -440,12 +514,10 @@ export function evaluateUnitRouteMatch(
   const frechetKm = hasKml
     ? discreteFrechetKm(
         sortedPoints.map((p) => ({ lat: p.latitude, lng: p.longitude })),
-        params.kmlWaypoints!,
+        scoredWaypoints,
       )
     : null;
-  const dirSim = hasKml
-    ? directionSimilarity(sortedPoints, params.kmlWaypoints!)
-    : null;
+  const dirSim = hasKml ? directionSimilarity(sortedPoints, scoredWaypoints) : null;
 
   // Fréchet / dirección desambiguan el ranking; el match duro es geocerca + A∧B.
   // Un tope duro de Fréchet descartaba recorridos reales con muestreo irregular.
@@ -454,10 +526,19 @@ export function evaluateUnitRouteMatch(
     frechetKm === null ||
     sortedPoints.length < 3 ||
     frechetKm <= params.frechetMaxKm;
+  // El tramo observable tiene que dar para calificar. Si no da, la unidad no
+  // acredita por esta vía — no porque haya fallado, sino porque no se le vio
+  // suficiente ruta (Ley 1). El veredicto lo resuelve verifyService.
+  const minObservableFraction =
+    params.minObservableFraction ?? 1 - DEFAULT_KML_ORIGIN_TOLERANCE_FRACTION;
+  const observableEnough = !hasKml || span.observableFraction + 1e-9 >= minObservableFraction;
+
   const servedRoute =
     arrivalAt !== null &&
     (!hasKml ||
-      (routeMatchPct >= params.minKmlPct && corridorPrecisionPct >= params.minCorridorPct));
+      (observableEnough &&
+        routeMatchPct >= params.minKmlPct &&
+        corridorPrecisionPct >= params.minCorridorPct));
 
   return {
     arrivalAt,
@@ -467,6 +548,7 @@ export function evaluateUnitRouteMatch(
     directionSimilarity: dirSim,
     shapeOk,
     servedRoute,
+    observableFraction: span.observableFraction,
   };
 }
 
@@ -682,6 +764,14 @@ export function verifyService(input: VerificationInput): VerificationResult {
     ? Math.min(100, Math.max(0, input.kmlCorridorMinPct ?? 60))
     : 0;
   const frechetMaxKm = input.frechetMaxKm ?? 0.8;
+  // Una sola perilla gobierna las dos mitades del arreglo: cuánto arranque de
+  // ruta se tolera perder. De ahí sale tanto el piso del tramo observable como
+  // el gate que manda a pendiente_evidencia más abajo.
+  const originToleranceFraction = Math.min(
+    1,
+    Math.max(0, input.kmlOriginToleranceFraction ?? DEFAULT_KML_ORIGIN_TOLERANCE_FRACTION),
+  );
+  const minObservableFraction = 1 - originToleranceFraction;
   const idf =
     hasKml && input.routeCorpus && input.routeCorpus.length > 0
       ? buildSegmentIdf(
@@ -704,6 +794,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
       directionSimilarity: dirSim,
       shapeOk,
       servedRoute,
+      observableFraction,
     } = evaluateUnitRouteMatch(sorted, {
       kmlWaypoints: input.kmlWaypoints,
       geofencePolygon: input.geofencePolygon,
@@ -711,6 +802,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
       minKmlPct,
       minCorridorPct,
       frechetMaxKm,
+      minObservableFraction,
       idf,
     });
 
@@ -722,6 +814,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
       corridorPrecisionPct,
       frechetKm,
       directionSimilarity: dirSim,
+      observableFraction,
     });
 
     steps.push({
@@ -741,6 +834,10 @@ export function verifyService(input: VerificationInput): VerificationResult {
         minCorridorPct,
         frechetMaxKm: hasKml ? frechetMaxKm : undefined,
         shapeOk,
+        // A se calculó sobre este tramo, no sobre la ruta completa. Va aparte
+        // del porcentaje a propósito: quien lea el expediente debe poder ver
+        // sobre qué se calificó, no solo el número.
+        observableFraction: hasKml ? Number(observableFraction.toFixed(3)) : undefined,
       },
     });
   }
@@ -800,10 +897,6 @@ export function verifyService(input: VerificationInput): VerificationResult {
     // adentro del recorrido, el motor no puede saber si el tramo inicial se
     // hizo o no — eso es un problema de observación, no un veredicto.
     if (hasKml) {
-      const originToleranceFraction = Math.min(
-        1,
-        Math.max(0, input.kmlOriginToleranceFraction ?? DEFAULT_KML_ORIGIN_TOLERANCE_FRACTION),
-      );
       const earliestFraction = earliestObservedRouteFraction(
         input.evidencePoints,
         input.kmlWaypoints!,
@@ -878,6 +971,10 @@ export function verifyService(input: VerificationInput): VerificationResult {
       minKmlPct: hasKml ? minKmlPct : undefined,
       minCorridorPct: hasKml ? minCorridorPct : undefined,
       corridorMeters: hasKml ? corridorKm * 1000 : undefined,
+      observableFraction:
+        hasKml && winner.observableFraction != null
+          ? Number(winner.observableFraction.toFixed(3))
+          : undefined,
     },
   });
 
