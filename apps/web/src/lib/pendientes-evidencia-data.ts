@@ -45,7 +45,9 @@ export type CasoPendiente = {
 type Repos = ReturnType<typeof getRepos>;
 type Occurrence = Awaited<ReturnType<Repos["occurrences"]["findForScope"]>>[number];
 
-async function construirCaso(o: Occurrence, repos: Repos): Promise<CasoPendiente> {
+type CasoConstruido = { caso: CasoPendiente; timeZone: string };
+
+async function construirCaso(o: Occurrence, repos: Repos): Promise<CasoConstruido> {
   const fact = o.complianceFact!;
   const profile = o.profile;
   const policy = (o.contract?.policy ?? {}) as ContractPolicy;
@@ -76,18 +78,21 @@ async function construirCaso(o: Occurrence, repos: Repos): Promise<CasoPendiente
   }
 
   return {
-    occurrenceId: o.id,
-    profileCode: profile?.code ?? "—",
-    profileName: profile?.name ?? "—",
-    turnoName: profile?.routeShift?.shift?.name ?? null,
-    fecha: o.serviceDate,
-    selladoEn: fact.materializedAt?.toISOString() ?? null,
-    versiones: historia.length + 1,
-    cobertura,
-    hueco: hueco
-      ? { minutos: hueco.minutos, desdeEn: hueco.desde.toISOString(), hastaEn: hueco.hasta.toISOString() }
-      : null,
-    ventanaMinutos: (ventana.endMs - ventana.startMs) / 60_000,
+    caso: {
+      occurrenceId: o.id,
+      profileCode: profile?.code ?? "—",
+      profileName: profile?.name ?? "—",
+      turnoName: profile?.routeShift?.shift?.name ?? null,
+      fecha: o.serviceDate,
+      selladoEn: fact.materializedAt?.toISOString() ?? null,
+      versiones: historia.length + 1,
+      cobertura,
+      hueco: hueco
+        ? { minutos: hueco.minutos, desdeEn: hueco.desde.toISOString(), hastaEn: hueco.hasta.toISOString() }
+        : null,
+      ventanaMinutos: (ventana.endMs - ventana.startMs) / 60_000,
+    },
+    timeZone: policy.timeZone ?? JTTEL_TZ,
   };
 }
 
@@ -118,18 +123,21 @@ export async function loadPendientesEvidencia(opts: {
   // sello) que no dependen entre sí, y ningún caso depende de otro — así que
   // tanto las 3 consultas de un caso como los casos entre sí corren en
   // paralelo. Sin esto, la bandeja hacía 3×N consultas en fila.
-  const casosSinOrdenar = await Promise.all(pendientes.map((o) => construirCaso(o, repos)));
+  const construidos = await Promise.all(pendientes.map((o) => construirCaso(o, repos)));
 
   // Orden por horizonte: el que lleva más tiempo pendiente primero — es el
   // que más se acerca a cualquier resolución, y el que menos debería quedar
   // enterrado bajo lo recién detectado.
-  const casos = casosSinOrdenar.sort((a, b) => (a.selladoEn ?? "").localeCompare(b.selladoEn ?? ""));
+  construidos.sort((a, b) => (a.caso.selladoEn ?? "").localeCompare(b.caso.selladoEn ?? ""));
 
-  const primeraPolitica = (pendientes[0]?.contract?.policy ?? {}) as ContractPolicy;
+  // La zona sale del contrato del primer caso YA ORDENADO — el que realmente
+  // se muestra arriba — nunca del primero del fetch crudo (que trae otro
+  // orden y puede ser un contrato distinto).
+  const zonaHoraria = construidos[0]?.timeZone ?? JTTEL_TZ;
 
   return {
-    zonaHoraria: primeraPolitica.timeZone ?? JTTEL_TZ,
-    casos,
+    zonaHoraria,
+    casos: construidos.map((c) => c.caso),
     plazoCierreEn: null,
   };
 }
