@@ -6,10 +6,13 @@ import {
   computeExclusiveContentionWindow,
   contarTurno,
   esExcepcion,
+  leerCobertura,
   limiteConTolerancia,
   margenMinutos,
   mayorHueco,
   titularDelTurno,
+  type Cobertura,
+  type CoberturaMedida,
   type ConteoTurno,
   type EstadoServicio,
   type Hueco,
@@ -32,22 +35,6 @@ import {
  * real solo se dibuja donde el árbitro selló una unidad, y cortado en la
  * llegada a geocerca.
  */
-
-/** Por qué no se pudo poner la medición de cobertura junto a este sello. */
-export type CoberturaNoDisponible = {
-  disponible: false;
-  razon: "no_entry" | "ambiguous" | "out_of_tolerance" | "sin_paso";
-};
-
-export type CoberturaMedida = {
-  disponible: true;
-  pct: number;
-  minimoPct: number;
-  mayorHuecoMinutos: number | null;
-  huecoMaximoPermitido: number | null;
-};
-
-export type Cobertura = CoberturaMedida | CoberturaNoDisponible;
 
 export type ServicioDelCierre = {
   occurrenceId: string;
@@ -97,8 +84,6 @@ export type CierrePayload = {
   limpios: ServicioDelCierre[];
 };
 
-const COBERTURA = "cobertura_evidencia";
-
 function downsample<T>(arr: T[], max: number): T[] {
   if (arr.length <= max) return arr;
   const out: T[] = [];
@@ -118,27 +103,6 @@ function normalizePolygon(raw: unknown): Array<{ lat: number; lng: number }> {
     if (Number.isFinite(lat) && Number.isFinite(lng)) out.push({ lat, lng });
   }
   return out;
-}
-
-type PasoLedger = { step?: string; details?: Record<string, unknown> };
-
-function leerCobertura(steps: unknown): CoberturaMedida | null {
-  if (!Array.isArray(steps)) return null;
-  const paso = (steps as PasoLedger[]).find((s) => s?.step === COBERTURA);
-  const d = paso?.details;
-  if (!d) return null;
-  const pct = Number(d.coveragePct);
-  const minimo = Number(d.minCoveragePct);
-  if (!Number.isFinite(pct) || !Number.isFinite(minimo)) return null;
-  const gap = Number(d.maxGapMinutes);
-  const gapMax = Number(d.maxGapMinutesAllowed);
-  return {
-    disponible: true,
-    pct,
-    minimoPct: minimo,
-    mayorHuecoMinutos: Number.isFinite(gap) ? gap : null,
-    huecoMaximoPermitido: Number.isFinite(gapMax) ? gapMax : null,
-  };
 }
 
 export async function loadCierre(opts: {

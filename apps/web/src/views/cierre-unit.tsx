@@ -10,6 +10,13 @@ import { operationalUnitLabel } from "@/lib/operational-scope";
 import { localDateIso } from "@/lib/local-time";
 import { dayForDateQuery } from "@jtel/domain";
 import { formatearDuracion } from "@jtel/services";
+import {
+  AfirmacionPendiente,
+  MedidaCobertura,
+  NotaHonestaPendiente,
+  rielPendiente,
+} from "@/components/caso-pendiente-evidencia";
+import { ChipResultado as Chip } from "@/components/chip-resultado";
 
 /**
  * Cierre del turno.
@@ -309,34 +316,13 @@ function Seccion({ titulo }: { titulo: string }) {
   );
 }
 
-function Chip({ estado }: { estado: ServicioDelCierre["estado"] }) {
-  const conf =
-    estado === "cumplido"
-      ? { t: "Cumplido", c: "var(--verde)", b: "rgba(52,199,123,.07)" }
-      : estado === "no_cumplido"
-        ? { t: "No cumplido", c: "var(--rojo)", b: "rgba(229,72,77,.07)" }
-        : { t: "Pendiente por evidencia", c: "var(--ambar)", b: "rgba(227,168,31,.07)" };
-  return (
-    <span
-      className="inline-block rounded-sm border-[1.5px] px-2.5 pt-[3.5px] pb-[2.5px] font-mono text-[10.5px] font-medium tracking-[0.13em] whitespace-nowrap uppercase"
-      style={{ color: conf.c, background: conf.b, borderColor: "currentColor" }}
-    >
-      {conf.t}
-    </span>
-  );
-}
-
 /** El riel izquierdo: la cifra que resume el caso, y qué mide. */
 function riel(s: ServicioDelCierre, tz: string): { cifra: string; sub: string; color: string } {
   if (s.estado === "no_cumplido") {
     return { cifra: "—", sub: "Sin llegada en la ventana", color: "var(--rojo)" };
   }
   if (s.estado === "pendiente_evidencia") {
-    return {
-      cifra: s.hueco ? formatearDuracion(s.hueco.minutos) : "—",
-      sub: "El silencio más largo",
-      color: "var(--ambar)",
-    };
+    return rielPendiente(s.hueco);
   }
   return {
     cifra: soloHora(s.llegadaEn, tz),
@@ -383,39 +369,14 @@ function Caso({ s, tz, slug }: { s: ServicioDelCierre; tz: string; slug: string 
         </h3>
 
         <div className="mb-3 flex flex-wrap gap-x-6 gap-y-1.5 border border-white/10 bg-[var(--panel)] px-3.5 py-2.5 font-mono text-[12px] text-[var(--tenue)]">
-          {s.cobertura.disponible ? (
-            <>
-              <span>
-                Evidencia de la ventana{" "}
-                <b className="font-medium text-[var(--acero)]">{pct(s.cobertura.pct)}</b>
-              </span>
-              <span>
-                mínimo del contrato{" "}
-                <b className="font-medium text-[var(--texto)]">{pct(s.cobertura.minimoPct)}</b>
-              </span>
-              {s.cobertura.mayorHuecoMinutos != null ? (
-                <span>
-                  Hueco máximo{" "}
-                  <b className="font-medium text-[var(--acero)]">
-                    {formatearDuracion(s.cobertura.mayorHuecoMinutos)}
-                  </b>
-                  {s.cobertura.huecoMaximoPermitido != null ? (
-                    <>
-                      {" · permitido "}
-                      <b className="font-medium text-[var(--texto)]">
-                        {formatearDuracion(s.cobertura.huecoMaximoPermitido)}
-                      </b>
-                    </>
-                  ) : null}
-                </span>
-              ) : null}
-            </>
-          ) : (
-            <span>
-              Medición de cobertura no disponible —{" "}
-              {RAZON_COBERTURA[s.cobertura.razon] ?? "no se pudo atribuir a este sello"}
-            </span>
-          )}
+          <MedidaCobertura
+            cobertura={s.cobertura}
+            textoNoDisponible={`Medición de cobertura no disponible — ${
+              s.cobertura.disponible
+                ? ""
+                : (RAZON_COBERTURA[s.cobertura.razon] ?? "no se pudo atribuir a este sello")
+            }`}
+          />
 
           {s.matchPct != null ? (
             <span>
@@ -439,15 +400,7 @@ function Caso({ s, tz, slug }: { s: ServicioDelCierre; tz: string; slug: string 
           ) : null}
         </div>
 
-        {s.estado === "pendiente_evidencia" ? (
-          <p className="mb-3 max-w-[58ch] border-l-2 border-[var(--azul)] py-0.5 pl-3.5 text-[14.5px]">
-            No cuenta como incumplimiento — el sistema no vio la unidad y no afirma lo que no midió.
-            Tampoco cuenta como cumplido.
-            <span className="mt-1 block font-mono text-[12.5px] text-[var(--tenue)]">
-              Si el archivo recupera los puntos, procede verificar de nuevo
-            </span>
-          </p>
-        ) : null}
+        {s.estado === "pendiente_evidencia" ? <NotaHonestaPendiente /> : null}
 
         {/*
           Aquí va el bloque de consecuencias — enforcement. Parqueado por
@@ -493,21 +446,7 @@ function Afirmacion({ s, tz }: { s: ServicioDelCierre; tz: string }) {
   }
 
   if (s.estado === "pendiente_evidencia") {
-    return (
-      <>
-        No hubo suficiente señal para emitir un resultado. La ventana quedó a oscuras
-        {s.hueco ? (
-          <>
-            {" "}
-            de{" "}
-            <em className="text-[var(--ambar)] not-italic">
-              {soloHora(s.hueco.desdeEn, tz)} a {soloHora(s.hueco.hastaEn, tz)}
-            </em>
-          </>
-        ) : null}
-        .
-      </>
-    );
+    return <AfirmacionPendiente hueco={s.hueco} tz={tz} />;
   }
 
   const fuera =
