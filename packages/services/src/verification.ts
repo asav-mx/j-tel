@@ -939,6 +939,7 @@ export class VerificationService {
       kmlMatchMinPct: policy.kmlMatchMinPct ?? 60,
       kmlCorridorMeters: policy.kmlCorridorMeters ?? 120,
       kmlCorridorMinPct: policy.kmlCorridorMinPct ?? 60,
+      kmlOriginToleranceFraction: policy.kmlOriginToleranceFraction ?? 0.15,
       geofencePolygon: geofence.polygon,
       routeCorpus: routeCorpus.length > 0 ? routeCorpus : undefined,
       evidencePoints: enrichedPoints,

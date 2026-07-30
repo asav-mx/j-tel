@@ -282,12 +282,22 @@ describe("verifyService", () => {
 
   it("honors configurable kmlMatchMinPct threshold (kml_full)", () => {
     const waypoints = [
-      { lat: 31.6800, lng: -106.4300 },
-      { lat: 31.6850, lng: -106.4280 },
+      { lat: 31.6800, lng: -106.43 },
+      { lat: 31.68273, lng: -106.42835 },
+      { lat: 31.68545, lng: -106.4267 },
+      { lat: 31.68818, lng: -106.42505 },
       { lat: 31.6909, lng: -106.4234 },
     ];
-    // Solo cubre 1 de 3 waypoints (~33%)
+    // Cubre el origen y el destino, 2 de 5 waypoints (40%) — el origen sí se
+    // observó, así que esto sigue siendo un fallo real de match, no un
+    // problema de observación.
     const points = [
+      {
+        imei: "unit-a",
+        latitude: 31.68,
+        longitude: -106.43,
+        timestamp: new Date("2026-07-07T12:40:00Z"),
+      },
       {
         imei: "unit-a",
         latitude: 31.6909,
@@ -314,7 +324,79 @@ describe("verifyService", () => {
       evidencePoints: points,
     });
     expect(pass.status).toBe("cumplido");
-    expect(pass.observedRouteMatchPct).toBeCloseTo(100 / 3, 5);
+    expect(pass.observedRouteMatchPct).toBeCloseTo(40, 5);
+  });
+});
+
+describe("Ley 1 — la ventana debe cubrir el origen de la ruta", () => {
+  const waypoints = [
+    { lat: 31.68, lng: -106.43 },
+    { lat: 31.68273, lng: -106.42835 },
+    { lat: 31.68545, lng: -106.4267 },
+    { lat: 31.68818, lng: -106.42505 },
+    { lat: 31.6909, lng: -106.4234 },
+  ];
+  const baseInput = {
+    occurrenceId: "occ-origen",
+    expectedDeadline: new Date("2026-07-07T12:45:00Z"),
+    toleranceMinutes: 5,
+    routeStrictness: "kml_full" as const,
+    geofencePolygon: geofence,
+    excusableReasons: [] as const,
+    kmlWaypoints: waypoints,
+    kmlMatchMinPct: 60,
+    kmlCorridorMinPct: 0,
+  };
+
+  it("pendiente_evidencia (no no_cumplido) cuando la evidencia solo cubre el tramo final de la ruta", () => {
+    // Un solo punto, pegado al último waypoint — nada cerca del origen.
+    const result = verifyService({
+      ...baseInput,
+      evidencePoints: [
+        {
+          imei: "unit-a",
+          latitude: 31.6909,
+          longitude: -106.4234,
+          timestamp: new Date("2026-07-07T12:44:00Z"),
+        },
+      ],
+    });
+    expect(result.status).toBe("pendiente_evidencia");
+    const decision = result.ledgerSteps.find((s) => s.step === "decision");
+    expect(decision?.details).toMatchObject({ reason: "observacion_insuficiente" });
+  });
+
+  it("no_cumplido normal cuando el origen sí se observó pero el match sigue bajo", () => {
+    const result = verifyService({
+      ...baseInput,
+      evidencePoints: [
+        {
+          imei: "unit-a",
+          latitude: 31.68,
+          longitude: -106.43,
+          timestamp: new Date("2026-07-07T12:40:00Z"),
+        },
+      ],
+    });
+    expect(result.status).toBe("no_cumplido");
+  });
+
+  it("respeta kmlOriginToleranceFraction configurado por contrato", () => {
+    // El único punto está a mitad de ruta (fracción ~0.5) — con tolerancia
+    // amplia (0.6) el motor sí se anima a juzgar no_cumplido.
+    const result = verifyService({
+      ...baseInput,
+      kmlOriginToleranceFraction: 0.6,
+      evidencePoints: [
+        {
+          imei: "unit-a",
+          latitude: 31.68545,
+          longitude: -106.4267,
+          timestamp: new Date("2026-07-07T12:42:00Z"),
+        },
+      ],
+    });
+    expect(result.status).toBe("no_cumplido");
   });
 });
 

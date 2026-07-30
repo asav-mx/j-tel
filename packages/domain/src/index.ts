@@ -321,6 +321,17 @@ export const contractPolicySchema = z.object({
    * (métrica B: precisión). Un match exige A ≥ kmlMatchMinPct Y B ≥ este umbral.
    */
   kmlCorridorMinPct: z.number().min(0).max(100).default(60),
+  /**
+   * Fracción máxima de la ruta (0–1, medida desde el origen por distancia
+   * acumulada del KML) que puede quedar sin ningún punto de evidencia
+   * cercano antes de que el motor renuncie a dictar `no_cumplido`. Si el
+   * punto de evidencia más temprano que coincide con el KML cae más allá de
+   * esta fracción, el origen de la ruta se considera no observado y el
+   * resultado es `pendiente_evidencia` — Ley 1: un problema de observación
+   * (la ventana no alcanzó a cubrir el arranque de la ruta) nunca se
+   * convierte en veredicto. Default 0.15 (15% inicial de la ruta).
+   */
+  kmlOriginToleranceFraction: z.number().min(0).max(1).default(0.15),
   excusableReasons: z.array(ExcusableReason).default([]),
   enforcementRules: z.array(enforcementRulesSchema).default([]),
   /** Ventana de observación GPS: empieza N min antes del deadline (ej. 60 → 5:45 si deadline 6:45). */
@@ -495,6 +506,12 @@ export interface VerificationInput {
   kmlCorridorMeters?: number;
   /** Umbral mínimo métrica B — precisión de corredor (0–100). Default 60. */
   kmlCorridorMinPct?: number;
+  /**
+   * Fracción máxima de la ruta (0–1, desde el origen) sin evidencia cercana
+   * antes de que el motor prefiera `pendiente_evidencia` sobre `no_cumplido`
+   * por no haber observado el arranque de la ruta. Default 0.15.
+   */
+  kmlOriginToleranceFraction?: number;
   geofencePolygon: Array<{ lat: number; lng: number }>;
   kmlWaypoints?: Array<{ lat: number; lng: number }>;
   /**
