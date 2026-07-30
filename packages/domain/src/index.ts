@@ -563,6 +563,12 @@ export interface VerificationResult {
     frechetKm?: number | null;
     /** Similitud de dirección 0–1; null sin KML. */
     directionSimilarity?: number | null;
+    /**
+     * Fracción de la ruta sobre la que se calculó la métrica A (1 = completa).
+     * Se declara aparte del porcentaje: A sobre medio trazado no es A sobre
+     * el trazado entero, y el expediente debe poder decir cuál de las dos es.
+     */
+    observableFraction?: number;
   }>;
 }
 
