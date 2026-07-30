@@ -121,6 +121,63 @@ function distPointToSegmentKm(
   return Math.sqrt(dx * dx + dy * dy);
 }
 
+/** Fracción máxima de la ruta sin evidencia cercana antes de considerar el origen no observado. */
+export const DEFAULT_KML_ORIGIN_TOLERANCE_FRACTION = 0.15;
+
+/**
+ * Fracción acumulada de distancia de cada waypoint sobre la longitud total
+ * del KML: 0 en el origen, 1 en el destino.
+ */
+export function cumulativeRouteFractions(
+  waypoints: Array<{ lat: number; lng: number }>,
+): number[] {
+  if (waypoints.length === 0) return [];
+  const cumKm: number[] = [0];
+  for (let i = 1; i < waypoints.length; i++) {
+    cumKm.push(
+      cumKm[i - 1]! +
+        haversineKm(
+          waypoints[i - 1]!.lat,
+          waypoints[i - 1]!.lng,
+          waypoints[i]!.lat,
+          waypoints[i]!.lng,
+        ),
+    );
+  }
+  const total = cumKm[cumKm.length - 1]!;
+  if (total <= 0) return waypoints.map(() => 0);
+  return cumKm.map((d) => d / total);
+}
+
+/**
+ * Qué tan lejos, sobre la ruta, empieza la evidencia observada. 0 = se vio
+ * el origen; 1 = solo se vio cerca del destino; null = ningún punto cayó
+ * dentro del corredor en ningún waypoint del KML.
+ *
+ * No distingue "el chofer se saltó el arranque" de "la ventana de
+ * observación abrió después de que la ruta ya había arrancado" — la Ley 1
+ * dice que esa distinción no le toca resolverla a un veredicto: ambas son
+ * observación insuficiente del origen.
+ */
+export function earliestObservedRouteFraction(
+  points: GpsPoint[],
+  waypoints: Array<{ lat: number; lng: number }>,
+  thresholdKm: number,
+): number | null {
+  if (waypoints.length === 0 || points.length === 0) return null;
+  const fractions = cumulativeRouteFractions(waypoints);
+  let earliest: number | null = null;
+  for (let i = 0; i < waypoints.length; i++) {
+    if (earliest !== null && fractions[i]! >= earliest) continue;
+    const wp = waypoints[i]!;
+    const seen = points.some(
+      (p) => haversineKm(wp.lat, wp.lng, p.latitude, p.longitude) <= thresholdKm,
+    );
+    if (seen) earliest = fractions[i]!;
+  }
+  return earliest;
+}
+
 /**
  * Métrica B — precisión de corredor: % de puntos GPS cuya distancia mínima
  * a la polilínea KML es ≤ thresholdKm.
@@ -736,6 +793,46 @@ export function verifyService(input: VerificationInput): VerificationResult {
         ledgerSteps: steps,
         candidateUnits,
       };
+    }
+
+    // Ley 1: antes de acusar, ¿la ventana alcanzó a observar el origen de la
+    // ruta? Si la evidencia más temprana que coincide con el KML ya cae bien
+    // adentro del recorrido, el motor no puede saber si el tramo inicial se
+    // hizo o no — eso es un problema de observación, no un veredicto.
+    if (hasKml) {
+      const originToleranceFraction = Math.min(
+        1,
+        Math.max(0, input.kmlOriginToleranceFraction ?? DEFAULT_KML_ORIGIN_TOLERANCE_FRACTION),
+      );
+      const earliestFraction = earliestObservedRouteFraction(
+        input.evidencePoints,
+        input.kmlWaypoints!,
+        corridorKm,
+      );
+      if (earliestFraction !== null && earliestFraction > originToleranceFraction) {
+        steps.push({
+          step: "decision",
+          result: "pendiente_evidencia",
+          details: {
+            reason: "observacion_insuficiente",
+            explanation:
+              "La ventana de observación no alcanzó a cubrir el origen de la ruta",
+            earliestObservedFraction: Number(earliestFraction.toFixed(3)),
+            originToleranceFraction,
+          },
+        });
+        return {
+          status: "pendiente_evidencia",
+          timing: null,
+          observedUnitId: null,
+          observedArrivalAt: null,
+          observedRouteMatchPct: null,
+          lateExcusable: false,
+          routeStrictnessApplied: input.routeStrictness,
+          ledgerSteps: steps,
+          candidateUnits,
+        };
+      }
     }
 
     steps.push({
