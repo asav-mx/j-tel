@@ -12,6 +12,7 @@ import {
   discreteFrechetKm,
   directionSimilarity,
   segmentKey,
+  observableRouteSpan,
 } from "./index.js";
 
 const geofence = [
@@ -397,6 +398,109 @@ describe("Ley 1 — la ventana debe cubrir el origen de la ruta", () => {
       ],
     });
     expect(result.status).toBe("no_cumplido");
+  });
+});
+
+describe("el match se califica sobre el tramo observable", () => {
+  // 11 waypoints equiespaciados sobre una recta: fracciones 0, 0.1, ... 1.0.
+  const waypoints = Array.from({ length: 11 }, (_, i) => ({
+    lat: 31.68 + i * 0.00109,
+    lng: -106.43 + i * 0.00066,
+  }));
+  const at = (i: number, minute: number) => ({
+    imei: "unit-a",
+    latitude: waypoints[i]!.lat,
+    longitude: waypoints[i]!.lng,
+    timestamp: new Date(`2026-07-07T12:${String(minute).padStart(2, "0")}:00Z`),
+  });
+
+  it("observableRouteSpan recorta el prefijo no observado y declara la fracción", () => {
+    // Evidencia del waypoint 2 (fracción 0.2) en adelante.
+    const points = [at(2, 30), at(5, 35), at(8, 40), at(10, 44)];
+    const span = observableRouteSpan(points, waypoints, 0.12);
+    expect(span.waypoints).toHaveLength(9);
+    expect(span.fromFraction).toBeCloseTo(0.2, 2);
+    expect(span.observableFraction).toBeCloseTo(0.8, 2);
+  });
+
+  it("sin prefijo perdido, el tramo observable es la ruta completa (regresión cero)", () => {
+    const points = waypoints.map((_, i) => at(i, 30 + i));
+    const span = observableRouteSpan(points, waypoints, 0.12);
+    expect(span.waypoints).toHaveLength(waypoints.length);
+    expect(span.observableFraction).toBe(1);
+  });
+
+  it("no cobra el prefijo no observado: un recorrido completo desde donde se ve da A alto", () => {
+    // Se pierde el primer 20% (la ventana abrió tarde), pero de ahí en
+    // adelante la unidad tocó TODOS los waypoints. Contra el KML completo
+    // A sería ~82%; sobre el tramo observable es 100%.
+    const points = waypoints.slice(2).map((_, i) => at(i + 2, 30 + i));
+    const evaluation = evaluateUnitRouteMatch(points, {
+      kmlWaypoints: waypoints,
+      geofencePolygon: geofence,
+      corridorKm: 0.12,
+      minKmlPct: 60,
+      minCorridorPct: 60,
+      frechetMaxKm: 0.8,
+    });
+    expect(evaluation.routeMatchPct).toBe(100);
+    expect(evaluation.observableFraction).toBeCloseTo(0.8, 2);
+  });
+
+  it("el umbral NO se afloja: huecos DENTRO del tramo observable siguen contando", () => {
+    // Se pierde el mismo primer 20%, pero además la unidad se salta la
+    // mitad del tramo que sí se observó — eso es un fallo real.
+    const points = [at(2, 30), at(3, 32), at(9, 42), at(10, 44)];
+    const evaluation = evaluateUnitRouteMatch(points, {
+      kmlWaypoints: waypoints,
+      geofencePolygon: geofence,
+      corridorKm: 0.12,
+      minKmlPct: 60,
+      minCorridorPct: 60,
+      frechetMaxKm: 0.8,
+    });
+    // 4 de los 9 waypoints observables ≈ 44% — por debajo del umbral de 60.
+    expect(evaluation.routeMatchPct).toBeLessThan(60);
+    expect(evaluation.servedRoute).toBe(false);
+  });
+
+  const baseInput = {
+    occurrenceId: "occ-observable",
+    expectedDeadline: new Date("2026-07-07T12:45:00Z"),
+    toleranceMinutes: 5,
+    routeStrictness: "kml_full" as const,
+    geofencePolygon: geofence,
+    excusableReasons: [] as const,
+    kmlWaypoints: waypoints,
+    kmlMatchMinPct: 60,
+    kmlCorridorMinPct: 60,
+  };
+
+  it("verifyService declara observableFraction en el ledger, aparte del porcentaje", () => {
+    const result = verifyService({
+      ...baseInput,
+      // El contrato tolera perder hasta 25% del arranque; aquí se perdió 20%.
+      kmlOriginToleranceFraction: 0.25,
+      evidencePoints: waypoints.slice(2).map((_, i) => at(i + 2, 30 + i)),
+    });
+    expect(result.status).toBe("cumplido");
+    const decision = result.ledgerSteps.find((s) => s.step === "decision");
+    expect(decision?.details).toMatchObject({ routeMatchPct: 100 });
+    expect((decision?.details as { observableFraction: number }).observableFraction).toBeCloseTo(
+      0.8,
+      2,
+    );
+  });
+
+  it("un tramo observable demasiado corto no acredita: cae a pendiente, no a cumplido inflado", () => {
+    // Solo se vio el último waypoint. Sobre ese tramo A daría 100%, pero
+    // acreditar con eso sería inventar evidencia que nadie observó.
+    const result = verifyService({
+      ...baseInput,
+      evidencePoints: [at(10, 44)],
+    });
+    expect(result.status).toBe("pendiente_evidencia");
+    expect(result.status).not.toBe("cumplido");
   });
 });
 
