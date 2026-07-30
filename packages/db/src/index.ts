@@ -19,3 +19,8 @@ export {
   type LedgerPairing,
   type PairableLedgerEntry,
 } from "./ledger-pairing.js";
+export {
+  clasificarDiferencia,
+  MINUTOS_MARCO_DISTINTO,
+  type CausaDeDiferencia,
+} from "./deadline-diff.js";
