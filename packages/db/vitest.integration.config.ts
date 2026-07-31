@@ -1,7 +1,29 @@
+import { existsSync } from "node:fs";
 import { defineConfig } from "vitest/config";
+
+/*
+ * El .env se carga aquí porque vitest no lo hace solo.
+ *
+ * Sin esto, `DATABASE_URL_TEST` nunca llegaba al proceso y la suite fallaba
+ * siempre con "no está definida" — aunque estuviera definida. El candado que
+ * se niega a correr contra producción quedaba inalcanzable, y con él la única
+ * forma sancionada de probar escrituras.
+ */
+for (const p of ["../../.env", ".env"]) {
+  if (existsSync(p)) {
+    try {
+      process.loadEnvFile(p);
+      break;
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 export default defineConfig({
   test: {
     include: ["src/integration.test.ts"],
+    // Escriben en la misma rama desechable: en paralelo se pisan.
+    fileParallelism: false,
   },
 });

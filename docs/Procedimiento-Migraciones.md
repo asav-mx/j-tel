@@ -16,6 +16,50 @@ producción.
 No es una preferencia de estilo. Son dos razones independientes, y cualquiera de
 las dos basta.
 
+### La segunda regla, del 31 de julio de 2026
+
+> **Una prueba que ESCRIBE nunca corre contra producción.** Ni con datos de
+> prueba, ni "revirtiendo al final".
+>
+> Va contra `DATABASE_URL_TEST`, que apunta a una rama desechable de Neon.
+
+Devolver los valores al terminar no es una red: depende de que la corrida
+termine. Si el proceso muere entre el cambio y la reversión —o la prueba falla a
+la mitad— el cliente vivo se queda mal configurado. Y en j-tel una política mal
+puesta no da error: da veredictos falsos, sellados y creíbles.
+
+Leer producción sí está bien. Con el usuario de solo lectura.
+
+---
+
+## Las tres conexiones, y para qué es cada una
+
+| Variable | Usuario | Para qué |
+|---|---|---|
+| `DATABASE_URL` | `neondb_owner` | Aplicar migraciones. Nada más. |
+| `DATABASE_URL_READONLY` | `jtel_readonly` | Toda lectura de verificación y todo diagnóstico contra producción. |
+| `DATABASE_URL_TEST` | rama desechable | Todo lo que escribe: pruebas de integración y pruebas de punta a punta. |
+
+**Las tres están configuradas.** Antes de suponer que una falta, compruébalo —
+`grep -oE '^[A-Z_]+='` recorta el valor por construcción y hace ver vacías todas
+las líneas. Confundir eso con "no está configurada" ya costó una migración
+verificada con el usuario equivocado.
+
+Que `jtel_readonly` sea de verdad de solo lectura se comprueba, no se supone:
+
+```bash
+pnpm --filter @jtel/db verificar-solo-lectura
+```
+
+Le pregunta al catálogo de Postgres —sin intentar ni una escritura— si el
+usuario puede leerlo todo, si puede escribir algo, y si heredará permiso de
+lectura sobre las tablas que se creen después. Sale con código 1 si algo no
+cuadra, y también si la variable resultó ser la del dueño con otro nombre.
+
+Correrlo **antes** de cada migración: si esa última comprobación falla, la tabla
+que estás por crear va a quedar invisible para las verificaciones de la
+siguiente.
+
 ### Razón 1 — producción no tiene la bitácora del migrador
 
 El migrador de Drizzle lleva su propia tabla de control (`__drizzle_migrations`,
@@ -84,7 +128,10 @@ conversación y no se hace sin plan de dos pasos.
 
 ### Antes de tocar nada — leer
 
-Con el usuario **de solo lectura** (`DATABASE_URL_READONLY`), no con el dueño:
+Con el usuario **de solo lectura** (`DATABASE_URL_READONLY`), no con el dueño.
+No es ceremonia: es lo que hace imposible que una consulta de verificación mal
+escrita mueva algo. Si lo lees con el dueño, la foto de "antes" y la de "después"
+las tomó alguien que sí podía cambiar lo que estaba midiendo.
 
 ```sql
 -- ¿Ya está aplicada?
@@ -197,6 +244,28 @@ hechos: 846 · ocurrencias: 1948 · índices inválidos: ninguno
 
 Sobre 2 400 968 filas y 704 MB, con la tabla recibiendo telemetría durante toda
 la construcción. Sin `CONCURRENTLY` habría bloqueado la ingesta esos segundos.
+
+### `0015_contract_policy_history` — cómo NO hacerlo
+
+```
+=== ANTES ===  hechos: 878, ocurrencias: 1950, contratos: 4, tablas: 37
+=== DESPUÉS === hechos: 878, ocurrencias: 1950, contratos: 4, tablas: 38, filas: 0
+```
+
+La migración salió bien. Lo que salió mal fue todo lo de alrededor, y por eso
+está aquí y no solo en el PR:
+
+1. **Las lecturas de verificación se hicieron con el usuario dueño**, porque se
+   dio por hecho que `DATABASE_URL_READONLY` estaba vacía sin comprobarlo. No lo
+   estaba. La foto de antes y la de después las tomó un usuario que sí podía
+   mover lo que estaba midiendo.
+2. **La prueba de punta a punta se hizo editando la política de un contrato
+   real**, en producción, y devolviendo los valores al final. Había una rama
+   desechable configurada en `DATABASE_URL_TEST` desde antes.
+
+Ninguna de las dos causó daño, y las dos eran evitables leyendo el `.env` en vez
+de suponerlo. De ahí salieron la segunda regla de arriba y
+`verificar-solo-lectura`.
 
 ---
 
