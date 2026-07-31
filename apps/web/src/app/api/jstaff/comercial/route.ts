@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 
 function back(request: Request, params: Record<string, string>) {
   const url = new URL("/jstaff/comercial", request.url);
@@ -10,6 +11,9 @@ function back(request: Request, params: Record<string, string>) {
 }
 
 export async function POST(request: Request) {
+  const g = await exigir(request, { tipo: "jstaff" }, { redirigirA: "/jstaff/comercial" });
+  if (!g.ok) return g.respuesta;
+
   const formData = await request.formData();
   const action = String(formData.get("action") ?? "authorize").trim();
   const clientSlug = String(formData.get("clientSlug") ?? "").trim();

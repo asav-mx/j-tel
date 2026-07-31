@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 
 export async function POST(request: Request) {
+  const g = await exigir(request, { tipo: "jstaff" }, { redirigirA: "/jstaff/verificacion" });
+  if (!g.ok) return g.respuesta;
+
   const form = await request.formData();
   const contractId = String(form.get("contractId") ?? "").trim();
   const serviceDate = String(form.get("serviceDate") ?? "").trim();

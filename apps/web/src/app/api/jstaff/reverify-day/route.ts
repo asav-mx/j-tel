@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 import { getUmbrellaConfig } from "@/lib/umbrella-config";
 import { VerificationService } from "@jtel/services";
 
@@ -38,6 +39,16 @@ function jsonErr(error: string, status = 400) {
 export async function POST(request: Request) {
   const formData = await request.formData();
   const asJson = wantsJson(request, formData);
+
+  // Después de leer el cuerpo —formData solo se puede consumir una vez— y
+  // antes de tocar el motor. Contesta en el estilo que pidió la petición.
+  const g = await exigir(
+    request,
+    { tipo: "jstaff" },
+    asJson ? "json" : { redirigirA: "/jstaff/soporte" },
+  );
+  if (!g.ok) return g.respuesta;
+
   const contractId = String(formData.get("contractId") ?? "").trim();
   const serviceDate = String(formData.get("serviceDate") ?? "").trim();
   const keepRaw = String(formData.get("keepEvidence") ?? "1").trim();

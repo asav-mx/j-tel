@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 import {
   classifyOne,
   buildSummary,
@@ -16,13 +17,15 @@ export const maxDuration = 120;
  * Reporte de solo lectura. No escribe en saveFact, no reverifica,
  * no llama a Umbrella. Las cubetas son etiquetas internas de análisis.
  *
- * TODO(seguridad): Este endpoint expone razonamiento confidencial del carrier
- * (cubetas, señales, métricas internas) y debe restringirse a J-Staff.
- * Hoy ningún endpoint ni página de /jstaff tiene protección de acceso
- * (getJStaffMemberships existe en auth.ts pero nadie la invoca).
- * Cuando se implemente auth para J-Staff, aplicarlo aquí también.
+ * Expone razonamiento confidencial del carrier —cubetas, señales, métricas
+ * internas— así que es de J-Staff y nada más. El TODO(seguridad) que pedía
+ * esto queda saldado con la guardia de abajo; las PÁGINAS de /jstaff siguen
+ * sin protección y van en su propio carril.
  */
 export async function GET(request: Request) {
+  const g = await exigir(request, { tipo: "jstaff" }, "json");
+  if (!g.ok) return g.respuesta;
+
   const url = new URL(request.url);
   const contractId = url.searchParams.get("contractId")?.trim();
   const from = url.searchParams.get("from")?.trim();

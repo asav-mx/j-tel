@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 
 export async function POST(request: Request) {
+  const g = await exigir(request, { tipo: "jstaff" }, "json");
+  if (!g.ok) return g.respuesta;
+
   const body = await request.json();
   const { profileId, fromDate, toDate } = body as {
     profileId: string;

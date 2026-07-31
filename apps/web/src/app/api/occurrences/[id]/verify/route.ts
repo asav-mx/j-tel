@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 import { getUmbrellaConfig } from "@/lib/umbrella-config";
 import { VerificationService } from "@jtel/services";
 
@@ -20,6 +21,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const g = await exigir(request, { tipo: "jstaff" }, { redirigirA: "/jstaff/soporte" });
+  if (!g.ok) return g.respuesta;
+
   const { id } = await params;
   const repos = getRepos();
   const service = new VerificationService(repos, getUmbrellaConfig());
