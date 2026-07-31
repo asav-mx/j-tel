@@ -1,3 +1,19 @@
+/**
+ * ⛔ SOLO PARA BASES LOCALES O DESECHABLES. Nunca contra producción.
+ *
+ * Producción no tiene la tabla de bitácora del migrador: nunca ha corrido ahí.
+ * Este script vería una base virgen e intentaría aplicar las migraciones desde
+ * la 0000 contra una base con 37 tablas y 846 hechos sellados — revienta en la
+ * primera y deja su bitácora a medio escribir.
+ *
+ * Además envuelve cada migración en una transacción (`session.transaction`), y
+ * hay sentencias que no pueden ir en una: la 0014 lleva
+ * `CREATE INDEX CONCURRENTLY`, que es lo que evita bloquear la ingesta de
+ * telemetría mientras el índice se construye.
+ *
+ * El procedimiento real —el que se usa— está en
+ * `docs/Procedimiento-Migraciones.md`.
+ */
 import { sql } from "drizzle-orm";
 import { existsSync } from "node:fs";
 import { createDb } from "./index.js";
