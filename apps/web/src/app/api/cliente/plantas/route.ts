@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 
 /** Genera un código corto y estable a partir del nombre: "Planta Norte 2" → "PLANTA-NORTE-2" */
 function codify(text: string): string {
@@ -24,6 +25,11 @@ function backToPlantas(request: Request, slug: string, params: Record<string, st
 export async function POST(request: Request) {
   const formData = await request.formData();
   const clientSlug = String(formData.get("clientSlug") ?? "").trim();
+
+  // Ancla de todo lo que sigue: las comprobaciones de pertenencia que esta
+  // ruta ya hacía comparaban contra el cliente que decía el cuerpo.
+  const g = await exigir(request, { tipo: "cliente", slug: clientSlug }, { redirigirA: "/cliente" });
+  if (!g.ok) return g.respuesta;
   const action = String(formData.get("action") ?? "plant");
 
   const repos = getRepos();

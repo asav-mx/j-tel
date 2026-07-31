@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { loadJornada } from "@/lib/jornada-data";
+import { exigir } from "@/lib/guardia-api";
 import type { OperationalScope } from "@jtel/domain";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,10 @@ export async function GET(request: Request) {
       { status: 400 },
     );
   }
+
+  // Lectura de la operación de una planta: solo su cliente.
+  const g = await exigir(request, { tipo: "cliente", slug: account }, "json");
+  if (!g.ok) return g.respuesta;
 
   const scope: OperationalScope = plantId
     ? { kind: "plant", plantId }

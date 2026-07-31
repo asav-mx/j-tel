@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 import {
   createServiceProfileSchema,
   geofenceMatchesScope,
@@ -33,6 +34,11 @@ async function memberPlantIdsForScope(
 export async function POST(request: Request) {
   const formData = await request.formData();
   const clientSlug = String(formData.get("clientSlug") ?? "").trim();
+
+  // Ancla de todo lo que sigue: las comprobaciones de pertenencia que esta
+  // ruta ya hacía comparaban contra el cliente que decía el cuerpo.
+  const g = await exigir(request, { tipo: "cliente", slug: clientSlug }, { redirigirA: "/cliente" });
+  if (!g.ok) return g.respuesta;
   const action = String(formData.get("action") ?? "create").trim();
   const plantId = String(formData.get("plantId") ?? "").trim();
   const plantGroupId = String(formData.get("plantGroupId") ?? "").trim();
@@ -59,6 +65,21 @@ export async function POST(request: Request) {
     const redirectScope = profileId ? await scopeForProfile(profileId) : formScope;
     if (!profileId || !fromDate || !toDate) {
       return back(request, client.slug, redirectScope, { error: "Elige perfil y rango de fechas." });
+    }
+
+    /*
+     * Pertenecer a la cuenta y ser dueño del recurso son preguntas distintas.
+     *
+     * La guardia de arriba demuestra que perteneces a este cliente; no dice
+     * nada del `profileId` que mandas. `generateForProfile` recibe el id
+     * crudo y no filtra por cuenta, así que sin esto un cliente autenticado
+     * podía generar ocurrencias sobre el perfil de OTRO cliente — creando
+     * servicios esperados en una operación ajena. Es la misma lección que
+     * dejó `carrier/assign`.
+     */
+    const perfilDestino = await repos.profiles.findById(profileId);
+    if (!perfilDestino || perfilDestino.contract?.clientAccountId !== client.id) {
+      return back(request, client.slug, formScope, { error: "Perfil no encontrado." });
     }
     // Mediodía UTC vía la función canónica: construir la fecha a mano la
     // resolvería en la zona del proceso, que es el defecto que corrió los

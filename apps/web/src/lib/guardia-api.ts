@@ -25,6 +25,13 @@ import { getRepos } from "@/lib/db";
 export type Audiencia =
   | { tipo: "jstaff" }
   | { tipo: "cliente"; slug: string }
+  /**
+   * El cliente dueño, identificado por id en vez de por slug. Para rutas que
+   * no reciben cuenta: la cuenta se DERIVA del recurso —el contrato de un
+   * perfil, por ejemplo— y se comprueba contra ella. Preguntar por el slug
+   * ahí sería volver a dejar que la petición eligiera contra quién se compara.
+   */
+  | { tipo: "cliente-por-id"; accountId: string }
   | { tipo: "carrier"; slug: string }
   /** El carrier dueño, o J-Staff operando de su parte. */
   | { tipo: "carrier-o-jstaff"; slug: string };
@@ -102,6 +109,14 @@ async function decidir(identidad: Identidad, audiencia: Audiencia): Promise<Deci
     case "cliente":
       return {
         permitido: await perteneceA(identidad, audiencia.slug, "client"),
+        motivo: "No perteneces a esa cuenta de cliente.",
+      };
+
+    case "cliente-por-id":
+      return {
+        permitido:
+          Boolean(audiencia.accountId) &&
+          canAccessClientAccount(identidad.memberships, audiencia.accountId),
         motivo: "No perteneces a esa cuenta de cliente.",
       };
 
