@@ -25,3 +25,12 @@ export {
   type CausaDeDiferencia,
 } from "./deadline-diff.js";
 export { routeWindowSizing, windowForOccurrence } from "./ventana-ocurrencia.js";
+export {
+  huecosDeVentana,
+  resumirUnidadDia,
+  HUECO_MINUTOS_POR_DEFECTO,
+  SALTO_KMH_POR_DEFECTO,
+  type BloqueObservado,
+  type ResumenUnidadDia,
+  type HuecosDeVentana,
+} from "./resumen-telemetria.js";
