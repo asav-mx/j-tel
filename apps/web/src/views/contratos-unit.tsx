@@ -528,9 +528,21 @@ export async function ContratosUnitView({
                     </button>
                   </ConfirmForm>
 
+                  <p className="border-t border-white/5 pt-2 text-sm">
+                    <a
+                      href={`/cliente/contrato/${c.id}?account=${encodeURIComponent(client.slug)}`}
+                      className="text-[var(--accent)] hover:underline"
+                    >
+                      Abrir la oficina del contrato →
+                    </a>
+                    <span className="ml-2 text-xs text-[var(--muted)]">
+                      cada regla explicada, medida contra la operación real
+                    </span>
+                  </p>
+
                   <details className="border-t border-white/5 pt-2">
-                    <summary className="cursor-pointer text-sm font-medium text-[var(--accent)]">
-                      Ver / editar política (ventana GPS, tolerancia, ruta…)
+                    <summary className="cursor-pointer text-sm text-[var(--muted)]">
+                      Editar la política en crudo
                     </summary>
                     <ConfirmForm
                       action="/api/cliente/contratos"
