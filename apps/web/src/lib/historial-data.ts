@@ -223,9 +223,8 @@ export async function cargarServiciosDeUnidad(entrada: {
  *   1 día   1762 ms → **905 ms**
  *   3 días  4908 ms → **1140 ms**
  *
- * Con el tope levantado a mano solo para medir, 7 días dan 1392 ms y 14 días
- * 2231 ms. `MAX_DIAS` sigue en 3: subirlo es decisión de producto, no un
- * efecto secundario de esta conexión.
+ * Con eso `MAX_DIAS` subió a 31 — el mes que pide la auditoría. Los números de
+ * ese alcance viven junto a la constante, en `historial-periodo.ts`.
  */
 export async function cargarDiasDeUnidad(entrada: {
   carrierAccountId: string;

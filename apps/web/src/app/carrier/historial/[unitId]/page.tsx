@@ -188,16 +188,22 @@ export default async function CarrierUnidadHistorialPage({
             Solo ese día
           </Link>
           {/*
-            El rango de varios días cuesta segundos de espera —la telemetría se
-            lee por carrier— así que el atajo lo dice antes de que lo piquen.
-            Un día suelto, que es como abre la pantalla, es inmediato.
+            El aviso de "tarda unos segundos" se cayó con el motivo que lo
+            sostenía: la consulta por unidad dejó el mes en un par de segundos.
+            Un atajo que advierte de una espera que ya no ocurre entrena al
+            usuario a no creerle a los avisos.
           */}
+          <Link
+            href={href({ desde: restarDias(periodo.fechaHasta, 6) })}
+            className={atajo(periodo.fechas.length === 7)}
+          >
+            Últimos 7 días
+          </Link>
           <Link
             href={href({ desde: restarDias(periodo.fechaHasta, MAX_DIAS - 1) })}
             className={atajo(periodo.fechas.length === MAX_DIAS)}
           >
-            Últimos {MAX_DIAS} días{" "}
-            <span className="text-[var(--tenue)]">· tarda unos segundos</span>
+            Último mes <span className="text-[var(--tenue)]">· {MAX_DIAS} días</span>
           </Link>
           <Link
             href={href({ horaDesde: "00:00", horaHasta: "00:00" })}
@@ -215,9 +221,8 @@ export default async function CarrierUnidadHistorialPage({
             <span className="text-[var(--azul)]">Aviso del sistema.</span> Pediste{" "}
             <span className={num}>{periodo.diasPedidos} días</span> y se están mostrando los{" "}
             <span className={num}>{periodo.fechas.length}</span> más recientes. El historial se
-            consulta de a {MAX_DIAS} días: hoy la telemetría se lee por carrier, y pedir más
-            deja la pantalla esperando tanto que la respuesta deja de servir. Es un tope
-            temporal, no el alcance de la vista.
+            consulta de a {MAX_DIAS} días — un mes, que es el rango con el que se audita.
+            Para ver más atrás, mueve la fecha de cierre hacia atrás y pide el mes anterior.
           </div>
         ) : null}
 

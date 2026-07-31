@@ -47,13 +47,22 @@ describe("el rango de días", () => {
   });
 
   it("recorta al tope y deja dicho cuánto recortó — nunca en silencio", () => {
-    const p = resolverPeriodo({ desde: "2026-07-01", hasta: "2026-07-31" });
+    // El rango pedido tiene que EXCEDER el tope para que esto pruebe algo. Con
+    // uno de exactamente MAX_DIAS la prueba pasaría verde sin ejercer el
+    // recorte, que es justo lo que viene a cuidar.
+    const p = resolverPeriodo({ desde: "2026-05-01", hasta: "2026-07-31" });
     expect(p.fechas).toHaveLength(MAX_DIAS);
-    expect(p.diasPedidos).toBe(31);
-    expect(p.diasRecortados).toBe(31 - MAX_DIAS);
+    expect(p.diasPedidos).toBe(92);
+    expect(p.diasRecortados).toBe(92 - MAX_DIAS);
     // Se conservan los más recientes: lo último que hizo la unidad es lo
     // primero que el carrier necesita ver.
     expect(p.fechas[0]).toBe("2026-07-31");
+  });
+
+  it("un mes exacto pasa entero, sin recorte", () => {
+    const p = resolverPeriodo({ desde: "2026-07-01", hasta: "2026-07-31" });
+    expect(p.fechas).toHaveLength(31);
+    expect(p.diasRecortados).toBe(0);
   });
 
   it("respeta un tope más chico cuando la vista lo pide", () => {

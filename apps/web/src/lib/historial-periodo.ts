@@ -18,32 +18,29 @@ import { addDaysIso, todayIso } from "./date-range";
 /**
  * Tope de días por consulta.
  *
- * Hoy la telemetría se lee por carrier y se filtra por unidad en memoria: no
- * hay índice por `unit_id`. Medido el 2026-07-30 contra un carrier de 82
- * unidades, tomando el peor de tres corridas:
+ * UN MES, porque es el rango con el que se audita: los ciclos de facturación,
+ * las quejas y las conversaciones con el cliente se cuentan por mes, y un tope
+ * de tres días obligaba a hacer diez consultas para revisar uno.
  *
- *   1 día — 2.6 s     2 días — 9.6 s     3 días — 16.6 s     7 días — 18.4 s
+ * Antes el número lo ponía el costo, no la pregunta. La telemetría se leía por
+ * carrier y se filtraba por unidad en memoria, así que tres días tardaban
+ * entre 8 y 17 segundos y el tope existía para que la pantalla no se sintiera
+ * rota. Con la consulta por unidad —índice `(carrier_account_id, unit_id,
+ * recorded_at)`— eso se acabó. Medido con el tope ya en 31, contra un carrier
+ * de 82 unidades, mediana de cinco cargas en caliente de punta a punta:
  *
- * El costo NO es lineal ni estable: el mismo rango de 3 días midió entre 8.1
- * y 16.6 s según cómo respondiera la base. Por eso el tope no se calcula, se
- * mide.
+ *   1 día — 823 ms     7 días — 1.1 s     14 días — 1.5 s     31 días — 2.1 s
  *
- * Se eligió TRES y no siete a sabiendas de que se ve menos historia: una
- * pantalla de 18 segundos se siente rota, y una respuesta que llega tarde no
- * es una respuesta. Es un tope temporal, no el alcance que la vista merece.
+ * El mes completo cuesta menos que lo que costaba UN día antes del arreglo.
  *
- * El caso de todos los días —un día suelto— cuesta 2.6 s, y ese es el que la
- * pantalla abre por default. El rango de varios días es una elección
- * explícita del usuario, y el atajo que la ofrece dice lo que cuesta.
- *
- * Lo levanta una consulta por unidad en `@jtel/db` con índice
- * `(carrier_account_id, unit_id, recorded_at)` — anotado como tarea de base
- * aparte. Cuando exista, este número sube y el comentario se cae.
+ * El tope ya no es un freno de rendimiento: es la ventana que la pregunta
+ * pide. Sigue existiendo porque un rango sin límite es una invitación a pedir
+ * dos años por accidente, no porque un mes cueste caro.
  *
  * El tope NUNCA es silencioso: la pantalla dice cuántos días pidió el usuario
  * y cuántos está viendo.
  */
-export const MAX_DIAS = 3;
+export const MAX_DIAS = 31;
 
 export type Periodo = {
   /** Días civiles del periodo, del más reciente al más antiguo. */
