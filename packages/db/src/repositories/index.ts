@@ -2,6 +2,7 @@ import { eq, and, or, gte, lte, isNull, inArray, sql, ne, desc } from "drizzle-o
 import {
   computeExpectedDeadline,
   computeEvidenceWindow,
+  contractPolicySchema,
   suggestProfileCode,
 } from "@jtel/domain";
 import type {
@@ -41,6 +42,7 @@ import {
   trips,
   complianceFacts,
   complianceFactHistory,
+  contractPolicyHistory,
   ledgerEntries,
   evidencePoints,
   userMemberships,
@@ -1429,13 +1431,105 @@ export class ContractRepository {
     return contract!;
   }
 
-  async updatePolicy(id: string, policy: ContractPolicy) {
-    const [contract] = await this.db
-      .update(serviceContracts)
-      .set({ policy, updatedAt: new Date() })
-      .where(eq(serviceContracts.id, id))
-      .returning();
-    return contract!;
+  /**
+   * JSON con las llaves ordenadas, para comparar dos políticas.
+   *
+   * `JSON.stringify` depende del orden de las llaves, y la misma política
+   * llega con órdenes distintos según de dónde venga: Postgres guarda un jsonb
+   * con SU orden (por longitud y luego por bytes) y zod devuelve el del
+   * esquema. Sin canonizar, dos objetos idénticos se dan por distintos y cada
+   * guardado registraría una edición fantasma.
+   */
+  private static canonizar(valor: unknown): unknown {
+    if (Array.isArray(valor)) return valor.map((v) => ContractRepository.canonizar(v));
+    if (valor && typeof valor === "object") {
+      return Object.fromEntries(
+        Object.keys(valor as object)
+          .sort()
+          .map((k) => [k, ContractRepository.canonizar((valor as Record<string, unknown>)[k])]),
+      );
+    }
+    return valor;
+  }
+
+  /**
+   * Cambia la política del contrato y deja el registro de la edición.
+   *
+   * Las dos escrituras van en UNA transacción, y el registro se hace aquí y no
+   * en quien llama a propósito: si dejar rastro fuera responsabilidad del
+   * llamador, tarde o temprano alguien agrega un camino de edición y se olvida.
+   * Así editar sin registrar deja de ser posible.
+   *
+   * La política nueva aplica solo hacia adelante. Ningún hecho ya sellado se
+   * toca: cada uno congeló su propia foto al verificarse.
+   */
+  async updatePolicy(
+    id: string,
+    policy: ContractPolicy,
+    edicion: { actorKind: string; actorId?: string | null; note?: string | null },
+  ) {
+    return this.db.transaction(async (tx) => {
+      const actual = await tx.query.serviceContracts.findFirst({
+        where: eq(serviceContracts.id, id),
+        columns: { policy: true },
+      });
+      if (!actual) throw new Error(`updatePolicy: contrato ${id} no encontrado`);
+
+      const [contract] = await tx
+        .update(serviceContracts)
+        .set({ policy, updatedAt: new Date() })
+        .where(eq(serviceContracts.id, id))
+        .returning();
+
+      /*
+       * Se compara la política EFECTIVA, no la guardada tal cual.
+       *
+       * Un contrato anterior a una perilla no trae esa llave en su jsonb, pero
+       * el motor la resuelve con el default del esquema al leerla: o sea que
+       * ese default ya era el valor vigente. Comparar en crudo hacía que el
+       * primer guardado de un contrato viejo registrara seis "cambios" que
+       * nadie hizo —«Aprender el ancho de la ventana: sin configurar →
+       * encendido», cuando llevaba encendida desde siempre— y una historia que
+       * arranca con cambios falsos no se vuelve a creer.
+       *
+       * Lo que este registro cuenta son cambios en la LEY, no en cómo se
+       * serializa. Por eso el "antes" que se guarda es el efectivo: es la regla
+       * con la que de verdad se estaba juzgando.
+       *
+       * Y una edición que no cambió nada no genera fila: el formulario manda
+       * las 24 perillas en cada guardado, así que abrir y guardar sin tocar
+       * nada es común. Registrarlo escondería las ediciones que sí cambiaron
+       * algo entre entradas vacías.
+       */
+      const previa = contractPolicySchema.safeParse(actual.policy);
+      const efectivaAntes: ContractPolicy = previa.success ? previa.data : actual.policy;
+
+      const canonico = (p: unknown) => JSON.stringify(ContractRepository.canonizar(p));
+      const huboCambio = canonico(efectivaAntes) !== canonico(policy);
+      if (huboCambio) {
+        await tx.insert(contractPolicyHistory).values({
+          contractId: id,
+          policyBefore: efectivaAntes,
+          policyAfter: policy,
+          actorKind: edicion.actorKind,
+          actorId: edicion.actorId ?? null,
+          note: edicion.note?.trim() ? edicion.note.trim() : null,
+        });
+      }
+
+      return contract!;
+    });
+  }
+
+  /**
+   * Las ediciones de política de un contrato, de la más reciente a la más
+   * antigua. Solo lectura: nada de aquí alimenta al motor.
+   */
+  async getPolicyHistory(contractId: string) {
+    return this.db.query.contractPolicyHistory.findMany({
+      where: eq(contractPolicyHistory.contractId, contractId),
+      orderBy: (h, { desc }) => [desc(h.changedAt)],
+    });
   }
 
   async deleteDraft(id: string, clientAccountId: string) {
