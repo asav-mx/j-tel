@@ -22,7 +22,8 @@
     "test": "TZ=UTC vitest run",
     "test:integration": "TZ=UTC vitest run --config vitest.integration.config.ts",
     "corregir-deadlines": "tsx src/corregir-deadlines.ts",
-    "verificar-resumen": "tsx src/verificar-resumen-telemetria.ts"
+    "verificar-resumen": "tsx src/verificar-resumen-telemetria.ts",
+    "verificar-solo-lectura": "tsx src/verificar-solo-lectura.ts"
   },
   "dependencies": {
     "@jtel/domain": "workspace:*",
