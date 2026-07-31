@@ -85,6 +85,29 @@ export function fechaDeIsoSinAnio(fechaIso: string, timeZone: string = JTTEL_TZ)
 }
 
 /**
+ * Instante completo para marcas de sellado: `2026-07-24 06:50:00`.
+ *
+ * Fecha y hora juntas, en ese orden y sin abreviar, porque una marca de sello
+ * es evidencia: una hora suelta no dice de qué día se está hablando y un
+ * servicio nocturno cruza la medianoche.
+ */
+export function instanteSellado(d: Date, timeZone: string = JTTEL_TZ): string {
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(d);
+  const de = (tipo: Intl.DateTimeFormatPartTypes) =>
+    partes.find((p) => p.type === tipo)?.value ?? "";
+  return `${de("year")}-${de("month")}-${de("day")} ${de("hour")}:${de("minute")}:${de("second")}`;
+}
+
+/**
  * Una duración, escrita como duración.
  *
  * Por debajo de una hora se escribe en minutos con un decimal cuando el
