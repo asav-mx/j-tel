@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 import { parseOperationalScope, operationalScopeColumns } from "@jtel/domain";
 import { configApiBack } from "@/lib/config-api-back";
 
@@ -17,6 +18,11 @@ function back(
 export async function POST(request: Request) {
   const formData = await request.formData();
   const clientSlug = String(formData.get("clientSlug") ?? "").trim();
+
+  // Ancla de todo lo que sigue: las comprobaciones de pertenencia que esta
+  // ruta ya hacía comparaban contra el cliente que decía el cuerpo.
+  const g = await exigir(request, { tipo: "cliente", slug: clientSlug }, { redirigirA: "/cliente" });
+  if (!g.ok) return g.respuesta;
   const plantId = String(formData.get("plantId") ?? "").trim();
   const plantGroupId = String(formData.get("plantGroupId") ?? "").trim();
   const action = String(formData.get("action") ?? "").trim();

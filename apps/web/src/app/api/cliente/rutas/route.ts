@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 import { parseNumber } from "@/lib/geo";
 import { parseKmlWaypoints } from "@/lib/kml";
 import { parseOperationalScope, operationalScopeColumns } from "@jtel/domain";
@@ -66,6 +67,11 @@ export async function POST(request: Request) {
     const plantId = String(formData.get("plantId") ?? "").trim();
     const plantGroupId = String(formData.get("plantGroupId") ?? "").trim();
     const action = String(formData.get("action") ?? "").trim();
+
+    // Ancla de todo lo que sigue: las comprobaciones de pertenencia que esta
+    // ruta ya hacía comparaban contra el cliente que decía el cuerpo.
+    const g = await exigir(request, { tipo: "cliente", slug: clientSlug }, { redirigirA: "/cliente" });
+    if (!g.ok) return g.respuesta;
 
     const repos = getRepos();
     const client = await repos.accounts.findBySlug(clientSlug);
