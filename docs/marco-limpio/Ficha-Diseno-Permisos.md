@@ -1,6 +1,6 @@
 # Ficha — Diseño de permisos: rol × alcance
 
-**Fecha:** 31 de julio de 2026 · **Estado:** diseño, pendiente de confirmar §2.3
+**Fecha:** 31 de julio de 2026 · **Estado:** diseño, confirmado
 **Gobierna:** Pieza 4 del `Marco-Limpio-J-Telemetry-MAESTRO.md`. Si algo aquí
 choca con el Marco, el Marco gana.
 
@@ -66,14 +66,14 @@ el desmadre de hojas y coordinación que J-Telemetry viene a resolver.
 del campus, pero **cada planta ve solo sus propios pasajeros**. Ahí sí el alcance
 se afina por planta dentro del campus. Hoy no, porque no hay qué separar.
 
-### 2.3 ⚠ Pendiente de confirmar
+### 2.3 Confirmado — un usuario de planta ve todo el campus
 
 La lectura de §2.2 asume que **un usuario de la Planta 20 (dentro del campus) SÍ
 debe ver todos los servicios del campus**, porque son suyos también.
 
-**Asav: confirmar.** Si la respuesta fuera que no —que debe ver solo algo
-recortado— hay que definir *qué* recorte, porque hoy no hay campo que lo
-sostenga.
+**Asav, 31 de julio de 2026: confirmado.** Un usuario de una planta dentro de
+un campus SÍ ve todos los servicios del campus, porque la operación de
+transporte compartido es del campus, no de la planta.
 
 ### 2.4 Compartir entre plantas, configurable
 
