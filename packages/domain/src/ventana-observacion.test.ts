@@ -326,3 +326,125 @@ describe("computeEvidenceWindow", () => {
     expect(v.cappedByMax).toBe(true);
   });
 });
+
+/**
+ * El ancho de la ventana son MINUTOS REALES, no minutos de reloj de pared.
+ *
+ * La versión anterior restaba con `setMinutes`, que es aritmética de
+ * calendario en la zona del PROCESO. Dos días al año eso no es lo mismo: en
+ * el cambio de horario, "tres horas antes" de reloj y "180 minutos antes" de
+ * verdad son instantes distintos. Y como depende de la zona del proceso, la
+ * misma ocurrencia salía con una ventana en la laptop de Juárez y otra en el
+ * cron de Vercel en UTC — la misma familia de bug que corrió 294 hechos a la
+ * hora equivocada.
+ *
+ * La ruta no dura una hora más porque el reloj se atrase. Estas pruebas
+ * blindan eso.
+ */
+describe("la ventana en los días de cambio de horario", () => {
+  const ZONA = "America/Ciudad_Juarez";
+  const politica = contractPolicySchema.parse({
+    toleranceMinutes: 5,
+    routeStrictness: "kml_full",
+  });
+  // 144 medidos × 1.25 = 180 min de "antes". Tres horas exactas, para que el
+  // corrimiento del cambio de horario se vea de un vistazo.
+  const RUTA_DE_TRES_HORAS = { measuredDurationMinutes: 144 };
+
+  const relojDePared = (d: Date) =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: ZONA,
+      dateStyle: "short",
+      timeStyle: "short",
+      hour12: false,
+    }).format(d);
+
+  /** Corre `fn` como si el proceso viviera en `tz`. */
+  const conZonaDelProceso = <T,>(tz: string, fn: () => T): T => {
+    const previa = process.env.TZ;
+    process.env.TZ = tz;
+    try {
+      return fn();
+    } finally {
+      process.env.TZ = previa;
+    }
+  };
+
+  it("el día que el reloj se atrasa, la ventana sigue durando 180 minutos", () => {
+    // 1 de noviembre de 2026: a las 02:00 el reloj vuelve a la 01:00.
+    // Deadline 03:45 de Juárez, ya en horario de invierno.
+    const deadline = new Date("2026-11-01T10:45:00Z");
+
+    // Corrida en la zona del contrato, que es donde la aritmética de
+    // calendario se equivocaba: ahí daba 00:45 local — 240 minutos reales.
+    const v = conZonaDelProceso(ZONA, () =>
+      computeEvidenceWindow(deadline, politica, RUTA_DE_TRES_HORAS),
+    );
+
+    expect(v.beforeMinutes).toBe(180);
+    expect(v.windowStart.toISOString()).toBe("2026-11-01T07:45:00.000Z");
+    expect(deadline.getTime() - v.windowStart.getTime()).toBe(180 * 60_000);
+    // De 01:45 a 03:45 son dos horas de reloj de pared, pero tres reales:
+    // la hora repetida se vive una sola vez y la ventana la cuenta.
+    expect(relojDePared(v.windowStart)).toBe("2026-11-01, 01:45");
+    expect(relojDePared(deadline)).toBe("2026-11-01, 03:45");
+  });
+
+  it("el día que el reloj se adelanta, tampoco se acorta", () => {
+    // 8 de marzo de 2026: a las 02:00 el reloj salta a las 03:00.
+    // Deadline 05:45 de Juárez, ya en horario de verano.
+    const deadline = new Date("2026-03-08T11:45:00Z");
+
+    // En la zona del contrato, la aritmética de calendario abría a las 03:45
+    // local: 120 minutos reales de ventana en vez de 180.
+    const v = conZonaDelProceso(ZONA, () =>
+      computeEvidenceWindow(deadline, politica, RUTA_DE_TRES_HORAS),
+    );
+
+    expect(v.beforeMinutes).toBe(180);
+    expect(v.windowStart.toISOString()).toBe("2026-03-08T08:45:00.000Z");
+    expect(deadline.getTime() - v.windowStart.getTime()).toBe(180 * 60_000);
+    // De 01:45 a 05:45 son cuatro horas de reloj de pared y tres reales:
+    // la hora que no existió no se observa.
+    expect(relojDePared(v.windowStart)).toBe("2026-03-08, 01:45");
+    expect(relojDePared(deadline)).toBe("2026-03-08, 05:45");
+  });
+
+  it("la zona del proceso no mueve la ventana", () => {
+    // El candado de verdad: con la aritmética de calendario, esta misma
+    // ocurrencia daba 06:45Z corriendo en una máquina con zona de Juárez y
+    // 07:45Z corriendo en UTC. La ventana no puede depender de dónde corrió
+    // el generador.
+    const deadline = new Date("2026-11-01T10:45:00Z");
+
+    const inicios = ["UTC", ZONA, "Asia/Tokyo"].map((tz) =>
+      conZonaDelProceso(tz, () =>
+        computeEvidenceWindow(deadline, politica, RUTA_DE_TRES_HORAS).windowStart.toISOString(),
+      ),
+    );
+
+    expect(new Set(inicios).size).toBe(1);
+    expect(inicios[0]).toBe("2026-11-01T07:45:00.000Z");
+  });
+
+  it("sin hechos de la ruta tampoco depende de la zona del proceso", () => {
+    // La ventana de política —la que usan la torre y la ficha— pasa por la
+    // misma aritmética, así que hereda el mismo blindaje. Y el caso es peor
+    // de lo que parece: con calendario local, restarle 60 minutos a un
+    // deadline de 03:45 del día que el reloj salta caía en las 02:45 que no
+    // existieron, JavaScript lo empujaba de vuelta a 03:45 y la ventana
+    // quedaba de ANCHO CERO — el motor se quedaba ciego el día entero.
+    const deadline = new Date("2026-03-08T09:45:00Z");
+
+    const inicios = ["UTC", ZONA, "Asia/Tokyo"].map((tz) =>
+      conZonaDelProceso(tz, () =>
+        computeEvidenceWindow(deadline, politica).windowStart.toISOString(),
+      ),
+    );
+
+    expect(new Set(inicios).size).toBe(1);
+    expect(inicios[0]).toBe("2026-03-08T08:45:00.000Z");
+    // 60 minutos reales, no un instante vacío.
+    expect(deadline.getTime() - new Date(inicios[0]!).getTime()).toBe(60 * 60_000);
+  });
+});
