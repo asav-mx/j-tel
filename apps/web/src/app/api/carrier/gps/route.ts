@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 import { isEncryptionConfigured } from "@jtel/db";
 
 function back(request: Request, slug: string, params: Record<string, string>) {
@@ -18,6 +19,15 @@ export async function POST(request: Request) {
   const userId = String(formData.get("userId") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const baseUrl = String(formData.get("baseUrl") ?? "").trim() || null;
+
+  // Sobrescribir credenciales de GPS deja a un carrier sin ingesta, así que
+  // esta puerta se cierra en la primera tanda aunque no sea de J-Staff.
+  const g = await exigir(
+    request,
+    { tipo: "carrier-o-jstaff", slug: carrierSlug },
+    { redirigirA: "/carrier/gps" },
+  );
+  if (!g.ok) return g.respuesta;
 
   const repos = getRepos();
   const carrier = await repos.accounts.findBySlug(carrierSlug);

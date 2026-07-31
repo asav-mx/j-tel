@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 
 /** Convierte cualquier nombre en un slug válido: "Mi Empresa S.A." → "mi-empresa-sa" */
 function slugify(text: string): string {
@@ -22,6 +23,9 @@ function backToForm(request: Request, params: Record<string, string>) {
 }
 
 export async function POST(request: Request) {
+  const g = await exigir(request, { tipo: "jstaff" }, { redirigirA: "/jstaff/cuentas" });
+  if (!g.ok) return g.respuesta;
+
   const formData = await request.formData();
   const name = String(formData.get("name") ?? "").trim();
   const rawType = String(formData.get("type") ?? "client");

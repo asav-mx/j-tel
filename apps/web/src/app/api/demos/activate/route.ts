@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 
 export async function POST(request: Request) {
+  // Purga/operación de J-Staff: se comprueba ANTES de leer o tocar nada.
+  const g = await exigir(request, { tipo: "jstaff" }, { redirigirA: "/jstaff/demos" });
+  if (!g.ok) return g.respuesta;
+
   const form = await request.formData();
   const templateId = form.get("templateId") as string;
   const repos = getRepos();

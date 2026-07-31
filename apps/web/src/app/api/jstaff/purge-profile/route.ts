@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -9,6 +10,10 @@ export const maxDuration = 60;
  * Confirmación: código exacto del perfil + frase "PURGAR".
  */
 export async function POST(request: Request) {
+  // Purga/operación de J-Staff: se comprueba ANTES de leer o tocar nada.
+  const g = await exigir(request, { tipo: "jstaff" }, { redirigirA: "/jstaff/soporte" });
+  if (!g.ok) return g.respuesta;
+
   const formData = await request.formData();
   const profileId = String(formData.get("profileId") ?? "").trim();
   const confirmar = String(formData.get("confirmar") ?? "").trim();
