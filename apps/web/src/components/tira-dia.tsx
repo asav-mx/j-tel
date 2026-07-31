@@ -1,8 +1,9 @@
-import { posicionEnFranja, type DiaDeUnidad, type Segmento } from "@/lib/historial-unidad";
+import { posicionEnFranja, type ClaseSegmento } from "@/lib/historial-unidad";
+import { type ClaseDeFlota } from "@/lib/historial-flota";
 import { relojCorto } from "@/lib/formato-tiempo";
 
 /**
- * La tira de un día: la franja observada, dibujada a escala.
+ * La tira de una franja, dibujada a escala.
  *
  * Los tres colores de resultado NO aparecen aquí, y es deliberado. Todo lo que
  * la tira dibuja es observación —se movió, no se movió, no se sabe— y el skill
@@ -15,28 +16,53 @@ import { relojCorto } from "@/lib/formato-tiempo";
  * afirmar. El hueco se dibuja como lo que es: ausencia. Cuando ese hueco sí
  * tumbó un servicio, el ámbar aparece en el chip del servicio, que es donde
  * corresponde.
+ *
+ * La misma tira sirve a dos resoluciones: la flota dibuja dos clases
+ * (observado / sin dato) porque a cincuenta y nueve renglones el matiz no se
+ * lee, y la unidad dibuja las tres. Es un solo componente y no dos parecidos:
+ * el dibujo es el mismo, lo que cambia es cuánto puede afirmar la pantalla.
  */
+
+export type ClaseDeTira = ClaseSegmento | ClaseDeFlota;
+
+export type TramoDibujable = {
+  clase: ClaseDeTira;
+  desde: Date;
+  hasta: Date;
+};
+
+export type Franja = { desde: Date; hasta: Date };
 
 const RAYADO_HUECO =
   "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(113,128,143,.35) 3px, rgba(113,128,143,.35) 4.5px)";
 
-function estiloDeSegmento(clase: Segmento["clase"]): React.CSSProperties {
-  if (clase === "en_movimiento") return { background: "var(--acero)" };
+function estiloDeSegmento(clase: ClaseDeTira): React.CSSProperties {
+  if (clase === "en_movimiento" || clase === "observado") return { background: "var(--acero)" };
   if (clase === "detenida") return { background: "rgba(122,156,184,.30)" };
   return { background: RAYADO_HUECO, boxShadow: "inset 0 0 0 1px rgba(113,128,143,.25)" };
 }
 
-export const ETIQUETA_CLASE: Record<Segmento["clase"], string> = {
+export const ETIQUETA_CLASE: Record<ClaseDeTira, string> = {
   en_movimiento: "En movimiento",
   detenida: "Detenida",
+  observado: "Con dato",
   sin_dato: "Sin dato",
 };
 
+/** Las tres clases de la vista de unidad. */
+export const CLASES_DE_UNIDAD = ["en_movimiento", "detenida", "sin_dato"] as const;
+/** Las dos de la vista de flota. */
+export const CLASES_DE_FLOTA = ["observado", "sin_dato"] as const;
+
 /** La leyenda va junto a la tira: una tira sin leyenda es un código de colores. */
-export function LeyendaTira() {
+export function LeyendaTira({
+  clases = CLASES_DE_UNIDAD,
+}: {
+  clases?: readonly ClaseDeTira[];
+}) {
   return (
     <div className="flex flex-wrap gap-4 font-[family-name:var(--fuente-mono)] text-[11px] text-[var(--tenue)]">
-      {(["en_movimiento", "detenida", "sin_dato"] as const).map((clase) => (
+      {clases.map((clase) => (
         <span key={clase} className="flex items-center gap-2">
           <i
             aria-hidden
@@ -57,19 +83,21 @@ export type MarcaEnTira = {
 };
 
 export function TiraDia({
-  dia,
+  franja,
+  segmentos,
   marcas = [],
   alto = "h-5",
 }: {
-  dia: DiaDeUnidad;
+  franja: Franja;
+  segmentos: readonly TramoDibujable[];
   marcas?: MarcaEnTira[];
   alto?: string;
 }) {
   return (
     <div className={`relative w-full rounded-[2px] bg-white/[.03] ${alto}`}>
-      {dia.segmentos.map((s, i) => {
-        const izquierda = posicionEnFranja(s.desde, dia.desde, dia.hasta);
-        const derecha = posicionEnFranja(s.hasta, dia.desde, dia.hasta);
+      {segmentos.map((s, i) => {
+        const izquierda = posicionEnFranja(s.desde, franja.desde, franja.hasta);
+        const derecha = posicionEnFranja(s.hasta, franja.desde, franja.hasta);
         return (
           <span
             key={`${s.clase}-${i}`}
@@ -88,7 +116,7 @@ export function TiraDia({
         <span
           key={`marca-${i}`}
           className="absolute -top-1 -bottom-1 w-px bg-white/25"
-          style={{ left: `${posicionEnFranja(m.instante, dia.desde, dia.hasta)}%` }}
+          style={{ left: `${posicionEnFranja(m.instante, franja.desde, franja.hasta)}%` }}
           title={m.etiqueta}
         />
       ))}
@@ -97,7 +125,7 @@ export function TiraDia({
 }
 
 /** El eje de horas de la franja. Cinco marcas: los extremos y los tercios. */
-export function EjeDeFranja({ dia }: { dia: DiaDeUnidad }) {
+export function EjeDeFranja({ franja: dia }: { franja: Franja }) {
   const total = dia.hasta.getTime() - dia.desde.getTime();
   const marcas = [0, 0.25, 0.5, 0.75, 1].map((f) => ({
     porcentaje: f * 100,

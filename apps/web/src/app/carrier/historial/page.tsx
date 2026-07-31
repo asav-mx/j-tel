@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AppNav } from "@/components/ui";
-import { EjeDeFranja, LeyendaTira, TiraDia } from "@/components/tira-dia";
+import { CLASES_DE_FLOTA, EjeDeFranja, LeyendaTira, TiraDia } from "@/components/tira-dia";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { cargarFlota, type FilaDeFlota } from "@/lib/historial-data";
 import { hhMm, resolverPeriodo } from "@/lib/historial-periodo";
@@ -39,7 +39,7 @@ function ordenar(filas: FilaDeFlota[], orden: Orden): FilaDeFlota[] {
     // Las que menos se observaron, primero: son las que piden explicación.
     return copia.sort(
       (a, b) =>
-        b.dia.minutosSinDato - a.dia.minutosSinDato ||
+        b.resumen.minutosSinDato - a.resumen.minutosSinDato ||
         a.unidad.label.localeCompare(b.unidad.label, "es"),
     );
   }
@@ -87,9 +87,9 @@ export default async function CarrierHistorialPage({
     orden,
   );
 
-  const conDato = todas.filter((f) => f.dia.puntos > 0).length;
-  const kmFlota = todas.reduce((t, f) => t + f.dia.kmAproximados, 0);
-  const huecosFlota = todas.reduce((t, f) => t + f.dia.huecos, 0);
+  const conDato = todas.filter((f) => f.resumen.puntos > 0).length;
+  const kmFlota = todas.reduce((t, f) => t + f.resumen.kmAproximados, 0);
+  const huecosFlota = todas.reduce((t, f) => t + f.resumen.huecos, 0);
 
   const href = (cambios: Record<string, string>) => {
     const p = new URLSearchParams();
@@ -233,7 +233,10 @@ export default async function CarrierHistorialPage({
           <h2 className={`text-[11px] tracking-[.14em] text-[var(--tenue)] uppercase ${mono}`}>
             El día de la flota — cada unidad, su franja
           </h2>
-          <LeyendaTira />
+          {/* Dos clases aquí: a este alto de renglón, la diferencia entre
+              moverse y estar detenida no se distingue. Las tres viven en la
+              vista de la unidad, que es donde sí se pueden leer. */}
+          <LeyendaTira clases={CLASES_DE_FLOTA} />
         </div>
 
         <div className="border border-[var(--linea)] bg-[var(--panel)] p-4">
@@ -247,11 +250,14 @@ export default async function CarrierHistorialPage({
             <>
               <div className="grid grid-cols-[minmax(120px,150px)_1fr] gap-3 sm:grid-cols-[minmax(120px,150px)_1fr_150px]">
                 <span />
-                <EjeDeFranja dia={filas[0]!.dia} />
+                {/* El eje sale del periodo, no de la primera fila: todas las
+                    tiras comparten franja, y colgarlo de una fila lo rompía
+                    cuando la búsqueda no dejaba ninguna. */}
+                <EjeDeFranja franja={periodo} />
                 <span className="hidden sm:block" />
               </div>
 
-              {filas.map(({ unidad, dia }) => (
+              {filas.map(({ unidad, resumen, tira }) => (
                 <Link
                   key={unidad.id}
                   href={withAccount(
@@ -270,22 +276,22 @@ export default async function CarrierHistorialPage({
                     </span>
                   </span>
 
-                  <TiraDia dia={dia} />
+                  <TiraDia franja={periodo} segmentos={tira} />
 
                   <span
                     className={`hidden text-right text-[11.5px] text-[var(--tenue)] sm:block ${num}`}
                   >
-                    {dia.puntos === 0 ? (
+                    {resumen.puntos === 0 ? (
                       <span className="text-[var(--tenue)]">sin un punto</span>
                     ) : (
                       <>
                         <span className="text-[var(--acero)]">
-                          {dia.kmAproximados.toFixed(1)} km
+                          {resumen.kmAproximados.toFixed(1)} km
                         </span>{" "}
                         aprox.
                         <br />
-                        {dia.huecos > 0
-                          ? `${dia.huecos} ${dia.huecos === 1 ? "hueco" : "huecos"} · máx ${duracion(dia.huecoMayorMinutos ?? 0)}`
+                        {resumen.huecos > 0
+                          ? `${resumen.huecos} ${resumen.huecos === 1 ? "hueco" : "huecos"} · máx ${duracion(resumen.huecoMayorMinutos ?? 0)}`
                           : "sin huecos"}
                       </>
                     )}
@@ -300,12 +306,14 @@ export default async function CarrierHistorialPage({
           <span className="text-[var(--texto)]">Cómo se lee la tira.</span> Un silencio de más de{" "}
           <span className={num}>{REGLAS_POR_DEFECTO.huecoMinutos} min</span> entre dos lecturas es
           un hueco: no dice que la unidad estuviera apagada, dice que no hay nada que afirmar de
-          ese rato. Se llama <span className="text-[var(--texto)]">detenida</span> a quedarse
-          dentro de <span className={num}>{REGLAS_POR_DEFECTO.radioDetenidaMetros} m</span> por más
-          de <span className={num}>{REGLAS_POR_DEFECTO.detenidaMinutos} min</span>. Los kilómetros
-          son <span className="text-[var(--texto)]">aproximados</span>: los tramos con velocidad
-          implícita mayor a <span className={num}>{SALTO_GPS_KMH} km/h</span> se descartan por ser
-          saltos del equipo, y cada descarte deja un hueco en la suma.
+          ese rato. Aquí la tira solo distingue{" "}
+          <span className="text-[var(--texto)]">con dato</span> de{" "}
+          <span className="text-[var(--texto)]">sin dato</span> — a {todas.length} renglones el
+          matiz entre moverse y estar detenida no se alcanza a leer, y dibujarlo sería teatro.
+          Abre una unidad para ver sus tres clases, con el detalle de dónde se paró y cuánto. Los
+          kilómetros son <span className="text-[var(--texto)]">aproximados</span>: los tramos con
+          velocidad implícita mayor a <span className={num}>{SALTO_GPS_KMH} km/h</span> se
+          descartan por ser saltos del equipo, y cada descarte deja un hueco en la suma.
         </p>
       </div>
     </main>
