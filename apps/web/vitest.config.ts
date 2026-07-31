@@ -16,6 +16,17 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  /*
+   * JSX con el runtime automático. Hasta ahora ninguna prueba renderizaba un
+   * componente, así que nunca se notó: esbuild transformaba el JSX al runtime
+   * clásico —`React.createElement`— y los archivos de este repo no importan
+   * React, porque Next usa el automático. El resultado era un
+   * `ReferenceError: React is not defined` DENTRO del componente, que un
+   * try/catch de producción se traga y convierte en un falso verde.
+   */
+  esbuild: {
+    jsx: "automatic",
+  },
   test: {
     include: ["src/**/*.test.ts"],
   },

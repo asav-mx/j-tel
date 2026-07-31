@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Archivo, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
+import { CLERK_CONFIGURADO } from "@/lib/clerk-estado";
+import { SesionActual } from "@/components/sesion-actual";
 import "./globals.css";
 
 /*
@@ -39,12 +42,27 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
+  const documento = (
     <html
       lang="es-MX"
       className={`${archivo.variable} ${plexSans.variable} ${plexMono.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* Quién soy — en toda pantalla, mientras auth-rbac no esté terminado. */}
+        <SesionActual />
+      </body>
     </html>
   );
+
+  /*
+   * El proveedor solo se monta si hay llave publicable. `ClerkProvider` sin
+   * llave no se degrada: lanza y se lleva todas las pantallas. Envolver
+   * condicionalmente es lo que permite que este commit entre a main antes de
+   * que las llaves estén aprovisionadas en Vercel — sin llaves, la app queda
+   * idéntica a como estaba.
+   */
+  if (!CLERK_CONFIGURADO) return documento;
+
+  return <ClerkProvider>{documento}</ClerkProvider>;
 }

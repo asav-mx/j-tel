@@ -51,6 +51,17 @@ export const OPCIONALES = [
   "UMBRELLA_PASSWORD",
   "SALUD_TOKEN",
   "JTEL_DEV_USER",
+  "JTEL_DEV_TOKEN",
+  /*
+   * Identidad. Opcionales mientras dure el Paso 1 de auth-rbac: la app está
+   * construida para arrancar sin ellas —sin llaves no se monta el proveedor y
+   * la identidad cae al bypass de desarrollo—, así que exigirlas hoy rompería
+   * el env:check de todo el mundo por una integración a medio conectar. Su
+   * ausencia no pasa desapercibida: /quien-soy dice "sin llaves" en la cara.
+   * Cuando /carrier quede cerrado, mover las dos a REQUERIDAS es una línea.
+   */
+  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+  "CLERK_SECRET_KEY",
   /*
    * El canal de alertas. Van como opcionales y no como requeridas mientras la
    * clave de Resend no esté puesta en Vercel: exigirlas hoy rompería el
