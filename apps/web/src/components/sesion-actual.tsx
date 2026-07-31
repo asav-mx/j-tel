@@ -18,6 +18,8 @@ export const ORIGEN_CORTO: Record<OrigenDeIdentidad, string> = {
 };
 
 /**
+ * El distintivo, sin resguardo. Lo envuelve `SesionActual`.
+ *
  * Vive en el layout raíz y no en el encabezado de la app por dos razones: el
  * layout es servidor puro —meterlo en `ui.tsx` arrastraría el SDK de servidor
  * de Clerk al bundle de cliente, porque de ahí importan componentes de
@@ -26,7 +28,7 @@ export const ORIGEN_CORTO: Record<OrigenDeIdentidad, string> = {
  * No se pinta sobre el landing: es público, no trata datos ni veredictos, y un
  * distintivo de identidad interna no tiene nada que hacer ahí.
  */
-export async function SesionActual() {
+async function distintivo() {
   const { headers } = await import("next/headers");
   const ruta = (await headers()).get("x-jtel-path") ?? "";
   if (ruta.startsWith("/landing")) return null;
@@ -49,4 +51,26 @@ export async function SesionActual() {
       {id.memberships.length === 0 ? <span>· sin membresías</span> : null}
     </Link>
   );
+}
+
+/**
+ * Quién soy — con resguardo. **Un adorno no puede tumbar lo que lo hospeda.**
+ *
+ * Esto cuelga del layout raíz, así que se renderiza en TODAS las pantallas y
+ * `getIdentidad()` consulta la base. Sin resguardo, una base caída o sin
+ * configurar lanzaba aquí y se llevaba la página entera — incluida `/`, que
+ * está escrita justo para atrapar ese fallo y explicar cómo conectar Neon.
+ * Perdíamos el diagnóstico exactamente cuando más sirve, y lo cambiábamos por
+ * una pantalla en blanco.
+ *
+ * Se atrapa TODO, no solo el fallo de base: si el encabezado de ruta no llegó,
+ * si Clerk contesta raro, si la consulta expira. Ninguna de esas cosas
+ * justifica dejar sin pantalla a quien está tratando de arreglarlas.
+ */
+export async function SesionActual() {
+  try {
+    return await distintivo();
+  } catch {
+    return null;
+  }
 }
