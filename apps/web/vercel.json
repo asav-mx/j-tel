@@ -19,6 +19,14 @@
     {
       "path": "/api/cron/gap-backfill",
       "schedule": "20 * * * *"
+    },
+    {
+      "path": "/api/cron/alertas",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/alertas-resumen",
+      "schedule": "0 13 * * *"
     }
   ]
 }
