@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
   const carrierSlug = String(formData.get("carrierSlug") ?? "").trim();
+  const g = await exigir(
+    request,
+    { tipo: "carrier", slug: carrierSlug },
+    { redirigirA: `/carrier/flota?account=${encodeURIComponent(carrierSlug)}` },
+  );
+  if (!g.ok) return g.respuesta;
+
   const imei = String(formData.get("imei") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim() || undefined;
 

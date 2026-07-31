@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigir } from "@/lib/guardia-api";
 
 /**
  * Etiquetado de calibración del carrier (Tarea B).
  * Solo escribe occurrence_ground_truth + ledger.
  * Nunca altera compliance_facts / saveFact.
+ *
+ * Esta ruta ya comprobaba que el contrato fuera de este carrier y que la
+ * unidad le perteneciera. Lo que le faltaba era el ancla: comprobaba contra el
+ * carrier que decía el cuerpo de la petición, así que cualquiera podía
+ * declararse dueño y las dos comprobaciones daban verde. La guardia convierte
+ * esas comprobaciones de coherencia en autorización de verdad — no se
+ * reemplazan, se apuntalan.
  */
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
@@ -33,6 +41,9 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  const g = await exigir(request, { tipo: "carrier", slug: accountSlug }, "json");
+  if (!g.ok) return g.respuesta;
 
   const repos = getRepos();
   const carrier = await repos.accounts.findBySlug(accountSlug);
