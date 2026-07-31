@@ -648,6 +648,12 @@ describe("perdedor exclusivo sin alternativa", () => {
           policy: {
             toleranceMinutes: 5,
             maxRouteDurationMinutes: 60,
+            windowDerivationEnabled: true,
+            windowSlackPct: 25,
+            routeAvgSpeedKmh: 20,
+            maxWindowBeforeMinutes: 360,
+            routeDurationPercentile: 90,
+            routeDurationMinSamples: 3,
             routeStrictness: "destino_only" as const,
             kmlMatchMinPct: 60,
             evidenceMinCoveragePct: 80,

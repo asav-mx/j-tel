@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  deriveObservationWindow,
+  type DerivedObservationWindow,
+} from "./ventana-observacion.js";
 
 // ── Zona horaria ────────────────────────────────────────────────────────
 /**
@@ -334,9 +338,33 @@ export const contractPolicySchema = z.object({
   kmlOriginToleranceFraction: z.number().min(0).max(1).default(0.15),
   excusableReasons: z.array(ExcusableReason).default([]),
   enforcementRules: z.array(enforcementRulesSchema).default([]),
-  /** Ventana de observación GPS: empieza N min antes del deadline (ej. 60 → 5:45 si deadline 6:45). */
+  /**
+   * Ventana de observación GPS: empieza AL MENOS N min antes del deadline
+   * (ej. 60 → 5:45 si deadline 6:45). Es el **piso**, no el ancho final: si la
+   * ruta dura más que esto, la ventana se abre antes — ver
+   * `deriveObservationWindow` y las perillas de abajo.
+   */
   evidenceMarginMinutesBefore: z.number().int().nonnegative().default(60),
   evidenceMarginMinutesAfter: z.number().int().nonnegative().default(30),
+  /**
+   * Dimensionar la ventana con la duración real de la ruta. Apagarlo devuelve
+   * la ventana de política tal cual (`evidenceMarginMinutesBefore` fijo) — es
+   * el interruptor de emergencia, no una perilla de afinación.
+   */
+  windowDerivationEnabled: z.boolean().default(true),
+  /** Holgura (%) sobre la duración de la ruta al dimensionar la ventana. */
+  windowSlackPct: z.number().min(0).max(200).default(25),
+  /**
+   * Velocidad promedio (km/h) para estimar la duración de una ruta sin
+   * historia medida. Ruta con paradas, no flujo libre.
+   */
+  routeAvgSpeedKmh: z.number().positive().default(20),
+  /** Techo del lado "antes" (min): una medición loca no abre una ventana absurda. */
+  maxWindowBeforeMinutes: z.number().int().positive().default(360),
+  /** Percentil de las duraciones históricas: la ventana cubre el día lento. */
+  routeDurationPercentile: z.number().min(1).max(100).default(90),
+  /** Mediciones mínimas para creerle a la historia de una ruta. */
+  routeDurationMinSamples: z.number().int().positive().default(3),
   /** Duración máxima esperada del recorrido de recolección (min). */
   maxRouteDurationMinutes: z.number().int().positive().default(60),
   /**
@@ -390,22 +418,64 @@ export function computeExpectedDeadline(
   return instanteZonificado(serviceDate, minutes, timeZone);
 }
 
+/** Lo que la política aporta al dimensionar la ventana. */
+export type EvidenceWindowPolicy = Pick<
+  ContractPolicy,
+  "evidenceMarginMinutesBefore" | "verificationGraceMinutes" | "evidenceMarginMinutesAfter"
+> &
+  Partial<
+    Pick<
+      ContractPolicy,
+      | "windowDerivationEnabled"
+      | "windowSlackPct"
+      | "routeAvgSpeedKmh"
+      | "maxWindowBeforeMinutes"
+    >
+  >;
+
+/** Los hechos de la ruta que permiten dimensionar la ventana. */
+export type EvidenceWindowRoute = {
+  /** p90 de las duraciones ya medidas de esta ruta×turno (min). */
+  measuredDurationMinutes?: number | null;
+  /** Largo del trazado (km), para el arranque en frío sin historia. */
+  routeLengthKm?: number | null;
+  /** Trazado, si el largo no viene calculado. */
+  kmlWaypoints?: Array<{ lat: number; lng: number }>;
+};
+
+/**
+ * Ventana de observación de una ocurrencia.
+ *
+ * **Sin el tercer argumento el resultado es el de siempre**, minuto por
+ * minuto: `evidenceMarginMinutesBefore` antes del deadline, gracia + margen
+ * después. Así los llamadores que no saben nada de la ruta —la torre en vivo,
+ * la ficha de servicio, la corrección de deadlines— no cambian de
+ * comportamiento por este arreglo.
+ *
+ * Cuando quien llama SÍ conoce la ruta (la generación de ocurrencias, que
+ * tiene el KML y la historia de mediciones en la mano), el lado de "antes" se
+ * deriva de cuánto dura de verdad ese recorrido, y el margen de política pasa
+ * a ser el piso. La ventana solo puede ensancharse, nunca angostarse.
+ */
 export function computeEvidenceWindow(
   deadline: Date,
-  policy: Pick<
-    ContractPolicy,
-    "evidenceMarginMinutesBefore" | "verificationGraceMinutes" | "evidenceMarginMinutesAfter"
-  >,
-): { windowStart: Date; windowEnd: Date } {
-  const windowStart = new Date(deadline);
-  windowStart.setMinutes(windowStart.getMinutes() - policy.evidenceMarginMinutesBefore);
-  const windowEnd = new Date(deadline);
-  windowEnd.setMinutes(
-    windowEnd.getMinutes() +
-      policy.verificationGraceMinutes +
-      policy.evidenceMarginMinutesAfter,
-  );
-  return { windowStart, windowEnd };
+  policy: EvidenceWindowPolicy,
+  route?: EvidenceWindowRoute,
+): DerivedObservationWindow {
+  const afterMinutes =
+    policy.verificationGraceMinutes + policy.evidenceMarginMinutesAfter;
+  const derivationOff = policy.windowDerivationEnabled === false;
+
+  return deriveObservationWindow(deadline, {
+    minBeforeMinutes: policy.evidenceMarginMinutesBefore,
+    afterMinutes,
+    maxBeforeMinutes: policy.maxWindowBeforeMinutes,
+    slackPct: policy.windowSlackPct,
+    avgSpeedKmh: policy.routeAvgSpeedKmh,
+    measuredDurationMinutes: derivationOff ? null : route?.measuredDurationMinutes,
+    routeLengthKm: derivationOff ? null : route?.routeLengthKm,
+    kmlWaypoints: derivationOff ? undefined : route?.kmlWaypoints,
+  });
 }
 
 export const createContractSchema = z
@@ -574,3 +644,4 @@ export interface VerificationResult {
 
 export * from "./enforcement.js";
 export * from "./operational-scope.js";
+export * from "./ventana-observacion.js";

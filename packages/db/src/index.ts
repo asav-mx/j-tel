@@ -24,3 +24,4 @@ export {
   MINUTOS_MARCO_DISTINTO,
   type CausaDeDiferencia,
 } from "./deadline-diff.js";
+export { routeWindowSizing, windowForOccurrence } from "./ventana-ocurrencia.js";

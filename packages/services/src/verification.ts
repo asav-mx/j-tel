@@ -1,4 +1,5 @@
 import { verifyService, pointInPolygon } from "@jtel/verification";
+import { measureBestTraversal, corridorKmFromMeters } from "./medicion-recorrido.js";
 import { createUmbrellaProvider, ingestEvidenceForTrip } from "@jtel/gps-umbrella";
 import type { ComplianceFact, Repositories } from "@jtel/db";
 import type { ContractPolicy, VerificationResult } from "@jtel/domain";
@@ -1048,6 +1049,56 @@ export class VerificationService {
         null;
       // Solo persistir UUID de unidad real (nunca un IMEI crudo).
       observedUnitId = candidate && units.some((u) => u.id === candidate) ? candidate : null;
+    }
+
+    // Instrumento, no veredicto: cuánto duró de verdad este recorrido. De
+    // aquí sale el ancho de la ventana de las ocurrencias futuras de esta
+    // ruta×turno. Va aparte del hecho y nunca lo altera; si falla, el sellado
+    // sigue igual (por eso el try/catch).
+    try {
+      const measuredWaypoints =
+        (servedVariantId
+          ? variants.find((v) => v.variantId === servedVariantId)?.waypoints
+          : undefined) ?? variants[0]?.waypoints;
+      const measuredKmlVersionId =
+        (servedVariantId
+          ? variants.find((v) => v.variantId === servedVariantId)?.kmlVersionId
+          : undefined) ?? variants[0]?.kmlVersionId ?? null;
+
+      if (measuredWaypoints?.length && profile.routeShiftId) {
+        const arrivalByUnit = new Map<string, Date | null>();
+        if (verification.observedUnitId && verification.observedArrivalAt) {
+          arrivalByUnit.set(verification.observedUnitId, verification.observedArrivalAt);
+        }
+        const measured = measureBestTraversal(
+          enrichedPoints,
+          measuredWaypoints,
+          corridorKmFromMeters(policy.kmlCorridorMeters),
+          {
+            arrivalAtByUnit: arrivalByUnit,
+            window: {
+              start: trip.evidenceWindowStart,
+              end: trip.evidenceWindowEnd,
+            },
+          },
+        );
+        if (measured?.measurement.durationMinutes != null) {
+          await this.repos.routeTraversals.record({
+            routeShiftId: profile.routeShiftId,
+            serviceOccurrenceId: occurrenceId,
+            serviceDate: occurrence.serviceDate,
+            kmlVersionId: measuredKmlVersionId,
+            durationMinutes: measured.measurement.durationMinutes,
+            lowerBound: measured.measurement.lowerBound,
+            pointsInCorridor: measured.measurement.pointsInCorridor,
+            unitId: units.some((u) => u.id === measured.unitId) ? measured.unitId : null,
+          });
+        }
+      }
+    } catch (err) {
+      console.error(
+        `[medicion-recorrido] ${occurrenceId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
 
     const fact = await this.repos.compliance.saveFact({
