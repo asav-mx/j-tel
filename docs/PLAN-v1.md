@@ -1,9 +1,11 @@
 # J-Telemetry — Plan de v1
 
-**Corte: 30 de julio de 2026 (segunda versión).** Reemplaza la versión del mismo
-día. Cambió por un hallazgo grande: el árbitro tiene un defecto que hace
-**imposible aprobar 194 de 439 servicios juzgados**, sin importar cómo maneje el
-carrier.
+**Corte: 30 de julio de 2026 (tercera versión, fin del día).** Reemplaza las dos
+anteriores del mismo día.
+
+Cambió por tres cosas: **el defecto del árbitro quedó arreglado de raíz y en
+producción**, entraron cuatro piezas nuevas, y apareció un frente que no
+existía — la política como acuerdo entre las partes.
 
 `DESPUES.md` es el backlog (qué hay que hacer, con su razón).
 **Este documento es el orden** (en qué secuencia, y qué desbloquea qué).
@@ -16,34 +18,30 @@ El `Marco-Limpio-J-Telemetry-MAESTRO.md` manda sobre los dos.
 | Quién | Qué hace |
 |---|---|
 | **Asav** | Decide producto, hace las llamadas que solo él puede hacer, mergea los PR. **No necesita recordar el plan** — lo lee aquí. |
-| **El chat de arquitectura** | Sostiene el mapa. Valida contra el Marco. Redacta los recados a Devin. |
-| **Devin** | Construye. Se detiene solo en decisiones de producto, escritura sobre veredictos sellados, o algo que contradiga el plan. |
+| **El chat de arquitectura** | Sostiene el mapa. Valida contra el Marco. Redacta los recados. |
+| **Carril A** | Motor, paquetes (`packages/*`) y base de datos. Tramo rojo. |
+| **Carril B** | Web (`apps/web`). Tramo verde salvo aviso. |
 
-**Regla nueva, aprendida el 30 de julio — medir tiene un tope.**
-Medir antes de construir salvó el proyecto dos veces. Pero medir también se
-puede volver una forma de no avanzar. **Cada hallazgo tiene derecho a una
-medición y a un arreglo, no a tres mediciones y ningún arreglo.** Cuando una
-medición ya identificó la causa, lo siguiente es construir — la afinación se
-investiga después, con el instrumento en la mano.
+**La frontera entre carriles es de carpetas, no de temas:** A vive en
+`packages/` y en la base; B vive en `apps/web`. Es lo único que impide que se
+pisen trabajando a la vez. Cuando una tarea cruza la frontera, se parte en dos
+PR coordinados — nunca uno solo cruzando.
 
-**Regla de tramos — cuándo Devin corre largo y cuándo se frena.**
-No depende del tamaño de la tarea sino de qué toca:
-- **Verde (corre largo, sin parar):** no toca datos reales, no escribe en
-  producción, no cambia cómo juzga el motor. Pantallas sin datos, refactors,
-  scripts de solo lectura, el landing.
+**Regla de tramos:**
+- **Verde (corre largo):** no toca datos reales, no escribe en producción, no
+  cambia cómo juzga el motor.
 - **Rojo (corta corto, con verificación entre tramos):** escribe en la base
   real, toca un veredicto sellado, o cambia la lógica del árbitro.
 
-**Regla de scripts — lo que produce un número que decide, se guarda.**
-Un script que solo cuenta es desechable. Un script cuyo resultado va a decidir
-algo grave **es evidencia**: se guarda en el repo, versionado y reproducible.
-Se aprendió por las malas: el número que justificaba re-verificar 300 veredictos
-vivía en un archivo temporal que se borró, y al reconstruirlo dio distinto.
+**Regla de scripts:** lo que produce un número que decide algo grave **es
+evidencia** — se guarda en el repo, versionado y reproducible.
 
-**La prueba de producto vs. caso de uso.**
-Ante cualquier arreglo, preguntar: *"¿esto tendría sentido para una planta en
-Bogotá cuyas rutas nunca hemos visto?"* Si sí — es producto. Si solo tiene
-sentido porque cierta ruta mide 29 km — es caso de uso, y va mal.
+**Regla de medición:** cada hallazgo tiene derecho a **una** medición y a un
+arreglo. Medir tres veces sin construir es no avanzar.
+
+**La prueba de producto vs. caso de uso:** *"¿esto tendría sentido para una
+planta en Bogotá cuyas rutas nunca hemos visto?"* Si sí — producto. Si solo
+tiene sentido por una ruta específica — caso de uso, y va mal.
 **Planta 47 es el laboratorio, no el paciente.**
 
 ---
@@ -58,73 +56,66 @@ autenticación.
 
 ---
 
-## 2. EL HALLAZGO DEL 30 DE JULIO — la ventana no cubre la ruta
+## 2. El defecto del árbitro — CERRADO el 30 de julio
 
-**Esto es lo más importante del documento.** Es un defecto de producto, no de un
-cliente.
+Queda escrito porque explica por qué los números de Planta 47 se ven como se ven,
+y por qué van a cambiar.
 
-### Qué pasa
+### Qué pasaba
 
-El motor abre una **ventana de observación** para mirar el GPS (105–115 minutos
-según el contrato). Pero muchas rutas **tardan más que eso**. Cuando ocurre, el
-sistema **no observa el arranque de la ruta** — y luego califica al carrier
-contra el trazado **completo**, incluyendo el tramo que nunca miró.
-
-### Medido
+El motor abría una ventana de observación fija (105–115 min) para mirar el GPS,
+pero muchas rutas **tardan más que eso**. No observaba el arranque de la ruta y
+luego calificaba contra el trazado **completo**, incluyendo el tramo que nunca
+miró.
 
 | Dato | Valor |
 |---|---:|
 | Rutas medidas (Tecma 47 + Campus Santos Dumont) | 48 |
-| **Rutas matemáticamente condenadas** (match máximo < 60%) | **16** |
-| **Acusaciones `no_cumplido` imposibles de aprobar por construcción** | **194 de 439 (44%)** |
-| Ventana configurada | 105–115 min |
+| Rutas matemáticamente condenadas | **16** |
+| Acusaciones imposibles de aprobar por construcción | **194 de 439 (44%)** |
 | Duración real de las rutas | 42–370 min |
 
-Caso extremo: una ruta de **370 minutos** con ventana de **115** — la ventana es
-255 minutos más corta que el servicio que juzga.
+**No eran los mapas ni el carrier.** En Huertas-B el 96% de los puntos GPS caen
+a menos de 150 m del trazado (mediana 60 m): la unidad hacía la ruta bien.
 
-### Lo que NO es
+Violaba la Ley 1: un problema de observación se convertía en acusación. Y lo
+agravaba un segundo defecto — el motor reportaba "cobertura 100%" porque medía
+qué tan bien vio *su ventana*, no si su ventana cubría *la ruta*.
 
-- **No son los mapas.** En Huertas-B el **96% de los puntos GPS caen a menos de
-  150 m del trazado**, mediana **60 m**. El trazado es correcto.
-- **No es el carrier.** Con esa precisión, la unidad hace la ruta bien.
-- **No es Planta 47.** Campus Santos Dumont tiene el mismo defecto (41 de 171).
+### Cómo quedó arreglado (los cuatro, en producción)
 
-### Por qué es grave — viola la Ley 1
+1. **PR #108** — si la ventana no cubrió el origen de la ruta →
+   `pendiente_evidencia`, nunca `no_cumplido`.
+2. **PR #113** — el match se califica sobre el **tramo observable**, no contra el
+   KML completo. El umbral de cumplimiento no se tocó.
+3. **PR #115** — la ventana **se dimensiona con la ruta**: largo del trazado +
+   p90 de la historia real. Sin el argumento nuevo, el comportamiento es idéntico
+   al de antes (con prueba).
+4. **PR #115** — al sellar cada hecho **se mide y se guarda cuánto duró el
+   recorrido** (tabla `route_traversal_measurements`). El sistema aprende cuánto
+   dura cada ruta en vez de que alguien lo adivine.
 
-La Ley 1 dice: *un problema de observación jamás se convierte en veredicto.*
-Aquí el sistema **no pudo observar** medio recorrido y, en vez de declarar
-`pendiente_evidencia`, dictó **`no_cumplido`** — una acusación por un tramo que
-nunca miró.
+**Bug encontrado de regalo:** el día del cambio de horario la ventana quedaba en
+**ancho cero** — el motor ciego el día entero. Y en otro caso el ancho dependía
+de **en qué máquina corriera el proceso**, misma familia del bug que corrió 294
+hechos. Los dos blindados con prueba.
 
-Lo agrava un segundo defecto: el motor reporta **"cobertura 100%, sin huecos"**
-porque mide qué tan bien vio *su ventana*, no si su ventana cubría *la ruta*.
-**Cree que tiene evidencia perfecta cuando está ciego a la mitad.**
-
-### Los tres arreglos, en orden
-
-1. **Detener la acusación falsa (urgente, chico).** Antes de juzgar, el motor
-   pregunta: *"¿mi ventana cubrió la ruta?"* Si no — `pendiente_evidencia`.
-   Deja de acusar injustamente **hoy**.
-2. **Calificar sobre lo observable.** Hoy el match se calcula contra el KML
-   completo, incluyendo el tramo no observado — como calificar como malas las
-   preguntas que nunca se entregaron. Debe calcularse sobre el tramo observable,
-   declarando qué fracción de la ruta representa. **No baja el estándar: lo hace
-   honesto.**
-3. **Ventana suficiente por contrato.** Derivada de la duración real medida.
-   **No es aflojar el umbral** — es asegurar que el árbitro vea la película
-   completa antes de calificar.
+**Consecuencia visible:** de aquí en adelante, rutas largas que salían
+`no_cumplido` van a salir `cumplido` o `pendiente_evidencia`. **Es lo correcto y
+es el punto del arreglo** — pero es un cambio notorio en los números.
 
 ---
 
 ## 3. Los dos candados
 
 **Candado 1 — la identificación confiable manda sobre las pantallas de juicio.**
-Hoy una sola señal frágil (el match contra el KML) hace dos trabajos: identificar
+Una sola señal frágil (el match contra el KML) hace dos trabajos: identificar
 quién hizo la ruta y juzgar si cumplió. Cuando falla, se pierden las dos.
 
 **Candado 2 — `auth-rbac` cierra antes del primer login real.**
-Una planta jamás ve otra planta. No bloquea construir; bloquea enseñar.
+Una planta jamás ve otra planta. No bloquea construir; bloquea enseñar. **Y
+ahora bloquea algo más:** el acuerdo de dos partes sobre la política (§6) no
+puede existir sin que el carrier tenga llave.
 
 ---
 
@@ -132,54 +123,37 @@ Una planta jamás ve otra planta. No bloquea construir; bloquea enseñar.
 
 ### Ola 0 — cerrada
 
-| Pieza | Estado |
-|---|---|
-| PR #102 — Cierre del turno | ✅ en `main` |
-| PR #103 — PLAN-v1 | ✅ en `main` |
-| PR #104 — Pendiente por evidencia | ✅ **en producción** |
-| PR #106 — Lista congelada de las 300 | ✅ en `main` |
-| Turno B de Planta 47 | ✅ **corregido por Asav** |
+Cierre del turno · Pendiente por evidencia · PLAN-v1 · lista congelada de las
+300 · Turno B de Planta 47 corregido · **el arreglo del árbitro completo (§2)**.
 
 ---
 
 ### Ola 1 — construir sobre hechos sellados
 
-**1.a — El arreglo del árbitro y su instrumento (NUEVO, va primero).**
+**Entregado el 30 de julio:**
 
-Se adelantó desde la Ola 3 por una razón medida: descubrir este defecto costó
-**horas** de scripts temporales y análisis manual. Con instrumento, cuesta un
-vistazo. **Construir la Ola 2 sin poder ver lo que el motor mide es construir a
-ciegas.**
+| Pieza | PR |
+|---|---|
+| Pendiente por evidencia (cara planta) | #104 |
+| Arreglo del árbitro, cuatro piezas | #108 · #113 · #115 |
+| Landing público en `/landing` | #112 |
+| Historial de flota del carrier | #114 |
+| Oficina del contrato (configuración) | #116 |
+| Índice `(carrier, unit, recorded_at)` | #117 |
 
-- **Tablero de diagnóstico (cara J-Staff, interno).** Un servicio a la vez:
-  trazado contratado **con su banda de corredor dibujada**, recorrido real
-  encima, **la ventana de observación marcada** (y qué tramo quedó fuera), y los
-  cuatro números con su umbral al lado — match, corredor, forma, cobertura —
-  más una línea de por qué el motor decidió lo que decidió.
-  Es un microscopio, **no** una cara de cliente.
-- **Arreglo 1 de §2** — ventana insuficiente → `pendiente_evidencia`.
-- **Arreglo 2 de §2** — match sobre el tramo observable.
-- **Arreglo 3 de §2** — ventana derivada de la duración real, por contrato.
+**En vuelo:** tablero de diagnóstico (Carril B).
 
-**Compuerta de salida:** cero servicios acusados por un tramo no observado. El
-tablero muestra el caso Huertas-B y se entiende de un vistazo.
+**Falta:**
 
-**1.b — Plomería de operación (Fase 0 restante).**
-Bitácora `cron_runs` · **entrega real de alertas** · semáforo de J-Staff.
-
-**1.c — Pantallas sobre hechos sellados.**
-`oficina-contrato` (config — gana lugar temprano: los errores de configuración
-causan veredictos malos, ya se demostró) · `historia-del-sello` (falta la columna
-de causa) · `flota-dia-completo` / `unidad-dia` (cara carrier).
-
-**1.d — Sin datos, en paralelo.** `landing-jtel` · `parvada-ciudad`.
-
-**1.e — Arranca `auth-rbac`.**
-
-**1.f — Higiene que quita fricción (medio día, alto retorno).**
-- **Credenciales de un solo lugar.** Hoy la contraseña vive pegada a mano en dos
-  sitios y se desincroniza en cada rotación.
-- **Base de práctica desechable.** Para ensayar escrituras sin tocar producción.
+- **1.a — La política como acuerdo vivo** (frente nuevo, ver §6). Historia de la
+  política y referencia de cláusula entran aquí; la aprobación de dos partes
+  queda anclada a `auth-rbac`.
+- **1.b — Plomería de operación.** Bitácora `cron_runs` · **entrega real de
+  alertas** (que lleguen, no que se pinten) · semáforo de J-Staff.
+- **1.c — `historia-del-sello`** (componente; falta la columna de causa).
+- **1.d — Arranca `auth-rbac`.**
+- **1.e — Higiene:** credenciales de un solo lugar · base de práctica desechable.
+- **1.f — Tareas de base** (ver §7).
 
 ---
 
@@ -191,7 +165,7 @@ de causa) · `flota-dia-completo` / `unidad-dia` (cara carrier).
 confianza**; ninguna condena sola:
 
 1. **Llegada a geocerca** — la más robusta, ya existe
-2. **Corredor** — banda de 120 m configurable, tolerante al temblor del GPS
+2. **Corredor** — banda configurable, tolerante al temblor del GPS
 3. **Match fino** — solo con densidad y observación suficientes
 4. **Huella histórica** contra viajes ya aceptados
 5. **Patrón de paradas** — dónde se detiene el camión **de forma repetida** a lo
@@ -201,14 +175,12 @@ confianza**; ninguna condena sola:
 
 **2.b — El juicio cambia de pregunta.** De *"¿siguió el dibujo?"* a **"¿recogió
 donde debía y llegó cuando debía?"**, con el trazado como calificador
-configurable. Sale de la operación real: lo que importa es la recolección, no las
-vías exactas del trayecto.
+configurable.
 
 **2.c — Compuerta de densidad.** Umbral derivado de la geometría, no adivinado.
 
-**2.d — Reconocer caminos, mitad motor.** Que el árbitro **pueda juzgar
-honestamente sin KML fino** — geocerca + corredor + paradas, con el trazado
-opcional. **Sí es v1**: sin ello el producto no sirve para su mercado (§7).
+**2.d — Juzgar sin KML fino.** Geocerca + corredor + paradas, con el trazado
+opcional. **Sí es v1**: sin ello el producto no sirve para su mercado (§8).
 
 **Compuerta de salida:** **≥90% sostenido dos semanas**, cero rojos sin
 expediente.
@@ -219,59 +191,137 @@ expediente.
 
 `expediente-carrier` / `expediente-dos-recortes` · `cumplimiento` +
 `preventivo-jtel` · `mapa-instrumento` · `vista-de-ruta` · Pieza 2 + Tablero de
-calibración · **módulo de choferes**.
+calibración · módulo de choferes.
 
 ---
 
 ### Ola 4 — vendible
 
-`auth-rbac` cerrado · **Lenore v1** (narra, correlaciona, audita; jamás opina
-dentro del veredicto) · J-Staff altas y demos · landing + pase de UI final.
+`auth-rbac` cerrado · **Lenore v1** · J-Staff altas y demos · pase de UI final.
 
 **Compuerta de salida:** un cliente nuevo se da de alta, entra con su usuario, ve
 solo lo suyo, y el ≥90% se sostiene. **Eso es v1 en producción.**
 
 ---
 
-## 5. Las 300 — CONGELADAS
+## 5. Las 300 — congeladas, pero ya se pueden descongelar
 
-**No se escribe ni un hecho.** Dos razones encimadas:
+Se congelaron porque el número no era reproducible **y** porque la ventana estaba
+rota al medir. **La segunda razón ya no existe: el árbitro está arreglado.**
 
-1. **El número no era confiable.** El 161/139/0 salió de un script que se borró y
-   no se puede auditar. Reconstruido de forma reproducible dio **91/209/0** — 70
-   veredictos de diferencia. Escribir sobre el primero habría metido 70
-   absoluciones falsas.
-2. **La ventana estaba rota al medir.** El 91 se calculó con la ventana angosta,
-   así que buena parte de esos 209 `no_cumplido` probablemente también son falsos.
+**Lo que falta antes de re-verificar:** correr la simulación otra vez con el motor
+honesto (ventana derivada + match sobre lo observable) y comparar contra el
+91/209/0 que se midió con la ventana rota. **Ese número va a subir**, y esta vez
+por verdad, no por maquillaje.
 
-**El orden correcto:** primero se arregla el árbitro (§2), después se re-verifica
-con el motor honesto. La ficha
-`docs/marco-limpio/Ficha-Reverificacion-Deadline-Zona.md` sigue vigente en su
-procedimiento y sus guardas; solo cambia **cuándo** se ejecuta.
+La ficha `docs/marco-limpio/Ficha-Reverificacion-Deadline-Zona.md` sigue vigente
+en su procedimiento y sus guardas; solo cambia **cuándo**.
 
-**Riesgo aceptado mientras tanto:** esas acusaciones falsas siguen visibles. No
-cobran nada (enforcement apagado) y no empeoran.
-
----
-
-## 6. Las decisiones que solo Asav puede tomar
-
-| # | Decisión | Cuándo | Estado |
-|---|---|---|---|
-| 1 | Turno B de Planta 47 | Ola 0 | ✅ **resuelta** |
-| 2 | Regla de cierre del pendiente por evidencia (planta + legal) | Ola 1 | Pendiente — hoy en modo demo |
-| 3 | Re-verificación de los hechos viejos | Después de arreglar el árbitro | **Congelada por decisión** |
-| 4 | ¿`jornada-instrumento` quedó superseded por Cierre del turno? | Ola 3 | Por confirmar |
-| 5 | Cómo se le cuenta a Tecma que su número sube al corregir | Antes de re-verificar | Pendiente |
+**Dato que espera explicación:** la pantalla de configuración encontró que **319
+de 336 servicios de Planta 47 se resolvieron sin ver una sola llegada**, y declara
+honestamente que no puede distinguir entre hora mal declarada, ventana angosta o
+unidades que no reportan. Con el árbitro arreglado, ese número debería moverse
+mucho — es la primera prueba de que el arreglo sirvió.
 
 ---
 
-## 7. El mercado — por qué "sin KML fino" es requisito, no lujo
+## 6. La política como acuerdo vivo — FRENTE NUEVO
+
+Apareció el 30 de julio al construir la oficina del contrato. Son tres piezas que
+van juntas.
+
+### El problema
+
+Hoy la política de un contrato **se sobrescribe al editarse**. La versión
+anterior se pierde: no hay registro de qué decía antes, ni de quién la cambió, ni
+de cuándo.
+
+Compárese con los hechos: cada veredicto guarda su historia completa, con firma y
+motivo, y nunca se borra nada. **La política —que es la ley con la que se
+juzga— no tiene nada de eso.**
+
+Y el landing promete que *"cada regla puede citar su cláusula"*. **No existe
+ningún campo de cláusula en el esquema.** Es una promesa de venta sin respaldo, y
+el Marco la pide: la referencia contractual vive dentro del objeto de política y
+se congela con cada hecho.
+
+### Las tres piezas
+
+**1. Historia de la política — Ola 1.**
+Cada edición queda: qué cambió, quién, cuándo, qué decía antes. Nada se pierde.
+Es barato y es de lo que **se vuelve imposible de reconstruir hacia atrás** —
+cada día sin ella pierde ediciones para siempre.
+
+**2. Referencia de cláusula por regla — Ola 1.**
+Que cada tolerancia pueda citar el papel que la respalda. Cierra la promesa del
+landing y le da al veredicto con qué defenderse ante un cliente que reclama.
+
+**3. Acuerdo de las partes — anclado a `auth-rbac`.**
+Un cambio de política no es una edición: **es una propuesta**. Misma forma que la
+promoción de variantes de trazado — la operación propone, el humano dispone.
+
+**Configurable por contrato desde J-Staff**, y esto es decisión de producto de
+Asav: hay contratos donde la planta se reserva el derecho de modificar a su
+criterio. Lo que **nunca** es opcional es que exista **método de comunicación**:
+el carrier se entera del cambio, siempre, aunque no tenga que aprobarlo.
+
+**Cuidado que no se toca:** el acuerdo **jamás reescribe el pasado**. La
+propuesta entra en vigor **desde una fecha**; todo lo sellado antes conserva la
+política con la que se juzgó. Eso ya funciona (cada hecho congela su foto); lo
+que falta es el circuito de aprobación arriba.
+
+**Por qué importa más de lo que parece:** una tolerancia que la planta cambia
+sola, sin que el carrier lo sepa, **cambia las reglas del juego a media
+partida**. Eso rompe al árbitro ante el auditado, que es lo único que lo hace
+creíble.
+
+---
+
+## 7. Tareas de base pendientes (Carril A)
+
+**1. El migrador huérfano — riesgo activo.**
+El repo tiene un migrador de Drizzle que **nunca se ha usado en producción**: no
+existe su tabla de bitácora. Si alguien corre `pnpm db:migrate` contra
+producción, el migrador ve una base virgen e intenta aplicar las catorce
+migraciones desde la 0000 contra una base con 37 tablas y 846 hechos. **Revienta
+—y deja su bitácora a medio escribir.**
+
+Desde la 0003 las migraciones se vienen aplicando **a mano**, con SQL directo.
+Ese es el procedimiento real y no está documentado. **Cualquiera que siga el
+README le apunta a producción un comando que falla.**
+
+Salida recomendada: **adoptar el SQL a mano como procedimiento oficial y
+documentarlo** (más seguro que intentar darle bitácora inicial al migrador sobre
+una base viva).
+
+**2. El historial de flota es lento por la app, no por la base.**
+Medido: la base contesta en **14 ms**; los **3.5 s** se van transportando 58 000
+puntos por la red y materializándolos en JavaScript. El índice #117 no lo arregla
+porque **ninguna consulta filtra por unidad en SQL** — la app pide la ventana
+completa del carrier y filtra en memoria.
+
+El arreglo real: **una agregación en SQL que devuelva el día ya resumido**, en vez
+de 58 000 puntos crudos. **Cruza la frontera de carriles** (consulta en
+`@jtel/db`, llamada desde `apps/web`), así que van dos PR coordinados.
+
+El índice #117 **sí sirve y se queda**: la consulta que existe para servir pasó de
+8.3 ms a 0.4 ms, y `getLastPointPerUnit` se hizo el doble de rápida sola. Era el
+requisito previo.
+
+**3. `MAX_DIAS = 3` se fijó con números no reproducibles.** Re-medir después del
+arreglo de la agregación, no antes.
+
+**4. `maxRouteDurationMinutes`, fijo en 60.** Un segundo "cuánto dura una ruta"
+sin derivar, que gobierna la ventana de exclusividad y la de cobertura. Hoy no
+causa falsos negativos. Tarea propia — no mezclar con otro cambio de motor.
+
+---
+
+## 8. El mercado — por qué "sin KML fino" es requisito
 
 **La mayoría de las plantas no tienen sus rutas bien definidas.** Viven en la
 cabeza de los carriers y se transmiten de boca en boca cuando una planta cambia
-de proveedor. La informalidad de los datos es **el estado normal del mercado**,
-no una anomalía.
+de proveedor. La informalidad de los datos es **el estado normal del mercado**.
 
 Consecuencia: **un árbitro que exige trazados perfectos está peleado con su
 propio mercado.** El que juzga honestamente con lo que hay —y de paso formaliza
@@ -279,56 +329,48 @@ lo informal— atiende el dolor de frente. Esa es la cuña de venta.
 
 ---
 
-## 8. Fuera de v1 — por decisión
+## 9. Las decisiones que solo Asav puede tomar
+
+| # | Decisión | Cuándo | Estado |
+|---|---|---|---|
+| 1 | Turno B de Planta 47 | Ola 0 | ✅ resuelta |
+| 2 | Regla de cierre del pendiente por evidencia (planta + legal) | Ola 1 | Pendiente — hoy en modo demo |
+| 3 | Re-verificación de las 300 | Ahora se puede (§5) | Pendiente de simulación nueva |
+| 4 | ¿`jornada-instrumento` quedó superseded por Cierre del turno? | Ola 3 | Por confirmar |
+| 5 | Cómo se le cuenta a Tecma que su número cambia | Antes de re-verificar | Pendiente |
+| 6 | Qué contratos permiten que la planta modifique sin acuerdo (§6) | Con `auth-rbac` | Pendiente |
+
+---
+
+## 10. Fuera de v1 — por decisión
 
 | Qué | Por qué | A dónde |
 |---|---|---|
-| **Quejas** (`queja-expediente`) | Circuito completo | Después de v1 |
-| **Descubrimiento y promoción de caminos con su UI** | La mitad motor sí entra a v1 (§4, 2.d); proponer y aprobar variantes es obra aparte | **v1.1 — candidato a subir** |
-| **Ficha 4 — incidentes** | Circuito carrier → planta | Después de v1 |
+| **Quejas** | Circuito completo | Después de v1 |
+| **Descubrimiento y promoción de caminos con su UI** | La mitad motor sí entra a v1 (§4, 2.d) | **v1.1 — candidato a subir** |
+| **Ficha 4 — incidentes** | Circuito carrier ↔ planta | Después de v1 |
 | **Enforcement** | Primero el árbitro confiable | Después del ≥90% |
-| **Map matching** (red de calles) | Ayuda con "se fue por la calle paralela", **no** con "no vimos media ruta". Afinación, no arreglo | v1.1 |
-| **Expediente de pasajero / modo pasajero** | Requiere hardware para registrar quién sube. **Las paradas se infieren del GPS sin identificar personas** (§4, capa 5) | Futuro (jrz-pass) |
+| **Map matching** (red de calles) | Como **capa de aprendizaje y explicación**, no de juicio: entender la operación en calles y hacer a Lenore más humana. No arregla "no vimos media ruta" | v1.1 |
+| **Expediente de pasajero / modo pasajero** | Requiere hardware. **Las paradas se infieren del GPS sin identificar personas** (§4, capa 5) | Futuro (jrz-pass) |
 
 ---
 
-## 9. Los mockups
-
-| Mockup | Ola |
-|---|---|
-| `cierre-del-turno` | ✅ **construido** |
-| `pendiente-por-evidencia` | ✅ **construido** |
-| **Tablero de diagnóstico (J-Staff)** | **Ola 1 — nuevo, va primero** |
-| `oficina-contrato` | Ola 1 |
-| `historia-del-sello` | Ola 1 (componente) |
-| `flota-dia-completo` · `unidad-dia` | Ola 1 |
-| `landing-jtel` · `parvada-ciudad` | Ola 1 |
-| `expediente-carrier` · `expediente-dos-recortes` | Ola 3 |
-| `cumplimiento` · `preventivo-jtel` | Ola 3 |
-| `mapa-instrumento` · `vista-de-ruta` | Ola 3 |
-| `como-reconoce-caminos` | v1.1 (mitad motor en Ola 2) |
-| `queja-expediente` | Fuera de v1 |
-| `jornada-instrumento` | Por confirmar |
-
----
-
-## 10. Reglas de trabajo
+## 11. Reglas de trabajo
 
 - **Una rama por tarea. Todo por PR. El merge lo hace Asav.** Nunca directo a `main`.
 - **Nunca mergear sin el check en verde**, y revisar "Files changed".
 - **Antes de afirmar, verificar.** Simular antes de escribir sobre datos vivos.
+- **Las pruebas deben fallar contra código roto** antes de contar como cobertura.
 - **El código nunca conoce nombres.** Todo genérico.
-- **Modelos:** el fuerte para arquitectura, validación de Marco y lógica del
-  árbitro; el mecánico para UI, lectura y ejecución.
+- **Cuando un carril cambia un esquema que el otro usa, se avisa antes.** El 30
+  de julio salvó a la oficina del contrato de nacer con seis perillas de menos.
 - **`jrz-drone-os` congelada** — fuente de datos históricos, jamás de código.
 
 ---
 
-## 11. Las leyes de producto
+## 12. Las leyes de producto
 
-1. **Un problema de observación jamás se convierte en veredicto.** Sin
-   observación suficiente → `pendiente_evidencia`. **Esta es la ley que se está
-   violando hoy (§2), y el primer arreglo de la Ola 1.**
+1. **Un problema de observación jamás se convierte en veredicto.**
 2. **Todo `no_cumplido` carga su evidencia y su porqué medido.**
 3. **La matemática decide, la AI explica.**
 4. **Tres estados y nada más.** "Tarde" es motivo, no estado.
@@ -339,10 +381,11 @@ lo informal— atiende el dolor de frente. Esa es la cuña de venta.
 8. **Todo umbral es configurable por contrato.**
 9. **El vigilante no comparte nada con lo vigilado.**
 10. **Nunca rotar credenciales sin redesplegar en el mismo movimiento.**
+11. **La política cambia hacia adelante y nunca reescribe el pasado.**
 
 ---
 
-## 12. El loop de aprendizaje
+## 13. El loop de aprendizaje
 
 Declarado → observado → divergencia sostenida → propuesta → **aprobación
 humana** → la configuración aprende.
@@ -354,12 +397,12 @@ humana** → la configuración aprende.
 **La trampa:** no se pueden calibrar umbrales contra la operación que se juzga.
 Afinar hasta que todo pase convierte al árbitro en decorado.
 
-**Corolario aprendido hoy:** ampliar la ventana de observación **NO es
-calibrar**. Medir cuánto dura una ruta es un hecho; el umbral de cumplimiento no
-se toca. La diferencia entre corregir un instrumento y aflojar un estándar es la
-línea que separa un árbitro de un adorno.
+**Corolario:** ampliar la ventana de observación **NO es calibrar**. Medir cuánto
+dura una ruta es un hecho; el umbral de cumplimiento no se toca. La diferencia
+entre corregir un instrumento y aflojar un estándar es la línea que separa un
+árbitro de un adorno.
 
 ---
 
-*Se actualiza cuando una ola cierra su compuerta o cuando una decisión de §6 se
+*Se actualiza cuando una ola cierra su compuerta o cuando una decisión de §9 se
 resuelve. No se edita para acomodar prisa.*
