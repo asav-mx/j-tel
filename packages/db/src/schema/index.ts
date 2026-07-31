@@ -647,6 +647,20 @@ export const telemetryPoints = pgTable("telemetry_points", {
   // Deduplica: un mismo equipo no puede tener dos puntos en el mismo instante.
   uniqueIndex("telemetry_points_imei_recorded_idx").on(table.imei, table.recordedAt),
   index("telemetry_points_carrier_recorded_idx").on(table.carrierAccountId, table.recordedAt),
+  /**
+   * Lectura por unidad. Sin él, pedir los puntos de UNA unidad en un día leía
+   * los del carrier entero y tiraba el resto: medido en producción el
+   * 2026-07-31, 58 464 filas leídas para devolver 744 (8.3 ms) contra 744
+   * leídas (0.4 ms) con el índice.
+   *
+   * Se aplicó a mano con CONCURRENTLY (migración 0014) porque la tabla recibe
+   * telemetría en vivo. Ver el archivo de la migración.
+   */
+  index("telemetry_points_carrier_unit_recorded_idx").on(
+    table.carrierAccountId,
+    table.unitId,
+    table.recordedAt,
+  ),
 ]);
 
 // Marca de agua por carrier: hasta qué instante ya archivamos, para que cada
