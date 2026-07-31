@@ -12,6 +12,29 @@ function back(
   return configApiBack(request, slug, "contratos", scope, params);
 }
 
+/**
+ * A dónde volver después de guardar.
+ *
+ * La oficina del contrato manda su propia ruta para que el usuario regrese a
+ * donde estaba y no a la lista. Se acepta SOLO una ruta interna de la oficina:
+ * cualquier otra cosa —una URL absoluta, un `//host`, otra sección— se ignora
+ * y se cae al comportamiento de siempre. Un `returnTo` sin validar es una
+ * redirección abierta.
+ */
+function backOficina(
+  request: Request,
+  formData: FormData,
+  params: Record<string, string>,
+): NextResponse | null {
+  const raw = String(formData.get("returnTo") ?? "").trim();
+  if (!/^\/cliente\/contrato\/[A-Za-z0-9-]+(\?[^#]*)?$/.test(raw)) return null;
+  const url = new URL(raw, request.url);
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+  return NextResponse.redirect(url, 303);
+}
+
 function toInt(value: unknown, fallback: number): number {
   const raw = String(value ?? "").trim();
   if (raw === "") return fallback;
@@ -32,6 +55,29 @@ function toOptionalInt(value: unknown): number | undefined {
   if (raw === "") return undefined;
   const n = Number(raw);
   return Number.isFinite(n) ? Math.trunc(n) : undefined;
+}
+
+/** Como `toInt` pero conserva decimales: hay perillas que no son enteras. */
+function toNumber(value: unknown, fallback: number): number {
+  const raw = String(value ?? "").trim();
+  if (raw === "") return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+/**
+ * Una fracción que en pantalla se escribe como porcentaje.
+ *
+ * `kmlOriginToleranceFraction` vive como 0–1 en la política, pero pedirle a un
+ * humano "0.15" cuando quiere decir "15% del arranque de la ruta" es cómo se
+ * acaban tecleando valores diez veces más grandes de lo que se quería.
+ */
+function fraccionDeCampoPct(value: unknown, fallback: number): number {
+  const raw = String(value ?? "").trim();
+  if (raw === "") return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(1, Math.max(0, n / 100));
 }
 
 function buildEnforcementRule(formData: FormData): EnforcementRules[] {
@@ -124,7 +170,21 @@ export async function POST(request: Request) {
 
     const existingPolicy = contract.policy;
 
+    /*
+     * Se parte de la política que ya existe y se encima lo que vino en el
+     * formulario.
+     *
+     * Antes se armaba el objeto desde cero, y las perillas que ningún
+     * formulario mandaba —`kmlOriginToleranceFraction`,
+     * `permitirConsolidacion`— no viajaban. Como el esquema les da default,
+     * zod las rellenaba y `updatePolicy` guardaba el default encima del valor
+     * configurado: guardar cualquier cambio reseteaba en silencio la tolerancia
+     * de origen a 0.15 y apagaba la consolidación. Un contrato con
+     * consolidación permitida la perdía por editar la zona horaria, y nadie se
+     * enteraba hasta ver veredictos raros.
+     */
     const policyPayload = {
+      ...existingPolicy,
       toleranceMinutes: toInt(formData.get("toleranceMinutes"), existingPolicy.toleranceMinutes),
       arrivalAnticipationMinutes: toInt(
         formData.get("arrivalAnticipationMinutes"),
@@ -172,14 +232,64 @@ export async function POST(request: Request) {
         existingPolicy.evidenceMaxGapMinutes ?? 10,
       ),
       timeZone: String(formData.get("timeZone") ?? existingPolicy.timeZone ?? "America/Ciudad_Juarez").trim(),
+
+      /*
+       * Estas dos solo las edita la oficina del contrato. Un formulario que no
+       * las trae NO debe apagarlas: por eso se preservan salvo que el
+       * formulario declare explícitamente que las está editando.
+       *
+       * La marca es necesaria para el booleano — un checkbox desmarcado
+       * simplemente no viaja, y sin la marca sería imposible distinguir
+       * "lo apagué" de "mi formulario no lo tiene".
+       */
+      kmlOriginToleranceFraction: fraccionDeCampoPct(
+        formData.get("kmlOriginToleranceFractionPct"),
+        existingPolicy.kmlOriginToleranceFraction ?? 0.15,
+      ),
+      permitirConsolidacion: formData.has("editaConsolidacion")
+        ? formData.get("permitirConsolidacion") === "on"
+        : (existingPolicy.permitirConsolidacion ?? false),
+
+      /*
+       * Las perillas de la ventana derivada. No fijan el ancho: gobiernan cómo
+       * el sistema lo aprende de la duración real de cada ruta. Mismo trato que
+       * arriba — un formulario que no las trae las preserva, y el booleano
+       * necesita su marca porque una casilla desmarcada no viaja.
+       */
+      windowDerivationEnabled: formData.has("editaVentanaDerivada")
+        ? formData.get("windowDerivationEnabled") === "on"
+        : (existingPolicy.windowDerivationEnabled ?? true),
+      windowSlackPct: toNumber(
+        formData.get("windowSlackPct"),
+        existingPolicy.windowSlackPct ?? 25,
+      ),
+      routeAvgSpeedKmh: toNumber(
+        formData.get("routeAvgSpeedKmh"),
+        existingPolicy.routeAvgSpeedKmh ?? 20,
+      ),
+      maxWindowBeforeMinutes: toInt(
+        formData.get("maxWindowBeforeMinutes"),
+        existingPolicy.maxWindowBeforeMinutes ?? 360,
+      ),
+      routeDurationPercentile: toInt(
+        formData.get("routeDurationPercentile"),
+        existingPolicy.routeDurationPercentile ?? 90,
+      ),
+      routeDurationMinSamples: toInt(
+        formData.get("routeDurationMinSamples"),
+        existingPolicy.routeDurationMinSamples ?? 3,
+      ),
     };
 
     const parsed = contractPolicySchema.safeParse(policyPayload);
     if (!parsed.success) {
       const first = parsed.error.issues[0];
-      return back(request, client.slug, scope, {
-        error: `Revisa la política: ${first?.path.join(".") || ""} ${first?.message ?? ""}`.trim(),
-      });
+      const mensaje =
+        `Revisa la política: ${first?.path.join(".") || ""} ${first?.message ?? ""}`.trim();
+      return (
+        backOficina(request, formData, { error: mensaje }) ??
+        back(request, client.slug, scope, { error: mensaje })
+      );
     }
 
     // La política nueva aplica solo hacia adelante. Hechos definitivos
@@ -187,7 +297,10 @@ export async function POST(request: Request) {
     // reintenta en el cron normal (verifyOccurrence sin force).
     await repos.contracts.updatePolicy(contractId, parsed.data);
 
-    return back(request, client.slug, scope, { created: "politica" });
+    return (
+      backOficina(request, formData, { created: "politica" }) ??
+      back(request, client.slug, scope, { created: "politica" })
+    );
   }
 
   if (action === "delete") {
