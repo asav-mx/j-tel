@@ -1,8 +1,17 @@
-import { eq, and, or, gte, lte, isNull, inArray, sql, ne } from "drizzle-orm";
-import { computeExpectedDeadline, computeEvidenceWindow, suggestProfileCode } from "@jtel/domain";
-import type { OperationalScope, OperationalUnit } from "@jtel/domain";
+import { eq, and, or, gte, lte, isNull, inArray, sql, ne, desc } from "drizzle-orm";
+import {
+  computeExpectedDeadline,
+  computeEvidenceWindow,
+  suggestProfileCode,
+} from "@jtel/domain";
+import type {
+  OperationalScope,
+  OperationalUnit,
+  RouteDurationSample,
+} from "@jtel/domain";
 import { operationalScopeColumns } from "@jtel/domain";
 import type { Database } from "../index.js";
+import { routeWindowSizing } from "../ventana-ocurrencia.js";
 import {
   accounts,
   carrierProfiles,
@@ -39,6 +48,7 @@ import {
   groundTruthDays,
   occurrenceGroundTruth,
   ingestAlerts,
+  routeTraversalMeasurements,
   clientCarrierAuthorizations,
 } from "../schema/index.js";
 import type { ComplianceFact } from "../schema/index.js";
@@ -1940,6 +1950,16 @@ export class OccurrenceRepository {
       orderBy: (v, { desc }) => [desc(v.validFrom)],
     });
 
+    // La ventana de observación se dimensiona con la ruta, no con una
+    // constante: cuánto ha durado de verdad este recorrido (historia medida) y,
+    // si no hay historia suficiente, qué tan largo es el trazado. Se resuelve
+    // UNA vez por perfil — ni el KML ni la historia cambian entre las fechas
+    // de una misma corrida.
+    const durationSamples = await new RouteTraversalRepository(this.db).recentSamples(
+      profile.routeShiftId,
+    );
+    const windowSizing = routeWindowSizing(kmlVersion?.waypoints, durationSamples, policy);
+
     type Row = {
       serviceProfileId: string;
       contractId: string;
@@ -1967,7 +1987,11 @@ export class OccurrenceRepository {
         anticipation,
         policy.timeZone,
       );
-      const { windowStart, windowEnd } = computeEvidenceWindow(deadline, policy);
+      const { windowStart, windowEnd } = computeEvidenceWindow(
+        deadline,
+        policy,
+        windowSizing,
+      );
       rows.push({
         serviceProfileId: profileId,
         contractId: profile.contractId,
@@ -2945,6 +2969,73 @@ export class OccurrenceGroundTruthRepository {
   }
 }
 
+/**
+ * Mediciones de cuánto duró de verdad cada recorrido de una ruta×turno.
+ *
+ * No juzga nada: es el instrumento del que sale el ancho de la ventana de
+ * observación de las ocurrencias futuras.
+ */
+export class RouteTraversalRepository {
+  constructor(private db: Database) {}
+
+  /** Una medición por ocurrencia: re-verificar reemplaza, no acumula. */
+  async record(data: {
+    routeShiftId: string;
+    serviceOccurrenceId: string;
+    serviceDate: string;
+    kmlVersionId?: string | null;
+    durationMinutes: number;
+    lowerBound?: boolean;
+    pointsInCorridor?: number;
+    unitId?: string | null;
+  }) {
+    const values = {
+      routeShiftId: data.routeShiftId,
+      serviceOccurrenceId: data.serviceOccurrenceId,
+      serviceDate: data.serviceDate,
+      kmlVersionId: data.kmlVersionId ?? null,
+      durationMinutes: data.durationMinutes,
+      lowerBound: data.lowerBound ?? false,
+      pointsInCorridor: data.pointsInCorridor ?? 0,
+      unitId: data.unitId ?? null,
+      measuredAt: new Date(),
+    };
+    const [row] = await this.db
+      .insert(routeTraversalMeasurements)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [routeTraversalMeasurements.serviceOccurrenceId],
+        set: values,
+      })
+      .returning();
+    return row;
+  }
+
+  /**
+   * Las mediciones más recientes de una ruta×turno, en el formato que
+   * `summarizeRouteDuration` espera. Ventana móvil: la operación de hace medio
+   * año no debe dimensionar la ventana de mañana.
+   */
+  async recentSamples(
+    routeShiftId: string,
+    opts: { limit?: number } = {},
+  ): Promise<RouteDurationSample[]> {
+    const rows = await this.db
+      .select({
+        durationMinutes: routeTraversalMeasurements.durationMinutes,
+        lowerBound: routeTraversalMeasurements.lowerBound,
+      })
+      .from(routeTraversalMeasurements)
+      .where(eq(routeTraversalMeasurements.routeShiftId, routeShiftId))
+      .orderBy(desc(routeTraversalMeasurements.serviceDate))
+      .limit(Math.max(1, opts.limit ?? 30));
+    return rows.map((r) => ({
+      durationMinutes: r.durationMinutes,
+      lowerBound: r.lowerBound,
+    }));
+  }
+}
+
 export class IngestAlertRepository {
   constructor(private db: Database) {}
 
@@ -3031,6 +3122,7 @@ export function createRepositories(db: Database) {
     notifications: new NotificationRepository(db),
     demos: new DemoRepository(db),
     telemetry: new TelemetryRepository(db),
+    routeTraversals: new RouteTraversalRepository(db),
     groundTruth: new GroundTruthRepository(db),
     occurrenceGroundTruth: new OccurrenceGroundTruthRepository(db),
     ingestAlerts: new IngestAlertRepository(db),

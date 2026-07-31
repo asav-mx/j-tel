@@ -7,3 +7,4 @@ export * from "./salud.js";
 export * from "./recorrido.js";
 export * from "./cierre.js";
 export * from "./cobertura.js";
+export * from "./medicion-recorrido.js";

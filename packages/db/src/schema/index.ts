@@ -764,6 +764,58 @@ export const ingestAlerts = pgTable(
   ],
 );
 
+/**
+ * Cuánto duró de verdad cada recorrido de una ruta×turno.
+ *
+ * Es una MEDICIÓN, no un veredicto: se guarda haya cumplido o no el servicio,
+ * porque justo las rutas que fallan por ventana corta son las que más
+ * necesitan que se sepa cuánto duran. Nadie juzga con esta tabla; solo
+ * dimensiona la ventana de observación de las ocurrencias futuras
+ * (`deriveObservationWindow`).
+ *
+ * Una medición por ocurrencia: re-verificar la reemplaza en vez de acumular
+ * duplicados que sesguen el percentil.
+ */
+export const routeTraversalMeasurements = pgTable(
+  "route_traversal_measurements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    routeShiftId: uuid("route_shift_id")
+      .notNull()
+      .references(() => routeShifts.id, { onDelete: "cascade" }),
+    serviceOccurrenceId: uuid("service_occurrence_id")
+      .notNull()
+      .references(() => serviceOccurrences.id, { onDelete: "cascade" })
+      .unique(),
+    serviceDate: date("service_date").notNull(),
+    kmlVersionId: uuid("kml_version_id").references(() => routeKmlVersions.id, {
+      onDelete: "set null",
+    }),
+    /** Del primer punto en corredor a la llegada (o al último punto en corredor). */
+    durationMinutes: doublePrecision("duration_minutes").notNull(),
+    /**
+     * La medición topó con el borde de la ventana: la ruta duró AL MENOS
+     * esto. Sin esta bandera el percentil se quedaría atrapado en la ventana
+     * angosta que produjo la medición.
+     */
+    lowerBound: boolean("lower_bound").notNull().default(false),
+    pointsInCorridor: integer("points_in_corridor").notNull().default(0),
+    /** Unidad a la que se le midió el recorrido; informativa, nunca un veredicto. */
+    unitId: uuid("unit_id").references(() => units.id, { onDelete: "set null" }),
+    measuredAt: timestamp("measured_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("route_traversal_route_shift_date_idx").on(
+      table.routeShiftId,
+      table.serviceDate,
+    ),
+  ],
+);
+
+export type RouteTraversalMeasurement = typeof routeTraversalMeasurements.$inferSelect;
+
 export const clientCarrierAuthorizationsRelations = relations(
   clientCarrierAuthorizations,
   ({ one }) => ({
