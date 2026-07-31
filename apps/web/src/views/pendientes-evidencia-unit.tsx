@@ -11,6 +11,7 @@ import {
   NotaHonestaPendiente,
   rielPendiente,
 } from "@/components/caso-pendiente-evidencia";
+import { HistoriaDelSello, PuntoHistoriaSello } from "@/components/historia-del-sello";
 import { withAccount } from "@/lib/account-context";
 import type { UnitPageContext } from "@/lib/unit-context";
 import { operationalUnitLabel } from "@/lib/operational-scope";
@@ -25,20 +26,6 @@ import { operationalUnitLabel } from "@/lib/operational-scope";
  *
  * No hay fecha ni turno seleccionable — es una bandeja, no un corte de un día.
  */
-
-function instante(iso: string, tz: string): string {
-  const f = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: tz,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-  return f.format(new Date(iso)).replace("T", " ");
-}
 
 function titular(n: number): string {
   if (n === 0) return "No hay servicios pendientes por evidencia.";
@@ -124,13 +111,7 @@ function Caso({ c, tz, slug }: { c: CasoPendienteData; tz: string; slug: string 
             {c.profileName}
             {c.turnoName ? ` · ${c.turnoName}` : ""} · {c.fecha}
           </span>
-          {c.versiones > 1 ? (
-            <span
-              className="h-1.5 w-1.5 rounded-full bg-[var(--azul)]"
-              title={`Verificado de nuevo · ${c.versiones} versiones`}
-              aria-label={`Verificado de nuevo, ${c.versiones} versiones`}
-            />
-          ) : null}
+          <PuntoHistoriaSello historia={c.historiaSello} />
         </p>
 
         <h3 className="mb-3 max-w-[42ch] font-[family-name:var(--fuente-archivo)] text-[19px] leading-[1.24] font-semibold">
@@ -153,12 +134,7 @@ function Caso({ c, tz, slug }: { c: CasoPendienteData; tz: string; slug: string 
           >
             Abrir el expediente
           </Link>
-          {c.selladoEn ? (
-            <span className="border border-dashed border-white/20 px-2.5 py-1.5 font-mono text-[11px] text-[var(--tenue)]">
-              {c.versiones > 1 ? "Verificado de nuevo" : "Verificado y sellado"} ·{" "}
-              {instante(c.selladoEn, tz)}
-            </span>
-          ) : null}
+          <HistoriaDelSello historia={c.historiaSello} timeZone={tz} />
         </div>
       </div>
     </div>

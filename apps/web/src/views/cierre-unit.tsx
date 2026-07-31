@@ -17,6 +17,7 @@ import {
   rielPendiente,
 } from "@/components/caso-pendiente-evidencia";
 import { ChipResultado as Chip } from "@/components/chip-resultado";
+import { HistoriaDelSello, PuntoHistoriaSello } from "@/components/historia-del-sello";
 
 /**
  * Cierre del turno.
@@ -35,23 +36,6 @@ function parseParam(
 ): string | null {
   const v = sp?.[key];
   return typeof v === "string" && v.length > 0 ? v : null;
-}
-
-/** Instante completo: en evidencia, una hora sin fecha no sostiene un caso. */
-function instante(iso: string | null, tz: string): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  const f = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: tz,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-  return f.format(d).replace("T", " ");
 }
 
 function soloHora(iso: string | null, tz: string): string {
@@ -355,13 +339,7 @@ function Caso({ s, tz, slug }: { s: ServicioDelCierre; tz: string; slug: string 
             {s.profileName}
             {s.unidadLabel ? ` · Unidad ${s.unidadLabel}` : ""}
           </span>
-          {s.versiones > 1 ? (
-            <span
-              className="h-1.5 w-1.5 rounded-full bg-[var(--azul)]"
-              title={`Verificado de nuevo · ${s.versiones} versiones`}
-              aria-label={`Verificado de nuevo, ${s.versiones} versiones`}
-            />
-          ) : null}
+          <PuntoHistoriaSello historia={s.historiaSello} />
         </p>
 
         <h3 className="mb-3 max-w-[42ch] font-[family-name:var(--fuente-archivo)] text-[19px] leading-[1.24] font-semibold">
@@ -416,12 +394,7 @@ function Caso({ s, tz, slug }: { s: ServicioDelCierre; tz: string; slug: string 
           >
             Abrir el expediente
           </Link>
-          {s.selladoEn ? (
-            <span className="border border-dashed border-white/20 px-2.5 py-1.5 font-mono text-[11px] text-[var(--tenue)]">
-              {s.versiones > 1 ? "Verificado de nuevo" : "Verificado y sellado"} ·{" "}
-              {instante(s.selladoEn, tz)}
-            </span>
-          ) : null}
+          <HistoriaDelSello historia={s.historiaSello} timeZone={tz} />
         </div>
       </div>
     </div>
@@ -487,12 +460,7 @@ function TablaLimpios({ servicios, tz }: { servicios: ServicioDelCierre[]; tz: s
             <tr key={s.occurrenceId} className="hover:bg-white/[0.025]">
               <td className="border-b border-white/[0.045] py-2 pr-2.5">
                 {s.profileName}
-                {s.versiones > 1 ? (
-                  <span
-                    className="ml-2 inline-block h-1.5 w-1.5 rounded-full bg-[var(--azul)] align-middle"
-                    title="Verificado de nuevo"
-                  />
-                ) : null}
+                <PuntoHistoriaSello historia={s.historiaSello} className="ml-2 align-middle" />
               </td>
               <td className="border-b border-white/[0.045] py-2 pr-2.5 font-mono text-[12px] whitespace-nowrap text-[var(--tenue)]">
                 {s.unidadLabel ?? "—"}

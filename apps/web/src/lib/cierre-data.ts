@@ -2,6 +2,7 @@ import { getRepos } from "@/lib/db";
 import type { ContractPolicy, GpsPoint, OperationalScope } from "@jtel/domain";
 import { JTTEL_TZ } from "@jtel/domain";
 import { pairLedgerEntryWithFact } from "@jtel/db";
+import { construirHistoriaSello, type HistoriaSello } from "@/lib/historia-sello";
 import {
   computeExclusiveContentionWindow,
   contarTurno,
@@ -45,9 +46,10 @@ export type ServicioDelCierre = {
   excepcion: boolean;
   unidadLabel: string | null;
 
-  /** La marca de sellado. `versiones > 1` enciende el punto azul. */
+  /** La marca de sellado. */
   selladoEn: string | null;
-  versiones: number;
+  /** Las versiones del resultado y la causa de cada una. */
+  historiaSello: HistoriaSello;
 
   /** Llegada medida contra el límite que gobierna, ambos del hecho congelado. */
   llegadaEn: string | null;
@@ -252,7 +254,7 @@ export async function loadCierre(opts: {
       excepcion,
       unidadLabel: observedUnitId ? (unitLabels.get(observedUnitId) ?? null) : null,
       selladoEn: fact?.materializedAt?.toISOString() ?? null,
-      versiones: historia.length + (fact ? 1 : 0),
+      historiaSello: construirHistoriaSello(fact ?? null, historia),
       llegadaEn: fact?.observedArrivalAt?.toISOString() ?? null,
       limiteEn: limite?.toISOString() ?? null,
       margenMinutos:
