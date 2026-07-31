@@ -5,6 +5,21 @@ description: Lenguaje visual y reglas de interfaz de J-Telemetry (repo asav-mx/j
 
 # J-Telemetry — Lenguaje de interfaz
 
+## La tesis: la calma es la competencia
+
+**La calma es la competencia.** Un centro de control aeroespacial no grita aunque
+haya una anomalía — la serenidad *es* la señal de que todo está bajo control. Las
+superficies de J-Telemetry se sienten así: frías, precisas, sin pánico. El gerente
+abre a las 6 de la mañana y la pantalla le dice, sin levantar la voz, "tenemos esto".
+
+El desmadre de la operación ya lo resolvió el motor. El trabajo del diseño no es
+**agregar** calma con decoración — es **no estorbarle** a la calma que el producto
+ya produjo. Cada elemento que no comunica un hecho, se va.
+
+Si la pantalla grita, está mal.
+
+---
+
 ## El producto en un párrafo
 
 J-Telemetry es un **árbitro automático**. Recibe telemetría GPS y emite un veredicto vinculante sobre si cada servicio de transporte de personal se cumplió. Empresas usan ese veredicto para decidir pagos a sus transportistas.
@@ -57,6 +72,16 @@ Cualquier propuesta que rompa una de estas está mal por definición, sin import
 8. **El código nunca conoce nombres.** Ni de clientes, ni de plantas, ni de rutas, ni de calles. Los documentos y mockups sí los usan como ejemplo para comunicar. Un componente recibe cuenta, alcance y fecha; nunca sabe qué es "Planta 47".
 9. **Cualquier caso real es una instancia, no una categoría.** Si una operación concreta motiva un cambio, el cambio se diseña genérico y esa operación es simplemente la primera donde disparó.
 
+### La maquinaria de identificación no se enseña
+
+Hay que separar dos clases de número, porque el original las confundía:
+
+**Medición del hecho — Sí va en cara cliente.** Cobertura de la ventana, margen contra el deadline, hueco máximo de señal: son evidencia del servicio, y van junto a su umbral. Un resultado sin su medida es una acusación sin prueba.
+
+**Maquinaria de identificación — NUNCA va en cara cliente.** Los puntajes de candidatas (`A—82 / B—39`), el razonamiento de eliminación, las unidades que se consideraron y se descartaron. Eso es cómo el motor decidió qué unidad era — y además revela la flota del carrier, así que también lo prohíbe la Ley 3 del Marco.
+
+La distinción: **qué se midió del servicio** es evidencia; **cómo se decidió qué unidad era** es cocina. La evidencia se muestra; la cocina vive en la bitácora técnica del expediente, y del lado carrier.
+
 ---
 
 ## Las caras y su registro
@@ -74,6 +99,14 @@ Cada una es su propio subdominio y acceso. La misma información base, presentac
 Corporativo y planta comparten **idioma** (chips, colores, tipografía, tono) pero son **pantallas distintas**, porque sus necesidades de información son distintas.
 
 Roles funcionales dentro de la cara cliente, para etiquetar quién ejecuta cada acción: Coordinación de rutas, Cumplimiento (acepta incidentes y aprueba variantes), Inspecciones, Contrato y escalaciones.
+
+### La leyenda de la torre
+
+Toda superficie en vivo lleva esta leyenda **permanentemente visible**, no como disclaimer chico al pie:
+
+> **Vista en vivo. El resultado se emite al cierre.**
+
+Es lo que impide que una unidad que "llegó" a las 06:40 se lea como un resultado cuando el árbitro todavía no cierra. La torre reporta hechos en curso; el acta emite resultados. Esa frontera se declara en pantalla, siempre.
 
 ---
 
