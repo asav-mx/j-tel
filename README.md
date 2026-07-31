@@ -16,12 +16,24 @@ Repositorio de JTEL en Cursor — plataforma multi-cuenta de verificación de tr
 pnpm install
 cp .env.example .env
 docker compose up -d
-pnpm db:migrate
+pnpm db:migrate      # SOLO en local — ver la advertencia de abajo
 pnpm db:seed
 pnpm dev
 ```
 
 Abrir http://localhost:3000
+
+> ⛔ **`pnpm db:migrate` NUNCA se corre contra producción.** Producción no tiene la
+> tabla de bitácora del migrador, así que este comando ve una base virgen e intenta
+> aplicar las migraciones desde la `0000` contra una base con 37 tablas y 846 hechos
+> sellados: revienta, y deja su bitácora a medio escribir. Las migraciones se aplican
+> ejecutando su SQL directamente. **El procedimiento real está en
+> [docs/Procedimiento-Migraciones.md](docs/Procedimiento-Migraciones.md)** — léelo
+> antes de tocar la base.
+>
+> En local también se atora en la `0014`, que lleva `CREATE INDEX CONCURRENTLY` y el
+> migrador envuelve cada migración en una transacción. El documento explica cómo
+> levantar una base local con el mismo procedimiento que producción.
 
 > **Seed y producción.** `pnpm db:seed` hace `TRUNCATE` de TODAS las tablas antes de
 > sembrar. Por eso exige `SEED_DATABASE_URL` (definida en `.env.example`) apuntando a
@@ -37,6 +49,7 @@ Abrir http://localhost:3000
 - `packages/gps-umbrella` — Adaptador API Umbrella
 - `packages/services` — Orquestación verificación + ingesta
 - `docs/marco-limpio` — Fuente de verdad del dominio
+- `docs/Procedimiento-Migraciones.md` — Cómo se aplica una migración (a mano, no con el migrador)
 
 ## Usuarios demo (header `X-JTEL-User`)
 
