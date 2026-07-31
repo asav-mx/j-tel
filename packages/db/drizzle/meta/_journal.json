@@ -99,6 +99,13 @@
       "when": 1784600000000,
       "tag": "0013_route_traversal_measurements",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1784700000000,
+      "tag": "0014_telemetry_unit_idx",
+      "breakpoints": true
     }
   ]
 }
