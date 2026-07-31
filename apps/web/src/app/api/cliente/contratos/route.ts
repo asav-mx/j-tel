@@ -295,7 +295,20 @@ export async function POST(request: Request) {
     // La política nueva aplica solo hacia adelante. Hechos definitivos
     // (cumplido / no_cumplido) no se recalculan; pendiente_evidencia sí se
     // reintenta en el cron normal (verifyOccurrence sin force).
-    await repos.contracts.updatePolicy(contractId, parsed.data);
+    //
+    // El registro de la edición lo hace `updatePolicy` en la misma
+    // transacción, no este endpoint: si dejar rastro dependiera de quien
+    // llama, un camino de edición nuevo se olvidaría de hacerlo.
+    //
+    // `actorId` va vacío a propósito. Hasta que exista auth-rbac el sistema
+    // sabe que fue una persona pero no cuál, y la firma honesta es el rol —
+    // nunca un nombre inventado ni un campo que finja precisión. Cuando
+    // auth-rbac exista, esto se llena solo.
+    await repos.contracts.updatePolicy(contractId, parsed.data, {
+      actorKind: "human",
+      actorId: null,
+      note: String(formData.get("motivo") ?? ""),
+    });
 
     return (
       backOficina(request, formData, { created: "politica" }) ??

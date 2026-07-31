@@ -366,6 +366,50 @@ export const serviceContracts = pgTable("service_contracts", {
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
+/**
+ * Historia de la política — una fila por edición, nunca se borra.
+ *
+ * Los hechos guardan la suya desde la 0012; la política, que es la ley con la
+ * que se juzga, no tenía registro: `updatePolicy` sobrescribía y la versión
+ * anterior se perdía.
+ *
+ * Se guardan las DOS fotos a propósito. Con solo la anterior, saber qué cambió
+ * una edición obliga a mirar la fila siguiente, y un camino de escritura que no
+ * registre rompe la cadena en silencio. Con las dos, cada fila es verdadera por
+ * sí sola y el hueco se puede detectar: si el `policyAfter` de una fila no
+ * coincide con el `policyBefore` de la siguiente, alguien escribió sin dejar
+ * rastro, y eso se dice en vez de dibujar una historia falsa.
+ *
+ * Nada del motor lee esta tabla. Cada hecho congela su propio
+ * `contractPolicySnapshot`; esto es registro hacia adelante, no ley.
+ */
+export const contractPolicyHistory = pgTable(
+  "contract_policy_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contractId: uuid("contract_id")
+      .notNull()
+      .references(() => serviceContracts.id, { onDelete: "cascade" }),
+    policyBefore: jsonb("policy_before")
+      .$type<import("@jtel/domain").ContractPolicy>()
+      .notNull(),
+    policyAfter: jsonb("policy_after")
+      .$type<import("@jtel/domain").ContractPolicy>()
+      .notNull(),
+    /** Quién editó. Hasta que exista auth-rbac, la firma honesta es el rol. */
+    actorKind: text("actor_kind").notNull(),
+    actorId: text("actor_id"),
+    /** Por qué. Opcional: no bloquea guardar, pero cuando está vale más que el qué. */
+    note: text("note"),
+    changedAt: timestamp("changed_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("cph_contract_idx").on(table.contractId, table.changedAt)],
+);
+
+export type ContractPolicyEdit = typeof contractPolicyHistory.$inferSelect;
+
 export const serviceProfiles = pgTable(
   "service_profiles",
   {
@@ -905,6 +949,14 @@ export const serviceContractsRelations = relations(serviceContracts, ({ one, man
     references: [plantGroups.id],
   }),
   profiles: many(serviceProfiles),
+  policyHistory: many(contractPolicyHistory),
+}));
+
+export const contractPolicyHistoryRelations = relations(contractPolicyHistory, ({ one }) => ({
+  contract: one(serviceContracts, {
+    fields: [contractPolicyHistory.contractId],
+    references: [serviceContracts.id],
+  }),
 }));
 
 export const routeShiftsRelations = relations(routeShifts, ({ one }) => ({

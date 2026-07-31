@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppNav } from "@/components/ui";
 import { ConfirmForm } from "@/components/confirm-form";
@@ -244,6 +245,32 @@ export default async function OficinaDeContratoPage({
             ),
           )}
 
+          {/*
+            El motivo es opcional a propósito: obligarlo haría que la gente
+            escriba "ajuste" para poder guardar, y un registro lleno de
+            "ajuste" es peor que uno con huecos. Cuando está, vale más que la
+            lista de qué cambió — el qué se deduce de las dos versiones, el
+            porqué no se deduce de ningún lado.
+          */}
+          <label className="mt-8 block max-w-[70ch]">
+            <span className="text-[13px] text-[var(--texto)]">
+              Por qué estás cambiando esto{" "}
+              <span className="text-[var(--tenue)]">· opcional</span>
+            </span>
+            <span className="mt-1 mb-2 block text-[12px] text-[var(--tenue)]">
+              Queda guardado con la edición, en la historia del contrato. Dentro de seis
+              meses, cuando alguien pregunte por qué el umbral está en 70, esto es lo
+              único que va a contestarlo.
+            </span>
+            <input
+              type="text"
+              name="motivo"
+              maxLength={280}
+              placeholder="p. ej. el turno B se movió a las 14:00"
+              className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-white/25"
+            />
+          </label>
+
           <div className="mt-6 flex flex-wrap items-center gap-4">
             <button
               type="submit"
@@ -252,10 +279,20 @@ export default async function OficinaDeContratoPage({
               Guardar la política
             </button>
             <span className="text-xs text-[var(--tenue)]">
-              Aplica hacia adelante. Nada de lo ya sellado se recalcula.
+              Aplica hacia adelante. Nada de lo ya sellado se recalcula, y la edición queda
+              registrada.
             </span>
           </div>
         </ConfirmForm>
+
+        <p className={`mt-4 text-[12px] ${mono}`}>
+          <Link
+            href={withAccount(`/cliente/contrato/${contrato.id}/historia`, client.slug)}
+            className="text-[var(--azul)]"
+          >
+            Ver la historia de la política →
+          </Link>
+        </p>
 
         {/* — Los turnos, con la hora de la que sale todo — */}
         <h2 className={`mt-12 mb-1 border-b border-[var(--linea)] pb-2 text-[11px] tracking-[.14em] text-[var(--tenue)] uppercase ${mono}`}>
