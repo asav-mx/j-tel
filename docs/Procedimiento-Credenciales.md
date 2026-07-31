@@ -12,13 +12,14 @@ porque el `.env` de una máquina y las variables de Vercel decían cosas distint
 > Nadie edita el `.env` a mano. Rotar un secreto es **un solo cambio**, en
 > Vercel, y después cada quien corre `pnpm env:pull`.
 
-Tres archivos sostienen esto:
+Cuatro archivos sostienen esto:
 
 | Archivo | Qué es |
 |---|---|
 | `.env.example` | La **lista autorizada de nombres**. Sin valores. Versionado. |
 | `.env` | Los valores, **generados** con `pnpm env:pull`. Nunca en git. |
 | `scripts/verificar-env.mjs` | El árbitro. `pnpm env:check`. |
+| `scripts/verificar-env.test.mjs` | Que el árbitro sepa fallar. `pnpm env:test`. |
 
 Si agregas una variable al código, va a `.env.example` **en el mismo commit**.
 `pnpm env:check` compara los dos archivos en ambos sentidos y avisa cuando se
@@ -36,6 +37,14 @@ pnpm env:check    # ¿el .env cumple el contrato?
 `env:pull` corre el CLI de Vercel con `pnpm dlx`, así que no hace falta
 instalarlo. La primera vez pide vincular el proyecto (`vercel link`); ese paso
 deja un `.vercel/` local que no se versiona.
+
+**El `.env` que genera trae los valores entre comillas** (`CLAVE="valor"`). Es
+formato válido y `env:check` lo entiende, pero conviene saberlo: la primera
+versión de este árbitro no le quitaba las comillas y, con ellas puestas, la
+comprobación del password se saltaba **en silencio** y anunciaba verde — se
+apagaba sola justo en el flujo que este documento recomienda. Por eso
+`pnpm env:test` existe y por eso corre dentro de `pnpm test`: un detector que no
+sabe fallar es peor que no tenerlo, porque da una seguridad que no hay.
 
 ---
 
