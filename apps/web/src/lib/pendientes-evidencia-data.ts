@@ -2,6 +2,7 @@ import { getRepos } from "@/lib/db";
 import type { ContractPolicy, OperationalScope } from "@jtel/domain";
 import { JTTEL_TZ } from "@jtel/domain";
 import { pairLedgerEntryWithFact } from "@jtel/db";
+import { construirHistoriaSello, type HistoriaSello } from "@/lib/historia-sello";
 import {
   computeExclusiveContentionWindow,
   leerCobertura,
@@ -32,9 +33,10 @@ export type CasoPendiente = {
   turnoName: string | null;
   fecha: string;
 
-  /** La marca de sellado. `versiones > 1` enciende el punto azul. */
+  /** La marca de sellado, y el orden de la bandeja. */
   selladoEn: string | null;
-  versiones: number;
+  /** Las versiones del resultado y la causa de cada una. */
+  historiaSello: HistoriaSello;
 
   cobertura: Cobertura;
   /** El silencio más largo de la ventana, descrito desde evidencia anclada. */
@@ -85,7 +87,7 @@ async function construirCaso(o: Occurrence, repos: Repos): Promise<CasoConstruid
       turnoName: profile?.routeShift?.shift?.name ?? null,
       fecha: o.serviceDate,
       selladoEn: fact.materializedAt?.toISOString() ?? null,
-      versiones: historia.length + 1,
+      historiaSello: construirHistoriaSello(fact, historia),
       cobertura,
       hueco: hueco
         ? { minutos: hueco.minutos, desdeEn: hueco.desde.toISOString(), hastaEn: hueco.hasta.toISOString() }

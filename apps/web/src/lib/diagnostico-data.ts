@@ -22,6 +22,7 @@ import { contractPolicySchema, type LedgerStep } from "@jtel/domain";
 import { getRepos } from "@/lib/db";
 import { leerElMotor, type LecturaDelMotor } from "@/lib/diagnostico-lectura";
 import { partirRuta, type Punto, type TramoDeRuta } from "@/lib/diagnostico-geometria";
+import { construirHistoriaSello, type HistoriaSello } from "@/lib/historia-sello";
 
 /** Cuántos puntos de traza se llevan al dibujo. Por encima de esto no se ve mejor. */
 export const MAX_PUNTOS_DIBUJADOS = 900;
@@ -60,8 +61,8 @@ export type DatosDeDiagnostico = {
     llegada: Date | null;
     unidadObservada: string | null;
     selladoEn: Date;
-    /** Cuántas versiones tiene el sello. 1 = se verificó una sola vez. */
-    versiones: number;
+    /** Las versiones del sello y la causa de cada una. */
+    historiaSello: HistoriaSello;
     excusable: string | null;
   } | null;
   /** La ventana que el motor efectivamente miró, tal como quedó en el viaje. */
@@ -269,7 +270,7 @@ export async function cargarDiagnostico(
           llegada: fact.observedArrivalAt ?? null,
           unidadObservada: fact.observedUnit?.label ?? fact.observedUnitId ?? null,
           selladoEn: fact.materializedAt,
-          versiones: historia.length + 1,
+          historiaSello: construirHistoriaSello(fact, historia),
           excusable: fact.excusableReason ?? null,
         }
       : null,

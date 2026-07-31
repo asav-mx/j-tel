@@ -20,7 +20,8 @@ import { RielDeRuta, RielDeVentana } from "@/components/rieles-diagnostico";
 import { MedidasDelMotor } from "@/components/medidas-motor";
 import { cargarDiagnostico } from "@/lib/diagnostico-data";
 import { km, pct } from "@/lib/diagnostico-lectura";
-import { duracion, fechaDeIso, instanteSellado, reloj } from "@/lib/formato-tiempo";
+import { duracion, fechaDeIso, reloj } from "@/lib/formato-tiempo";
+import { HistoriaDelSello } from "@/components/historia-del-sello";
 import type { LedgerPairing } from "@jtel/db";
 import type { EstadoServicio } from "@jtel/services";
 
@@ -107,17 +108,21 @@ export default async function DiagnosticoPage({
                 Sin hecho sellado
               </span>
             )}
-            {hecho && (
-              <span
-                className="border-b border-dotted border-[var(--linea)] pb-0.5 font-[family-name:var(--fuente-mono)] text-[11.5px]"
-                style={{ color: hecho.versiones > 1 ? "var(--azul)" : "var(--tenue)" }}
-              >
-                {hecho.versiones > 1 ? "Verificado de nuevo" : "Verificado y sellado"} ·{" "}
-                {instanteSellado(hecho.selladoEn)}
-                {hecho.versiones > 1 ? ` · ${hecho.versiones} versiones` : ""}
-              </span>
-            )}
           </div>
+
+          {/*
+            El cajón completo vive aquí y no en las bandejas: J-Staff es la
+            superficie de razonamiento, donde el operador experto sí quiere la
+            cadena entera. Abierto por defecto cuando hubo versiones — quien
+            entra a diagnosticar viene justamente a leerlas.
+          */}
+          {hecho && (
+            <HistoriaDelSello
+              historia={hecho.historiaSello}
+              conCajon
+              abiertoPorDefecto
+            />
+          )}
 
           {/* La línea que el operador viene a leer. */}
           <p className="max-w-4xl border-l-2 border-[var(--acero)] pl-4 text-[15px] leading-relaxed text-[var(--texto)]">
