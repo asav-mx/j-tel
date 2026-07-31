@@ -1,0 +1,824 @@
+/*
+ * Landing público de j-tel.io.
+ *
+ * El landing es la ÚNICA excepción del lenguaje de producto (skill
+ * j-telemetry-ui): no trata datos ni resultados sellados, así que puede ser
+ * todo lo expresivo que quiera. Lo que sí conserva es la identidad —las tres
+ * fuentes, la paleta y el chip con borde—, porque es la primera vez que
+ * alguien ve la marca.
+ *
+ * Vive en su propio módulo y no toca los tokens del producto: las variables se
+ * declaran sobre .pagina, no sobre :root, para que nada de aquí se filtre a
+ * una pantalla que sí muestra veredictos.
+ */
+
+.pagina {
+  --fondo: #0a0d10;
+  --panel: #0f1318;
+  --linea: rgba(255, 255, 255, 0.1);
+  --linea-fuerte: rgba(255, 255, 255, 0.2);
+  --texto: #eaeef2;
+  --tenue: #71808f;
+  --acero: #7a9cb8;
+  --verde: #34c77b;
+  --ambar: #e3a81f;
+  --rojo: #e5484d;
+  --azul: #4c9ae0;
+  /* Un ciclo completo de la escena: recorrido, sello y descanso. */
+  --ciclo: 17s;
+
+  /*
+   * El landing usa Archivo en 800 —un peso que el producto no carga, porque
+   * dentro de una pantalla de resultados grita. La familia la carga el layout
+   * del segmento; aquí solo se le pone nombre.
+   */
+  --fuente-titular: var(--fuente-titular-cargada), system-ui, sans-serif;
+
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--fuente-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+.pagina *,
+.pagina *::before,
+.pagina *::after {
+  box-sizing: border-box;
+}
+
+.c {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 22px;
+}
+
+.pagina section {
+  padding: 90px 0;
+}
+
+@media (max-width: 640px) {
+  .pagina section {
+    padding: 64px 0;
+  }
+}
+
+/* — Barra — */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(10, 13, 16, 0.88);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--linea);
+}
+
+.navIn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 14px 22px;
+}
+
+.logo {
+  font-family: var(--fuente-titular);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.logo span {
+  color: var(--acero);
+}
+
+.navLinks {
+  display: flex;
+  gap: 26px;
+  align-items: center;
+  font-family: var(--fuente-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+}
+
+.navLinks a {
+  color: var(--tenue);
+  text-decoration: none;
+}
+
+.navLinks a:hover {
+  color: var(--texto);
+}
+
+@media (max-width: 720px) {
+  .navLinks a:not(.btn) {
+    display: none;
+  }
+}
+
+/* — Botones — */
+
+.btn {
+  font-family: var(--fuente-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  padding: 9px 17px;
+  border-radius: 2px;
+  border: 1px solid var(--linea-fuerte);
+  color: var(--texto);
+  text-decoration: none;
+  display: inline-block;
+  transition:
+    background 0.16s,
+    border-color 0.16s;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--texto);
+}
+
+/* El foco de teclado no se hereda del hover: se declara aparte y se ve. */
+.pagina a:focus-visible {
+  outline: 2px solid var(--azul);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.btnPrim {
+  border-color: var(--acero);
+  color: var(--acero);
+}
+
+.btnPrim:hover {
+  background: rgba(122, 156, 184, 0.12);
+  color: var(--texto);
+}
+
+/* — Tipografía — */
+
+.kicker {
+  font-family: var(--fuente-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--acero);
+  margin: 0 0 20px;
+}
+
+.pagina h1 {
+  font-family: var(--fuente-titular);
+  font-weight: 800;
+  font-size: clamp(36px, 6.6vw, 68px);
+  line-height: 0.99;
+  letter-spacing: -0.035em;
+  margin: 0 0 22px;
+  max-width: 17ch;
+}
+
+.pagina h2 {
+  font-family: var(--fuente-titular);
+  font-weight: 800;
+  font-size: clamp(28px, 4.6vw, 46px);
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  margin: 0 0 18px;
+  max-width: 20ch;
+}
+
+.pagina h3 {
+  font-family: var(--fuente-titular);
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: -0.015em;
+  margin: 0 0 8px;
+}
+
+.lead {
+  color: var(--tenue);
+  font-size: 18px;
+  max-width: 56ch;
+  margin: 0 0 34px;
+  line-height: 1.6;
+}
+
+.lead b {
+  color: var(--texto);
+  font-weight: 500;
+}
+
+.sm {
+  color: var(--tenue);
+  max-width: 58ch;
+  margin: 0;
+}
+
+.sm b {
+  color: var(--texto);
+  font-weight: 500;
+}
+
+/* — Hero — */
+
+.hero {
+  padding: 96px 0 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+.heroRejilla {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(ellipse 70% 60% at 30% 40%, #000 20%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 30% 40%, #000 20%, transparent 75%);
+}
+
+.hero .c {
+  position: relative;
+}
+
+.ctaFila {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.heroLinea {
+  margin-top: 56px;
+  border-top: 1px solid var(--linea);
+  padding-top: 22px;
+  display: flex;
+  gap: 34px;
+  flex-wrap: wrap;
+}
+
+.hl {
+  font-family: var(--fuente-mono);
+  font-size: 11.5px;
+  color: var(--tenue);
+  letter-spacing: 0.04em;
+}
+
+.hl b {
+  display: block;
+  font-family: var(--fuente-titular);
+  font-weight: 700;
+  font-size: 21px;
+  color: var(--acero);
+  letter-spacing: -0.015em;
+  margin-bottom: 3px;
+}
+
+/* — El dolor, a dos lados — */
+
+.dolor {
+  border-top: 1px solid var(--linea);
+  background: linear-gradient(180deg, rgba(15, 19, 24, 0.5), transparent);
+}
+
+.dos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--linea);
+  border: 1px solid var(--linea);
+  margin-top: 38px;
+}
+
+@media (max-width: 720px) {
+  .dos {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lado {
+  background: var(--panel);
+  padding: 26px 26px 28px;
+}
+
+.quien {
+  font-family: var(--fuente-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--acero);
+  margin: 0 0 12px;
+}
+
+.lado p {
+  margin: 0;
+  color: var(--tenue);
+  font-size: 15.5px;
+}
+
+.lado p b {
+  color: var(--texto);
+  font-weight: 500;
+}
+
+.remate {
+  margin-top: 32px;
+  border-left: 2px solid var(--acero);
+  padding: 6px 0 6px 18px;
+  font-size: 19px;
+  max-width: 52ch;
+  font-family: var(--fuente-titular);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+/* — La escena de la ciudad — */
+
+.escena {
+  position: relative;
+  border: 1px solid var(--linea);
+  background: #07090c;
+  overflow: hidden;
+  margin-top: 38px;
+}
+
+.escena svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.vineta {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 75% 70% at 62% 48%,
+    transparent 40%,
+    rgba(4, 6, 8, 0.66) 100%
+  );
+}
+
+.traza {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: var(--len);
+  stroke-dashoffset: var(--len);
+  animation: traza var(--ciclo) linear infinite;
+  animation-delay: var(--d);
+}
+
+@keyframes traza {
+  0% {
+    stroke-dashoffset: var(--len);
+    opacity: 0;
+  }
+  2% {
+    opacity: 0.75;
+  }
+  28% {
+    stroke-dashoffset: 0;
+    opacity: 0.75;
+  }
+  40% {
+    opacity: var(--reposo);
+  }
+  87% {
+    opacity: var(--reposo);
+  }
+  95% {
+    opacity: 0;
+  }
+  100% {
+    stroke-dashoffset: var(--len);
+    opacity: 0;
+  }
+}
+
+.cabeza {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: var(--cab);
+  stroke-dashoffset: var(--len2);
+  animation: cabeza var(--ciclo) linear infinite;
+  animation-delay: var(--d);
+}
+
+@keyframes cabeza {
+  0% {
+    stroke-dashoffset: var(--len2);
+    opacity: 0;
+  }
+  2% {
+    opacity: 1;
+  }
+  28% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  33% {
+    opacity: 0;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+.geo {
+  animation: geo var(--ciclo) linear infinite;
+}
+
+@keyframes geo {
+  0%,
+  20% {
+    opacity: 0.2;
+  }
+  32% {
+    opacity: 0.9;
+  }
+  87% {
+    opacity: 0.9;
+  }
+  95%,
+  100% {
+    opacity: 0.2;
+  }
+}
+
+.pulso {
+  transform-origin: 905px 300px;
+  animation: pulso var(--ciclo) linear infinite;
+}
+
+@keyframes pulso {
+  0%,
+  26% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  33% {
+    opacity: 0.5;
+    transform: scale(1.6);
+  }
+  46%,
+  100% {
+    opacity: 0;
+    transform: scale(2.1);
+  }
+}
+
+.etq {
+  opacity: 0;
+  animation: etq var(--ciclo) linear infinite;
+}
+
+@keyframes etq {
+  0%,
+  38% {
+    opacity: 0;
+  }
+  46% {
+    opacity: 1;
+  }
+  87% {
+    opacity: 1;
+  }
+  93%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.marcador {
+  position: absolute;
+  left: 22px;
+  bottom: 20px;
+  display: flex;
+  gap: 26px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  opacity: 0;
+  animation: marca var(--ciclo) linear infinite;
+}
+
+@keyframes marca {
+  0%,
+  42% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  52% {
+    opacity: 1;
+    transform: none;
+  }
+  87% {
+    opacity: 1;
+    transform: none;
+  }
+  93%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.mItem {
+  font-family: var(--fuente-mono);
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+
+.mItem b {
+  font-family: var(--fuente-titular);
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+  margin-right: 8px;
+  vertical-align: -3px;
+}
+
+.mv {
+  color: var(--acero);
+}
+
+.ma {
+  color: var(--ambar);
+}
+
+.mr {
+  color: var(--rojo);
+}
+
+.selloP {
+  position: absolute;
+  right: 22px;
+  bottom: 20px;
+  border: 1.5px solid var(--verde);
+  border-radius: 2px;
+  padding: 9px 16px 7px;
+  background: rgba(52, 199, 123, 0.07);
+  text-align: right;
+  opacity: 0;
+  animation: selloA var(--ciclo) linear infinite;
+}
+
+@keyframes selloA {
+  0%,
+  50% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+  58% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  87% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  93%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.selloP .v {
+  font-family: var(--fuente-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--verde);
+}
+
+.selloP .s {
+  font-family: var(--fuente-mono);
+  font-size: 10px;
+  color: var(--tenue);
+  margin-top: 5px;
+}
+
+.pieEscena {
+  font-family: var(--fuente-mono);
+  font-size: 11.5px;
+  color: var(--tenue);
+  margin: 14px 0 0;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 640px) {
+  .marcador {
+    gap: 15px;
+    left: 15px;
+    bottom: 13px;
+  }
+  .mItem {
+    font-size: 9px;
+  }
+  .mItem b {
+    font-size: 18px;
+  }
+  .selloP {
+    right: 15px;
+    bottom: 13px;
+    padding: 7px 11px 5px;
+  }
+  .selloP .v {
+    font-size: 9.5px;
+    letter-spacing: 0.15em;
+  }
+}
+
+/* — Los tres pasos — */
+
+.pasos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--linea);
+  border: 1px solid var(--linea);
+  margin-top: 38px;
+}
+
+@media (max-width: 760px) {
+  .pasos {
+    grid-template-columns: 1fr;
+  }
+}
+
+.paso {
+  background: var(--panel);
+  padding: 26px 24px 28px;
+}
+
+.paso .n {
+  font-family: var(--fuente-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--acero);
+  margin-bottom: 14px;
+}
+
+.paso p {
+  margin: 0;
+  color: var(--tenue);
+  font-size: 15px;
+}
+
+.paso p b {
+  color: var(--texto);
+  font-weight: 500;
+}
+
+/* — Los tres resultados — */
+
+.estados {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 34px;
+}
+
+.est {
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  padding: 9px 16px 7px;
+  font-family: var(--fuente-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.eVerde {
+  color: var(--verde);
+  background: rgba(52, 199, 123, 0.07);
+}
+
+.eRojo {
+  color: var(--rojo);
+  background: rgba(229, 72, 77, 0.07);
+}
+
+.eAmbar {
+  color: var(--ambar);
+  background: rgba(227, 168, 31, 0.07);
+}
+
+/* — Lo que no hace — */
+
+.noHace {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--linea);
+  border: 1px solid var(--linea);
+  margin-top: 38px;
+}
+
+@media (max-width: 720px) {
+  .noHace {
+    grid-template-columns: 1fr;
+  }
+}
+
+.nh {
+  background: var(--panel);
+  padding: 22px 24px;
+}
+
+.nh h4 {
+  font-family: var(--fuente-titular);
+  font-weight: 700;
+  font-size: 16px;
+  margin: 0 0 6px;
+}
+
+.nh p {
+  margin: 0;
+  color: var(--tenue);
+  font-size: 14.5px;
+}
+
+/* — Cierre y pie — */
+
+.cierre {
+  border-top: 1px solid var(--linea);
+  text-align: center;
+}
+
+.cierre h2,
+.cierre .lead {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cierre .ctaFila {
+  justify-content: center;
+}
+
+.pie {
+  border-top: 1px solid var(--linea);
+  padding: 34px 0 46px;
+  font-family: var(--fuente-mono);
+  font-size: 11px;
+  color: var(--tenue);
+  line-height: 1.9;
+}
+
+.pie .c {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.borde {
+  border-top: 1px solid var(--linea);
+}
+
+.degradado {
+  border-top: 1px solid var(--linea);
+  background: linear-gradient(180deg, rgba(15, 19, 24, 0.5), transparent);
+}
+
+/*
+ * Quien pidió no ver movimiento ve la escena en su estado final: las trazas
+ * completas, el sello puesto y las etiquetas legibles. No se le esconde
+ * información — se le quita la animación.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .traza {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: var(--reposo);
+  }
+  .cabeza,
+  .pulso {
+    display: none;
+  }
+  .geo,
+  .etq,
+  .marcador,
+  .selloP {
+    animation: none;
+    opacity: 1;
+  }
+}

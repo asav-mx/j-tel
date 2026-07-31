@@ -1,0 +1,23 @@
+/*
+ * Lo poco del landing que no cabe en un módulo: reglas sobre <html> y <body>,
+ * que viven fuera del árbol del componente.
+ *
+ * Solo lo carga el layout del segmento /landing, así que ninguna pantalla del
+ * producto lo ve. El fondo se repite aquí para que el rebote del scroll no
+ * descubra el gris del producto debajo del negro del landing.
+ */
+
+html:has(.landing-raiz) {
+  scroll-behavior: smooth;
+  background: #0a0d10;
+}
+
+body:has(.landing-raiz) {
+  background: #0a0d10;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:has(.landing-raiz) {
+    scroll-behavior: auto;
+  }
+}
