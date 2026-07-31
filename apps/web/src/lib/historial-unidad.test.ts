@@ -3,6 +3,7 @@ import {
   construirDia,
   construirDias,
   posicionEnFranja,
+  ventanasDelPeriodo,
   REGLAS_POR_DEFECTO,
   type PuntoDeUnidad,
 } from "./historial-unidad";
@@ -252,6 +253,81 @@ describe("un rango de días son N tiras comparables, no una tira larga", () => {
     // tira — pero el día tampoco pretende haberlo observado.
     expect(dias[0]!.segmentos.every((s) => s.minutos > 0)).toBe(true);
     expect(dias[0]!.minutosEnMovimiento).toBe(0);
+  });
+});
+
+describe("las franjas del periodo son una sola cuenta", () => {
+  const fechas = ["2026-07-22", "2026-07-23"];
+
+  it("una franja normal abre y cierra el mismo día", () => {
+    const [primera] = ventanasDelPeriodo({
+      fechas,
+      minutosDesde: 5 * 60,
+      minutosHasta: 11 * 60,
+      timeZone: TZ,
+    });
+
+    expect(primera).toMatchObject({ fecha: "2026-07-22" });
+    expect(primera!.desde.toISOString()).toBe("2026-07-22T11:00:00.000Z");
+    expect(primera!.hasta.toISOString()).toBe("2026-07-22T17:00:00.000Z");
+  });
+
+  it("una franja que cruza medianoche cierra al día siguiente", () => {
+    const [primera] = ventanasDelPeriodo({
+      fechas,
+      minutosDesde: 22 * 60,
+      minutosHasta: 6 * 60,
+      timeZone: TZ,
+    });
+
+    // El turno de noche del 22 es del 22, aunque termine el 23.
+    expect(primera!.desde.toISOString()).toBe("2026-07-23T04:00:00.000Z");
+    expect(primera!.hasta.toISOString()).toBe("2026-07-23T12:00:00.000Z");
+  });
+
+  it("el día completo va de 00:00 a 00:00 y dura 24 h", () => {
+    const [primera] = ventanasDelPeriodo({
+      fechas,
+      minutosDesde: 0,
+      minutosHasta: 0,
+      timeZone: TZ,
+    });
+
+    expect(
+      (primera!.hasta.getTime() - primera!.desde.getTime()) / 3_600_000,
+    ).toBe(24);
+  });
+
+  it("son EXACTAMENTE las franjas que usa construirDias", () => {
+    /*
+     * La invariante que sostiene la pantalla de flota: el resumen que pide la
+     * base se calcula sobre estas ventanas y la tira se dibuja sobre las
+     * mismas. Si las dos cuentas se separaran, la tabla y la tira estarían
+     * hablando de tramos distintos del día sin que nada lo delate.
+     */
+    for (const [minutosDesde, minutosHasta] of [
+      [0, 0],
+      [5 * 60, 11 * 60],
+      [22 * 60, 6 * 60],
+    ]) {
+      const ventanas = ventanasDelPeriodo({
+        fechas,
+        minutosDesde: minutosDesde!,
+        minutosHasta: minutosHasta!,
+        timeZone: TZ,
+      });
+      const dias = construirDias({
+        fechas,
+        minutosDesde: minutosDesde!,
+        minutosHasta: minutosHasta!,
+        timeZone: TZ,
+        puntos: [],
+      });
+
+      expect(dias.map((d) => ({ fecha: d.fecha, desde: d.desde, hasta: d.hasta }))).toEqual(
+        ventanas,
+      );
+    }
   });
 });
 

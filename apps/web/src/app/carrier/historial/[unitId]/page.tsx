@@ -266,7 +266,7 @@ export default async function CarrierUnidadHistorialPage({
         <div className="mb-2 border border-[var(--linea)] bg-[var(--panel)] p-4">
           <div className="grid grid-cols-[minmax(90px,110px)_1fr] gap-3">
             <span />
-            <EjeDeFranja dia={dias[0]!} />
+            <EjeDeFranja franja={dias[0]!} />
           </div>
           {dias.map((dia) => (
             <div
@@ -277,7 +277,8 @@ export default async function CarrierUnidadHistorialPage({
                 {fechaDeIsoSinAnio(dia.fecha)}
               </span>
               <TiraDia
-                dia={dia}
+                franja={dia}
+                segmentos={dia.segmentos}
                 alto={unDia ? "h-11" : "h-5"}
                 marcas={(serviciosPorFecha.get(dia.fecha) ?? [])
                   .filter((s) => s.deadline)

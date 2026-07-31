@@ -315,6 +315,34 @@ export function construirDia(entrada: {
 }
 
 /**
+ * Las franjas absolutas de un periodo: una por fecha civil.
+ *
+ * Existe como función aparte porque hay dos consumidores y no puede haber dos
+ * cuentas. `construirDias` la usa para partir puntos; el resumen de la base la
+ * usa para saber qué ventanas pedir. Si cada uno calculara sus propios bordes,
+ * la tabla y la tira podrían estar hablando de tramos distintos del día — y una
+ * segunda versión de la aritmética de zona horaria es exactamente el bug que ya
+ * corrió hechos a la hora equivocada.
+ */
+export function ventanasDelPeriodo(entrada: {
+  fechas: string[];
+  minutosDesde: number;
+  minutosHasta: number;
+  timeZone: string;
+}): Array<{ fecha: string; desde: Date; hasta: Date }> {
+  const cruzaMedianoche = entrada.minutosHasta <= entrada.minutosDesde;
+  return entrada.fechas.map((fecha) => ({
+    fecha,
+    desde: instanteZonificado(fecha, entrada.minutosDesde, entrada.timeZone),
+    hasta: instanteZonificado(
+      fecha,
+      cruzaMedianoche ? entrada.minutosHasta + 1440 : entrada.minutosHasta,
+      entrada.timeZone,
+    ),
+  }));
+}
+
+/**
  * Reparte los puntos de un periodo en un día por fecha civil, respetando la
  * franja horaria pedida dentro de cada día.
  *
@@ -353,18 +381,13 @@ export function construirDias(entrada: {
     porFecha.get(fecha)?.push(p);
   }
 
-  return fechas.map((fecha) =>
-    construirDia({
-      fecha,
-      desde: instanteZonificado(fecha, minutosDesde, timeZone),
-      hasta: instanteZonificado(
-        fecha,
-        cruzaMedianoche ? minutosHasta + 1440 : minutosHasta,
-        timeZone,
-      ),
-      puntos: porFecha.get(fecha) ?? [],
-      reglas: entrada.reglas,
-    }),
+  return ventanasDelPeriodo({ fechas, minutosDesde, minutosHasta, timeZone }).map(
+    (ventana) =>
+      construirDia({
+        ...ventana,
+        puntos: porFecha.get(ventana.fecha) ?? [],
+        reglas: entrada.reglas,
+      }),
   );
 }
 

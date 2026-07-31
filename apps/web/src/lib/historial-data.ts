@@ -10,14 +10,17 @@
  * mismo, así que sí ve a qué cliente sirvió — es su propio contrato.
  */
 
+import { resumirUnidadDia, type ResumenUnidadDia } from "@jtel/db";
 import { JTTEL_TZ } from "@/lib/local-time";
 import { getRepos } from "@/lib/db";
 import { type Periodo } from "@/lib/historial-periodo";
+import { tiraDeFlota, type TramoDeFlota } from "@/lib/historial-flota";
 import {
   construirDias,
+  ventanasDelPeriodo,
   REGLAS_POR_DEFECTO,
+  SALTO_GPS_KMH,
   type DiaDeUnidad,
-  type PuntoDeUnidad,
   type ReglasDeLectura,
 } from "@/lib/historial-unidad";
 
@@ -30,14 +33,29 @@ export type UnidadDeFlota = {
 
 export type FilaDeFlota = {
   unidad: UnidadDeFlota;
-  dia: DiaDeUnidad;
+  /** El día ya resumido por la base: conteos, kilómetros y huecos. */
+  resumen: ResumenUnidadDia;
+  /** La tira de dos clases. A esta escala es lo que se puede leer. */
+  tira: TramoDeFlota[];
 };
 
 /**
  * El día de cada unidad de la flota, sobre la misma franja.
  *
- * Se consulta una vez para todo el carrier y se reparte en memoria: una
- * consulta por unidad serían 52 viajes a la base para dibujar una pantalla.
+ * La base resume y devuelve una fila por unidad; antes traía los puntos crudos
+ * de todo el carrier —58 464 filas para dibujar 82 tiras— y los segmentaba en
+ * memoria. El trabajo de recorrer decenas de miles de puntos no era necesario
+ * para contestar la pregunta de esta pantalla, y por eso ya no se hace.
+ *
+ * Medido de punta a punta sobre la pantalla, mediana de cinco cargas en
+ * caliente contra un carrier de 82 unidades (2026-07-30):
+ *
+ *   día completo   3385 ms → **530 ms**
+ *   franja de 6 h  1290 ms → **325 ms**
+ *
+ * Las reglas de lectura viajan a la consulta en vez de quedarse en el default
+ * del paquete. La pantalla escribe al pie "silencios de más de N min": si la
+ * consulta usara otro número, ese texto estaría mintiendo.
  */
 export async function cargarFlota(entrada: {
   carrierAccountId: string;
@@ -45,38 +63,50 @@ export async function cargarFlota(entrada: {
   reglas?: ReglasDeLectura;
 }): Promise<FilaDeFlota[]> {
   const repos = getRepos();
-  const [unidades, puntos] = await Promise.all([
+  const reglas = entrada.reglas ?? REGLAS_POR_DEFECTO;
+
+  // La flota mira UNA franja: la primera del periodo. La profundidad de días
+  // vive en la vista de la unidad, donde las tiras sí se pueden comparar.
+  const [ventana] = ventanasDelPeriodo({
+    fechas: entrada.periodo.fechas,
+    minutosDesde: entrada.periodo.minutosDesde,
+    minutosHasta: entrada.periodo.minutosHasta,
+    timeZone: JTTEL_TZ,
+  });
+
+  const [unidades, resumen] = await Promise.all([
     repos.fleet.getUnitsForCarrier(entrada.carrierAccountId),
-    repos.telemetry.getForCarrierWindow(
-      entrada.carrierAccountId,
-      entrada.periodo.desde,
-      entrada.periodo.hasta,
-    ),
+    ventana
+      ? repos.telemetry.resumenDiarioPorUnidad(entrada.carrierAccountId, [ventana], {
+          huecoMinutos: reglas.huecoMinutos,
+          saltoKmh: SALTO_GPS_KMH,
+        })
+      : Promise.resolve([]),
   ]);
 
-  const porUnidad = new Map<string, PuntoDeUnidad[]>();
-  for (const p of puntos) {
-    if (!p.unitId) continue;
-    const lista = porUnidad.get(p.unitId);
-    const punto: PuntoDeUnidad = {
-      recordedAt: p.recordedAt,
-      latitude: p.latitude,
-      longitude: p.longitude,
-      imei: p.imei,
-    };
-    if (lista) lista.push(punto);
-    else porUnidad.set(p.unitId, [punto]);
-  }
+  const porUnidad = new Map(resumen.map((r) => [r.unitId, r]));
 
   return unidades.map((u) => {
-    const dias = construirDias({
-      fechas: entrada.periodo.fechas,
-      minutosDesde: entrada.periodo.minutosDesde,
-      minutosHasta: entrada.periodo.minutosHasta,
-      timeZone: JTTEL_TZ,
-      puntos: porUnidad.get(u.id) ?? [],
-      reglas: entrada.reglas ?? REGLAS_POR_DEFECTO,
-    });
+    /*
+     * La consulta solo devuelve unidades que reportaron algo, así que las
+     * demás se completan desde el inventario — una unidad que no aparece se
+     * lee como una unidad que no existe, y sin dato es justo lo que hay que
+     * poder ver.
+     *
+     * El vacío se arma con `resumirUnidadDia`, la misma función que usa la
+     * base, y no con un objeto de ceros a mano: así una unidad muda y una que
+     * reportó pasan por el mismo cálculo y sus huecos se cuentan igual.
+     */
+    const dia =
+      porUnidad.get(u.id) ??
+      resumirUnidadDia({
+        unitId: u.id,
+        fecha: ventana?.fecha ?? entrada.periodo.fechaHasta,
+        desde: ventana?.desde ?? entrada.periodo.desde,
+        hasta: ventana?.hasta ?? entrada.periodo.hasta,
+        equipos: 0,
+        bloques: [],
+      });
 
     return {
       unidad: {
@@ -85,9 +115,8 @@ export async function cargarFlota(entrada: {
         plateNumber: u.plateNumber,
         activa: u.active,
       },
-      // La vista de flota mira un día a la vez: la profundidad de días vive
-      // en la vista de la unidad, donde 30 tiras sí se pueden leer.
-      dia: dias[0]!,
+      resumen: dia,
+      tira: tiraDeFlota(dia, dia.bloques),
     };
   });
 }
@@ -176,20 +205,27 @@ export async function cargarServiciosDeUnidad(entrada: {
 /**
  * Los días de UNA unidad, para la vista de cerca.
  *
- * CARA, y con número medido. La telemetría se lee por carrier —no hay índice
- * por `unit_id`— así que para dibujar una unidad hay que traer los puntos de
- * toda la flota y filtrar en memoria. Medido el 2026-07-30 contra un carrier
- * de 82 unidades: **1 día 2.5 s · 3 días ~7 s · 7 días entre 14 y 18 s**.
+ * Aquí sí se traen los puntos, y a propósito: las tres clases —en movimiento,
+ * detenida, sin dato— salen de un barrido con anclas sobre las coordenadas, y
+ * eso no se resuelve con una función de ventana en SQL. Se calculan con la
+ * implementación que ya existe y está probada, en vez de tener una segunda
+ * versión de la misma regla esperando a divergir.
  *
- * Se probó partirlo en una consulta por día en paralelo, esperando que se
- * solaparan: no mejoró nada (14–18 s también). El cuello no es la espera de la
- * consulta sino el volumen que se transfiere y se parsea, así que se dejó la
- * versión simple.
+ * Lo que cambió es cuántos puntos se traen: la consulta filtra la unidad en la
+ * base y entra por el índice `(carrier_account_id, unit_id, recorded_at)`, así
+ * que llegan los cientos de esa unidad y no las decenas de miles de la flota
+ * entera. Con una tira sola en pantalla, segmentar cientos de puntos no cuesta
+ * nada.
  *
- * El tope de días de `historial-periodo` acota la espera mientras tanto, y la
- * pantalla dice cuándo recortó. Levantarlo es trabajo de `@jtel/db`: una
- * consulta por unidad con índice `(carrier_account_id, unit_id, recorded_at)`.
- * Eso vive en el paquete, no aquí.
+ * Medido de punta a punta sobre la pantalla, mediana de cinco cargas en
+ * caliente (2026-07-30):
+ *
+ *   1 día   1762 ms → **905 ms**
+ *   3 días  4908 ms → **1140 ms**
+ *
+ * Con el tope levantado a mano solo para medir, 7 días dan 1392 ms y 14 días
+ * 2231 ms. `MAX_DIAS` sigue en 3: subirlo es decisión de producto, no un
+ * efecto secundario de esta conexión.
  */
 export async function cargarDiasDeUnidad(entrada: {
   carrierAccountId: string;
@@ -198,8 +234,9 @@ export async function cargarDiasDeUnidad(entrada: {
   reglas?: ReglasDeLectura;
 }): Promise<DiaDeUnidad[]> {
   const repos = getRepos();
-  const puntos = await repos.telemetry.getForCarrierWindow(
+  const puntos = await repos.telemetry.getForUnitWindow(
     entrada.carrierAccountId,
+    entrada.unitId,
     entrada.periodo.desde,
     entrada.periodo.hasta,
   );
@@ -209,14 +246,12 @@ export async function cargarDiasDeUnidad(entrada: {
     minutosDesde: entrada.periodo.minutosDesde,
     minutosHasta: entrada.periodo.minutosHasta,
     timeZone: JTTEL_TZ,
-    puntos: puntos
-      .filter((p) => p.unitId === entrada.unitId)
-      .map((p) => ({
-        recordedAt: p.recordedAt,
-        latitude: p.latitude,
-        longitude: p.longitude,
-        imei: p.imei,
-      })),
+    puntos: puntos.map((p) => ({
+      recordedAt: p.recordedAt,
+      latitude: p.latitude,
+      longitude: p.longitude,
+      imei: p.imei,
+    })),
     reglas: entrada.reglas ?? REGLAS_POR_DEFECTO,
   });
 }
