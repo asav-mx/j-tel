@@ -13,6 +13,13 @@ import { operationalScopeColumns } from "@jtel/domain";
 import type { Database } from "../index.js";
 import { routeWindowSizing } from "../ventana-ocurrencia.js";
 import {
+  resumirUnidadDia,
+  HUECO_MINUTOS_POR_DEFECTO,
+  SALTO_KMH_POR_DEFECTO,
+  type BloqueObservado,
+  type ResumenUnidadDia,
+} from "../resumen-telemetria.js";
+import {
   accounts,
   carrierProfiles,
   clientProfiles,
@@ -2864,6 +2871,166 @@ export class TelemetryRepository {
       porUnidad.set(r.unitId, r.ultimo instanceof Date ? r.ultimo : new Date(r.ultimo));
     }
     return porUnidad;
+  }
+
+  /**
+   * Los puntos de UNA unidad en una ventana.
+   *
+   * Existe porque filtrar la unidad en memoria significa traer la ventana
+   * entera del carrier: medido en producción, 58 464 filas para devolver 744.
+   * Con la igualdad en `unit_id` la consulta entra por el índice
+   * `(carrier_account_id, unit_id, recorded_at)` y lee solo lo suyo — 8.3 ms
+   * de ejecución bajan a 0.4 ms, y 1922 buffers a 117.
+   */
+  async getForUnitWindow(
+    carrierAccountId: string,
+    unitId: string,
+    from: Date,
+    to: Date,
+  ) {
+    return this.db
+      .select({
+        unitId: telemetryPoints.unitId,
+        imei: telemetryPoints.imei,
+        latitude: telemetryPoints.latitude,
+        longitude: telemetryPoints.longitude,
+        recordedAt: telemetryPoints.recordedAt,
+      })
+      .from(telemetryPoints)
+      .where(
+        and(
+          eq(telemetryPoints.carrierAccountId, carrierAccountId),
+          eq(telemetryPoints.unitId, unitId),
+          gte(telemetryPoints.recordedAt, from),
+          lte(telemetryPoints.recordedAt, to),
+        ),
+      )
+      .orderBy(telemetryPoints.recordedAt);
+  }
+
+  /**
+   * El día ya resumido, una fila por unidad y por ventana.
+   *
+   * Contra pedir los puntos crudos: 58 464 filas y ~3.5 s de reloj se vuelven
+   * 52 filas y menos de 200 ms. La base **encontraba** esas filas en 14 ms; el
+   * tiempo se iba transportándolas y materializándolas en JavaScript, así que
+   * el arreglo no era un índice sino dejar de traerlas.
+   *
+   * El `LATERAL` por unidad no es adorno: le da al planificador la igualdad en
+   * `unit_id` que hace usable el índice por unidad. La versión con `GROUP BY`
+   * plano elige el índice por fecha y termina ordenando 3.8 MB **en disco**.
+   *
+   * Las ventanas llegan ya calculadas. Aquí no se hace aritmética de fecha
+   * civil ni de zona horaria: esa cuenta ya vive resuelta y probada en un solo
+   * lugar, y una segunda versión en SQL es exactamente el bug que corrió 294
+   * hechos a la hora equivocada.
+   */
+  async resumenDiarioPorUnidad(
+    carrierAccountId: string,
+    ventanas: Array<{ fecha: string; desde: Date; hasta: Date }>,
+    reglas?: { huecoMinutos?: number; saltoKmh?: number },
+  ): Promise<ResumenUnidadDia[]> {
+    if (ventanas.length === 0) return [];
+    const huecoMinutos = Math.max(0, reglas?.huecoMinutos ?? HUECO_MINUTOS_POR_DEFECTO);
+    const saltoKmh = Math.max(1, reglas?.saltoKmh ?? SALTO_KMH_POR_DEFECTO);
+
+    const porVentana = await Promise.all(
+      ventanas.map(async (ventana) => {
+        const filas = await this.db.execute<{
+          unit_id: string;
+          bloque: number;
+          desde: Date;
+          hasta: Date;
+          puntos: number;
+          km: number;
+          saltos: number;
+          equipos: number;
+        }>(sql`
+          SELECT b.unit_id,
+                 b.bloque,
+                 min(b.recorded_at) AS desde,
+                 max(b.recorded_at) AS hasta,
+                 count(*)::int      AS puntos,
+                 COALESCE(sum(b.km_prev) FILTER (
+                   WHERE b.min_prev IS NOT NULL
+                     AND b.min_prev <= ${huecoMinutos}
+                     AND b.min_prev > 0
+                     AND b.km_prev / (b.min_prev / 60) <= ${saltoKmh}
+                 ), 0)::double precision AS km,
+                 count(*) FILTER (
+                   WHERE b.min_prev IS NOT NULL
+                     AND b.min_prev <= ${huecoMinutos}
+                     AND b.min_prev > 0
+                     AND b.km_prev / (b.min_prev / 60) > ${saltoKmh}
+                 )::int AS saltos,
+                 count(DISTINCT b.imei)::int AS equipos
+            FROM (
+              SELECT t.*,
+                     sum(CASE WHEN t.min_prev IS NULL OR t.min_prev > ${huecoMinutos}
+                              THEN 1 ELSE 0 END)
+                       OVER (PARTITION BY t.unit_id ORDER BY t.recorded_at) AS bloque
+                FROM (
+                  SELECT p.unit_id, p.imei, p.recorded_at,
+                         EXTRACT(EPOCH FROM p.recorded_at - p.prev_at) / 60 AS min_prev,
+                         2 * 6371 * asin(sqrt(
+                           power(sin(radians(p.latitude - p.prev_lat) / 2), 2) +
+                           cos(radians(p.prev_lat)) * cos(radians(p.latitude)) *
+                           power(sin(radians(p.longitude - p.prev_lng) / 2), 2)
+                         )) AS km_prev
+                    FROM units u
+                    CROSS JOIN LATERAL (
+                      SELECT tp.unit_id, tp.imei, tp.recorded_at, tp.latitude, tp.longitude,
+                             lag(tp.recorded_at) OVER w AS prev_at,
+                             lag(tp.latitude)    OVER w AS prev_lat,
+                             lag(tp.longitude)   OVER w AS prev_lng
+                        FROM telemetry_points tp
+                       WHERE tp.carrier_account_id = ${carrierAccountId}
+                         AND tp.unit_id = u.id
+                         AND tp.recorded_at >= ${ventana.desde.toISOString()}::timestamptz
+                         AND tp.recorded_at <= ${ventana.hasta.toISOString()}::timestamptz
+                      WINDOW w AS (ORDER BY tp.recorded_at)
+                    ) p
+                   WHERE u.carrier_account_id = ${carrierAccountId}
+                ) t
+            ) b
+           GROUP BY b.unit_id, b.bloque
+           ORDER BY b.unit_id, desde
+        `);
+
+        const porUnidad = new Map<
+          string,
+          { equipos: number; bloques: BloqueObservado[] }
+        >();
+        for (const f of filas as unknown as Array<Record<string, unknown>>) {
+          const unitId = String(f.unit_id);
+          const acc = porUnidad.get(unitId) ?? { equipos: 0, bloques: [] };
+          acc.bloques.push({
+            desde: new Date(f.desde as string),
+            hasta: new Date(f.hasta as string),
+            puntos: Number(f.puntos),
+            kmAproximados: Number(f.km),
+            saltosDescartados: Number(f.saltos),
+          });
+          // Un equipo puede reportar en varios bloques del mismo día; el conteo
+          // por bloque no se suma, se toma el mayor como piso del día.
+          acc.equipos = Math.max(acc.equipos, Number(f.equipos));
+          porUnidad.set(unitId, acc);
+        }
+
+        return [...porUnidad].map(([unitId, { equipos, bloques }]) =>
+          resumirUnidadDia({
+            unitId,
+            fecha: ventana.fecha,
+            desde: ventana.desde,
+            hasta: ventana.hasta,
+            equipos,
+            bloques,
+          }),
+        );
+      }),
+    );
+
+    return porVentana.flat();
   }
 }
 
