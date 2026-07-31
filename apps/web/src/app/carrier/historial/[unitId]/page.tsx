@@ -187,11 +187,17 @@ export default async function CarrierUnidadHistorialPage({
           <Link href={href({ desde: periodo.fechaHasta })} className={atajo(unDia)}>
             Solo ese día
           </Link>
+          {/*
+            El rango de varios días cuesta segundos de espera —la telemetría se
+            lee por carrier— así que el atajo lo dice antes de que lo piquen.
+            Un día suelto, que es como abre la pantalla, es inmediato.
+          */}
           <Link
-            href={href({ desde: restarDias(periodo.fechaHasta, 6) })}
+            href={href({ desde: restarDias(periodo.fechaHasta, MAX_DIAS - 1) })}
             className={atajo(periodo.fechas.length === MAX_DIAS)}
           >
-            Últimos {MAX_DIAS} días
+            Últimos {MAX_DIAS} días{" "}
+            <span className="text-[var(--tenue)]">· tarda unos segundos</span>
           </Link>
           <Link
             href={href({ horaDesde: "00:00", horaHasta: "00:00" })}
@@ -209,8 +215,9 @@ export default async function CarrierUnidadHistorialPage({
             <span className="text-[var(--azul)]">Aviso del sistema.</span> Pediste{" "}
             <span className={num}>{periodo.diasPedidos} días</span> y se están mostrando los{" "}
             <span className={num}>{periodo.fechas.length}</span> más recientes. El historial se
-            consulta de a {MAX_DIAS} días: hoy la telemetría se lee por carrier y filtrar por
-            unidad más allá de eso cuesta más de lo que rinde.
+            consulta de a {MAX_DIAS} días: hoy la telemetría se lee por carrier, y pedir más
+            deja la pantalla esperando tanto que la respuesta deja de servir. Es un tope
+            temporal, no el alcance de la vista.
           </div>
         ) : null}
 

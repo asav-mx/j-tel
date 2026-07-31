@@ -179,18 +179,17 @@ export async function cargarServiciosDeUnidad(entrada: {
  * CARA, y con número medido. La telemetría se lee por carrier —no hay índice
  * por `unit_id`— así que para dibujar una unidad hay que traer los puntos de
  * toda la flota y filtrar en memoria. Medido el 2026-07-30 contra un carrier
- * de 82 unidades: **1 día 2.5 s · 7 días entre 14 y 18 s**.
+ * de 82 unidades: **1 día 2.5 s · 3 días ~7 s · 7 días entre 14 y 18 s**.
  *
  * Se probó partirlo en una consulta por día en paralelo, esperando que se
  * solaparan: no mejoró nada (14–18 s también). El cuello no es la espera de la
  * consulta sino el volumen que se transfiere y se parsea, así que se dejó la
  * versión simple.
  *
- * La salida NO es recortar más el rango —el carrier necesita ver su semana—
- * sino una consulta por unidad en `@jtel/db` con índice
- * `(carrier_account_id, unit_id, recorded_at)`. Eso vive en el paquete, no
- * aquí. Mientras tanto el tope de días de `historial-periodo` acota la espera y la
- * pantalla dice cuándo recortó.
+ * El tope de días de `historial-periodo` acota la espera mientras tanto, y la
+ * pantalla dice cuándo recortó. Levantarlo es trabajo de `@jtel/db`: una
+ * consulta por unidad con índice `(carrier_account_id, unit_id, recorded_at)`.
+ * Eso vive en el paquete, no aquí.
  */
 export async function cargarDiasDeUnidad(entrada: {
   carrierAccountId: string;
