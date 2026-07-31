@@ -51,6 +51,17 @@ export const OPCIONALES = [
   "UMBRELLA_PASSWORD",
   "SALUD_TOKEN",
   "JTEL_DEV_USER",
+  /*
+   * El canal de alertas. Van como opcionales y no como requeridas mientras la
+   * clave de Resend no esté puesta en Vercel: exigirlas hoy rompería el
+   * `env:check` de todo el mundo por una integración que todavía no existe.
+   * Su ausencia no pasa desapercibida —las dos rutas de cron contestan 503 y
+   * Vercel marca la corrida fallida—, así que el fallo se ve donde importa.
+   * Cuando la clave viva en Vercel, mover las tres a REQUERIDAS es una línea.
+   */
+  "RESEND_API_KEY",
+  "ALERTAS_REMITENTE",
+  "ALERTAS_DESTINATARIOS",
 ];
 
 /**
