@@ -1,3 +1,25 @@
+> ## ⚠ DOCUMENTO SUPERSEDED — no construir contra este documento
+>
+> **Reemplazado por:** el skill `j-telemetry-ui` (`.claude/skills/j-telemetry-ui/SKILL.md`),
+> que es el lenguaje visual vigente de J-Telemetry.
+>
+> **Desde:** los tokens canónicos entraron a `main` en los PR #77 y #78, y el skill
+> con sus ediciones en el #79. Toda pantalla construida desde entonces usa esa paleta.
+>
+> **En qué contradice la realidad construida:** este documento propone fondo claro
+> (`#EDF0EE`) para las caras internas, otros hexes de resultado (`#1F7A5C` / `#A62C24` /
+> `#C98A12`) y otra tipografía (Archivo Expanded · Inter Tight · JetBrains Mono). Lo que
+> está vivo en `globals.css` es fondo oscuro (`#0A0D10`), los hexes del skill y
+> Archivo · IBM Plex Sans · IBM Plex Mono.
+>
+> **Qué se rescató antes de archivarlo:** la tesis de la calma, la leyenda permanente de
+> la torre, y la regla de que la maquinaria de identificación no se muestra en cara
+> cliente. Las tres viven hoy en el skill, adaptadas al vocabulario vigente.
+>
+> **Por qué se conserva:** es el registro de cómo se llegó al lenguaje actual. La idea de
+> los dos mundos —el acta quieta y la torre viva, que nunca se pueden ver iguales— nació
+> aquí y sigue siendo ley.
+
 # Sistema de Diseño — Superficies Internas de J-Telemetry
 
 **Uso:** este documento se pega al inicio de cualquier herramienta de diseño o código (Cursor, v0, Claude Code) al construir o rehacer **las caras internas** (portal cliente, cara carrier, J-Staff). Es el hermano del `Brief-Identidad-J-Tel.md` (que cubre la landing pública). Hereda su paleta, tipografía y prohibidos.
