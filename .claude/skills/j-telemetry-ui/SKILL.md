@@ -256,6 +256,76 @@ Fondo de tinta, paneles de papel oscuro. La regla dura:
 --azul     #4C9AE0   enlaces, avisos del sistema, acciones. Jamás un veredicto
 ```
 
+### Los dos temas
+
+El producto tiene **tema oscuro** (el canónico, el de arriba) y **tema claro**. Son
+el mismo idioma con otra luz: mismos roles, mismos nombres de token, distintos
+valores. Ninguna regla de color cambia entre temas.
+
+El tema claro se activa con `[data-tema="claro"]` en `<html>`:
+
+```css
+[data-tema="claro"]{
+  --fondo:#F4F6F8;   --panel:#FFFFFF;  --panel2:#F0F3F6;  --nav-bg:#ECEFF3;
+  --linea:rgba(16,26,36,.11);          --linea-fuerte:rgba(16,26,36,.20);
+  --texto:#111820;   --tenue:#5A6874;  --acero:#3D6A8F;
+  --verde:#1B8A54;   --ambar:#9A6A05;  --rojo:#B4262B;    --azul:#2A6FB5;
+}
+```
+
+**Por qué los colores de veredicto cambian de valor.** El verde `#34C77B` y el ámbar
+`#E3A81F` son luminosos: sobre fondo blanco pierden contraste y dejan de leerse. Las
+versiones claras son más oscuras y saturadas para sostener el contraste, pero siguen
+siendo reconociblemente verde, ámbar y rojo — la ley de color depende de que un
+verde se lea como verde en cualquier tema.
+
+Lo mismo con el acero: `#7A9CB8` en oscuro, `#3D6A8F` en claro. Sigue siendo el
+color de "esto es medición".
+
+### Tokens derivados — la regla que hace esto barato
+
+Además de los colores base, hay tokens para **tintes de fondo, bordes suaves y
+tramas**. Existen porque un `rgba(255,255,255,.05)` escrito a mano funciona en
+oscuro y desaparece en claro.
+
+```
+--t-acero    fondo tenue de acero (chips activos, avatares, sparklines)
+--t-acero2   fondo de acero más presente (barras, segmentos llenos)
+--t-ambar    fondo tenue de ámbar (pastillas, marcas de pendiente)
+--t-rojo     fondo tenue de rojo (marcas de no cumplido)
+--b-acero    borde suave de acero
+--b-ambar    borde suave de ámbar
+--b-rojo     borde suave de rojo
+--hover      fondo de hover y zonas neutras (patio, pistas vacías)
+--rayado     franja de las tramas diagonales (unidad en taller)
+--nav-bg     fondo de la navegación lateral
+```
+
+**Regla dura: ningún componente escribe un color a mano.** Ni `#hex`, ni
+`rgba(255,255,255,…)`, ni `rgba(122,156,184,…)`. Todo sale de un token.
+
+Si un componente necesita un tinte que no existe, **se agrega el token a las dos
+paletas** — nunca se resuelve con un valor literal. Un solo color a mano rompe el
+tema claro en ese punto y nadie lo nota hasta que alguien cambia de tema.
+
+### El interruptor
+
+- Vive **abajo en la navegación lateral, junto al usuario y el engrane**. Es
+  preferencia personal, no una acción de la pantalla.
+- Arranca siguiendo la preferencia del sistema operativo
+  (`prefers-color-scheme`), y una vez que el usuario elige, se recuerda por usuario.
+- La transición entre temas es sobria: `transition: background .18s` en la raíz.
+  Nada de animaciones elaboradas.
+
+### Qué NO cambia entre temas
+
+- **Los roles de color.** Verde sigue siendo solo cumplido; acero sigue siendo solo
+  medición; azul jamás es un veredicto.
+- **La jerarquía.** La zona dominante domina igual en los dos.
+- **Los mapas y superficies de evidencia oscuras** conservan su fondo profundo en
+  ambos temas: una traza sobre mapa necesita fondo oscuro para leerse, y ese lienzo
+  es evidencia, no interfaz.
+
 **El acero separa medición de juicio.** Un dato es acero; un veredicto es verde/ámbar/rojo. Así el color nunca miente sobre qué clase de cosa estás viendo.
 
 **Los estados operativos (activa/legacy, encendido/apagado, conectado/sin señal) usan acero y tenue. Verde, ámbar y rojo jamás marcan estados operativos — solo veredictos y sus consecuencias.**
@@ -441,6 +511,10 @@ Si aparece cualquiera de estos, el instrumento se disolvió de vuelta en tablero
   renglones cumple todas las reglas de color y voz y aun así no es un producto:
   es un directorio. Si una vista no tiene zona dominante, navegación lateral ni
   camino visible hacia la evidencia, está mal aunque cada regla suelta se cumpla.
+- **El color escrito a mano.** Un `rgba(255,255,255,.05)` de fondo funciona en
+  oscuro y desaparece en claro; un `#0C0F13` deja la navegación negra sobre un
+  producto blanco. Cada valor literal es un punto donde el tema claro se rompe sin
+  que nadie lo note. Si falta un tinte, se agrega el token a las dos paletas.
 
 ---
 
