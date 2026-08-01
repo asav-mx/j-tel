@@ -150,6 +150,12 @@ Cierre del turno · Pendiente por evidencia · PLAN-v1 · lista congelada de las
   queda anclada a `auth-rbac`.
 - **1.b — Plomería de operación.** Bitácora `cron_runs` · **entrega real de
   alertas** (que lleguen, no que se pinten) · semáforo de J-Staff.
+  **Bloqueado sin resolver destinatarios:** hoy no hay forma de resolver "todos
+  los usuarios con rol X en el contrato Y" — el email vive en Clerk (no en la
+  base), `userMemberships` no está ligado a `service_contracts`, y `canal.ts`
+  solo manda a una lista fija por variable de entorno. El contenido de los
+  correos ya está definido (`Ficha-Correos-y-Alertas.md`, #143); falta a quién
+  mandárselos. No urgente esta semana, pero sin esto 1.b no cierra.
 - **1.c — `historia-del-sello`** (componente; falta la columna de causa).
 - **1.d — Arranca `auth-rbac`.**
 - **1.e — Higiene:** credenciales de un solo lugar · base de práctica desechable.
