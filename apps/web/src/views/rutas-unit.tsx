@@ -15,7 +15,7 @@ import {
 export const dynamic = "force-dynamic";
 
 const inputClass =
-  "mt-1 w-full rounded border border-white/10 bg-black/20 p-2 text-sm placeholder:text-white/30";
+  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm placeholder:text-[var(--tenue)]";
 const labelClass = "block text-sm";
 const btnClass =
   "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
@@ -136,8 +136,8 @@ export async function RutasUnitView({
       step="rutas"
     >
       <p className="text-sm text-[var(--muted)]">
-        Una ruta es <span className="text-white">turno + trazado KML</span> para{" "}
-        <span className="text-white">{operationalUnitLabel(unit)}</span>. Los turnos se registran
+        Una ruta es <span className="text-[var(--texto)]">turno + trazado KML</span> para{" "}
+        <span className="text-[var(--texto)]">{operationalUnitLabel(unit)}</span>. Los turnos se registran
         en{" "}
         <Link href={turnosHref} className="text-[var(--accent)]">
           Turnos
@@ -160,7 +160,7 @@ export async function RutasUnitView({
         <Card title="Campus compartido">
           <p className="text-sm text-[var(--muted)]">
             Plantas en este campus:{" "}
-            <span className="text-white">
+            <span className="text-[var(--texto)]">
               {activeUnit.memberPlants.map((p) => `${p.name} (${p.code})`).join(" · ") ||
                 "ninguna asignada"}
             </span>
@@ -175,16 +175,16 @@ export async function RutasUnitView({
           <ul className="list-inside list-disc space-y-1 text-sm text-[var(--muted)]">
             <li>
               Anticipación de llegada:{" "}
-              <span className="text-white">{anticipation} min</span> antes del inicio del turno →
+              <span className="text-[var(--texto)]">{anticipation} min</span> antes del inicio del turno →
               deadline en geocerca
             </li>
             <li>
               Observación GPS empieza{" "}
-              <span className="text-white">{evidenceBefore} min</span> antes del deadline
+              <span className="text-[var(--texto)]">{evidenceBefore} min</span> antes del deadline
             </li>
             <li>
               Duración máxima de ruta:{" "}
-              <span className="text-white">
+              <span className="text-[var(--texto)]">
                 {samplePolicy.maxRouteDurationMinutes ?? 60} min
               </span>
             </li>
@@ -205,15 +205,15 @@ export async function RutasUnitView({
       <Card title="Cómo funciona">
         <ol className="list-inside list-decimal space-y-1 text-sm text-[var(--muted)]">
           <li>
-            Registra los <span className="text-white">turnos</span> en Turnos (hora de entrada del
+            Registra los <span className="text-[var(--texto)]">turnos</span> en Turnos (hora de entrada del
             personal).
           </li>
           <li>
-            Crea cada <span className="text-white">ruta</span> eligiendo turno + trazado KML. Riveras
+            Crea cada <span className="text-[var(--texto)]">ruta</span> eligiendo turno + trazado KML. Riveras
             7 turno 1 y Riveras 7 turno 2 son rutas distintas aunque compartan nombre.
           </li>
           <li>
-            Usa la ruta en <span className="text-white">Perfiles de servicio</span> junto con
+            Usa la ruta en <span className="text-[var(--texto)]">Perfiles de servicio</span> junto con
             contrato y geocerca.
           </li>
         </ol>
@@ -340,17 +340,17 @@ export async function RutasUnitView({
           title={`Catálogo de variantes — ${routeRows.reduce((n, r) => n + r.variants.length, 0)} variante(s) · ${routeRows.reduce((n, r) => n + r.variants.filter((v) => v.status === "activa").length, 0)} activa(s)`}
         >
           <p className="mb-5 text-xs text-[var(--muted)]">
-            <strong className="text-white">Variante</strong> = caminos alternos que coexisten hoy
+            <strong className="text-[var(--texto)]">Variante</strong> = caminos alternos que coexisten hoy
             (MEX-45, Panamericana…). El motor evalúa contra todas las{" "}
-            <span className="text-white">activas</span> — la unidad cumple si sirve cualquiera de
-            ellas. <strong className="text-white">Versión</strong> = historia temporal de una
+            <span className="text-[var(--texto)]">activas</span> — la unidad cumple si sirve cualquiera de
+            ellas. <strong className="text-[var(--texto)]">Versión</strong> = historia temporal de una
             variante; las anteriores se conservan para auditoría.
           </p>
 
           {Array.from(shiftGroups.entries()).map(([sid, group]) => (
             <div key={sid} className="mb-8">
               {/* Encabezado de turno */}
-              <div className="mb-3 flex flex-wrap items-baseline gap-x-3 border-b border-white/5 pb-2">
+              <div className="mb-3 flex flex-wrap items-baseline gap-x-3 border-b border-[var(--linea-tenue)] pb-2">
                 <span
                   className="font-mono text-xs font-medium uppercase tracking-widest"
                   style={{ color: "#7A9CB8" }}
@@ -365,19 +365,19 @@ export async function RutasUnitView({
                 </span>
               </div>
 
-              <div className="space-y-3 border-l border-white/5 pl-3">
+              <div className="space-y-3 border-l border-[var(--linea-tenue)] pl-3">
                 {group.routes.map((row) => {
                   const activas = row.variants.filter((v) => v.status === "activa");
                   const legacyCount = row.variants.filter((v) => v.status === "legacy").length;
                   return (
                     <div
                       key={row.routeId}
-                      className="rounded border border-white/5"
+                      className="rounded border border-[var(--linea-tenue)]"
                       style={{ background: "rgba(0,0,0,.15)" }}
                     >
                       {/* Encabezado de ruta */}
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-white/5 px-3 py-2">
-                        <span className="text-sm font-medium text-white">{row.routeName}</span>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--linea-tenue)] px-3 py-2">
+                        <span className="text-sm font-medium text-[var(--texto)]">{row.routeName}</span>
                         <span
                           className="font-mono text-xs tabular-nums"
                           style={{ color: "#7A9CB8" }}
@@ -398,7 +398,7 @@ export async function RutasUnitView({
                       {/* Tabla de variantes */}
                       {row.variants.length > 0 && (
                         <table className="w-full text-sm">
-                          <tbody className="divide-y divide-white/5">
+                          <tbody className="divide-y divide-[var(--linea-tenue)]">
                             {row.variants.map((v) => {
                               const isLastActive =
                                 v.status === "activa" && activas.length === 1;
@@ -444,7 +444,7 @@ export async function RutasUnitView({
                                       </span>
                                     )}
                                   </td>
-                                  <td className="px-3 py-2 text-white">{v.name}</td>
+                                  <td className="px-3 py-2 text-[var(--texto)]">{v.name}</td>
                                   <td className="px-3 py-2 font-mono text-xs tabular-nums text-[var(--muted)]">
                                     {vCount} versión{vCount !== 1 ? "es" : ""}
                                   </td>
@@ -508,7 +508,7 @@ export async function RutasUnitView({
                       )}
 
                       {/* Form de nueva variante, anclado a esta ruta */}
-                      <details className="border-t border-white/5">
+                      <details className="border-t border-[var(--linea-tenue)]">
                         <summary
                           className="cursor-pointer px-3 py-2 text-xs hover:underline"
                           style={{ color: "#4C9AE0" }}

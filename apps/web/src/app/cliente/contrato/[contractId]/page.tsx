@@ -49,7 +49,7 @@ export const dynamic = "force-dynamic";
 const mono = "font-[family-name:var(--fuente-mono)]";
 const num = "font-[family-name:var(--fuente-mono)] tabular-nums";
 const inputBase =
-  "w-full max-w-xs rounded border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] tabular-nums";
+  "w-full max-w-xs rounded border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] tabular-nums";
 
 export default async function OficinaDeContratoPage({
   params,
@@ -267,7 +267,7 @@ export default async function OficinaDeContratoPage({
               name="motivo"
               maxLength={280}
               placeholder="p. ej. el turno B se movió a las 14:00"
-              className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-white/25"
+              className="w-full rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-2 text-sm text-[var(--texto)] placeholder:text-[var(--tenue)]"
             />
           </label>
 
@@ -315,17 +315,17 @@ export default async function OficinaDeContratoPage({
             <table className="w-full text-[13.5px]">
               <thead>
                 <tr className={`text-left text-[10px] tracking-[.12em] text-[var(--tenue)] uppercase ${mono}`}>
-                  <th className="border-b border-white/20 p-3 font-medium">Ruta</th>
-                  <th className="border-b border-white/20 p-3 font-medium">Turno</th>
-                  <th className="border-b border-white/20 p-3 font-medium">Entrada declarada</th>
-                  <th className="border-b border-white/20 p-3 font-medium">Hora límite que produce</th>
-                  <th className="border-b border-white/20 p-3 font-medium">Ventana que abre</th>
-                  <th className="border-b border-white/20 p-3 text-right font-medium">Servicios</th>
+                  <th className="border-b border-[var(--linea-fuerte)] p-3 font-medium">Ruta</th>
+                  <th className="border-b border-[var(--linea-fuerte)] p-3 font-medium">Turno</th>
+                  <th className="border-b border-[var(--linea-fuerte)] p-3 font-medium">Entrada declarada</th>
+                  <th className="border-b border-[var(--linea-fuerte)] p-3 font-medium">Hora límite que produce</th>
+                  <th className="border-b border-[var(--linea-fuerte)] p-3 font-medium">Ventana que abre</th>
+                  <th className="border-b border-[var(--linea-fuerte)] p-3 text-right font-medium">Servicios</th>
                 </tr>
               </thead>
               <tbody>
                 {turnos.map((t) => (
-                  <tr key={t.routeShiftId} className="border-b border-white/[.045]">
+                  <tr key={t.routeShiftId} className="border-b border-[var(--linea-tenue)]">
                     <td className="p-3 text-[var(--texto)]">{t.ruta}</td>
                     <td className="p-3 text-[var(--tenue)]">{t.turno}</td>
                     <td className={`p-3 text-[var(--acero)] ${num}`}>{t.horaEntrada ?? "—"}</td>
@@ -416,7 +416,7 @@ function AnchoDeVentana({
         className={`ml-2 rounded-[2px] border px-1.5 pt-[2px] pb-[1px] text-[9px] tracking-[.1em] uppercase ${mono} ${
           origen.acero
             ? "border-[var(--acero)]/60 text-[var(--acero)]"
-            : "border-white/15 text-[var(--tenue)]"
+            : "border-[var(--linea-fuerte)] text-[var(--tenue)]"
         }`}
       >
         {origen.etiqueta}

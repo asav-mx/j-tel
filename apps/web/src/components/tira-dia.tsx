@@ -94,7 +94,7 @@ export function TiraDia({
   alto?: string;
 }) {
   return (
-    <div className={`relative w-full rounded-[2px] bg-white/[.03] ${alto}`}>
+    <div className={`relative w-full rounded-[2px] bg-[var(--hover)] ${alto}`}>
       {segmentos.map((s, i) => {
         const izquierda = posicionEnFranja(s.desde, franja.desde, franja.hasta);
         const derecha = posicionEnFranja(s.hasta, franja.desde, franja.hasta);
@@ -115,7 +115,7 @@ export function TiraDia({
       {marcas.map((m, i) => (
         <span
           key={`marca-${i}`}
-          className="absolute -top-1 -bottom-1 w-px bg-white/25"
+          className="absolute -top-1 -bottom-1 w-px bg-[var(--linea-fuerte)]"
           style={{ left: `${posicionEnFranja(m.instante, franja.desde, franja.hasta)}%` }}
           title={m.etiqueta}
         />

@@ -93,15 +93,15 @@ export function CarrierDudosoLabelForm({
     <form onSubmit={onSubmit} className="space-y-4 text-sm">
       <p className="text-[var(--muted)]">
         El sistema no asoció una unidad con seguridad. Tu respuesta sirve para{" "}
-        <span className="text-white">calibrar</span> el motor —{" "}
-        <span className="text-white">no cambia</span> el veredicto que ve el cliente.
+        <span className="text-[var(--texto)]">calibrar</span> el motor —{" "}
+        <span className="text-[var(--texto)]">no cambia</span> el veredicto que ve el cliente.
       </p>
 
       {suggestions.length > 0 ? (
-        <div className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3">
+        <div className="space-y-2 rounded-lg border border-[var(--linea)] bg-black/20 p-3">
           <p className="text-[var(--muted)]">
             Sugerencias del sistema (unidades cuyo GPS más se parece a esta ruta).{" "}
-            <span className="text-white">Revisa el mapa</span> — no es veredicto.
+            <span className="text-[var(--texto)]">Revisa el mapa</span> — no es veredicto.
           </p>
           <ul className="flex flex-wrap gap-2">
             {suggestions.map((s) => {
@@ -113,8 +113,8 @@ export function CarrierDudosoLabelForm({
                     onClick={() => pickSuggestion(s.unitId)}
                     className={`rounded-lg border px-3 py-2 text-left transition ${
                       active
-                        ? "border-[var(--accent)] bg-[var(--accent)]/15 text-white"
-                        : "border-white/15 hover:border-[var(--accent)]"
+                        ? "border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--texto)]"
+                        : "border-[var(--linea-fuerte)] hover:border-[var(--accent)]"
                     }`}
                   >
                     <span className="font-medium">{s.label}</span>
@@ -162,7 +162,7 @@ export function CarrierDudosoLabelForm({
         <label className="block space-y-1">
           <span className="text-[var(--muted)]">Unidad</span>
           <select
-            className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2"
+            className="w-full rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-2"
             value={unitId}
             onChange={(e) => setUnit(e.target.value)}
             required
@@ -192,7 +192,7 @@ export function CarrierDudosoLabelForm({
       <label className="block space-y-1">
         <span className="text-[var(--muted)]">Nota (opcional)</span>
         <textarea
-          className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2"
+          className="w-full rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-2"
           rows={2}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}

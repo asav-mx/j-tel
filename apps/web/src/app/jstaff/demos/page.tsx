@@ -13,7 +13,7 @@ export default async function JStaffDemosPage() {
         <AppNav title="Demos comerciales" links={[{ href: "/jstaff", label: "← Panel" }]} />
         <Card>
           {templates.map((t) => (
-            <div key={t.id} className="mb-4 rounded border border-white/5 p-4">
+            <div key={t.id} className="mb-4 rounded border border-[var(--linea-tenue)] p-4">
               <p className="font-medium">{t.name}</p>
               <pre className="mt-2 overflow-x-auto text-xs text-[var(--muted)]">
                 {JSON.stringify(t.config, null, 2)}

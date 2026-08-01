@@ -76,6 +76,7 @@
 :root {
   --panel2: #12171d; /* encabezados de tabla, hover, panel dominante */
   --nav-bg: #0c0f13; /* fondo de la navegación lateral */
+  --linea-tenue: rgba(255, 255, 255, 0.05); /* separador apenas insinuado */
   --linea-fuerte: rgba(255, 255, 255, 0.18); /* separador marcado */
 
   /* Tintes de fondo */
@@ -120,6 +121,7 @@
     la rejilla es ~la mitad de --linea (.05 vs .10); aquí --linea es .11 → .055,
     redondeado a .06. Sin esto la rejilla sería blanco sobre blanco en claro. */
   --linea: rgba(16, 26, 36, 0.11);
+  --linea-tenue: rgba(16, 26, 36, 0.055); /* la mitad de --linea, igual que en oscuro */
   --linea-fuerte: rgba(16, 26, 36, 0.2);
 
   /* — Texto — */

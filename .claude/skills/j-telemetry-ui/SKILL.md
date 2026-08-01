@@ -329,6 +329,7 @@ oscuro y desaparece en claro.
 --b-ambar    borde suave de ámbar
 --b-rojo     borde suave de rojo
 --b-verde    borde suave de verde
+--linea-tenue  separador apenas insinuado (la mitad de --linea)
 --hover      fondo de hover y zonas neutras (patio, pistas vacías)
 --rayado     franja de las tramas diagonales (unidad en taller)
 --nav-bg     fondo de la navegación lateral
@@ -350,7 +351,7 @@ Se verifica en automático: **cada token de color debe aparecer exactamente dos 
 en el CSS.**
 
 ```bash
-for t in fondo panel panel2 nav-bg rejilla linea linea-fuerte texto tenue \
+for t in fondo panel panel2 nav-bg rejilla linea linea-tenue linea-fuerte texto tenue \
          acero verde ambar rojo azul t-acero t-acero2 t-verde t-ambar t-rojo \
          b-acero b-verde b-ambar b-rojo hover rayado; do
   n=$(grep -cE -- "--$t:" apps/web/src/app/globals.css)

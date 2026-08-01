@@ -25,7 +25,7 @@ type StatusFilter = "all" | "sin_verificar" | "cumplido" | "no_cumplido" | "pend
 function chipClass(active: boolean): string {
   return active
     ? "rounded-full bg-[var(--accent)] px-3 py-1 text-sm text-black"
-    : "rounded-full border border-white/10 px-3 py-1 text-sm hover:border-[var(--accent)]";
+    : "rounded-full border border-[var(--linea)] px-3 py-1 text-sm hover:border-[var(--accent)]";
 }
 
 function complianceHref(
@@ -234,14 +234,14 @@ export async function UnitComplianceView({
   return (
     <UnitShell client={client} unit={unit} title={`Cumplimiento — ${unitLabel}`}>
       <p className="text-sm text-[var(--muted)]">
-        Servicios verificados de <span className="text-white">{unitLabel}</span> contra el GPS del
+        Servicios verificados de <span className="text-[var(--texto)]">{unitLabel}</span> contra el GPS del
         carrier. Elige el rango de fechas que quieras revisar.
       </p>
 
       <Card title="Cobertura de rutas">
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
           <p>
-            <span className="text-white">
+            <span className="text-[var(--texto)]">
               {coverage.routesProfiled} de {coverage.routesTotal}
             </span>{" "}
             rutas+turno con perfil · {coverage.profiles} perfil(es) activo(s)

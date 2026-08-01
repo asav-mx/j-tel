@@ -107,13 +107,13 @@ export default async function QuienSoyPage() {
             <div className="flex gap-2.5">
               {id.sesionActiva ? (
                 <SignOutButton>
-                  <button className="cursor-pointer rounded-sm border border-[var(--acero)] px-3.5 py-2 font-mono text-[11px] font-medium tracking-[0.11em] text-[var(--acero)] uppercase transition-colors hover:bg-white/5">
+                  <button className="cursor-pointer rounded-sm border border-[var(--acero)] px-3.5 py-2 font-mono text-[11px] font-medium tracking-[0.11em] text-[var(--acero)] uppercase transition-colors hover:bg-[var(--hover)]">
                     Cerrar sesión
                   </button>
                 </SignOutButton>
               ) : (
                 <SignInButton>
-                  <button className="cursor-pointer rounded-sm border border-[var(--azul)] px-3.5 py-2 font-mono text-[11px] font-medium tracking-[0.11em] text-[var(--azul)] uppercase transition-colors hover:bg-white/5">
+                  <button className="cursor-pointer rounded-sm border border-[var(--azul)] px-3.5 py-2 font-mono text-[11px] font-medium tracking-[0.11em] text-[var(--azul)] uppercase transition-colors hover:bg-[var(--hover)]">
                     Iniciar sesión
                   </button>
                 </SignInButton>
@@ -124,7 +124,7 @@ export default async function QuienSoyPage() {
       </section>
 
       {/* — El estado del arranque, con su lectura al lado — */}
-      <section className="mb-5 grid gap-px overflow-hidden border border-[var(--linea)] bg-white/10 sm:grid-cols-3">
+      <section className="mb-5 grid gap-px overflow-hidden border border-[var(--linea)] bg-[var(--linea)] sm:grid-cols-3">
         <div className="bg-[var(--panel)] px-5 py-4">
           <Dato etiqueta="Clerk en este despliegue">
             {CLERK_CONFIGURADO ? "configurado" : "sin llaves"}
@@ -182,7 +182,7 @@ export default async function QuienSoyPage() {
                   {["Cuenta", "Tipo", "Rol", "Alcance"].map((h) => (
                     <th
                       key={h}
-                      className="border-b border-white/20 pr-3 pb-2.5 text-left font-mono text-[10px] font-medium tracking-[0.12em] text-[var(--tenue)] uppercase"
+                      className="border-b border-[var(--linea-fuerte)] pr-3 pb-2.5 text-left font-mono text-[10px] font-medium tracking-[0.12em] text-[var(--tenue)] uppercase"
                     >
                       {h}
                     </th>
@@ -192,16 +192,16 @@ export default async function QuienSoyPage() {
               <tbody>
                 {membresías.map((m) => (
                   <tr key={`${m.accountId}-${m.role}-${m.scopeType}-${m.scopeId ?? ""}`}>
-                    <td className="border-b border-white/[0.045] py-2.5 pr-3">
+                    <td className="border-b border-[var(--linea-tenue)] py-2.5 pr-3">
                       {m.cuenta?.name ?? "—"}
                     </td>
-                    <td className="border-b border-white/[0.045] py-2.5 pr-3 font-mono text-[12px] text-[var(--tenue)]">
+                    <td className="border-b border-[var(--linea-tenue)] py-2.5 pr-3 font-mono text-[12px] text-[var(--tenue)]">
                       {m.cuenta?.type ?? "—"}
                     </td>
-                    <td className="border-b border-white/[0.045] py-2.5 pr-3 font-mono text-[12px] text-[var(--acero)]">
+                    <td className="border-b border-[var(--linea-tenue)] py-2.5 pr-3 font-mono text-[12px] text-[var(--acero)]">
                       {m.role}
                     </td>
-                    <td className="border-b border-white/[0.045] py-2.5 pr-3 text-[var(--tenue)]">
+                    <td className="border-b border-[var(--linea-tenue)] py-2.5 pr-3 text-[var(--tenue)]">
                       {ALCANCE[m.scopeType] ?? m.scopeType}
                     </td>
                   </tr>

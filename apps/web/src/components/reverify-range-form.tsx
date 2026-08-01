@@ -9,7 +9,7 @@ type ContractOption = {
 };
 
 const inputClass =
-  "mt-1 w-full rounded border border-white/10 bg-black/20 p-2 text-sm";
+  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm";
 
 const MAX_DAYS = 31;
 
@@ -199,7 +199,7 @@ export function ReverifyRangeForm({ contracts }: { contracts: ContractOption[] }
           onChange={(e) => setUnderstood(e.target.checked)}
         />
         <span>
-          Entiendo que se <span className="text-white">sobrescriben</span> los resultados
+          Entiendo que se <span className="text-[var(--texto)]">sobrescriben</span> los resultados
           (cumplido / no cumplido) de esas fechas.
         </span>
       </label>
@@ -238,7 +238,7 @@ export function ReverifyRangeForm({ contracts }: { contracts: ContractOption[] }
       {fatal ? <p className="text-sm text-red-300">{fatal}</p> : null}
 
       {results.length > 0 ? (
-        <div className="rounded-lg border border-white/10 bg-black/20 p-3 text-sm">
+        <div className="rounded-lg border border-[var(--linea)] bg-black/20 p-3 text-sm">
           <p className="text-emerald-200">
             Listo: {okDays} ok · {failDays} con error
           </p>

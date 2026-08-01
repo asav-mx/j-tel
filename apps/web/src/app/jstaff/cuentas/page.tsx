@@ -52,7 +52,7 @@ export default async function JStaffCuentasPage({
                 <input
                   name="name"
                   required
-                  className="mt-1 w-full rounded border border-white/10 bg-black/20 p-2"
+                  className="mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2"
                   placeholder="Ej. Transportes García"
                 />
               </label>
@@ -60,7 +60,7 @@ export default async function JStaffCuentasPage({
                 Tipo
                 <select
                   name="type"
-                  className="mt-1 w-full rounded border border-white/10 bg-black/20 p-2"
+                  className="mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2"
                 >
                   <option value="client">Cliente (maquiladora / planta)</option>
                   <option value="carrier">Carrier (operador de transporte)</option>
@@ -88,7 +88,7 @@ export default async function JStaffCuentasPage({
                   {carriers.map((a) => (
                     <li
                       key={a.id}
-                      className="flex items-center justify-between rounded border border-white/5 p-3"
+                      className="flex items-center justify-between rounded border border-[var(--linea-tenue)] p-3"
                     >
                       <div>
                         <p className="font-medium">
@@ -117,7 +117,7 @@ export default async function JStaffCuentasPage({
                   {clients.map((a) => (
                     <li
                       key={a.id}
-                      className="flex items-center justify-between rounded border border-white/5 p-3"
+                      className="flex items-center justify-between rounded border border-[var(--linea-tenue)] p-3"
                     >
                       <div>
                         <p className="font-medium">

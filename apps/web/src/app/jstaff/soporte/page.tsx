@@ -14,7 +14,7 @@ import {
 export const dynamic = "force-dynamic";
 
 const inputClass =
-  "mt-1 w-full rounded border border-white/10 bg-black/20 p-2 text-sm";
+  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm";
 
 export default async function JStaffSoportePage({
   searchParams,
@@ -167,7 +167,7 @@ export default async function JStaffSoportePage({
         <Card title="Re-verificar resultados (rango)">
           <p className="mb-4 text-sm text-[var(--muted)]">
             Para después de corregir geocercas: recalcula cumplido / no cumplido con la geocerca
-            actual, <span className="text-white">día por día</span>, sin volver a bajar GPS
+            actual, <span className="text-[var(--texto)]">día por día</span>, sin volver a bajar GPS
             (más estable; evita el error 500 por tiempo). Ideal para Tecma 47.
           </p>
           {activeContracts.length === 0 ? (
@@ -255,7 +255,7 @@ export default async function JStaffSoportePage({
 
         <Card title={`Pendientes de verificación — ${range.label} (${pending.length})`}>
           <p className="mb-4 text-sm text-[var(--muted)]">
-            Solo reintenta <span className="text-white">pendiente_evidencia</span>. Los hechos
+            Solo reintenta <span className="text-[var(--texto)]">pendiente_evidencia</span>. Los hechos
             ya cerrados (cumplido / no cumplido) no se tocan aquí.
           </p>
 
@@ -270,7 +270,7 @@ export default async function JStaffSoportePage({
               </li>
             ) : (
               pending.map((row) => (
-                <li key={row.occurrence.id} className="rounded border border-white/5 p-3">
+                <li key={row.occurrence.id} className="rounded border border-[var(--linea-tenue)] p-3">
                   <p>
                     {row.occurrence.serviceDate} · contrato {row.contract.name}
                   </p>

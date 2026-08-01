@@ -25,7 +25,7 @@ const btnClass =
   "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
 
 const inputClass =
-  "mt-1 w-full rounded border border-white/10 bg-black/20 p-2 text-sm placeholder:text-white/30";
+  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm placeholder:text-[var(--tenue)]";
 
 export function RouteShiftList({
   rows,
@@ -112,9 +112,9 @@ export function RouteShiftList({
       {pageRows.length === 0 ? (
         <p className="text-sm text-[var(--muted)]">Ninguna ruta coincide con el filtro.</p>
       ) : (
-        <ul className="divide-y divide-white/5 rounded border border-white/5 text-sm">
+        <ul className="divide-y divide-[var(--linea-tenue)] rounded border border-[var(--linea-tenue)] text-sm">
           {pageRows.map((r) => (
-            <li key={r.id} className="space-y-3 px-3 py-3 hover:bg-white/[0.02]">
+            <li key={r.id} className="space-y-3 px-3 py-3 hover:bg-[var(--hover)]">
               <div className="min-w-0">
                 <p className="font-medium truncate">
                   {r.routeName} · {r.shiftName}
@@ -190,7 +190,7 @@ export function RouteShiftList({
             type="button"
             disabled={safePage === 0}
             onClick={() => setPage((p) => Math.max(0, p - 1))}
-            className="rounded border border-white/10 px-3 py-1 disabled:opacity-40"
+            className="rounded border border-[var(--linea)] px-3 py-1 disabled:opacity-40"
           >
             ← Anterior
           </button>
@@ -202,7 +202,7 @@ export function RouteShiftList({
             type="button"
             disabled={safePage >= totalPages - 1}
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            className="rounded border border-white/10 px-3 py-1 disabled:opacity-40"
+            className="rounded border border-[var(--linea)] px-3 py-1 disabled:opacity-40"
           >
             Siguiente →
           </button>

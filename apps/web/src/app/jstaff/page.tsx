@@ -46,7 +46,7 @@ export default async function JStaffDashboardPage({
             />
             <ul className="space-y-2 text-sm">
               {accounts.map((a) => (
-                <li key={a!.id} className="flex justify-between rounded border border-white/5 p-3">
+                <li key={a!.id} className="flex justify-between rounded border border-[var(--linea-tenue)] p-3">
                   <span>
                     {a!.name}
                     {a!.isDemo ? <DemoChip /> : null}
@@ -71,7 +71,7 @@ export default async function JStaffDashboardPage({
           <Card title="Plantillas demo → contrato">
             <ul className="space-y-2 text-sm">
               {templates.map((t) => (
-                <li key={t.id} className="rounded border border-white/5 p-3">
+                <li key={t.id} className="rounded border border-[var(--linea-tenue)] p-3">
                   {t.name}
                 </li>
               ))}

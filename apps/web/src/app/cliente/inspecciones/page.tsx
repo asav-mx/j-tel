@@ -38,7 +38,7 @@ export default async function ClienteInspeccionesPage({
           ) : (
             <ul className="space-y-2 text-sm">
               {inspections.map((i) => (
-                <li key={i.id} className="rounded border border-white/5 p-3">
+                <li key={i.id} className="rounded border border-[var(--linea-tenue)] p-3">
                   Estado: {i.status} · {i.notes ?? "Sin notas"}
                 </li>
               ))}

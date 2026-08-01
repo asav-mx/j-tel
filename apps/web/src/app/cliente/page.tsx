@@ -78,7 +78,7 @@ export default async function ClienteDashboardPage({
       ) : null}
 
       <p className="text-sm text-[var(--muted)]">
-        Vista corporativa de <span className="text-white">{client.name}</span>. Cada planta
+        Vista corporativa de <span className="text-[var(--texto)]">{client.name}</span>. Cada planta
         independiente o campus tiene su propio panel, configuración y cumplimiento.
       </p>
 
@@ -105,7 +105,7 @@ export default async function ClienteDashboardPage({
             <Link
               key={`${unit.kind}-${unit.id}`}
               href={href}
-              className="block rounded-xl border border-white/10 bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
+              className="block rounded-xl border border-[var(--linea)] bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -142,7 +142,7 @@ export default async function ClienteDashboardPage({
       <div className="grid gap-4 md:grid-cols-2">
         <Link
           href={withAccount("/cliente/plantas", client.slug)}
-          className="block rounded-xl border border-white/10 bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
+          className="block rounded-xl border border-[var(--linea)] bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
         >
           <h2 className="font-semibold">Administrar plantas</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
@@ -151,7 +151,7 @@ export default async function ClienteDashboardPage({
         </Link>
         <Link
           href={withAccount("/cliente/reportes", client.slug)}
-          className="block rounded-xl border border-white/10 bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
+          className="block rounded-xl border border-[var(--linea)] bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
         >
           <h2 className="font-semibold">Reportes corporativos</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">Resumen exportable de todas las unidades.</p>

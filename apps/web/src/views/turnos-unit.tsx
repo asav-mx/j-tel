@@ -14,7 +14,7 @@ import {
 export const dynamic = "force-dynamic";
 
 const inputClass =
-  "mt-1 w-full rounded border border-white/10 bg-black/20 p-2 text-sm placeholder:text-white/30";
+  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm placeholder:text-[var(--tenue)]";
 const labelClass = "block text-sm";
 const btnClass =
   "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
@@ -71,8 +71,8 @@ export async function TurnosUnitView({
     >
       <p className="text-sm text-[var(--muted)]">
         Los turnos son los horarios de entrada del personal en{" "}
-        <span className="text-white">{operationalUnitLabel(unit)}</span>. Después defines la{" "}
-        <span className="text-white">trayectoria (ruta)</span> vinculada a cada turno.
+        <span className="text-[var(--texto)]">{operationalUnitLabel(unit)}</span>. Después defines la{" "}
+        <span className="text-[var(--texto)]">trayectoria (ruta)</span> vinculada a cada turno.
       </p>
 
       {error ? (
@@ -89,17 +89,17 @@ export async function TurnosUnitView({
       <Card title="Cómo encaja en el flujo">
         <ol className="list-inside list-decimal space-y-1 text-sm text-[var(--muted)]">
           <li>
-            <span className="text-white">Geocercas</span> — destino / fin de la ruta.
+            <span className="text-[var(--texto)]">Geocercas</span> — destino / fin de la ruta.
           </li>
           <li>
-            <span className="text-white">Turnos</span> — horarios de entrada (este paso).
+            <span className="text-[var(--texto)]">Turnos</span> — horarios de entrada (este paso).
           </li>
           <li>
-            <span className="text-white">Rutas</span> — trazado KML por turno. Riveras 7 turno 1 ≠
+            <span className="text-[var(--texto)]">Rutas</span> — trazado KML por turno. Riveras 7 turno 1 ≠
             turno 2.
           </li>
           <li>
-            <span className="text-white">Perfiles</span> — contrato + ruta + geocerca.
+            <span className="text-[var(--texto)]">Perfiles</span> — contrato + ruta + geocerca.
           </li>
         </ol>
       </Card>
@@ -107,7 +107,7 @@ export async function TurnosUnitView({
       <Card title="Registrar turno">
         <p className="mb-3 text-sm text-[var(--muted)]">
           Un turno es la hora en que entra el personal. La ruta que debe cumplirse es{" "}
-          <span className="text-white">turno + trazado KML</span>.
+          <span className="text-[var(--texto)]">turno + trazado KML</span>.
         </p>
         <form action="/api/cliente/turnos" method="post" className="space-y-3">
           <input type="hidden" name="clientSlug" value={client.slug} />
@@ -139,7 +139,7 @@ export async function TurnosUnitView({
             {shifts.map((s) => (
               <li
                 key={s.id}
-                className="rounded-lg border border-white/10 p-4"
+                className="rounded-lg border border-[var(--linea)] p-4"
               >
                 <ConfirmForm
                   action="/api/cliente/turnos"

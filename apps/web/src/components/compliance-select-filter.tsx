@@ -46,7 +46,7 @@ export function ComplianceSelectFilter({
       <span className="shrink-0 text-[var(--muted)]">{label}:</span>
       <select
         name={name}
-        className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 font-mono text-sm"
+        className="min-w-0 flex-1 rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 font-mono text-sm"
         value={value ?? ""}
         onChange={(e) => {
           const next = e.target.value || null;

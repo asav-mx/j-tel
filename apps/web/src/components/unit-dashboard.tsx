@@ -55,7 +55,7 @@ export async function UnitDashboard({ ctx }: { ctx: UnitPageContext }) {
       {unit.kind === "plant_group" ? (
         <p className="text-sm text-[var(--muted)]">
           Campus compartido — plantas{" "}
-          <span className="text-white">
+          <span className="text-[var(--texto)]">
             {unit.memberPlants.map((p) => p.code).join(", ")}
           </span>
           . La configuración de servicios aplica a todo el campus.
@@ -87,7 +87,7 @@ export async function UnitDashboard({ ctx }: { ctx: UnitPageContext }) {
         </Link>
         <Link
           href={compliance}
-          className="block rounded-xl border border-white/10 bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
+          className="block rounded-xl border border-[var(--linea)] bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
         >
           <h2 className="text-lg font-semibold">Cumplimiento</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
@@ -109,7 +109,7 @@ export async function UnitDashboard({ ctx }: { ctx: UnitPageContext }) {
             <Link
               key={step.id}
               href={unitConfigStepHrefFor(unit, client.slug, step.id)}
-              className="block rounded-xl border border-white/10 bg-[var(--card)] p-4 transition hover:border-[var(--accent)]"
+              className="block rounded-xl border border-[var(--linea)] bg-[var(--card)] p-4 transition hover:border-[var(--accent)]"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs text-[var(--muted)]">Paso {step.n}</span>

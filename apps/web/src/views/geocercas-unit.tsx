@@ -10,7 +10,7 @@ import { operationalUnitLabel } from "@/lib/operational-scope";
 export const dynamic = "force-dynamic";
 
 const inputClass =
-  "mt-1 w-full rounded border border-white/10 bg-black/20 p-2 text-sm placeholder:text-white/30";
+  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm placeholder:text-[var(--tenue)]";
 const labelClass = "block text-sm";
 const btnClass =
   "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
@@ -62,8 +62,8 @@ export async function GeocercasUnitView({
       step="geocercas"
     >
       <p className="text-sm text-[var(--muted)]">
-        La geocerca marca <span className="text-white">dónde debe llegar</span> la unidad en{" "}
-        <span className="text-white">{operationalUnitLabel(unit)}</span>.
+        La geocerca marca <span className="text-[var(--texto)]">dónde debe llegar</span> la unidad en{" "}
+        <span className="text-[var(--texto)]">{operationalUnitLabel(unit)}</span>.
         {unit.kind === "plant_group"
           ? " En un campus compartido suele haber una geocerca de llegada común en la entrada."
           : null}
@@ -119,7 +119,7 @@ export async function GeocercasUnitView({
           </label>
           <div className="md:col-span-2">
             <p className="mb-2 text-xs text-[var(--muted)]">
-              Pertenece a: <span className="text-white">{unitLabel}</span>
+              Pertenece a: <span className="text-[var(--texto)]">{unitLabel}</span>
             </p>
             <p className="mb-2 text-xs text-[var(--muted)]">
               Tip: en Google Maps, clic derecho sobre el punto → el primer valor es la latitud y el
@@ -144,7 +144,7 @@ export async function GeocercasUnitView({
               return (
                 <li
                   key={g.id}
-                  className="rounded-lg border border-white/10 p-4"
+                  className="rounded-lg border border-[var(--linea)] p-4"
                 >
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <span className="font-medium">{g.name}</span>

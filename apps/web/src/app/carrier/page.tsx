@@ -76,8 +76,8 @@ export default async function CarrierDashboardPage({
 
         <Card title="Tu rol como carrier">
           <p className="text-sm text-[var(--muted)]">
-            Configuras <span className="text-white">flota, GPS y unidades</span> — eso es cómo
-            atiendes. El cliente define <span className="text-white">geocercas, turnos, rutas y
+            Configuras <span className="text-[var(--texto)]">flota, GPS y unidades</span> — eso es cómo
+            atiendes. El cliente define <span className="text-[var(--texto)]">geocercas, turnos, rutas y
             contratos</span> (qué se verifica). Aquí ves el cumplimiento de los contratos activos
             que te asignaron.
           </p>
@@ -108,7 +108,7 @@ export default async function CarrierDashboardPage({
                 return (
                   <li
                     key={contract.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 p-4"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--linea)] p-4"
                   >
                     <div>
                       <p className="font-medium">{contract.client?.name ?? "Cliente"}</p>

@@ -116,7 +116,7 @@ export async function CierreUnitView({
     <UnitShell client={ctx.client} unit={ctx.unit} title={`Cierre del turno — ${unitLabel}`}>
       {/* ── Selector: fecha y turno ─────────────────────────────────── */}
       <div className="mt-6 flex flex-wrap items-center gap-2.5">
-        <div className="flex items-center rounded-sm border border-white/20">
+        <div className="flex items-center rounded-sm border border-[var(--linea-fuerte)]">
           <Link
             href={href(dia(-1), turnoId)}
             aria-label="Día anterior"
@@ -124,7 +124,7 @@ export async function CierreUnitView({
           >
             ‹
           </Link>
-          <span className="border-x border-white/10 px-3.5 py-2 font-mono text-[13px] whitespace-nowrap text-[var(--texto)]">
+          <span className="border-x border-[var(--linea)] px-3.5 py-2 font-mono text-[13px] whitespace-nowrap text-[var(--texto)]">
             {fecha}
           </span>
           <Link
@@ -137,17 +137,17 @@ export async function CierreUnitView({
         </div>
 
         {turnos.length > 0 ? (
-          <div className="flex overflow-hidden rounded-sm border border-white/20">
+          <div className="flex overflow-hidden rounded-sm border border-[var(--linea-fuerte)]">
             {turnos.map((t, i) => (
               <Link
                 key={t.id}
                 href={href(fecha, t.id)}
                 aria-current={t.id === turnoId ? "page" : undefined}
                 className={`px-4 py-2 text-[13px] font-medium transition-colors ${
-                  i > 0 ? "border-l border-white/20" : ""
+                  i > 0 ? "border-l border-[var(--linea-fuerte)]" : ""
                 } ${
                   t.id === turnoId
-                    ? "bg-white/[0.09] text-[var(--texto)]"
+                    ? "bg-[var(--t-acero)] text-[var(--texto)]"
                     : "text-[var(--tenue)] hover:text-[var(--texto)]"
                 }`}
               >
@@ -236,7 +236,7 @@ export async function CierreUnitView({
 
           {/* ── El cajón de los limpios ──────────────────────────────── */}
           {cierre.limpios.length > 0 ? (
-            <details className="mt-2 border-t border-white/10">
+            <details className="mt-2 border-t border-[var(--linea)]">
               <summary className="flex cursor-pointer list-none items-center gap-3 py-5 text-[15px] text-[var(--tenue)] [&::-webkit-details-marker]:hidden">
                 <span className="font-mono text-[11px]">▸</span>
                 <span>
@@ -250,7 +250,7 @@ export async function CierreUnitView({
             </details>
           ) : null}
 
-          <div className="mt-14 border-t border-white/10 pt-5 font-mono text-[11px] leading-[1.9] text-[var(--tenue)]">
+          <div className="mt-14 border-t border-[var(--linea)] pt-5 font-mono text-[11px] leading-[1.9] text-[var(--tenue)]">
             Cierre del turno · J-Telemetry. Absorbe el antiguo Historial: el selector de fecha
             muestra el cierre de cualquier turno pasado.
             <br />
@@ -290,7 +290,7 @@ function Conteo({
 
 function Seccion({ titulo }: { titulo: string }) {
   return (
-    <h2 className="mt-10 mb-3.5 border-b border-white/10 pb-2 font-mono text-[11px] font-semibold tracking-[0.14em] text-[var(--tenue)] uppercase">
+    <h2 className="mt-10 mb-3.5 border-b border-[var(--linea)] pb-2 font-mono text-[11px] font-semibold tracking-[0.14em] text-[var(--tenue)] uppercase">
       {titulo}
     </h2>
   );
@@ -315,7 +315,7 @@ function Caso({ s, tz, slug }: { s: ServicioDelCierre; tz: string; slug: string 
   const r = riel(s, tz);
 
   return (
-    <div className="grid grid-cols-1 gap-3 border-t border-white/10 py-6 sm:grid-cols-[118px_1fr] sm:gap-7">
+    <div className="grid grid-cols-1 gap-3 border-t border-[var(--linea)] py-6 sm:grid-cols-[118px_1fr] sm:gap-7">
       <div className="pt-0.5">
         <div
           className="font-[family-name:var(--fuente-archivo)] text-[22px] leading-none font-bold tracking-[-0.015em]"
@@ -342,7 +342,7 @@ function Caso({ s, tz, slug }: { s: ServicioDelCierre; tz: string; slug: string 
           <Afirmacion s={s} tz={tz} />
         </h3>
 
-        <div className="mb-3 flex flex-wrap gap-x-6 gap-y-1.5 border border-white/10 bg-[var(--panel)] px-3.5 py-2.5 font-mono text-[12px] text-[var(--tenue)]">
+        <div className="mb-3 flex flex-wrap gap-x-6 gap-y-1.5 border border-[var(--linea)] bg-[var(--panel)] px-3.5 py-2.5 font-mono text-[12px] text-[var(--tenue)]">
           <MedidaCobertura
             cobertura={s.cobertura}
             textoNoDisponible={`Medición de cobertura no disponible — ${
@@ -386,7 +386,7 @@ function Caso({ s, tz, slug }: { s: ServicioDelCierre; tz: string; slug: string 
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href={withAccount(`/cliente/servicio/${s.occurrenceId}`, slug)}
-            className="inline-block cursor-pointer rounded-sm border border-[var(--acero)] px-3.5 py-2 font-mono text-[11px] font-medium tracking-[0.11em] text-[var(--acero)] uppercase transition-colors hover:bg-white/5"
+            className="inline-block cursor-pointer rounded-sm border border-[var(--acero)] px-3.5 py-2 font-mono text-[11px] font-medium tracking-[0.11em] text-[var(--acero)] uppercase transition-colors hover:bg-[var(--hover)]"
           >
             Abrir el expediente
           </Link>
@@ -442,7 +442,7 @@ function TablaLimpios({ servicios, tz }: { servicios: ServicioDelCierre[]; tz: s
             {["Ruta", "Unidad", "Llegada", "Margen", "Cobertura de ruta"].map((h, i) => (
               <th
                 key={h}
-                className={`border-b border-white/20 pr-2.5 pb-2 font-mono text-[10px] font-medium tracking-[0.12em] text-[var(--tenue)] uppercase ${
+                className={`border-b border-[var(--linea-fuerte)] pr-2.5 pb-2 font-mono text-[10px] font-medium tracking-[0.12em] text-[var(--tenue)] uppercase ${
                   i >= 3 ? "text-right" : "text-left"
                 }`}
               >
@@ -453,23 +453,23 @@ function TablaLimpios({ servicios, tz }: { servicios: ServicioDelCierre[]; tz: s
         </thead>
         <tbody>
           {servicios.map((s) => (
-            <tr key={s.occurrenceId} className="hover:bg-white/[0.025]">
-              <td className="border-b border-white/[0.045] py-2 pr-2.5">
+            <tr key={s.occurrenceId} className="hover:bg-[var(--hover)]">
+              <td className="border-b border-[var(--linea-tenue)] py-2 pr-2.5">
                 {s.profileName}
                 <PuntoHistoriaSello historia={s.historiaSello} className="ml-2 align-middle" />
               </td>
-              <td className="border-b border-white/[0.045] py-2 pr-2.5 font-mono text-[12px] whitespace-nowrap text-[var(--tenue)]">
+              <td className="border-b border-[var(--linea-tenue)] py-2 pr-2.5 font-mono text-[12px] whitespace-nowrap text-[var(--tenue)]">
                 {s.unidadLabel ?? "—"}
               </td>
-              <td className="border-b border-white/[0.045] py-2 pr-2.5 font-mono text-[12px] whitespace-nowrap text-[var(--tenue)]">
+              <td className="border-b border-[var(--linea-tenue)] py-2 pr-2.5 font-mono text-[12px] whitespace-nowrap text-[var(--tenue)]">
                 {soloHora(s.llegadaEn, tz)}
               </td>
-              <td className="border-b border-white/[0.045] py-2 pr-2.5 text-right font-mono text-[12px] text-[var(--acero)]">
+              <td className="border-b border-[var(--linea-tenue)] py-2 pr-2.5 text-right font-mono text-[12px] text-[var(--acero)]">
                 {s.margenMinutos == null
                   ? "—"
                   : `${s.margenMinutos < 0 ? "−" : "+"}${formatearDuracion(s.margenMinutos)}`}
               </td>
-              <td className="border-b border-white/[0.045] py-2 pr-2.5 text-right font-mono text-[12px] text-[var(--acero)]">
+              <td className="border-b border-[var(--linea-tenue)] py-2 pr-2.5 text-right font-mono text-[12px] text-[var(--acero)]">
                 {s.matchPct == null ? "—" : pct(s.matchPct)}
               </td>
             </tr>
