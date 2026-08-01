@@ -1,3 +1,23 @@
+> ## ⚠ DOCUMENTO SUPERSEDED — no construir contra este documento
+>
+> **Reemplazado por:** el skill `j-telemetry-ui` para todas las superficies internas.
+> Para la landing pública, el diseño vigente es el aprobado en sesión (dirección
+> "la parvada · ciudad de noche").
+>
+> **Desde:** los tokens canónicos en `main` (PR #77, #78) y el skill con sus ediciones (#79).
+>
+> **Qué quedó obsoleto:** la paleta y tipografía que propone contradicen las que están
+> construidas. Su sección 9 —correr una prueba comparativa entre v0, Framer y Claude
+> Design— describe una fase de exploración que ya cerró.
+>
+> **Qué sigue vigente y no está en otro lado:** la definición de los subdominios
+> (`j-tel.io` pública · `portal.j-tel.io` cliente, donde el alcance lo decide el rol y no
+> la URL · `carrier.j-tel.io` transportista · `staff.j-tel.io` consola interna). Esa
+> sección se cita desde aquí hasta que viva en un documento vigente.
+>
+> **Por qué se conserva:** es el registro del posicionamiento de marca y de por qué el
+> sello es el activo comercial central.
+
 # Brief de Identidad Visual — J-Telemetry (j-tel.io)
 
 **Uso:** este documento se pega **completo** al inicio de cualquier herramienta de diseño (v0, Framer, Claude Design, Claude Code). Sin él, todas producen el mismo promedio del internet. Con él, producen J-Telemetry.
