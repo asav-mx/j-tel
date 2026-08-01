@@ -113,7 +113,9 @@ export function gruposCorporativos(clientSlug: string): GrupoNav[] {
     {
       titulo: "Operación",
       renglones: [
-        { href: withAccount("/cliente", clientSlug), label: "Unidades" },
+        // En corporativo la lista de unidades ES la pantalla de inicio: un
+        // renglón "Unidades" que no lleva a otro lado confunde.
+        { href: withAccount("/cliente", clientSlug), label: "Inicio" },
         { href: withAccount("/cliente/plantas", clientSlug), label: "Administrar plantas" },
       ],
     },
