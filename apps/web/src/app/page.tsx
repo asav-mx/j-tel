@@ -49,7 +49,7 @@ export default async function HomePage() {
         )}
 
         <div className="grid gap-4 md:grid-cols-3">
-          <section className="rounded-xl border border-white/10 bg-[var(--card)] p-6">
+          <section className="rounded-xl border border-[var(--linea)] bg-[var(--card)] p-6">
             <h2 className="text-lg font-semibold">Cara Cliente</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">
               Cumplimiento, reportes y configuración de servicios (plantas → contratos)
@@ -68,7 +68,7 @@ export default async function HomePage() {
               )}
             </ul>
           </section>
-          <section className="rounded-xl border border-white/10 bg-[var(--card)] p-6">
+          <section className="rounded-xl border border-[var(--linea)] bg-[var(--card)] p-6">
             <h2 className="text-lg font-semibold">Cara Carrier</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">
               Flota, mantenimiento y auditoría
@@ -89,7 +89,7 @@ export default async function HomePage() {
           </section>
           <a
             href="/jstaff"
-            className="rounded-xl border border-white/10 bg-[var(--card)] p-6 transition hover:border-[var(--accent)]"
+            className="rounded-xl border border-[var(--linea)] bg-[var(--card)] p-6 transition hover:border-[var(--accent)]"
           >
             <h2 className="text-lg font-semibold">J-Staff</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">
@@ -98,7 +98,7 @@ export default async function HomePage() {
           </a>
         </div>
 
-        <section className="mt-12 rounded-xl border border-white/10 bg-[var(--card)] p-6">
+        <section className="mt-12 rounded-xl border border-[var(--linea)] bg-[var(--card)] p-6">
           <h3 className="font-semibold">Estado del sistema</h3>
           <dl className="mt-4 grid gap-2 text-sm">
             <div className="flex justify-between">

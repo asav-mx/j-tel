@@ -116,7 +116,7 @@ export function OccurrenceTable({
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-white/10 text-[var(--muted)]">
+          <tr className="border-b border-[var(--linea)] text-[var(--muted)]">
             <th className="py-2 pr-4">Fecha</th>
             {showPlant ? <th className="py-2 pr-4">Planta</th> : null}
             {showClient ? <th className="py-2 pr-4">Cliente</th> : null}
@@ -129,7 +129,7 @@ export function OccurrenceTable({
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.id} className="border-b border-white/5">
+            <tr key={row.id} className="border-b border-[var(--linea-tenue)]">
               <td className="py-3 pr-4">{row.serviceDate}</td>
               {showPlant ? <td className="py-3 pr-4">{row.plantLabel}</td> : null}
               {showClient ? <td className="py-3 pr-4">{row.clientLabel}</td> : null}

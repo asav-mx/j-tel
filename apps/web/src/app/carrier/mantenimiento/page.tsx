@@ -43,7 +43,7 @@ export default async function CarrierMantenimientoPage({
               <li className="text-[var(--muted)]">Sin registros en este rango.</li>
             ) : (
               records.map((r) => (
-                <li key={r.id} className="rounded border border-white/5 p-4">
+                <li key={r.id} className="rounded border border-[var(--linea-tenue)] p-4">
                   <p className="font-medium">{r.description}</p>
                   <p className="text-[var(--muted)]">
                     Estado: {r.status}

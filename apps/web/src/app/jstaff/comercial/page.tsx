@@ -8,7 +8,7 @@ import { confirmMessages } from "@/lib/confirm-messages";
 export const dynamic = "force-dynamic";
 
 const inputClass =
-  "mt-1 w-full rounded border border-white/10 bg-black/20 p-2 text-sm placeholder:text-white/30";
+  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm placeholder:text-[var(--tenue)]";
 const labelClass = "block text-sm";
 const btnClass =
   "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
@@ -55,11 +55,11 @@ export default async function JStaffComercialPage({
         />
 
         <p className="text-sm text-[var(--muted)]">
-          El catálogo completo de carriers es <span className="text-white">privado de J-Staff</span>.
+          El catálogo completo de carriers es <span className="text-[var(--texto)]">privado de J-Staff</span>.
           Aquí autorizas qué carriers puede contratar cada cliente (
-          <span className="text-white">autorización active/suspended</span>
+          <span className="text-[var(--texto)]">autorización active/suspended</span>
           ). Eso no activa el contrato: el contrato se crea en borrador y se activa en{" "}
-          <span className="text-white">Contratos</span> de cada unidad operativa.
+          <span className="text-[var(--texto)]">Contratos</span> de cada unidad operativa.
         </p>
 
         {error ? (
@@ -75,7 +75,7 @@ export default async function JStaffComercialPage({
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-black/20 p-3 text-sm">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--linea)] bg-black/20 p-3 text-sm">
           <span className="text-[var(--muted)]">Cliente:</span>
           {clients.length === 0 ? (
             <span className="text-[var(--muted)]">Sin clientes — créalos en Cuentas.</span>
@@ -89,7 +89,7 @@ export default async function JStaffComercialPage({
                   className={`rounded-full px-3 py-1 ${
                     active
                       ? "bg-[var(--accent)] font-medium text-black"
-                      : "border border-white/10 hover:border-[var(--accent)]"
+                      : "border border-[var(--linea)] hover:border-[var(--accent)]"
                   }`}
                 >
                   {c.name}
@@ -161,7 +161,7 @@ export default async function JStaffComercialPage({
                   {authorizations.map((a) => (
                     <li
                       key={a.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded border border-white/5 p-3"
+                      className="flex flex-wrap items-center justify-between gap-3 rounded border border-[var(--linea-tenue)] p-3"
                     >
                       <div>
                         <p className="font-medium">{a.carrier?.name ?? "—"}</p>
@@ -173,7 +173,7 @@ export default async function JStaffComercialPage({
                       <div className="flex gap-2">
                         <Link
                           href={withAccount("/cliente", selectedClient.slug)}
-                          className="rounded-lg border border-white/10 px-3 py-1.5 text-xs hover:border-[var(--accent)]"
+                          className="rounded-lg border border-[var(--linea)] px-3 py-1.5 text-xs hover:border-[var(--accent)]"
                         >
                           Unidades del cliente →
                         </Link>

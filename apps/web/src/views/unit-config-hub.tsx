@@ -43,14 +43,14 @@ export async function UnitConfigHub({
   return (
     <UnitShell client={client} unit={unit} title={`Configuración — ${unitLabel}`}>
       <p className="text-sm text-[var(--muted)]">
-        Configura los servicios de <span className="text-white">{unitLabel}</span> en orden. Cada
+        Configura los servicios de <span className="text-[var(--texto)]">{unitLabel}</span> en orden. Cada
         paso aplica solo a esta unidad operativa.
       </p>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Link
           href={unitContratosHref(unit, client.slug)}
-          className="block rounded-xl border border-white/10 bg-[var(--card)] p-5 transition hover:border-[var(--accent)] md:col-span-2"
+          className="block rounded-xl border border-[var(--linea)] bg-[var(--card)] p-5 transition hover:border-[var(--accent)] md:col-span-2"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
@@ -71,10 +71,10 @@ export async function UnitConfigHub({
             <Link
               key={step.id}
               href={unitConfigStepHrefFor(unit, client.slug, step.id)}
-              className="block rounded-xl border border-white/10 bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
+              className="block rounded-xl border border-[var(--linea)] bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
             >
               <div className="flex items-center justify-between">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-sm font-semibold">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--t-acero)] text-sm font-semibold">
                   {step.n}
                 </span>
                 <span

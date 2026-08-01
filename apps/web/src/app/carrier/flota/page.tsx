@@ -5,7 +5,7 @@ import { resolveAccountByType, withAccount } from "@/lib/account-context";
 export const dynamic = "force-dynamic";
 
 const inputClass =
-  "mt-1 w-full rounded border border-white/10 bg-black/20 p-2 text-sm placeholder:text-white/30";
+  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm placeholder:text-[var(--tenue)]";
 const labelClass = "block text-sm";
 const btnClass =
   "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
@@ -52,10 +52,10 @@ export default async function CarrierFlotaPage({
         />
 
         <p className="text-sm text-[var(--muted)]">
-          Carrier: <span className="text-white">{carrier.name}</span>. Orden:{" "}
-          <strong className="text-white">1)</strong> registra la unidad →{" "}
-          <strong className="text-white">2)</strong> registra el GPS →{" "}
-          <strong className="text-white">3)</strong> asígnalos.
+          Carrier: <span className="text-[var(--texto)]">{carrier.name}</span>. Orden:{" "}
+          <strong className="text-[var(--texto)]">1)</strong> registra la unidad →{" "}
+          <strong className="text-[var(--texto)]">2)</strong> registra el GPS →{" "}
+          <strong className="text-[var(--texto)]">3)</strong> asígnalos.
         </p>
 
         <div className="grid gap-6 lg:grid-cols-3">
@@ -170,7 +170,7 @@ export default async function CarrierFlotaPage({
                 {units.map((u) => {
                   const gps = deviceByUnit.get(u.id);
                   return (
-                    <li key={u.id} className="rounded border border-white/5 p-3">
+                    <li key={u.id} className="rounded border border-[var(--linea-tenue)] p-3">
                       <p className="font-medium">{u.label}</p>
                       <p className="text-[var(--muted)]">
                         Placa: {u.plateNumber ?? "—"}
@@ -196,7 +196,7 @@ export default async function CarrierFlotaPage({
                 {devices.map((d) => {
                   const assigned = assignedDeviceIds.has(d.id);
                   return (
-                    <li key={d.id} className="rounded border border-white/5 p-3">
+                    <li key={d.id} className="rounded border border-[var(--linea-tenue)] p-3">
                       <p className="font-mono text-xs">{d.imei}</p>
                       {d.label ? <p className="mt-0.5 text-[var(--muted)]">{d.label}</p> : null}
                       <p className="mt-1 text-xs text-[var(--muted)]">

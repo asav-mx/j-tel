@@ -20,7 +20,7 @@ export function JornadaClientFilters({
         <label>
           Unidad
           <select
-            className="ml-2 rounded border border-white/10 bg-black/40 px-2 py-1"
+            className="ml-2 rounded border border-[var(--linea)] bg-black/40 px-2 py-1"
             value={unitFilter ?? ""}
             onChange={(e) => setUnitFilter(e.target.value || null)}
           >
@@ -35,7 +35,7 @@ export function JornadaClientFilters({
         <label>
           Veredicto
           <select
-            className="ml-2 rounded border border-white/10 bg-black/40 px-2 py-1"
+            className="ml-2 rounded border border-[var(--linea)] bg-black/40 px-2 py-1"
             value={statusFilter ?? ""}
             onChange={(e) => setStatusFilter(e.target.value || null)}
           >

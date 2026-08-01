@@ -71,7 +71,7 @@ export async function PendientesEvidenciaUnitView({ ctx }: { ctx: UnitPageContex
         </>
       )}
 
-      <div className="mt-14 border-t border-white/10 pt-5 font-mono text-[11px] leading-[1.9] text-[var(--tenue)]">
+      <div className="mt-14 border-t border-[var(--linea)] pt-5 font-mono text-[11px] leading-[1.9] text-[var(--tenue)]">
         Pendiente por evidencia · J-Telemetry — cara planta.
         <br />
         "Sin señal" es un motivo bajo pendiente, no un cuarto estado: los resultados siguen siendo
@@ -87,7 +87,7 @@ function Caso({ c, tz, slug }: { c: CasoPendienteData; tz: string; slug: string 
   const r = rielPendiente(c.hueco);
 
   return (
-    <div className="grid grid-cols-1 gap-3 border-t border-white/10 py-6 sm:grid-cols-[118px_1fr] sm:gap-7">
+    <div className="grid grid-cols-1 gap-3 border-t border-[var(--linea)] py-6 sm:grid-cols-[118px_1fr] sm:gap-7">
       <div className="pt-0.5">
         <div
           className="font-[family-name:var(--fuente-archivo)] text-[22px] leading-none font-bold tracking-[-0.015em]"
@@ -114,7 +114,7 @@ function Caso({ c, tz, slug }: { c: CasoPendienteData; tz: string; slug: string 
           <AfirmacionPendiente hueco={c.hueco} tz={tz} />
         </h3>
 
-        <div className="mb-3 flex flex-wrap gap-x-6 gap-y-1.5 border border-white/10 bg-[var(--panel)] px-3.5 py-2.5 font-mono text-[12px] text-[var(--tenue)]">
+        <div className="mb-3 flex flex-wrap gap-x-6 gap-y-1.5 border border-[var(--linea)] bg-[var(--panel)] px-3.5 py-2.5 font-mono text-[12px] text-[var(--tenue)]">
           <MedidaCobertura
             cobertura={c.cobertura}
             textoNoDisponible="Sin señal en la ventana — no hay cobertura que mostrar."
@@ -126,7 +126,7 @@ function Caso({ c, tz, slug }: { c: CasoPendienteData; tz: string; slug: string 
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href={withAccount(`/cliente/servicio/${c.occurrenceId}`, slug)}
-            className="inline-block cursor-pointer rounded-sm border border-[var(--acero)] px-3.5 py-2 font-mono text-[11px] font-medium tracking-[0.11em] text-[var(--acero)] uppercase transition-colors hover:bg-white/5"
+            className="inline-block cursor-pointer rounded-sm border border-[var(--acero)] px-3.5 py-2 font-mono text-[11px] font-medium tracking-[0.11em] text-[var(--acero)] uppercase transition-colors hover:bg-[var(--hover)]"
           >
             Abrir el expediente
           </Link>
@@ -150,12 +150,12 @@ function Caso({ c, tz, slug }: { c: CasoPendienteData; tz: string; slug: string 
  */
 function ComoSaleDeAhi() {
   return (
-    <div className="mt-10 border border-white/10 border-l-2 border-l-[var(--ambar)] bg-[var(--panel)] px-5 py-[18px]">
+    <div className="mt-10 border border-[var(--linea)] border-l-2 border-l-[var(--ambar)] bg-[var(--panel)] px-5 py-[18px]">
       <p className="mb-3 font-[family-name:var(--fuente-archivo)] text-[16px] font-semibold">
         Cómo sale de ahí — el pendiente no es para siempre
       </p>
 
-      <div className="grid gap-px overflow-hidden border border-white/10 bg-white/10">
+      <div className="grid gap-px overflow-hidden border border-[var(--linea)] bg-[var(--linea)]">
         <div className="flex items-start gap-3.5 bg-[var(--panel)] px-4 py-3.5">
           <span className="mt-1.5 h-[7px] w-[7px] flex-none rounded-full bg-[var(--acero)]" />
           <div>
@@ -197,7 +197,7 @@ function ComoSaleDeAhi() {
         </div>
       </div>
 
-      <p className="mt-3.5 border-t border-white/10 pt-3 font-mono text-[11px] leading-[1.6] text-[var(--azul)]">
+      <p className="mt-3.5 border-t border-[var(--linea)] pt-3 font-mono text-[11px] leading-[1.6] text-[var(--azul)]">
         La regla de cierre está en definición con la planta y el área legal. La pantalla la mostrará
         cuando exista — hoy no hay plazo que mostrar, y no se inventa uno.
       </p>

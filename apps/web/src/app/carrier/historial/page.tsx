@@ -141,7 +141,7 @@ export default async function CarrierHistorialPage({
               type="date"
               name="fecha"
               defaultValue={periodo.fechaHasta}
-              className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white [color-scheme:dark]"
+              className="rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] [color-scheme:dark]"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--tenue)]">
@@ -150,7 +150,7 @@ export default async function CarrierHistorialPage({
               type="time"
               name="horaDesde"
               defaultValue={hhMm(periodo.minutosDesde)}
-              className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white [color-scheme:dark]"
+              className="rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] [color-scheme:dark]"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--tenue)]">
@@ -159,7 +159,7 @@ export default async function CarrierHistorialPage({
               type="time"
               name="horaHasta"
               defaultValue={hhMm(periodo.minutosHasta)}
-              className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white [color-scheme:dark]"
+              className="rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] [color-scheme:dark]"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--tenue)]">
@@ -169,7 +169,7 @@ export default async function CarrierHistorialPage({
               name="q"
               defaultValue={busqueda}
               placeholder="Número económico o placa"
-              className="w-56 rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white placeholder:text-white/25"
+              className="w-56 rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] placeholder:text-[var(--tenue)]"
             />
           </label>
           {orden !== "unidad" ? <input type="hidden" name="orden" value={orden} /> : null}
@@ -264,7 +264,7 @@ export default async function CarrierHistorialPage({
                     `/carrier/historial/${unidad.id}?desde=${periodo.fechaDesde}&hasta=${periodo.fechaHasta}&horaDesde=${hhMm(periodo.minutosDesde)}&horaHasta=${hhMm(periodo.minutosHasta)}`,
                     carrier.slug,
                   )}
-                  className="grid grid-cols-[minmax(120px,150px)_1fr] items-center gap-3 border-t border-white/[.045] py-2 hover:bg-white/[.025] focus-visible:bg-white/[.04] focus-visible:outline-2 focus-visible:outline-[var(--azul)] sm:grid-cols-[minmax(120px,150px)_1fr_150px]"
+                  className="grid grid-cols-[minmax(120px,150px)_1fr] items-center gap-3 border-t border-[var(--linea-tenue)] py-2 hover:bg-[var(--hover)] focus-visible:bg-[var(--hover)] focus-visible:outline-2 focus-visible:outline-[var(--azul)] sm:grid-cols-[minmax(120px,150px)_1fr_150px]"
                 >
                   <span className="min-w-0">
                     <span className={`block truncate text-[12.5px] text-[var(--texto)] ${mono}`}>
@@ -302,7 +302,7 @@ export default async function CarrierHistorialPage({
           )}
         </div>
 
-        <p className="mt-4 max-w-[80ch] border-t border-white/10 pt-4 text-xs text-[var(--tenue)]">
+        <p className="mt-4 max-w-[80ch] border-t border-[var(--linea)] pt-4 text-xs text-[var(--tenue)]">
           <span className="text-[var(--texto)]">Cómo se lee la tira.</span> Un silencio de más de{" "}
           <span className={num}>{REGLAS_POR_DEFECTO.huecoMinutos} min</span> entre dos lecturas es
           un hueco: no dice que la unidad estuviera apagada, dice que no hay nada que afirmar de
@@ -324,7 +324,7 @@ function atajo(activo: boolean): string {
   return `rounded-full border px-3 py-1 ${
     activo
       ? "border-[var(--azul)] text-[var(--azul)]"
-      : "border-white/10 text-[var(--tenue)] hover:border-[var(--azul)] hover:text-[var(--texto)]"
+      : "border-[var(--linea)] text-[var(--tenue)] hover:border-[var(--azul)] hover:text-[var(--texto)]"
   }`;
 }
 

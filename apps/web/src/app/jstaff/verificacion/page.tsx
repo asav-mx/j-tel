@@ -75,7 +75,7 @@ export default async function JStaffVerificacionPage() {
             {healthRows.map((r) => (
               <li
                 key={r.id}
-                className="flex flex-wrap justify-between gap-2 rounded border border-white/5 p-3"
+                className="flex flex-wrap justify-between gap-2 rounded border border-[var(--linea-tenue)] p-3"
               >
                 <span>{r.name}</span>
                 <span className="text-[var(--muted)]">
@@ -133,7 +133,7 @@ export default async function JStaffVerificacionPage() {
               {recallRows.map((r) => (
                 <li
                   key={`${r.contractName}-${r.serviceDate}`}
-                  className="rounded border border-white/5 p-3"
+                  className="rounded border border-[var(--linea-tenue)] p-3"
                 >
                   <p className="font-medium">
                     {r.contractName} · {r.serviceDate}
@@ -157,7 +157,7 @@ export default async function JStaffVerificacionPage() {
               <select
                 name="contractId"
                 required
-                className="mt-1 w-full rounded border border-white/10 bg-black/40 px-3 py-2"
+                className="mt-1 w-full rounded border border-[var(--linea)] bg-black/40 px-3 py-2"
                 defaultValue=""
               >
                 <option value="" disabled>
@@ -176,7 +176,7 @@ export default async function JStaffVerificacionPage() {
                 name="serviceDate"
                 type="date"
                 required
-                className="mt-1 w-full rounded border border-white/10 bg-black/40 px-3 py-2"
+                className="mt-1 w-full rounded border border-[var(--linea)] bg-black/40 px-3 py-2"
               />
             </label>
             <label className="flex items-center gap-2 md:col-span-2">
@@ -187,7 +187,7 @@ export default async function JStaffVerificacionPage() {
               <span className="text-[var(--muted)]">Notas</span>
               <input
                 name="notes"
-                className="mt-1 w-full rounded border border-white/10 bg-black/40 px-3 py-2"
+                className="mt-1 w-full rounded border border-[var(--linea)] bg-black/40 px-3 py-2"
                 placeholder="p.ej. operador confirma que todos los servicios salieron"
               />
             </label>

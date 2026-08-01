@@ -191,7 +191,7 @@ export function ServiceDetailView({
         </div>
       ) : null}
 
-      <details className="mt-6 rounded-xl border border-white/10 bg-[var(--card)] p-5">
+      <details className="mt-6 rounded-xl border border-[var(--linea)] bg-[var(--card)] p-5">
         <summary className="cursor-pointer text-sm font-semibold text-[var(--muted)]">
           Bitácora técnica (auditoría)
         </summary>

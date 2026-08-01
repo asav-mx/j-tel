@@ -7,12 +7,12 @@ import {
 type Hidden = Record<string, string | undefined | null>;
 
 const inputClass =
-  "rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white [color-scheme:dark]";
+  "rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] [color-scheme:dark]";
 
 function chipClass(active: boolean): string {
   return active
     ? "rounded-full bg-[var(--accent)] px-3 py-1 text-sm text-black"
-    : "rounded-full border border-white/10 px-3 py-1 text-sm hover:border-[var(--accent)]";
+    : "rounded-full border border-[var(--linea)] px-3 py-1 text-sm hover:border-[var(--accent)]";
 }
 
 function buildHref(
@@ -107,7 +107,7 @@ export function DateRangeFilter({
         </label>
         <button
           type="submit"
-          className="rounded-lg border border-white/10 px-3 py-1.5 text-sm hover:border-[var(--accent)]"
+          className="rounded-lg border border-[var(--linea)] px-3 py-1.5 text-sm hover:border-[var(--accent)]"
         >
           Aplicar
         </button>

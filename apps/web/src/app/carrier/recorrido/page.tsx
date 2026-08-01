@@ -79,11 +79,11 @@ const CATEGORIA = {
   },
   dejo_de_reportar: {
     etiqueta: "Dejó de reportar",
-    clase: "bg-white/5 text-[var(--tenue)]",
+    clase: "bg-[var(--hover)] text-[var(--tenue)]",
   },
   nunca_reporto: {
     etiqueta: "Nunca ha reportado",
-    clase: "bg-white/5 text-[var(--tenue)] ring-1 ring-[var(--azul)]/50",
+    clase: "bg-[var(--hover)] text-[var(--tenue)] ring-1 ring-[var(--azul)]/50",
   },
 } as const;
 
@@ -181,7 +181,7 @@ export default async function CarrierRecorridoPage({
 
         <p className="mb-6 text-sm text-[var(--muted)]">
           Todas tus unidades sobre una ventana de tiempo, tal como las reportó el GPS.
-          Esta pantalla <span className="text-white">no emite ningún veredicto</span>: no
+          Esta pantalla <span className="text-[var(--texto)]">no emite ningún veredicto</span>: no
           consulta hechos sellados ni sabe qué ruta debía hacerse. Es tu flota, y solo la
           tuya.
         </p>
@@ -194,7 +194,7 @@ export default async function CarrierRecorridoPage({
               type="date"
               name="fecha"
               defaultValue={fecha}
-              className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white [color-scheme:dark]"
+              className="rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] [color-scheme:dark]"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--muted)]">
@@ -203,7 +203,7 @@ export default async function CarrierRecorridoPage({
               type="time"
               name="desde"
               defaultValue={hhMm(minDesde)}
-              className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white [color-scheme:dark]"
+              className="rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] [color-scheme:dark]"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--muted)]">
@@ -212,7 +212,7 @@ export default async function CarrierRecorridoPage({
               type="time"
               name="hasta"
               defaultValue={hhMm(minHasta)}
-              className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white [color-scheme:dark]"
+              className="rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] [color-scheme:dark]"
             />
           </label>
           <button
@@ -223,13 +223,13 @@ export default async function CarrierRecorridoPage({
           </button>
           <a
             href={href({ desde: "22:00", hasta: "06:00" })}
-            className="rounded-full border border-white/10 px-3 py-1 text-sm hover:border-[var(--azul)]"
+            className="rounded-full border border-[var(--linea)] px-3 py-1 text-sm hover:border-[var(--azul)]"
           >
             Turno de noche
           </a>
           <a
             href={href({ desde: "00:00", hasta: "00:00" })}
-            className="rounded-full border border-white/10 px-3 py-1 text-sm hover:border-[var(--azul)]"
+            className="rounded-full border border-[var(--linea)] px-3 py-1 text-sm hover:border-[var(--azul)]"
           >
             Día completo
           </a>
@@ -281,8 +281,8 @@ export default async function CarrierRecorridoPage({
             </div>
 
             {censo.nuncaReportaron > 0 ? (
-              <p className="mt-4 border-t border-white/10 pt-4 text-sm text-[var(--muted)]">
-                <span className="text-white">
+              <p className="mt-4 border-t border-[var(--linea)] pt-4 text-sm text-[var(--muted)]">
+                <span className="text-[var(--texto)]">
                   {censo.nuncaReportaron}{" "}
                   {censo.nuncaReportaron === 1 ? "unidad activa" : "unidades activas"} sin un
                   solo punto en toda su historia.
@@ -303,7 +303,7 @@ export default async function CarrierRecorridoPage({
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/10 text-left text-xs text-[var(--muted)]">
+                  <tr className="border-b border-[var(--linea)] text-left text-xs text-[var(--muted)]">
                     <th className="pb-2 pr-4 font-medium">Unidad</th>
                     <th className="pb-2 pr-4 font-medium">Estado</th>
                     <th className="pb-2 pr-4 text-right font-medium">Puntos</th>
@@ -315,9 +315,9 @@ export default async function CarrierRecorridoPage({
                 </thead>
                 <tbody>
                   {censo.filas.map((f) => (
-                    <tr key={f.unitId} className="border-b border-white/5">
+                    <tr key={f.unitId} className="border-b border-[var(--linea-tenue)]">
                       <td className="py-2 pr-4">
-                        <div className="text-white">{f.label}</div>
+                        <div className="text-[var(--texto)]">{f.label}</div>
                         {f.plateNumber ? (
                           <div className="text-xs text-[var(--tenue)]">{f.plateNumber}</div>
                         ) : null}
@@ -373,7 +373,7 @@ export default async function CarrierRecorridoPage({
             </div>
           )}
 
-          <p className="mt-4 border-t border-white/10 pt-4 text-xs text-[var(--muted)]">
+          <p className="mt-4 border-t border-[var(--linea)] pt-4 text-xs text-[var(--muted)]">
             <span className="text-[var(--tenue)]">Ping mediano</span> es el tiempo típico
             entre dos lecturas consecutivas del equipo con más puntos de esa unidad — mide
             con qué resolución se pudo observar, no cómo se manejó. Los{" "}

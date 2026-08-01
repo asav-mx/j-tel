@@ -15,7 +15,7 @@ import { localDateIso } from "@/lib/local-time";
 export const dynamic = "force-dynamic";
 
 const inputClass =
-  "mt-1 w-full rounded border border-white/10 bg-black/20 p-2 text-sm placeholder:text-white/30";
+  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm placeholder:text-[var(--tenue)]";
 const labelClass = "block text-sm";
 const btnClass =
   "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
@@ -108,8 +108,8 @@ export async function ContratosUnitView({
       title={`Contratos — ${operationalUnitLabel(unit)}`}
     >
       <p className="text-sm text-[var(--muted)]">
-        El contrato define la <span className="text-white">política</span> entre este cliente y un
-        carrier para <span className="text-white">{operationalUnitLabel(unit)}</span>. Desde ahí se
+        El contrato define la <span className="text-[var(--texto)]">política</span> entre este cliente y un
+        carrier para <span className="text-[var(--texto)]">{operationalUnitLabel(unit)}</span>. Desde ahí se
         calculan deadline, ventana GPS y reglas de cumplimiento para los perfiles de servicio.
       </p>
 
@@ -201,7 +201,7 @@ export async function ContratosUnitView({
               </label>
             </div>
 
-            <fieldset className="rounded-lg border border-white/10 p-3">
+            <fieldset className="rounded-lg border border-[var(--linea)] p-3">
               <legend className="px-1 text-sm text-[var(--muted)]">Política</legend>
               <div className="grid gap-3 md:grid-cols-3">
                 <label className={labelClass}>
@@ -365,7 +365,7 @@ export async function ContratosUnitView({
               </div>
             </fieldset>
 
-            <fieldset className="rounded-lg border border-white/10 p-3">
+            <fieldset className="rounded-lg border border-[var(--linea)] p-3">
               <legend className="px-1 text-sm text-[var(--muted)]">Motivos excusables (opcional)</legend>
               <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                 {EXCUSABLES.map((e) => (
@@ -377,7 +377,7 @@ export async function ContratosUnitView({
               </div>
             </fieldset>
 
-            <fieldset className="rounded-lg border border-white/10 p-3">
+            <fieldset className="rounded-lg border border-[var(--linea)] p-3">
               <legend className="px-1 text-sm text-[var(--muted)]">Regla de enforcement (opcional)</legend>
               <div className="grid gap-3 md:grid-cols-3">
                 <label className={labelClass}>
@@ -433,13 +433,13 @@ export async function ContratosUnitView({
             {scopedContracts.map((c) => (
               <li
                 key={c.id}
-                className="space-y-2 rounded border border-white/5 p-3"
+                className="space-y-2 rounded border border-[var(--linea-tenue)] p-3"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-medium">
                     {c.name}{" "}
-                    <span className="ml-1 rounded-full bg-white/10 px-2 py-0.5 text-xs">
+                    <span className="ml-1 rounded-full bg-[var(--t-acero)] px-2 py-0.5 text-xs">
                       {c.status}
                     </span>
                   </p>
@@ -463,7 +463,7 @@ export async function ContratosUnitView({
                       <input type="hidden" name="contractId" value={c.id} />
                       <button
                         type="submit"
-                        className="rounded-lg border border-white/10 px-3 py-1.5 text-xs hover:border-[var(--accent)]"
+                        className="rounded-lg border border-[var(--linea)] px-3 py-1.5 text-xs hover:border-[var(--accent)]"
                       >
                         Activar
                       </button>
@@ -491,7 +491,7 @@ export async function ContratosUnitView({
                 <ConfirmForm
                   action="/api/cliente/contratos"
                   method="post"
-                  className="flex flex-wrap items-end gap-2 border-t border-white/5 pt-2"
+                  className="flex flex-wrap items-end gap-2 border-t border-[var(--linea-tenue)] pt-2"
                   confirmMessage={`¿Actualizar vigencia de «${c.name}»?`}
                 >
                   <input type="hidden" name="clientSlug" value={client.slug} />
@@ -519,13 +519,13 @@ export async function ContratosUnitView({
                   </label>
                   <button
                     type="submit"
-                    className="rounded-lg border border-white/10 px-3 py-2 text-xs hover:border-[var(--accent)]"
+                    className="rounded-lg border border-[var(--linea)] px-3 py-2 text-xs hover:border-[var(--accent)]"
                   >
                     Guardar vigencia
                   </button>
                 </ConfirmForm>
 
-                <p className="border-t border-white/5 pt-2 text-sm">
+                <p className="border-t border-[var(--linea-tenue)] pt-2 text-sm">
                   <a
                     href={`/cliente/contrato/${c.id}?account=${encodeURIComponent(client.slug)}`}
                     className="text-[var(--accent)] hover:underline"
@@ -537,7 +537,7 @@ export async function ContratosUnitView({
                   </span>
                 </p>
 
-                <details className="border-t border-white/5 pt-2">
+                <details className="border-t border-[var(--linea-tenue)] pt-2">
                   <summary className="cursor-pointer text-sm text-[var(--muted)]">
                     Editar la política en crudo
                   </summary>
@@ -551,7 +551,7 @@ export async function ContratosUnitView({
                     <input type="hidden" name="action" value="updatePolicy" />
                     <input type="hidden" name="contractId" value={c.id} />
 
-                    <fieldset className="rounded-lg border border-white/10 p-3">
+                    <fieldset className="rounded-lg border border-[var(--linea)] p-3">
                       <legend className="px-1 text-sm text-[var(--muted)]">Política</legend>
                       <div className="grid gap-3 md:grid-cols-3">
                         <label className={labelClass}>
@@ -736,8 +736,8 @@ export async function ContratosUnitView({
                       </div>
                       <p className="mt-2 text-xs text-[var(--muted)]">
                         Ventana GPS = deadline − margen antes → deadline +{" "}
-                        <span className="text-white">gracia</span> +{" "}
-                        <span className="text-white">margen después</span>. Con tus
+                        <span className="text-[var(--texto)]">gracia</span> +{" "}
+                        <span className="text-[var(--texto)]">margen después</span>. Con tus
                         valores actuales: −{c.policy.evidenceMarginMinutesBefore ?? 60} / +
                         {(c.policy.verificationGraceMinutes ?? 15) +
                           (c.policy.evidenceMarginMinutesAfter ?? 30)}{" "}
@@ -747,7 +747,7 @@ export async function ContratosUnitView({
                       </p>
                     </fieldset>
 
-                    <fieldset className="rounded-lg border border-white/10 p-3">
+                    <fieldset className="rounded-lg border border-[var(--linea)] p-3">
                       <legend className="px-1 text-sm text-[var(--muted)]">Motivos excusables</legend>
                       <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                         {EXCUSABLES.map((e) => (
@@ -769,7 +769,7 @@ export async function ContratosUnitView({
                     {(() => {
                       const rule = c.policy.enforcementRules?.[0];
                       return (
-                        <fieldset className="rounded-lg border border-white/10 p-3">
+                        <fieldset className="rounded-lg border border-[var(--linea)] p-3">
                           <legend className="px-1 text-sm text-[var(--muted)]">
                             Regla de enforcement
                           </legend>

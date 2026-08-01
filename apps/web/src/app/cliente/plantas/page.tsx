@@ -10,7 +10,7 @@ import { campusHref, plantHref } from "@/lib/navigation";
 export const dynamic = "force-dynamic";
 
 const inputClass =
-  "mt-1 w-full rounded border border-white/10 bg-black/20 p-2 text-sm placeholder:text-white/30";
+  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm placeholder:text-[var(--tenue)]";
 const labelClass = "block text-sm";
 const btnClass =
   "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
@@ -51,7 +51,7 @@ export default async function ClientePlantasPage({
     <CorporateShell client={client} title={`Administrar plantas — ${client.name}`} >
       <p className="text-sm text-[var(--muted)]">
         Alta corporativa de plantas y campus. Para configurar servicios, entra al panel de cada{" "}
-        <span className="text-white">unidad operativa</span> desde el hub principal.
+        <span className="text-[var(--texto)]">unidad operativa</span> desde el hub principal.
       </p>
 
       {error ? (
@@ -138,7 +138,7 @@ export default async function ClientePlantasPage({
             {plants.map((p) => (
               <li
                 key={p.id}
-                className="rounded border border-white/5 p-3"
+                className="rounded border border-[var(--linea-tenue)] p-3"
               >
                 <ConfirmForm
                   action="/api/cliente/plantas"

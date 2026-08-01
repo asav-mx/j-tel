@@ -13,7 +13,7 @@ function chipClass(active: boolean): string {
   return `rounded-full px-3 py-1 text-sm ${
     active
       ? "bg-[var(--accent)] text-black"
-      : "border border-white/10 hover:border-[var(--accent)]"
+      : "border border-[var(--linea)] hover:border-[var(--accent)]"
   }`;
 }
 

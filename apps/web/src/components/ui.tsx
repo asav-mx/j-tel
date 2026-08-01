@@ -8,10 +8,10 @@ export function AppNav({
   links: Array<{ href: string; label: string }>;
 }) {
   return (
-    <header className="mb-8 border-b border-white/10 pb-4">
+    <header className="mb-8 border-b border-[var(--linea)] pb-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <Link href="/" className="text-sm text-[var(--muted)] hover:text-white">
+          <Link href="/" className="text-sm text-[var(--muted)] hover:text-[var(--texto)]">
             ← JTEL
           </Link>
           <h1 className="mt-1 text-2xl font-bold">{title}</h1>
@@ -21,7 +21,7 @@ export function AppNav({
             <Link
               key={link.href}
               href={link.href}
-              className="rounded-lg border border-white/10 px-3 py-1.5 text-sm hover:border-[var(--accent)]"
+              className="rounded-lg border border-[var(--linea)] px-3 py-1.5 text-sm hover:border-[var(--accent)]"
             >
               {link.label}
             </Link>
@@ -71,7 +71,7 @@ export function StatusBadge({
 
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status] ?? "bg-white/10"}`}
+      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status] ?? "bg-[var(--hover)]"}`}
     >
       {(labels[status] ?? status) + timingSuffix}
     </span>
@@ -86,7 +86,7 @@ export function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-white/10 bg-[var(--card)] p-6">
+    <section className="rounded-xl border border-[var(--linea)] bg-[var(--card)] p-6">
       {title ? <h2 className="mb-4 text-lg font-semibold">{title}</h2> : null}
       {children}
     </section>
@@ -99,7 +99,7 @@ export function Card({
  */
 export function DemoChip() {
   return (
-    <span className="ml-2 rounded-sm border border-white/15 px-1.5 py-0.5 align-middle text-[10px] uppercase tracking-wider text-[var(--muted)]">
+    <span className="ml-2 rounded-sm border border-[var(--linea-fuerte)] px-1.5 py-0.5 align-middle text-[10px] uppercase tracking-wider text-[var(--muted)]">
       demo
     </span>
   );

@@ -145,7 +145,7 @@ export default async function CarrierUnidadHistorialPage({
               type="date"
               name="desde"
               defaultValue={periodo.fechaDesde}
-              className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white [color-scheme:dark]"
+              className="rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] [color-scheme:dark]"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--tenue)]">
@@ -154,7 +154,7 @@ export default async function CarrierUnidadHistorialPage({
               type="date"
               name="hasta"
               defaultValue={periodo.fechaHasta}
-              className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white [color-scheme:dark]"
+              className="rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] [color-scheme:dark]"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--tenue)]">
@@ -163,7 +163,7 @@ export default async function CarrierUnidadHistorialPage({
               type="time"
               name="horaDesde"
               defaultValue={hhMm(periodo.minutosDesde)}
-              className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white [color-scheme:dark]"
+              className="rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] [color-scheme:dark]"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--tenue)]">
@@ -172,7 +172,7 @@ export default async function CarrierUnidadHistorialPage({
               type="time"
               name="horaHasta"
               defaultValue={hhMm(periodo.minutosHasta)}
-              className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white [color-scheme:dark]"
+              className="rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] [color-scheme:dark]"
             />
           </label>
           <button
@@ -276,7 +276,7 @@ export default async function CarrierUnidadHistorialPage({
           {dias.map((dia) => (
             <div
               key={dia.fecha}
-              className="grid grid-cols-[minmax(90px,110px)_1fr] items-center gap-3 border-t border-white/[.045] py-2"
+              className="grid grid-cols-[minmax(90px,110px)_1fr] items-center gap-3 border-t border-[var(--linea-tenue)] py-2"
             >
               <span className={`text-[11px] text-[var(--tenue)] ${mono}`}>
                 {fechaDeIsoSinAnio(dia.fecha)}
@@ -312,16 +312,16 @@ export default async function CarrierUnidadHistorialPage({
             <table className="w-full text-[13.5px]">
               <thead>
                 <tr className={`text-left text-[10px] tracking-[.12em] text-[var(--tenue)] uppercase ${mono}`}>
-                  <th className="border-b border-white/20 p-3 font-medium">Día</th>
-                  <th className="border-b border-white/20 p-3 font-medium">Servicio</th>
-                  <th className="border-b border-white/20 p-3 font-medium">Resultado</th>
-                  <th className="border-b border-white/20 p-3 font-medium">Llegada y su límite</th>
-                  <th className="border-b border-white/20 p-3 font-medium" />
+                  <th className="border-b border-[var(--linea-fuerte)] p-3 font-medium">Día</th>
+                  <th className="border-b border-[var(--linea-fuerte)] p-3 font-medium">Servicio</th>
+                  <th className="border-b border-[var(--linea-fuerte)] p-3 font-medium">Resultado</th>
+                  <th className="border-b border-[var(--linea-fuerte)] p-3 font-medium">Llegada y su límite</th>
+                  <th className="border-b border-[var(--linea-fuerte)] p-3 font-medium" />
                 </tr>
               </thead>
               <tbody>
                 {servicios.deLaUnidad.map((s) => (
-                  <tr key={s.occurrenceId} className="border-b border-white/[.045]">
+                  <tr key={s.occurrenceId} className="border-b border-[var(--linea-tenue)]">
                     <td className={`p-3 text-[12px] whitespace-nowrap text-[var(--tenue)] ${mono}`}>
                       {fechaDeIsoSinAnio(s.serviceDate)}
                     </td>
@@ -397,7 +397,7 @@ export default async function CarrierUnidadHistorialPage({
           <TablaDeSegmentos key={dia.fecha} dia={dia} abierto={indice === 0} soloUno={unDia} />
         ))}
 
-        <p className="mt-6 max-w-[80ch] border-t border-white/10 pt-4 text-xs text-[var(--tenue)]">
+        <p className="mt-6 max-w-[80ch] border-t border-[var(--linea)] pt-4 text-xs text-[var(--tenue)]">
           <span className="text-[var(--texto)]">Cómo se lee.</span> Un silencio de más de{" "}
           <span className={num}>{REGLAS_POR_DEFECTO.huecoMinutos} min</span> entre dos lecturas es
           un hueco — no dice que la unidad estuviera apagada ni en patio, dice que de ese rato no
@@ -431,16 +431,16 @@ function TablaDeSegmentos({
         <table className="w-full text-[13.5px]">
           <thead>
             <tr className={`text-left text-[10px] tracking-[.12em] text-[var(--tenue)] uppercase ${mono}`}>
-              <th className="border-b border-white/20 p-3 font-medium">Inicio</th>
-              <th className="border-b border-white/20 p-3 font-medium">Segmento</th>
-              <th className="border-b border-white/20 p-3 text-right font-medium">Duración</th>
-              <th className="border-b border-white/20 p-3 text-right font-medium">Km aprox.</th>
-              <th className="border-b border-white/20 p-3 text-right font-medium">Lecturas</th>
+              <th className="border-b border-[var(--linea-fuerte)] p-3 font-medium">Inicio</th>
+              <th className="border-b border-[var(--linea-fuerte)] p-3 font-medium">Segmento</th>
+              <th className="border-b border-[var(--linea-fuerte)] p-3 text-right font-medium">Duración</th>
+              <th className="border-b border-[var(--linea-fuerte)] p-3 text-right font-medium">Km aprox.</th>
+              <th className="border-b border-[var(--linea-fuerte)] p-3 text-right font-medium">Lecturas</th>
             </tr>
           </thead>
           <tbody>
             {dia.segmentos.map((s, i) => (
-              <tr key={`${dia.fecha}-${i}`} className="border-b border-white/[.045]">
+              <tr key={`${dia.fecha}-${i}`} className="border-b border-[var(--linea-tenue)]">
                 <td className={`p-3 text-[12px] whitespace-nowrap text-[var(--tenue)] ${num}`}>
                   {reloj(s.desde)}
                 </td>
@@ -513,7 +513,7 @@ function atajo(activo: boolean): string {
   return `rounded-full border px-3 py-1 ${
     activo
       ? "border-[var(--azul)] text-[var(--azul)]"
-      : "border-white/10 text-[var(--tenue)] hover:border-[var(--azul)] hover:text-[var(--texto)]"
+      : "border-[var(--linea)] text-[var(--tenue)] hover:border-[var(--azul)] hover:text-[var(--texto)]"
   }`;
 }
 

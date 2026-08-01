@@ -45,7 +45,7 @@ export default async function ClienteNotificacionesPage({
               </li>
             ) : (
               notifications.map((n) => (
-                <li key={n.id} className="rounded-lg border border-white/5 p-4">
+                <li key={n.id} className="rounded-lg border border-[var(--linea-tenue)] p-4">
                   <p className="font-medium">{n.title}</p>
                   <p className="mt-1 text-sm text-[var(--muted)]">{n.body}</p>
                   <p className="mt-2 text-xs text-[var(--muted)]">

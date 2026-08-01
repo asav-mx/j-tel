@@ -91,7 +91,7 @@ export function CarrierDudosoReview({
           <button
             type="button"
             onClick={() => setFullRoute((v) => !v)}
-            className="rounded-lg border border-white/10 px-3 py-1.5 text-xs hover:border-[var(--accent)]"
+            className="rounded-lg border border-[var(--linea)] px-3 py-1.5 text-xs hover:border-[var(--accent)]"
           >
             {fullRoute ? "Ver solo cerca del KML" : "Recorrido completo"}
           </button>

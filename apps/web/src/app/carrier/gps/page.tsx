@@ -6,7 +6,7 @@ import { resolveAccountByType, withAccount } from "@/lib/account-context";
 export const dynamic = "force-dynamic";
 
 const inputClass =
-  "mt-1 w-full rounded border border-white/10 bg-black/20 p-2 text-sm placeholder:text-white/30";
+  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm placeholder:text-[var(--tenue)]";
 const labelClass = "block text-sm";
 const btnClass =
   "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
@@ -50,7 +50,7 @@ export default async function CarrierGpsPage({
         />
 
         <p className="text-sm text-[var(--muted)]">
-          Carrier: <span className="text-white">{carrier.name}</span>. Aquí guardas las credenciales
+          Carrier: <span className="text-[var(--texto)]">{carrier.name}</span>. Aquí guardas las credenciales
           de tu proveedor de GPS. El verificador las usa para leer la evidencia de tus unidades. La
           contraseña se guarda cifrada.
         </p>

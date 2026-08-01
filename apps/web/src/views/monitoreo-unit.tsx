@@ -110,7 +110,7 @@ export async function MonitoreoUnitView({
       <Card title={autoMode ? "Turno activo (automático)" : "Vista forzada (manual)"}>
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
           <div>
-            <p className="text-base text-white">
+            <p className="text-base text-[var(--texto)]">
               {selectedShift
                 ? `${selectedShift.name} · ${fecha} · ${selectedShift.startTime}`
                 : "Sin turnos configurados"}
@@ -128,7 +128,7 @@ export async function MonitoreoUnitView({
           </div>
           <Link
             href={historialHref}
-            className="rounded border border-white/15 px-3 py-2 text-sm hover:bg-white/10"
+            className="rounded border border-[var(--linea-fuerte)] px-3 py-2 text-sm hover:bg-[var(--hover)]"
           >
             Ver historial (días pasados) →
           </Link>
@@ -146,7 +146,7 @@ export async function MonitoreoUnitView({
                 type="date"
                 name="fecha"
                 defaultValue={fecha}
-                className="mt-1 block rounded border border-white/10 bg-black/40 px-3 py-2"
+                className="mt-1 block rounded border border-[var(--linea)] bg-black/40 px-3 py-2"
               />
             </label>
             <label>
@@ -154,7 +154,7 @@ export async function MonitoreoUnitView({
               <select
                 name="turno"
                 defaultValue={turnoId ?? ""}
-                className="mt-1 block rounded border border-white/10 bg-black/40 px-3 py-2"
+                className="mt-1 block rounded border border-[var(--linea)] bg-black/40 px-3 py-2"
               >
                 {shifts.length === 0 ? (
                   <option value="">Sin turnos</option>

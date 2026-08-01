@@ -15,7 +15,7 @@ import { todayIso, addDaysIso } from "@/lib/date-range";
 export const dynamic = "force-dynamic";
 
 const inputClass =
-  "mt-1 w-full rounded border border-white/10 bg-black/20 p-2 text-sm placeholder:text-white/30";
+  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm placeholder:text-[var(--tenue)]";
 const labelClass = "block text-sm";
 const btnClass =
   "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
@@ -198,9 +198,9 @@ export async function ServiciosUnitView({
       step="servicios"
     >
       <p className="text-sm text-[var(--muted)]">
-        El perfil define <span className="text-white">qué</span> se verifica:{" "}
-        <span className="text-white">contrato + ruta/turno + geocerca + días</span>. Las
-        ocurrencias se mantienen en una <span className="text-white">ventana de 30 días</span>{" "}
+        El perfil define <span className="text-[var(--texto)]">qué</span> se verifica:{" "}
+        <span className="text-[var(--texto)]">contrato + ruta/turno + geocerca + días</span>. Las
+        ocurrencias se mantienen en una <span className="text-[var(--texto)]">ventana de 30 días</span>{" "}
         (renovación automática diaria). Generar es solo el primer arranque o para rellenar huecos.
       </p>
 
@@ -224,7 +224,7 @@ export async function ServiciosUnitView({
       {missing.length > 0 ? (
         <Card title="Faltan requisitos">
           <p className="text-sm text-[var(--muted)]">
-            Para crear un perfil en <span className="text-white">{operationalUnitLabel(activeUnit)}</span>{" "}
+            Para crear un perfil en <span className="text-[var(--texto)]">{operationalUnitLabel(activeUnit)}</span>{" "}
             necesitas: {missing.join(", ")}.
           </p>
         </Card>
@@ -298,7 +298,7 @@ export async function ServiciosUnitView({
               </label>
             </div>
 
-            <fieldset className="rounded-lg border border-white/10 p-3">
+            <fieldset className="rounded-lg border border-[var(--linea)] p-3">
               <legend className="px-1 text-sm text-[var(--muted)]">Días activos</legend>
               <div className="flex flex-wrap gap-3">
                 {DAYS.map((d) => (
@@ -377,7 +377,7 @@ export async function ServiciosUnitView({
               const coversRolling = rolling.coversRolling;
 
               return (
-              <li key={p.id} className="rounded border border-white/5 p-3">
+              <li key={p.id} className="rounded border border-[var(--linea-tenue)] p-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-medium">
@@ -470,7 +470,7 @@ export async function ServiciosUnitView({
                       </label>
                       <button
                         type="submit"
-                        className="rounded-lg border border-white/10 px-3 py-2 text-xs hover:border-[var(--accent)]"
+                        className="rounded-lg border border-[var(--linea)] px-3 py-2 text-xs hover:border-[var(--accent)]"
                       >
                         {hasOccurrences ? "Completar 30 días" : "Generar 30 días"}
                       </button>
@@ -554,7 +554,7 @@ export async function ServiciosUnitView({
                         </select>
                       </label>
                     </div>
-                    <fieldset className="rounded-lg border border-white/10 p-3">
+                    <fieldset className="rounded-lg border border-[var(--linea)] p-3">
                       <legend className="px-1 text-sm text-[var(--muted)]">Días activos</legend>
                       <div className="flex flex-wrap gap-3">
                         {DAYS.map((d) => (
@@ -572,7 +572,7 @@ export async function ServiciosUnitView({
                     </fieldset>
                     <button
                       type="submit"
-                      className="rounded-lg border border-white/10 px-3 py-2 text-xs hover:border-[var(--accent)]"
+                      className="rounded-lg border border-[var(--linea)] px-3 py-2 text-xs hover:border-[var(--accent)]"
                     >
                       Guardar cambios
                     </button>

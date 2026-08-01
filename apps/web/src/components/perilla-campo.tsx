@@ -38,7 +38,7 @@ export function PerillaCampo({
           className={`rounded-[2px] border px-2 pt-[3px] pb-[2px] text-[9.5px] font-medium tracking-[.12em] uppercase ${mono} ${
             perilla.decide === "arbitro"
               ? "border-[var(--acero)]/60 text-[var(--acero)]"
-              : "border-white/15 text-[var(--tenue)]"
+              : "border-[var(--linea-fuerte)] text-[var(--tenue)]"
           }`}
           title={decide.explica}
         >
@@ -114,7 +114,7 @@ function LecturaDeOperacion({ lectura }: { lectura: LecturaDeUmbral }) {
       </div>
 
       <div className="relative h-8">
-        <span className="absolute top-4 right-0 left-0 h-[3px] rounded-sm bg-white/[.07]" />
+        <span className="absolute top-4 right-0 left-0 h-[3px] rounded-sm bg-[var(--hover)]" />
         <span
           className="absolute top-[13px] h-[7px] rounded-sm bg-[var(--acero)]/30"
           style={{ left: `${pos(d.minimo)}%`, width: `${pos(d.maximo) - pos(d.minimo)}%` }}
@@ -143,7 +143,7 @@ function LecturaDeOperacion({ lectura }: { lectura: LecturaDeUmbral }) {
       </div>
 
       <div
-        className={`mt-3 flex flex-wrap justify-between gap-3 border-t border-white/[.05] pt-2.5 text-[11.5px] ${mono} text-[var(--tenue)]`}
+        className={`mt-3 flex flex-wrap justify-between gap-3 border-t border-[var(--linea-tenue)] pt-2.5 text-[11.5px] ${mono} text-[var(--tenue)]`}
       >
         <span className={holgura === "amplia" ? "text-[var(--tenue)]" : "text-[var(--texto)]"}>
           {frase}

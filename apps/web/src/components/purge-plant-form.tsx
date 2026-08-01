@@ -9,7 +9,7 @@ type PlantOption = {
 };
 
 const inputClass =
-  "mt-1 w-full rounded border border-white/10 bg-black/20 p-2 text-sm";
+  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm";
 
 /**
  * Purga destructiva con frenos explícitos:
@@ -50,7 +50,7 @@ export function PurgePlantForm({ plants }: { plants: PlantOption[] }) {
             <li>El contrato y la planta se quedan; las rutas/turnos también</li>
             <li>
               Si solo confundiste la geocerca,{" "}
-              <span className="text-white">no uses esto</span>: corrige en
+              <span className="text-[var(--texto)]">no uses esto</span>: corrige en
               Configuración → Perfiles → «Aplicar a todos»
             </li>
           </ul>
@@ -113,7 +113,7 @@ export function PurgePlantForm({ plants }: { plants: PlantOption[] }) {
             />
             <span>
               Entiendo que se borrarán perfiles y servicios ya generados y que{" "}
-              <span className="text-white">no hay deshacer</span>.
+              <span className="text-[var(--texto)]">no hay deshacer</span>.
             </span>
           </label>
 
@@ -138,7 +138,7 @@ export function PurgePlantForm({ plants }: { plants: PlantOption[] }) {
           </label>
 
           <label className="block text-sm md:col-span-2">
-            Escribe la palabra <span className="font-mono text-white">PURGAR</span> en mayúsculas
+            Escribe la palabra <span className="font-mono text-[var(--texto)]">PURGAR</span> en mayúsculas
             <input
               className={inputClass}
               value={phraseTyped}
