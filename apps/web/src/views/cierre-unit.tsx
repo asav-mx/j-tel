@@ -113,157 +113,153 @@ export async function CierreUnitView({
   };
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-5xl">
-        <UnitShell client={ctx.client} unit={ctx.unit} title={`Cierre del turno — ${unitLabel}`} />
-
-        {/* ── Selector: fecha y turno ─────────────────────────────────── */}
-        <div className="mt-6 flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center rounded-sm border border-white/20">
-            <Link
-              href={href(dia(-1), turnoId)}
-              aria-label="Día anterior"
-              className="px-3 py-2 font-mono text-sm text-[var(--tenue)] transition-colors hover:text-[var(--texto)]"
-            >
-              ‹
-            </Link>
-            <span className="border-x border-white/10 px-3.5 py-2 font-mono text-[13px] whitespace-nowrap text-[var(--texto)]">
-              {fecha}
-            </span>
-            <Link
-              href={href(dia(1), turnoId)}
-              aria-label="Día siguiente"
-              className="px-3 py-2 font-mono text-sm text-[var(--tenue)] transition-colors hover:text-[var(--texto)]"
-            >
-              ›
-            </Link>
-          </div>
-
-          {turnos.length > 0 ? (
-            <div className="flex overflow-hidden rounded-sm border border-white/20">
-              {turnos.map((t, i) => (
-                <Link
-                  key={t.id}
-                  href={href(fecha, t.id)}
-                  aria-current={t.id === turnoId ? "page" : undefined}
-                  className={`px-4 py-2 text-[13px] font-medium transition-colors ${
-                    i > 0 ? "border-l border-white/20" : ""
-                  } ${
-                    t.id === turnoId
-                      ? "bg-white/[0.09] text-[var(--texto)]"
-                      : "text-[var(--tenue)] hover:text-[var(--texto)]"
-                  }`}
-                >
-                  {t.name} <span className="font-mono text-[11px]">{t.startTime}</span>
-                </Link>
-              ))}
-            </div>
-          ) : null}
+    <UnitShell client={ctx.client} unit={ctx.unit} title={`Cierre del turno — ${unitLabel}`}>
+      {/* ── Selector: fecha y turno ─────────────────────────────────── */}
+      <div className="mt-6 flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center rounded-sm border border-white/20">
+          <Link
+            href={href(dia(-1), turnoId)}
+            aria-label="Día anterior"
+            className="px-3 py-2 font-mono text-sm text-[var(--tenue)] transition-colors hover:text-[var(--texto)]"
+          >
+            ‹
+          </Link>
+          <span className="border-x border-white/10 px-3.5 py-2 font-mono text-[13px] whitespace-nowrap text-[var(--texto)]">
+            {fecha}
+          </span>
+          <Link
+            href={href(dia(1), turnoId)}
+            aria-label="Día siguiente"
+            className="px-3 py-2 font-mono text-sm text-[var(--tenue)] transition-colors hover:text-[var(--texto)]"
+          >
+            ›
+          </Link>
         </div>
 
-        {!cierre ? (
-          <p className="mt-10 text-[15px] text-[var(--tenue)]">
-            No hay servicios programados para esta fecha en {unitLabel}.
-          </p>
-        ) : (
-          <>
-            {/* ── La tesis de la pantalla ──────────────────────────────── */}
-            <h1 className="mt-7 mb-2.5 max-w-[24ch] font-[family-name:var(--fuente-archivo)] text-[clamp(28px,5vw,42px)] leading-[1.02] font-bold tracking-[-0.022em]">
-              {cierre.titular}
-            </h1>
+        {turnos.length > 0 ? (
+          <div className="flex overflow-hidden rounded-sm border border-white/20">
+            {turnos.map((t, i) => (
+              <Link
+                key={t.id}
+                href={href(fecha, t.id)}
+                aria-current={t.id === turnoId ? "page" : undefined}
+                className={`px-4 py-2 text-[13px] font-medium transition-colors ${
+                  i > 0 ? "border-l border-white/20" : ""
+                } ${
+                  t.id === turnoId
+                    ? "bg-white/[0.09] text-[var(--texto)]"
+                    : "text-[var(--tenue)] hover:text-[var(--texto)]"
+                }`}
+              >
+                {t.name} <span className="font-mono text-[11px]">{t.startTime}</span>
+              </Link>
+            ))}
+          </div>
+        ) : null}
+      </div>
 
-            <p className="max-w-[62ch] text-[var(--tenue)]">
-              {cierre.conteo.total} servicios verificados
-              {cierre.ventanasConEvidencia ? (
-                <>
-                  {" · evidencia completa en "}
-                  <b className="font-mono font-medium text-[var(--texto)]">
-                    {cierre.ventanasConEvidencia.suficientes} de{" "}
-                    {cierre.ventanasConEvidencia.medidas}
-                  </b>
-                  {" ventanas"}
-                </>
-              ) : null}
-              {cierre.deadlineEn ? (
-                <>
-                  {" · deadline "}
-                  <b className="font-mono font-medium text-[var(--texto)]">
-                    {soloHora(cierre.deadlineEn, tz)}
-                  </b>
-                </>
-              ) : null}
-              {cierre.toleranciaMinutos != null ? (
-                <>
-                  {" · tolerancia "}
-                  <b className="font-mono font-medium text-[var(--texto)]">
-                    {formatearDuracion(cierre.toleranciaMinutos)}
-                  </b>
-                </>
-              ) : null}
-              {". "}
-              <span className="font-mono text-[12px]">reloj: {tz}</span>
-            </p>
+      {!cierre ? (
+        <p className="mt-10 text-[15px] text-[var(--tenue)]">
+          No hay servicios programados para esta fecha en {unitLabel}.
+        </p>
+      ) : (
+        <>
+          {/* ── La tesis de la pantalla ──────────────────────────────── */}
+          <h1 className="mt-7 mb-2.5 max-w-[24ch] font-[family-name:var(--fuente-archivo)] text-[clamp(28px,5vw,42px)] leading-[1.02] font-bold tracking-[-0.022em]">
+            {cierre.titular}
+          </h1>
 
-            <div className="mt-5 flex flex-wrap gap-6 font-mono text-[12px] text-[var(--tenue)]">
-              <Conteo n={cierre.conteo.cumplido} color="var(--verde)" texto="cumplidos">
-                {cierre.conteo.tarde > 0 ? ` · ${cierre.conteo.tarde} tarde` : null}
-              </Conteo>
-              <Conteo n={cierre.conteo.no_cumplido} color="var(--rojo)" texto="no cumplido" />
-              <Conteo
-                n={cierre.conteo.pendiente_evidencia}
-                color="var(--ambar)"
-                texto="pendiente por evidencia"
-              />
-              {cierre.conteo.sin_verificar > 0 ? (
-                <Conteo
-                  n={cierre.conteo.sin_verificar}
-                  color="var(--acero)"
-                  texto="sin verificar todavía"
-                />
-              ) : null}
-            </div>
-
-            {/* ── El mapa ──────────────────────────────────────────────── */}
-            <Seccion titulo="El turno en el mapa — solo lo que te necesita" />
-            <CierreMapa excepciones={cierre.excepciones} limpios={cierre.limpios} />
-
-            {/* ── Las excepciones ──────────────────────────────────────── */}
-            {cierre.excepciones.length > 0 ? (
+          <p className="max-w-[62ch] text-[var(--tenue)]">
+            {cierre.conteo.total} servicios verificados
+            {cierre.ventanasConEvidencia ? (
               <>
-                <Seccion titulo="Lo que te necesita" />
-                {cierre.excepciones.map((s) => (
-                  <Caso key={s.occurrenceId} s={s} tz={tz} slug={ctx.client.slug} />
-                ))}
+                {" · evidencia completa en "}
+                <b className="font-mono font-medium text-[var(--texto)]">
+                  {cierre.ventanasConEvidencia.suficientes} de{" "}
+                  {cierre.ventanasConEvidencia.medidas}
+                </b>
+                {" ventanas"}
               </>
             ) : null}
-
-            {/* ── El cajón de los limpios ──────────────────────────────── */}
-            {cierre.limpios.length > 0 ? (
-              <details className="mt-2 border-t border-white/10">
-                <summary className="flex cursor-pointer list-none items-center gap-3 py-5 text-[15px] text-[var(--tenue)] [&::-webkit-details-marker]:hidden">
-                  <span className="font-mono text-[11px]">▸</span>
-                  <span>
-                    <b className="font-medium text-[var(--texto)]">
-                      {cierre.limpios.length} servicios
-                    </b>{" "}
-                    cerraron limpio — la tabla con sus medidas
-                  </span>
-                </summary>
-                <TablaLimpios servicios={cierre.limpios} tz={tz} />
-              </details>
+            {cierre.deadlineEn ? (
+              <>
+                {" · deadline "}
+                <b className="font-mono font-medium text-[var(--texto)]">
+                  {soloHora(cierre.deadlineEn, tz)}
+                </b>
+              </>
             ) : null}
+            {cierre.toleranciaMinutos != null ? (
+              <>
+                {" · tolerancia "}
+                <b className="font-mono font-medium text-[var(--texto)]">
+                  {formatearDuracion(cierre.toleranciaMinutos)}
+                </b>
+              </>
+            ) : null}
+            {". "}
+            <span className="font-mono text-[12px]">reloj: {tz}</span>
+          </p>
 
-            <div className="mt-14 border-t border-white/10 pt-5 font-mono text-[11px] leading-[1.9] text-[var(--tenue)]">
-              Cierre del turno · J-Telemetry. Absorbe el antiguo Historial: el selector de fecha
-              muestra el cierre de cualquier turno pasado.
-              <br />
-              Vista derivada de hechos ya sellados — abrirla no verifica de nuevo nada. Las trazas
-              cortan en la llegada a geocerca.
-            </div>
-          </>
-        )}
-      </div>
-    </main>
+          <div className="mt-5 flex flex-wrap gap-6 font-mono text-[12px] text-[var(--tenue)]">
+            <Conteo n={cierre.conteo.cumplido} color="var(--verde)" texto="cumplidos">
+              {cierre.conteo.tarde > 0 ? ` · ${cierre.conteo.tarde} tarde` : null}
+            </Conteo>
+            <Conteo n={cierre.conteo.no_cumplido} color="var(--rojo)" texto="no cumplido" />
+            <Conteo
+              n={cierre.conteo.pendiente_evidencia}
+              color="var(--ambar)"
+              texto="pendiente por evidencia"
+            />
+            {cierre.conteo.sin_verificar > 0 ? (
+              <Conteo
+                n={cierre.conteo.sin_verificar}
+                color="var(--acero)"
+                texto="sin verificar todavía"
+              />
+            ) : null}
+          </div>
+
+          {/* ── El mapa ──────────────────────────────────────────────── */}
+          <Seccion titulo="El turno en el mapa — solo lo que te necesita" />
+          <CierreMapa excepciones={cierre.excepciones} limpios={cierre.limpios} />
+
+          {/* ── Las excepciones ──────────────────────────────────────── */}
+          {cierre.excepciones.length > 0 ? (
+            <>
+              <Seccion titulo="Lo que te necesita" />
+              {cierre.excepciones.map((s) => (
+                <Caso key={s.occurrenceId} s={s} tz={tz} slug={ctx.client.slug} />
+              ))}
+            </>
+          ) : null}
+
+          {/* ── El cajón de los limpios ──────────────────────────────── */}
+          {cierre.limpios.length > 0 ? (
+            <details className="mt-2 border-t border-white/10">
+              <summary className="flex cursor-pointer list-none items-center gap-3 py-5 text-[15px] text-[var(--tenue)] [&::-webkit-details-marker]:hidden">
+                <span className="font-mono text-[11px]">▸</span>
+                <span>
+                  <b className="font-medium text-[var(--texto)]">
+                    {cierre.limpios.length} servicios
+                  </b>{" "}
+                  cerraron limpio — la tabla con sus medidas
+                </span>
+              </summary>
+              <TablaLimpios servicios={cierre.limpios} tz={tz} />
+            </details>
+          ) : null}
+
+          <div className="mt-14 border-t border-white/10 pt-5 font-mono text-[11px] leading-[1.9] text-[var(--tenue)]">
+            Cierre del turno · J-Telemetry. Absorbe el antiguo Historial: el selector de fecha
+            muestra el cierre de cualquier turno pasado.
+            <br />
+            Vista derivada de hechos ya sellados — abrirla no verifica de nuevo nada. Las trazas
+            cortan en la llegada a geocerca.
+          </div>
+        </>
+      )}
+    </UnitShell>
   );
 }
 

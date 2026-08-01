@@ -96,114 +96,110 @@ export async function MonitoreoUnitView({
   const unitLabel = operationalUnitLabel(ctx.unit);
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <UnitShell client={ctx.client} unit={ctx.unit} title={`Monitoreo — ${unitLabel}`} />
+    <UnitShell client={ctx.client} unit={ctx.unit} title={`Monitoreo — ${unitLabel}`}>
+      <p className="text-sm text-[var(--muted)]">
+        Torre de control en vivo: el turno se elige solo según la hora (Juárez). Las unidades
+        identificadas dejan huella de lo ya cubierto (pre-verificado visual, no cambia el
+        veredicto). Para jornadas pasadas ve a{" "}
+        <Link href={historialHref} className="text-[var(--accent)]">
+          Historial
+        </Link>
+        .
+      </p>
 
-        <p className="text-sm text-[var(--muted)]">
-          Torre de control en vivo: el turno se elige solo según la hora (Juárez). Las unidades
-          identificadas dejan huella de lo ya cubierto (pre-verificado visual, no cambia el
-          veredicto). Para jornadas pasadas ve a{" "}
-          <Link href={historialHref} className="text-[var(--accent)]">
-            Historial
-          </Link>
-          .
-        </p>
-
-        <Card title={autoMode ? "Turno activo (automático)" : "Vista forzada (manual)"}>
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-            <div>
-              <p className="text-base text-white">
-                {selectedShift
-                  ? `${selectedShift.name} · ${fecha} · ${selectedShift.startTime}`
-                  : "Sin turnos configurados"}
-              </p>
-              <p className="mt-1 text-xs text-[var(--muted)]">
-                {autoMode
-                  ? "Elegido por la hora actual. Se actualiza cada 45s."
-                  : "Estás forzando fecha/turno. "}
-                {!autoMode ? (
-                  <Link href={liveHref} className="text-[var(--accent)]">
-                    Volver al automático →
-                  </Link>
-                ) : null}
-              </p>
-            </div>
-            <Link
-              href={historialHref}
-              className="rounded border border-white/15 px-3 py-2 text-sm hover:bg-white/10"
-            >
-              Ver historial (días pasados) →
-            </Link>
+      <Card title={autoMode ? "Turno activo (automático)" : "Vista forzada (manual)"}>
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div>
+            <p className="text-base text-white">
+              {selectedShift
+                ? `${selectedShift.name} · ${fecha} · ${selectedShift.startTime}`
+                : "Sin turnos configurados"}
+            </p>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              {autoMode
+                ? "Elegido por la hora actual. Se actualiza cada 45s."
+                : "Estás forzando fecha/turno. "}
+              {!autoMode ? (
+                <Link href={liveHref} className="text-[var(--accent)]">
+                  Volver al automático →
+                </Link>
+              ) : null}
+            </p>
           </div>
-
-          <details className="mt-4 text-sm">
-            <summary className="cursor-pointer text-[var(--muted)]">
-              Forzar otra fecha / turno
-            </summary>
-            <form className="mt-3 flex flex-wrap items-end gap-3" method="get">
-              <input type="hidden" name="account" value={ctx.client.slug} />
-              <label>
-                <span className="text-[var(--muted)]">Fecha</span>
-                <input
-                  type="date"
-                  name="fecha"
-                  defaultValue={fecha}
-                  className="mt-1 block rounded border border-white/10 bg-black/40 px-3 py-2"
-                />
-              </label>
-              <label>
-                <span className="text-[var(--muted)]">Turno</span>
-                <select
-                  name="turno"
-                  defaultValue={turnoId ?? ""}
-                  className="mt-1 block rounded border border-white/10 bg-black/40 px-3 py-2"
-                >
-                  {shifts.length === 0 ? (
-                    <option value="">Sin turnos</option>
-                  ) : (
-                    shifts.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.startTime})
-                      </option>
-                    ))
-                  )}
-                </select>
-              </label>
-              <button
-                type="submit"
-                className="rounded bg-[var(--accent)] px-4 py-2 font-medium text-black"
-              >
-                Ver este turno
-              </button>
-            </form>
-          </details>
-        </Card>
-
-        {!monitoreo ? (
-          <Card title="Sin datos">
-            <p className="text-sm text-[var(--muted)]">
-              No hay ocurrencias para el turno activo de hoy. Revisa turnos/perfiles o abre{" "}
-              <Link href={historialHref} className="text-[var(--accent)]">
-                Historial
-              </Link>{" "}
-              para un día pasado.
-            </p>
-          </Card>
-        ) : (
-          <Card
-            title={`${monitoreo.turnoName} · ${monitoreo.fecha}${monitoreo.turnoStartTime ? ` · ${monitoreo.turnoStartTime}` : ""}`}
+          <Link
+            href={historialHref}
+            className="rounded border border-white/15 px-3 py-2 text-sm hover:bg-white/10"
           >
-            <p className="mb-4 text-sm text-[var(--muted)]">
-              {monitoreo.stats.total} rutas · {monitoreo.stats.cerrado} cerrado ·{" "}
-              {monitoreo.stats.llego} llegó · {monitoreo.stats.avanzando} avanzando ·{" "}
-              {monitoreo.stats.en_ruta} en ruta · {monitoreo.stats.programada} programada ·{" "}
-              <span className="font-medium text-sky-200">{monitoreo.stats.alerta} alerta</span>
-            </p>
-            <MonitoreoLive initial={monitoreo} query={query} />
-          </Card>
-        )}
-      </div>
-    </main>
+            Ver historial (días pasados) →
+          </Link>
+        </div>
+
+        <details className="mt-4 text-sm">
+          <summary className="cursor-pointer text-[var(--muted)]">
+            Forzar otra fecha / turno
+          </summary>
+          <form className="mt-3 flex flex-wrap items-end gap-3" method="get">
+            <input type="hidden" name="account" value={ctx.client.slug} />
+            <label>
+              <span className="text-[var(--muted)]">Fecha</span>
+              <input
+                type="date"
+                name="fecha"
+                defaultValue={fecha}
+                className="mt-1 block rounded border border-white/10 bg-black/40 px-3 py-2"
+              />
+            </label>
+            <label>
+              <span className="text-[var(--muted)]">Turno</span>
+              <select
+                name="turno"
+                defaultValue={turnoId ?? ""}
+                className="mt-1 block rounded border border-white/10 bg-black/40 px-3 py-2"
+              >
+                {shifts.length === 0 ? (
+                  <option value="">Sin turnos</option>
+                ) : (
+                  shifts.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.startTime})
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            <button
+              type="submit"
+              className="rounded bg-[var(--accent)] px-4 py-2 font-medium text-black"
+            >
+              Ver este turno
+            </button>
+          </form>
+        </details>
+      </Card>
+
+      {!monitoreo ? (
+        <Card title="Sin datos">
+          <p className="text-sm text-[var(--muted)]">
+            No hay ocurrencias para el turno activo de hoy. Revisa turnos/perfiles o abre{" "}
+            <Link href={historialHref} className="text-[var(--accent)]">
+              Historial
+            </Link>{" "}
+            para un día pasado.
+          </p>
+        </Card>
+      ) : (
+        <Card
+          title={`${monitoreo.turnoName} · ${monitoreo.fecha}${monitoreo.turnoStartTime ? ` · ${monitoreo.turnoStartTime}` : ""}`}
+        >
+          <p className="mb-4 text-sm text-[var(--muted)]">
+            {monitoreo.stats.total} rutas · {monitoreo.stats.cerrado} cerrado ·{" "}
+            {monitoreo.stats.llego} llegó · {monitoreo.stats.avanzando} avanzando ·{" "}
+            {monitoreo.stats.en_ruta} en ruta · {monitoreo.stats.programada} programada ·{" "}
+            <span className="font-medium text-sky-200">{monitoreo.stats.alerta} alerta</span>
+          </p>
+          <MonitoreoLive initial={monitoreo} query={query} />
+        </Card>
+      )}
+    </UnitShell>
   );
 }

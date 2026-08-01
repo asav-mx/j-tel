@@ -42,48 +42,44 @@ export async function PendientesEvidenciaUnitView({ ctx }: { ctx: UnitPageContex
   const tz = payload.zonaHoraria;
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-5xl">
-        <UnitShell
-          client={ctx.client}
-          unit={ctx.unit}
-          title={`Pendiente por evidencia — ${unitLabel}`}
-        />
+    <UnitShell
+      client={ctx.client}
+      unit={ctx.unit}
+      title={`Pendiente por evidencia — ${unitLabel}`}
+    >
+      <h1 className="mt-7 mb-2.5 max-w-[24ch] font-[family-name:var(--fuente-archivo)] text-[clamp(28px,5vw,42px)] leading-[1.02] font-bold tracking-[-0.022em]">
+        {titular(payload.casos.length)}
+      </h1>
 
-        <h1 className="mt-7 mb-2.5 max-w-[24ch] font-[family-name:var(--fuente-archivo)] text-[clamp(28px,5vw,42px)] leading-[1.02] font-bold tracking-[-0.022em]">
-          {titular(payload.casos.length)}
-        </h1>
+      <p className="max-w-[62ch] text-[var(--tenue)]">
+        El sistema no vio suficiente señal para emitir un resultado — no cuenta como
+        incumplimiento, tampoco como cumplido. Por ley, sin evidencia no se declara una falta.{" "}
+        <span className="font-mono text-[12px]">reloj: {tz}</span>
+      </p>
 
-        <p className="max-w-[62ch] text-[var(--tenue)]">
-          El sistema no vio suficiente señal para emitir un resultado — no cuenta como
-          incumplimiento, tampoco como cumplido. Por ley, sin evidencia no se declara una falta.{" "}
-          <span className="font-mono text-[12px]">reloj: {tz}</span>
+      {payload.casos.length === 0 ? (
+        <p className="mt-10 text-[15px] text-[var(--tenue)]">
+          No hay servicios pendientes por evidencia en {unitLabel}.
         </p>
+      ) : (
+        <>
+          {payload.casos.map((c) => (
+            <Caso key={c.occurrenceId} c={c} tz={tz} slug={ctx.client.slug} />
+          ))}
 
-        {payload.casos.length === 0 ? (
-          <p className="mt-10 text-[15px] text-[var(--tenue)]">
-            No hay servicios pendientes por evidencia en {unitLabel}.
-          </p>
-        ) : (
-          <>
-            {payload.casos.map((c) => (
-              <Caso key={c.occurrenceId} c={c} tz={tz} slug={ctx.client.slug} />
-            ))}
+          <ComoSaleDeAhi />
+        </>
+      )}
 
-            <ComoSaleDeAhi />
-          </>
-        )}
-
-        <div className="mt-14 border-t border-white/10 pt-5 font-mono text-[11px] leading-[1.9] text-[var(--tenue)]">
-          Pendiente por evidencia · J-Telemetry — cara planta.
-          <br />
-          "Sin señal" es un motivo bajo pendiente, no un cuarto estado: los resultados siguen siendo
-          tres.
-          <br />
-          El sistema no afirma lo que no midió; el pendiente es esa regla hecha visible.
-        </div>
+      <div className="mt-14 border-t border-white/10 pt-5 font-mono text-[11px] leading-[1.9] text-[var(--tenue)]">
+        Pendiente por evidencia · J-Telemetry — cara planta.
+        <br />
+        "Sin señal" es un motivo bajo pendiente, no un cuarto estado: los resultados siguen siendo
+        tres.
+        <br />
+        El sistema no afirma lo que no midió; el pendiente es esa regla hecha visible.
       </div>
-    </main>
+    </UnitShell>
   );
 }
 
