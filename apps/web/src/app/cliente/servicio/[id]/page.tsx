@@ -64,20 +64,32 @@ export default async function ClienteServicioPage({
     ? unitContratosHref(unit, client.slug)
     : withAccount("/cliente/configuracion/contratos", client.slug);
 
+  const detalle = (
+    <ServiceDetailView
+      data={data}
+      backHref={complianceHref}
+      backLabel="← Volver a cumplimiento"
+      contractHref={contratosHref}
+      contractLabel={`Ver contrato: ${data.contractName}`}
+    />
+  );
+
+  /*
+   * Sin unidad operativa resuelta no hay navegación que dibujar —el marco vive
+   * de la unidad— pero el expediente sí se puede leer. Se sirve suelto en vez
+   * de esconderlo: es el mismo criterio que ya seguía esta pantalla.
+   */
+  if (!unit) {
+    return (
+      <main className="min-h-screen p-8">
+        <div className="mx-auto max-w-4xl">{detalle}</div>
+      </main>
+    );
+  }
+
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-4xl">
-        {unit ? (
-          <UnitShell client={client} unit={unit} title={`Servicio ${data.serviceDate}`} />
-        ) : null}
-        <ServiceDetailView
-          data={data}
-          backHref={complianceHref}
-          backLabel="← Volver a cumplimiento"
-          contractHref={contratosHref}
-          contractLabel={`Ver contrato: ${data.contractName}`}
-        />
-      </div>
-    </main>
+    <UnitShell client={client} unit={unit} title={`Servicio ${data.serviceDate}`}>
+      {detalle}
+    </UnitShell>
   );
 }

@@ -191,411 +191,407 @@ export async function ServiciosUnitView({
   if (geofences.length === 0) missing.push("geocerca de destino");
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <UnitShell
-          client={client}
-          unit={unit}
-          title={`Perfiles de servicio — ${operationalUnitLabel(unit)}`}
-          step="servicios"
-        />
+    <UnitShell
+      client={client}
+      unit={unit}
+      title={`Perfiles de servicio — ${operationalUnitLabel(unit)}`}
+      step="servicios"
+    >
+      <p className="text-sm text-[var(--muted)]">
+        El perfil define <span className="text-white">qué</span> se verifica:{" "}
+        <span className="text-white">contrato + ruta/turno + geocerca + días</span>. Las
+        ocurrencias se mantienen en una <span className="text-white">ventana de 30 días</span>{" "}
+        (renovación automática diaria). Generar es solo el primer arranque o para rellenar huecos.
+      </p>
 
-        <p className="text-sm text-[var(--muted)]">
-          El perfil define <span className="text-white">qué</span> se verifica:{" "}
-          <span className="text-white">contrato + ruta/turno + geocerca + días</span>. Las
-          ocurrencias se mantienen en una <span className="text-white">ventana de 30 días</span>{" "}
-          (renovación automática diaria). Generar es solo el primer arranque o para rellenar huecos.
-        </p>
+      {error ? (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+          {error}
+        </div>
+      ) : null}
+      {created ? (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+          {created.startsWith("geocerca_actualizada_")
+            ? `Geocerca aplicada a ${created.replace("geocerca_actualizada_", "")} perfiles. Ya puedes eliminar la geocerca que no uses.`
+            : created === "generado" || created === "generado_acotado"
+              ? `${createdLabels[created]} ${n ? `(${n} nuevas)` : ""}`
+              : created === "ya_existian"
+                ? `${createdLabels.ya_existian}${n ? ` (${n} días)` : ""}`
+                : (createdLabels[created] ?? "Guardado.")}
+        </div>
+      ) : null}
 
-        {error ? (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-            {error}
-          </div>
-        ) : null}
-        {created ? (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-            {created.startsWith("geocerca_actualizada_")
-              ? `Geocerca aplicada a ${created.replace("geocerca_actualizada_", "")} perfiles. Ya puedes eliminar la geocerca que no uses.`
-              : created === "generado" || created === "generado_acotado"
-                ? `${createdLabels[created]} ${n ? `(${n} nuevas)` : ""}`
-                : created === "ya_existian"
-                  ? `${createdLabels.ya_existian}${n ? ` (${n} días)` : ""}`
-                  : (createdLabels[created] ?? "Guardado.")}
-          </div>
-        ) : null}
+      {missing.length > 0 ? (
+        <Card title="Faltan requisitos">
+          <p className="text-sm text-[var(--muted)]">
+            Para crear un perfil en <span className="text-white">{operationalUnitLabel(activeUnit)}</span>{" "}
+            necesitas: {missing.join(", ")}.
+          </p>
+        </Card>
+      ) : (
+        <Card title={`Nuevo perfil — ${operationalUnitLabel(activeUnit)}`}>
+          <ConfirmForm
+            action="/api/cliente/servicios"
+            method="post"
+            className="space-y-4"
+            confirmMessage={confirmMessages.createProfile(operationalUnitLabel(activeUnit))}
+            pendingLabel="Creando perfil…"
+          >
+            <input type="hidden" name="clientSlug" value={client.slug} />
+            <input type="hidden" name="action" value="create" />
+            {scopeHidden}
 
-        {missing.length > 0 ? (
-          <Card title="Faltan requisitos">
-            <p className="text-sm text-[var(--muted)]">
-              Para crear un perfil en <span className="text-white">{operationalUnitLabel(activeUnit)}</span>{" "}
-              necesitas: {missing.join(", ")}.
-            </p>
-          </Card>
-        ) : (
-          <Card title={`Nuevo perfil — ${operationalUnitLabel(activeUnit)}`}>
-            <ConfirmForm
-              action="/api/cliente/servicios"
-              method="post"
-              className="space-y-4"
-              confirmMessage={confirmMessages.createProfile(operationalUnitLabel(activeUnit))}
-              pendingLabel="Creando perfil…"
-            >
-              <input type="hidden" name="clientSlug" value={client.slug} />
-              <input type="hidden" name="action" value="create" />
-              {scopeHidden}
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className={labelClass}>
-                  Nombre del perfil
-                  <input name="name" required className={inputClass} placeholder="Ej. Poniente Matutino" />
-                </label>
-                <label className={labelClass}>
-                  Código (opcional)
-                  <input
-                    name="code"
-                    className={inputClass}
-                    placeholder="Ej. CSD-PON-I — si lo dejas vacío se genera del nombre"
-                  />
-                </label>
-                <label className={labelClass}>
-                  Contrato
-                  <select name="contractId" required className={inputClass} defaultValue="">
-                    <option value="" disabled>
-                      Elige contrato…
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className={labelClass}>
+                Nombre del perfil
+                <input name="name" required className={inputClass} placeholder="Ej. Poniente Matutino" />
+              </label>
+              <label className={labelClass}>
+                Código (opcional)
+                <input
+                  name="code"
+                  className={inputClass}
+                  placeholder="Ej. CSD-PON-I — si lo dejas vacío se genera del nombre"
+                />
+              </label>
+              <label className={labelClass}>
+                Contrato
+                <select name="contractId" required className={inputClass} defaultValue="">
+                  <option value="" disabled>
+                    Elige contrato…
+                  </option>
+                  {contracts
+                    .filter((c) => c.status === "active" || c.status === "demo")
+                    .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} · {c.carrier?.name ?? carrierById.get(c.carrierAccountId)?.name ?? "carrier"}
                     </option>
-                    {contracts
-                      .filter((c) => c.status === "active" || c.status === "demo")
-                      .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} · {c.carrier?.name ?? carrierById.get(c.carrierAccountId)?.name ?? "carrier"}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className={labelClass}>
-                  Ruta + turno
-                  <select name="routeShiftId" required className={inputClass} defaultValue="">
-                    <option value="" disabled>
-                      Elige combinación…
-                    </option>
-                    {routeShifts.map((rs) => (
-                      <option key={rs.id} value={rs.id}>
-                        {rs.route?.name ?? "—"} · {rs.shift?.name ?? "—"} · inicio{" "}
-                        {rs.shift?.startTime?.slice(0, 5) ?? "—"}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className={labelClass}>
-                  Geocerca de destino
-                  <select name="geofenceId" required className={inputClass} defaultValue="">
-                    <option value="" disabled>
-                      Elige geocerca…
-                    </option>
-                    {geofences.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {geofenceOptionLabel(g)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <fieldset className="rounded-lg border border-white/10 p-3">
-                <legend className="px-1 text-sm text-[var(--muted)]">Días activos</legend>
-                <div className="flex flex-wrap gap-3">
-                  {DAYS.map((d) => (
-                    <label key={d.value} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        name="activeDays"
-                        value={d.value}
-                        defaultChecked={d.value >= 1 && d.value <= 5}
-                      />
-                      {d.label}
-                    </label>
                   ))}
-                </div>
-              </fieldset>
+                </select>
+              </label>
+              <label className={labelClass}>
+                Ruta + turno
+                <select name="routeShiftId" required className={inputClass} defaultValue="">
+                  <option value="" disabled>
+                    Elige combinación…
+                  </option>
+                  {routeShifts.map((rs) => (
+                    <option key={rs.id} value={rs.id}>
+                      {rs.route?.name ?? "—"} · {rs.shift?.name ?? "—"} · inicio{" "}
+                      {rs.shift?.startTime?.slice(0, 5) ?? "—"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={labelClass}>
+                Geocerca de destino
+                <select name="geofenceId" required className={inputClass} defaultValue="">
+                  <option value="" disabled>
+                    Elige geocerca…
+                  </option>
+                  {geofences.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {geofenceOptionLabel(g)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
 
-              <button type="submit" className={btnClass}>
-                Crear perfil
-              </button>
-            </ConfirmForm>
-          </Card>
-        )}
+            <fieldset className="rounded-lg border border-white/10 p-3">
+              <legend className="px-1 text-sm text-[var(--muted)]">Días activos</legend>
+              <div className="flex flex-wrap gap-3">
+                {DAYS.map((d) => (
+                  <label key={d.value} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      name="activeDays"
+                      value={d.value}
+                      defaultChecked={d.value >= 1 && d.value <= 5}
+                    />
+                    {d.label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
 
-        <Card title={`Perfiles — ${operationalUnitLabel(activeUnit)} (${profiles.length})`}>
-          {profiles.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">Sin perfiles para esta unidad.</p>
-          ) : (
-            <>
-              {unit.kind === "plant" && geofences.length > 0 ? (
-                <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/10 p-4">
-                  <p className="mb-3 text-sm text-amber-100">
-                    ¿Todos los perfiles apuntan a la geocerca equivocada? Corrige de un jalón:
-                    elige la buena y se aplica a los {profiles.length} perfiles.
-                  </p>
-                  <ConfirmForm
-                    action="/api/cliente/servicios"
-                    method="post"
-                    className="flex flex-wrap items-end gap-3"
-                    confirmMessage={confirmMessages.bulkSetGeofence(operationalUnitLabel(unit))}
-                    pendingLabel="Aplicando geocerca…"
-                  >
-                    <input type="hidden" name="clientSlug" value={client.slug} />
-                    <input type="hidden" name="action" value="bulk_geofence" />
-                    {scopeHidden}
-                    <label className="min-w-[220px] flex-1 text-sm">
-                      Geocerca correcta
-                      <select name="geofenceId" required className={inputClass} defaultValue="">
-                        <option value="" disabled>
-                          Elige una geocerca…
+            <button type="submit" className={btnClass}>
+              Crear perfil
+            </button>
+          </ConfirmForm>
+        </Card>
+      )}
+
+      <Card title={`Perfiles — ${operationalUnitLabel(activeUnit)} (${profiles.length})`}>
+        {profiles.length === 0 ? (
+          <p className="text-sm text-[var(--muted)]">Sin perfiles para esta unidad.</p>
+        ) : (
+          <>
+            {unit.kind === "plant" && geofences.length > 0 ? (
+              <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/10 p-4">
+                <p className="mb-3 text-sm text-amber-100">
+                  ¿Todos los perfiles apuntan a la geocerca equivocada? Corrige de un jalón:
+                  elige la buena y se aplica a los {profiles.length} perfiles.
+                </p>
+                <ConfirmForm
+                  action="/api/cliente/servicios"
+                  method="post"
+                  className="flex flex-wrap items-end gap-3"
+                  confirmMessage={confirmMessages.bulkSetGeofence(operationalUnitLabel(unit))}
+                  pendingLabel="Aplicando geocerca…"
+                >
+                  <input type="hidden" name="clientSlug" value={client.slug} />
+                  <input type="hidden" name="action" value="bulk_geofence" />
+                  {scopeHidden}
+                  <label className="min-w-[220px] flex-1 text-sm">
+                    Geocerca correcta
+                    <select name="geofenceId" required className={inputClass} defaultValue="">
+                      <option value="" disabled>
+                        Elige una geocerca…
+                      </option>
+                      {geofences.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {geofenceOptionLabel(g)}
                         </option>
-                        {geofences.map((g) => (
-                          <option key={g.id} value={g.id}>
-                            {geofenceOptionLabel(g)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <button type="submit" className={btnClass}>
-                      Aplicar a todos los perfiles
-                    </button>
-                  </ConfirmForm>
-                </div>
-              ) : null}
-              <ul className="space-y-3 text-sm">
-              {profiles.map((p) => {
-                const contractFrom = asIsoDate(p.contract?.validFrom);
-                const contractTo = asIsoDate(p.contract?.validTo);
-                const coverage = occurrenceCoverage.get(p.id);
-                const rolling = rollingWindowCoverage(
-                  coverage,
-                  contractFrom,
-                  contractTo,
-                  p.activeDays ?? [1, 2, 3, 4, 5],
-                );
-                const hasOccurrences = rolling.hasAny;
-                const coversRolling = rolling.coversRolling;
+                      ))}
+                    </select>
+                  </label>
+                  <button type="submit" className={btnClass}>
+                    Aplicar a todos los perfiles
+                  </button>
+                </ConfirmForm>
+              </div>
+            ) : null}
+            <ul className="space-y-3 text-sm">
+            {profiles.map((p) => {
+              const contractFrom = asIsoDate(p.contract?.validFrom);
+              const contractTo = asIsoDate(p.contract?.validTo);
+              const coverage = occurrenceCoverage.get(p.id);
+              const rolling = rollingWindowCoverage(
+                coverage,
+                contractFrom,
+                contractTo,
+                p.activeDays ?? [1, 2, 3, 4, 5],
+              );
+              const hasOccurrences = rolling.hasAny;
+              const coversRolling = rolling.coversRolling;
 
-                return (
-                <li key={p.id} className="rounded border border-white/5 p-3">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium">
-                        <span className="mr-2 font-mono text-xs text-[var(--accent)]">{p.code}</span>
-                        {p.name}
-                      </p>
-                      <p className="text-xs text-[var(--muted)]">
-                        {p.contract?.name ?? "—"} · {p.routeShift?.route?.name ?? "—"} ·{" "}
-                        {p.routeShift?.shift?.name ?? "—"} · destino {p.geofence?.name ?? "—"} · días [
-                        {(p.activeDays ?? []).join(", ")}]
-                        {contractFrom && contractTo
-                          ? ` · vigencia ${contractFrom} → ${contractTo}`
-                          : ""}
-                      </p>
-                      {hasOccurrences ? (
-                        <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-300">
-                          <span aria-hidden>✓</span>
-                          {coversRolling
-                            ? `30 días cubiertos: ${rolling.inWindowCount} ocurrencias (${rolling.covFrom} → ${rolling.covTo})`
-                            : `Parcial: ${rolling.inWindowCount} de ~${rolling.expected} en ventana 30d (${rolling.covFrom} → ${rolling.covTo})`}
-                        </p>
-                      ) : (
-                        <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs text-amber-200">
-                          Sin ocurrencias — genera los próximos 30 días
-                          {rolling.expected > 0 ? ` (~${rolling.expected})` : ""}
-                        </p>
-                      )}
-                    </div>
-                    {!hasOccurrences ? (
-                      <ConfirmForm
-                        action="/api/cliente/servicios"
-                        method="post"
-                        confirmMessage={confirmMessages.deleteProfile(p.name)}
-                        pendingLabel="Eliminando…"
-                      >
-                        <input type="hidden" name="clientSlug" value={client.slug} />
-                        <input type="hidden" name="action" value="delete" />
-                        <input type="hidden" name="profileId" value={p.id} />
-                        {scopeHidden}
-                        <button
-                          type="submit"
-                          className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-200 hover:border-red-400"
-                        >
-                          Eliminar perfil
-                        </button>
-                      </ConfirmForm>
-                    ) : null}
-                  </div>
-                  {coversRolling ? (
-                    <p className="mt-3 text-xs text-[var(--muted)]">
-                      Ventana de 30 días cubierta. El cron diario la renueva; no hace falta generar
-                      de nuevo salvo que falte un hueco.
+              return (
+              <li key={p.id} className="rounded border border-white/5 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium">
+                      <span className="mr-2 font-mono text-xs text-[var(--accent)]">{p.code}</span>
+                      {p.name}
                     </p>
-                  ) : (
-                    <>
-                      <ConfirmForm
-                        action="/api/cliente/servicios"
-                        method="post"
-                        className="mt-3 flex flex-wrap items-end gap-2"
-                        confirmTemplate={confirmMessages.generateOccurrencesTemplate(p.name)}
-                        pendingLabel="Generando ocurrencias…"
-                      >
-                        <input type="hidden" name="clientSlug" value={client.slug} />
-                        <input type="hidden" name="action" value="generar" />
-                        <input type="hidden" name="profileId" value={p.id} />
-                        {scopeHidden}
-                        <label className="text-xs">
-                          Desde
-                          <input
-                            name="fromDate"
-                            type="date"
-                            required
-                            defaultValue={rolling.windowFrom}
-                            min={contractFrom}
-                            max={rolling.windowTo}
-                            className={inputClass}
-                          />
-                        </label>
-                        <label className="text-xs">
-                          Hasta
-                          <input
-                            name="toDate"
-                            type="date"
-                            required
-                            defaultValue={rolling.windowTo}
-                            min={rolling.windowFrom}
-                            max={contractTo && contractTo < rolling.windowTo ? contractTo : rolling.windowTo}
-                            className={inputClass}
-                          />
-                        </label>
-                        <button
-                          type="submit"
-                          className="rounded-lg border border-white/10 px-3 py-2 text-xs hover:border-[var(--accent)]"
-                        >
-                          {hasOccurrences ? "Completar 30 días" : "Generar 30 días"}
-                        </button>
-                      </ConfirmForm>
-                      <p className="mt-1 text-xs text-[var(--muted)]">
-                        Por defecto: hoy → +{ROLLING_DAYS} días (techo: vigencia del contrato). El
-                        sistema renueva esta ventana cada día.
+                    <p className="text-xs text-[var(--muted)]">
+                      {p.contract?.name ?? "—"} · {p.routeShift?.route?.name ?? "—"} ·{" "}
+                      {p.routeShift?.shift?.name ?? "—"} · destino {p.geofence?.name ?? "—"} · días [
+                      {(p.activeDays ?? []).join(", ")}]
+                      {contractFrom && contractTo
+                        ? ` · vigencia ${contractFrom} → ${contractTo}`
+                        : ""}
+                    </p>
+                    {hasOccurrences ? (
+                      <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-300">
+                        <span aria-hidden>✓</span>
+                        {coversRolling
+                          ? `30 días cubiertos: ${rolling.inWindowCount} ocurrencias (${rolling.covFrom} → ${rolling.covTo})`
+                          : `Parcial: ${rolling.inWindowCount} de ~${rolling.expected} en ventana 30d (${rolling.covFrom} → ${rolling.covTo})`}
                       </p>
-                    </>
-                  )}
-                  <details className="mt-3 rounded-lg border border-[var(--accent)]/40 bg-black/20 p-3">
-                    <summary className="cursor-pointer list-none text-sm font-medium text-[var(--accent)]">
-                      ▸ Editar perfil / cambiar geocerca
-                    </summary>
+                    ) : (
+                      <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs text-amber-200">
+                        Sin ocurrencias — genera los próximos 30 días
+                        {rolling.expected > 0 ? ` (~${rolling.expected})` : ""}
+                      </p>
+                    )}
+                  </div>
+                  {!hasOccurrences ? (
                     <ConfirmForm
                       action="/api/cliente/servicios"
                       method="post"
-                      className="mt-3 space-y-3"
-                      confirmMessage={confirmMessages.updateProfile(p.name)}
-                      pendingLabel="Guardando…"
+                      confirmMessage={confirmMessages.deleteProfile(p.name)}
+                      pendingLabel="Eliminando…"
                     >
                       <input type="hidden" name="clientSlug" value={client.slug} />
-                      <input type="hidden" name="action" value="update" />
+                      <input type="hidden" name="action" value="delete" />
                       <input type="hidden" name="profileId" value={p.id} />
                       {scopeHidden}
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <label className={labelClass}>
-                          Nombre del perfil
-                          <input
-                            name="name"
-                            required
-                            className={inputClass}
-                            defaultValue={p.name}
-                          />
-                        </label>
-                        <label className={labelClass}>
-                          Código
-                          <input name="code" className={inputClass} defaultValue={p.code ?? ""} />
-                        </label>
-                        <div className={labelClass}>
-                          Contrato
-                          <p className={`${inputClass} text-[var(--muted)]`}>
-                            {p.contract?.name ?? "—"} ·{" "}
-                            {(p.contract?.carrierAccountId
-                              ? carrierById.get(p.contract.carrierAccountId)?.name
-                              : null) ?? "carrier"}
-                          </p>
-                          <p className="mt-1 text-xs text-[var(--muted)]">
-                            El contrato no se puede cambiar aquí.
-                          </p>
-                        </div>
-                        <label className={labelClass}>
-                          Ruta + turno
-                          <select
-                            name="routeShiftId"
-                            required
-                            className={inputClass}
-                            defaultValue={p.routeShiftId}
-                          >
-                            {routeShifts.map((rs) => (
-                              <option key={rs.id} value={rs.id}>
-                                {rs.route?.name ?? "—"} · {rs.shift?.name ?? "—"} · inicio{" "}
-                                {rs.shift?.startTime?.slice(0, 5) ?? "—"}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label className={`${labelClass} md:col-span-2`}>
-                          Geocerca de destino
-                          <select
-                            name="geofenceId"
-                            required
-                            className={inputClass}
-                            defaultValue={p.geofenceId}
-                          >
-                            {geofences.map((g) => (
-                              <option key={g.id} value={g.id}>
-                                {geofenceOptionLabel(g)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                      <fieldset className="rounded-lg border border-white/10 p-3">
-                        <legend className="px-1 text-sm text-[var(--muted)]">Días activos</legend>
-                        <div className="flex flex-wrap gap-3">
-                          {DAYS.map((d) => (
-                            <label key={d.value} className="flex items-center gap-2 text-sm">
-                              <input
-                                type="checkbox"
-                                name="activeDays"
-                                value={d.value}
-                                defaultChecked={(p.activeDays ?? [1, 2, 3, 4, 5]).includes(d.value)}
-                              />
-                              {d.label}
-                            </label>
-                          ))}
-                        </div>
-                      </fieldset>
+                      <button
+                        type="submit"
+                        className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-200 hover:border-red-400"
+                      >
+                        Eliminar perfil
+                      </button>
+                    </ConfirmForm>
+                  ) : null}
+                </div>
+                {coversRolling ? (
+                  <p className="mt-3 text-xs text-[var(--muted)]">
+                    Ventana de 30 días cubierta. El cron diario la renueva; no hace falta generar
+                    de nuevo salvo que falte un hueco.
+                  </p>
+                ) : (
+                  <>
+                    <ConfirmForm
+                      action="/api/cliente/servicios"
+                      method="post"
+                      className="mt-3 flex flex-wrap items-end gap-2"
+                      confirmTemplate={confirmMessages.generateOccurrencesTemplate(p.name)}
+                      pendingLabel="Generando ocurrencias…"
+                    >
+                      <input type="hidden" name="clientSlug" value={client.slug} />
+                      <input type="hidden" name="action" value="generar" />
+                      <input type="hidden" name="profileId" value={p.id} />
+                      {scopeHidden}
+                      <label className="text-xs">
+                        Desde
+                        <input
+                          name="fromDate"
+                          type="date"
+                          required
+                          defaultValue={rolling.windowFrom}
+                          min={contractFrom}
+                          max={rolling.windowTo}
+                          className={inputClass}
+                        />
+                      </label>
+                      <label className="text-xs">
+                        Hasta
+                        <input
+                          name="toDate"
+                          type="date"
+                          required
+                          defaultValue={rolling.windowTo}
+                          min={rolling.windowFrom}
+                          max={contractTo && contractTo < rolling.windowTo ? contractTo : rolling.windowTo}
+                          className={inputClass}
+                        />
+                      </label>
                       <button
                         type="submit"
                         className="rounded-lg border border-white/10 px-3 py-2 text-xs hover:border-[var(--accent)]"
                       >
-                        Guardar cambios
+                        {hasOccurrences ? "Completar 30 días" : "Generar 30 días"}
                       </button>
                     </ConfirmForm>
-                  </details>
-                </li>
-              );
-              })}
-            </ul>
-            </>
-          )}
-        </Card>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      Por defecto: hoy → +{ROLLING_DAYS} días (techo: vigencia del contrato). El
+                      sistema renueva esta ventana cada día.
+                    </p>
+                  </>
+                )}
+                <details className="mt-3 rounded-lg border border-[var(--accent)]/40 bg-black/20 p-3">
+                  <summary className="cursor-pointer list-none text-sm font-medium text-[var(--accent)]">
+                    ▸ Editar perfil / cambiar geocerca
+                  </summary>
+                  <ConfirmForm
+                    action="/api/cliente/servicios"
+                    method="post"
+                    className="mt-3 space-y-3"
+                    confirmMessage={confirmMessages.updateProfile(p.name)}
+                    pendingLabel="Guardando…"
+                  >
+                    <input type="hidden" name="clientSlug" value={client.slug} />
+                    <input type="hidden" name="action" value="update" />
+                    <input type="hidden" name="profileId" value={p.id} />
+                    {scopeHidden}
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className={labelClass}>
+                        Nombre del perfil
+                        <input
+                          name="name"
+                          required
+                          className={inputClass}
+                          defaultValue={p.name}
+                        />
+                      </label>
+                      <label className={labelClass}>
+                        Código
+                        <input name="code" className={inputClass} defaultValue={p.code ?? ""} />
+                      </label>
+                      <div className={labelClass}>
+                        Contrato
+                        <p className={`${inputClass} text-[var(--muted)]`}>
+                          {p.contract?.name ?? "—"} ·{" "}
+                          {(p.contract?.carrierAccountId
+                            ? carrierById.get(p.contract.carrierAccountId)?.name
+                            : null) ?? "carrier"}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          El contrato no se puede cambiar aquí.
+                        </p>
+                      </div>
+                      <label className={labelClass}>
+                        Ruta + turno
+                        <select
+                          name="routeShiftId"
+                          required
+                          className={inputClass}
+                          defaultValue={p.routeShiftId}
+                        >
+                          {routeShifts.map((rs) => (
+                            <option key={rs.id} value={rs.id}>
+                              {rs.route?.name ?? "—"} · {rs.shift?.name ?? "—"} · inicio{" "}
+                              {rs.shift?.startTime?.slice(0, 5) ?? "—"}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className={`${labelClass} md:col-span-2`}>
+                        Geocerca de destino
+                        <select
+                          name="geofenceId"
+                          required
+                          className={inputClass}
+                          defaultValue={p.geofenceId}
+                        >
+                          {geofences.map((g) => (
+                            <option key={g.id} value={g.id}>
+                              {geofenceOptionLabel(g)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <fieldset className="rounded-lg border border-white/10 p-3">
+                      <legend className="px-1 text-sm text-[var(--muted)]">Días activos</legend>
+                      <div className="flex flex-wrap gap-3">
+                        {DAYS.map((d) => (
+                          <label key={d.value} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              name="activeDays"
+                              value={d.value}
+                              defaultChecked={(p.activeDays ?? [1, 2, 3, 4, 5]).includes(d.value)}
+                            />
+                            {d.label}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                    <button
+                      type="submit"
+                      className="rounded-lg border border-white/10 px-3 py-2 text-xs hover:border-[var(--accent)]"
+                    >
+                      Guardar cambios
+                    </button>
+                  </ConfirmForm>
+                </details>
+              </li>
+            );
+            })}
+          </ul>
+          </>
+        )}
+      </Card>
 
-        {activeUnit.kind === "plant_group" ? (
-          <p className="text-xs text-[var(--muted)]">
-            En campus, prioriza la geocerca de entrada compartida. Las geocercas por planta aparecen
-            como excepción si las configuraste en Geocercas.
-          </p>
-        ) : null}
-      </div>
-    </main>
+      {activeUnit.kind === "plant_group" ? (
+        <p className="text-xs text-[var(--muted)]">
+          En campus, prioriza la geocerca de entrada compartida. Las geocercas por planta aparecen
+          como excepción si las configuraste en Geocercas.
+        </p>
+      ) : null}
+    </UnitShell>
   );
 }

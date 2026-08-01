@@ -48,147 +48,143 @@ export default async function ClientePlantasPage({
   ]);
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <CorporateShell client={client} title={`Administrar plantas — ${client.name}`} />
+    <CorporateShell client={client} title={`Administrar plantas — ${client.name}`} >
+      <p className="text-sm text-[var(--muted)]">
+        Alta corporativa de plantas y campus. Para configurar servicios, entra al panel de cada{" "}
+        <span className="text-white">unidad operativa</span> desde el hub principal.
+      </p>
 
-        <p className="text-sm text-[var(--muted)]">
-          Alta corporativa de plantas y campus. Para configurar servicios, entra al panel de cada{" "}
-          <span className="text-white">unidad operativa</span> desde el hub principal.
-        </p>
-
-        {error ? (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-            {error}
-          </div>
-        ) : null}
-        {created ? (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-            {created === "grupo"
-              ? "Grupo creado."
-              : created === "actualizada"
-                ? "Planta actualizada."
-                : "Planta creada."}{" "}
-            Ya aparece en la lista.
-          </div>
-        ) : null}
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card title="Nueva planta">
-            <form action="/api/cliente/plantas" method="post" className="space-y-3">
-              <input type="hidden" name="clientSlug" value={client.slug} />
-              <input type="hidden" name="action" value="plant" />
-              <label className={labelClass}>
-                Nombre de la planta
-                <input
-                  name="name"
-                  required
-                  className={inputClass}
-                  placeholder="Ej. Planta Norte"
-                />
-              </label>
-              <label className={labelClass}>
-                Código (opcional, se genera del nombre)
-                <input name="code" className={inputClass} placeholder="Ej. PLANTA-47" />
-              </label>
-              <label className={labelClass}>
-                Grupo (opcional)
-                <select name="plantGroupId" className={inputClass} defaultValue="">
-                  <option value="">Sin grupo</option>
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button type="submit" className={btnClass}>
-                Crear planta
-              </button>
-            </form>
-          </Card>
-
-          <Card title="Nuevo grupo de plantas (opcional)">
-            <form action="/api/cliente/plantas" method="post" className="space-y-3">
-              <input type="hidden" name="clientSlug" value={client.slug} />
-              <input type="hidden" name="action" value="group" />
-              <label className={labelClass}>
-                Nombre del grupo
-                <input
-                  name="groupName"
-                  required
-                  className={inputClass}
-                  placeholder="Ej. Región Bajío"
-                />
-              </label>
-              <p className="text-xs text-[var(--muted)]">
-                Los grupos sirven para reportes y permisos por conjunto de plantas.
-              </p>
-              <button type="submit" className={btnClass}>
-                Crear grupo
-              </button>
-            </form>
-          </Card>
+      {error ? (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+          {error}
         </div>
+      ) : null}
+      {created ? (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+          {created === "grupo"
+            ? "Grupo creado."
+            : created === "actualizada"
+              ? "Planta actualizada."
+              : "Planta creada."}{" "}
+          Ya aparece en la lista.
+        </div>
+      ) : null}
 
-        <Card title={`Plantas (${plants.length})`}>
-          {plants.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              Este cliente todavía no tiene plantas. Crea la primera arriba.
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card title="Nueva planta">
+          <form action="/api/cliente/plantas" method="post" className="space-y-3">
+            <input type="hidden" name="clientSlug" value={client.slug} />
+            <input type="hidden" name="action" value="plant" />
+            <label className={labelClass}>
+              Nombre de la planta
+              <input
+                name="name"
+                required
+                className={inputClass}
+                placeholder="Ej. Planta Norte"
+              />
+            </label>
+            <label className={labelClass}>
+              Código (opcional, se genera del nombre)
+              <input name="code" className={inputClass} placeholder="Ej. PLANTA-47" />
+            </label>
+            <label className={labelClass}>
+              Grupo (opcional)
+              <select name="plantGroupId" className={inputClass} defaultValue="">
+                <option value="">Sin grupo</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="submit" className={btnClass}>
+              Crear planta
+            </button>
+          </form>
+        </Card>
+
+        <Card title="Nuevo grupo de plantas (opcional)">
+          <form action="/api/cliente/plantas" method="post" className="space-y-3">
+            <input type="hidden" name="clientSlug" value={client.slug} />
+            <input type="hidden" name="action" value="group" />
+            <label className={labelClass}>
+              Nombre del grupo
+              <input
+                name="groupName"
+                required
+                className={inputClass}
+                placeholder="Ej. Región Bajío"
+              />
+            </label>
+            <p className="text-xs text-[var(--muted)]">
+              Los grupos sirven para reportes y permisos por conjunto de plantas.
             </p>
-          ) : (
-            <ul className="space-y-4 text-sm">
-              {plants.map((p) => (
-                <li
-                  key={p.id}
-                  className="rounded border border-white/5 p-3"
-                >
-                  <ConfirmForm
-                    action="/api/cliente/plantas"
-                    method="post"
-                    className="space-y-3"
-                    confirmTemplate={confirmMessages.savePlantTemplate}
-                  >
-                    <input type="hidden" name="clientSlug" value={client.slug} />
-                    <input type="hidden" name="action" value="update" />
-                    <input type="hidden" name="plantId" value={p.id} />
-                    <div className="flex flex-wrap items-end gap-3">
-                      <label className={`${labelClass} min-w-[12rem] flex-1`}>
-                        Nombre
-                        <input name="name" defaultValue={p.name} required className={inputClass} />
-                      </label>
-                      <label className={`${labelClass} min-w-[12rem] flex-1`}>
-                        Grupo
-                        <select
-                          name="plantGroupId"
-                          className={inputClass}
-                          defaultValue={p.plantGroupId ?? ""}
-                        >
-                          <option value="">Sin grupo</option>
-                          {groups.map((g) => (
-                            <option key={g.id} value={g.id}>
-                              {g.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <p className="pb-2 text-xs text-[var(--muted)]">Código: {p.code}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      <button type="submit" className={btnClass}>
-                        Guardar cambios
-                      </button>
-                      <a href={plantHref(p.id, client.slug)} className="self-center text-[var(--accent)]">
-                        Abrir panel →
-                      </a>
-                    </div>
-                  </ConfirmForm>
-                </li>
-              ))}
-            </ul>
-          )}
+            <button type="submit" className={btnClass}>
+              Crear grupo
+            </button>
+          </form>
         </Card>
       </div>
-    </main>
+
+      <Card title={`Plantas (${plants.length})`}>
+        {plants.length === 0 ? (
+          <p className="text-sm text-[var(--muted)]">
+            Este cliente todavía no tiene plantas. Crea la primera arriba.
+          </p>
+        ) : (
+          <ul className="space-y-4 text-sm">
+            {plants.map((p) => (
+              <li
+                key={p.id}
+                className="rounded border border-white/5 p-3"
+              >
+                <ConfirmForm
+                  action="/api/cliente/plantas"
+                  method="post"
+                  className="space-y-3"
+                  confirmTemplate={confirmMessages.savePlantTemplate}
+                >
+                  <input type="hidden" name="clientSlug" value={client.slug} />
+                  <input type="hidden" name="action" value="update" />
+                  <input type="hidden" name="plantId" value={p.id} />
+                  <div className="flex flex-wrap items-end gap-3">
+                    <label className={`${labelClass} min-w-[12rem] flex-1`}>
+                      Nombre
+                      <input name="name" defaultValue={p.name} required className={inputClass} />
+                    </label>
+                    <label className={`${labelClass} min-w-[12rem] flex-1`}>
+                      Grupo
+                      <select
+                        name="plantGroupId"
+                        className={inputClass}
+                        defaultValue={p.plantGroupId ?? ""}
+                      >
+                        <option value="">Sin grupo</option>
+                        {groups.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="pb-2 text-xs text-[var(--muted)]">Código: {p.code}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <button type="submit" className={btnClass}>
+                      Guardar cambios
+                    </button>
+                    <a href={plantHref(p.id, client.slug)} className="self-center text-[var(--accent)]">
+                      Abrir panel →
+                    </a>
+                  </div>
+                </ConfirmForm>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </CorporateShell>
   );
 }

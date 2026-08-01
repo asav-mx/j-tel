@@ -232,139 +232,135 @@ export async function UnitComplianceView({
     }));
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <UnitShell client={client} unit={unit} title={`Cumplimiento — ${unitLabel}`} />
+    <UnitShell client={client} unit={unit} title={`Cumplimiento — ${unitLabel}`}>
+      <p className="text-sm text-[var(--muted)]">
+        Servicios verificados de <span className="text-white">{unitLabel}</span> contra el GPS del
+        carrier. Elige el rango de fechas que quieras revisar.
+      </p>
 
-        <p className="text-sm text-[var(--muted)]">
-          Servicios verificados de <span className="text-white">{unitLabel}</span> contra el GPS del
-          carrier. Elige el rango de fechas que quieras revisar.
-        </p>
+      <Card title="Cobertura de rutas">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <p>
+            <span className="text-white">
+              {coverage.routesProfiled} de {coverage.routesTotal}
+            </span>{" "}
+            rutas+turno con perfil · {coverage.profiles} perfil(es) activo(s)
+            {coverage.routesTotal > coverage.routesProfiled ? (
+              <span className="text-[var(--muted)]">
+                {" "}
+                · faltan {coverage.routesTotal - coverage.routesProfiled} por perfilar
+              </span>
+            ) : null}
+          </p>
+          <a href={perfilesHref} className="text-[var(--accent)] hover:underline">
+            Ir a Perfiles →
+          </a>
+        </div>
+      </Card>
 
-        <Card title="Cobertura de rutas">
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-            <p>
-              <span className="text-white">
-                {coverage.routesProfiled} de {coverage.routesTotal}
-              </span>{" "}
-              rutas+turno con perfil · {coverage.profiles} perfil(es) activo(s)
-              {coverage.routesTotal > coverage.routesProfiled ? (
-                <span className="text-[var(--muted)]">
-                  {" "}
-                  · faltan {coverage.routesTotal - coverage.routesProfiled} por perfilar
-                </span>
-              ) : null}
-            </p>
-            <a href={perfilesHref} className="text-[var(--accent)] hover:underline">
-              Ir a Perfiles →
-            </a>
-          </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <Card title="En vista">
+          <p className="text-2xl font-semibold">{stats.total}</p>
         </Card>
+        <Card title="Cumplidos">
+          <p className="text-2xl font-semibold text-emerald-300">{stats.cumplido}</p>
+        </Card>
+        <Card title="No cumplidos">
+          <p className="text-2xl font-semibold text-red-300">{stats.no_cumplido}</p>
+        </Card>
+        <Card title="Pendientes">
+          <p className="text-2xl font-semibold text-amber-200">{stats.pendiente}</p>
+        </Card>
+        <Card title="Sin verificar">
+          <p className="text-2xl font-semibold text-[var(--muted)]">{stats.sin_verificar}</p>
+        </Card>
+      </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <Card title="En vista">
-            <p className="text-2xl font-semibold">{stats.total}</p>
-          </Card>
-          <Card title="Cumplidos">
-            <p className="text-2xl font-semibold text-emerald-300">{stats.cumplido}</p>
-          </Card>
-          <Card title="No cumplidos">
-            <p className="text-2xl font-semibold text-red-300">{stats.no_cumplido}</p>
-          </Card>
-          <Card title="Pendientes">
-            <p className="text-2xl font-semibold text-amber-200">{stats.pendiente}</p>
-          </Card>
-          <Card title="Sin verificar">
-            <p className="text-2xl font-semibold text-[var(--muted)]">{stats.sin_verificar}</p>
-          </Card>
+      <div className="space-y-3">
+        <DateRangeFilter
+          action={actionPath}
+          range={range}
+          hidden={{
+            account: client.slug,
+            estado: estado !== "all" ? estado : undefined,
+            turno: turnoFilter,
+            perfil: perfilFilter,
+          }}
+        />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-[var(--muted)]">Estado:</span>
+          {statusFilters.map((s) => (
+            <a
+              key={s.id}
+              href={complianceHref(baseHref, {
+                desde: range.fromIso,
+                hasta: range.toIso,
+                estado: s.id,
+                turno: turnoFilter,
+                perfil: perfilFilter,
+              })}
+              className={chipClass(estado === s.id)}
+            >
+              {s.label}
+            </a>
+          ))}
         </div>
 
-        <div className="space-y-3">
-          <DateRangeFilter
-            action={actionPath}
-            range={range}
-            hidden={{
-              account: client.slug,
-              estado: estado !== "all" ? estado : undefined,
-              turno: turnoFilter,
-              perfil: perfilFilter,
-            }}
-          />
-
+        {shifts.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-[var(--muted)]">Estado:</span>
-            {statusFilters.map((s) => (
+            <span className="text-sm text-[var(--muted)]">Turno:</span>
+            <a
+              href={complianceHref(baseHref, {
+                desde: range.fromIso,
+                hasta: range.toIso,
+                estado,
+                turno: null,
+                perfil: perfilFilter,
+              })}
+              className={chipClass(!turnoFilter)}
+            >
+              Todos
+            </a>
+            {shifts.map((s) => (
               <a
                 key={s.id}
                 href={complianceHref(baseHref, {
                   desde: range.fromIso,
                   hasta: range.toIso,
-                  estado: s.id,
-                  turno: turnoFilter,
-                  perfil: perfilFilter,
+                  estado,
+                  turno: s.id,
+                  perfil: null,
                 })}
-                className={chipClass(estado === s.id)}
+                className={chipClass(turnoFilter === s.id)}
               >
-                {s.label}
+                {s.name}
               </a>
             ))}
           </div>
+        ) : null}
 
-          {shifts.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-[var(--muted)]">Turno:</span>
-              <a
-                href={complianceHref(baseHref, {
-                  desde: range.fromIso,
-                  hasta: range.toIso,
-                  estado,
-                  turno: null,
-                  perfil: perfilFilter,
-                })}
-                className={chipClass(!turnoFilter)}
-              >
-                Todos
-              </a>
-              {shifts.map((s) => (
-                <a
-                  key={s.id}
-                  href={complianceHref(baseHref, {
-                    desde: range.fromIso,
-                    hasta: range.toIso,
-                    estado,
-                    turno: s.id,
-                    perfil: null,
-                  })}
-                  className={chipClass(turnoFilter === s.id)}
-                >
-                  {s.name}
-                </a>
-              ))}
-            </div>
-          ) : null}
-
-          {profileOptions.length > 0 ? (
-            <ComplianceSelectFilter
-              label="Perfil"
-              name="perfil"
-              value={perfilFilter}
-              options={profileOptions}
-              allLabel="Todos los perfiles"
-              filterState={{
-                baseHref,
-                desde: range.fromIso,
-                hasta: range.toIso,
-                estado,
-                turno: turnoFilter,
-              }}
-            />
-          ) : null}
-        </div>
-
-        <Card title={`Servicios — ${range.label} (${rows.length})`}>
-          <OccurrenceTable rows={rows} showPlant={false} showMotivo />
-        </Card>
+        {profileOptions.length > 0 ? (
+          <ComplianceSelectFilter
+            label="Perfil"
+            name="perfil"
+            value={perfilFilter}
+            options={profileOptions}
+            allLabel="Todos los perfiles"
+            filterState={{
+              baseHref,
+              desde: range.fromIso,
+              hasta: range.toIso,
+              estado,
+              turno: turnoFilter,
+            }}
+          />
+        ) : null}
       </div>
-    </main>
+
+      <Card title={`Servicios — ${range.label} (${rows.length})`}>
+        <OccurrenceTable rows={rows} showPlant={false} showMotivo />
+      </Card>
+    </UnitShell>
   );
 }

@@ -32,6 +32,12 @@ async function distintivo() {
   const { headers } = await import("next/headers");
   const ruta = (await headers()).get("x-jtel-path") ?? "";
   if (ruta.startsWith("/landing")) return null;
+  /*
+   * Tampoco donde ya hay navegación lateral: su caja de usuario dice lo mismo
+   * y mejor, en el lugar que le toca. Este distintivo sigue vivo para carrier
+   * y J-Staff, que todavía no tienen nav — cuando la tengan, se borra entero.
+   */
+  if (ruta.startsWith("/cliente")) return null;
 
   const id = await getIdentidad();
 

@@ -63,156 +63,152 @@ export async function TurnosUnitView({
   const rutasHref = unitConfigStepHrefFor(unit, client.slug, "rutas");
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <UnitShell
-          client={client}
-          unit={unit}
-          title={`Turnos — ${operationalUnitLabel(unit)}`}
-          step="turnos"
-        />
+    <UnitShell
+      client={client}
+      unit={unit}
+      title={`Turnos — ${operationalUnitLabel(unit)}`}
+      step="turnos"
+    >
+      <p className="text-sm text-[var(--muted)]">
+        Los turnos son los horarios de entrada del personal en{" "}
+        <span className="text-white">{operationalUnitLabel(unit)}</span>. Después defines la{" "}
+        <span className="text-white">trayectoria (ruta)</span> vinculada a cada turno.
+      </p>
 
-        <p className="text-sm text-[var(--muted)]">
-          Los turnos son los horarios de entrada del personal en{" "}
-          <span className="text-white">{operationalUnitLabel(unit)}</span>. Después defines la{" "}
-          <span className="text-white">trayectoria (ruta)</span> vinculada a cada turno.
+      {error ? (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+          {error}
+        </div>
+      ) : null}
+      {created ? (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+          {createdLabels[created] ?? "Guardado."}
+        </div>
+      ) : null}
+
+      <Card title="Cómo encaja en el flujo">
+        <ol className="list-inside list-decimal space-y-1 text-sm text-[var(--muted)]">
+          <li>
+            <span className="text-white">Geocercas</span> — destino / fin de la ruta.
+          </li>
+          <li>
+            <span className="text-white">Turnos</span> — horarios de entrada (este paso).
+          </li>
+          <li>
+            <span className="text-white">Rutas</span> — trazado KML por turno. Riveras 7 turno 1 ≠
+            turno 2.
+          </li>
+          <li>
+            <span className="text-white">Perfiles</span> — contrato + ruta + geocerca.
+          </li>
+        </ol>
+      </Card>
+
+      <Card title="Registrar turno">
+        <p className="mb-3 text-sm text-[var(--muted)]">
+          Un turno es la hora en que entra el personal. La ruta que debe cumplirse es{" "}
+          <span className="text-white">turno + trazado KML</span>.
         </p>
-
-        {error ? (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-            {error}
+        <form action="/api/cliente/turnos" method="post" className="space-y-3">
+          <input type="hidden" name="clientSlug" value={client.slug} />
+          {scopeHidden}
+          <input type="hidden" name="action" value="shift" />
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className={labelClass}>
+              Nombre del turno
+              <input name="name" required className={inputClass} placeholder="Ej. Entrada 7:00" />
+            </label>
+            <label className={labelClass}>
+              Hora de inicio (cuándo entra el personal)
+              <input name="startTime" required type="time" className={inputClass} defaultValue="07:00" />
+            </label>
           </div>
-        ) : null}
-        {created ? (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-            {createdLabels[created] ?? "Guardado."}
-          </div>
-        ) : null}
-
-        <Card title="Cómo encaja en el flujo">
-          <ol className="list-inside list-decimal space-y-1 text-sm text-[var(--muted)]">
-            <li>
-              <span className="text-white">Geocercas</span> — destino / fin de la ruta.
-            </li>
-            <li>
-              <span className="text-white">Turnos</span> — horarios de entrada (este paso).
-            </li>
-            <li>
-              <span className="text-white">Rutas</span> — trazado KML por turno. Riveras 7 turno 1 ≠
-              turno 2.
-            </li>
-            <li>
-              <span className="text-white">Perfiles</span> — contrato + ruta + geocerca.
-            </li>
-          </ol>
-        </Card>
-
-        <Card title="Registrar turno">
-          <p className="mb-3 text-sm text-[var(--muted)]">
-            Un turno es la hora en que entra el personal. La ruta que debe cumplirse es{" "}
-            <span className="text-white">turno + trazado KML</span>.
+          <p className="text-xs text-[var(--muted)]">
+            El deadline (llegada a geocerca) = esta hora − anticipación del contrato (
+            {anticipation} min por defecto).
           </p>
-          <form action="/api/cliente/turnos" method="post" className="space-y-3">
-            <input type="hidden" name="clientSlug" value={client.slug} />
-            {scopeHidden}
-            <input type="hidden" name="action" value="shift" />
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className={labelClass}>
-                Nombre del turno
-                <input name="name" required className={inputClass} placeholder="Ej. Entrada 7:00" />
-              </label>
-              <label className={labelClass}>
-                Hora de inicio (cuándo entra el personal)
-                <input name="startTime" required type="time" className={inputClass} defaultValue="07:00" />
-              </label>
-            </div>
-            <p className="text-xs text-[var(--muted)]">
-              El deadline (llegada a geocerca) = esta hora − anticipación del contrato (
-              {anticipation} min por defecto).
-            </p>
-            <button type="submit" className={btnClass}>
-              Registrar turno
-            </button>
-          </form>
-        </Card>
+          <button type="submit" className={btnClass}>
+            Registrar turno
+          </button>
+        </form>
+      </Card>
 
-        <Card title={`Turnos registrados — ${operationalUnitLabel(unit)}`}>
-          {shifts.length > 0 ? (
-            <ul className="space-y-4 text-sm">
-              {shifts.map((s) => (
-                <li
-                  key={s.id}
-                  className="rounded-lg border border-white/10 p-4"
+      <Card title={`Turnos registrados — ${operationalUnitLabel(unit)}`}>
+        {shifts.length > 0 ? (
+          <ul className="space-y-4 text-sm">
+            {shifts.map((s) => (
+              <li
+                key={s.id}
+                className="rounded-lg border border-white/10 p-4"
+              >
+                <ConfirmForm
+                  action="/api/cliente/turnos"
+                  method="post"
+                  confirmMessage={confirmMessages.updateShift(s.name)}
+                  className="grid gap-3 md:grid-cols-2"
                 >
+                  <input type="hidden" name="clientSlug" value={client.slug} />
+                  {scopeHidden}
+                  <input type="hidden" name="action" value="updateShift" />
+                  <input type="hidden" name="shiftId" value={s.id} />
+                  <label className={labelClass}>
+                    Nombre del turno
+                    <input name="name" required className={inputClass} defaultValue={s.name} />
+                  </label>
+                  <label className={labelClass}>
+                    Hora de inicio
+                    <input
+                      name="startTime"
+                      required
+                      type="time"
+                      className={inputClass}
+                      defaultValue={fmtTime(s.startTime)}
+                    />
+                  </label>
+                  <div className="md:col-span-2">
+                    <button type="submit" className={btnClass}>
+                      Guardar cambios
+                    </button>
+                  </div>
+                </ConfirmForm>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="text-xs text-[var(--muted)]">
+                    Inicio actual: {fmtTime(s.startTime)}
+                  </span>
                   <ConfirmForm
                     action="/api/cliente/turnos"
                     method="post"
-                    confirmMessage={confirmMessages.updateShift(s.name)}
-                    className="grid gap-3 md:grid-cols-2"
+                    confirmMessage={confirmMessages.deleteShift(s.name, fmtTime(s.startTime))}
+                    className="inline"
                   >
                     <input type="hidden" name="clientSlug" value={client.slug} />
                     {scopeHidden}
-                    <input type="hidden" name="action" value="updateShift" />
+                    <input type="hidden" name="action" value="deleteShift" />
                     <input type="hidden" name="shiftId" value={s.id} />
-                    <label className={labelClass}>
-                      Nombre del turno
-                      <input name="name" required className={inputClass} defaultValue={s.name} />
-                    </label>
-                    <label className={labelClass}>
-                      Hora de inicio
-                      <input
-                        name="startTime"
-                        required
-                        type="time"
-                        className={inputClass}
-                        defaultValue={fmtTime(s.startTime)}
-                      />
-                    </label>
-                    <div className="md:col-span-2">
-                      <button type="submit" className={btnClass}>
-                        Guardar cambios
-                      </button>
-                    </div>
-                  </ConfirmForm>
-                  <div className="mt-2 flex items-center justify-between gap-2">
-                    <span className="text-xs text-[var(--muted)]">
-                      Inicio actual: {fmtTime(s.startTime)}
-                    </span>
-                    <ConfirmForm
-                      action="/api/cliente/turnos"
-                      method="post"
-                      confirmMessage={confirmMessages.deleteShift(s.name, fmtTime(s.startTime))}
-                      className="inline"
+                    <button
+                      type="submit"
+                      className="rounded border border-red-500/30 px-3 py-1 text-xs text-red-200 hover:border-red-400"
                     >
-                      <input type="hidden" name="clientSlug" value={client.slug} />
-                      {scopeHidden}
-                      <input type="hidden" name="action" value="deleteShift" />
-                      <input type="hidden" name="shiftId" value={s.id} />
-                      <button
-                        type="submit"
-                        className="rounded border border-red-500/30 px-3 py-1 text-xs text-red-200 hover:border-red-400"
-                      >
-                        Eliminar
-                      </button>
-                    </ConfirmForm>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-[var(--muted)]">
-              Sin turnos todavía. Registra al menos uno antes de crear rutas.
-            </p>
-          )}
-          {shifts.length > 0 ? (
-            <p className="mt-4 text-sm">
-              <Link href={rutasHref} className="text-[var(--accent)]">
-                Siguiente: crear rutas →
-              </Link>
-            </p>
-          ) : null}
-        </Card>
-      </div>
-    </main>
+                      Eliminar
+                    </button>
+                  </ConfirmForm>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-[var(--muted)]">
+            Sin turnos todavía. Registra al menos uno antes de crear rutas.
+          </p>
+        )}
+        {shifts.length > 0 ? (
+          <p className="mt-4 text-sm">
+            <Link href={rutasHref} className="text-[var(--accent)]">
+              Siguiente: crear rutas →
+            </Link>
+          </p>
+        ) : null}
+      </Card>
+    </UnitShell>
   );
 }

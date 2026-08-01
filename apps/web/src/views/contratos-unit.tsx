@@ -102,778 +102,774 @@ export async function ContratosUnitView({
   const yearAheadIso = localDateIso(yearAhead);;
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <UnitShell
-          client={client}
-          unit={unit}
-          title={`Contratos — ${operationalUnitLabel(unit)}`}
-        />
+    <UnitShell
+      client={client}
+      unit={unit}
+      title={`Contratos — ${operationalUnitLabel(unit)}`}
+    >
+      <p className="text-sm text-[var(--muted)]">
+        El contrato define la <span className="text-white">política</span> entre este cliente y un
+        carrier para <span className="text-white">{operationalUnitLabel(unit)}</span>. Desde ahí se
+        calculan deadline, ventana GPS y reglas de cumplimiento para los perfiles de servicio.
+      </p>
 
-        <p className="text-sm text-[var(--muted)]">
-          El contrato define la <span className="text-white">política</span> entre este cliente y un
-          carrier para <span className="text-white">{operationalUnitLabel(unit)}</span>. Desde ahí se
-          calculan deadline, ventana GPS y reglas de cumplimiento para los perfiles de servicio.
-        </p>
+      {error ? (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+          {error}
+        </div>
+      ) : null}
+      {created ? (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+          {createdLabels[created] ?? "Guardado."}
+        </div>
+      ) : null}
 
-        {error ? (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-            {error}
-          </div>
-        ) : null}
-        {created ? (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-            {createdLabels[created] ?? "Guardado."}
-          </div>
-        ) : null}
+      {authorizedCarriers.length === 0 ? (
+        <Card title="Sin carriers autorizados">
+          <p className="text-sm text-[var(--muted)]">
+            Este cliente aún no tiene carriers autorizados por J-Staff. Solicita a JTEL que
+            autorice al carrier correcto antes de crear contratos.
+          </p>
+        </Card>
+      ) : allCarriersHaveOpenContract ? (
+        <Card title={`Contrato existente — ${operationalUnitLabel(activeUnit)}`}>
+          <p className="text-sm text-[var(--muted)]">
+            {scopedContracts.some((c) => c.status === "draft")
+              ? "Ya hay un contrato en borrador o activo para cada carrier autorizado en esta unidad. Activa el borrador que quieras usar o elimina los duplicados de abajo."
+              : "Cada carrier autorizado ya tiene contrato en esta unidad. Para perfiles de servicio usa el contrato activo de la lista."}
+          </p>
+        </Card>
+      ) : (
+        <Card title={`Nuevo contrato — ${operationalUnitLabel(activeUnit)}`}>
+          <p className="mb-3 text-xs text-[var(--muted)]">
+            Solo puede existir un contrato (borrador o activo) por carrier y unidad operativa.
+          </p>
+          <ConfirmForm
+            action="/api/cliente/contratos"
+            method="post"
+            className="space-y-4"
+            confirmMessage={confirmMessages.createContract(operationalUnitLabel(activeUnit))}
+          >
+            <input type="hidden" name="clientSlug" value={client.slug} />
+            <input type="hidden" name="action" value="create" />
+            {scopeHidden}
 
-        {authorizedCarriers.length === 0 ? (
-          <Card title="Sin carriers autorizados">
-            <p className="text-sm text-[var(--muted)]">
-              Este cliente aún no tiene carriers autorizados por J-Staff. Solicita a JTEL que
-              autorice al carrier correcto antes de crear contratos.
-            </p>
-          </Card>
-        ) : allCarriersHaveOpenContract ? (
-          <Card title={`Contrato existente — ${operationalUnitLabel(activeUnit)}`}>
-            <p className="text-sm text-[var(--muted)]">
-              {scopedContracts.some((c) => c.status === "draft")
-                ? "Ya hay un contrato en borrador o activo para cada carrier autorizado en esta unidad. Activa el borrador que quieras usar o elimina los duplicados de abajo."
-                : "Cada carrier autorizado ya tiene contrato en esta unidad. Para perfiles de servicio usa el contrato activo de la lista."}
-            </p>
-          </Card>
-        ) : (
-          <Card title={`Nuevo contrato — ${operationalUnitLabel(activeUnit)}`}>
-            <p className="mb-3 text-xs text-[var(--muted)]">
-              Solo puede existir un contrato (borrador o activo) por carrier y unidad operativa.
-            </p>
-            <ConfirmForm
-              action="/api/cliente/contratos"
-              method="post"
-              className="space-y-4"
-              confirmMessage={confirmMessages.createContract(operationalUnitLabel(activeUnit))}
-            >
-              <input type="hidden" name="clientSlug" value={client.slug} />
-              <input type="hidden" name="action" value="create" />
-              {scopeHidden}
-
-              <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className={labelClass}>
+                Nombre del contrato
+                <input name="name" required className={inputClass} placeholder="Ej. Transporte Personal 2026" />
+              </label>
                 <label className={labelClass}>
-                  Nombre del contrato
-                  <input name="name" required className={inputClass} placeholder="Ej. Transporte Personal 2026" />
-                </label>
-                  <label className={labelClass}>
-                    Carrier autorizado
-                    <select name="carrierAccountId" required className={inputClass} defaultValue="">
-                      <option value="" disabled>
-                        Elige carrier…
+                  Carrier autorizado
+                  <select name="carrierAccountId" required className={inputClass} defaultValue="">
+                    <option value="" disabled>
+                      Elige carrier…
+                    </option>
+                  {authorizedCarriers.map((c) => {
+                    const taken = openByCarrier.has(c.id);
+                    return (
+                      <option key={c.id} value={c.id} disabled={taken}>
+                        {c.name}
+                        {taken ? " (ya tiene contrato)" : ""}
                       </option>
-                    {authorizedCarriers.map((c) => {
-                      const taken = openByCarrier.has(c.id);
-                      return (
-                        <option key={c.id} value={c.id} disabled={taken}>
-                          {c.name}
-                          {taken ? " (ya tiene contrato)" : ""}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </label>
+                    );
+                  })}
+                </select>
+              </label>
+              <label className={labelClass}>
+                Vigencia desde
+                <input
+                  name="validFrom"
+                  type="date"
+                  required
+                  defaultValue={todayIso}
+                  className={inputClass}
+                />
+              </label>
+              <label className={labelClass}>
+                Vigencia hasta
+                <input
+                  name="validTo"
+                  type="date"
+                  required
+                  defaultValue={yearAheadIso}
+                  className={inputClass}
+                />
+                <span className="mt-1 block text-xs text-[var(--muted)]">
+                  Las ocurrencias de perfiles no pueden salir de este rango.
+                </span>
+              </label>
+            </div>
+
+            <fieldset className="rounded-lg border border-white/10 p-3">
+              <legend className="px-1 text-sm text-[var(--muted)]">Política</legend>
+              <div className="grid gap-3 md:grid-cols-3">
                 <label className={labelClass}>
-                  Vigencia desde
+                  Anticipación de llegada (min antes del turno)
                   <input
-                    name="validFrom"
-                    type="date"
-                    required
-                    defaultValue={todayIso}
-                    className={inputClass}
-                  />
-                </label>
-                <label className={labelClass}>
-                  Vigencia hasta
-                  <input
-                    name="validTo"
-                    type="date"
-                    required
-                    defaultValue={yearAheadIso}
+                    name="arrivalAnticipationMinutes"
+                    type="number"
+                    min={0}
+                    defaultValue={15}
                     className={inputClass}
                   />
                   <span className="mt-1 block text-xs text-[var(--muted)]">
-                    Las ocurrencias de perfiles no pueden salir de este rango.
+                    Ej. turno 7:00 y 15 min → deadline 6:45 en geocerca.
+                  </span>
+                </label>
+                <label className={labelClass}>
+                  Minutos de cierre del turno tras la hora de entrada
+                  <input
+                    name="shiftCloseMinutesAfterStart"
+                    type="number"
+                    min={0}
+                    placeholder="sin configurar"
+                    className={inputClass}
+                  />
+                  <span className="mt-1 block text-xs text-[var(--muted)]">
+                    A esa hora se sella el turno. Ej. turno 7:00 y 120 min →
+                    cierra 9:00. Una unidad que llega después no retrasa el
+                    cierre: el turno se sella igual y ese servicio carga su
+                    propio resultado. Vacío = sin hora de cierre.
+                  </span>
+                </label>
+                <label className={labelClass}>
+                  Tolerancia puntualidad (min)
+                  <input name="toleranceMinutes" type="number" min={0} defaultValue={5} className={inputClass} />
+                </label>
+                <label className={labelClass}>
+                  Gracia de verificación (min)
+                  <input
+                    name="verificationGraceMinutes"
+                    type="number"
+                    min={0}
+                    defaultValue={15}
+                    className={inputClass}
+                  />
+                </label>
+                <label className={labelClass}>
+                  Estrictez de ruta
+                  <select name="routeStrictness" className={inputClass} defaultValue="destino_only">
+                    <option value="destino_only">Solo destino</option>
+                    <option value="kml_full">Ruta completa (waypoints)</option>
+                  </select>
+                </label>
+                <label className={labelClass}>
+                  Umbral match KML — métrica A (%)
+                  <input
+                    name="kmlMatchMinPct"
+                    type="number"
+                    min={0}
+                    max={100}
+                    defaultValue={60}
+                    className={inputClass}
+                  />
+                  <span className="mt-1 block text-xs text-[var(--muted)]">
+                    % de waypoints del KML con GPS dentro del corredor. Default: 60.
+                  </span>
+                </label>
+                <label className={labelClass}>
+                  Radio del corredor KML (m)
+                  <input
+                    name="kmlCorridorMeters"
+                    type="number"
+                    min={10}
+                    max={500}
+                    defaultValue={120}
+                    className={inputClass}
+                  />
+                </label>
+                <label className={labelClass}>
+                  Umbral precisión — métrica B (%)
+                  <input
+                    name="kmlCorridorMinPct"
+                    type="number"
+                    min={0}
+                    max={100}
+                    defaultValue={60}
+                    className={inputClass}
+                  />
+                </label>
+                <label className={labelClass}>
+                  Margen evidencia antes (min)
+                  <input
+                    name="evidenceMarginMinutesBefore"
+                    type="number"
+                    min={0}
+                    defaultValue={60}
+                    className={inputClass}
+                  />
+                </label>
+                <label className={labelClass}>
+                  Duración máx. de ruta (min)
+                  <input
+                    name="maxRouteDurationMinutes"
+                    type="number"
+                    min={1}
+                    defaultValue={60}
+                    className={inputClass}
+                  />
+                </label>
+                <label className={labelClass}>
+                  Margen evidencia después (min)
+                  <input
+                    name="evidenceMarginMinutesAfter"
+                    type="number"
+                    min={0}
+                    defaultValue={30}
+                    className={inputClass}
+                  />
+                </label>
+                <label className={labelClass}>
+                  Cobertura mínima de la ventana (%)
+                  <input
+                    name="evidenceMinCoveragePct"
+                    type="number"
+                    min={0}
+                    max={100}
+                    defaultValue={80}
+                    className={inputClass}
+                  />
+                  <span className="mt-1 block text-xs text-[var(--muted)]">
+                    Qué tanto de la ventana necesita señal para poder dictar un
+                    resultado. Por debajo, el servicio queda pendiente por
+                    evidencia — nunca no cumplido. Default: 80.
+                  </span>
+                </label>
+                <label className={labelClass}>
+                  Hueco máximo de señal (min)
+                  <input
+                    name="evidenceMaxGapMinutes"
+                    type="number"
+                    min={1}
+                    defaultValue={10}
+                    className={inputClass}
+                  />
+                  <span className="mt-1 block text-xs text-[var(--muted)]">
+                    El silencio continuo más largo que se tolera dentro de la
+                    ventana. Si se supera, el servicio queda pendiente por
+                    evidencia. Default: 10.
+                  </span>
+                </label>
+                <label className={labelClass}>
+                  Zona horaria
+                  <select name="timeZone" className={inputClass} defaultValue="America/Ciudad_Juarez">
+                    {MEXICO_TIMEZONES.map((tz) => (
+                      <option key={tz.value} value={tz.value}>{tz.label}</option>
+                    ))}
+                  </select>
+                  <span className="mt-1 block text-xs text-[var(--muted)]">
+                    Todas las horas de este contrato se muestran en esta zona.
                   </span>
                 </label>
               </div>
+            </fieldset>
 
-              <fieldset className="rounded-lg border border-white/10 p-3">
-                <legend className="px-1 text-sm text-[var(--muted)]">Política</legend>
-                <div className="grid gap-3 md:grid-cols-3">
-                  <label className={labelClass}>
-                    Anticipación de llegada (min antes del turno)
-                    <input
-                      name="arrivalAnticipationMinutes"
-                      type="number"
-                      min={0}
-                      defaultValue={15}
-                      className={inputClass}
-                    />
-                    <span className="mt-1 block text-xs text-[var(--muted)]">
-                      Ej. turno 7:00 y 15 min → deadline 6:45 en geocerca.
-                    </span>
+            <fieldset className="rounded-lg border border-white/10 p-3">
+              <legend className="px-1 text-sm text-[var(--muted)]">Motivos excusables (opcional)</legend>
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                {EXCUSABLES.map((e) => (
+                  <label key={e.value} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="excusableReasons" value={e.value} />
+                    {e.label}
                   </label>
-                  <label className={labelClass}>
-                    Minutos de cierre del turno tras la hora de entrada
-                    <input
-                      name="shiftCloseMinutesAfterStart"
-                      type="number"
-                      min={0}
-                      placeholder="sin configurar"
-                      className={inputClass}
-                    />
-                    <span className="mt-1 block text-xs text-[var(--muted)]">
-                      A esa hora se sella el turno. Ej. turno 7:00 y 120 min →
-                      cierra 9:00. Una unidad que llega después no retrasa el
-                      cierre: el turno se sella igual y ese servicio carga su
-                      propio resultado. Vacío = sin hora de cierre.
-                    </span>
-                  </label>
-                  <label className={labelClass}>
-                    Tolerancia puntualidad (min)
-                    <input name="toleranceMinutes" type="number" min={0} defaultValue={5} className={inputClass} />
-                  </label>
-                  <label className={labelClass}>
-                    Gracia de verificación (min)
-                    <input
-                      name="verificationGraceMinutes"
-                      type="number"
-                      min={0}
-                      defaultValue={15}
-                      className={inputClass}
-                    />
-                  </label>
-                  <label className={labelClass}>
-                    Estrictez de ruta
-                    <select name="routeStrictness" className={inputClass} defaultValue="destino_only">
-                      <option value="destino_only">Solo destino</option>
-                      <option value="kml_full">Ruta completa (waypoints)</option>
-                    </select>
-                  </label>
-                  <label className={labelClass}>
-                    Umbral match KML — métrica A (%)
-                    <input
-                      name="kmlMatchMinPct"
-                      type="number"
-                      min={0}
-                      max={100}
-                      defaultValue={60}
-                      className={inputClass}
-                    />
-                    <span className="mt-1 block text-xs text-[var(--muted)]">
-                      % de waypoints del KML con GPS dentro del corredor. Default: 60.
-                    </span>
-                  </label>
-                  <label className={labelClass}>
-                    Radio del corredor KML (m)
-                    <input
-                      name="kmlCorridorMeters"
-                      type="number"
-                      min={10}
-                      max={500}
-                      defaultValue={120}
-                      className={inputClass}
-                    />
-                  </label>
-                  <label className={labelClass}>
-                    Umbral precisión — métrica B (%)
-                    <input
-                      name="kmlCorridorMinPct"
-                      type="number"
-                      min={0}
-                      max={100}
-                      defaultValue={60}
-                      className={inputClass}
-                    />
-                  </label>
-                  <label className={labelClass}>
-                    Margen evidencia antes (min)
-                    <input
-                      name="evidenceMarginMinutesBefore"
-                      type="number"
-                      min={0}
-                      defaultValue={60}
-                      className={inputClass}
-                    />
-                  </label>
-                  <label className={labelClass}>
-                    Duración máx. de ruta (min)
-                    <input
-                      name="maxRouteDurationMinutes"
-                      type="number"
-                      min={1}
-                      defaultValue={60}
-                      className={inputClass}
-                    />
-                  </label>
-                  <label className={labelClass}>
-                    Margen evidencia después (min)
-                    <input
-                      name="evidenceMarginMinutesAfter"
-                      type="number"
-                      min={0}
-                      defaultValue={30}
-                      className={inputClass}
-                    />
-                  </label>
-                  <label className={labelClass}>
-                    Cobertura mínima de la ventana (%)
-                    <input
-                      name="evidenceMinCoveragePct"
-                      type="number"
-                      min={0}
-                      max={100}
-                      defaultValue={80}
-                      className={inputClass}
-                    />
-                    <span className="mt-1 block text-xs text-[var(--muted)]">
-                      Qué tanto de la ventana necesita señal para poder dictar un
-                      resultado. Por debajo, el servicio queda pendiente por
-                      evidencia — nunca no cumplido. Default: 80.
-                    </span>
-                  </label>
-                  <label className={labelClass}>
-                    Hueco máximo de señal (min)
-                    <input
-                      name="evidenceMaxGapMinutes"
-                      type="number"
-                      min={1}
-                      defaultValue={10}
-                      className={inputClass}
-                    />
-                    <span className="mt-1 block text-xs text-[var(--muted)]">
-                      El silencio continuo más largo que se tolera dentro de la
-                      ventana. Si se supera, el servicio queda pendiente por
-                      evidencia. Default: 10.
-                    </span>
-                  </label>
-                  <label className={labelClass}>
-                    Zona horaria
-                    <select name="timeZone" className={inputClass} defaultValue="America/Ciudad_Juarez">
-                      {MEXICO_TIMEZONES.map((tz) => (
-                        <option key={tz.value} value={tz.value}>{tz.label}</option>
-                      ))}
-                    </select>
-                    <span className="mt-1 block text-xs text-[var(--muted)]">
-                      Todas las horas de este contrato se muestran en esta zona.
-                    </span>
-                  </label>
-                </div>
-              </fieldset>
+                ))}
+              </div>
+            </fieldset>
 
-              <fieldset className="rounded-lg border border-white/10 p-3">
-                <legend className="px-1 text-sm text-[var(--muted)]">Motivos excusables (opcional)</legend>
-                <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-                  {EXCUSABLES.map((e) => (
-                    <label key={e.value} className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" name="excusableReasons" value={e.value} />
-                      {e.label}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
+            <fieldset className="rounded-lg border border-white/10 p-3">
+              <legend className="px-1 text-sm text-[var(--muted)]">Regla de enforcement (opcional)</legend>
+              <div className="grid gap-3 md:grid-cols-3">
+                <label className={labelClass}>
+                  Tipo
+                  <select name="enforcementType" className={inputClass} defaultValue="">
+                    <option value="">Ninguna</option>
+                    <option value="no_pago_viaje">No pago del viaje</option>
+                    <option value="rebate_escalonado">Rebate escalonado</option>
+                    <option value="reembolso">Reembolso</option>
+                  </select>
+                </label>
+                <label className={labelClass}>
+                  Tolerancia de la regla (min)
+                  <input name="enforcementTolerance" type="number" min={1} defaultValue={5} className={inputClass} />
+                </label>
+                <label className={labelClass}>
+                  Reembolso: monto (opcional)
+                  <input name="reembolsoAmount" type="number" min={0} className={inputClass} />
+                </label>
+                <label className={labelClass}>
+                  Rebate base (%)
+                  <input name="baseRebatePercent" type="number" step="0.1" defaultValue={0} className={inputClass} />
+                </label>
+                <label className={labelClass}>
+                  Fallas para base
+                  <input name="baseFailureCount" type="number" min={1} defaultValue={1} className={inputClass} />
+                </label>
+                <label className={labelClass}>
+                  Rebate adicional (%)
+                  <input
+                    name="additionalRebatePercent"
+                    type="number"
+                    step="0.1"
+                    defaultValue={0}
+                    className={inputClass}
+                  />
+                </label>
+              </div>
+            </fieldset>
 
-              <fieldset className="rounded-lg border border-white/10 p-3">
-                <legend className="px-1 text-sm text-[var(--muted)]">Regla de enforcement (opcional)</legend>
-                <div className="grid gap-3 md:grid-cols-3">
-                  <label className={labelClass}>
-                    Tipo
-                    <select name="enforcementType" className={inputClass} defaultValue="">
-                      <option value="">Ninguna</option>
-                      <option value="no_pago_viaje">No pago del viaje</option>
-                      <option value="rebate_escalonado">Rebate escalonado</option>
-                      <option value="reembolso">Reembolso</option>
-                    </select>
-                  </label>
-                  <label className={labelClass}>
-                    Tolerancia de la regla (min)
-                    <input name="enforcementTolerance" type="number" min={1} defaultValue={5} className={inputClass} />
-                  </label>
-                  <label className={labelClass}>
-                    Reembolso: monto (opcional)
-                    <input name="reembolsoAmount" type="number" min={0} className={inputClass} />
-                  </label>
-                  <label className={labelClass}>
-                    Rebate base (%)
-                    <input name="baseRebatePercent" type="number" step="0.1" defaultValue={0} className={inputClass} />
-                  </label>
-                  <label className={labelClass}>
-                    Fallas para base
-                    <input name="baseFailureCount" type="number" min={1} defaultValue={1} className={inputClass} />
-                  </label>
-                  <label className={labelClass}>
-                    Rebate adicional (%)
-                    <input
-                      name="additionalRebatePercent"
-                      type="number"
-                      step="0.1"
-                      defaultValue={0}
-                      className={inputClass}
-                    />
-                  </label>
-                </div>
-              </fieldset>
+            <button type="submit" className={btnClass}>
+              Crear contrato
+            </button>
+          </ConfirmForm>
+        </Card>
+      )}
 
-              <button type="submit" className={btnClass}>
-                Crear contrato
-              </button>
-            </ConfirmForm>
-          </Card>
-        )}
-
-        <Card title={`Contratos — ${operationalUnitLabel(activeUnit)} (${scopedContracts.length})`}>
-          {scopedContracts.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">Sin contratos para esta unidad.</p>
-          ) : (
-            <ul className="space-y-2 text-sm">
-              {scopedContracts.map((c) => (
-                <li
-                  key={c.id}
-                  className="space-y-2 rounded border border-white/5 p-3"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium">
-                      {c.name}{" "}
-                      <span className="ml-1 rounded-full bg-white/10 px-2 py-0.5 text-xs">
-                        {c.status}
-                      </span>
-                    </p>
-                    <p className="text-xs text-[var(--muted)]">
-                      {c.carrier?.name ?? "—"} · {contractScopeLabel(c, operationalUnits)} ·
-                      Vigencia {c.validFrom} → {c.validTo} · Tolerancia {c.policy.toleranceMinutes}{" "}
-                      min · anticipación {c.policy.arrivalAnticipationMinutes ?? 15} min ·{" "}
-                      {c.policy.routeStrictness} · KML ≥{c.policy.kmlMatchMinPct ?? 60}% ·{" "}
-                      {c.profiles.length} perfil(es)
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {c.status !== "active" ? (
-                      <ConfirmForm
-                        action="/api/cliente/contratos"
-                        method="post"
-                        confirmMessage={confirmMessages.activateContract(c.name)}
-                      >
-                        <input type="hidden" name="clientSlug" value={client.slug} />
-                        <input type="hidden" name="action" value="activate" />
-                        <input type="hidden" name="contractId" value={c.id} />
-                        <button
-                          type="submit"
-                          className="rounded-lg border border-white/10 px-3 py-1.5 text-xs hover:border-[var(--accent)]"
-                        >
-                          Activar
-                        </button>
-                      </ConfirmForm>
-                    ) : null}
-                    {c.status === "draft" && c.profiles.length === 0 ? (
-                      <ConfirmForm
-                        action="/api/cliente/contratos"
-                        method="post"
-                        confirmMessage={confirmMessages.deleteContractDraft(c.name)}
-                      >
-                        <input type="hidden" name="clientSlug" value={client.slug} />
-                        <input type="hidden" name="action" value="delete" />
-                        <input type="hidden" name="contractId" value={c.id} />
-                        <button
-                          type="submit"
-                          className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-200 hover:border-red-400"
-                        >
-                          Eliminar borrador
-                        </button>
-                      </ConfirmForm>
-                    ) : null}
-                  </div>
-                  </div>
-                  <ConfirmForm
-                    action="/api/cliente/contratos"
-                    method="post"
-                    className="flex flex-wrap items-end gap-2 border-t border-white/5 pt-2"
-                    confirmMessage={`¿Actualizar vigencia de «${c.name}»?`}
-                  >
-                    <input type="hidden" name="clientSlug" value={client.slug} />
-                    <input type="hidden" name="action" value="updateValidity" />
-                    <input type="hidden" name="contractId" value={c.id} />
-                    <label className="text-xs">
-                      Desde
-                      <input
-                        name="validFrom"
-                        type="date"
-                        required
-                        defaultValue={c.validFrom}
-                        className={inputClass}
-                      />
-                    </label>
-                    <label className="text-xs">
-                      Hasta
-                      <input
-                        name="validTo"
-                        type="date"
-                        required
-                        defaultValue={c.validTo}
-                        className={inputClass}
-                      />
-                    </label>
-                    <button
-                      type="submit"
-                      className="rounded-lg border border-white/10 px-3 py-2 text-xs hover:border-[var(--accent)]"
-                    >
-                      Guardar vigencia
-                    </button>
-                  </ConfirmForm>
-
-                  <p className="border-t border-white/5 pt-2 text-sm">
-                    <a
-                      href={`/cliente/contrato/${c.id}?account=${encodeURIComponent(client.slug)}`}
-                      className="text-[var(--accent)] hover:underline"
-                    >
-                      Abrir la oficina del contrato →
-                    </a>
-                    <span className="ml-2 text-xs text-[var(--muted)]">
-                      cada regla explicada, medida contra la operación real
+      <Card title={`Contratos — ${operationalUnitLabel(activeUnit)} (${scopedContracts.length})`}>
+        {scopedContracts.length === 0 ? (
+          <p className="text-sm text-[var(--muted)]">Sin contratos para esta unidad.</p>
+        ) : (
+          <ul className="space-y-2 text-sm">
+            {scopedContracts.map((c) => (
+              <li
+                key={c.id}
+                className="space-y-2 rounded border border-white/5 p-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium">
+                    {c.name}{" "}
+                    <span className="ml-1 rounded-full bg-white/10 px-2 py-0.5 text-xs">
+                      {c.status}
                     </span>
                   </p>
-
-                  <details className="border-t border-white/5 pt-2">
-                    <summary className="cursor-pointer text-sm text-[var(--muted)]">
-                      Editar la política en crudo
-                    </summary>
+                  <p className="text-xs text-[var(--muted)]">
+                    {c.carrier?.name ?? "—"} · {contractScopeLabel(c, operationalUnits)} ·
+                    Vigencia {c.validFrom} → {c.validTo} · Tolerancia {c.policy.toleranceMinutes}{" "}
+                    min · anticipación {c.policy.arrivalAnticipationMinutes ?? 15} min ·{" "}
+                    {c.policy.routeStrictness} · KML ≥{c.policy.kmlMatchMinPct ?? 60}% ·{" "}
+                    {c.profiles.length} perfil(es)
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {c.status !== "active" ? (
                     <ConfirmForm
                       action="/api/cliente/contratos"
                       method="post"
-                      className="mt-3 space-y-4"
-                      confirmMessage={confirmMessages.updatePolicy(c.name)}
+                      confirmMessage={confirmMessages.activateContract(c.name)}
                     >
                       <input type="hidden" name="clientSlug" value={client.slug} />
-                      <input type="hidden" name="action" value="updatePolicy" />
+                      <input type="hidden" name="action" value="activate" />
                       <input type="hidden" name="contractId" value={c.id} />
-
-                      <fieldset className="rounded-lg border border-white/10 p-3">
-                        <legend className="px-1 text-sm text-[var(--muted)]">Política</legend>
-                        <div className="grid gap-3 md:grid-cols-3">
-                          <label className={labelClass}>
-                            Anticipación de llegada (min antes del turno)
-                            <input
-                              name="arrivalAnticipationMinutes"
-                              type="number"
-                              min={0}
-                              defaultValue={c.policy.arrivalAnticipationMinutes ?? 15}
-                              className={inputClass}
-                            />
-                          </label>
-                          <label className={labelClass}>
-                            Minutos de cierre del turno tras la hora de entrada
-                            <input
-                              name="shiftCloseMinutesAfterStart"
-                              type="number"
-                              min={0}
-                              placeholder="sin configurar"
-                              defaultValue={c.policy.shiftCloseMinutesAfterStart ?? ""}
-                              className={inputClass}
-                            />
-                            <span className="mt-1 block text-xs text-[var(--muted)]">
-                              A esa hora se sella el turno. Ej. turno 7:00 y 120 min →
-                              cierra 9:00. Una unidad que llega después no retrasa el
-                              cierre: el turno se sella igual y ese servicio carga su
-                              propio resultado. Déjalo vacío para quitar la hora de
-                              cierre.
-                            </span>
-                          </label>
-                          <label className={labelClass}>
-                            Tolerancia puntualidad (min)
-                            <input
-                              name="toleranceMinutes"
-                              type="number"
-                              min={0}
-                              defaultValue={c.policy.toleranceMinutes}
-                              className={inputClass}
-                            />
-                          </label>
-                          <label className={labelClass}>
-                            Gracia de verificación (min)
-                            <input
-                              name="verificationGraceMinutes"
-                              type="number"
-                              min={0}
-                              defaultValue={c.policy.verificationGraceMinutes ?? 15}
-                              className={inputClass}
-                            />
-                          </label>
-                          <label className={labelClass}>
-                            Estrictez de ruta
-                            <select
-                              name="routeStrictness"
-                              className={inputClass}
-                              defaultValue={c.policy.routeStrictness}
-                            >
-                              <option value="destino_only">Solo destino</option>
-                              <option value="kml_full">Ruta completa (waypoints)</option>
-                            </select>
-                          </label>
-                          <label className={labelClass}>
-                            Umbral match KML — métrica A (%)
-                            <input
-                              name="kmlMatchMinPct"
-                              type="number"
-                              min={0}
-                              max={100}
-                              defaultValue={c.policy.kmlMatchMinPct ?? 60}
-                              className={inputClass}
-                            />
-                            <span className="mt-1 block text-xs text-[var(--muted)]">
-                              % de waypoints del KML con GPS dentro del corredor (radio abajo).
-                              Default recomendado: 60.
-                            </span>
-                          </label>
-                          <label className={labelClass}>
-                            Radio del corredor KML (m)
-                            <input
-                              name="kmlCorridorMeters"
-                              type="number"
-                              min={10}
-                              max={500}
-                              defaultValue={c.policy.kmlCorridorMeters ?? 120}
-                              className={inputClass}
-                            />
-                            <span className="mt-1 block text-xs text-[var(--muted)]">
-                              Distancia máxima GPS ↔ trazado. Default: 120 m.
-                            </span>
-                          </label>
-                          <label className={labelClass}>
-                            Umbral precisión — métrica B (%)
-                            <input
-                              name="kmlCorridorMinPct"
-                              type="number"
-                              min={0}
-                              max={100}
-                              defaultValue={c.policy.kmlCorridorMinPct ?? 60}
-                              className={inputClass}
-                            />
-                            <span className="mt-1 block text-xs text-[var(--muted)]">
-                              % de puntos GPS dentro del corredor. Cumple ruta si A y B pasan.
-                              Default: 60.
-                            </span>
-                          </label>
-                          <label className={labelClass}>
-                            Margen evidencia antes (min)
-                            <input
-                              name="evidenceMarginMinutesBefore"
-                              type="number"
-                              min={0}
-                              defaultValue={c.policy.evidenceMarginMinutesBefore ?? 60}
-                              className={inputClass}
-                            />
-                          </label>
-                          <label className={labelClass}>
-                            Margen evidencia después (min)
-                            <input
-                              name="evidenceMarginMinutesAfter"
-                              type="number"
-                              min={0}
-                              defaultValue={c.policy.evidenceMarginMinutesAfter ?? 30}
-                              className={inputClass}
-                            />
-                          </label>
-                          <label className={labelClass}>
-                            Cobertura mínima de la ventana (%)
-                            <input
-                              name="evidenceMinCoveragePct"
-                              type="number"
-                              min={0}
-                              max={100}
-                              defaultValue={c.policy.evidenceMinCoveragePct ?? 80}
-                              className={inputClass}
-                            />
-                            <span className="mt-1 block text-xs text-[var(--muted)]">
-                              Qué tanto de la ventana necesita señal para poder dictar
-                              un resultado. Por debajo, el servicio queda pendiente por
-                              evidencia — nunca no cumplido. Default: 80.
-                            </span>
-                          </label>
-                          <label className={labelClass}>
-                            Hueco máximo de señal (min)
-                            <input
-                              name="evidenceMaxGapMinutes"
-                              type="number"
-                              min={1}
-                              defaultValue={c.policy.evidenceMaxGapMinutes ?? 10}
-                              className={inputClass}
-                            />
-                            <span className="mt-1 block text-xs text-[var(--muted)]">
-                              El silencio continuo más largo que se tolera dentro de la
-                              ventana. Si se supera, el servicio queda pendiente por
-                              evidencia. Default: 10.
-                            </span>
-                          </label>
-                          <label className={labelClass}>
-                            Duración máx. de ruta (min)
-                            <input
-                              name="maxRouteDurationMinutes"
-                              type="number"
-                              min={1}
-                              defaultValue={c.policy.maxRouteDurationMinutes ?? 60}
-                              className={inputClass}
-                            />
-                          </label>
-                          <label className={labelClass}>
-                            Zona horaria
-                            <select
-                              name="timeZone"
-                              className={inputClass}
-                              defaultValue={c.policy.timeZone ?? "America/Ciudad_Juarez"}
-                            >
-                              {MEXICO_TIMEZONES.map((tz) => (
-                                <option key={tz.value} value={tz.value}>{tz.label}</option>
-                              ))}
-                            </select>
-                            <span className="mt-1 block text-xs text-[var(--muted)]">
-                              Todas las horas de este contrato se muestran en esta zona.
-                            </span>
-                          </label>
-                        </div>
-                        <p className="mt-2 text-xs text-[var(--muted)]">
-                          Ventana GPS = deadline − margen antes → deadline +{" "}
-                          <span className="text-white">gracia</span> +{" "}
-                          <span className="text-white">margen después</span>. Con tus
-                          valores actuales: −{c.policy.evidenceMarginMinutesBefore ?? 60} / +
-                          {(c.policy.verificationGraceMinutes ?? 15) +
-                            (c.policy.evidenceMarginMinutesAfter ?? 30)}{" "}
-                          min (gracia {c.policy.verificationGraceMinutes ?? 15} + después{" "}
-                          {c.policy.evidenceMarginMinutesAfter ?? 30}). Los viajes ya
-                          generados conservan su ventana anterior hasta re-generar/re-verificar.
-                        </p>
-                      </fieldset>
-
-                      <fieldset className="rounded-lg border border-white/10 p-3">
-                        <legend className="px-1 text-sm text-[var(--muted)]">Motivos excusables</legend>
-                        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-                          {EXCUSABLES.map((e) => (
-                            <label key={e.value} className="flex items-center gap-2 text-sm">
-                              <input
-                                type="checkbox"
-                                name="excusableReasons"
-                                value={e.value}
-                                defaultChecked={(c.policy.excusableReasons ?? []).includes(
-                                  e.value as (typeof c.policy.excusableReasons)[number],
-                                )}
-                              />
-                              {e.label}
-                            </label>
-                          ))}
-                        </div>
-                      </fieldset>
-
-                      {(() => {
-                        const rule = c.policy.enforcementRules?.[0];
-                        return (
-                          <fieldset className="rounded-lg border border-white/10 p-3">
-                            <legend className="px-1 text-sm text-[var(--muted)]">
-                              Regla de enforcement
-                            </legend>
-                            <div className="grid gap-3 md:grid-cols-3">
-                              <label className={labelClass}>
-                                Tipo
-                                <select
-                                  name="enforcementType"
-                                  className={inputClass}
-                                  defaultValue={rule?.type ?? ""}
-                                >
-                                  <option value="">Ninguna</option>
-                                  <option value="no_pago_viaje">No pago del viaje</option>
-                                  <option value="rebate_escalonado">Rebate escalonado</option>
-                                  <option value="reembolso">Reembolso</option>
-                                </select>
-                              </label>
-                              <label className={labelClass}>
-                                Tolerancia de la regla (min)
-                                <input
-                                  name="enforcementTolerance"
-                                  type="number"
-                                  min={1}
-                                  defaultValue={
-                                    rule && "toleranceMinutes" in rule
-                                      ? rule.toleranceMinutes
-                                      : 5
-                                  }
-                                  className={inputClass}
-                                />
-                              </label>
-                              <label className={labelClass}>
-                                Reembolso: monto
-                                <input
-                                  name="reembolsoAmount"
-                                  type="number"
-                                  min={0}
-                                  defaultValue={
-                                    rule?.type === "reembolso" ? (rule.amount ?? "") : ""
-                                  }
-                                  className={inputClass}
-                                />
-                              </label>
-                              <label className={labelClass}>
-                                Rebate base (%)
-                                <input
-                                  name="baseRebatePercent"
-                                  type="number"
-                                  step="0.1"
-                                  defaultValue={
-                                    rule?.type === "rebate_escalonado"
-                                      ? rule.baseRebatePercent
-                                      : 0
-                                  }
-                                  className={inputClass}
-                                />
-                              </label>
-                              <label className={labelClass}>
-                                Fallas para base
-                                <input
-                                  name="baseFailureCount"
-                                  type="number"
-                                  min={1}
-                                  defaultValue={
-                                    rule?.type === "rebate_escalonado"
-                                      ? rule.baseFailureCount
-                                      : 1
-                                  }
-                                  className={inputClass}
-                                />
-                              </label>
-                              <label className={labelClass}>
-                                Rebate adicional (%)
-                                <input
-                                  name="additionalRebatePercent"
-                                  type="number"
-                                  step="0.1"
-                                  defaultValue={
-                                    rule?.type === "rebate_escalonado"
-                                      ? rule.additionalRebatePercent
-                                      : 0
-                                  }
-                                  className={inputClass}
-                                />
-                              </label>
-                            </div>
-                          </fieldset>
-                        );
-                      })()}
-
-                      <button type="submit" className={btnClass}>
-                        Guardar política
+                      <button
+                        type="submit"
+                        className="rounded-lg border border-white/10 px-3 py-1.5 text-xs hover:border-[var(--accent)]"
+                      >
+                        Activar
                       </button>
                     </ConfirmForm>
-                  </details>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      </div>
-    </main>
+                  ) : null}
+                  {c.status === "draft" && c.profiles.length === 0 ? (
+                    <ConfirmForm
+                      action="/api/cliente/contratos"
+                      method="post"
+                      confirmMessage={confirmMessages.deleteContractDraft(c.name)}
+                    >
+                      <input type="hidden" name="clientSlug" value={client.slug} />
+                      <input type="hidden" name="action" value="delete" />
+                      <input type="hidden" name="contractId" value={c.id} />
+                      <button
+                        type="submit"
+                        className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-200 hover:border-red-400"
+                      >
+                        Eliminar borrador
+                      </button>
+                    </ConfirmForm>
+                  ) : null}
+                </div>
+                </div>
+                <ConfirmForm
+                  action="/api/cliente/contratos"
+                  method="post"
+                  className="flex flex-wrap items-end gap-2 border-t border-white/5 pt-2"
+                  confirmMessage={`¿Actualizar vigencia de «${c.name}»?`}
+                >
+                  <input type="hidden" name="clientSlug" value={client.slug} />
+                  <input type="hidden" name="action" value="updateValidity" />
+                  <input type="hidden" name="contractId" value={c.id} />
+                  <label className="text-xs">
+                    Desde
+                    <input
+                      name="validFrom"
+                      type="date"
+                      required
+                      defaultValue={c.validFrom}
+                      className={inputClass}
+                    />
+                  </label>
+                  <label className="text-xs">
+                    Hasta
+                    <input
+                      name="validTo"
+                      type="date"
+                      required
+                      defaultValue={c.validTo}
+                      className={inputClass}
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    className="rounded-lg border border-white/10 px-3 py-2 text-xs hover:border-[var(--accent)]"
+                  >
+                    Guardar vigencia
+                  </button>
+                </ConfirmForm>
+
+                <p className="border-t border-white/5 pt-2 text-sm">
+                  <a
+                    href={`/cliente/contrato/${c.id}?account=${encodeURIComponent(client.slug)}`}
+                    className="text-[var(--accent)] hover:underline"
+                  >
+                    Abrir la oficina del contrato →
+                  </a>
+                  <span className="ml-2 text-xs text-[var(--muted)]">
+                    cada regla explicada, medida contra la operación real
+                  </span>
+                </p>
+
+                <details className="border-t border-white/5 pt-2">
+                  <summary className="cursor-pointer text-sm text-[var(--muted)]">
+                    Editar la política en crudo
+                  </summary>
+                  <ConfirmForm
+                    action="/api/cliente/contratos"
+                    method="post"
+                    className="mt-3 space-y-4"
+                    confirmMessage={confirmMessages.updatePolicy(c.name)}
+                  >
+                    <input type="hidden" name="clientSlug" value={client.slug} />
+                    <input type="hidden" name="action" value="updatePolicy" />
+                    <input type="hidden" name="contractId" value={c.id} />
+
+                    <fieldset className="rounded-lg border border-white/10 p-3">
+                      <legend className="px-1 text-sm text-[var(--muted)]">Política</legend>
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <label className={labelClass}>
+                          Anticipación de llegada (min antes del turno)
+                          <input
+                            name="arrivalAnticipationMinutes"
+                            type="number"
+                            min={0}
+                            defaultValue={c.policy.arrivalAnticipationMinutes ?? 15}
+                            className={inputClass}
+                          />
+                        </label>
+                        <label className={labelClass}>
+                          Minutos de cierre del turno tras la hora de entrada
+                          <input
+                            name="shiftCloseMinutesAfterStart"
+                            type="number"
+                            min={0}
+                            placeholder="sin configurar"
+                            defaultValue={c.policy.shiftCloseMinutesAfterStart ?? ""}
+                            className={inputClass}
+                          />
+                          <span className="mt-1 block text-xs text-[var(--muted)]">
+                            A esa hora se sella el turno. Ej. turno 7:00 y 120 min →
+                            cierra 9:00. Una unidad que llega después no retrasa el
+                            cierre: el turno se sella igual y ese servicio carga su
+                            propio resultado. Déjalo vacío para quitar la hora de
+                            cierre.
+                          </span>
+                        </label>
+                        <label className={labelClass}>
+                          Tolerancia puntualidad (min)
+                          <input
+                            name="toleranceMinutes"
+                            type="number"
+                            min={0}
+                            defaultValue={c.policy.toleranceMinutes}
+                            className={inputClass}
+                          />
+                        </label>
+                        <label className={labelClass}>
+                          Gracia de verificación (min)
+                          <input
+                            name="verificationGraceMinutes"
+                            type="number"
+                            min={0}
+                            defaultValue={c.policy.verificationGraceMinutes ?? 15}
+                            className={inputClass}
+                          />
+                        </label>
+                        <label className={labelClass}>
+                          Estrictez de ruta
+                          <select
+                            name="routeStrictness"
+                            className={inputClass}
+                            defaultValue={c.policy.routeStrictness}
+                          >
+                            <option value="destino_only">Solo destino</option>
+                            <option value="kml_full">Ruta completa (waypoints)</option>
+                          </select>
+                        </label>
+                        <label className={labelClass}>
+                          Umbral match KML — métrica A (%)
+                          <input
+                            name="kmlMatchMinPct"
+                            type="number"
+                            min={0}
+                            max={100}
+                            defaultValue={c.policy.kmlMatchMinPct ?? 60}
+                            className={inputClass}
+                          />
+                          <span className="mt-1 block text-xs text-[var(--muted)]">
+                            % de waypoints del KML con GPS dentro del corredor (radio abajo).
+                            Default recomendado: 60.
+                          </span>
+                        </label>
+                        <label className={labelClass}>
+                          Radio del corredor KML (m)
+                          <input
+                            name="kmlCorridorMeters"
+                            type="number"
+                            min={10}
+                            max={500}
+                            defaultValue={c.policy.kmlCorridorMeters ?? 120}
+                            className={inputClass}
+                          />
+                          <span className="mt-1 block text-xs text-[var(--muted)]">
+                            Distancia máxima GPS ↔ trazado. Default: 120 m.
+                          </span>
+                        </label>
+                        <label className={labelClass}>
+                          Umbral precisión — métrica B (%)
+                          <input
+                            name="kmlCorridorMinPct"
+                            type="number"
+                            min={0}
+                            max={100}
+                            defaultValue={c.policy.kmlCorridorMinPct ?? 60}
+                            className={inputClass}
+                          />
+                          <span className="mt-1 block text-xs text-[var(--muted)]">
+                            % de puntos GPS dentro del corredor. Cumple ruta si A y B pasan.
+                            Default: 60.
+                          </span>
+                        </label>
+                        <label className={labelClass}>
+                          Margen evidencia antes (min)
+                          <input
+                            name="evidenceMarginMinutesBefore"
+                            type="number"
+                            min={0}
+                            defaultValue={c.policy.evidenceMarginMinutesBefore ?? 60}
+                            className={inputClass}
+                          />
+                        </label>
+                        <label className={labelClass}>
+                          Margen evidencia después (min)
+                          <input
+                            name="evidenceMarginMinutesAfter"
+                            type="number"
+                            min={0}
+                            defaultValue={c.policy.evidenceMarginMinutesAfter ?? 30}
+                            className={inputClass}
+                          />
+                        </label>
+                        <label className={labelClass}>
+                          Cobertura mínima de la ventana (%)
+                          <input
+                            name="evidenceMinCoveragePct"
+                            type="number"
+                            min={0}
+                            max={100}
+                            defaultValue={c.policy.evidenceMinCoveragePct ?? 80}
+                            className={inputClass}
+                          />
+                          <span className="mt-1 block text-xs text-[var(--muted)]">
+                            Qué tanto de la ventana necesita señal para poder dictar
+                            un resultado. Por debajo, el servicio queda pendiente por
+                            evidencia — nunca no cumplido. Default: 80.
+                          </span>
+                        </label>
+                        <label className={labelClass}>
+                          Hueco máximo de señal (min)
+                          <input
+                            name="evidenceMaxGapMinutes"
+                            type="number"
+                            min={1}
+                            defaultValue={c.policy.evidenceMaxGapMinutes ?? 10}
+                            className={inputClass}
+                          />
+                          <span className="mt-1 block text-xs text-[var(--muted)]">
+                            El silencio continuo más largo que se tolera dentro de la
+                            ventana. Si se supera, el servicio queda pendiente por
+                            evidencia. Default: 10.
+                          </span>
+                        </label>
+                        <label className={labelClass}>
+                          Duración máx. de ruta (min)
+                          <input
+                            name="maxRouteDurationMinutes"
+                            type="number"
+                            min={1}
+                            defaultValue={c.policy.maxRouteDurationMinutes ?? 60}
+                            className={inputClass}
+                          />
+                        </label>
+                        <label className={labelClass}>
+                          Zona horaria
+                          <select
+                            name="timeZone"
+                            className={inputClass}
+                            defaultValue={c.policy.timeZone ?? "America/Ciudad_Juarez"}
+                          >
+                            {MEXICO_TIMEZONES.map((tz) => (
+                              <option key={tz.value} value={tz.value}>{tz.label}</option>
+                            ))}
+                          </select>
+                          <span className="mt-1 block text-xs text-[var(--muted)]">
+                            Todas las horas de este contrato se muestran en esta zona.
+                          </span>
+                        </label>
+                      </div>
+                      <p className="mt-2 text-xs text-[var(--muted)]">
+                        Ventana GPS = deadline − margen antes → deadline +{" "}
+                        <span className="text-white">gracia</span> +{" "}
+                        <span className="text-white">margen después</span>. Con tus
+                        valores actuales: −{c.policy.evidenceMarginMinutesBefore ?? 60} / +
+                        {(c.policy.verificationGraceMinutes ?? 15) +
+                          (c.policy.evidenceMarginMinutesAfter ?? 30)}{" "}
+                        min (gracia {c.policy.verificationGraceMinutes ?? 15} + después{" "}
+                        {c.policy.evidenceMarginMinutesAfter ?? 30}). Los viajes ya
+                        generados conservan su ventana anterior hasta re-generar/re-verificar.
+                      </p>
+                    </fieldset>
+
+                    <fieldset className="rounded-lg border border-white/10 p-3">
+                      <legend className="px-1 text-sm text-[var(--muted)]">Motivos excusables</legend>
+                      <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                        {EXCUSABLES.map((e) => (
+                          <label key={e.value} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              name="excusableReasons"
+                              value={e.value}
+                              defaultChecked={(c.policy.excusableReasons ?? []).includes(
+                                e.value as (typeof c.policy.excusableReasons)[number],
+                              )}
+                            />
+                            {e.label}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+
+                    {(() => {
+                      const rule = c.policy.enforcementRules?.[0];
+                      return (
+                        <fieldset className="rounded-lg border border-white/10 p-3">
+                          <legend className="px-1 text-sm text-[var(--muted)]">
+                            Regla de enforcement
+                          </legend>
+                          <div className="grid gap-3 md:grid-cols-3">
+                            <label className={labelClass}>
+                              Tipo
+                              <select
+                                name="enforcementType"
+                                className={inputClass}
+                                defaultValue={rule?.type ?? ""}
+                              >
+                                <option value="">Ninguna</option>
+                                <option value="no_pago_viaje">No pago del viaje</option>
+                                <option value="rebate_escalonado">Rebate escalonado</option>
+                                <option value="reembolso">Reembolso</option>
+                              </select>
+                            </label>
+                            <label className={labelClass}>
+                              Tolerancia de la regla (min)
+                              <input
+                                name="enforcementTolerance"
+                                type="number"
+                                min={1}
+                                defaultValue={
+                                  rule && "toleranceMinutes" in rule
+                                    ? rule.toleranceMinutes
+                                    : 5
+                                }
+                                className={inputClass}
+                              />
+                            </label>
+                            <label className={labelClass}>
+                              Reembolso: monto
+                              <input
+                                name="reembolsoAmount"
+                                type="number"
+                                min={0}
+                                defaultValue={
+                                  rule?.type === "reembolso" ? (rule.amount ?? "") : ""
+                                }
+                                className={inputClass}
+                              />
+                            </label>
+                            <label className={labelClass}>
+                              Rebate base (%)
+                              <input
+                                name="baseRebatePercent"
+                                type="number"
+                                step="0.1"
+                                defaultValue={
+                                  rule?.type === "rebate_escalonado"
+                                    ? rule.baseRebatePercent
+                                    : 0
+                                }
+                                className={inputClass}
+                              />
+                            </label>
+                            <label className={labelClass}>
+                              Fallas para base
+                              <input
+                                name="baseFailureCount"
+                                type="number"
+                                min={1}
+                                defaultValue={
+                                  rule?.type === "rebate_escalonado"
+                                    ? rule.baseFailureCount
+                                    : 1
+                                }
+                                className={inputClass}
+                              />
+                            </label>
+                            <label className={labelClass}>
+                              Rebate adicional (%)
+                              <input
+                                name="additionalRebatePercent"
+                                type="number"
+                                step="0.1"
+                                defaultValue={
+                                  rule?.type === "rebate_escalonado"
+                                    ? rule.additionalRebatePercent
+                                    : 0
+                                }
+                                className={inputClass}
+                              />
+                            </label>
+                          </div>
+                        </fieldset>
+                      );
+                    })()}
+
+                    <button type="submit" className={btnClass}>
+                      Guardar política
+                    </button>
+                  </ConfirmForm>
+                </details>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </UnitShell>
   );
 }
