@@ -151,6 +151,31 @@
   /* Superficies neutras */
   --hover: rgba(16, 26, 36, 0.04);
   --rayado: rgba(16, 26, 36, 0.03); /* debajo de --hover, igual que en oscuro */
+
+  /* — Tokens heredados, en tema claro —
+   *   Existen solo en oscuro, y por eso el tema claro no llegaba a las pantallas
+   *   que todavía los usan: la cara carrier entera se quedaba oscura, y todo
+   *   texto que no declara color heredaba `--foreground` desde `body` y salía
+   *   casi blanco sobre panel blanco.
+   *
+   *   Cada uno APUNTA a su equivalente ya validado en vez de repetir su hex.
+   *   Así hay una sola fuente de verdad: el día que se borre el heredado, nada
+   *   cambia, y nunca hay dos tonos de "panel" en claro sin saber cuál es el
+   *   bueno. En oscuro conservan su valor propio del :root de arriba — este
+   *   bloque no los toca ahí.
+   *
+   *   Son deuda a extinguir: cada pantalla que se reviste debería soltarlos.
+   *   Cuando el último los suelte, se borran. --success y --warning ya no los
+   *   usa nadie (0 referencias) y se mapean solo para que ningún token quede
+   *   definido en un tema y no en el otro. */
+  --background: var(--fondo);
+  --foreground: var(--texto);
+  --card: var(--panel);
+  --accent: var(--azul);
+  --success: var(--verde);
+  --warning: var(--ambar);
+  --danger: var(--rojo);
+  --muted: var(--tenue);
 }
 
 body {
