@@ -110,6 +110,130 @@ Es lo que impide que una unidad que "llegó" a las 06:40 se lea como un resultad
 
 ---
 
+## La arquitectura de la plataforma
+
+J-Telemetry no es un conjunto de páginas: es una plataforma sobre la que se van a
+montar más cosas. Eso tiene que sentirse al abrirla, y se logra con tres piezas
+estructurales que no son negociables.
+
+### 1 · Navegación lateral permanente
+
+Toda superficie interna (cliente, carrier, J-Staff) lleva una columna de navegación
+fija a la izquierda, de 230px, siempre presente. No barras de botones arriba, no
+menús que aparecen y desaparecen.
+
+De arriba abajo lleva, en este orden:
+
+1. **Identidad del producto** — el logotipo.
+2. **Selector de cuenta** — qué planta, campus o carrier estás viendo, en una caja
+   propia. Responde "dónde estoy parado" antes de cualquier otra cosa.
+3. **Las secciones, agrupadas por naturaleza** con encabezados en mono tenue
+   (`Operación` · `Contrato` · `Vistas`). El grupo comunica de qué está hecha la
+   plataforma.
+4. **Identidad de quién eres** — abajo, fija: avatar, nombre y rol. Mientras no
+   exista autenticación, el rol; con `auth-rbac`, el nombre propio, sin cambiar el
+   componente.
+
+Reglas de la navegación:
+
+- La sección actual se marca con fondo tenue **y una barra de acero de 2px pegada
+  al borde izquierdo**. Nunca solo con negritas.
+- Los módulos **no contratados se muestran atenuados con su candado**, jamás se
+  esconden. El usuario debe saber de qué es capaz la plataforma aunque no lo tenga.
+- Un contador —pendientes abiertos, por ejemplo— va como pastilla ámbar a la
+  derecha del renglón. Es el único adorno permitido en la navegación.
+
+En pantallas menores a 720px la columna se colapsa; qué la reemplaza se decide
+cuando se diseñe móvil, que es requisito y no extra.
+
+### 2 · Jerarquía: una grande y el resto chico
+
+**Prohibido que todo pese lo mismo.** Una pantalla donde todos los bloques tienen
+el mismo tamaño y el mismo tono es un directorio, no un producto.
+
+Cada vista declara **una zona dominante** —lo que el usuario vino a ver— y el resto
+la acompaña, más chico y más callado.
+
+| Vista | Domina | Acompaña |
+|---|---|---|
+| Inicio | La bandeja de lo que te necesita hoy | Widgets de sección, un renglón |
+| Cumplimiento | La retícula ruta × día | Métricas arriba, desgloses abajo |
+| Expediente | El veredicto y su razón medida | Mapa, cronología, identidades |
+
+**La regla que protege la tesis:** en el inicio, la bandeja manda y los widgets
+acompañan. Si los widgets crecen más que la bandeja, la pantalla se convierte en un
+tablero de monitoreo — que es exactamente lo que el producto existe para eliminar.
+
+### 3 · De macro a micro, y siempre comprobable
+
+Toda vista se organiza en tres escalones, de arriba hacia abajo:
+
+- **Macro** — la respuesta en una cifra. `95.4%`
+- **Medio** — el patrón: dónde y cuándo. La serie diaria, la retícula, la línea de vida.
+- **Micro** — el hecho individual con su evidencia. Un servicio y su expediente.
+
+**Y la regla dura: el camino hacia abajo tiene que existir y ser visible.** Ninguna
+cifra puede quedarse cerrada. Un porcentaje que no se puede descomponer hasta el
+hecho sellado que lo sostiene es exactamente lo que J-Telemetry vino a reemplazar —
+un número que hay que creer porque sí.
+
+Esto no significa llenar la pantalla de enlaces: significa que en cada escalón se ve
+cómo bajar al siguiente. En la práctica:
+
+- Las celdas de una retícula son clicables y lo parecen (crecen al pasar encima).
+- Al elegir un elemento aparece un **puente**: un panel que confirma qué elegiste,
+  con sus medidas clave y los botones para entrar al expediente completo.
+- El expediente es **pantalla propia**, no un cajón. Necesita el ancho completo para
+  el mapa, la cronología y el sello.
+- Dentro del expediente, cada identidad mencionada —ruta, unidad, contrato, turno—
+  es a su vez puerta a su propio expediente. La cadena se vuelve red.
+
+### 4 · El control de tiempo cambia la forma, no solo el contenido
+
+Cualquier vista con rango de fechas ofrece: **Hoy · 7 días · Mes · Personalizado**
+(con dos campos de fecha). Aplica igual a cara cliente y cara carrier.
+
+Y lo que se dibuja cambia con el rango:
+
+- **Un día** no se dibuja como retícula: es la **lista** de sus servicios, con hora
+  y margen. Una retícula de una columna no dice nada.
+- **7 días** son columnas anchas con todos los días rotulados.
+- **Un mes** son columnas angostas, rotulando de cinco en cinco.
+
+**Todas las cifras de la pantalla se recalculan con el rango.** Si el porcentaje de
+una ruta dice lo mismo en "mes" que en "7 días", está mintiendo sobre lo que muestra.
+
+Los filtros —periodo, turno, resultado, ruta, búsqueda— viven juntos en una barra
+bajo el encabezado, y **acotan la vista completa a la vez**: métricas, gráficas y
+retícula. Nunca un filtro que solo afecte a un bloque.
+
+### 5 · Densidad con aire
+
+El registro es Linear y Vercel: denso pero respirado. Concretamente:
+
+- Paneles con `border-radius: 10px`, borde de 1px, sobre `--panel`.
+- El panel dominante puede llevar un degradado sutil hacia `--panel2` para ganar
+  peso sin usar color.
+- Espaciado interno generoso (17–22px); entre secciones, 26px.
+- Las cifras grandes en Archivo 800, con `letter-spacing:-.03em` y
+  `font-variant-numeric: tabular-nums`.
+- **Sparklines permitidas** bajo una cifra: son medición, van en acero, y muestran
+  la historia del número sin ocupar una gráfica entera.
+
+### 6 · Las métricas sí se muestran, y siempre en acero
+
+Un instrumento sin números no es un instrumento. Métricas, series, sparklines,
+barras de distribución y porcentajes **van todos en acero**, porque son medición.
+
+Los tres colores de veredicto aparecen **únicamente** donde hay un resultado de un
+servicio: el chip del expediente, las celdas de la retícula, el punto de un renglón
+de bandeja. Nunca en una métrica agregada, por más que un 95.4% "se sienta" bueno.
+
+Un agregado no es un veredicto: es un promedio de veredictos, y pintarlo de verde
+mentiría sobre qué clase de cosa es.
+
+---
+
 ## El vocabulario
 
 ### Color
@@ -313,6 +437,10 @@ Si aparece cualquiera de estos, el instrumento se disolvió de vuelta en tablero
 - Un veredicto con animación de entrada. El movimiento solo se justifica para continuidad: una línea de proyección dibujándose, un cajón abriendo, una transición de alcance. Nunca sobre un veredicto.
 - Emojis como iconos.
 - Jerga técnica en las caras cliente y carrier. Los usuarios son coordinadores de transporte y HR de planta, no ingenieros. Español mexicano de operación.
+- **La lista de enlaces disfrazada de inicio.** Un menú de secciones apilado en
+  renglones cumple todas las reglas de color y voz y aun así no es un producto:
+  es un directorio. Si una vista no tiene zona dominante, navegación lateral ni
+  camino visible hacia la evidencia, está mal aunque cada regla suelta se cumpla.
 
 ---
 
