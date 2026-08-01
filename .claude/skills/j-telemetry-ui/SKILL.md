@@ -188,6 +188,31 @@ cómo bajar al siguiente. En la práctica:
 - Dentro del expediente, cada identidad mencionada —ruta, unidad, contrato, turno—
   es a su vez puerta a su propio expediente. La cadena se vuelve red.
 
+### 3.b · El contexto de navegación viaja con el enlace
+
+Una pantalla de detalle debe saber **desde dónde la abrieron y qué lista estaba recorriendo el
+usuario** — no solo qué registro mostrar. El contexto se pasa en la dirección de la página, como
+cuando una búsqueda recuerda sus filtros al volver.
+
+Con eso, tres cosas salen solas:
+
+- Las migas dicen la verdad: `Cierre del turno › Sierra Vista 3 › 2026-07-23`, y no siempre el
+  mismo camino inventado.
+- El regreso devuelve **a donde estabas**, con los filtros puestos.
+- Aparece `‹ anterior · siguiente ›` para recorrer los hermanos de esa lista sin volver al índice.
+
+Es barato al construirse y caro de retrofitear: una pantalla de detalle nacida sin contexto
+obliga a tocar después todas las que llevan a ella.
+
+### 3.c · Lo resuelto se marca, no se borra
+
+Una lista de trabajo muestra **el conjunto completo**, no solo lo que falta. Los elementos
+atendidos se quedan, con su marca y su dato — *"Llegó 14:06"* — en la parte de arriba.
+
+Borrarlos deja al usuario sin saber si algo se resolvió o si nunca existió, y le quita la
+referencia de cuánto lleva del total. La bandeja del inicio es la excepción deliberada: ahí
+llegar a cero **es** la meta, y el vacío tiene su propia forma.
+
 ### 4 · El control de tiempo cambia la forma, no solo el contenido
 
 Cualquier vista con rango de fechas ofrece: **Hoy · 7 días · Mes · Personalizado**
@@ -328,6 +353,17 @@ tema claro en ese punto y nadie lo nota hasta que alguien cambia de tema.
 
 **El acero separa medición de juicio.** Un dato es acero; un veredicto es verde/ámbar/rojo. Así el color nunca miente sobre qué clase de cosa estás viendo.
 
+**Cuando una medición se compara contra su umbral, la medición va en acero y el color de estado
+marca únicamente la brecha.**
+
+En la barra de cobertura de un pendiente: lo observado (48.9%) es **acero sólido**, porque es
+medición; lo que faltó para llegar al mínimo es **ámbar rayado**, porque esa carencia es la
+razón del estado. La línea del umbral marca dónde estaba la exigencia del contrato.
+
+Pintar la barra completa de ámbar confunde el dato con el fallo: la cobertura no es un veredicto,
+es lo que el instrumento alcanzó a ver. Aplica igual al margen contra el deadline, al hueco de
+señal y a cualquier medida futura con umbral.
+
 **Los estados operativos (activa/legacy, encendido/apagado, conectado/sin señal) usan acero y tenue. Verde, ámbar y rojo jamás marcan estados operativos — solo veredictos y sus consecuencias.**
 
 ### Tipografía
@@ -414,6 +450,28 @@ Dos verbos son de la casa y todo cuelga de ellos: **verificar** (lo que hace el 
 
 El silencio es mensaje: si la marca solo dice "Verificado y sellado" con su fecha, la ausencia de más texto significa que no hubo más. No hace falta prometer que nada cambió.
 
+### La pantalla no le explica al usuario quién es
+
+Escribir *"declarado por el transportista"* en la cara del transportista lo pone en posición de
+vigilado dentro de su propia casa. Y *"el cliente nunca ve el recorrido posterior"* en la cara
+del cliente le habla de sí mismo en tercera persona.
+
+**Los datos se enuncian sin sujeto.**
+
+| No | Sí |
+|---|---|
+| "datos declarados por el transportista" | "configuración y datos de alta" |
+| "declarado por el transportista, no medido" | "el chofer se declara · el GPS identifica unidades" |
+| "el cliente nunca ve movimiento posterior" | "la traza corta al entrar a la geocerca" |
+| "Tus clientes" / "Mis clientes" | "Clientes" |
+
+**La frontera de confidencialidad se menciona una sola vez por pantalla, al pie**, y describe el
+sistema, no a las partes: *"nada de esta pantalla llega a los clientes"*. Repetirla en cada
+sección la convierte en una advertencia y sugiere que hay algo que ocultar.
+
+**Excepción: los correos sí hablan en segunda persona.** Un correo es un mensaje dirigido a
+alguien, no un instrumento — ahí *"tus clientes no ven tus asignaciones"* es correcto.
+
 ---
 
 ## Anatomía de un hallazgo
@@ -456,6 +514,32 @@ Esta regla evita inventar evidencia que el árbitro no selló.
 
 Cuando dudes si puedes mostrar un dato: pregunta si el árbitro lo selló. Si no lo selló, no lo muestres.
 
+### Lo inferido no se presenta como declarado
+
+Identificar qué unidad cubrió una ruta es una **inferencia que acumula confianza**, no un dato
+que alguien declaró. Mientras el turno corre, esa asociación se está formando.
+
+- **En vivo:** la unidad se marca `probable`, con la etiqueta visible junto al identificador.
+  La pantalla declara además, en una línea: *"el sistema infiere qué unidad cubre cada ruta a
+  partir de su recorrido; se confirma al cierre"*.
+- **Al cierre:** la unidad pasa a `confirmada`, congelada junto con el resultado.
+
+Escribir "U-208" a secas en la torre afirma como hecho algo que el motor todavía está
+resolviendo. Es la misma falta que pintar un veredicto antes del cierre.
+
+### Llegar es un hecho medido; cumplir es un veredicto
+
+Cuando una unidad entra a la geocerca, eso **se puede afirmar**: se midió. Pero no es un
+resultado — el resultado necesita el deadline, la cobertura y el cierre.
+
+Por eso la etiqueta de llegada en vivo dice **"Llegó 14:06" y va en acero**, nunca en verde ni
+con la palabra "cumplido". El verde llega al cierre, o no llega.
+
+### El instrumento no dice más de lo que ve, y lo dice cuando no ve
+
+Si una unidad lleva veinte minutos sin señal, su llegada estimada se muestra como `—`, no como
+una hora calculada sobre datos viejos. **Un hueco declarado vale más que un número inventado.**
+
 ---
 
 ## Dos ritmos, un idioma
@@ -480,6 +564,23 @@ Ambos son correctos. Lo incorrecto es mezclarlos en una sola vista sin razón.
 **Las capas de fase futura se muestran apagadas con su requisito** ("Demanda por zona · requiere conteo"). El instrumento enseña lo que va a poder hacer.
 
 Colores: cada capa obedece la regla general — medición en acero, resultados en verde/ámbar/rojo, avisos del sistema en azul. Por eso las capas se pueden mezclar sin volverse ruido: el color siempre dice qué clase de cosa se está viendo.
+
+### El mapa solo aparece cuando lo que muestra es confiable
+
+Un mapa comunica "esto es lo que está pasando ahora". Cuando eso deja de ser cierto, el mapa
+miente aunque cada píxel sea correcto.
+
+- **Con operación en curso:** mapa completo, unidades sobre sus rutas.
+- **Sin turno activo:** mapa **quieto** — ciudad, geocerca del destino, rutas del siguiente turno
+  insinuadas. Da continuidad y anticipa lo que viene, con su etiqueta: *"sin unidades en ruta"*.
+- **Cuenta nueva:** **sin mapa.** No hay geocercas ni rutas que dibujar; el espacio lo ocupa el
+  camino a la primera verificación.
+- **Sistema sin señal:** **sin mapa, ni siquiera con la última posición conocida.** Un camión
+  dibujado cerca de la planta se lee como "va llegando" aunque el dato sea de hace dos horas.
+  La ausencia del mapa es la declaración más honesta de que no hay nada que ver.
+
+La pantalla conserva su estructura en los cuatro casos: lo que cambia es qué ocupa el lugar del
+mapa, no el esqueleto de la vista.
 
 ### Audiencia declarada por capa (ley del Marco, no preferencia)
 
@@ -515,6 +616,10 @@ Si aparece cualquiera de estos, el instrumento se disolvió de vuelta en tablero
   oscuro y desaparece en claro; un `#0C0F13` deja la navegación negra sobre un
   producto blanco. Cada valor literal es un punto donde el tema claro se rompe sin
   que nadie lo note. Si falta un tinte, se agrega el token a las dos paletas.
+- **La certeza prestada.** Presentar como hecho algo que el sistema todavía está infiriendo: la
+  unidad de una ruta antes del cierre, una llegada estimada calculada sobre señal vieja, una
+  posición de hace dos horas dibujada en un mapa en vivo. Cada una es correcta en sus datos y
+  falsa en lo que comunica. Si el motor no ha terminado de decidir, la pantalla lo dice.
 
 ---
 
