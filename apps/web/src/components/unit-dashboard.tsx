@@ -1,135 +1,90 @@
 import Link from "next/link";
 import { getRepos } from "@/lib/db";
-import { Card } from "@/components/ui";
 import { UnitShell } from "@/components/unit-shell";
 import type { UnitPageContext } from "@/lib/unit-context";
-import { contractMatchesScope } from "@/lib/operational-scope";
-import { operationalUnitLabel } from "@/lib/operational-scope";
-import {
-  UNIT_CONFIG_STEPS,
-  unitConfigStepHrefFor,
-} from "@/lib/config-wizard";
-import {
-  unitComplianceHref,
-  unitConfigHubHref,
-} from "@/lib/unit-routes";
+import { contractMatchesScope, operationalUnitLabel } from "@/lib/operational-scope";
+import { withAccount } from "@/lib/account-context";
+import { unitBasePath, unitComplianceHref, unitContratosHref } from "@/lib/unit-routes";
 
+type Puerta = { label: string } & (
+  | { atenuada: true }
+  | { atenuada?: false; href: string }
+);
+
+/**
+ * El homescreen de una unidad: puertas a lo que ya existe, sin cifras.
+ *
+ * Los pasos de configuración operativa (geocercas/turnos/rutas/perfiles)
+ * siguen viviendo detrás del link "Configuración" del header (`UnitShell`) —
+ * no son una de las seis puertas de la ficha, así que no se repiten aquí.
+ */
 export async function UnitDashboard({ ctx }: { ctx: UnitPageContext }) {
   const repos = getRepos();
   const { client, unit, scope } = ctx;
   const unitLabel = operationalUnitLabel(unit);
 
-  const [occurrences, geofences, shifts, routeShifts, profiles] = await Promise.all([
-    repos.occurrences.findForScope(scope),
-    repos.geofences.findForScope(scope, client.id),
-    repos.routes.getShiftsForScope(scope),
-    repos.routes.getRouteShiftsForScope(scope),
-    repos.profiles.findForClient(client.id).then(async (all) => {
-      const { operationalScopeFromContract } = await import("@jtel/domain");
-      return all.filter((p) => {
-        const cs = operationalScopeFromContract(p.contract ?? {});
-        return cs && contractMatchesScope(p.contract ?? {}, scope);
-      });
-    }),
-  ]);
+  const contracts = await repos.contracts.findForClient(client.id);
+  const scopedContracts = contracts.filter((c) => contractMatchesScope(c, scope));
+  // Un solo contrato: se va directo a su oficina/historia. Cero o varios: la
+  // puerta cae en la lista de contratos, igual que hace hoy el hub de la unidad.
+  const unContrato = scopedContracts.length === 1 ? scopedContracts[0] : null;
+  const contratosHubHref = unitContratosHref(unit, client.slug);
+  const contratoHref = unContrato
+    ? withAccount(`/cliente/contrato/${unContrato.id}`, client.slug)
+    : contratosHubHref;
+  const historiaHref = unContrato
+    ? withAccount(`/cliente/contrato/${unContrato.id}/historia`, client.slug)
+    : contratosHubHref;
 
-  const stats = {
-    total: occurrences.length,
-    cumplido: occurrences.filter((o) => o.complianceFact?.status === "cumplido").length,
-    noCumplido: occurrences.filter((o) => o.complianceFact?.status === "no_cumplido").length,
-    pendiente: occurrences.filter((o) => o.complianceFact?.status === "pendiente_evidencia").length,
-  };
-
-  const stepCounts: Record<string, number> = {
-    geocercas: geofences.length,
-    turnos: shifts.length,
-    rutas: routeShifts.length,
-    servicios: profiles.length,
-  };
-
-  const configHub = unitConfigHubHref(unit, client.slug);
-  const compliance = unitComplianceHref(unit, client.slug);
+  const puertas: Puerta[] = [
+    { label: "Cumplimiento", href: unitComplianceHref(unit, client.slug) },
+    { label: "Cierre del turno", href: withAccount(`${unitBasePath(unit)}/cierre`, client.slug) },
+    unit.kind === "plant"
+      ? {
+          label: "Pendiente por evidencia",
+          href: withAccount(`${unitBasePath(unit)}/pendiente-por-evidencia`, client.slug),
+        }
+      : { label: "Pendiente por evidencia", atenuada: true },
+    { label: "Monitoreo", href: withAccount(`${unitBasePath(unit)}/monitoreo`, client.slug) },
+    { label: "Configuración del contrato", href: contratoHref },
+    { label: "Historia de la política", href: historiaHref },
+  ];
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <UnitShell client={client} unit={unit} title={`${unitLabel}`} />
+    <main className="min-h-screen bg-[var(--fondo)] p-6 sm:p-8">
+      <div className="mx-auto max-w-2xl space-y-8">
+        <UnitShell client={client} unit={unit} title={unitLabel} />
 
-        {unit.kind === "plant_group" ? (
-          <p className="text-sm text-[var(--muted)]">
-            Campus compartido — plantas{" "}
-            <span className="text-white">
-              {unit.memberPlants.map((p) => p.code).join(", ")}
-            </span>
-            . La configuración de servicios aplica a todo el campus.
-          </p>
-        ) : (
-          <p className="text-sm text-[var(--muted)]">
-            Planta con operación independiente. Aquí configuras geocercas, turnos, rutas y perfiles
-            solo para esta unidad.
-          </p>
-        )}
-
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card title="Total servicios">{stats.total}</Card>
-          <Card title="Cumplidos">{stats.cumplido}</Card>
-          <Card title="No cumplidos">{stats.noCumplido}</Card>
-          <Card title="Pendientes">{stats.pendiente}</Card>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <Link
-            href={configHub}
-            className="block rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/5 p-5 transition hover:border-[var(--accent)]"
-          >
-            <h2 className="text-lg font-semibold">Configuración</h2>
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              Geocercas, turnos, rutas y perfiles de {unitLabel}.
-            </p>
-            <p className="mt-3 text-sm text-[var(--accent)]">Abrir →</p>
-          </Link>
-          <Link
-            href={compliance}
-            className="block rounded-xl border border-white/10 bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
-          >
-            <h2 className="text-lg font-semibold">Cumplimiento</h2>
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              Servicios verificados y evidencia GPS de esta unidad.
-            </p>
-            <p className="mt-3 text-sm text-[var(--accent)]">
-              {stats.pendiente > 0
-                ? `${stats.pendiente} pendiente(s) →`
-                : "Ver servicios →"}
-            </p>
-          </Link>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-          {UNIT_CONFIG_STEPS.map((step) => {
-            const count = stepCounts[step.id] ?? 0;
-            const ready = count > 0;
-            return (
-              <Link
-                key={step.id}
-                href={unitConfigStepHrefFor(unit, client.slug, step.id)}
-                className="block rounded-xl border border-white/10 bg-[var(--card)] p-4 transition hover:border-[var(--accent)]"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-[var(--muted)]">Paso {step.n}</span>
+        <nav aria-label={`Puertas de ${unitLabel}`}>
+          <ul className="divide-y divide-[var(--linea)] rounded-sm border border-[var(--linea)] bg-[var(--panel)]">
+            {puertas.map((puerta) =>
+              puerta.atenuada ? (
+                <li
+                  key={puerta.label}
+                  className="flex items-center justify-between px-5 py-4 text-[var(--tenue)]"
+                >
+                  <span className="text-[15px]">{puerta.label}</span>
                   <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${
-                      ready ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"
-                    }`}
+                    className="text-[10.5px] uppercase tracking-[.13em]"
+                    style={{ fontFamily: "var(--fuente-mono)" }}
                   >
-                    {ready ? `${count}` : "—"}
+                    Próximamente
                   </span>
-                </div>
-                <h3 className="mt-2 font-medium">{step.title}</h3>
-                <p className="mt-1 text-xs text-[var(--muted)]">{step.desc}</p>
-              </Link>
-            );
-          })}
-        </div>
+                </li>
+              ) : (
+                <li key={puerta.label}>
+                  <Link
+                    href={puerta.href}
+                    className="flex items-center justify-between px-5 py-4 text-[var(--texto)] transition hover:bg-white/[0.03]"
+                  >
+                    <span className="text-[15px]">{puerta.label}</span>
+                    <span className="text-[var(--tenue)]">→</span>
+                  </Link>
+                </li>
+              ),
+            )}
+          </ul>
+        </nav>
       </div>
     </main>
   );
