@@ -293,10 +293,16 @@ El tema claro se activa con `[data-tema="claro"]` en `<html>`:
 [data-tema="claro"]{
   --fondo:#F4F6F8;   --panel:#FFFFFF;  --panel2:#F0F3F6;  --nav-bg:#ECEFF3;
   --linea:rgba(16,26,36,.11);          --linea-fuerte:rgba(16,26,36,.20);
+  --rejilla:rgba(16,26,36,.06);
   --texto:#111820;   --tenue:#5A6874;  --acero:#3D6A8F;
   --verde:#1B8A54;   --ambar:#9A6A05;  --rojo:#B4262B;    --azul:#2A6FB5;
 }
 ```
+
+`--rejilla` no tenía gemelo claro: en oscuro vale `rgba(255,255,255,.05)`, que sobre
+un panel blanco es blanco sobre blanco — rejilla invisible. Su valor claro está
+**derivado, no validado en mockup**: sale de la misma proporción que en oscuro (≈½ de
+`--linea`). Se ajusta cuando alguien vea `microscopio-ruta.tsx` en tema claro.
 
 **Por qué los colores de veredicto cambian de valor.** El verde `#34C77B` y el ámbar
 `#E3A81F` son luminosos: sobre fondo blanco pierden contraste y dejan de leerse. Las
@@ -318,9 +324,11 @@ oscuro y desaparece en claro.
 --t-acero2   fondo de acero más presente (barras, segmentos llenos)
 --t-ambar    fondo tenue de ámbar (pastillas, marcas de pendiente)
 --t-rojo     fondo tenue de rojo (marcas de no cumplido)
+--t-verde    fondo tenue de verde (chip de cumplido, marcas de resultado)
 --b-acero    borde suave de acero
 --b-ambar    borde suave de ámbar
 --b-rojo     borde suave de rojo
+--b-verde    borde suave de verde
 --hover      fondo de hover y zonas neutras (patio, pistas vacías)
 --rayado     franja de las tramas diagonales (unidad en taller)
 --nav-bg     fondo de la navegación lateral
@@ -332,6 +340,23 @@ oscuro y desaparece en claro.
 Si un componente necesita un tinte que no existe, **se agrega el token a las dos
 paletas** — nunca se resuelve con un valor literal. Un solo color a mano rompe el
 tema claro en ese punto y nadie lo nota hasta que alguien cambia de tema.
+
+**Cada token existe en las dos paletas, sin excepción.** Un token definido en un solo
+tema produce un color que desaparece o se invierte al cambiar — blanco sobre blanco,
+borde negro sobre fondo negro. Es un error silencioso: no rompe la compilación, solo
+hace ilegible una pieza en un tema, y nadie lo nota hasta verlo.
+
+Se verifica en automático: **cada token de color debe aparecer exactamente dos veces
+en el CSS.**
+
+```bash
+for t in fondo panel panel2 nav-bg rejilla linea linea-fuerte texto tenue \
+         acero verde ambar rojo azul t-acero t-acero2 t-verde t-ambar t-rojo \
+         b-acero b-verde b-ambar b-rojo hover rayado; do
+  n=$(grep -cE -- "--$t:" apps/web/src/app/globals.css)
+  [ "$n" = "2" ] || echo "DESPAREJO: --$t aparece $n vez/veces"
+done
+```
 
 ### El interruptor
 
