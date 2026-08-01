@@ -50,12 +50,56 @@ function encabezadosDe(ruta: string) {
   return Promise.resolve({ get: (k: string) => (k === "x-jtel-path" ? ruta : null) });
 }
 
+/**
+ * La ruta por defecto tiene que ser una donde el distintivo SÍ se pinta.
+ *
+ * Cuando el esqueleto de plataforma le enseñó a `SesionActual` a callarse en
+ * `/cliente` —porque ahí la nav lateral ya dice quién eres— esta constante
+ * seguía apuntando a `/cliente/cumplimiento`, y el componente empezó a devolver
+ * `null` ANTES de tocar la base. Dos de las tres pruebas del resguardo pasaron
+ * a estar verdes sin ejercer el resguardo: exactamente el "verde por la razón
+ * equivocada" contra el que advierte el comentario de arriba. La cuarta —el
+ * control— se puso roja, que era la señal, y nadie la vio porque nada corría
+ * las pruebas.
+ *
+ * Carrier todavía no tiene nav lateral, así que ahí el distintivo sigue vivo.
+ */
+const RUTA_CON_DISTINTIVO = "/carrier/flota";
+
 const { SesionActual } = await import("./sesion-actual");
 
 beforeEach(() => {
   getIdentidad.mockReset();
   headers.mockReset();
-  headers.mockImplementation(() => encabezadosDe("/cliente/cumplimiento"));
+  headers.mockImplementation(() => encabezadosDe(RUTA_CON_DISTINTIVO));
+});
+
+/**
+ * Las pantallas donde el distintivo se calla a propósito. Se prueban aparte y
+ * de frente: si viven solo como efecto colateral del `beforeEach`, cambiarlo
+ * las apaga sin que nadie lo note — que es justo lo que pasó.
+ */
+describe("donde ya hay otra identidad en pantalla, el distintivo se calla", () => {
+  it.each([
+    ["/landing", "es público y no trata datos ni veredictos"],
+    ["/cliente", "la nav lateral ya tiene su caja de usuario"],
+    ["/cliente/planta/abc/monitoreo", "misma razón, ruta adentro"],
+  ])("en %s no se pinta: %s", async (ruta) => {
+    headers.mockImplementation(() => encabezadosDe(ruta));
+    getIdentidad.mockResolvedValue({
+      userId: "tecma_admin",
+      origen: "default-heredado",
+      memberships: [],
+      clerkConfigurado: false,
+      sesionActiva: false,
+      encabezadoRechazado: false,
+    });
+
+    await expect(SesionActual()).resolves.toBeNull();
+    // Y se calla ANTES de consultar: un adorno que no se va a pintar no tiene
+    // por qué costar una consulta a la base en cada pantalla.
+    expect(getIdentidad).not.toHaveBeenCalled();
+  });
 });
 
 describe("con la base caída, la pantalla sobrevive y solo falta el distintivo", () => {
