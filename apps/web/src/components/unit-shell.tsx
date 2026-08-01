@@ -52,7 +52,7 @@ export function gruposUnidad(
       ],
     },
     {
-      titulo: "Cuenta",
+      titulo: "Vistas",
       renglones: [
         { href: withAccount("/cliente/notificaciones", clientSlug), label: "Notificaciones" },
       ],
@@ -118,7 +118,7 @@ export function gruposCorporativos(clientSlug: string): GrupoNav[] {
       ],
     },
     {
-      titulo: "Cuenta",
+      titulo: "Vistas",
       renglones: [
         { href: withAccount("/cliente/reportes", clientSlug), label: "Reportes" },
         { href: withAccount("/cliente/notificaciones", clientSlug), label: "Notificaciones" },
