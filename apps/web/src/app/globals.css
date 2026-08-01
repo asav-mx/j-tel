@@ -54,6 +54,103 @@
   --muted: #64748b;
 }
 
+/*
+ * — Tokens derivados, tema oscuro —
+ *   Bloque nuevo, deliberadamente separado del :root de arriba, que no se
+ *   toca. Las custom properties de varias reglas :root se fusionan en el mismo
+ *   scope, así que esto es puramente aditivo: ninguna pantalla actual cambia.
+ *
+ *   Regla del skill que estos tokens hacen cumplir: "ningún componente escribe
+ *   un color a mano; si falta un tinte se agrega el token a las DOS paletas".
+ *   Por eso cada token de aquí abajo tiene su gemelo en [data-tema="claro"].
+ *
+ *   --panel2 y --nav-bg no existían en oscuro (el skill solo dio los claros).
+ *   En oscuro la prominencia va hacia la luz: --panel (#0f1318) ya es más claro
+ *   que --fondo, y --panel2 sigue esa dirección. --panel2 es el fondo de los
+ *   encabezados de tabla y del hover — si fuera más oscuro que --fondo, el
+ *   encabezado del acta se leería como un hoyo y no como una banda.
+ *
+ *   --rayado va un escalón por debajo de --hover a propósito: la trama diagonal
+ *   se repite y su alpha se acumula, así que igualarlo competiría con el hover.
+ */
+:root {
+  --panel2: #12171d; /* encabezados de tabla, hover, panel dominante */
+  --nav-bg: #0c0f13; /* fondo de la navegación lateral */
+  --linea-fuerte: rgba(255, 255, 255, 0.18); /* separador marcado */
+
+  /* Tintes de fondo */
+  --t-acero: rgba(122, 156, 184, 0.13); /* chips activos, avatares, sparklines */
+  --t-acero2: rgba(122, 156, 184, 0.3); /* barras, segmentos llenos */
+  --t-verde: rgba(52, 199, 123, 0.12); /* fondo del chip de cumplido */
+  --t-ambar: rgba(227, 168, 31, 0.13); /* pastillas, marcas de pendiente */
+  --t-rojo: rgba(229, 72, 77, 0.14); /* marcas de no cumplido */
+
+  /* Bordes suaves */
+  --b-acero: rgba(122, 156, 184, 0.42);
+  --b-verde: rgba(52, 199, 123, 0.4);
+  --b-ambar: rgba(227, 168, 31, 0.4);
+  --b-rojo: rgba(229, 72, 77, 0.42);
+
+  /* Superficies neutras */
+  --hover: rgba(255, 255, 255, 0.04); /* hover y zonas neutras (patio, pistas vacías) */
+  --rayado: rgba(255, 255, 255, 0.03); /* franja de tramas diagonales (unidad en taller) */
+}
+
+/*
+ * — Tema claro —
+ *   Mismo idioma con otra luz: mismos roles, mismos nombres de token, distintos
+ *   valores. Ninguna regla de color cambia entre temas — el verde sigue siendo
+ *   solo cumplido, el acero sigue siendo solo medición.
+ *
+ *   Los valores de veredicto y acero cambian de tono porque los luminosos del
+ *   tema oscuro pierden contraste sobre fondo blanco; los claros son más
+ *   oscuros y saturados para sostenerlo sin dejar de leerse como su color.
+ *
+ *   Nada setea [data-tema] todavía: el interruptor vive en la navegación
+ *   lateral, que llega en su propio PR. Mientras tanto este bloque no pinta
+ *   un solo pixel.
+ */
+[data-tema="claro"] {
+  /* — Superficies — */
+  --fondo: #f4f6f8;
+  --panel: #ffffff;
+  --panel2: #f0f3f6;
+  --nav-bg: #eceff3;
+  --rejilla: rgba(16, 26, 36, 0.06); /* derivado, no validado en mockup: en oscuro
+    la rejilla es ~la mitad de --linea (.05 vs .10); aquí --linea es .11 → .055,
+    redondeado a .06. Sin esto la rejilla sería blanco sobre blanco en claro. */
+  --linea: rgba(16, 26, 36, 0.11);
+  --linea-fuerte: rgba(16, 26, 36, 0.2);
+
+  /* — Texto — */
+  --texto: #111820;
+  --tenue: #5a6874;
+
+  /* — Medición vs. juicio — */
+  --acero: #3d6a8f;
+  --verde: #1b8a54;
+  --ambar: #9a6a05;
+  --rojo: #b4262b;
+  --azul: #2a6fb5;
+
+  /* Tintes de fondo */
+  --t-acero: rgba(61, 106, 143, 0.1);
+  --t-acero2: rgba(61, 106, 143, 0.24);
+  --t-verde: rgba(27, 138, 84, 0.1);
+  --t-ambar: rgba(154, 106, 5, 0.12);
+  --t-rojo: rgba(180, 38, 43, 0.09);
+
+  /* Bordes suaves */
+  --b-acero: rgba(61, 106, 143, 0.38);
+  --b-verde: rgba(27, 138, 84, 0.36);
+  --b-ambar: rgba(154, 106, 5, 0.38);
+  --b-rojo: rgba(180, 38, 43, 0.34);
+
+  /* Superficies neutras */
+  --hover: rgba(16, 26, 36, 0.04);
+  --rayado: rgba(16, 26, 36, 0.05);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
