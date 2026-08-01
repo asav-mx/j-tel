@@ -1,0 +1,58 @@
+name: Pruebas
+
+# La puerta. Hasta ahora el único workflow del repo sondeaba producción cada 15
+# minutos: nada corría en un pull request. La compilación de Vercel era la única
+# señal, y una compilación verde no dice nada sobre si las pruebas pasan.
+#
+# Lo que costó no tenerla: `sesion-actual.test.ts` llevaba días roja en `main`
+# —y dos de sus pruebas pasaban sin ejercer nada— sin que nadie se enterara.
+# Una prueba verde que nadie ejecuta no protege nada.
+#
+# Las pruebas de integración NO corren aquí: escriben, y escriben contra una
+# rama desechable de Neon que exige `DATABASE_URL_TEST`. Se corren a mano con
+# `pnpm --filter @jtel/db test:integration`. Que no corran se dice en voz alta
+# al final del job en vez de dejar que un verde parezca cobertura completa.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Un push nuevo a la misma rama cancela la corrida anterior: lo que importa es
+# el último commit, y dejar corridas viejas compitiendo confunde cuál verde es
+# el que cuenta.
+concurrency:
+  group: pruebas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar
+        run: pnpm install --frozen-lockfile
+
+      # `build` compila los paquetes con tsc y la app con next build, así que
+      # esto es también el chequeo de tipos. Va antes que las pruebas porque
+      # `turbo test` depende de `^build` de todos modos.
+      - name: Compilar
+        run: pnpm build
+
+      - name: Pruebas unitarias
+        run: pnpm test
+
+      - name: Decir lo que NO se probó
+        if: always()
+        run: |
+          echo "::notice::Las pruebas de integración de @jtel/db no corren en CI:"
+          echo "::notice::escriben contra una rama de Neon y necesitan DATABASE_URL_TEST."
+          echo "::notice::Se corren a mano con: pnpm --filter @jtel/db test:integration"
