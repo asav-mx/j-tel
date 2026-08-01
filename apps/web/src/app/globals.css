@@ -148,7 +148,7 @@
 
   /* Superficies neutras */
   --hover: rgba(16, 26, 36, 0.04);
-  --rayado: rgba(16, 26, 36, 0.05);
+  --rayado: rgba(16, 26, 36, 0.03); /* debajo de --hover, igual que en oscuro */
 }
 
 body {
