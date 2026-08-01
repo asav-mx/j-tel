@@ -3,6 +3,7 @@ import { Archivo, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { CLERK_CONFIGURADO } from "@/lib/clerk-estado";
 import { SesionActual } from "@/components/sesion-actual";
+import { TemaInicial } from "@/components/tema-inicial";
 import "./globals.css";
 
 /*
@@ -46,8 +47,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="es-MX"
       className={`${archivo.variable} ${plexSans.variable} ${plexMono.variable}`}
+      /* `TemaInicial` escribe data-tema en <html> antes de que React hidrate:
+         el servidor no puede saber la preferencia del navegador, así que esa
+         diferencia es esperada y no un error. */
+      suppressHydrationWarning
     >
       <body>
+        {/* Primero que nada, y síncrono: fija el tema antes del primer pintado. */}
+        <TemaInicial />
         {children}
         {/* Quién soy — en toda pantalla, mientras auth-rbac no esté terminado. */}
         <SesionActual />

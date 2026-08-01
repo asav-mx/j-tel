@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { getRepos } from "@/lib/db";
 import { getIdentidad } from "@/lib/auth";
 import { etiquetaRol } from "@/lib/etiquetas-rol";
+import { InterruptorTema } from "@/components/interruptor-tema";
 import { ENCABEZADO_RUTA } from "@/middleware";
 
 /**
@@ -45,7 +46,7 @@ function Usuario({ id, compacta = false }: { id: Identidad; compacta?: boolean }
       href="/quien-soy"
       title={`${id.userId} · ${rol}`}
       className={`flex cursor-pointer items-center gap-2.5 transition-colors hover:bg-[var(--hover)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--azul)] ${
-        compacta ? "rounded-sm px-1.5 py-1" : "border-t border-[var(--linea)] px-3.5 py-3"
+        compacta ? "rounded-sm px-1.5 py-1" : "px-3.5 py-3"
       }`}
     >
       <span
@@ -121,6 +122,7 @@ export async function NavLateral({
           </Link>
         ) : null}
         <Usuario id={id} compacta />
+        <InterruptorTema />
       </div>
 
       {/* 1 · Identidad del producto */}
@@ -202,9 +204,13 @@ export async function NavLateral({
         ))}
       </div>
 
-      {/* 4 · Quién soy */}
-      <div className="hidden min-[720px]:block">
-        <Usuario id={id} />
+      {/* 4 · Quién soy — y el interruptor de tema, que es preferencia personal
+             y por eso vive aquí abajo y no en la pantalla */}
+      <div className="hidden items-center gap-1 border-t border-[var(--linea)] pr-2 min-[720px]:flex">
+        <div className="min-w-0 flex-1">
+          <Usuario id={id} />
+        </div>
+        <InterruptorTema />
       </div>
     </nav>
   );
