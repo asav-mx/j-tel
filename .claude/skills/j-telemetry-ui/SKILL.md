@@ -358,6 +358,9 @@ for t in fondo panel panel2 nav-bg rejilla linea linea-fuerte texto tenue \
 done
 ```
 
+**De dónde salió:** la verificación se construyó al hacer PR #151, para atrapar el
+`--t-verde` que se había encontrado a mano — y ahí mismo encontró sola el `--rejilla`.
+
 ### El interruptor
 
 - Vive **abajo en la navegación lateral, junto al usuario y el engrane**. Es
