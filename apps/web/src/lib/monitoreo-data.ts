@@ -1,7 +1,14 @@
 import { getRepos } from "@/lib/db";
 import type { ContractPolicy, GpsPoint, OperationalScope } from "@jtel/domain";
-import { computeEvidenceWindow, dayForDateQuery, localTimeHHMM, JTTEL_TZ } from "@jtel/domain";
 import {
+  computeEvidenceWindow,
+  dayForDateQuery,
+  haversineKm,
+  localTimeHHMM,
+  JTTEL_TZ,
+} from "@jtel/domain";
+import {
+  cumulativeRouteFractions,
   evaluateUnitRouteMatch,
   findGeofenceEntry,
   minDistanceToRouteKm,
@@ -58,6 +65,40 @@ export type MonitoreoRoute = {
   currentPoint: TrackPoint | null;
   /** Llegada a geocerca destino (pre-llegada en vivo, o la del hecho si cerrado). */
   arrivalAt: string | null;
+  /**
+   * Hace cuánto se recibió el último punto GPS de esta unidad, en minutos.
+   * Null si no hay unidad en vivo. Es la resta que la torre necesita para
+   * decir "sin señal" por unidad: el heartbeat del sistema existe agregado
+   * por carrier, y ese no distingue cuál unidad se calló.
+   */
+  signalAgeMinutes: number | null;
+  /** Hora local del último punto GPS — la evidencia de la antigüedad de arriba. */
+  lastSignalAt: string | null;
+  /**
+   * Kilómetros que faltan del trazado CONTRATADO, medidos sobre el trazado
+   * mismo y no en línea recta: la recta al destino miente a la baja.
+   * Null si no hay unidad, si ya llegó, o si no hay KML contra el cual medir.
+   */
+  remainingKm: number | null;
+  /**
+   * Certeza de la asociación unidad↔ruta. Mientras el turno corre la
+   * asociación se recalcula en cada lectura: es inferencia en formación, y se
+   * declara `probable`. Las cerradas traen su unidad del hecho congelado y van
+   * SIN etiqueta — `confirmada` es palabra del acta, no de la torre.
+   */
+  certeza: "probable" | null;
+  /**
+   * Minutos entre la llegada y SU deadline: negativo antes, positivo después.
+   * Null si no ha llegado. La tira de llegadas se dibuja sobre este delta y no
+   * sobre la hora del reloj, porque cada ruta trae su propio deadline y un eje
+   * de horas absolutas mezclaría plazos distintos en la misma pista.
+   */
+  arrivalDeltaMinutes: number | null;
+  /**
+   * Holgura del contrato en minutos (`verificationGraceMinutes`). Es el umbral
+   * que la tira dibuja al lado de la llegada — el dato nunca va sin su lectura.
+   */
+  graceMinutes: number;
 };
 
 export type MonitoreoPayload = {
@@ -69,6 +110,13 @@ export type MonitoreoPayload = {
   unitName: string;
   accountSlug: string;
   generatedAt: string;
+  /**
+   * El turno está corriendo AHORA: alguna ocurrencia tiene a `now` dentro de
+   * su ventana de evidencia sin truncar. Es la misma ventana del árbitro, no
+   * un horario aparte — así la torre y el acta no pueden discrepar sobre
+   * cuándo estaba en vuelo un turno.
+   */
+  enVuelo: boolean;
   routes: MonitoreoRoute[];
   stats: {
     total: number;
@@ -83,6 +131,38 @@ export type MonitoreoPayload = {
 };
 
 const PALETTE_SIZE = 12;
+
+/**
+ * Kilómetros que faltan del trazado contratado desde donde va la unidad.
+ *
+ * Se proyecta el punto al waypoint más cercano del KML y se mide lo que queda
+ * de ahí al destino SOBRE el trazado. La alternativa —línea recta al
+ * destino— miente a la baja: dice 3 km cuando por calle faltan 7.
+ */
+function distanciaRestanteKm(punto: LatLng, kml: LatLng[]): number | null {
+  if (kml.length < 2) return null;
+
+  let totalKm = 0;
+  for (let i = 1; i < kml.length; i++) {
+    totalKm += haversineKm(kml[i - 1]!.lat, kml[i - 1]!.lng, kml[i]!.lat, kml[i]!.lng);
+  }
+  if (totalKm <= 0) return null;
+
+  let masCercano = 0;
+  let mejorKm = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < kml.length; i++) {
+    const d = haversineKm(punto.lat, punto.lng, kml[i]!.lat, kml[i]!.lng);
+    if (d < mejorKm) {
+      mejorKm = d;
+      masCercano = i;
+    }
+  }
+
+  // Fracción acumulada del árbitro, para que "avance sobre la ruta" signifique
+  // lo mismo aquí y en la verificación.
+  const avance = cumulativeRouteFractions(kml)[masCercano] ?? 0;
+  return Math.max(0, Math.round(totalKm * (1 - avance) * 10) / 10);
+}
 
 function downsample<T>(arr: T[], max: number): T[] {
   if (arr.length <= max) return arr;
@@ -202,10 +282,14 @@ export async function loadMonitoreo(opts: {
     windowStart: Date;
     /** Techo de la ventana: min(now, deadline + gracia + margen después). */
     windowEnd: Date;
+    /** La misma ventana SIN truncar a `now` — para saber si el turno va en vuelo. */
+    windowEndFull: Date;
     /** Umbral A de la política (kmlMatchMinPct) — mismo default del motor. */
     matchMinPct: number;
     /** Umbral B de la política (kmlCorridorMinPct) — mismo default del motor. */
     corridorMinPct: number;
+    /** Holgura de la política, en minutos — el umbral que la tira dibuja. */
+    graceMinutes: number;
     carrierAccountId: string | null;
     /** Hecho congelado: si existe, la torre no calcula nada sobre esta ocurrencia. */
     closed: boolean;
@@ -226,6 +310,11 @@ export async function loadMonitoreo(opts: {
       policy,
       now,
     );
+    const { windowEnd: windowEndFull } = computeEvidenceWindow(o.expectedDeadline, {
+      evidenceMarginMinutesBefore: policy.evidenceMarginMinutesBefore ?? 60,
+      verificationGraceMinutes: policy.verificationGraceMinutes ?? 15,
+      evidenceMarginMinutesAfter: policy.evidenceMarginMinutesAfter ?? 30,
+    });
     const profileGeo = o.profile?.geofence;
     const fromProfile = profileGeo ? normalizePolygon(profileGeo.polygon) : [];
     const fromScope = geofenceById.get(o.profile?.geofenceId ?? "");
@@ -243,8 +332,10 @@ export async function loadMonitoreo(opts: {
       deadline: o.expectedDeadline,
       windowStart,
       windowEnd,
+      windowEndFull,
       matchMinPct: policy.kmlMatchMinPct ?? 60,
       corridorMinPct: policy.kmlCorridorMinPct ?? 60,
+      graceMinutes: policy.verificationGraceMinutes ?? 15,
       carrierAccountId: o.contract?.carrierAccountId ?? null,
       closed: Boolean(o.complianceFact),
     });
@@ -400,6 +491,7 @@ export async function loadMonitoreo(opts: {
     let huella: TrackPoint[] = [];
     let currentPoint: TrackPoint | null = null;
     let arrivalAt: string | null = null;
+    let arrivalDate: Date | null = null;
     let coveragePct = 0;
     let corridorPct = 0;
     let matchedUnitId: string | null = null;
@@ -414,9 +506,8 @@ export async function loadMonitoreo(opts: {
       // Unidad observada del hecho congelado — la planta SÍ la ve
       // (es la verdad operativa del servicio que pagó).
       matchedUnitId = fact.observedUnitId ?? null;
-      arrivalAt = fact.observedArrivalAt
-        ? localTimeHHMM(fact.observedArrivalAt, JTTEL_TZ)
-        : null;
+      arrivalDate = fact.observedArrivalAt ?? null;
+      arrivalAt = arrivalDate ? localTimeHHMM(arrivalDate, JTTEL_TZ) : null;
 
       if (fact.observedUnitId && o.trip) {
         const evidence = await repos.evidence.getPointsForTrip(o.trip.id);
@@ -455,9 +546,8 @@ export async function loadMonitoreo(opts: {
         // por entrada a la geocerca (frontera de evidencia).
         const entryDetected =
           d.geofence.length >= 3 ? findGeofenceEntry(match.points, d.geofence) : null;
-        arrivalAt = entryDetected
-          ? localTimeHHMM(entryDetected, JTTEL_TZ)
-          : null;
+        arrivalDate = entryDetected;
+        arrivalAt = entryDetected ? localTimeHHMM(entryDetected, JTTEL_TZ) : null;
 
         // Recortar al momento de llegada: el servicio terminó ahí.
         // No seguir transmitiendo GPS post-llegada (p. ej. casa del chofer).
@@ -529,6 +619,20 @@ export async function loadMonitoreo(opts: {
       }
     }
 
+    // La resta que la torre necesita y el heartbeat agregado por carrier no da:
+    // hace cuánto se calló ESTA unidad.
+    //
+    // Solo sobre servicios abiertos que siguen en camino. En uno cerrado la
+    // evidencia ya está congelada; y en uno que ya llegó, **la traza se cortó
+    // en la geocerca porque esa es la frontera de la evidencia** — el silencio
+    // posterior es la ley funcionando, no una unidad callada. Marcarlo ámbar
+    // acusaría al carrier de perder señal justo cuando el sistema dejó de
+    // mirar a propósito.
+    const puntoVivo = d.closed || state === "llego" ? null : currentPoint;
+    const signalAgeMinutes = puntoVivo
+      ? Math.max(0, Math.round((now.getTime() - new Date(puntoVivo.at).getTime()) / 60_000))
+      : null;
+
     routes.push({
       occurrenceId: o.id,
       profileCode: o.profile?.code ?? "?",
@@ -548,6 +652,18 @@ export async function loadMonitoreo(opts: {
       huella,
       currentPoint,
       arrivalAt,
+      signalAgeMinutes,
+      lastSignalAt: puntoVivo ? localTimeHHMM(new Date(puntoVivo.at), JTTEL_TZ) : null,
+      // Ya llegó = no falta camino. Sin unidad = no hay desde dónde medir.
+      remainingKm:
+        puntoVivo && state !== "llego"
+          ? distanciaRestanteKm({ lat: puntoVivo.lat, lng: puntoVivo.lng }, d.kml)
+          : null,
+      certeza: !d.closed && matchedUnitId ? "probable" : null,
+      arrivalDeltaMinutes: arrivalDate
+        ? Math.round((arrivalDate.getTime() - d.deadline.getTime()) / 60_000)
+        : null,
+      graceMinutes: d.graceMinutes,
     });
   }
 
@@ -583,6 +699,15 @@ export async function loadMonitoreo(opts: {
     unitName: unit.name,
     accountSlug: account.slug,
     generatedAt: localTimeHHMM(now, JTTEL_TZ),
+    // En vuelo = `now` cae dentro de la ventana de evidencia SIN truncar de
+    // alguna ocurrencia. No se compara contra la hora de inicio del turno: la
+    // ventana abre antes y cierra después, y es la que el árbitro va a usar.
+    enVuelo: occData.some(
+      (d) =>
+        !d.closed &&
+        now.getTime() >= d.windowStart.getTime() &&
+        now.getTime() <= d.windowEndFull.getTime(),
+    ),
     routes,
     stats,
     units,

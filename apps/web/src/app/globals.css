@@ -193,3 +193,22 @@ body {
     transition: none;
   }
 }
+
+/*
+ * — La ciudad insinuada del mapa de la torre —
+ *   Único estilo de componente en este archivo, y por una razón: leaflet
+ *   inyecta su propio DOM y sus panes no se pueden alcanzar con utilidades.
+ *
+ *   El mosaico crudo de OSM es una lámina brillante que compite con las
+ *   trazas. La ficha pide ciudad insinuada: el territorio se reconoce, pero
+ *   quien manda es lo medido encima. Se baja saturación y contraste, y en
+ *   oscuro además se invierte el tono para que el mapa no sea un rectángulo
+ *   blanco dentro de una pantalla de tinta.
+ */
+.mapa-torre .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.85) saturate(0.35);
+}
+
+[data-tema="claro"] .mapa-torre .leaflet-tile-pane {
+  filter: saturate(0.4) contrast(0.92) brightness(1.04);
+}

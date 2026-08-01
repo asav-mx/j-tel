@@ -1,14 +1,27 @@
 import { loadMonitoreo } from "@/lib/monitoreo-data";
+import { diagnosticarTorre } from "@/lib/monitoreo-estado";
 import { UnitShell } from "@/components/unit-shell";
-import { Card } from "@/components/ui";
 import { withAccount } from "@/lib/account-context";
-import { MonitoreoLive } from "@/components/monitoreo-map";
+import { MonitoreoTorre } from "@/components/monitoreo-torre";
+import {
+  CuentaNueva,
+  SinTurnoActivo,
+  SistemaSinSenal,
+} from "@/components/monitoreo-estados";
 import { getRepos } from "@/lib/db";
 import type { UnitPageContext } from "@/lib/unit-context";
 import { scopeToUnitPath } from "@/lib/unit-routes";
-import { operationalUnitLabel } from "@/lib/operational-scope";
-import { localDateIso, pickActiveShift } from "@/lib/local-time";
+import { localDateIso, pickActiveShift, pickNextShift } from "@/lib/local-time";
+import { JTTEL_TZ, localTimeHHMM } from "@jtel/domain";
 import Link from "next/link";
+
+/**
+ * Monitoreo — la torre (Ficha-Monitoreo.md).
+ *
+ * Esta vista no dibuja: **decide cuál de los cuatro estados de §5 toca**, carga
+ * lo que ese estado necesita y nada más. Es una sola pantalla; lo que cambia es
+ * qué ocupa el lugar del mapa.
+ */
 
 function parseParam(
   sp: Record<string, string | string[] | undefined> | undefined,
@@ -27,7 +40,7 @@ export async function MonitoreoUnitView({
 }) {
   const sp = searchParams ? await searchParams : undefined;
   const now = new Date();
-  // Fecha civil en Juárez (no UTC), para que a las 10pm no salte al “día de mañana”.
+  // Fecha civil en Juárez (no UTC), para que a las 10pm no salte al "día de mañana".
   const fechaAuto = localDateIso(now);
   const fechaOverride = parseParam(sp, "fecha");
   const fecha = fechaOverride ?? fechaAuto;
@@ -64,6 +77,7 @@ export async function MonitoreoUnitView({
   );
 
   const active = pickActiveShift(shifts, now);
+  const proximo = pickNextShift(shifts, now);
   const turnoId =
     turnoOverride && shiftById.has(turnoOverride)
       ? turnoOverride
@@ -81,6 +95,33 @@ export async function MonitoreoUnitView({
         })
       : null;
 
+  const abiertas = monitoreo
+    ? monitoreo.routes.filter((r) => r.state !== "cerrado").length
+    : 0;
+
+  const estado = await diagnosticarTorre({
+    scope: ctx.scope,
+    clientAccountId: ctx.client.id,
+    hayTurnos: shifts.length > 0,
+    enVuelo: monitoreo?.enVuelo ?? false,
+    serviciosAbiertos: abiertas,
+    now,
+  });
+
+  // Cuántas rutas trae el turno que SIGUE — no el que se está mostrando, que
+  // ya cerró. Se cuenta sobre las ocurrencias del día ya cargadas; si el
+  // siguiente turno es de mañana no hay nada que contar todavía, y entonces el
+  // bloque no se muestra en vez de pintar un cero que no significa "ninguna".
+  const programadasDelProximo =
+    proximo && !proximo.manana
+      ? occs.filter((o) => o.profile?.routeShift?.shiftId === proximo.turno.id).length ||
+        null
+      : null;
+
+  // El último cierre del día: el turno cuyo hecho más reciente quedó sellado.
+  // Si hoy no ha cerrado nada, el bloque simplemente no se muestra.
+  const ultimoCierre = ultimoCierreDelDia(occs, shiftById);
+
   const scopeParam =
     ctx.scope.kind === "plant"
       ? `plantId=${ctx.scope.plantId}`
@@ -91,115 +132,218 @@ export async function MonitoreoUnitView({
       : "";
 
   const basePath = scopeToUnitPath(ctx.scope);
-  const historialHref = withAccount(`${basePath}/cierre`, ctx.client.slug);
+  const cierreHref = withAccount(`${basePath}/cierre`, ctx.client.slug);
   const liveHref = withAccount(`${basePath}/monitoreo`, ctx.client.slug);
-  const unitLabel = operationalUnitLabel(ctx.unit);
+  const rutasHref = proximo
+    ? `${liveHref}&turno=${proximo.turno.id}`
+    : liveHref;
+
+  // §3.1 · La línea de contexto: turno vigente, hora de entrada del personal y
+  // deadline de llegada. El deadline vive por ocurrencia y puede diferir entre
+  // rutas del mismo turno; cuando difieren se dice el rango, no un número que
+  // no le toca a ninguna.
+  const deadlines = [...new Set((monitoreo?.routes ?? []).map((r) => r.expectedDeadline))]
+    .filter((d) => d.length > 0)
+    .sort();
+  const contexto = selectedShift
+    ? [
+        // El nombre a secas: los turnos ya se llaman "Primer Turno", "Turno B".
+        selectedShift.name,
+        selectedShift.startTime ? `entrada del personal ${selectedShift.startTime}` : null,
+        // Dicho completo porque el deadline es ANTES de la entrada, y visto sin
+        // etiqueta parece un error de captura.
+        deadlines.length === 1
+          ? `deadline de llegada ${deadlines[0]}`
+          : deadlines.length > 1
+            ? `deadline de llegada ${deadlines[0]}–${deadlines[deadlines.length - 1]}`
+            : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
+
+  const accion = (
+    <Link
+      href={cierreHref}
+      className="rounded-sm border border-[var(--linea-fuerte)] px-3 py-1.5 text-[12px] text-[var(--texto)] transition-colors hover:bg-[var(--hover)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--azul)]"
+    >
+      Cierre del turno →
+    </Link>
+  );
 
   return (
-    <UnitShell client={ctx.client} unit={ctx.unit} title={`Monitoreo — ${unitLabel}`}>
-      <p className="text-sm text-[var(--muted)]">
-        Torre de control en vivo: el turno se elige solo según la hora (Juárez). Las unidades
-        identificadas dejan huella de lo ya cubierto (pre-verificado visual, no cambia el
-        veredicto). Para jornadas pasadas ve a{" "}
-        <Link href={historialHref} className="text-[var(--accent)]">
-          Historial
-        </Link>
-        .
-      </p>
-
-      <Card title={autoMode ? "Turno activo (automático)" : "Vista forzada (manual)"}>
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-          <div>
-            <p className="text-base text-[var(--texto)]">
-              {selectedShift
-                ? `${selectedShift.name} · ${fecha} · ${selectedShift.startTime}`
-                : "Sin turnos configurados"}
-            </p>
-            <p className="mt-1 text-xs text-[var(--muted)]">
-              {autoMode
-                ? "Elegido por la hora actual. Se actualiza cada 45s."
-                : "Estás forzando fecha/turno. "}
-              {!autoMode ? (
-                <Link href={liveHref} className="text-[var(--accent)]">
-                  Volver al automático →
-                </Link>
-              ) : null}
-            </p>
-          </div>
-          <Link
-            href={historialHref}
-            className="rounded border border-[var(--linea-fuerte)] px-3 py-2 text-sm hover:bg-[var(--hover)]"
-          >
-            Ver historial (días pasados) →
+    <UnitShell client={ctx.client} unit={ctx.unit} title="Monitoreo" contexto={contexto} accion={accion}>
+      {!autoMode ? (
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-sm border border-[var(--b-acero)] bg-[var(--t-acero)] px-3 py-2 font-mono text-[11px] text-[var(--texto)] tabular-nums">
+          <span>
+            Vista forzada · {fecha}
+            {selectedShift ? ` · ${selectedShift.name}` : ""}
+          </span>
+          <Link href={liveHref} className="text-[var(--azul)] hover:underline">
+            Volver al turno en curso →
           </Link>
-        </div>
+        </p>
+      ) : null}
 
-        <details className="mt-4 text-sm">
-          <summary className="cursor-pointer text-[var(--muted)]">
-            Forzar otra fecha / turno
-          </summary>
-          <form className="mt-3 flex flex-wrap items-end gap-3" method="get">
-            <input type="hidden" name="account" value={ctx.client.slug} />
-            <label>
-              <span className="text-[var(--muted)]">Fecha</span>
-              <input
-                type="date"
-                name="fecha"
-                defaultValue={fecha}
-                className="mt-1 block rounded border border-[var(--linea)] bg-black/40 px-3 py-2"
-              />
-            </label>
-            <label>
-              <span className="text-[var(--muted)]">Turno</span>
-              <select
-                name="turno"
-                defaultValue={turnoId ?? ""}
-                className="mt-1 block rounded border border-[var(--linea)] bg-black/40 px-3 py-2"
-              >
-                {shifts.length === 0 ? (
-                  <option value="">Sin turnos</option>
-                ) : (
-                  shifts.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.startTime})
-                    </option>
-                  ))
-                )}
-              </select>
-            </label>
-            <button
-              type="submit"
-              className="rounded bg-[var(--accent)] px-4 py-2 font-medium text-black"
-            >
-              Ver este turno
-            </button>
-          </form>
-        </details>
-      </Card>
+      {contenido()}
 
-      {!monitoreo ? (
-        <Card title="Sin datos">
-          <p className="text-sm text-[var(--muted)]">
-            No hay ocurrencias para el turno activo de hoy. Revisa turnos/perfiles o abre{" "}
-            <Link href={historialHref} className="text-[var(--accent)]">
-              Historial
-            </Link>{" "}
-            para un día pasado.
-          </p>
-        </Card>
-      ) : (
-        <Card
-          title={`${monitoreo.turnoName} · ${monitoreo.fecha}${monitoreo.turnoStartTime ? ` · ${monitoreo.turnoStartTime}` : ""}`}
-        >
-          <p className="mb-4 text-sm text-[var(--muted)]">
-            {monitoreo.stats.total} rutas · {monitoreo.stats.cerrado} cerrado ·{" "}
-            {monitoreo.stats.llego} llegó · {monitoreo.stats.avanzando} avanzando ·{" "}
-            {monitoreo.stats.en_ruta} en ruta · {monitoreo.stats.programada} programada ·{" "}
-            <span className="font-medium text-sky-200">{monitoreo.stats.alerta} alerta</span>
-          </p>
-          <MonitoreoLive initial={monitoreo} query={query} />
-        </Card>
-      )}
+      <SelectorDeTurno
+        clientSlug={ctx.client.slug}
+        fecha={fecha}
+        turnoId={turnoId}
+        shifts={shifts}
+      />
     </UnitShell>
   );
+
+  function contenido() {
+    // Forzar una fecha o un turno es pedir explícitamente esos datos: los
+    // estados de §5 describen el ahora, y aquí el usuario no está mirando el
+    // ahora. Se le muestra lo que pidió.
+    if (!autoMode) {
+      return monitoreo ? (
+        <MonitoreoTorre initial={monitoreo} query={query} forzado />
+      ) : (
+        <SinDatos cierreHref={cierreHref} />
+      );
+    }
+
+    if (estado.tipo === "cuenta_nueva") return <CuentaNueva pasos={estado.pasos} />;
+
+    if (estado.tipo === "sin_senal") {
+      return (
+        <SistemaSinSenal
+          edadMinutos={estado.edadMinutos}
+          ultimaLectura={estado.ultimaLectura}
+          serviciosEnRiesgo={estado.serviciosEnRiesgo}
+        />
+      );
+    }
+
+    if (estado.tipo === "sin_turno") {
+      return (
+        <SinTurnoActivo
+          proximo={
+            proximo
+              ? {
+                  nombre: proximo.turno.name,
+                  hora: proximo.turno.startTime,
+                  minutosPara: proximo.minutosPara,
+                  manana: proximo.manana,
+                }
+              : null
+          }
+          ultimoCierre={ultimoCierre}
+          programadas={programadasDelProximo}
+          telemetriaViva={estado.telemetriaViva}
+          edadMinutos={estado.edadMinutos}
+          cierreHref={cierreHref}
+          rutasHref={rutasHref}
+          routes={monitoreo?.routes ?? []}
+        />
+      );
+    }
+
+    return monitoreo ? (
+      <MonitoreoTorre initial={monitoreo} query={query} />
+    ) : (
+      <SinDatos cierreHref={cierreHref} />
+    );
+  }
+}
+
+function SinDatos({ cierreHref }: { cierreHref: string }) {
+  return (
+    <p className="rounded-sm border border-[var(--linea)] px-4 py-6 text-[13px] text-[var(--tenue)]">
+      Este turno no tiene rutas programadas para la fecha elegida. Para jornadas pasadas
+      ve al{" "}
+      <Link href={cierreHref} className="text-[var(--azul)] hover:underline">
+        cierre del turno
+      </Link>
+      .
+    </p>
+  );
+}
+
+/** Ver otro turno: es consulta, no la operación de ahora, y por eso va plegado. */
+function SelectorDeTurno({
+  clientSlug,
+  fecha,
+  turnoId,
+  shifts,
+}: {
+  clientSlug: string;
+  fecha: string;
+  turnoId: string | null;
+  shifts: Array<{ id: string; name: string; startTime: string }>;
+}) {
+  if (shifts.length === 0) return null;
+
+  return (
+    <details className="rounded-sm border border-[var(--linea)] px-3 py-2">
+      <summary className="cursor-pointer font-mono text-[11px] tracking-[0.1em] text-[var(--tenue)] uppercase">
+        Ver otra fecha o turno
+      </summary>
+      <form className="mt-3 flex flex-wrap items-end gap-3 text-[12px]" method="get">
+        <input type="hidden" name="account" value={clientSlug} />
+        <label>
+          <span className="block text-[var(--tenue)]">Fecha</span>
+          <input
+            type="date"
+            name="fecha"
+            defaultValue={fecha}
+            className="mt-1 block rounded-sm border border-[var(--linea)] bg-[var(--panel2)] px-2.5 py-1.5 font-mono text-[var(--texto)]"
+          />
+        </label>
+        <label>
+          <span className="block text-[var(--tenue)]">Turno</span>
+          <select
+            name="turno"
+            defaultValue={turnoId ?? ""}
+            className="mt-1 block rounded-sm border border-[var(--linea)] bg-[var(--panel2)] px-2.5 py-1.5 text-[var(--texto)]"
+          >
+            {shifts.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name} ({s.startTime})
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="submit"
+          className="cursor-pointer rounded-sm border border-[var(--b-acero)] px-3 py-1.5 text-[var(--acero)] transition-colors hover:bg-[var(--t-acero)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--azul)]"
+        >
+          Ver este turno
+        </button>
+      </form>
+    </details>
+  );
+}
+
+type OccConHecho = {
+  profile?: { routeShift?: { shiftId?: string | null } | null } | null;
+  complianceFact?: { materializedAt: Date } | null;
+};
+
+/**
+ * El turno del día que selló más recientemente. Se lee de las ocurrencias que
+ * ya se cargaron — no vale abrir otra consulta para una línea de apoyo.
+ */
+function ultimoCierreDelDia(
+  occs: OccConHecho[],
+  shiftById: Map<string, { id: string; name: string; startTime: string }>,
+): { turno: string; hora: string } | null {
+  let mejor: { shiftId: string; at: Date } | null = null;
+  for (const o of occs) {
+    const at = o.complianceFact?.materializedAt;
+    const shiftId = o.profile?.routeShift?.shiftId;
+    if (!at || !shiftId) continue;
+    if (!mejor || at.getTime() > mejor.at.getTime()) mejor = { shiftId, at };
+  }
+  if (!mejor) return null;
+  const turno = shiftById.get(mejor.shiftId);
+  return {
+    turno: turno?.name ?? "anterior",
+    hora: localTimeHHMM(mejor.at, JTTEL_TZ),
+  };
 }
