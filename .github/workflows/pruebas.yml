@@ -41,11 +41,16 @@ jobs:
       - name: Instalar
         run: pnpm install --frozen-lockfile
 
-      # `build` compila los paquetes con tsc y la app con next build, así que
-      # esto es también el chequeo de tipos. Va antes que las pruebas porque
-      # `turbo test` depende de `^build` de todos modos.
       - name: Compilar
         run: pnpm build
+
+      # `next build` NO revisa los tipos de los archivos de prueba: no están en
+      # el grafo de módulos de la app. Eso importa porque algunas leyes se hacen
+      # cumplir con tipos y no con aserciones —lo filtrado por resultado no se
+      # puede contar como periodo— y su prueba es un `@ts-expect-error`. Sin
+      # este paso, esa valla no la vigila nadie.
+      - name: Tipos, incluidas las pruebas
+        run: pnpm typecheck
 
       - name: Pruebas unitarias
         run: pnpm test

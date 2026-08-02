@@ -1,4 +1,9 @@
 import { getRepos } from "@/lib/db";
+import {
+  aplicarFiltroResultado,
+  contarPeriodo,
+  FILTROS_DE_RESULTADO,
+} from "@/lib/cumplimiento-agregados";
 import { Card } from "@/components/ui";
 import { UnitShell } from "@/components/unit-shell";
 import { OccurrenceTable, toOccurrenceRow } from "@/components/occurrence-table";
@@ -209,36 +214,15 @@ export async function UnitComplianceView({
    * La regla: **un agregado dice la verdad del periodo completo siempre.** El
    * filtro de estado es una lente sobre la tabla, no sobre los hechos.
    */
-  const delPeriodo = filtered;
-  const stats = {
-    total: delPeriodo.length,
-    cumplido: delPeriodo.filter((o) => o.complianceFact?.status === "cumplido").length,
-    no_cumplido: delPeriodo.filter((o) => o.complianceFact?.status === "no_cumplido").length,
-    pendiente: delPeriodo.filter((o) => o.complianceFact?.status === "pendiente_evidencia")
-      .length,
-    sin_verificar: delPeriodo.filter((o) => !o.complianceFact).length,
-  };
+  const stats = contarPeriodo(filtered);
 
-  if (estado === "sin_verificar") {
-    filtered = filtered.filter((o) => !o.complianceFact);
-  } else if (estado !== "all") {
-    filtered = filtered.filter((o) => o.complianceFact?.status === estado);
-  }
+  const paraLaTabla = aplicarFiltroResultado(filtered, estado);
 
-  const rows = filtered.map((occ) =>
+  const rows = paraLaTabla.map((occ) =>
     toOccurrenceRow(occ, "/cliente/servicio", client.slug, { showPlant: false }),
   );
 
-  // Los tres resultados y nada más. `sin_verificar` se dibuja aparte: no es un
-  // resultado del que se pueda elegir, es lo que el árbitro aún no ha juzgado.
-  const statusFilters: Array<{ id: StatusFilter; label: string }> = [
-    { id: "all", label: "Todos" },
-    { id: "cumplido", label: "Cumplido" },
-    { id: "no_cumplido", label: "No cumplido" },
-    // El estado canónico se llama así completo; acortarlo a "Pendiente" deja
-    // en el aire pendiente de qué, que es justo lo que da credibilidad.
-    { id: "pendiente_evidencia", label: "Pendiente por evidencia" },
-  ];
+  const statusFilters = FILTROS_DE_RESULTADO;
 
   const profileOptions = [...profilesForSelect]
     .sort((a, b) => a.code.localeCompare(b.code) || a.name.localeCompare(b.name))

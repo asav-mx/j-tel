@@ -15,3 +15,31 @@
  * número aquí haría que la torre y las alertas discreparan sobre lo mismo.
  */
 export const SIN_SENAL_MINUTOS = 15;
+
+/**
+ * Hace cuánto se calló una unidad — o `null` cuando preguntarlo no tiene
+ * sentido.
+ *
+ * Vive aparte y como función pura porque encierra una ley, no una conveniencia:
+ * **después de entrar a la geocerca no hay señal que esperar.** La traza se
+ * corta ahí porque la geocerca es la frontera de la evidencia, así que el
+ * silencio posterior es la ley funcionando y no una unidad callada. Medirlo
+ * igual acusaba al carrier de perder señal justo donde el sistema deja de mirar
+ * a propósito — con el dato correcto al minuto.
+ *
+ * Igual en un servicio cerrado: su evidencia ya está congelada.
+ */
+export function edadSenalMinutos(input: {
+  /** El servicio ya tiene hecho sellado. */
+  cerrado: boolean;
+  /** La unidad ya entró a la geocerca de destino. */
+  llego: boolean;
+  /** Marca de tiempo del último punto GPS, o null si no hay unidad. */
+  ultimoPuntoAt: Date | string | null | undefined;
+  ahora: Date;
+}): number | null {
+  if (input.cerrado || input.llego || !input.ultimoPuntoAt) return null;
+  const at = new Date(input.ultimoPuntoAt).getTime();
+  if (!Number.isFinite(at)) return null;
+  return Math.max(0, Math.round((input.ahora.getTime() - at) / 60_000));
+}

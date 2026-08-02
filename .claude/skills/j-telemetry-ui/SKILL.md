@@ -663,6 +663,7 @@ Si aparece cualquiera de estos, el instrumento se disolvió de vuelta en tablero
 - [ ] ¿La cara cliente está libre de operación interna del carrier?
 - [ ] ¿Las trazas se cortan en la llegada a geocerca?
 - [ ] ¿Todo umbral viene de la política del contrato, no de una constante?
+- [ ] **Por cada dato en pantalla: ¿qué afirma AHÍ?** No basta con que el valor sea correcto — un dato correcto se vuelve una afirmación falsa según **dónde** se lea (una unidad que llegó no está "sin señal": la traza se cortó en la geocerca a propósito), **cómo se agrupe** (`sin verificar` junto a los tres se lee como cuarto veredicto), **sobre qué universo hable** (un agregado recalculado sobre el filtro afirma del periodo lo que solo vale para la lente) y **de qué color se pinte** (ámbar sobre un motivo sin costo le imputa al carrier un cargo que el contrato no le pone). Los cuatro pasaron en un solo piloto, ninguno lo atrapó el compilador. Ver Marco, sección D.
 - [ ] Oficio: foco visible con teclado, contraste ≥ 4.5:1, `prefers-reduced-motion` respetado, responsivo en 375 / 768 / 1024 / 1440, cursor de mano en lo clickeable, iconos SVG (Lucide) y no emojis.
 
 ---
