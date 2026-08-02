@@ -2566,6 +2566,102 @@ export class OccurrenceRepository {
   }
 
   /**
+   * Cuándo se selló el pendiente por evidencia más viejo que sigue abierto.
+   *
+   * Es la mitad que le falta a "22 servicios sin poder juzgarse": un conteo sin
+   * antigüedad alarma sin informar, porque no dice de cuándo (§D del Marco).
+   *
+   * Un `min()` en la base, sin traer filas: la pantalla de inicio es la que más
+   * se abre y no puede pagar el costo de materializar los pendientes para mirar
+   * el primero.
+   *
+   * Devuelve `null` cuando el alcance no tiene un solo pendiente abierto — que
+   * es la respuesta buena, y la pantalla debe poder decirla en vez de pintar
+   * una antigüedad de cero.
+   */
+  async pendienteMasViejoForClientAccount(clientAccountId: string): Promise<Date | null> {
+    const conditions = await this.occurrenceConditions({ kind: "client", clientAccountId });
+    if (!conditions) return null;
+
+    const [fila] = await this.db
+      .select({ selladoEn: sql<Date | null>`min(${complianceFacts.materializedAt})` })
+      .from(serviceOccurrences)
+      .innerJoin(complianceFacts, eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id))
+      .where(
+        and(
+          ...(conditions as Parameters<typeof and>),
+          eq(complianceFacts.status, "pendiente_evidencia"),
+        ),
+      );
+
+    return fila?.selladoEn ? new Date(fila.selladoEn) : null;
+  }
+
+  /**
+   * Un renglón por día civil con servicios programados, contado por la base.
+   *
+   * **Un día sin renglón es un día sin servicios programados** — no un día sin
+   * datos. Esa distinción es la que decide si la tira de 14 días se puede
+   * dibujar: un cuadro que significa dos cosas distintas es peor que ninguno.
+   * Se sostiene porque las ocurrencias se generan por adelantado, así que la
+   * ausencia de ocurrencia en un día pasado significa que no se programó.
+   *
+   * `sin_hecho` es su propia columna, no se reparte entre los veredictos: un
+   * servicio programado que el árbitro todavía no juzgó no es un cuarto
+   * veredicto.
+   */
+  async tiraDiariaForScope(
+    scope: OperationalScope,
+    from: Date,
+    to: Date,
+  ): Promise<
+    Array<{
+      dia: string;
+      cumplido: number;
+      no_cumplido: number;
+      pendiente_evidencia: number;
+      sin_hecho: number;
+    }>
+  > {
+    const target =
+      scope.kind === "plant"
+        ? ({ kind: "plant", plantId: scope.plantId } as const)
+        : ({ kind: "plant_group", plantGroupId: scope.plantGroupId } as const);
+    const conditions = await this.occurrenceConditions(target, from, to);
+    if (!conditions) return [];
+
+    const filas = await this.db
+      .select({
+        dia: serviceOccurrences.serviceDate,
+        status: complianceFacts.status,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(serviceOccurrences)
+      .leftJoin(complianceFacts, eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id))
+      .where(and(...(conditions as Parameters<typeof and>)))
+      .groupBy(serviceOccurrences.serviceDate, complianceFacts.status);
+
+    const porDia = new Map<string, ReturnType<typeof vacio>>();
+    function vacio() {
+      return { cumplido: 0, no_cumplido: 0, pendiente_evidencia: 0, sin_hecho: 0 };
+    }
+    for (const f of filas) {
+      const dia = String(f.dia).slice(0, 10);
+      const acc = porDia.get(dia) ?? vacio();
+      const n = Number(f.count);
+      if (f.status === null) acc.sin_hecho += n;
+      else if (f.status === "cumplido") acc.cumplido += n;
+      else if (f.status === "no_cumplido") acc.no_cumplido += n;
+      else if (f.status === "pendiente_evidencia") acc.pendiente_evidencia += n;
+      porDia.set(dia, acc);
+    }
+
+    return [...porDia.entries()]
+      .map(([dia, c]) => ({ dia, ...c }))
+      .sort((a, b) => a.dia.localeCompare(b.dia));
+  }
+
+  /**
    * El conteo de un contrato en UN día civil, comparando la columna
    * `serviceDate` tal cual.
    *
