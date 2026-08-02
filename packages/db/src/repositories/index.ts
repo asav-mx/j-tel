@@ -577,6 +577,23 @@ export class FleetRepository {
       where: eq(maintenanceRecords.carrierAccountId, carrierAccountId),
     });
   }
+
+  /**
+   * Las cargas de diésel del transportista, opcionalmente desde una fecha.
+   *
+   * El filtro va en la base y no en memoria: la tabla crece con cada carga de
+   * cada unidad, y el explorador solo mira un periodo.
+   */
+  async getFuelForCarrier(carrierAccountId: string, desde?: Date) {
+    return this.db.query.fuelRecords.findMany({
+      where: desde
+        ? and(
+            eq(fuelRecords.carrierAccountId, carrierAccountId),
+            gte(fuelRecords.recordedAt, desde),
+          )
+        : eq(fuelRecords.carrierAccountId, carrierAccountId),
+    });
+  }
 }
 
 export class RouteRepository {
@@ -2557,6 +2574,53 @@ export class OccurrenceRepository {
     return this.countByStatus(
       await this.occurrenceConditions({ kind: "client", clientAccountId }, from, to),
     );
+  }
+
+  /**
+   * Servicios acreditados a cada unidad, y en cuántos días distintos.
+   *
+   * Los cuenta la base y devuelve una fila por unidad. Con 82 unidades por 30
+   * días, traer los hechos para contarlos en JavaScript es el patrón que este
+   * repositorio ya midió y desterró: el costo no está en encontrarlos, está en
+   * transportarlos.
+   *
+   * **Solo cuenta hechos con unidad acreditada**, que por diseño del motor son
+   * los `cumplido`: un `no_cumplido` nunca tiene unidad observada, así que una
+   * tabla construida sobre esto no puede —ni debe— nombrar unidad para lo que
+   * no se cumplió.
+   */
+  async serviciosPorUnidad(
+    carrierAccountId: string,
+    desde: Date,
+    hasta: Date,
+  ): Promise<Map<string, { servicios: number; dias: number }>> {
+    const filas = await this.db
+      .select({
+        unitId: complianceFacts.observedUnitId,
+        servicios: sql<number>`count(*)::int`,
+        dias: sql<number>`count(distinct ${serviceOccurrences.serviceDate})::int`,
+      })
+      .from(complianceFacts)
+      .innerJoin(
+        serviceOccurrences,
+        eq(serviceOccurrences.id, complianceFacts.serviceOccurrenceId),
+      )
+      .innerJoin(units, eq(units.id, complianceFacts.observedUnitId))
+      .where(
+        and(
+          eq(units.carrierAccountId, carrierAccountId),
+          gte(serviceOccurrences.serviceDate, localDateIso(desde, JTTEL_TZ)),
+          lte(serviceOccurrences.serviceDate, localDateIso(hasta, JTTEL_TZ)),
+        ),
+      )
+      .groupBy(complianceFacts.observedUnitId);
+
+    const porUnidad = new Map<string, { servicios: number; dias: number }>();
+    for (const f of filas) {
+      if (!f.unitId) continue;
+      porUnidad.set(f.unitId, { servicios: Number(f.servicios), dias: Number(f.dias) });
+    }
+    return porUnidad;
   }
 
   async countByStatusForContract(contractId: string, from?: Date, to?: Date) {
