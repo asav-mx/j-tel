@@ -1,5 +1,11 @@
 import { getRepos } from "@/lib/db";
-import type { ContractPolicy, GpsPoint, OperationalScope } from "@jtel/domain";
+import type {
+  ContractPolicy,
+  EtaBasis,
+  GpsPoint,
+  OperationalScope,
+  RouteDurationSample,
+} from "@jtel/domain";
 import {
   computeEvidenceWindow,
   dayForDateQuery,
@@ -8,6 +14,7 @@ import {
   JTTEL_TZ,
 } from "@jtel/domain";
 import { edadSenalMinutos } from "@/lib/monitoreo-umbrales";
+import { estimarLlegada } from "@/lib/monitoreo-eta";
 import {
   cumulativeRouteFractions,
   evaluateUnitRouteMatch,
@@ -100,6 +107,17 @@ export type MonitoreoRoute = {
    * que la tira dibuja al lado de la llegada — el dato nunca va sin su lectura.
    */
   graceMinutes: number;
+  /**
+   * Llegada ESTIMADA (hora local) — inferencia, no medición. Null cuando no se
+   * puede estimar sin inventar: sin unidad, con señal vieja, ya llegada o
+   * cerrada. No confundir con `arrivalAt`, que es la entrada real a la
+   * geocerca.
+   */
+  etaAt: string | null;
+  /** Minutos que faltan según esa estimación. Null cuando `etaAt` es null. */
+  etaMinutes: number | null;
+  /** De dónde salió la estimación. Viaja con el número para que se pueda decir. */
+  etaBasis: EtaBasis | null;
 };
 
 export type MonitoreoPayload = {
@@ -134,13 +152,21 @@ export type MonitoreoPayload = {
 const PALETTE_SIZE = 12;
 
 /**
- * Kilómetros que faltan del trazado contratado desde donde va la unidad.
+ * Dónde va la unidad sobre el trazado contratado: qué fracción lleva recorrida
+ * y cuántos kilómetros le faltan.
  *
  * Se proyecta el punto al waypoint más cercano del KML y se mide lo que queda
  * de ahí al destino SOBRE el trazado. La alternativa —línea recta al
  * destino— miente a la baja: dice 3 km cuando por calle faltan 7.
+ *
+ * La fracción se devuelve además de los kilómetros porque la llegada estimada
+ * la necesita: los km dicen cuánto falta de camino, la fracción dice cuánto de
+ * la ruta, y una duración típica se reparte por fracción, no por distancia.
  */
-function distanciaRestanteKm(punto: LatLng, kml: LatLng[]): number | null {
+function avanceSobreRuta(
+  punto: LatLng,
+  kml: LatLng[],
+): { avanceFraccion: number; restanteKm: number } | null {
   if (kml.length < 2) return null;
 
   let totalKm = 0;
@@ -162,7 +188,10 @@ function distanciaRestanteKm(punto: LatLng, kml: LatLng[]): number | null {
   // Fracción acumulada del árbitro, para que "avance sobre la ruta" signifique
   // lo mismo aquí y en la verificación.
   const avance = cumulativeRouteFractions(kml)[masCercano] ?? 0;
-  return Math.max(0, Math.round(totalKm * (1 - avance) * 10) / 10);
+  return {
+    avanceFraccion: avance,
+    restanteKm: Math.max(0, Math.round(totalKm * (1 - avance) * 10) / 10),
+  };
 }
 
 function downsample<T>(arr: T[], max: number): T[] {
@@ -291,6 +320,10 @@ export async function loadMonitoreo(opts: {
     corridorMinPct: number;
     /** Holgura de la política, en minutos — el umbral que la tira dibuja. */
     graceMinutes: number;
+    /** Velocidad promedio contratada (km/h) — el arranque en frío de la estimación. */
+    avgSpeedKmh: number;
+    /** Ruta×turno: la llave de la historia de duraciones de esta ruta. */
+    routeShiftId: string | null;
     carrierAccountId: string | null;
     /** Hecho congelado: si existe, la torre no calcula nada sobre esta ocurrencia. */
     closed: boolean;
@@ -337,10 +370,26 @@ export async function loadMonitoreo(opts: {
       matchMinPct: policy.kmlMatchMinPct ?? 60,
       corridorMinPct: policy.kmlCorridorMinPct ?? 60,
       graceMinutes: policy.verificationGraceMinutes ?? 15,
+      // El mismo default del motor: 20 km/h, ruta de recolección de personal
+      // con paradas, no flujo libre.
+      avgSpeedKmh: policy.routeAvgSpeedKmh ?? 20,
+      routeShiftId: o.profile?.routeShift?.id ?? null,
       carrierAccountId: o.contract?.carrierAccountId ?? null,
       closed: Boolean(o.complianceFact),
     });
   }
+
+  // ── Historia de duraciones, para la llegada estimada ────────────────────
+  // Las catorce rutas del turno en UNA consulta. De a una serían catorce viajes
+  // más a la base en una pantalla que ya carga de más.
+  //
+  // Solo se piden las de servicios ABIERTOS: un servicio cerrado no se estima.
+  const muestrasPorRutaTurno = await repos.routeTraversals.recentSamplesForRouteShifts(
+    occData
+      .filter((d) => !d.closed)
+      .map((d) => d.routeShiftId)
+      .filter((x): x is string => !!x),
+  );
 
   // ── Labels de unidades (TODOS los carriers) ─────────────────────────────
   // Se cargan labels de todos los carriers (abiertos y cerrados) porque las
@@ -496,6 +545,7 @@ export async function loadMonitoreo(opts: {
     let coveragePct = 0;
     let corridorPct = 0;
     let matchedUnitId: string | null = null;
+    let transcurridoMinutos: number | null = null;
 
     if (d.closed) {
       // El árbitro ya emitió veredicto: la torre no calcula nada. Solo dibuja
@@ -570,6 +620,17 @@ export async function loadMonitoreo(opts: {
           150,
         );
 
+        // Cuánto lleva andando ESTE viaje: del primer punto en corredor al
+        // último. Se mide sobre el corredor y no sobre todos los puntos porque
+        // antes de entrar al trazado la unidad no había empezado la ruta, y
+        // contar ese tiempo inflaría el ritmo observado con minutos de patio.
+        const primero = onCorridor[0];
+        const ultimo = onCorridor[onCorridor.length - 1];
+        transcurridoMinutos =
+          primero && ultimo && ultimo.timestamp.getTime() > primero.timestamp.getTime()
+            ? (ultimo.timestamp.getTime() - primero.timestamp.getTime()) / 60_000
+            : null;
+
         if (entryDetected) {
           state = "llego";
           // Marcador estático de llegada (último punto del servicio), NO la posición en vivo.
@@ -632,6 +693,28 @@ export async function loadMonitoreo(opts: {
       ahora: now,
     });
 
+    // Dónde va sobre el trazado. Los km alimentan el renglón; la fracción,
+    // la estimación de llegada.
+    const avance =
+      puntoVivo && state !== "llego"
+        ? avanceSobreRuta({ lat: puntoVivo.lat, lng: puntoVivo.lng }, d.kml)
+        : null;
+
+    // La llegada estimada — inferencia, y la ley de cuándo NO estimarla vive
+    // aparte y probada en `monitoreo-eta`. Aquí solo se le entregan los hechos.
+    const estimacion = estimarLlegada({
+      cerrado: d.closed,
+      llego: state === "llego",
+      edadSenalMinutos: signalAgeMinutes,
+      avanceFraccion: avance?.avanceFraccion ?? null,
+      restanteKm: avance?.restanteKm ?? null,
+      transcurridoMinutos,
+      muestras: d.routeShiftId
+        ? (muestrasPorRutaTurno.get(d.routeShiftId) ?? ([] as RouteDurationSample[]))
+        : [],
+      avgSpeedKmh: d.avgSpeedKmh,
+    });
+
     routes.push({
       occurrenceId: o.id,
       profileCode: o.profile?.code ?? "?",
@@ -654,14 +737,16 @@ export async function loadMonitoreo(opts: {
       signalAgeMinutes,
       lastSignalAt: puntoVivo ? localTimeHHMM(new Date(puntoVivo.at), JTTEL_TZ) : null,
       // Ya llegó = no falta camino. Sin unidad = no hay desde dónde medir.
-      remainingKm:
-        puntoVivo && state !== "llego"
-          ? distanciaRestanteKm({ lat: puntoVivo.lat, lng: puntoVivo.lng }, d.kml)
-          : null,
+      remainingKm: avance?.restanteKm ?? null,
       certeza: !d.closed && matchedUnitId ? "probable" : null,
       arrivalDeltaMinutes: arrivalDate
         ? Math.round((arrivalDate.getTime() - d.deadline.getTime()) / 60_000)
         : null,
+      etaAt: estimacion
+        ? localTimeHHMM(new Date(now.getTime() + estimacion.minutosRestantes * 60_000), JTTEL_TZ)
+        : null,
+      etaMinutes: estimacion?.minutosRestantes ?? null,
+      etaBasis: estimacion?.base ?? null,
       graceMinutes: d.graceMinutes,
     });
   }

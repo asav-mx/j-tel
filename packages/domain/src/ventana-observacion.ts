@@ -150,6 +150,24 @@ export function estimateRouteDurationMinutes(
 /** De dónde salió el ancho de la ventana. Se declara; no se adivina después. */
 export type ObservationWindowBasis = "medida" | "estimada_geometria" | "politica";
 
+/**
+ * De dónde salió una llegada estimada. Mismo vocabulario que la ventana, y a
+ * propósito: `medida` y `estimada_geometria` significan aquí exactamente lo que
+ * significan allá, y dos juegos de palabras para la misma idea harían que el
+ * expediente hablara dos idiomas.
+ *
+ * Las diferencias son de fondo, no de estilo:
+ *
+ * - **No hay `politica`.** El contrato no configura ninguna hora de llegada.
+ *   Ofrecer ese valor sería prometer una fuente que no existe.
+ * - **Sí hay `ritmo_observado`**, que la ventana no tiene concepto de usar
+ *   porque se dimensiona antes de que el viaje exista. La estimación, en
+ *   cambio, se calcula con el viaje ya andando y puede mirar cómo va.
+ */
+export type EtaBasis =
+  | Extract<ObservationWindowBasis, "medida" | "estimada_geometria">
+  | "ritmo_observado";
+
 export type ObservationWindowParams = {
   /** Duración resumida de la historia de esta ruta (min); null si no alcanza. */
   measuredDurationMinutes?: number | null;

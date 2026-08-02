@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MonitoreoPayload, MonitoreoRoute } from "@/lib/monitoreo-data";
 import { SIN_SENAL_MINUTOS } from "@/lib/monitoreo-umbrales";
+import { LECTURA_BASE_ETA } from "@/lib/monitoreo-eta";
 import { formatearDuracion } from "@/lib/local-time";
 import { MonitoreoMapa } from "@/components/monitoreo-map";
 
@@ -29,6 +30,12 @@ const REFRESH_MS = 45_000;
  */
 function plural(n: number, singular: string, plural: string): string {
   return `${n} ${n === 1 ? singular : plural}`;
+}
+
+/** "A", "A y B", "A, B y C" — una enumeración que se lee como una frase. */
+function enumerar(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} y ${items[items.length - 1]}`;
 }
 
 /** "hace 3 min" — y por debajo del minuto no se finge precisión que no hay. */
@@ -296,13 +303,47 @@ function grupo(r: MonitoreoRoute): number {
   return r.matchedUnitId ? 1 : 2;
 }
 
+/**
+ * §3.4 · El orden es por llegada estimada — cuando hay estimación.
+ *
+ * Dentro de un mismo grupo, las que tienen estimación van primero y ordenadas
+ * por ella: la pregunta de la torre es "quién llega y en qué orden". Las que no
+ * la tienen —sin unidad, o con la señal vieja— no se pueden intercalar sin
+ * inventarles una hora, así que van después y conservan su orden por deadline.
+ *
+ * El desempate final por `occurrenceId` no es adorno: sin él, dos renglones con
+ * la misma estimación pueden intercambiarse entre refrescos de 45 segundos y la
+ * lista parece moverse sola.
+ */
+function compararParaLista(a: MonitoreoRoute, b: MonitoreoRoute): number {
+  const porGrupo = grupo(a) - grupo(b);
+  if (porGrupo !== 0) return porGrupo;
+
+  const aTiene = a.etaMinutes !== null;
+  const bTiene = b.etaMinutes !== null;
+  if (aTiene !== bTiene) return aTiene ? -1 : 1;
+  if (aTiene && bTiene) {
+    const porEta = a.etaMinutes! - b.etaMinutes!;
+    if (porEta !== 0) return porEta;
+  }
+
+  const porDeadline = a.minutesToDeadline - b.minutesToDeadline;
+  if (porDeadline !== 0) return porDeadline;
+  return a.occurrenceId.localeCompare(b.occurrenceId);
+}
+
 function Lista({ data }: { data: MonitoreoPayload }) {
   const orden = useMemo(
-    () =>
-      [...data.routes].sort(
-        (a, b) => grupo(a) - grupo(b) || a.minutesToDeadline - b.minutesToDeadline,
-      ),
+    () => [...data.routes].sort(compararParaLista),
     [data.routes],
+  );
+
+  // La procedencia se declara UNA vez debajo de la lista, no en cada renglón:
+  // repetirla catorce veces convertiría la explicación en ruido y empujaría
+  // fuera lo que sí cambia entre renglones.
+  const basesPresentes = useMemo(
+    () => [...new Set(orden.map((r) => r.etaBasis).filter((b) => b !== null))],
+    [orden],
   );
 
   if (orden.length === 0) {
@@ -331,6 +372,16 @@ function Lista({ data }: { data: MonitoreoPayload }) {
         El sistema infiere qué unidad cubre cada ruta a partir de su recorrido, y esa
         asociación se afina conforme avanza el turno. Se confirma al cierre.
       </p>
+
+      {/* La llegada estimada declara de dónde salió. Una hora sin su
+          procedencia se lee tan firme como una medida, y no lo es. */}
+      {basesPresentes.length > 0 ? (
+        <p className="mt-1 text-[11px] leading-snug text-[var(--tenue)]">
+          La llegada estimada es un cálculo, no una medición: se estima{" "}
+          {enumerar(basesPresentes.map((b) => LECTURA_BASE_ETA[b!]))}. Se afina conforme
+          avanza el turno, y no se muestra cuando la señal de la unidad no es reciente.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -395,6 +446,25 @@ function Renglon({
           </span>
         ) : null}
       </span>
+
+      {/* §3.4 · La llegada estimada. En acero como todo lo demás, pero con el
+          `~` y la palabra "estimada" en su título: es inferencia, y una hora a
+          secas al lado de "Llegó 14:06" se leería igual de firme que la medida.
+          Cuando no hay estimación va `—`, nunca una hora sobre señal vieja. */}
+      {!cerrado && r.state !== "llego" ? (
+        <span
+          title={
+            r.etaBasis
+              ? `Llegada estimada ${r.etaAt} · ${LECTURA_BASE_ETA[r.etaBasis]}`
+              : sinSenal
+                ? "Sin estimación: la señal de esta unidad no es reciente"
+                : "Sin estimación: no hay desde dónde calcularla"
+          }
+          className="flex-none font-mono text-[11px] text-[var(--acero)] tabular-nums"
+        >
+          {r.etaAt ? `llega ~${r.etaAt}` : "llega —"}
+        </span>
+      ) : null}
 
       {/* Llegada medida, nunca un veredicto. */}
       {r.arrivalAt ? (

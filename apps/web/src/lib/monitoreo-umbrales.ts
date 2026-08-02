@@ -9,12 +9,13 @@
 /**
  * Cuántos minutos sin punto GPS convierten a una unidad en "sin señal".
  *
- * El mismo umbral del dead-man switch de ingesta (`IngestHealthService`,
- * `DEFAULT_STALE_MINUTES`): si el sistema da por caída la ingesta a los 15
- * minutos, una unidad callada 15 minutos está igual de callada. Un segundo
- * número aquí haría que la torre y las alertas discreparan sobre lo mismo.
+ * El valor ya no vive aquí: vive una sola vez en `@jtel/domain`, porque la
+ * banda, el mapa, la llegada estimada y el dead-man switch de ingesta tienen
+ * que afirmar lo mismo sobre el mismo silencio. Se re-exporta —que no es
+ * copiar— para que los call sites de la torre no cambien de ruta y el
+ * componente de cliente lo siga importando desde aquí.
  */
-export const SIN_SENAL_MINUTOS = 15;
+export { SIN_SENAL_MINUTOS } from "@jtel/domain";
 
 /**
  * Hace cuánto se calló una unidad — o `null` cuando preguntarlo no tiene
