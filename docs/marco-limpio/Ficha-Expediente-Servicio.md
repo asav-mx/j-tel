@@ -36,13 +36,42 @@ Los pasos que siguió el árbitro, en forma de preguntas con su respuesta medida
 
 **Cuando un paso falla, ahí se ve** — con lo que faltó, no con una etiqueta genérica.
 
+#### Lo que la cara cliente recibe es una proyección, no el ledger
+
+**El ledger crudo no cruza a la planta, y no debe cruzar.** Sus pasos `candidata` traen el IMEI de cada unidad que *no* sirvió la ruta: eso es flota del transportista, y Pieza 4 del Marco lo prohíbe. La compuerta que hoy existe en el cargador se queda intacta.
+
+Lo que cruza es una **proyección armada en el servidor**:
+
+- los cuatro pasos con sus umbrales y sus porcentajes
+- la unidad ganadora **con su etiqueta legible**, nunca su IMEI
+- **cero candidatas perdedoras, cero IMEIs**
+
+**Por qué se construye la proyección en vez de dejar §2.2 solo del lado transportista:** el argumento entero del producto es que el veredicto aguanta una discusión. Una planta que no puede ver cómo se midió tiene que creer el resultado por fe — y eso es exactamente lo que J-Telemetry existe para no pedir. **Puede saber cómo se midió sin ver la flota de quien la sirve.**
+
+#### Cada paso declara su procedencia
+
+Los cuatro pasos no salen todos del mismo lugar, y la pantalla no finge que sí:
+
+| Paso | De dónde sale |
+|---|---|
+| 1 · Qué unidad | `ledgerEntries.steps` — `candidata` y `decision`, con sus umbrales |
+| 2 · Evidencia suficiente | `ledgerEntries.steps` — `cobertura_evidencia` |
+| 3 · Geocerca | La hora, del ledger. **El radio, de la geocerca del contrato** — no está en ningún paso |
+| 4 · Plazo | `complianceFacts.expectedDeadline` + la **política congelada**, no el ledger |
+
+**El método de identificación no se cita como etiqueta guardada, porque no se guarda una.** Se muestra *cómo* se midió — coincidencia de trazado y precisión de corredor, cada una contra su mínimo. Es más honesto y más útil que un nombre.
+
+**Cuando un paso no se registró, se declara.** Los hechos sellados antes de que existiera la medición de cobertura no traen el paso 2. Ese renglón dice que no se registró para ese servicio. **No se deriva a la callada ni se deja un hueco mudo:** un paso inferido y uno medido no pueden verse igual.
+
 ### 2.3 La evidencia
 Mapa con el trazado contratado (punteado) y el recorrido medido (sólido), los puntos de evidencia, el origen con su hora y el destino con su geocerca.
 
 Fondo oscuro en ambos temas. **La traza termina al entrar a la geocerca** — el recorrido posterior del transportista no se muestra a ningún cliente.
 
 ### 2.4 Las medidas
-Tabla de medición pura, toda en acero: llegada observada · plazo acordado · margen · coincidencia con el trazado · cobertura con su mínimo · puntos en la ventana · hueco de señal más largo.
+Tabla de medición pura, toda en acero: llegada observada · plazo acordado · margen · coincidencia con el trazado · cobertura con su mínimo · puntos en la ventana · hueco de señal más largo **con el máximo que permite el contrato**.
+
+El hueco más largo **ya está medido** — no se recalcula desde los puntos de evidencia. Vive en el paso `cobertura_evidencia`, junto al máximo contra el que se comparó.
 
 ### 2.5 Qué se juzgó — identidad
 Ruta, turno, fecha, contrato, unidad observada, chofer declarado. **Cada uno enlaza a su propia identidad.**
@@ -74,11 +103,17 @@ Las formas por las que pasó, con su hora y quién la produjo. **Dos formas, no 
 - `complianceFactHistory` (`status`, `timing`, `factSnapshot`, `actorKind`, `replacedAt`) — §2.7
 - `routeKmlVersions.waypoints` — el trazado contratado
 
-**Debe confirmar desarrollo:**
-1. **Qué guarda `ledgerEntries.steps` exactamente.** §2.2 depende de eso. Si los pasos guardados no cubren las cuatro preguntas, se muestran los que sí y se declara.
-2. **El método de identificación** ("coincidencia de trazado") — confirmar que se persiste cuál se usó, no solo el resultado.
-3. **Hueco de señal más largo** — derivable de `evidencePoints`, confirmar si ya se calcula o hay que hacerlo.
-4. **Chofer declarado** — no existe el modelo. Ese renglón espera el módulo de choferes.
+**Confirmado contra el código — lo que guarda `ledgerEntries.steps`:**
+
+El árbitro emite cinco pasos (`inicio`, `evidencia`, `cobertura_evidencia`, `candidata` — uno por IMEI —, `decision`), con la forma `{step, result, details}`. La capa de servicios agrega `llegada_fuera_ventana` y `multi_variante`.
+
+1. **Las cuatro preguntas no salen todas del ledger.** La 1 y la 2 sí; la 3 solo en su hora; la 4 no. La procedencia de cada una está en §2.2 y **se declara en pantalla**.
+2. **El método de identificación no se persiste con nombre.** Se infiere de si hubo trazado contratado. Por eso §2.2 muestra las dos medidas contra sus mínimos en vez de citar una etiqueta que no existe.
+3. **El hueco de señal más largo ya se calcula** y viene con su máximo permitido. **No se deriva de `evidencePoints`.**
+4. **El paso de cobertura falta en los hechos viejos** — solo se emite cuando hay ventana de cobertura. Ya existe el lector que devuelve nulo cuando el paso no aparece; ese es el contrato. Renglón declarado, nunca callado.
+5. **Chofer declarado** — no existe el modelo. Ese renglón espera el módulo de choferes.
+
+**El ledger no cruza a la cara cliente.** La compuerta es de Pieza 4 y no se toca. Lo que la planta ve es la proyección de §2.2.
 
 **Si un dato no existe, ese renglón no se muestra.** Y en esta pantalla más que en ninguna: **un paso inventado destruye la credibilidad de todo el expediente.**
 
@@ -91,3 +126,5 @@ Las formas por las que pasó, con su hora y quién la produjo. **Dos formas, no 
 - **Color de veredicto fuera del sello.** Las medidas van en acero
 - **Traza después de la geocerca**
 - **Lenguaje de culpa.** Se reporta lo medido; el enforcement es otra cosa
+- **El ledger crudo en la cara cliente.** Ni IMEIs, ni las unidades candidatas que no sirvieron la ruta. La planta ve cómo se midió, nunca la flota de quien la sirve
+- **Un paso inferido con la misma cara que uno medido.** Lo que no se registró se dice
