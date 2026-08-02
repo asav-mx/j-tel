@@ -5,6 +5,9 @@ import {
   serviceOccurrences,
   trips,
   complianceFactHistory,
+  complianceFacts,
+  drivers,
+  driverCredentials,
 } from "../src/index.js";
 import { eq, inArray } from "drizzle-orm";
 import type { ContractPolicy } from "@jtel/domain";
@@ -948,5 +951,127 @@ describe("countByStatus — paridad con el conteo en JS", () => {
     ).toEqual(cero);
     expect(await repos.occurrences.countByStatusForClientAccount(inexistente)).toEqual(cero);
     expect(await repos.occurrences.countByStatusForContract(inexistente)).toEqual(cero);
+  });
+});
+
+/**
+ * La invariante de la que depende todo el módulo de choferes.
+ *
+ * Las dos capas existen para que borrar los datos personales de una persona no
+ * destruya el acta de los servicios que cubrió. Si esta prueba falla, la purga
+ * rompe la historia — que es exactamente lo que el Plan-Choferes llama
+ * no-negociable.
+ */
+describe("choferes — la purga no rompe la historia", () => {
+  it("el nombre congelado sobrevive a purgar credenciales y a borrar al chofer", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const tecma = await repos.accounts.findBySlug("tecma");
+    const carrier = await repos.accounts.findBySlug("juarez-bus");
+    if (!tecma || !carrier) return;
+    const profiles = await repos.profiles.findForClient(tecma.id);
+    if (profiles.length === 0) return;
+    const profile = profiles[0]!;
+
+    const serviceDate = "2099-03-01";
+    const deadline = new Date("2099-03-01T08:00:00Z");
+
+    const stale = await db.query.serviceOccurrences.findFirst({
+      where: (o, { and, eq: e }) =>
+        and(e(o.serviceProfileId, profile.id), e(o.serviceDate, serviceDate)),
+    });
+    if (stale) {
+      await repos.compliance.deleteFactForOccurrence(stale.id);
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, stale.id));
+    }
+
+    const [occ] = await db
+      .insert(serviceOccurrences)
+      .values({
+        serviceProfileId: profile.id,
+        contractId: profile.contractId,
+        routeShiftId: profile.routeShiftId,
+        serviceDate,
+        expectedDeadline: deadline,
+        expectedGeofenceId: profile.geofenceId,
+      })
+      .returning();
+    if (!occ) throw new Error("no se pudo insertar la ocurrencia");
+
+    try {
+      const [trip] = await db
+        .insert(trips)
+        .values({
+          serviceOccurrenceId: occ.id,
+          evidenceWindowStart: new Date("2099-03-01T07:00:00Z"),
+          evidenceWindowEnd: new Date("2099-03-01T09:00:00Z"),
+          evidenceStatus: "en_espera",
+        })
+        .returning();
+      if (!trip) throw new Error("no se pudo insertar el viaje");
+
+      // Un chofer con su expediente vivo.
+      const [chofer] = await db
+        .insert(drivers)
+        .values({ carrierAccountId: carrier.id })
+        .returning();
+      if (!chofer) throw new Error("no se pudo insertar el chofer");
+      await db.insert(driverCredentials).values({
+        driverId: chofer.id,
+        fullName: "R. Medina",
+        licenseNumber: "LIC-TEST-0001",
+      });
+
+      // El servicio se sella con el chofer declarado, congelado en el hecho.
+      await repos.compliance.saveFact({
+        serviceOccurrenceId: occ.id,
+        tripId: trip.id,
+        expectedDeadline: deadline,
+        expectedGeofenceId: profile.geofenceId,
+        referenceUnitId: null,
+        observedUnitId: null,
+        observedArrivalAt: null,
+        observedRouteMatchPct: null,
+        servedVariantId: null,
+        status: "no_cumplido",
+        timing: null,
+        lateExcusable: false,
+        excusableReason: null,
+        routeStrictnessApplied: "destino_only",
+        contractPolicySnapshot: TECMA_POLICY,
+      });
+      await db
+        .update(complianceFacts)
+        .set({ declaredDriverName: "R. Medina", declaredDriverId: chofer.id })
+        .where(eq(complianceFacts.serviceOccurrenceId, occ.id));
+
+      const leer = async () =>
+        db.query.complianceFacts.findFirst({
+          where: (f, { eq: e }) => e(f.serviceOccurrenceId, occ.id),
+        });
+
+      expect((await leer())?.declaredDriverName).toBe("R. Medina");
+      expect((await leer())?.declaredDriverId).toBe(chofer.id);
+
+      // 1 · Se purgan las credenciales: el chofer se fue, o la ley obligó.
+      await db.delete(driverCredentials).where(eq(driverCredentials.driverId, chofer.id));
+      expect(await db.query.driverCredentials.findFirst({
+        where: (c, { eq: e }) => e(c.driverId, chofer.id),
+      })).toBeUndefined();
+      // El acta de ese día sigue diciendo quién manejó.
+      expect((await leer())?.declaredDriverName).toBe("R. Medina");
+
+      // 2 · El caso extremo: se borra el ancla entera.
+      await db.delete(drivers).where(eq(drivers.id, chofer.id));
+      const tras = await leer();
+      // La referencia se anula...
+      expect(tras?.declaredDriverId).toBeNull();
+      // ...y el nombre NO. Esa es la invariante.
+      expect(tras?.declaredDriverName).toBe("R. Medina");
+    } finally {
+      await repos.compliance.deleteFactForOccurrence(occ.id);
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, occ.id));
+    }
   });
 });

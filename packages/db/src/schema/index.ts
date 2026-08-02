@@ -543,8 +543,122 @@ export const complianceFacts = pgTable("compliance_facts", {
   contractPolicySnapshot: jsonb("contract_policy_snapshot")
     .$type<import("@jtel/domain").ContractPolicy>()
     .notNull(),
+  /**
+   * El chofer declarado, CONGELADO dentro del hecho — Capa 1 del Plan-Choferes.
+   *
+   * El nombre es texto plano, no una referencia. Es la única forma de que la
+   * historia sobreviva a la purga: si el expediente del chofer se borra —porque
+   * se fue, o porque la ley obliga— este renglón sigue diciendo quién manejó
+   * ese día según el transportista. Una referencia a una fila purgable dejaría
+   * el acta de ese servicio con un hueco.
+   *
+   * Es el mismo argumento que congela `contractPolicySnapshot`: lo que sostiene
+   * un hecho sellado vive dentro del hecho.
+   *
+   * `declaredDriverId` es comodidad para enlazar mientras el chofer exista, y
+   * por eso se anula al borrarlo. **El nombre nunca se anula.**
+   *
+   * Nulo en los hechos anteriores al módulo, y nulo cuando el transportista no
+   * declaró chofer — que es un hueco legítimo y se muestra, no se esconde.
+   */
+  declaredDriverName: text("declared_driver_name"),
+  declaredDriverId: uuid("declared_driver_id").references(() => drivers.id, {
+    onDelete: "set null",
+  }),
   materializedAt: timestamp("materialized_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
+
+/**
+ * El chofer — Capa 1 del Plan-Choferes: la identidad estable, no purgable.
+ *
+ * **No guarda un solo dato personal.** Es el ancla: existe para que las
+ * asignaciones y los hechos tengan a qué colgarse, y para que borrar el
+ * expediente de una persona no rompa nada.
+ *
+ * **El identificador lo genera J-Telemetry, no el transportista.** Si el
+ * transportista tiene su propio número de nómina, vive en las credenciales
+ * como un campo más —purgable— y nunca como llave: un identificador ajeno
+ * puede repetirse, cambiar de dueño o desaparecer con el sistema que lo emitió,
+ * y nada de eso puede arrastrar la historia de un servicio sellado.
+ */
+export const drivers = pgTable("drivers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  carrierAccountId: uuid("carrier_account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  /** La baja NO borra: marca. Los hechos que cubrió siguen siendo suyos. */
+  deactivatedAt: timestamp("deactivated_at", { withTimezone: true, mode: "date" }),
+  /** Cuándo se purgaron las credenciales. Deja constancia de que se purgaron. */
+  credentialsPurgedAt: timestamp("credentials_purged_at", { withTimezone: true, mode: "date" }),
+}, (table) => [
+  index("drivers_carrier_idx").on(table.carrierAccountId),
+]);
+
+/**
+ * Las credenciales — Capa 2 del Plan-Choferes: el expediente vivo, PURGABLE.
+ *
+ * Todo el dato personal vive aquí y solo aquí, en su propia tabla, para que
+ * purgarlo sea borrar filas y no editar columnas de media base. Al dar de baja
+ * se borra esta fila; `drivers` y los hechos quedan intactos.
+ *
+ * Alta mínima: nombre y licencia. Todo lo demás es opcional y se llena después
+ * — el transportista tiene que poder registrar a alguien en treinta segundos.
+ */
+export const driverCredentials = pgTable("driver_credentials", {
+  driverId: uuid("driver_id")
+    .primaryKey()
+    .references(() => drivers.id, { onDelete: "cascade" }),
+  /** Alta mínima. */
+  fullName: text("full_name").notNull(),
+  licenseNumber: text("license_number").notNull(),
+  /** Todo lo de abajo es opcional a propósito. */
+  licenseExpiresOn: date("license_expires_on"),
+  phone: text("phone"),
+  emergencyContactName: text("emergency_contact_name"),
+  emergencyContactPhone: text("emergency_contact_phone"),
+  photoUrl: text("photo_url"),
+  /**
+   * El número que el transportista ya usa para esta persona. Es una comodidad
+   * suya, purgable como todo lo de esta tabla, y JAMÁS una llave: la llave es
+   * `drivers.id`, que genera J-Telemetry.
+   */
+  carrierPayrollNumber: text("carrier_payroll_number"),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+});
+
+/**
+ * Asignaciones — un solo tipo de registro, no varios.
+ *
+ * - **Fija:** `validTo` nulo. Cubre esa ruta indefinidamente.
+ * - **Por periodo:** con rango. Cubre del día X al día Y.
+ *
+ * **Las excepciones se superponen; no cierran la fija.** Si el titular falta un
+ * día y otro lo cubre, esa cobertura es un registro por periodo *encima* de la
+ * fija — la fija no se cancela ni se parte, y al pasar el día sigue vigente
+ * como si nada. Por eso no hay columna de "tipo": el rango ya lo dice todo, y
+ * quien lee resuelve por especificidad (el rango más angosto que cubre el día
+ * gana).
+ *
+ * El modelo de cerrar-y-reabrir se descartó a propósito: genera huecos y
+ * confusión sobre quién era titular.
+ */
+export const driverAssignments = pgTable("driver_assignments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  driverId: uuid("driver_id")
+    .notNull()
+    .references(() => drivers.id, { onDelete: "cascade" }),
+  routeShiftId: uuid("route_shift_id")
+    .notNull()
+    .references(() => routeShifts.id, { onDelete: "cascade" }),
+  validFrom: date("valid_from").notNull(),
+  /** Nulo = fija, sin fecha de fin. */
+  validTo: date("valid_to"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => [
+  index("driver_assignments_driver_idx").on(table.driverId),
+  index("driver_assignments_route_shift_idx").on(table.routeShiftId, table.validFrom),
+]);
 
 /** Fila completa de un hecho de cumplimiento. La foto que archiva la Pieza 1 debe ser fiel a esto. */
 export type ComplianceFact = typeof complianceFacts.$inferSelect;
