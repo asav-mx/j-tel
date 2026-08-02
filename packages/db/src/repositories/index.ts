@@ -2516,6 +2516,43 @@ export class OccurrenceRepository {
     return this.countByStatus(await this.occurrenceConditions(target, from, to));
   }
 
+  /**
+   * El sello más reciente del alcance: cuándo se selló y de qué día de servicio.
+   *
+   * Solo lee. Existe para que el inicio pueda decir "último cierre 06:50:00"
+   * sin traerse las ocurrencias del día entero para mirar la última — que es lo
+   * que costaba antes de tener esto, y el inicio es la pantalla que más se
+   * abre.
+   *
+   * Devuelve `null` cuando el alcance no tiene un solo hecho sellado: una
+   * unidad recién configurada no tiene último cierre, y la pantalla debe poder
+   * decir eso en vez de pintar una hora falsa.
+   */
+  async ultimoSelloForScope(
+    scope: OperationalScope,
+  ): Promise<{ selladoEn: Date; serviceDate: string } | null> {
+    const target =
+      scope.kind === "plant"
+        ? ({ kind: "plant", plantId: scope.plantId } as const)
+        : ({ kind: "plant_group", plantGroupId: scope.plantGroupId } as const);
+    const conditions = await this.occurrenceConditions(target);
+    if (!conditions) return null;
+
+    const [fila] = await this.db
+      .select({
+        selladoEn: complianceFacts.materializedAt,
+        serviceDate: serviceOccurrences.serviceDate,
+      })
+      .from(serviceOccurrences)
+      .innerJoin(complianceFacts, eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id))
+      .where(and(...(conditions as Parameters<typeof and>)))
+      .orderBy(desc(complianceFacts.materializedAt))
+      .limit(1);
+
+    if (!fila?.selladoEn) return null;
+    return { selladoEn: fila.selladoEn, serviceDate: String(fila.serviceDate).slice(0, 10) };
+  }
+
   async countByStatusForClientAccount(clientAccountId: string, from?: Date, to?: Date) {
     return this.countByStatus(
       await this.occurrenceConditions({ kind: "client", clientAccountId }, from, to),
