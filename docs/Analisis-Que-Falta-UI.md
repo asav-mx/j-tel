@@ -3,7 +3,7 @@
 **Medido contra `main` (7c5a471), no de memoria.**
 **Total de pantallas existentes: 48** — 37 de cliente, 11 de carrier. Diseñamos 9.
 
-**Al commitearse, la Oficina ya entró (#166–#168); Pendiente, Inicios y Correos siguen en rama.**
+**Al commitearse, la tanda de Carril B ya entró completa: Oficina (#166–#168), Pendiente (#169), Inicios (#170) y Correos (#171).**
 
 ---
 
@@ -91,13 +91,14 @@ Cosas que ninguna pantalla puede mostrar hasta que el motor las produzca.
 | **Destinatarios por rol y contrato** | los correos no se pueden enviar | mediano — `userMemberships` no liga a `service_contracts`, emails en Clerk |
 | **Concepto de contratación** | módulos no contratados con candado | mediano — no hay tabla de features ni plan |
 | **Modelo de choferes** | expediente de chofer, "quién manejó" en unidad | mediano — 2 tablas, plano ya escrito |
-| **Vigencia del contrato** | expediente del contrato | chico — confirmar si `validFrom`/`validTo` se persisten |
 | **Longitud de ruta** | "31.4 km" en expediente de ruta | chico — calcular de waypoints |
 | **Datos de alta de unidad** | modelo, año, asientos, verificación | chico — no existen columnas |
 | **Kilómetro muerto** | métrica del carrier | mediano — distinguir recorrido en servicio de fuera |
 | **CI que corra integración** | nada, pero deja pruebas sin vigilar | chico |
 | **ESLint** | nada, pero no hay red de seguridad | mediano — levanta ola sobre 60 archivos |
 | **~14s de la torre** | percepción de lentitud | por medir |
+
+**Salió de esta lista:** la vigencia del contrato. `validFrom` y `validTo` sí se persisten en `service_contracts` —columnas `date` y `notNull`— así que el expediente del contrato puede mostrar ese renglón. Confirmado en su ficha.
 
 ---
 
