@@ -164,3 +164,76 @@ export function CorporateShell({
     </MarcoPlataforma>
   );
 }
+
+/**
+ * Los grupos de la cara del transportista, según `Estructura-Cara-Carrier.md`.
+ *
+ * Solo se enlaza lo que existe. Un renglón que lleva a un 404 es peor que un
+ * renglón ausente: promete una sección y entrega un error. Monitoreo, Sin
+ * declarar, Choferes e Inspecciones entran con sus pantallas.
+ *
+ * Los nombres SÍ son los de destino aunque la pantalla todavía no esté
+ * revestida —Unidades, Workbench, Diésel, Taller, Rastreadores— porque la ruta
+ * ya es esa cosa; lo que falta es su piel, no su identidad.
+ */
+export function gruposCarrier(carrierSlug: string): GrupoNav[] {
+  return [
+    {
+      titulo: "Operación",
+      renglones: [{ href: withAccount("/carrier", carrierSlug), label: "Inicio" }],
+    },
+    {
+      titulo: "Recursos",
+      renglones: [
+        { href: withAccount("/carrier/flota", carrierSlug), label: "Unidades" },
+        { href: withAccount("/carrier/combustible", carrierSlug), label: "Diésel" },
+        { href: withAccount("/carrier/mantenimiento", carrierSlug), label: "Taller" },
+        { href: withAccount("/carrier/gps", carrierSlug), label: "Rastreadores" },
+      ],
+    },
+    {
+      titulo: "Análisis",
+      renglones: [
+        { href: withAccount("/carrier/recorrido", carrierSlug), label: "Workbench" },
+        { href: withAccount("/carrier/cumplimiento", carrierSlug), label: "Cumplimiento" },
+      ],
+    },
+    {
+      titulo: "Clientes",
+      renglones: [{ href: withAccount("/carrier/reportes", carrierSlug), label: "Reportes" }],
+    },
+  ];
+}
+
+export function CarrierShell({
+  carrier,
+  title,
+  contexto,
+  accion,
+  children,
+}: {
+  carrier: { slug: string; name: string };
+  title: string;
+  contexto?: React.ReactNode;
+  accion?: React.ReactNode;
+  children?: React.ReactNode;
+}) {
+  return (
+    <MarcoPlataforma
+      titulo={title}
+      contexto={contexto}
+      accion={accion}
+      nav={
+        <NavLateral
+          cuenta={carrier}
+          grupos={gruposCarrier(carrier.slug)}
+          raiz="/carrier"
+          contexto="Transportista"
+          tipoCuenta="carrier"
+        />
+      }
+    >
+      {children}
+    </MarcoPlataforma>
+  );
+}

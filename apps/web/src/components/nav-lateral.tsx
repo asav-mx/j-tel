@@ -73,8 +73,9 @@ export async function NavLateral({
   raiz,
   contexto,
   regreso,
+  tipoCuenta = "client",
 }: {
-  /** La cuenta cliente en curso. */
+  /** La cuenta en curso. */
   cuenta: { slug: string; name: string };
   grupos: GrupoNav[];
   /** Ruta de inicio de esta unidad; no se marca activa por prefijo. */
@@ -83,10 +84,18 @@ export async function NavLateral({
   contexto?: string | null;
   /** Subir al panorama corporativo. Fuera de los grupos: es cambio de alcance. */
   regreso?: { href: string; label: string } | null;
+  /**
+   * De qué cara es esta navegación. Gobierna qué cuentas ofrece el selector.
+   *
+   * Estaba fijado en `client`: en la cara del transportista el selector habría
+   * listado cuentas de cliente ajenas, que es justo lo que la Ley 3 del Marco
+   * prohíbe. Un carrier jamás ve otro carrier, y menos la lista de clientes.
+   */
+  tipoCuenta?: "client" | "carrier";
 }) {
   const [cabeceras, cuentas, identidad] = await Promise.all([
     headers(),
-    getRepos().accounts.listByType("client"),
+    getRepos().accounts.listByType(tipoCuenta),
     getIdentidad(),
   ]);
   const rutaActual = cabeceras.get(ENCABEZADO_RUTA) ?? "";
@@ -145,7 +154,7 @@ export async function NavLateral({
             {cuentas.map((c) => (
               <a
                 key={c.id}
-                href={`/cliente?account=${c.slug}`}
+                href={`${tipoCuenta === "carrier" ? "/carrier" : "/cliente"}?account=${c.slug}`}
                 className={`cursor-pointer rounded-sm px-1.5 py-0.5 font-mono text-[10px] transition-colors ${
                   c.slug === cuenta.slug
                     ? "bg-[var(--t-acero)] text-[var(--acero)]"
