@@ -28,14 +28,20 @@ export default async function CarrierDashboardPage({
   const contracts = await repos.contracts.findForCarrier(carrier.id);
   const activeContracts = contracts.filter((c) => c.status === "active");
 
+  // Por contrato activo se traía TODA su historia de ocurrencias para sacar dos
+  // cifras y quedarse con cinco filas. Ahora las cifras las cuenta la base y las
+  // cinco filas vienen con `LIMIT`, no con un `.slice()` sobre todo lo traído.
   const contractSummaries = await Promise.all(
     activeContracts.map(async (contract) => {
-      const occs = await repos.occurrences.findForContract(contract.id);
+      const [conteo, recent] = await Promise.all([
+        repos.occurrences.countByStatusForContract(contract.id),
+        repos.occurrences.findRecentForContract(contract.id, 5),
+      ]);
       return {
         contract,
-        total: occs.length,
-        pending: occs.filter((o) => o.complianceFact?.status === "pendiente_evidencia").length,
-        recent: occs.slice(0, 5),
+        total: conteo.total,
+        pending: conteo.pendiente_evidencia,
+        recent,
       };
     }),
   );

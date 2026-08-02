@@ -1970,6 +1970,22 @@ export class ServiceProfileRepository {
   }
 }
 
+/**
+ * Cuántos servicios hay de cada estado en un alcance.
+ *
+ * `sin_hecho` va nombrado aparte y NO sumado a ninguno de los tres: un servicio
+ * que el árbitro todavía no juzgó no es un cuarto veredicto, es ausencia de
+ * veredicto. Repartirlo entre los otros tres —o esconderlo dentro de `total`
+ * sin nombre— convierte una cifra correcta en una afirmación falsa.
+ */
+export type ConteoPorEstado = {
+  total: number;
+  cumplido: number;
+  no_cumplido: number;
+  pendiente_evidencia: number;
+  sin_hecho: number;
+};
+
 export class OccurrenceRepository {
   constructor(private db: Database) {}
 
@@ -2321,31 +2337,67 @@ export class OccurrenceRepository {
     return rows;
   }
 
-  async findForPlant(plantId: string, from?: Date, to?: Date) {
-    const contracts = await this.db.query.serviceContracts.findMany({
-      where: eq(serviceContracts.plantId, plantId),
-    });
-    const contractIds = contracts.map((c) => c.id);
-    if (contractIds.length === 0) return [];
+  /**
+   * El `where` de CUALQUIER consulta de ocurrencias por alcance: los contratos
+   * que le pertenecen, más el rango de fecha civil.
+   *
+   * Existe como un solo lugar porque el fetch y el conteo tienen que filtrar
+   * **idéntico**. Un `count()` con su propia copia del alcance no falla ruidoso
+   * el día que una de las dos cambie: devuelve un número más grande, con
+   * ocurrencias de plantas que ese usuario no debe ver. Una cifra de más es una
+   * fuga, y se lee como dato correcto. Que sean el mismo código es lo que hace
+   * imposible que uno filtre y el otro no.
+   *
+   * `null` significa "no hay contratos en este alcance" — cero filas y cero
+   * conteo, sin ir a la base a preguntar por una lista vacía.
+   */
+  private async occurrenceConditions(
+    target:
+      | { kind: "plant"; plantId: string }
+      | { kind: "plant_group"; plantGroupId: string }
+      | { kind: "client"; clientAccountId: string }
+      | { kind: "contract"; contractId: string },
+    from?: Date,
+    to?: Date,
+  ) {
+    const conditions = [];
 
-    const conditions = [inArray(serviceOccurrences.contractId, contractIds)];
+    if (target.kind === "contract") {
+      conditions.push(eq(serviceOccurrences.contractId, target.contractId));
+    } else {
+      const where =
+        target.kind === "plant"
+          ? eq(serviceContracts.plantId, target.plantId)
+          : target.kind === "plant_group"
+            ? eq(serviceContracts.plantGroupId, target.plantGroupId)
+            : eq(serviceContracts.clientAccountId, target.clientAccountId);
+      const contracts = await this.db.query.serviceContracts.findMany({ where });
+      const contractIds = contracts.map((c) => c.id);
+      if (contractIds.length === 0) return null;
+      conditions.push(inArray(serviceOccurrences.contractId, contractIds));
+    }
+
+    // La fecha civil la resuelve `localDateIso`, no una segunda aritmética de
+    // zona escrita en SQL: esa cuenta ya vive resuelta y probada en un lugar.
     if (from) conditions.push(gte(serviceOccurrences.serviceDate, localDateIso(from, JTTEL_TZ)));
     if (to) conditions.push(lte(serviceOccurrences.serviceDate, localDateIso(to, JTTEL_TZ)));
 
+    return conditions;
+  }
+
+  async findForPlant(plantId: string, from?: Date, to?: Date) {
+    const conditions = await this.occurrenceConditions({ kind: "plant", plantId }, from, to);
+    if (!conditions) return [];
     return this.queryOccurrencesWithRelations(conditions);
   }
 
   async findForPlantGroup(plantGroupId: string, from?: Date, to?: Date) {
-    const contracts = await this.db.query.serviceContracts.findMany({
-      where: eq(serviceContracts.plantGroupId, plantGroupId),
-    });
-    const contractIds = contracts.map((c) => c.id);
-    if (contractIds.length === 0) return [];
-
-    const conditions = [inArray(serviceOccurrences.contractId, contractIds)];
-    if (from) conditions.push(gte(serviceOccurrences.serviceDate, localDateIso(from, JTTEL_TZ)));
-    if (to) conditions.push(lte(serviceOccurrences.serviceDate, localDateIso(to, JTTEL_TZ)));
-
+    const conditions = await this.occurrenceConditions(
+      { kind: "plant_group", plantGroupId },
+      from,
+      to,
+    );
+    if (!conditions) return [];
     return this.queryOccurrencesWithRelations(conditions);
   }
 
@@ -2373,38 +2425,28 @@ export class OccurrenceRepository {
   }
 
   async findForClientAccount(clientAccountId: string, from?: Date, to?: Date) {
-    const contracts = await this.db.query.serviceContracts.findMany({
-      where: eq(serviceContracts.clientAccountId, clientAccountId),
-    });
-    const contractIds = contracts.map((c) => c.id);
-    if (contractIds.length === 0) return [];
-
-    const conditions = [inArray(serviceOccurrences.contractId, contractIds)];
-    if (from) conditions.push(gte(serviceOccurrences.serviceDate, localDateIso(from, JTTEL_TZ)));
-    if (to) conditions.push(lte(serviceOccurrences.serviceDate, localDateIso(to, JTTEL_TZ)));
-
-    return this.db.query.serviceOccurrences.findMany({
-      where: and(...conditions),
-      with: {
-        complianceFact: { with: { observedUnit: true } },
-        trip: true,
-        profile: {
-          with: {
-            geofence: true,
-            routeShift: { with: { route: true, shift: true } },
-          },
-        },
-        contract: { with: { plant: true, plantGroup: true, carrier: true, client: true } },
-      },
-      orderBy: (o, { desc }) => [desc(o.serviceDate)],
-    });
+    const conditions = await this.occurrenceConditions(
+      { kind: "client", clientAccountId },
+      from,
+      to,
+    );
+    if (!conditions) return [];
+    return this.queryOccurrencesWithRelations(conditions);
   }
 
   async findForContract(contractId: string, from?: Date, to?: Date) {
-    const conditions = [eq(serviceOccurrences.contractId, contractId)];
-    if (from) conditions.push(gte(serviceOccurrences.serviceDate, localDateIso(from, JTTEL_TZ)));
-    if (to) conditions.push(lte(serviceOccurrences.serviceDate, localDateIso(to, JTTEL_TZ)));
+    const conditions = await this.occurrenceConditions({ kind: "contract", contractId }, from, to);
+    if (!conditions) return [];
+    return this.queryOccurrencesWithRelations(conditions);
+  }
 
+  /**
+   * Las mismas ocurrencias, pero solo las N más recientes — con `LIMIT` en la
+   * base y no un `.slice()` después de traerlas todas.
+   */
+  async findRecentForContract(contractId: string, limit: number) {
+    const conditions = await this.occurrenceConditions({ kind: "contract", contractId });
+    if (!conditions) return [];
     return this.db.query.serviceOccurrences.findMany({
       where: and(...conditions),
       with: {
@@ -2419,7 +2461,88 @@ export class OccurrenceRepository {
         contract: { with: { plant: true, plantGroup: true, carrier: true, client: true } },
       },
       orderBy: (o, { desc }) => [desc(o.serviceDate)],
+      limit,
     });
+  }
+
+  /**
+   * Cuántas ocurrencias hay de cada estado, contadas por la base.
+   *
+   * Contra el camino que reemplaza —traer las filas con sus nueve relaciones
+   * anidadas, sin límite, y contarlas con `.filter().length`— aquí no viaja ni
+   * una fila de ocurrencia: viajan cinco números. El precedente medido del repo
+   * dice dónde estaba el costo (`resumenDiarioPorUnidad`): no en encontrar las
+   * filas sino en transportarlas y materializarlas en JavaScript.
+   */
+  private async countByStatus(conditions: unknown[] | null): Promise<ConteoPorEstado> {
+    const vacio: ConteoPorEstado = {
+      total: 0,
+      cumplido: 0,
+      no_cumplido: 0,
+      pendiente_evidencia: 0,
+      sin_hecho: 0,
+    };
+    if (!conditions) return vacio;
+
+    const rows = await this.db
+      .select({
+        status: complianceFacts.status,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(serviceOccurrences)
+      .leftJoin(complianceFacts, eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id))
+      .where(and(...(conditions as Parameters<typeof and>)))
+      .groupBy(complianceFacts.status);
+
+    const conteo = { ...vacio };
+    for (const row of rows) {
+      const n = Number(row.count);
+      conteo.total += n;
+      // Sin hecho: el árbitro todavía no juzgó ese servicio. NO es un cuarto
+      // veredicto, y por eso se nombra aparte en vez de sumarse a ninguno.
+      if (row.status === null) conteo.sin_hecho += n;
+      else if (row.status === "cumplido") conteo.cumplido += n;
+      else if (row.status === "no_cumplido") conteo.no_cumplido += n;
+      else if (row.status === "pendiente_evidencia") conteo.pendiente_evidencia += n;
+    }
+    return conteo;
+  }
+
+  async countByStatusForScope(scope: OperationalScope, from?: Date, to?: Date) {
+    const target =
+      scope.kind === "plant"
+        ? ({ kind: "plant", plantId: scope.plantId } as const)
+        : ({ kind: "plant_group", plantGroupId: scope.plantGroupId } as const);
+    return this.countByStatus(await this.occurrenceConditions(target, from, to));
+  }
+
+  async countByStatusForClientAccount(clientAccountId: string, from?: Date, to?: Date) {
+    return this.countByStatus(
+      await this.occurrenceConditions({ kind: "client", clientAccountId }, from, to),
+    );
+  }
+
+  async countByStatusForContract(contractId: string, from?: Date, to?: Date) {
+    return this.countByStatus(
+      await this.occurrenceConditions({ kind: "contract", contractId }, from, to),
+    );
+  }
+
+  /**
+   * El conteo de un contrato en UN día civil, comparando la columna
+   * `serviceDate` tal cual.
+   *
+   * Aparte de `countByStatusForContract(id, from, to)` a propósito: ese recibe
+   * `Date` y los convierte con `localDateIso`, y quien ya tiene la fecha como
+   * `YYYY-MM-DD` no debe darse la vuelta por un `Date` para volver a la misma
+   * cadena. Esa ida y vuelta es exactamente donde se cuela un día de
+   * corrimiento.
+   */
+  async countByStatusForContractDate(contractId: string, serviceDate: string) {
+    return this.countByStatus([
+      eq(serviceOccurrences.contractId, contractId),
+      eq(serviceOccurrences.serviceDate, serviceDate),
+    ]);
   }
 
   async findById(id: string) {

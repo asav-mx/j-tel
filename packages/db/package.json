@@ -23,6 +23,7 @@
     "test:integration": "TZ=UTC vitest run --config vitest.integration.config.ts",
     "corregir-deadlines": "tsx src/corregir-deadlines.ts",
     "verificar-resumen": "tsx src/verificar-resumen-telemetria.ts",
+    "verificar-conteos": "tsx src/verificar-conteos.ts",
     "verificar-solo-lectura": "tsx src/verificar-solo-lectura.ts"
   },
   "dependencies": {
