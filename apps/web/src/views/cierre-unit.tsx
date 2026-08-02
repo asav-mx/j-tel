@@ -302,7 +302,8 @@ function riel(s: ServicioDelCierre, tz: string): { cifra: string; sub: string; c
     return { cifra: "—", sub: "Sin llegada en la ventana", color: "var(--rojo)" };
   }
   if (s.estado === "pendiente_evidencia") {
-    return rielPendiente(s.hueco);
+    // Ámbar: es la carencia que dejó al servicio sin juzgar, no un veredicto.
+    return { ...rielPendiente(s), color: "var(--ambar)" };
   }
   return {
     cifra: soloHora(s.llegadaEn, tz),
@@ -415,7 +416,14 @@ function Afirmacion({ s, tz }: { s: ServicioDelCierre; tz: string }) {
   }
 
   if (s.estado === "pendiente_evidencia") {
-    return <AfirmacionPendiente hueco={s.hueco} tz={tz} />;
+    return (
+      <AfirmacionPendiente
+        causa={s.causa}
+        hueco={s.hueco}
+        fraccionObservada={s.fraccionObservada}
+        tz={tz}
+      />
+    );
   }
 
   const fuera =

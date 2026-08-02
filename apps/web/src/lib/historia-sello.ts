@@ -139,6 +139,19 @@ const PRIMERA: FirmaSello = {
  * sería un campo que finge precisión. Hasta que auth-rbac resuelva el nombre
  * real, la firma honesta es el rol.
  */
+/**
+ * La intención con la que un actor causó una versión.
+ *
+ * Se expone porque la bandeja de pendientes necesita separar dos cosas que un
+ * conteo crudo mezcla: un pendiente que se resolvió **solo** —la verificación
+ * programada volvió a correr y esta vez la evidencia alcanzó— y uno que se
+ * resolvió porque **alguien lo pidió**. Contar los dos juntos y llamarles "se
+ * resolvieron solos" sería un número correcto con una afirmación falsa.
+ */
+export function intencionDeActor(actorKind: string): IntencionSello {
+  return firmaDe(actorKind).intencion;
+}
+
 function firmaDe(actorKind: string): FirmaSello {
   return (
     FIRMAS[actorKind] ?? {

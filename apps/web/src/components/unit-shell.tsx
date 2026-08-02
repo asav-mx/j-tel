@@ -28,19 +28,23 @@ export function gruposUnidad(
 ): GrupoNav[] {
   const base = unitBasePath(unit);
 
+  /*
+   * `pendiente-por-evidencia` ya existe en los dos alcances. Estuvo solo en
+   * planta mientras faltaba la ruta de campus; la vista nunca tuvo el
+   * problema, porque `loadPendientesEvidencia` toma un `OperationalScope`
+   * genérico. Un campus sin esta entrada escondía sus pendientes: lo que el
+   * árbitro no pudo juzgar es justo lo que no debe quedar fuera del menú.
+   */
   const operacion = [
     { href: unitDashboardHref(unit, clientSlug), label: "Inicio" },
     { href: withAccount(`${base}/monitoreo`, clientSlug), label: "Monitoreo" },
     { href: withAccount(`${base}/cierre`, clientSlug), label: "Cierre del turno" },
     { href: unitComplianceHref(unit, clientSlug), label: "Cumplimiento" },
-  ];
-  // Cara planta únicamente por ahora — campus no tiene esta ruta todavía.
-  if (unit.kind === "plant") {
-    operacion.push({
+    {
       href: withAccount(`${base}/pendiente-por-evidencia`, clientSlug),
       label: "Pendiente por evidencia",
-    });
-  }
+    },
+  ];
 
   return [
     { titulo: "Operación", renglones: operacion },

@@ -2673,6 +2673,40 @@ export class ComplianceRepository {
     });
   }
 
+  /**
+   * Las salidas de `pendiente_evidencia` en un periodo, con quién las causó.
+   *
+   * Solo lee. Una fila de `compliance_fact_history` guarda la foto del hecho
+   * VIEJO junto con el actor de la verificación NUEVA que lo reemplaza — así
+   * que una fila con `status = "pendiente_evidencia"` es exactamente eso: un
+   * pendiente que dejó de serlo, firmado por quien lo causó.
+   *
+   * Devuelve las filas crudas en vez de un conteo porque separar "se resolvió
+   * solo" de "alguien lo pidió" depende del mapa de actores, que vive en la
+   * capa de pantalla. Un conteo único aquí obligaría a decidir esa semántica
+   * en la base, donde no se puede leer.
+   */
+  async getSalidasDePendiente(
+    serviceOccurrenceIds: string[],
+    desde: Date,
+  ): Promise<Array<{ serviceOccurrenceId: string; actorKind: string; replacedAt: Date }>> {
+    if (serviceOccurrenceIds.length === 0) return [];
+    return this.db
+      .select({
+        serviceOccurrenceId: complianceFactHistory.serviceOccurrenceId,
+        actorKind: complianceFactHistory.actorKind,
+        replacedAt: complianceFactHistory.replacedAt,
+      })
+      .from(complianceFactHistory)
+      .where(
+        and(
+          inArray(complianceFactHistory.serviceOccurrenceId, serviceOccurrenceIds),
+          eq(complianceFactHistory.status, "pendiente_evidencia"),
+          gte(complianceFactHistory.replacedAt, desde),
+        ),
+      );
+  }
+
   async addLedgerEntry(data: {
     tripId: string;
     serviceOccurrenceId: string;
