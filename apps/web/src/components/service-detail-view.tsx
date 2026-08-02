@@ -1,5 +1,6 @@
 import { Card, StatusBadge } from "@/components/ui";
 import { ServiceEvidenceMap } from "@/components/service-evidence-map";
+import { PasosMedicionView } from "@/components/pasos-medicion-view";
 import type { ServiceDetailData } from "@/lib/service-detail-data";
 import { noCumplidoDetailLine } from "@/lib/no-cumplido-motivo";
 
@@ -64,7 +65,10 @@ export function ServiceDetailView({
         ) : null}
       </p>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      {/* §2.2 — va justo después del sello: es lo que lo sostiene. */}
+      <PasosMedicionView pasos={data.pasosMedicion} />
+
+      <div className="mt-6 grid gap-6 md:grid-cols-2">
         <Card title="Esperado">
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">

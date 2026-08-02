@@ -72,6 +72,8 @@ Comparar el cumplimiento entre sitios. Con su razón escrita: *"poner lado a lad
 2. **La tira de 14 días por sitio.** Agrupación por día y estado, por sitio. Con tres sitios ×14 días es chico, pero **medir con una cuenta de veinte plantas.**
 3. **Distinguir "sin servicios programados" de "sin datos".** Un cuadro vacío tiene que significar lo primero. Si no se puede distinguir, **no se dibuja la tira** — un cuadro ambiguo es peor que ninguno.
 
+**Decidido (2026-08-02): si al construirla no se puede distinguir, la tira NO se dibuja y la pantalla se entrega sin ella.** No es una tarea pendiente ni un hueco a rellenar después: una tira existe para comparar de un vistazo, y un cuadro ambiguo dentro de ella envenena justo esa lectura. Mejor ninguna tira que una que miente rápido.
+
 ---
 
 ## 5. Lo que NO lleva
