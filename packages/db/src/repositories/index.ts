@@ -2623,6 +2623,51 @@ export class OccurrenceRepository {
     return porUnidad;
   }
 
+  /**
+   * En cuántos días del periodo hubo servicios contratados para este
+   * transportista, y cuántos fueron.
+   *
+   * Es el denominador honesto de "N de M días con servicio". El calendario NO
+   * sirve como denominador: medido el 2026-08-02 sobre treinta días civiles,
+   * el cliente contratado solo tenía servicios en **20** de ellos. Contra 30,
+   * una unidad que trabajó todos los días de operación se lee como si hubiera
+   * faltado diez.
+   *
+   * Es el mismo cuidado que la tira de catorce días: "sin servicios
+   * programados" y "sin datos" no son lo mismo, y contarlos juntos convierte
+   * un dato correcto en una afirmación falsa (§D del Marco, eje del ALCANCE).
+   *
+   * Las cuentas de demostración quedan fuera **del denominador**, no de los
+   * datos. Sus contratos aportan 9 días de operación que nadie operó: contarlos
+   * infla el denominador de 20 a 29 y vuelve a hundir la cifra de cada unidad.
+   * Que el árbitro sí selle sobre esas cuentas es el hallazgo abierto de Ola 2
+   * (Ficha-Diagnostico-Datos-No-Declarados) — aquí solo se evita construir un
+   * denominador con ellas.
+   */
+  async diasConServicioContratado(
+    carrierAccountId: string,
+    desde: Date,
+    hasta: Date,
+  ): Promise<{ dias: number; ocurrencias: number }> {
+    const [fila] = await this.db
+      .select({
+        dias: sql<number>`count(distinct ${serviceOccurrences.serviceDate})::int`,
+        ocurrencias: sql<number>`count(*)::int`,
+      })
+      .from(serviceOccurrences)
+      .innerJoin(serviceContracts, eq(serviceContracts.id, serviceOccurrences.contractId))
+      .innerJoin(accounts, eq(accounts.id, serviceContracts.clientAccountId))
+      .where(
+        and(
+          eq(serviceContracts.carrierAccountId, carrierAccountId),
+          eq(accounts.isDemo, false),
+          gte(serviceOccurrences.serviceDate, localDateIso(desde, JTTEL_TZ)),
+          lte(serviceOccurrences.serviceDate, localDateIso(hasta, JTTEL_TZ)),
+        ),
+      );
+    return { dias: Number(fila?.dias ?? 0), ocurrencias: Number(fila?.ocurrencias ?? 0) };
+  }
+
   async countByStatusForContract(contractId: string, from?: Date, to?: Date) {
     return this.countByStatus(
       await this.occurrenceConditions({ kind: "contract", contractId }, from, to),
