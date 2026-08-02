@@ -188,8 +188,33 @@ configurable.
 **2.d — Juzgar sin KML fino.** Geocerca + corredor + paradas, con el trazado
 opcional. **Sí es v1**: sin ello el producto no sirve para su mercado (§8).
 
+**2.e — El árbitro tiene que distinguir una cuenta de prueba de una real.
+PRIORIDAD ALTA.**
+
+Hoy no lo hace, y está medido: **73 hechos sellados sobre cuentas marcadas como
+demo**, indistinguibles en forma de los 829 vinculantes. `accounts.isDemo` está
+bien puesta y el motor no la lee en ningún punto — se consulta en dos lugares,
+los dos para listar cuentas en la interfaz. `serviceContracts.status` tiene
+`demo` en su enum justo para esto, y el seed escribió `active` en los contratos
+que creó.
+
+**Por qué va aquí y no en una lista de pendientes sueltos:** un veredicto es
+vinculante porque alguien declaró la operación sobre la que se juzga. Un motor
+que sella sobre datos que nadie declaró produce la forma completa de un
+veredicto —sello, política congelada, razón escrita, expediente— hueca por
+dentro, y el auditado no puede distinguirla. **Un rojo así pasa la compuerta de
+salida sin hacer ruido:** tiene expediente, tiene evidencia y tiene razón
+escrita. Es exactamente la clase de falla que el ≥90% existe para atrapar, y la
+única que el propio número no ve.
+
+Lo que hay que decidir está en la ficha:
+`docs/marco-limpio/Ficha-Diagnostico-Datos-No-Declarados.md` — si el motor se
+niega a sellar sobre cuentas demo o sella marcando el hecho, dónde vive esa
+marca (tiene que viajar **dentro** del hecho, como la política congelada), qué
+se hace con los 73 ya sellados, y quién puede poner una cuenta en `active`.
+
 **Compuerta de salida:** **≥90% sostenido dos semanas**, cero rojos sin
-expediente.
+expediente, **y ningún hecho sellado sobre una cuenta que nadie declaró.**
 
 ---
 
