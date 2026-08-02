@@ -11,6 +11,12 @@ import {
   cutTrackAtArrival,
   downsampleMapPoints,
 } from "@/lib/map-evidence";
+import { pairLedgerEntryWithFact } from "@jtel/db";
+import {
+  proyectarPasosMedicion,
+  type PasoMedicion,
+  type RazonSinLedger,
+} from "@/lib/pasos-medicion";
 
 export type MapPoint = { lat: number; lng: number; at: string };
 export type MapPolygon = Array<{ lat: number; lng: number }>;
@@ -63,6 +69,14 @@ export interface ServiceDetailData {
   enforcement: Array<{ description: string; applies: boolean }>;
   showEnforcement: boolean;
   ledger: unknown[];
+  /**
+   * Cómo se midió — los cuatro pasos, ya proyectados.
+   *
+   * Va a TODAS las caras. A diferencia de `ledger`, esto no trae operación
+   * interna del carrier: ni IMEIs ni las unidades candidatas que no sirvieron
+   * la ruta. Por eso puede cruzar a la planta sin tocar la compuerta.
+   */
+  pasosMedicion: PasoMedicion[];
   /** Para navegación de vuelta a la unidad / contrato. */
   clientSlug: string | null;
   contractId: string;
@@ -291,6 +305,46 @@ export async function loadServiceDetail(
 
   const tz = policy.timeZone ?? "America/Ciudad_Juarez";
 
+  // ── Cómo se midió: los pasos de ESTE sello ───────────────────────────────
+  // No se reusa `ledger` de arriba: ese trae el viaje completo. Aquí se filtra
+  // por ocurrencia en la base (ledger_entries_occurrence_idx) y se empareja con
+  // el hecho vigente, que es lo único que puede hablar de este sello.
+  let stepsDelSello: unknown = null;
+  let razonSinLedger: RazonSinLedger | null = null;
+  if (fact) {
+    const entradas = await repos.compliance.getLedgerForOccurrence(occurrence.id, {
+      sinceMaterializedAt: fact.materializedAt,
+    });
+    const emparejado = pairLedgerEntryWithFact(entradas, fact.materializedAt);
+    if (emparejado.paired) {
+      stepsDelSello = emparejado.entry.steps;
+    } else {
+      razonSinLedger = emparejado.reason;
+    }
+  }
+
+  const margenMinutos =
+    fact?.observedArrivalAt && occurrence.expectedDeadline
+      ? (occurrence.expectedDeadline.getTime() - fact.observedArrivalAt.getTime()) / 60_000
+      : null;
+
+  const pasosMedicion = fact
+    ? proyectarPasosMedicion({
+        steps: stepsDelSello,
+        razonSinLedger,
+        // La etiqueta legible, nunca el IMEI de `decision.details.observedUnit`.
+        unidadObservadaLabel:
+          observedUnitLabel && observedUnitLabel !== "—" ? observedUnitLabel : null,
+        llegadaTexto: fact.observedArrivalAt
+          ? localDateTimeShort(fact.observedArrivalAt, tz)
+          : null,
+        deadlineTexto: localDateTimeShort(occurrence.expectedDeadline, tz),
+        margenMinutos,
+        toleranciaMinutos: policy.toleranceMinutes ?? null,
+        timing: fact.timing ?? null,
+      })
+    : [];
+
   return {
     occurrenceId: occurrence.id,
     serviceDate: occurrence.serviceDate,
@@ -333,7 +387,10 @@ export async function loadServiceDetail(
     arrivalPoint,
     enforcement,
     showEnforcement: options.showEnforcement !== false,
+    // La compuerta de Pieza 4 se queda: el ledger crudo trae IMEIs de flota.
+    // Lo que cruza a la planta es `pasosMedicion`, que es una proyección.
     ledger: isClientFace ? [] : ledger,
+    pasosMedicion,
     clientSlug: client?.slug ?? null,
     contractId: contract.id,
     plantId: contract.plantId ?? null,

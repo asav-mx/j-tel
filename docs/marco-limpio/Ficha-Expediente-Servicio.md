@@ -29,7 +29,7 @@ Los pasos que siguió el árbitro, en forma de preguntas con su respuesta medida
 
 1. *¿Qué unidad prestó el servicio?* — cuál, por qué método, con qué porcentaje
 2. *¿Hubo evidencia suficiente para juzgar?* — puntos, cobertura, mínimo del contrato
-3. *¿Entró a la geocerca del destino?* — sí/no, a qué hora exacta, radio
+3. *¿Entró a la geocerca del destino?* — sí/no, a qué hora exacta **(sin radio — ver abajo)**
 4. *¿Llegó dentro del plazo acordado?* — deadline, margen, tolerancia del contrato
 
 **Cada paso enuncia el umbral contra el que se comparó**, no solo el valor. Un "97.4%" sin el "mínimo 80%" no dice si pasó.
@@ -56,10 +56,20 @@ Los cuatro pasos no salen todos del mismo lugar, y la pantalla no finge que sí:
 |---|---|
 | 1 · Qué unidad | `ledgerEntries.steps` — `candidata` y `decision`, con sus umbrales |
 | 2 · Evidencia suficiente | `ledgerEntries.steps` — `cobertura_evidencia` |
-| 3 · Geocerca | La hora, del ledger. **El radio, de la geocerca del contrato** — no está en ningún paso |
+| 3 · Geocerca | La hora, del hecho sellado. **Sin radio** — ver abajo |
 | 4 · Plazo | `complianceFacts.expectedDeadline` + la **política congelada**, no el ledger |
 
 **El método de identificación no se cita como etiqueta guardada, porque no se guarda una.** Se muestra *cómo* se midió — coincidencia de trazado y precisión de corredor, cada una contra su mínimo. Es más honesto y más útil que un nombre.
+
+**Y cuando la ruta no tiene trazado contratado, el paso 1 no muestra porcentajes.** El motor deja 100 de relleno y no emite mínimos, porque no comparó contra nada. Enseñar "coincidencia con el trazado 100.0%" de una ruta sin trazado es un número correcto sosteniendo algo falso. Se dice lo que sí pasó: la unidad se acreditó por su entrada a la geocerca.
+
+#### El paso 3 va sin radio, y esa es la decisión
+
+**No existe un radio de geocerca que mostrar.** Una geocerca se archiva como polígono, no como radio. El único "radio" configurable es el del **corredor del trazado**, que sirve a las medidas del paso 1 y no tiene nada que ver con la geocerca del destino — etiquetarlo como tal sería mentir con un número correcto.
+
+**Y aunque existiera, no se podría recuperar el histórico.** La geocerca no se versiona y el hecho la referencia viva, así que lo que se dibujara sería la forma de hoy, no contra la que se midió ese día. Un expediente que no se recalcula no puede enseñar una regla que sí cambió.
+
+**Entonces el paso 3 afirma solo la hora de entrada**, que sí quedó congelada con el hecho, y dice por qué no muestra la forma. La hora sola sigue siendo verdad.
 
 **Cuando un paso no se registró, se declara.** Los hechos sellados antes de que existiera la medición de cobertura no traen el paso 2. Ese renglón dice que no se registró para ese servicio. **No se deriva a la callada ni se deja un hueco mudo:** un paso inferido y uno medido no pueden verse igual.
 
