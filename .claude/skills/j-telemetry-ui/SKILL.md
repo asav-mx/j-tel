@@ -578,6 +578,21 @@ Esta regla evita inventar evidencia que el árbitro no selló.
 
 Cuando dudes si puedes mostrar un dato: pregunta si el árbitro lo selló. Si no lo selló, no lo muestres.
 
+### Cuando se puede no traer el dato, no se trae
+
+Para que un dato confidencial no llegue a una cara que no le corresponde hay dos caminos, y **no valen lo mismo**:
+
+- **Filtrarlo** — se trae y luego se quita. Funciona hoy y se puede quitar mañana sin que nadie lo note. Un filtro es una promesa que alguien tiene que seguir cumpliendo.
+- **No traerlo nunca** — la ruta que lo cargaría no existe. No hay nada que recordar, nada que revisar, nada que se pueda olvidar de correr.
+
+**Lo segundo, siempre que se pueda.** Un filtro es la segunda mejor opción, no la normal.
+
+El caso que lo enseña: en el expediente, los pasos `candidata` del ledger nombran cada unidad que *no* sirvió la ruta. La proyección para la cara cliente **no lee ese paso** — arma el paso de la unidad desde `decision`, que solo describe a la ganadora. La garantía no depende de que un filtro siga ahí: depende de que el dato nunca entre.
+
+La prueba de fuego: **¿alguien podría borrar una línea y abrir la fuga sin que se rompa nada?** Si la respuesta es sí, todavía es un filtro. Si la línea que habría que borrar no existe, ya es estructura.
+
+Vale igual para las capas de mapa con audiencia declarada: la capa que no le toca a esa cara **no se construye**, no se construye apagada.
+
 ### Lo inferido no se presenta como declarado
 
 Identificar qué unidad cubrió una ruta es una **inferencia que acumula confianza**, no un dato
