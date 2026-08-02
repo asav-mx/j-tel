@@ -229,14 +229,19 @@ honestamente que no puede distinguir entre hora mal declarada, ventana angosta o
 unidades que no reportan. Con el árbitro arreglado, ese número debería moverse
 mucho — es la primera prueba de que el arreglo sirvió.
 
-**Hay una cuarta causa, y ya está medida: la geocerca ciega.** Una geocerca
-dibujada demasiado chica produce `no_cumplido` con cobertura al 100%, evidencia
-abundante y cero entradas registradas — un rojo con expediente completo y falso.
-Se midió un caso con **0 de 135,256 puntos dentro de la geocerca** y unidades
-pasando a **123 m** del centro. Importa para esta lista porque **se separa de las
-otras tres por la cobertura**: las otras tres la tiran, esta la deja intacta.
-Ver `docs/marco-limpio/Ficha-Diagnostico-Geocerca-Ciega.md`, que trae la señal
-que la atrapa y su caso de prueba.
+**Antes de buscarle una cuarta causa, hay que saber qué datos se están
+midiendo.** Se propuso aquí una — "la geocerca ciega" — y se retiró: su
+evidencia resultó ser una cuenta sembrada por `db:seed` contra producción, no
+una operación declarada. La geocerca de ese caso es una constante escrita a mano
+en el script, no algo que alguien dibujó.
+
+Lo que sí salió de ahí, y pesa más para esta ola: **el árbitro no distingue una
+cuenta de demostración de una real.** `accounts.isDemo` está puesta y ningún
+punto del motor la lee; `serviceContracts.status` tiene `demo` en su enum y el
+seed escribe `active`. Hay **73 hechos sellados sobre cuentas demo**,
+indistinguibles de los vinculantes. Un `no_cumplido` así pasa la compuerta de
+salida sin ruido: tiene expediente, evidencia y razón escrita.
+Ver `docs/marco-limpio/Ficha-Diagnostico-Datos-No-Declarados.md`.
 
 ---
 
