@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ConfirmForm } from "@/components/confirm-form";
+import { botonPrimario, botonSecundario, campo, etiqueta } from "@/components/ui";
 import { confirmMessages } from "@/lib/confirm-messages";
 
 export type RouteShiftRow = {
@@ -20,12 +21,9 @@ type ShiftOption = { id: string; name: string; startTime: string };
 
 const PAGE_SIZE = 50;
 
-const labelClass = "block text-sm";
-const btnClass =
-  "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
-
-const inputClass =
-  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm placeholder:text-[var(--tenue)]";
+const labelClass = etiqueta;
+const btnClass = botonPrimario;
+const inputClass = campo;
 
 export function RouteShiftList({
   rows,
@@ -78,7 +76,7 @@ export function RouteShiftList({
               setPage(0);
             }}
             className={inputClass}
-            placeholder="Ej. Riveras 7"
+            placeholder="Nombre de la ruta o del turno"
           />
         </label>
         <label className="block text-sm">
@@ -101,8 +99,8 @@ export function RouteShiftList({
         </label>
       </div>
 
-      <p className="text-xs text-[var(--muted)]">
-        {filtered.length} ruta(s) mostradas
+      <p className="text-xs text-[var(--tenue)]">
+        {filtered.length} rutas mostradas
         {shiftId || query ? ` (de ${rows.length} total)` : ""}
         {filtered.length > PAGE_SIZE
           ? ` · página ${safePage + 1} de ${totalPages}`
@@ -110,7 +108,7 @@ export function RouteShiftList({
       </p>
 
       {pageRows.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">Ninguna ruta coincide con el filtro.</p>
+        <p className="text-sm text-[var(--tenue)]">Ninguna ruta coincide con el filtro.</p>
       ) : (
         <ul className="divide-y divide-[var(--linea-tenue)] rounded border border-[var(--linea-tenue)] text-sm">
           {pageRows.map((r) => (
@@ -119,7 +117,7 @@ export function RouteShiftList({
                 <p className="font-medium truncate">
                   {r.routeName} · {r.shiftName}
                 </p>
-                <p className="text-xs text-[var(--muted)] truncate">{r.meta}</p>
+                <p className="text-xs text-[var(--tenue)] truncate">{r.meta}</p>
               </div>
               <ConfirmForm
                 action="/api/cliente/rutas"
@@ -174,7 +172,7 @@ export function RouteShiftList({
                 <input type="hidden" name="routeShiftId" value={r.id} />
                 <button
                   type="submit"
-                  className="rounded border border-red-500/30 px-3 py-1.5 text-xs text-red-200 hover:border-red-400"
+                  className={botonSecundario}
                 >
                   Eliminar
                 </button>
@@ -194,7 +192,7 @@ export function RouteShiftList({
           >
             ← Anterior
           </button>
-          <span className="text-xs text-[var(--muted)]">
+          <span className="text-xs text-[var(--tenue)]">
             {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} de{" "}
             {filtered.length}
           </span>

@@ -26,14 +26,19 @@ export const UNIT_CONFIG_STEPS = [
     id: "rutas",
     n: 3,
     title: "Rutas",
-    desc: "Trazado KML por turno (ruta = turno + KML).",
+    desc: "El trazado de cada turno. Mismo recorrido, otra hora: otra ruta.",
     segment: "rutas",
   },
   {
     id: "servicios",
     n: 4,
-    title: "Perfiles",
-    desc: "Contrato + ruta + geocerca → ocurrencias.",
+    /*
+     * "Perfiles" y "ocurrencias" son palabras del motor. Quien usa esta
+     * pantalla coordina transporte: lo que arma aquí es el servicio, y lo que
+     * sale de él son los días que corre.
+     */
+    title: "Servicios",
+    desc: "Contrato, ruta y geocerca juntos, con los días que corre.",
     segment: "servicios",
   },
 ] as const;
