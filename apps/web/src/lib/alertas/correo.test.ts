@@ -45,8 +45,18 @@ describe("los colores de veredicto no entran a un aviso operativo", () => {
 
   it("lo medido va en acero y lo que el sistema pide va en azul", () => {
     const { html } = renderAvisos([aviso()], AHORA);
-    expect(html).toContain("#7A9CB8");
-    expect(html).toContain("#4C9AE0");
+    // Los tonos claros del acero y del azul: el correo va en tema claro sin
+    // importar la preferencia del usuario, porque varios clientes rompen el
+    // fondo oscuro y porque un correo puede terminar impreso.
+    expect(html).toContain("#3d6a8f");
+    expect(html).toContain("#2a6fb5");
+  });
+
+  it("va en tema claro: un fondo oscuro se imprime como plancha negra", () => {
+    const { html } = renderAvisos([aviso()], AHORA);
+    expect(html).toContain("#f4f6f8");
+    expect(html).not.toContain("#0A0D10");
+    expect(html).not.toContain("#0F1318");
   });
 });
 
