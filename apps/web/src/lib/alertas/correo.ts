@@ -30,18 +30,33 @@ import {
 } from "@/lib/alertas/decision";
 import type { Mensaje } from "@/lib/alertas/canal";
 
+/*
+ * La paleta clara, no la oscura — sin importar la preferencia del usuario.
+ *
+ * Este correo nació con el fondo `#0A0D10` de la app, y en un correo eso falla
+ * de tres formas: varios clientes reescriben el fondo de un correo oscuro y
+ * dejan texto claro sobre blanco, ilegible; el modo oscuro de algunos clientes
+ * invierte los colores otra vez encima; y un correo es la única pieza del
+ * producto que puede terminar impresa y metida en una carpeta, donde
+ * `#0A0D10` sale como una plancha negra.
+ *
+ * Los valores son los de la paleta clara del skill copiados como hex, porque
+ * los clientes de correo no entienden custom properties. Es la única
+ * duplicación de tokens que el producto se permite, y la comparte con
+ * `@/lib/correos/plantilla`.
+ */
 const C = {
-  fondo: "#0A0D10",
-  panel: "#0F1318",
-  linea: "rgba(255,255,255,.10)",
-  texto: "#EAEEF2",
-  tenue: "#71808F",
-  acero: "#7A9CB8",
-  azul: "#4C9AE0",
+  fondo: "#f4f6f8",
+  panel: "#ffffff",
+  linea: "#e2e6ea",
+  texto: "#111820",
+  tenue: "#5a6874",
+  acero: "#3d6a8f",
+  azul: "#2a6fb5",
 } as const;
 
-const MONO = `"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace`;
-const SANS = `"IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif`;
+const MONO = `'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace`;
+const SANS = `'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif`;
 
 function esc(s: string): string {
   return s
