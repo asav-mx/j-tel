@@ -673,6 +673,28 @@ Un mapa por capas apagables es un multiplicador de riesgo de confidencialidad: s
 
 ---
 
+## Trampas de medición
+
+Muchas decisiones de este producto se toman contra un número medido: si una columna se muestra, si un hallazgo es real, si una consulta se sostiene. **Un número mal medido decide igual de fuerte que uno bien medido**, y no se nota. Estas son las que ya cayeron, con el caso que las enseñó.
+
+**Medir sobre un entorno que uno mismo pisó.** Correr `pnpm build` con el servidor de desarrollo vivo sobrescribe `.next`, y lo que se mide después no es la aplicación: es el servidor recompilando encima de sus propios archivos rotos. Sobre esa medición se quitaron columnas de producto.
+
+Y la parte que importa más: al rehacerla con servidor limpio, el número se sostuvo. **Eso no valida la primera.** Una medición contaminada que por casualidad coincide con la buena sigue sin ser evidencia — la conclusión sobrevivió, el método no. Se dice así, no como "ya lo confirmé".
+
+**Culpar a la forma de pedir el dato cuando el costo está en el volumen.** Treinta ventanas de un día costaron lo mismo que una ventana de treinta: el trabajo era recorrer un mes de puntos por unidad, y ninguna forma de pedirlo lo cambia. Antes de rediseñar la llamada, medir la versión colapsada. Si cuesta igual, el problema es cuánto se lee, no cómo se pide.
+
+**Medir con una fuente que el motor no usa.** El árbitro lee `evidence_points` por viaje; `telemetry_points` es otro archivo, con otra cobertura. Un cruce armado sobre el segundo responde una pregunta que nadie hizo. Antes de cruzar: buscar en el código qué lee el motor, no qué tabla suena parecido.
+
+**Publicar un instrumento sin probarlo contra casos conocidos.** Antes de usar una prueba propia —una geometría, un cruce, una heurística— pásala por los hechos que el motor **ya selló** y cuya respuesta se conoce. Si no reproduce lo que el árbitro ya decidió, el instrumento está mal y todo lo cruzado con él también. El caso: una prueba de punto-en-polígono que reprodujo 51 de 60 llegadas selladas; las 9 que falló apuntaban todas a la misma geocerca, y ahí estaba el error.
+
+**Contar filas que son reintentos.** Un servicio re-verificado deja varias entradas de ledger. Contar entradas en vez de servicios multiplicó por ocho el tamaño aparente de un hallazgo. Deduplicar por la cosa de la que se habla, no por la fila que la registra.
+
+**Medir sobre datos que nadie declaró.** Datos sembrados tienen forma de datos, y un hallazgo construido sobre ellos describe la siembra, no el producto. Antes de medir: declarar de quién es cada fila y qué cuentas son de demostración. Ver `Ficha-Diagnostico-Datos-No-Declarados`.
+
+**El denominador de otro universo.** Si el numerador cuenta servicios contratados y el denominador cuenta la flota entera, la fracción no habla de nada. Es §D, eje del ALCANCE, y en una cifra se ve limpia: "45 de 82 unidades no cubrieron ningún servicio" era cierta en los dos números y falsa como afirmación. Cuando los dos lados vienen de universos distintos, o se cambia el denominador o se declara el alcance junto al número.
+
+---
+
 ## Anti-patrones (esto la regresa a genérica)
 
 Si aparece cualquiera de estos, el instrumento se disolvió de vuelta en tablero:

@@ -44,8 +44,20 @@ export type FilaUnidad = {
 export type UnidadesData = {
   lente: ClaveLente;
   titular: string;
-  /** Días civiles del periodo. Todo número de la tabla se lee contra esto. */
+  /** Días civiles del periodo. Solo para encabezar el rango de fechas. */
   diasPeriodo: number;
+  /**
+   * Días del periodo en que hubo servicios contratados. Es contra ESTO que se
+   * lee "N de M días con servicio" — no contra el calendario. Ver
+   * `diasConServicioContratado`.
+   */
+  diasOperacion: number;
+  /**
+   * Lo que J-Telemetry no puede ver. La flota es del transportista; los
+   * servicios son de los clientes bajo contrato. Sin esta línea, la tabla
+   * afirma que media flota está parada.
+   */
+  alcance: string;
   desde: string;
   hasta: string;
   filas: FilaUnidad[];
@@ -56,6 +68,45 @@ export type UnidadesData = {
 };
 
 const DIAS_PERIODO = 30;
+
+/**
+ * El titular de la lente "¿cuáles trabajan?".
+ *
+ * Afirma **cuántas cubrieron**, nunca cuántas no. Decía "45 de 82 unidades no
+ * cubrieron ningún servicio": los dos números correctos y la frase falsa,
+ * porque el denominador es la flota del transportista y el numerador es la
+ * demanda de los clientes contratados — dos universos distintos en una sola
+ * fracción (§D del Marco, eje del ALCANCE).
+ *
+ * El complemento no se enuncia porque J-Telemetry no lo puede sostener: no
+ * sabe qué hicieron esas unidades, solo que no fue un servicio contratado.
+ */
+export function titularTrabajan(cubrieron: number, total: number): string {
+  return `${cubrieron} de ${total} unidades cubrieron servicios contratados.`;
+}
+
+/**
+ * La lente ordena; nunca filtra. La flota completa está en las tres.
+ *
+ * "¿Cuáles trabajan?" ordena **descendente**: la tabla abre respondiendo lo que
+ * la lente pregunta. Estuvo ascendente, poniendo los ceros arriba porque se
+ * asumió que un cero pedía atención; la medición tumbó la premisa —el cero es
+ * el estado normal de una unidad que sirve a otro cliente— y con ella el orden.
+ */
+export function ordenarFilas(lente: ClaveLente, filas: FilaUnidad[]): FilaUnidad[] {
+  const porNombre = (a: FilaUnidad, b: FilaUnidad) => a.label.localeCompare(b.label, "es");
+  if (lente === "trabajan") {
+    return [...filas].sort((a, b) => b.diasConServicio - a.diasConServicio || porNombre(a, b));
+  }
+  if (lente === "gastan") {
+    return [...filas].sort((a, b) => b.litros - a.litros || porNombre(a, b));
+  }
+  // Las más calladas primero; las que nunca reportaron, hasta arriba.
+  return [...filas].sort(
+    (a, b) =>
+      (a.ultimoDato?.getTime() ?? -1) - (b.ultimoDato?.getTime() ?? -1) || porNombre(a, b),
+  );
+}
 
 export async function loadUnidades(
   carrier: { id: string; slug: string },
@@ -92,12 +143,13 @@ export async function loadUnidades(
   // kilómetros y huecos, por ser reglas de tiempo y distancia.
   //
   // Lo que sí se sostiene: cuándo reportó por última vez cada unidad.
-  const [unidades, ultimoPorUnidad, servicios, combustible, taller] = await Promise.all([
+  const [unidades, ultimoPorUnidad, servicios, combustible, taller, operacion] = await Promise.all([
     repos.fleet.getUnitsForCarrier(carrier.id),
     repos.telemetry.getLastPointPerUnit(carrier.id),
     repos.occurrences.serviciosPorUnidad(carrier.id, desde, ahora),
     repos.fleet.getFuelForCarrier(carrier.id, desde),
     repos.fleet.getMaintenanceForCarrier(carrier.id),
+    repos.occurrences.diasConServicioContratado(carrier.id, desde, ahora),
   ]);
 
   const diesel = new Map<string, { litros: number; costo: number }>();
@@ -132,30 +184,23 @@ export async function loadUnidades(
     };
   });
 
-  // La lente ordena; no filtra. La flota completa sigue ahí.
-  if (lente === "trabajan") {
-    filas.sort((a, b) => a.diasConServicio - b.diasConServicio || a.label.localeCompare(b.label, "es"));
-  } else if (lente === "gastan") {
-    filas.sort((a, b) => b.litros - a.litros || a.label.localeCompare(b.label, "es"));
-  } else {
-    // Las más calladas primero; las que nunca reportaron, hasta arriba.
-    filas.sort(
-      (a, b) =>
-        (a.ultimoDato?.getTime() ?? -1) - (b.ultimoDato?.getTime() ?? -1) ||
-        a.label.localeCompare(b.label, "es"),
-    );
-  }
+  const ordenadas = ordenarFilas(lente, filas);
 
-  const sinSalir = filas.filter((f) => f.diasConServicio === 0).length;
-  const conDiesel = filas.filter((f) => f.litros > 0).length;
+  const sinSalir = ordenadas.filter((f) => f.diasConServicio === 0).length;
+  const conDiesel = ordenadas.filter((f) => f.litros > 0).length;
   const limiteMudo = ahora.getTime() - 2 * 86_400_000;
-  const mudas = filas.filter((f) => !f.ultimoDato || f.ultimoDato.getTime() < limiteMudo).length;
+  const mudas = ordenadas.filter((f) => !f.ultimoDato || f.ultimoDato.getTime() < limiteMudo).length;
 
+  // Por qué el titular no nombra a las que no cubrieron: ver `titularTrabajan`.
+  //
+  // Medido el 2026-08-02, para que quede el dato y no el argumento: de las 45
+  // sin servicio acreditado, el ledger del propio árbitro las evaluó como
+  // candidatas cientos de veces cada una, y solo 27 de 543 servicios sin unidad
+  // tuvieron a alguna de ellas llegando al destino esperado. No están paradas:
+  // hacen trabajo que J-Telemetry no ve, porque solo ve lo contratado.
   const titular =
     lente === "trabajan"
-      ? sinSalir === 0
-        ? `Las ${filas.length} unidades cubrieron servicios en el periodo.`
-        : `${sinSalir} de ${filas.length} unidades no cubrieron ningún servicio.`
+      ? titularTrabajan(filas.length - sinSalir, filas.length)
       : lente === "gastan"
         ? conDiesel === 0
           ? "Sin capturas de diésel en el periodo."
@@ -175,9 +220,13 @@ export async function loadUnidades(
     lente,
     titular,
     diasPeriodo: dias.length,
+    diasOperacion: operacion.dias,
+    alcance:
+      "J-Telemetry solo ve los servicios bajo contrato. Una unidad sin servicios aquí puede estar " +
+      "trabajando en algo que este sistema no mide — el cero dice lo que J-Telemetry vio, no lo que la unidad hizo.",
     desde: localDateIso(desde, JTTEL_TZ),
     hasta: localDateIso(ahora, JTTEL_TZ),
-    filas,
+    filas: ordenadas,
     vacio,
     razonReservada:
       "Se enciende cuando la verificación alcance su umbral de confianza. Cuántos servicios no cumplidos carga una unidad es una cifra de juicio, y se mueve cuando se afina el árbitro.",

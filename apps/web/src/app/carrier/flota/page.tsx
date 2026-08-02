@@ -59,7 +59,13 @@ export default async function CarrierUnidadesPage({
           {data.titular}
         </h1>
         <p className="mt-1 font-[family-name:var(--fuente-mono)] text-xs tabular-nums text-[var(--tenue)]">
-          {data.filas.length} unidades · {data.diasPeriodo} días · {data.desde} → {data.hasta}
+          {data.filas.length} unidades · {data.desde} → {data.hasta} · {data.diasOperacion} días con
+          servicios contratados de {data.diasPeriodo}
+        </p>
+        {/* El alcance va junto al titular, no al pie: es lo que decide cómo se
+            lee cada cero de la tabla. */}
+        <p className="mt-2 max-w-3xl text-[11px] leading-relaxed text-[var(--tenue)]">
+          {data.alcance}
         </p>
       </header>
 
@@ -149,13 +155,13 @@ export default async function CarrierUnidadesPage({
                   </td>
                   {data.lente === "trabajan" ? (
                     <>
-                      <td
-                        className={`${TD} ${
-                          // Ámbar marca lo que necesita atención, nunca una falta.
-                          f.diasConServicio === 0 ? "text-[var(--ambar)]" : "text-[var(--acero)]"
-                        }`}
-                      >
-                        {f.diasConServicio} de {data.diasPeriodo}
+                      {/* Todo en acero. El ámbar estuvo aquí marcando "0 días
+                          con servicio" y se quitó por medición: más de la mitad
+                          de la flota tiene cero porque hace trabajo fuera de lo
+                          contratado, no porque falle. Ámbar sobre la mayoría no
+                          llama la atención — imputa. */}
+                      <td className={`${TD} text-[var(--acero)]`}>
+                        {f.diasConServicio} de {data.diasOperacion}
                       </td>
                       <td className={`${TD} text-[var(--acero)]`}>{f.servicios}</td>
                     </>
@@ -190,7 +196,7 @@ export default async function CarrierUnidadesPage({
       )}
 
       <p className="max-w-3xl text-[11px] leading-relaxed text-[var(--tenue)]">
-        Las medidas se enuncian, no se juzgan: &quot;0 de {data.diasPeriodo} días con
+        Las medidas se enuncian, no se juzgan: &quot;0 de {data.diasOperacion} días con
         servicio&quot; dice lo que pasó, y la conclusión es de quien mira. Faltan columnas a propósito:
         &quot;horas en patio&quot; y &quot;kilómetro muerto&quot; necesitan el concepto de parada
         del Workbench, que todavía no existe; y kilómetros y huecos de señal se midieron en

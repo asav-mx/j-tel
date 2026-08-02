@@ -213,8 +213,32 @@ niega a sellar sobre cuentas demo o sella marcando el hecho, dónde vive esa
 marca (tiene que viajar **dentro** del hecho, como la política congelada), qué
 se hace con los 73 ya sellados, y quién puede poner una cuenta en `active`.
 
+**2.f — Una ruta no puede esperar llegada donde no hay destino. PRIORIDAD
+ALTA — corre el reloj.**
+
+Mismo hallazgo de fondo que el 2.e —**la marca existe y el motor no la lee**—
+pero aquí ya está costando resultados. **Veintiuna rutas variante esperan la
+llegada en una geocerca llamada `VOID`, con rol `otro` en vez de `destino`, a
+ocho kilómetros del destino real.** Sobre ellas el árbitro sella 8.6% de
+cumplidos; sobre las rutas hermanas que apuntan al destino verdadero, 51.4% —
+mismo cliente, mismo umbral, mismo rigor, mismo periodo. **333 de 357 servicios
+del periodo salieron no cumplidos o pendientes, y 189 servicios futuros siguen
+apuntando ahí.**
+
+Es la misma clase de falla que el 2.e y por eso va junto: cada uno de esos 333
+está bien calculado y todos descansan sobre una premisa falsa. El auditado
+recibe rojos con expediente completo por una ruta mal dada de alta. **Ningún
+número de cumplimiento delata esto** — al contrario, lo hunde.
+
+Lo urgente no es reparar el pasado sino detener el futuro: qué se hace con los
+189 servicios que todavía no ocurren. Lo demás —mover la geocerca implica
+re-sellar 357 hechos vinculantes, que es re-verificación auditada y no
+corrección de datos— está en la ficha:
+`docs/marco-limpio/Ficha-Diagnostico-Rutas-Variante-Sin-Destino.md`.
+
 **Compuerta de salida:** **≥90% sostenido dos semanas**, cero rojos sin
-expediente, **y ningún hecho sellado sobre una cuenta que nadie declaró.**
+expediente, ningún hecho sellado sobre una cuenta que nadie declaró, **y ninguna
+ocurrencia esperando llegada en una geocerca que no sea de rol `destino`.**
 
 ---
 
