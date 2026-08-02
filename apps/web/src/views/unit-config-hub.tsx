@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getRepos } from "@/lib/db";
-import { Card } from "@/components/ui";
+import { ChipEstado, Panel } from "@/components/ui";
 import { UnitShell } from "@/components/unit-shell";
 import type { UnitPageContext } from "@/lib/unit-context";
 import { contractMatchesScope, operationalUnitLabel } from "@/lib/operational-scope";
@@ -9,6 +9,29 @@ import {
   unitConfigStepHrefFor,
 } from "@/lib/config-wizard";
 import { unitContratosHref, unitDashboardHref } from "@/lib/unit-routes";
+
+const mono = "font-[family-name:var(--fuente-mono)]";
+
+/**
+ * Cómo se dice un conteo de configuración.
+ *
+ * "3 listo(s)" no dice nada: el usuario tiene que abrir para saber tres qué. El
+ * conteo va con su sustantivo, y el cero se dice como ausencia —"sin turnos"—
+ * en vez de disfrazarse de número.
+ */
+const CUENTA: Record<string, { uno: string; varios: string; vacio: string }> = {
+  geocercas: { uno: "geocerca", varios: "geocercas", vacio: "sin geocercas" },
+  turnos: { uno: "turno", varios: "turnos", vacio: "sin turnos" },
+  rutas: { uno: "ruta", varios: "rutas", vacio: "sin rutas" },
+  servicios: { uno: "servicio", varios: "servicios", vacio: "sin servicios" },
+};
+
+function decirCuenta(id: string, n: number): string {
+  const c = CUENTA[id];
+  if (!c) return String(n);
+  if (n === 0) return c.vacio;
+  return `${n} ${n === 1 ? c.uno : c.varios}`;
+}
 
 export async function UnitConfigHub({
   ctx,
@@ -42,70 +65,98 @@ export async function UnitConfigHub({
 
   return (
     <UnitShell client={client} unit={unit} title={`Configuración — ${unitLabel}`}>
-      <p className="text-sm text-[var(--muted)]">
-        Configura los servicios de <span className="text-[var(--texto)]">{unitLabel}</span> en orden. Cada
-        paso aplica solo a esta unidad operativa.
+      <p className="max-w-[76ch] text-[13.5px] text-[var(--tenue)]">
+        Lo que hay que dejar en pie para que{" "}
+        <span className="text-[var(--texto)]">{unitLabel}</span> se pueda juzgar: dónde debe llegar
+        la unidad, a qué hora entra el personal, por dónde va y con qué contrato. Cada paso aplica
+        solo a esta unidad operativa.
       </p>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Link
           href={unitContratosHref(unit, client.slug)}
-          className="block rounded-xl border border-[var(--linea)] bg-[var(--card)] p-5 transition hover:border-[var(--accent)] md:col-span-2"
+          className="block rounded-lg border border-[var(--linea)] bg-[var(--panel)] p-5 transition hover:border-[var(--azul)] md:col-span-2"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-              Requisito para perfiles
+          <div className="flex items-center justify-between gap-3">
+            <span
+              className={`text-[9.5px] tracking-[.12em] text-[var(--tenue)] uppercase ${mono}`}
+            >
+              Requisito para los servicios
             </span>
-            <span className="text-sm text-[var(--accent)]">Abrir →</span>
+            <span className="text-[13px] text-[var(--azul)]">Abrir →</span>
           </div>
-          <h3 className="mt-2 font-semibold">Contratos</h3>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Política con el carrier (deadline, GPS, enforcement). Activa el contrato aquí antes del
-            paso 4.
+          <h3 className="mt-2 text-[15px] font-semibold text-[var(--texto)]">Contrato</h3>
+          <p className="mt-1 max-w-[70ch] text-[12.5px] text-[var(--tenue)]">
+            Con estas reglas se juzga: la hora límite, cuánta señal hace falta y qué pasa con el
+            resultado. Debe estar activo antes del último paso.
           </p>
         </Link>
         {UNIT_CONFIG_STEPS.map((step) => {
           const count = stepCounts[step.id] ?? 0;
-          const ready = count > 0;
+          const listo = count > 0;
           return (
             <Link
               key={step.id}
               href={unitConfigStepHrefFor(unit, client.slug, step.id)}
-              className="block rounded-xl border border-[var(--linea)] bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
+              className="block rounded-lg border border-[var(--linea)] bg-[var(--panel)] p-5 transition hover:border-[var(--azul)]"
             >
-              <div className="flex items-center justify-between">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--t-acero)] text-sm font-semibold">
+              <div className="flex items-center justify-between gap-3">
+                <span
+                  className={`flex h-6 w-6 items-center justify-center rounded-full bg-[var(--t-acero)] text-[12px] text-[var(--acero)] ${mono}`}
+                >
                   {step.n}
                 </span>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs ${
-                    ready ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"
-                  }`}
-                >
-                  {ready ? `${count} listo(s)` : "pendiente"}
-                </span>
+                {/*
+                 * Un paso terminado NO es un `cumplido`: aquí no hay ningún
+                 * servicio verificado. Antes iba en verde relleno y el que
+                 * faltaba en ámbar —los colores de `cumplido` y de `pendiente
+                 * por evidencia`—, así que el ojo leía un resultado donde solo
+                 * había configuración. Acero para lo que ya está en pie, tenue
+                 * para lo que falta.
+                 */}
+                <ChipEstado tono={listo ? "acero" : "tenue"}>
+                  {decirCuenta(step.id, count)}
+                </ChipEstado>
               </div>
-              <h3 className="mt-3 font-semibold">{step.title}</h3>
-              <p className="mt-1 text-sm text-[var(--muted)]">{step.desc}</p>
+              <h3 className="mt-3 text-[15px] font-semibold text-[var(--texto)]">{step.title}</h3>
+              <p className="mt-1 text-[12.5px] text-[var(--tenue)]">{step.desc}</p>
             </Link>
           );
         })}
       </div>
 
-      <Card title="Orden recomendado">
-        <ol className="list-inside list-decimal space-y-1 text-sm text-[var(--muted)]">
-          <li>Contrato con el carrier (activar si está en borrador).</li>
-          <li>Geocerca de llegada (destino / fin de la ruta).</li>
-          <li>Turnos — horarios de entrada del personal.</li>
-          <li>Rutas — trazado KML por turno (Riveras 7 turno 1 ≠ turno 2).</li>
-          <li>Perfiles de servicio → generar ocurrencias.</li>
+      <Panel
+        titulo="En qué orden"
+        nota="Cada paso necesita el anterior: no se puede trazar una ruta sin turno, ni generar servicios sin contrato activo."
+      >
+        <ol className="space-y-1.5 text-[13px] text-[var(--tenue)]">
+          <li>
+            <span className="text-[var(--texto)]">Contrato</span> con el transportista — actívalo si
+            está en borrador.
+          </li>
+          <li>
+            <span className="text-[var(--texto)]">Geocerca</span> de llegada — dónde termina la
+            ruta.
+          </li>
+          <li>
+            <span className="text-[var(--texto)]">Turnos</span> — la hora a la que entra el
+            personal.
+          </li>
+          <li>
+            <span className="text-[var(--texto)]">Rutas</span> — el trazado de cada turno. El mismo
+            recorrido en dos turnos distintos son dos rutas distintas.
+          </li>
+          <li>
+            <span className="text-[var(--texto)]">Servicios</span> — contrato, ruta y geocerca
+            juntos, con su calendario.
+          </li>
         </ol>
-        <p className="mt-1 text-sm">
-          <Link href={unitDashboardHref(unit, client.slug)} className="text-[var(--accent)]">
+        <p className="mt-4 text-[13px]">
+          <Link href={unitDashboardHref(unit, client.slug)} className="text-[var(--azul)]">
             ← Volver al panel de la unidad
           </Link>
         </p>
-      </Card>
+      </Panel>
     </UnitShell>
   );
 }
