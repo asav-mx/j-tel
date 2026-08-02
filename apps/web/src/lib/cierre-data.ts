@@ -2,6 +2,11 @@ import { getRepos } from "@/lib/db";
 import type { ContractPolicy, GpsPoint, OperationalScope } from "@jtel/domain";
 import { JTTEL_TZ } from "@jtel/domain";
 import { pairLedgerEntryWithFact } from "@jtel/db";
+import {
+  leerCausaPendiente,
+  leerFraccionObservada,
+  type CausaPendiente,
+} from "@/lib/causa-pendiente";
 import { construirHistoriaSello, type HistoriaSello } from "@/lib/historia-sello";
 import {
   computeExclusiveContentionWindow,
@@ -59,6 +64,18 @@ export type ServicioDelCierre = {
   /** Fidelidad del recorrido — solo existe donde el árbitro acreditó unidad. */
   matchPct: number | null;
   matchUmbralPct: number | null;
+
+  /**
+   * Por qué quedó sin juzgar, leída del ledger. Solo significa algo en los
+   * servicios `pendiente_evidencia`; en los demás va `desconocida` y nadie la
+   * lee. Se comparte con la bandeja de Pendiente por evidencia para que el
+   * mismo servicio no se explique de dos formas según dónde se mire.
+   */
+  causa: CausaPendiente;
+  /** Fracción del trazado vista antes de la tolerancia de origen, si aplica. */
+  fraccionObservada: number | null;
+  /** Cuántos puntos de evidencia se anclaron a la ventana. */
+  puntos: number;
 
   cobertura: Cobertura;
   /** El silencio más largo de la ventana, descrito desde evidencia anclada. */
@@ -215,6 +232,8 @@ export async function loadCierre(opts: {
 
     // ── Cobertura: solo si la entrada del ledger es la que produjo ESTE sello
     let cobertura: Cobertura = { disponible: false, razon: "no_entry" };
+    let causa: CausaPendiente = "desconocida";
+    let fraccionObservada: number | null = null;
     if (fact) {
       const entradas = await repos.compliance.getLedgerForOccurrence(o.id, {
         sinceMaterializedAt: fact.materializedAt,
@@ -222,6 +241,8 @@ export async function loadCierre(opts: {
       const par = pairLedgerEntryWithFact(entradas, fact.materializedAt);
       if (par.paired) {
         cobertura = leerCobertura(par.entry.steps) ?? { disponible: false, razon: "sin_paso" };
+        causa = leerCausaPendiente(par.entry.steps, cobertura);
+        fraccionObservada = leerFraccionObservada(par.entry.steps);
       } else {
         cobertura = { disponible: false, razon: par.reason };
       }
@@ -231,10 +252,12 @@ export async function loadCierre(opts: {
     // Solo para las excepciones: es una lectura por servicio y no hace falta
     // pagarla por los que cerraron limpio.
     let hueco: Hueco | null = null;
+    let cuantosPuntos = 0;
     if (excepcion && o.trip?.id) {
       const inicio = o.trip.evidenceWindowStart ?? new Date(ventana.startMs);
       const fin = o.trip.evidenceWindowEnd ?? new Date(ventana.endMs);
       const puntos = await repos.evidence.getPointsForTrip(o.trip.id);
+      cuantosPuntos = puntos.length;
       hueco = mayorHueco(
         puntos.map((p) => ({ at: p.recordedAt })),
         { inicio, fin },
@@ -261,6 +284,9 @@ export async function loadCierre(opts: {
         fact?.observedArrivalAt && limite ? margenMinutos(fact.observedArrivalAt, limite) : null,
       matchPct: fact?.observedRouteMatchPct ?? null,
       matchUmbralPct: snapshot.kmlMatchMinPct ?? null,
+      causa,
+      fraccionObservada,
+      puntos: cuantosPuntos,
       cobertura,
       hueco: hueco
         ? {
