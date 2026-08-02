@@ -41,7 +41,7 @@ export function ServiceDetailView({
     <>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div>
-          <StatusBadge status={data.status} timing={data.timing} />
+          <StatusBadge status={data.status} />
           {noCumplidoDetalle ? (
             <p className="mt-1 text-xs text-[var(--muted)]">{noCumplidoDetalle}</p>
           ) : null}
