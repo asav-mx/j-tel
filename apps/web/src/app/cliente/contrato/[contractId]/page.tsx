@@ -48,8 +48,13 @@ export const dynamic = "force-dynamic";
 
 const mono = "font-[family-name:var(--fuente-mono)]";
 const num = "font-[family-name:var(--fuente-mono)] tabular-nums";
+/*
+ * El fondo del campo va en `--panel2`, no en `bg-black/30`: un negro fijo se
+ * ve como campo hundido en tema oscuro y como caja gris sucia sobre el papel
+ * blanco del tema claro. El token cambia con el tema; el negro no.
+ */
 const inputBase =
-  "w-full max-w-xs rounded border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] tabular-nums";
+  "w-full max-w-xs rounded border border-[var(--linea)] bg-[var(--panel2)] px-3 py-1.5 text-sm text-[var(--texto)] tabular-nums";
 
 export default async function OficinaDeContratoPage({
   params,
