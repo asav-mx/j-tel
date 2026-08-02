@@ -28,19 +28,14 @@ export default async function ClienteDashboardPage({
     );
   }
 
-  const [operationalUnits, allOccurrences, contracts] = await Promise.all([
+  // Esta pantalla solo muestra cifras: ninguna de estas ocurrencias se dibuja.
+  // Antes se traían todas —con sus nueve relaciones anidadas y sin límite— para
+  // contarlas con `.filter().length` y tirarlas. Ahora las cuenta la base.
+  const [operationalUnits, stats, contracts] = await Promise.all([
     repos.clients.getOperationalUnits(client.id),
-    repos.occurrences.findForClientAccount(client.id),
+    repos.occurrences.countByStatusForClientAccount(client.id),
     repos.contracts.findForClient(client.id),
   ]);
-
-  const stats = {
-    total: allOccurrences.length,
-    cumplido: allOccurrences.filter((o) => o.complianceFact?.status === "cumplido").length,
-    noCumplido: allOccurrences.filter((o) => o.complianceFact?.status === "no_cumplido").length,
-    pendiente: allOccurrences.filter((o) => o.complianceFact?.status === "pendiente_evidencia")
-      .length,
-  };
 
   const unitCards = await Promise.all(
     operationalUnits.map(async (unit) => {
@@ -49,21 +44,17 @@ export default async function ClienteDashboardPage({
           ? { kind: "plant" as const, plantId: unit.id }
           : { kind: "plant_group" as const, plantGroupId: unit.id };
 
-      const [occurrences, unitContracts] = await Promise.all([
-        repos.occurrences.findForScope(scope),
+      const [conteo, unitContracts] = await Promise.all([
+        repos.occurrences.countByStatusForScope(scope),
         Promise.resolve(contracts.filter((c) => contractMatchesScope(c, scope))),
       ]);
-
-      const pending = occurrences.filter(
-        (o) => o.complianceFact?.status === "pendiente_evidencia",
-      ).length;
 
       return {
         unit,
         href: unitDashboardHref(unit, client.slug),
-        services: occurrences.length,
+        services: conteo.total,
         contracts: unitContracts.length,
-        pending,
+        pending: conteo.pendiente_evidencia,
         ready: unitContracts.length > 0,
       };
     }),
@@ -85,8 +76,8 @@ export default async function ClienteDashboardPage({
       <div className="grid gap-4 md:grid-cols-4">
         <Card title="Total servicios">{stats.total}</Card>
         <Card title="Cumplidos">{stats.cumplido}</Card>
-        <Card title="No cumplidos">{stats.noCumplido}</Card>
-        <Card title="Pendientes">{stats.pendiente}</Card>
+        <Card title="No cumplidos">{stats.no_cumplido}</Card>
+        <Card title="Pendientes">{stats.pendiente_evidencia}</Card>
       </div>
 
       {operationalUnits.length === 0 ? (

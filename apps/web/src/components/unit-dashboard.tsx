@@ -19,8 +19,10 @@ export async function UnitDashboard({ ctx }: { ctx: UnitPageContext }) {
   const { client, unit, scope } = ctx;
   const unitLabel = operationalUnitLabel(unit);
 
-  const [occurrences, geofences, shifts, routeShifts, profiles] = await Promise.all([
-    repos.occurrences.findForScope(scope),
+  // El panel de la unidad solo enseña cifras de ocurrencias, nunca la lista:
+  // las cuenta la base en vez de traerlas enteras para contarlas aquí.
+  const [stats, geofences, shifts, routeShifts, profiles] = await Promise.all([
+    repos.occurrences.countByStatusForScope(scope),
     repos.geofences.findForScope(scope, client.id),
     repos.routes.getShiftsForScope(scope),
     repos.routes.getRouteShiftsForScope(scope),
@@ -32,13 +34,6 @@ export async function UnitDashboard({ ctx }: { ctx: UnitPageContext }) {
       });
     }),
   ]);
-
-  const stats = {
-    total: occurrences.length,
-    cumplido: occurrences.filter((o) => o.complianceFact?.status === "cumplido").length,
-    noCumplido: occurrences.filter((o) => o.complianceFact?.status === "no_cumplido").length,
-    pendiente: occurrences.filter((o) => o.complianceFact?.status === "pendiente_evidencia").length,
-  };
 
   const stepCounts: Record<string, number> = {
     geocercas: geofences.length,
@@ -70,8 +65,8 @@ export async function UnitDashboard({ ctx }: { ctx: UnitPageContext }) {
       <div className="grid gap-4 md:grid-cols-4">
         <Card title="Total servicios">{stats.total}</Card>
         <Card title="Cumplidos">{stats.cumplido}</Card>
-        <Card title="No cumplidos">{stats.noCumplido}</Card>
-        <Card title="Pendientes">{stats.pendiente}</Card>
+        <Card title="No cumplidos">{stats.no_cumplido}</Card>
+        <Card title="Pendientes">{stats.pendiente_evidencia}</Card>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -94,8 +89,8 @@ export async function UnitDashboard({ ctx }: { ctx: UnitPageContext }) {
             Servicios verificados y evidencia GPS de esta unidad.
           </p>
           <p className="mt-3 text-sm text-[var(--accent)]">
-            {stats.pendiente > 0
-              ? `${stats.pendiente} pendiente(s) →`
+            {stats.pendiente_evidencia > 0
+              ? `${stats.pendiente_evidencia} pendiente(s) →`
               : "Ver servicios →"}
           </p>
         </Link>

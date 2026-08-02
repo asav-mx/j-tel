@@ -135,34 +135,34 @@ export async function computeDayRecall(
   recall: number | null;
   falseNegatives: number;
 }> {
-  const gt = await repos.groundTruth.findForContractDate(contractId, serviceDate);
-  const occs = await repos.occurrences.findForContract(contractId);
-  const day = occs.filter((o) => o.serviceDate === serviceDate);
+  // Antes se traía la historia COMPLETA del contrato —sin filtro de fecha, con
+  // las nueve relaciones anidadas— para quedarse con un solo día y contarlo en
+  // JavaScript. Y esta función se llama una vez por fila de ground truth. El
+  // día y el conteo bajan juntos a la base.
+  //
+  // `countByStatusForContractDate` compara `serviceDate` como cadena, igual que
+  // el `===` que sustituye: no hay conversión de fecha civil de por medio, que
+  // es donde se colaría un día de corrimiento.
+  const [gt, conteo] = await Promise.all([
+    repos.groundTruth.findForContractDate(contractId, serviceDate),
+    repos.occurrences.countByStatusForContractDate(contractId, serviceDate),
+  ]);
 
-  let cumplido = 0;
-  let noCumplido = 0;
-  let pendienteEvidencia = 0;
-  let sinVerificar = 0;
-  for (const o of day) {
-    const s = o.complianceFact?.status;
-    if (s === "cumplido") cumplido += 1;
-    else if (s === "no_cumplido") noCumplido += 1;
-    else if (s === "pendiente_evidencia") pendienteEvidencia += 1;
-    else sinVerificar += 1;
-  }
-
-  const denom = cumplido + noCumplido;
-  const recall = denom > 0 ? cumplido / denom : null;
+  const denom = conteo.cumplido + conteo.no_cumplido;
+  const recall = denom > 0 ? conteo.cumplido / denom : null;
   const groundTruth = gt?.expectedAllCumplido ?? false;
-  const falseNegatives = groundTruth ? noCumplido : 0;
+  const falseNegatives = groundTruth ? conteo.no_cumplido : 0;
 
   return {
     groundTruth: Boolean(gt),
-    total: day.length,
-    cumplido,
-    noCumplido,
-    pendienteEvidencia,
-    sinVerificar,
+    total: conteo.total,
+    cumplido: conteo.cumplido,
+    noCumplido: conteo.no_cumplido,
+    pendienteEvidencia: conteo.pendiente_evidencia,
+    // "Sin verificar" es el servicio que todavía no tiene hecho sellado. El
+    // enum de estado solo tiene tres valores y la columna es `notNull`, así que
+    // "ninguno de los tres" y "sin hecho" son el mismo conjunto.
+    sinVerificar: conteo.sin_hecho,
     recall,
     falseNegatives,
   };

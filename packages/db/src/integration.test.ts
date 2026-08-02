@@ -777,3 +777,176 @@ describe("Pieza 1 — Historia de Hechos", () => {
     }
   });
 });
+
+/**
+ * El conteo que bajó a la base tiene que decir EXACTAMENTE lo mismo que el
+ * `.filter().length` que reemplaza. No "aproximadamente": si difiere en uno, es
+ * que el JS filtraba algo que el SQL no replica, y eso hay que entenderlo antes
+ * de reemplazar nada.
+ *
+ * Estas pruebas no siembran datos: corren los dos caminos sobre lo que la rama
+ * de prueba ya tiene, que es la única forma de que la comparación abarque casos
+ * que a nadie se le habrían ocurrido sembrar.
+ */
+describe("countByStatus — paridad con el conteo en JS", () => {
+  /** El camino viejo, escrito aquí tal como vivía en las pantallas. */
+  function contarEnJs(occs: Array<{ complianceFact?: { status: string } | null }>) {
+    return {
+      total: occs.length,
+      cumplido: occs.filter((o) => o.complianceFact?.status === "cumplido").length,
+      no_cumplido: occs.filter((o) => o.complianceFact?.status === "no_cumplido").length,
+      pendiente_evidencia: occs.filter(
+        (o) => o.complianceFact?.status === "pendiente_evidencia",
+      ).length,
+      sin_hecho: occs.filter((o) => !o.complianceFact).length,
+    };
+  }
+
+  it("por planta y por campus: mismas cinco cifras que contar las filas", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    let alcancesComparados = 0;
+    for (const slug of ["tecma", "honeywell"]) {
+      const cuenta = await repos.accounts.findBySlug(slug);
+      if (!cuenta) continue;
+
+      for (const unidad of await repos.clients.getOperationalUnits(cuenta.id)) {
+        const scope =
+          unidad.kind === "plant"
+            ? ({ kind: "plant", plantId: unidad.id } as const)
+            : ({ kind: "plant_group", plantGroupId: unidad.id } as const);
+
+        const filas = await repos.occurrences.findForScope(scope);
+        const conteo = await repos.occurrences.countByStatusForScope(scope);
+
+        expect(conteo).toEqual(contarEnJs(filas));
+        // Los cuatro cubos reparten el total sin traslape ni sobrante: un
+        // estado mal clasificado se escondería dentro de un total correcto.
+        expect(
+          conteo.cumplido + conteo.no_cumplido + conteo.pendiente_evidencia + conteo.sin_hecho,
+        ).toBe(conteo.total);
+        alcancesComparados++;
+      }
+    }
+
+    // Que el bucle no se haya quedado vacío es parte de la prueba: cero
+    // comparaciones pasarían en verde sin haber comparado nada.
+    expect(alcancesComparados).toBeGreaterThan(0);
+  });
+
+  it("por cuenta cliente y por contrato: mismas cifras", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const tecma = await repos.accounts.findBySlug("tecma");
+    if (!tecma) return;
+
+    expect(await repos.occurrences.countByStatusForClientAccount(tecma.id)).toEqual(
+      contarEnJs(await repos.occurrences.findForClientAccount(tecma.id)),
+    );
+
+    const contratos = await repos.contracts.findForClient(tecma.id);
+    expect(contratos.length).toBeGreaterThan(0);
+    for (const c of contratos) {
+      expect(await repos.occurrences.countByStatusForContract(c.id)).toEqual(
+        contarEnJs(await repos.occurrences.findForContract(c.id)),
+      );
+    }
+  });
+
+  it("por contrato y día: la fecha se compara igual que el === que sustituye", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const tecma = await repos.accounts.findBySlug("tecma");
+    if (!tecma) return;
+    const contrato = (await repos.contracts.findForClient(tecma.id))[0];
+    if (!contrato) return;
+
+    const todas = await repos.occurrences.findForContract(contrato.id);
+    const dias = [...new Set(todas.map((o) => o.serviceDate))].slice(0, 5);
+    expect(dias.length).toBeGreaterThan(0);
+
+    for (const dia of dias) {
+      expect(await repos.occurrences.countByStatusForContractDate(contrato.id, dia)).toEqual(
+        contarEnJs(todas.filter((o) => o.serviceDate === dia)),
+      );
+    }
+  });
+
+  /**
+   * La falla que esta prueba busca no es ruidosa: un `where` de alcance que se
+   * quede corto no revienta, devuelve un número MÁS GRANDE — con servicios de
+   * plantas que ese usuario no debe ver. Una fuga que se lee como dato correcto.
+   *
+   * Por eso el contador de referencia se calcula por un camino independiente:
+   * se traen las ocurrencias de toda la cuenta y se recortan a los contratos de
+   * esa planta. Si el conteo se saltara el alcance devolvería el total de la
+   * cuenta, y aquí se vería.
+   */
+  it("el alcance viaja con el conteo: una planta no cuenta las de otra", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const tecma = await repos.accounts.findBySlug("tecma");
+    if (!tecma) return;
+
+    const deLaCuenta = await repos.occurrences.findForClientAccount(tecma.id);
+    const plantas = await repos.clients.getPlantsForAccount(tecma.id);
+    expect(plantas.length).toBeGreaterThan(0);
+
+    for (const planta of plantas) {
+      const contratos = await repos.contracts.findForClient(tecma.id);
+      const idsDeLaPlanta = new Set(
+        contratos.filter((c) => c.plantId === planta.id).map((c) => c.id),
+      );
+      const esperado = contarEnJs(
+        deLaCuenta.filter((o) => idsDeLaPlanta.has(o.contractId)),
+      );
+
+      const conteo = await repos.occurrences.countByStatusForScope({
+        kind: "plant",
+        plantId: planta.id,
+      });
+      expect(conteo).toEqual(esperado);
+    }
+
+    // Y el contrapositivo: si alguna planta contara de más, su cifra superaría
+    // la de la cuenta entera que la contiene.
+    const cuenta = await repos.occurrences.countByStatusForClientAccount(tecma.id);
+    for (const planta of plantas) {
+      const conteo = await repos.occurrences.countByStatusForScope({
+        kind: "plant",
+        plantId: planta.id,
+      });
+      expect(conteo.total).toBeLessThanOrEqual(cuenta.total);
+    }
+  });
+
+  it("un alcance sin contratos devuelve ceros, no error", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const cero = {
+      total: 0,
+      cumplido: 0,
+      no_cumplido: 0,
+      pendiente_evidencia: 0,
+      sin_hecho: 0,
+    };
+    const inexistente = "00000000-0000-0000-0000-000000000000";
+
+    expect(
+      await repos.occurrences.countByStatusForScope({ kind: "plant", plantId: inexistente }),
+    ).toEqual(cero);
+    expect(
+      await repos.occurrences.countByStatusForScope({
+        kind: "plant_group",
+        plantGroupId: inexistente,
+      }),
+    ).toEqual(cero);
+    expect(await repos.occurrences.countByStatusForClientAccount(inexistente)).toEqual(cero);
+    expect(await repos.occurrences.countByStatusForContract(inexistente)).toEqual(cero);
+  });
+});
