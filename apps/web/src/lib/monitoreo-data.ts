@@ -7,6 +7,7 @@ import {
   localTimeHHMM,
   JTTEL_TZ,
 } from "@jtel/domain";
+import { edadSenalMinutos } from "@/lib/monitoreo-umbrales";
 import {
   cumulativeRouteFractions,
   evaluateUnitRouteMatch,
@@ -620,18 +621,16 @@ export async function loadMonitoreo(opts: {
     }
 
     // La resta que la torre necesita y el heartbeat agregado por carrier no da:
-    // hace cuánto se calló ESTA unidad.
-    //
-    // Solo sobre servicios abiertos que siguen en camino. En uno cerrado la
-    // evidencia ya está congelada; y en uno que ya llegó, **la traza se cortó
-    // en la geocerca porque esa es la frontera de la evidencia** — el silencio
-    // posterior es la ley funcionando, no una unidad callada. Marcarlo ámbar
-    // acusaría al carrier de perder señal justo cuando el sistema dejó de
-    // mirar a propósito.
+    // hace cuánto se calló ESTA unidad. La ley de cuándo preguntarlo vive en
+    // `edadSenalMinutos`, aparte y probada: después de la geocerca no hay señal
+    // que esperar, porque ahí se corta la evidencia a propósito.
     const puntoVivo = d.closed || state === "llego" ? null : currentPoint;
-    const signalAgeMinutes = puntoVivo
-      ? Math.max(0, Math.round((now.getTime() - new Date(puntoVivo.at).getTime()) / 60_000))
-      : null;
+    const signalAgeMinutes = edadSenalMinutos({
+      cerrado: d.closed,
+      llego: state === "llego",
+      ultimoPuntoAt: currentPoint?.at ?? null,
+      ahora: now,
+    });
 
     routes.push({
       occurrenceId: o.id,

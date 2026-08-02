@@ -56,7 +56,35 @@ Datos y privacidad. Se protegen datos personales/sensibles hasta el mínimo que 
 Un servicio cumplido siempre tiene unidad observada. No puede existir una hora de llegada sin una unidad observada detrás.
 La verificación no se calcula al abrir una pantalla. Se genera sola tras el deadline, y cuándo se genera es configurable por contrato (justo al deadline, o con la gracia que cada cliente prefiera por clima/tráfico/historial). Las pantallas sólo leen el hecho ya guardado.
 El producto siempre debe poder soportarse. Existe una compuerta interna para diagnosticar y resolver fallas, respetando datos personales y sin alterar la verdad guardada.
+Un dato correcto puede volverse una afirmación falsa según dónde se lea, cómo se agrupe o de qué color se pinte. El valor guardado siendo correcto no basta: lo que el usuario recibe es la afirmación completa, y esa la arman también el lugar, la agrupación y el color. Ver la sección D.
 Idioma nativo del sistema: español.
+
+
+D. Cuando un dato correcto miente
+
+Esta sección existe porque el mismo error apareció cuatro veces en un solo piloto de interfaz, y las cuatro veces el valor guardado era correcto. Ninguna se detectó compilando ni leyendo el código: se detectaron mirando la pantalla contra la ley.
+
+Es la clase de falla que más le cuesta a un árbitro. Un motor que calcula mal se arregla y se vuelve a sellar. Un motor que calcula bien y se muestra mal produce una afirmación falsa con toda la autoridad del sello detrás — y el auditado no tiene cómo distinguirlas.
+
+Los cuatro casos, con lo que hacía falsa cada afirmación:
+
+1. Unidades ya llegadas marcadas "sin señal". El dato era la antigüedad del último punto GPS, correcta al minuto. Pero la traza se corta al entrar a la geocerca porque la geocerca es la frontera de la evidencia: el silencio posterior es la ley funcionando, no una unidad callada. Once de catorce unidades acusaban al carrier de perder señal justo donde el sistema deja de mirar a propósito. Lo falso lo puso el LUGAR donde se leyó el dato.
+
+2. "Sin verificar" mostrado como cuarta tarjeta junto a los tres resultados. El conteo era correcto. Pero puesto al lado de cumplido, no cumplido y pendiente por evidencia, se lee como un cuarto veredicto — y no lo es: es ausencia de veredicto, el motor todavía no juzga ese servicio. Lo falso lo puso la AGRUPACIÓN.
+
+3. Agregados recalculados sobre el filtro. Al filtrar a "cumplido", la tarjeta "No cumplidos" mostraba 0. El 0 era correcto para el conjunto filtrado, y falso como afirmación sobre el periodo, que es lo que una tarjeta de agregado afirma. Un agregado dice la verdad del periodo completo siempre; el filtro es una lente sobre la tabla, no sobre los hechos. Lo falso lo puso el ALCANCE.
+
+4. El motivo "temprano" pintado en ámbar. La medición era correcta: llegó diez minutos antes. Pero el ámbar está reservado a los motivos con costo, así que pintarlo ámbar le imputa al carrier un cargo que el contrato no le pone. Lo falso lo puso el COLOR.
+
+Lo que esto exige al construir:
+
+Cada dato que llega a una pantalla se pregunta no sólo si es correcto, sino qué afirma ahí: al lado de qué queda, sobre qué universo habla, y qué dice el color que se le pone. Un dato correcto en el lugar equivocado no es un detalle de presentación — es el árbitro mintiendo.
+
+Sobre las pruebas, con precisión: ninguna prueba unitaria ENCUENTRA estos casos, porque no hay valor equivocado contra el cual comparar. Pero una vez encontrados, sí se pueden CERCAR, y los cuatro están cercados: tres con pruebas que fallan si el error vuelve, y el del agregado con una valla de tipos — lo que sale del filtro va marcado y la función que cuenta el periodo se niega a recibirlo, así que repetirlo deja de compilar.
+
+Esa diferencia importa al elegir la valla. El caso del agregado no vivía dentro de la función —contar siempre contó bien— sino en el sitio de llamada, y eso ninguna prueba sobre una función pura lo ve. Cuando el error está en quién llama y no en qué hace, la valla es el compilador.
+
+La regla completa: la revisión contra la ley es lo único que los descubre; la valla es lo que impide que regresen. Las dos hacen falta, en ese orden, y nunca al revés.
 
 
 Cómo se usa este documento

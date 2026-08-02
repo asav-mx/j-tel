@@ -5,6 +5,7 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
     "test": "turbo test && pnpm env:test",
     "env:pull": "pnpm dlx vercel@latest env pull .env",
     "env:check": "node scripts/verificar-env.mjs",
