@@ -51,7 +51,7 @@ export default async function ClientePlantasPage({
     <CorporateShell client={client} title={`Administrar plantas — ${client.name}`} >
       <p className="text-sm text-[var(--muted)]">
         Alta corporativa de plantas y campus. Para configurar servicios, entra al panel de cada{" "}
-        <span className="text-[var(--texto)]">unidad operativa</span> desde el hub principal.
+        <span className="text-[var(--texto)]">sitio</span> desde el hub principal.
       </p>
 
       {error ? (

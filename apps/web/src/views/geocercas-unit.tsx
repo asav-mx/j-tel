@@ -170,7 +170,7 @@ export async function GeocercasUnitView({
       <Panel titulo={`Geocercas — ${operationalUnitLabel(unit)} (${unitGeofences.length})`}>
         {unitGeofences.length === 0 ? (
           <p className="text-[13.5px] text-[var(--tenue)]">
-            Todavía no hay geocercas en esta unidad. Sin una de destino no se puede juzgar ninguna
+            Todavía no hay geocercas en este sitio. Sin una de destino no se puede juzgar ninguna
             llegada.
           </p>
         ) : (

@@ -37,12 +37,12 @@ export async function POST(request: Request) {
 
   const parsedScope = parseOperationalScope({ plantId, plantGroupId });
   if (!parsedScope) {
-    return back(request, client.slug, null, { error: "Elige una unidad operativa." });
+    return back(request, client.slug, null, { error: "Elige un sitio." });
   }
 
   const scope = await repos.clients.resolveOperationalScope(client.id, parsedScope);
   if (!scope) {
-    return back(request, client.slug, parsedScope, { error: "Unidad operativa no válida." });
+    return back(request, client.slug, parsedScope, { error: "Sitio no válido." });
   }
 
   const scopeCols = operationalScopeColumns(scope);

@@ -31,7 +31,7 @@ export function UnitConfigWizardNav({
       <div
         className={`mb-2.5 flex flex-wrap items-center justify-between gap-2 text-[10px] tracking-[.1em] uppercase ${mono} text-[var(--tenue)]`}
       >
-        <span>Configuración de esta unidad</span>
+        <span>Configuración de este sitio</span>
         <span className="flex flex-wrap gap-3 tracking-normal normal-case">
           <Link
             href={unitContratosHref(unit, clientSlug)}

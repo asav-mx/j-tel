@@ -364,7 +364,7 @@ export async function ServiciosUnitView({
 
       <Panel titulo={`Servicios — ${operationalUnitLabel(activeUnit)} (${profiles.length})`}>
         {profiles.length === 0 ? (
-          <p className="text-[13.5px] text-[var(--tenue)]">Sin servicios en esta unidad.</p>
+          <p className="text-[13.5px] text-[var(--tenue)]">Sin servicios en este sitio.</p>
         ) : (
           <>
             {unit.kind === "plant" && geofences.length > 0 ? (

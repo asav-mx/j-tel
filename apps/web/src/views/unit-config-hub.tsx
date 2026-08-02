@@ -69,7 +69,7 @@ export async function UnitConfigHub({
         Lo que hay que dejar en pie para que{" "}
         <span className="text-[var(--texto)]">{unitLabel}</span> se pueda juzgar: dónde debe llegar
         la unidad, a qué hora entra el personal, por dónde va y con qué contrato. Cada paso aplica
-        solo a esta unidad operativa.
+        solo a este sitio.
       </p>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -153,7 +153,7 @@ export async function UnitConfigHub({
         </ol>
         <p className="mt-4 text-[13px]">
           <Link href={unitDashboardHref(unit, client.slug)} className="text-[var(--azul)]">
-            ← Volver al panel de la unidad
+            ← Volver al panel del sitio
           </Link>
         </p>
       </Panel>

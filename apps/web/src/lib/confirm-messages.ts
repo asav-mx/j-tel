@@ -24,7 +24,7 @@ export const confirmMessages = {
   verifyOccurrence: (date: string, contract: string) =>
     `¿Re-sincronizar y verificar el servicio del ${date} (${contract})?`,
   savePlantTemplate:
-    "¿Guardar cambios en {name}? Si cambias de grupo, puede afectar la unidad operativa.",
+    "¿Guardar cambios en {name}? Si cambias de grupo, puede afectar el sitio.",
   deleteShift: (name: string, time: string) =>
     `¿Eliminar el turno «${name}» (inicio ${time})? Solo es posible si no está programado en un perfil de servicio.`,
   updateShift: (name: string) =>

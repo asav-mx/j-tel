@@ -153,14 +153,14 @@ export async function ContratosUnitView({
         <Panel titulo={`Ya hay contrato — ${operationalUnitLabel(activeUnit)}`}>
           <p className="max-w-[70ch] text-[13.5px] text-[var(--tenue)]">
             {scopedContracts.some((c) => c.status === "draft")
-              ? "Cada transportista autorizado ya tiene un contrato en borrador o activo en esta unidad. Activa el borrador que vayas a usar, o elimina el que sobre."
-              : "Cada transportista autorizado ya tiene contrato en esta unidad. Para los servicios usa el contrato activo de la lista."}
+              ? "Cada transportista autorizado ya tiene un contrato en borrador o activo en este sitio. Activa el borrador que vayas a usar, o elimina el que sobre."
+              : "Cada transportista autorizado ya tiene contrato en este sitio. Para los servicios usa el contrato activo de la lista."}
           </p>
         </Panel>
       ) : (
         <Panel
           titulo={`Nuevo contrato — ${operationalUnitLabel(activeUnit)}`}
-          nota="Solo puede existir un contrato —borrador o activo— por transportista y unidad operativa."
+          nota="Solo puede existir un contrato —borrador o activo— por transportista y sitio."
         >
           <ConfirmForm
             action="/api/cliente/contratos"
@@ -274,7 +274,7 @@ export async function ContratosUnitView({
         titulo={`Contratos — ${operationalUnitLabel(activeUnit)} (${scopedContracts.length})`}
       >
         {scopedContracts.length === 0 ? (
-          <p className="text-[13.5px] text-[var(--tenue)]">Sin contratos para esta unidad.</p>
+          <p className="text-[13.5px] text-[var(--tenue)]">Sin contratos para este sitio.</p>
         ) : (
           <ul className="space-y-3">
             {scopedContracts.map((c) => {

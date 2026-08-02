@@ -162,7 +162,7 @@ export async function UnitDashboard({ ctx }: { ctx: UnitPageContext }) {
             <span className="text-[var(--acero)]">{ultimoSello.serviceDate}</span>
           </>
         ) : (
-          " · todavía no se ha sellado ningún servicio en esta unidad"
+          " · todavía no se ha sellado ningún servicio en este sitio"
         )}
       </p>
 
@@ -284,7 +284,7 @@ function Bandeja({
         <p className="mt-1.5 max-w-[66ch] text-[13.5px] text-[var(--tenue)]">
           {fechaCierre
             ? `El último cierre — el del ${fechaCierre} — dejó ${verificadosDelCierre} ${verificadosDelCierre === 1 ? "servicio verificado" : "servicios verificados"} y ningún pendiente.`
-            : "Todavía no hay cierres con resultado en esta unidad."}
+            : "Todavía no hay cierres con resultado en este sitio."}
         </p>
       </div>
     );
