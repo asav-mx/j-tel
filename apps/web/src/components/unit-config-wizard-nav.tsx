@@ -3,6 +3,17 @@ import { UNIT_CONFIG_STEPS, type UnitConfigStepId, unitConfigHubHrefFor, unitCon
 import type { OperationalUnit } from "@jtel/domain";
 import { unitContratosHref } from "@/lib/unit-routes";
 
+const mono = "font-[family-name:var(--fuente-mono)]";
+
+/**
+ * Los pasos de la configuración de una unidad. Sale en las cuatro subrutas, así
+ * que es la pieza que más veces se ve de toda la oficina.
+ *
+ * El paso donde estás va en acero —el color de lo medido, y aquí lo más
+ * parecido a "esto es lo que tienes enfrente"—, nunca en el azul relleno de
+ * antes: un bloque sólido de color de acción compitiendo con el contenido de la
+ * pantalla. Los pasos se leen como una regla graduada, no como botonera.
+ */
 export function UnitConfigWizardNav({
   clientSlug,
   unit,
@@ -15,20 +26,22 @@ export function UnitConfigWizardNav({
   return (
     <nav
       aria-label="Pasos de configuración"
-      className="mb-6 rounded-xl border border-[var(--linea)] bg-black/20 p-3"
+      className="mb-6 rounded-lg border border-[var(--linea)] bg-[var(--panel2)] p-3"
     >
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted)]">
+      <div
+        className={`mb-2.5 flex flex-wrap items-center justify-between gap-2 text-[10px] tracking-[.1em] uppercase ${mono} text-[var(--tenue)]`}
+      >
         <span>Configuración de esta unidad</span>
-        <span className="flex flex-wrap gap-3">
+        <span className="flex flex-wrap gap-3 tracking-normal normal-case">
           <Link
             href={unitContratosHref(unit, clientSlug)}
-            className="text-[var(--accent)] hover:underline"
+            className="text-[var(--azul)] hover:underline"
           >
-            Contratos
+            Contrato
           </Link>
           <Link
             href={unitConfigHubHrefFor(unit, clientSlug)}
-            className="text-[var(--accent)] hover:underline"
+            className="text-[var(--azul)] hover:underline"
           >
             Ver resumen →
           </Link>
@@ -41,13 +54,14 @@ export function UnitConfigWizardNav({
             <li key={step.id}>
               <Link
                 href={unitConfigStepHrefFor(unit, clientSlug, step.id)}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm ${
+                aria-current={active ? "step" : undefined}
+                className={`inline-flex items-center gap-1.5 rounded-[2px] border px-3 py-1 text-[13px] ${
                   active
-                    ? "bg-[var(--accent)] font-medium text-black"
-                    : "border border-[var(--linea)] hover:border-[var(--accent)]"
+                    ? "border-[var(--b-acero)] bg-[var(--t-acero)] font-medium text-[var(--acero)]"
+                    : "border-[var(--linea)] text-[var(--tenue)] hover:border-[var(--azul)] hover:text-[var(--azul)]"
                 }`}
               >
-                <span className="text-xs opacity-80">{step.n}.</span>
+                <span className={`text-[11px] ${mono} opacity-70`}>{step.n}.</span>
                 {step.title}
               </Link>
             </li>
