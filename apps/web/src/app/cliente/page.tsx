@@ -1,15 +1,30 @@
 import Link from "next/link";
-import { getRepos } from "@/lib/db";
 import { CorporateShell } from "@/components/unit-shell";
-import { AvisoSistema, Card } from "@/components/ui";
+import { AvisoSistema } from "@/components/ui";
+import { TiraCatorceDias } from "@/components/tira-catorce-dias";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
-import { operationalUnitLabel } from "@/lib/operational-scope";
-import { contractMatchesScope } from "@/lib/operational-scope";
-import { unitDashboardHref } from "@/lib/unit-routes";
+import { loadInicioCorporativo } from "@/lib/inicio-corporativo-data";
 
 export const dynamic = "force-dynamic";
 
-export default async function ClienteDashboardPage({
+/**
+ * Inicio corporativo — "¿dónde tengo que mirar hoy?".
+ *
+ * Es para decidir dónde mirar, no para operar: cada sitio tiene su propio
+ * panel, su cierre y su configuración.
+ *
+ * Dos cosas que esta pantalla dejó de hacer:
+ *
+ * - **Repetir la navegación en tarjetas.** "Administrar plantas" y "Reportes
+ *   corporativos" vivían aquí como tarjetas *y* como renglones de nav.
+ * - **Contar desde siempre.** Las cifras eran acumuladas y sin alcance
+ *   temporal, que es §D del Marco: un dato correcto que alarma sin informar
+ *   porque no dice de cuándo. Además sumaban lo *programado* junto a lo
+ *   juzgado, inflando el total con servicios que todavía no ocurren.
+ *
+ * Y no muestra cifras de cumplimiento: eso espera la compuerta de Ola 2.
+ */
+export default async function ClienteInicioPage({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -17,9 +32,7 @@ export default async function ClienteDashboardPage({
   const sp = searchParams ? await searchParams : undefined;
   const error = typeof sp?.error === "string" ? sp.error : null;
 
-  const repos = getRepos();
   const client = await resolveAccountByType("client", searchParams);
-
   if (!client) {
     return (
       <main className="p-8">
@@ -28,122 +41,188 @@ export default async function ClienteDashboardPage({
     );
   }
 
-  // Esta pantalla solo muestra cifras: ninguna de estas ocurrencias se dibuja.
-  // Antes se traían todas —con sus nueve relaciones anidadas y sin límite— para
-  // contarlas con `.filter().length` y tirarlas. Ahora las cuenta la base.
-  const [operationalUnits, stats, contracts] = await Promise.all([
-    repos.clients.getOperationalUnits(client.id),
-    repos.occurrences.countByStatusForClientAccount(client.id),
-    repos.contracts.findForClient(client.id),
-  ]);
+  const data = await loadInicioCorporativo(client.id, {
+    nombre: client.name,
+    slug: client.slug,
+  });
 
-  const unitCards = await Promise.all(
-    operationalUnits.map(async (unit) => {
-      const scope =
-        unit.kind === "plant"
-          ? { kind: "plant" as const, plantId: unit.id }
-          : { kind: "plant_group" as const, plantGroupId: unit.id };
+  const sinAtender = data.pendientesAbiertos === 0;
+  const peor = data.sitiosConPendientes[0];
 
-      const [conteo, unitContracts] = await Promise.all([
-        repos.occurrences.countByStatusForScope(scope),
-        Promise.resolve(contracts.filter((c) => contractMatchesScope(c, scope))),
-      ]);
+  // El titular nombra el sitio que necesita atención. Si ninguno lo necesita,
+  // lo dice: el silencio también es una respuesta, pero hay que enunciarla.
+  const titular = sinAtender
+    ? data.sitios.length === 1
+      ? "Tu sitio está al corriente."
+      : `Los ${data.sitios.length} sitios al corriente.`
+    : `${peor!.nombre} necesita atención.`;
 
-      return {
-        unit,
-        href: unitDashboardHref(unit, client.slug),
-        services: conteo.total,
-        contracts: unitContracts.length,
-        pending: conteo.pendiente_evidencia,
-        ready: unitContracts.length > 0,
-      };
-    }),
-  );
+  const plural = (n: number, uno: string, varios: string) => (n === 1 ? uno : varios);
 
   return (
-    <CorporateShell client={client} title={`${client.name} — Sitios`}>
+    <CorporateShell client={client} title={`${data.cuentaNombre} — Sitios`}>
       {error ? <AvisoSistema lead="No se guardó.">{error}</AvisoSistema> : null}
 
-      <p className="text-sm text-[var(--muted)]">
-        Vista corporativa de <span className="text-[var(--texto)]">{client.name}</span>. Cada planta
-        independiente o campus tiene su propio panel, configuración y cumplimiento.
-      </p>
+      <header>
+        <h1 className="font-[family-name:var(--fuente-archivo)] text-2xl font-semibold text-[var(--texto)]">
+          {titular}
+        </h1>
+        <p className="mt-1 font-[family-name:var(--fuente-mono)] text-xs tabular-nums text-[var(--tenue)]">
+          {data.cuentaNombre} · {data.totalPlantas}{" "}
+          {plural(data.totalPlantas, "planta", "plantas")} en {data.sitios.length}{" "}
+          {plural(data.sitios.length, "sitio", "sitios")} · {data.transportistas.length}{" "}
+          {plural(data.transportistas.length, "transportista", "transportistas")} · {data.fechaHoy}
+        </p>
+      </header>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card title="Total servicios">{stats.total}</Card>
-        <Card title="Cumplidos">{stats.cumplido}</Card>
-        <Card title="No cumplidos">{stats.no_cumplido}</Card>
-        <Card title="Pendientes">{stats.pendiente_evidencia}</Card>
-      </div>
+      {/* El aviso: solo si hay algo que atender, con su antigüedad y su comparación. */}
+      {!sinAtender ? (
+        <section className="rounded-xl border border-[var(--b-ambar)] bg-[var(--t-ambar)] p-5">
+          <p className="text-sm text-[var(--texto)]">
+            <span className="font-[family-name:var(--fuente-mono)] tabular-nums">
+              {data.pendientesAbiertos}
+            </span>{" "}
+            {plural(data.pendientesAbiertos, "servicio quedó", "servicios quedaron")} sin poder
+            juzgarse por falta de evidencia
+            {data.diasDelPendienteMasViejo != null ? (
+              <>
+                {" — el más viejo lleva "}
+                <span className="font-[family-name:var(--fuente-mono)] tabular-nums">
+                  {data.diasDelPendienteMasViejo}
+                </span>
+                {` ${plural(data.diasDelPendienteMasViejo, "día", "días")}`}
+              </>
+            ) : null}
+            {/*
+              La comparación solo aparece cuando compara algo. Con un único
+              sitio con pendientes, nombrarlo repite el número que ya se dijo
+              en la misma frase — y un dato que no agrega nada gasta la
+              atención que el aviso necesita.
+            */}
+            {data.sitiosConPendientes.length > 1 ? (
+              <>
+                {" · "}
+                {data.sitiosConPendientes
+                  .slice(0, 2)
+                  .map((s) => `${s.nombre} (${s.pendientes})`)
+                  .join(" y ")}
+                {data.sitiosConPendientes.length > 2
+                  ? ` de ${data.sitiosConPendientes.length} sitios con pendientes`
+                  : ""}
+              </>
+            ) : null}
+            .
+          </p>
+          {/* Ley 7 del Marco, dicha en voz alta donde importa. */}
+          <p className="mt-2 text-xs text-[var(--tenue)]">
+            Sin evidencia no hay incumplimiento: estos servicios están pendientes, no reprobados.
+          </p>
+        </section>
+      ) : null}
 
-      {operationalUnits.length === 0 ? (
-        <Card title="Sin sitios">
-          <p className="text-sm text-[var(--muted)]">
-            Crea plantas o campus en{" "}
-            <Link href={withAccount("/cliente/plantas", client.slug)} className="text-[var(--accent)]">
-              Administrar plantas
+      {data.sitios.length === 0 ? (
+        <div className="rounded-xl border border-[var(--linea)] bg-[var(--panel)] p-5">
+          <p className="text-sm text-[var(--tenue)]">
+            Todavía no hay sitios.{" "}
+            <Link
+              href={withAccount("/cliente/plantas", client.slug)}
+              className="text-[var(--azul)] hover:underline"
+            >
+              Crea el primero
             </Link>
             .
           </p>
-        </Card>
+        </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {unitCards.map(({ unit, href, services, contracts: uc, pending, ready }) => (
+          {data.sitios.map((s) => (
             <Link
-              key={`${unit.kind}-${unit.id}`}
-              href={href}
-              className="block rounded-xl border border-[var(--linea)] bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
+              key={`${s.unidad.kind}-${s.unidad.id}`}
+              href={s.href}
+              className="block rounded-xl border border-[var(--linea)] bg-[var(--panel)] p-5 transition hover:border-[var(--b-acero)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--azul)]"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs text-[var(--muted)]">
-                    {unit.kind === "plant_group" ? "Campus" : "Planta independiente"}
-                  </p>
-                  <h2 className="text-lg font-semibold">{operationalUnitLabel(unit)}</h2>
-                  {unit.kind === "plant_group" ? (
-                    <p className="mt-1 text-xs text-[var(--muted)]">
-                      Plantas {unit.memberPlants.map((p) => p.code).join(", ")}
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-xs text-[var(--muted)]">Código {unit.code}</p>
-                  )}
-                </div>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs ${
-                    ready ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"
-                  }`}
-                >
-                  {ready ? "Configurada" : "Pendiente"}
-                </span>
-              </div>
-              <p className="mt-3 text-sm text-[var(--muted)]">
-                {services} servicio(s) · {uc} contrato(s)
-                {pending > 0 ? ` · ${pending} pendiente(s)` : ""}
+              <p className="font-[family-name:var(--fuente-mono)] text-[10.5px] uppercase tracking-[0.11em] text-[var(--tenue)]">
+                {s.tipo}
+                {s.unidad.kind === "plant_group"
+                  ? ` · ${s.unidad.memberPlants.length} ${plural(s.unidad.memberPlants.length, "planta", "plantas")}`
+                  : ` · ${s.unidad.code}`}
               </p>
-              <p className="mt-3 text-sm text-[var(--accent)]">Abrir panel →</p>
+              <h2 className="mt-1 text-lg font-semibold text-[var(--texto)]">{s.unidad.name}</h2>
+              <p className="mt-0.5 text-xs text-[var(--tenue)]">
+                {s.transportistas.length > 0
+                  ? s.transportistas.join(" · ")
+                  : "Sin transportista configurado"}
+              </p>
+
+              <dl className="mt-4 grid grid-cols-3 gap-3">
+                {(
+                  [
+                    ["Servicios hoy", s.hoy.servicios],
+                    ["Pendientes hoy", s.hoy.pendientes],
+                    ["Sin verificar hoy", s.hoy.sinVerificar],
+                  ] as const
+                ).map(([etiqueta, valor]) => (
+                  <div key={etiqueta}>
+                    <dt className="text-[10.5px] text-[var(--tenue)]">{etiqueta}</dt>
+                    <dd className="font-[family-name:var(--fuente-mono)] text-xl tabular-nums text-[var(--acero)]">
+                      {valor}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+
+              <div className="mt-4">
+                <TiraCatorceDias dias={s.tira} />
+              </div>
             </Link>
           ))}
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Link
-          href={withAccount("/cliente/plantas", client.slug)}
-          className="block rounded-xl border border-[var(--linea)] bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
-        >
-          <h2 className="font-semibold">Administrar plantas</h2>
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Alta de plantas, campus y agrupaciones corporativas.
-          </p>
-        </Link>
-        <Link
-          href={withAccount("/cliente/reportes", client.slug)}
-          className="block rounded-xl border border-[var(--linea)] bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
-        >
-          <h2 className="font-semibold">Reportes corporativos</h2>
-          <p className="mt-2 text-sm text-[var(--muted)]">Resumen exportable de todos los sitios.</p>
-        </Link>
-      </div>
+      {/* Todo sumado — cuatro cifras del conjunto, en acero, cada una con su alcance. */}
+      <section className="rounded-xl border border-[var(--linea)] bg-[var(--panel)] p-5">
+        <h2 className="font-[family-name:var(--fuente-mono)] text-[10.5px] uppercase tracking-[0.11em] text-[var(--tenue)]">
+          Todo sumado
+        </h2>
+        <dl className="mt-3 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+          {[
+            { etiqueta: "Servicios hoy", valor: data.sumado.servicios, nota: data.fechaHoy },
+            {
+              etiqueta: "Servicios pendientes",
+              valor: data.pendientesAbiertos,
+              nota:
+                data.diasDelPendienteMasViejo != null
+                  ? `el más viejo lleva ${data.diasDelPendienteMasViejo} ${plural(data.diasDelPendienteMasViejo, "día", "días")}`
+                  : "ninguno abierto",
+            },
+            { etiqueta: "Sin verificar hoy", valor: data.sumado.sinVerificar, nota: data.fechaHoy },
+            {
+              etiqueta: "Transportistas",
+              valor: data.transportistas.length,
+              nota: data.transportistas.join(" · ") || "ninguno",
+            },
+          ].map((c) => (
+            <div key={c.etiqueta}>
+              <dt className="text-xs text-[var(--tenue)]">{c.etiqueta}</dt>
+              <dd className="font-[family-name:var(--fuente-mono)] text-2xl tabular-nums text-[var(--acero)]">
+                {c.valor}
+              </dd>
+              <p className="mt-0.5 text-[10.5px] text-[var(--tenue)]">{c.nota}</p>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      {/* Bloque reservado — §3.5. Se enuncia con su razón; no se dibuja. */}
+      <section className="rounded-xl border border-dashed border-[var(--linea)] p-5">
+        <h2 className="font-[family-name:var(--fuente-mono)] text-[10.5px] uppercase tracking-[0.11em] text-[var(--tenue)]">
+          Reservado · comparar el cumplimiento entre sitios
+        </h2>
+        <p className="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--tenue)]">
+          Poner lado a lado el porcentaje de un campus contra el de una planta es la comparación de
+          más peso que hace este producto — y por eso es la última que se muestra, no la primera.
+        </p>
+      </section>
     </CorporateShell>
   );
 }
