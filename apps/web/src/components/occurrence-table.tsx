@@ -1,6 +1,6 @@
 import { StatusBadge } from "@/components/ui";
 import { withAccount } from "@/lib/account-context";
-import { noCumplidoDetailLine } from "@/lib/no-cumplido-motivo";
+import { motivoTiming, noCumplidoDetailLine } from "@/lib/no-cumplido-motivo";
 
 export type OccurrenceRow = {
   id: string;
@@ -15,6 +15,11 @@ export type OccurrenceRow = {
   observedUnitLabel: string;
   /** Línea de motivo bajo el chip no_cumplido (solo lectura del hecho). */
   motivo: string | null;
+  /**
+   * Motivo de puntualidad bajo un CUMPLIDO tarde o temprano, con su medición y
+   * la tolerancia del contrato congelado. "Tarde" vive aquí, nunca en el chip.
+   */
+  motivoTiming: string | null;
   detailHref: string;
 };
 
@@ -29,6 +34,8 @@ type OccurrenceInput = {
     observedUnitId?: string | null;
     observedArrivalAt?: Date | null;
     observedUnit?: { label?: string | null; plateNumber?: string | null } | null;
+    /** Política del contrato tal como regía al sellar. La tolerancia sale de aquí. */
+    contractPolicySnapshot?: { toleranceMinutes?: number | null } | null;
   } | null;
   contract?: {
     plant?: { name: string; code: string } | null;
@@ -83,6 +90,13 @@ export function toOccurrenceRow(
       observedArrivalAt: fact?.observedArrivalAt,
       expectedDeadline: occ.expectedDeadline,
       observedUnitLabel: formatObservedUnit(fact),
+    }),
+    motivoTiming: motivoTiming({
+      status: fact?.status,
+      timing: fact?.timing,
+      observedArrivalAt: fact?.observedArrivalAt,
+      expectedDeadline: occ.expectedDeadline,
+      toleranceMinutes: fact?.contractPolicySnapshot?.toleranceMinutes,
     }),
     detailHref: withAccount(`${detailPath}/${occ.id}`, accountSlug),
   };
@@ -141,9 +155,27 @@ export function OccurrenceTable({
                 {row.profileName}
               </td>
               <td className="py-3 pr-4">
-                <StatusBadge status={row.status} timing={row.timing} />
+                <StatusBadge status={row.status} />
                 {showMotivo && row.motivo ? (
-                  <p className="mt-1 text-xs text-[var(--muted)]">{row.motivo}</p>
+                  <p className="mt-1 text-xs text-[var(--tenue)]">{row.motivo}</p>
+                ) : null}
+                {/*
+                  El motivo va DEBAJO del chip, que sigue verde. El color lo
+                  decide si hay costo: `tarde` es motivo con costo y va ámbar;
+                  `temprano` es medición sin consecuencia y va en acero. Pintar
+                  de ámbar una llegada anticipada le inventaría un costo que el
+                  contrato no le pone.
+                */}
+                {showMotivo && row.motivoTiming ? (
+                  <p
+                    className={`mt-1 font-mono text-[11px] tabular-nums ${
+                      row.timing === "tarde"
+                        ? "text-[var(--ambar)]"
+                        : "text-[var(--acero)]"
+                    }`}
+                  >
+                    {row.motivoTiming}
+                  </p>
                 ) : null}
               </td>
               {showUnit ? (

@@ -198,30 +198,46 @@ export async function UnitComplianceView({
       (o) => o.serviceProfileId === perfilFilter || o.profile?.code === perfilFilter,
     );
   }
+  /*
+   * Los agregados se cuentan AQUÍ, antes del filtro de estado, y a propósito.
+   *
+   * Contándolos después, filtrar a `cumplido` dejaba la tarjeta "No cumplidos"
+   * en 0 — y un 0 en una tarjeta se lee como un hecho del periodo, no como un
+   * efecto de la lente que el usuario acaba de poner. El sistema afirmaba algo
+   * falso sobre el día.
+   *
+   * La regla: **un agregado dice la verdad del periodo completo siempre.** El
+   * filtro de estado es una lente sobre la tabla, no sobre los hechos.
+   */
+  const delPeriodo = filtered;
+  const stats = {
+    total: delPeriodo.length,
+    cumplido: delPeriodo.filter((o) => o.complianceFact?.status === "cumplido").length,
+    no_cumplido: delPeriodo.filter((o) => o.complianceFact?.status === "no_cumplido").length,
+    pendiente: delPeriodo.filter((o) => o.complianceFact?.status === "pendiente_evidencia")
+      .length,
+    sin_verificar: delPeriodo.filter((o) => !o.complianceFact).length,
+  };
+
   if (estado === "sin_verificar") {
     filtered = filtered.filter((o) => !o.complianceFact);
   } else if (estado !== "all") {
     filtered = filtered.filter((o) => o.complianceFact?.status === estado);
   }
 
-  const stats = {
-    total: filtered.length,
-    cumplido: filtered.filter((o) => o.complianceFact?.status === "cumplido").length,
-    no_cumplido: filtered.filter((o) => o.complianceFact?.status === "no_cumplido").length,
-    pendiente: filtered.filter((o) => o.complianceFact?.status === "pendiente_evidencia").length,
-    sin_verificar: filtered.filter((o) => !o.complianceFact).length,
-  };
-
   const rows = filtered.map((occ) =>
     toOccurrenceRow(occ, "/cliente/servicio", client.slug, { showPlant: false }),
   );
 
+  // Los tres resultados y nada más. `sin_verificar` se dibuja aparte: no es un
+  // resultado del que se pueda elegir, es lo que el árbitro aún no ha juzgado.
   const statusFilters: Array<{ id: StatusFilter; label: string }> = [
     { id: "all", label: "Todos" },
-    { id: "sin_verificar", label: "Sin verificar" },
     { id: "cumplido", label: "Cumplido" },
     { id: "no_cumplido", label: "No cumplido" },
-    { id: "pendiente_evidencia", label: "Pendiente" },
+    // El estado canónico se llama así completo; acortarlo a "Pendiente" deja
+    // en el aire pendiente de qué, que es justo lo que da credibilidad.
+    { id: "pendiente_evidencia", label: "Pendiente por evidencia" },
   ];
 
   const profileOptions = [...profilesForSelect]
@@ -232,7 +248,7 @@ export async function UnitComplianceView({
     }));
 
   return (
-    <UnitShell client={client} unit={unit} title={`Cumplimiento — ${unitLabel}`}>
+    <UnitShell client={client} unit={unit} title="Cumplimiento">
       <p className="text-sm text-[var(--muted)]">
         Servicios verificados de <span className="text-[var(--texto)]">{unitLabel}</span> contra el GPS del
         carrier. Elige el rango de fechas que quieras revisar.
@@ -258,23 +274,49 @@ export async function UnitComplianceView({
         </div>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Card title="En vista">
-          <p className="text-2xl font-semibold">{stats.total}</p>
+      {/*
+        Los agregados van en ACERO, no en los colores del veredicto: un
+        agregado es un promedio de veredictos, no un veredicto. El verde, el
+        rojo y el ámbar quedan reservados al chip de cada servicio.
+      */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Card title="En el periodo">
+          <p className="text-2xl font-semibold text-[var(--acero)] tabular-nums">
+            {stats.total}
+          </p>
         </Card>
         <Card title="Cumplidos">
-          <p className="text-2xl font-semibold text-emerald-300">{stats.cumplido}</p>
+          <p className="text-2xl font-semibold text-[var(--acero)] tabular-nums">
+            {stats.cumplido}
+          </p>
         </Card>
         <Card title="No cumplidos">
-          <p className="text-2xl font-semibold text-red-300">{stats.no_cumplido}</p>
+          <p className="text-2xl font-semibold text-[var(--acero)] tabular-nums">
+            {stats.no_cumplido}
+          </p>
         </Card>
-        <Card title="Pendientes">
-          <p className="text-2xl font-semibold text-amber-200">{stats.pendiente}</p>
-        </Card>
-        <Card title="Sin verificar">
-          <p className="text-2xl font-semibold text-[var(--muted)]">{stats.sin_verificar}</p>
+        <Card title="Pendientes por evidencia">
+          <p className="text-2xl font-semibold text-[var(--acero)] tabular-nums">
+            {stats.pendiente}
+          </p>
         </Card>
       </div>
+
+      {/*
+        `Sin verificar` NO es un cuarto estado: es ausencia de estado — el motor
+        todavía no juzgó ese servicio. Mostrado como tarjeta al lado de los tres
+        se leía como cuarto veredicto, y eso viola la ley de los tres. Va como
+        dato del sistema, en acero, fuera del grupo.
+      */}
+      {stats.sin_verificar > 0 ? (
+        <p className="font-mono text-[11px] text-[var(--tenue)] tabular-nums">
+          {stats.sin_verificar}{" "}
+          {stats.sin_verificar === 1
+            ? "servicio del periodo aún sin procesar"
+            : "servicios del periodo aún sin procesar"}
+          . No es un resultado: el árbitro todavía no los ha verificado.
+        </p>
+      ) : null}
 
       <div className="space-y-3">
         <DateRangeFilter
@@ -288,8 +330,13 @@ export async function UnitComplianceView({
           }}
         />
 
+        {/*
+          `Sin verificar` va SEPARADO de los tres resultados, no como cuarta
+          opción del mismo selector: en una fila con ellos se lee como un cuarto
+          estado del que elegir, y no lo es. Es el corte por "todavía no juzgado".
+        */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-[var(--muted)]">Estado:</span>
+          <span className="text-sm text-[var(--tenue)]">Resultado:</span>
           {statusFilters.map((s) => (
             <a
               key={s.id}
@@ -305,6 +352,21 @@ export async function UnitComplianceView({
               {s.label}
             </a>
           ))}
+          <span className="ml-2 border-l border-[var(--linea)] pl-3 text-sm text-[var(--tenue)]">
+            o ver solo lo que falta procesar:
+          </span>
+          <a
+            href={complianceHref(baseHref, {
+              desde: range.fromIso,
+              hasta: range.toIso,
+              estado: "sin_verificar",
+              turno: turnoFilter,
+              perfil: perfilFilter,
+            })}
+            className={chipClass(estado === "sin_verificar")}
+          >
+            Sin verificar
+          </a>
         </div>
 
         {shifts.length > 0 ? (
