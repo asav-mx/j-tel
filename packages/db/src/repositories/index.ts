@@ -3418,6 +3418,47 @@ export class RouteTraversalRepository {
       lowerBound: r.lowerBound,
     }));
   }
+
+  /**
+   * Lo mismo, pero para varias rutas×turno de una sola vez.
+   *
+   * La torre necesita las muestras de las catorce rutas del turno para estimar
+   * llegadas. Pedirlas de a una son catorce viajes a la base en una pantalla que
+   * ya carga de más; esto es uno.
+   *
+   * El tope por ruta es el MISMO de `recentSamples` — treinta— y se aplica aquí
+   * después de agrupar, no en la consulta: son decenas de filas por ruta, no
+   * miles, y un `LATERAL` por ruta costaría más de lo que ahorra. Si esta tabla
+   * crece a millones habrá que moverlo al SQL, y entonces el tope tiene que
+   * seguir siendo uno solo para las dos.
+   */
+  async recentSamplesForRouteShifts(
+    routeShiftIds: string[],
+    opts: { limitPorRuta?: number } = {},
+  ): Promise<Map<string, RouteDurationSample[]>> {
+    const porRuta = new Map<string, RouteDurationSample[]>();
+    const ids = [...new Set(routeShiftIds)];
+    if (ids.length === 0) return porRuta;
+
+    const limite = Math.max(1, opts.limitPorRuta ?? 30);
+    const rows = await this.db
+      .select({
+        routeShiftId: routeTraversalMeasurements.routeShiftId,
+        durationMinutes: routeTraversalMeasurements.durationMinutes,
+        lowerBound: routeTraversalMeasurements.lowerBound,
+      })
+      .from(routeTraversalMeasurements)
+      .where(inArray(routeTraversalMeasurements.routeShiftId, ids))
+      .orderBy(desc(routeTraversalMeasurements.serviceDate));
+
+    for (const r of rows) {
+      const lista = porRuta.get(r.routeShiftId) ?? [];
+      if (lista.length >= limite) continue;
+      lista.push({ durationMinutes: r.durationMinutes, lowerBound: r.lowerBound });
+      porRuta.set(r.routeShiftId, lista);
+    }
+    return porRuta;
+  }
 }
 
 export class IngestAlertRepository {

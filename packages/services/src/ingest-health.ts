@@ -3,8 +3,14 @@
  * Si no entran puntos nuevos en X minutos en horario operativo → alerta.
  */
 import type { Repositories } from "@jtel/db";
+import { SIN_SENAL_MINUTOS } from "@jtel/domain";
 
-const DEFAULT_STALE_MINUTES = 15;
+/**
+ * El mismo número que usa la torre para marcar una unidad sin señal, leído del
+ * dominio en vez de escrito otra vez aquí. Antes eran dos quinces que un
+ * comentario pedía mantener iguales; ahora es uno.
+ */
+const DEFAULT_STALE_MINUTES = SIN_SENAL_MINUTOS;
 
 /** Lunes–sábado 05:00–22:00 America/Ciudad_Juarez (UTC-6 sin DST en práctica MX). */
 export function isOperationalHours(now = new Date(), timeZone = "America/Ciudad_Juarez"): boolean {
