@@ -1,7 +1,15 @@
 import { getRepos } from "@/lib/db";
 import { ConfirmForm } from "@/components/confirm-form";
 import { UnitShell } from "@/components/unit-shell";
-import { Card } from "@/components/ui";
+import {
+  AvisoSistema,
+  ChipEstado,
+  Panel,
+  botonPrimario,
+  botonSecundario,
+  campo,
+  etiqueta,
+} from "@/components/ui";
 import { confirmMessages } from "@/lib/confirm-messages";
 import type { UnitPageContext } from "@/lib/unit-context";
 import {
@@ -9,41 +17,56 @@ import {
   findOperationalUnit,
   operationalUnitLabel,
 } from "@/lib/operational-scope";
+import { PERILLAS, ZONAS_HORARIAS } from "@/lib/perillas-contrato";
 import { operationalScopeFromContract } from "@jtel/domain";
 import { localDateIso } from "@/lib/local-time";
 
 export const dynamic = "force-dynamic";
 
-const inputClass =
-  "mt-1 w-full rounded border border-[var(--linea)] bg-black/20 p-2 text-sm placeholder:text-[var(--tenue)]";
-const labelClass = "block text-sm";
-const btnClass =
-  "rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90";
+const mono = "font-[family-name:var(--fuente-mono)]";
 
-const MEXICO_TIMEZONES = [
-  { value: "America/Ciudad_Juarez", label: "Cd. Juárez (Mountain)" },
-  { value: "America/Mexico_City", label: "Ciudad de México (Central)" },
-  { value: "America/Tijuana", label: "Tijuana (Pacific)" },
-  { value: "America/Cancun", label: "Cancún (Eastern, sin horario de verano)" },
-  { value: "America/Hermosillo", label: "Hermosillo (Mountain, sin horario de verano)" },
-];
+/**
+ * El estado del contrato es operativo, no un resultado: acero para el que está
+ * en pie, tenue para el que todavía no. Y se dice en español — `draft` es la
+ * palabra del esquema, no la que lee un coordinador de transporte.
+ */
+const ESTADO: Record<string, { texto: string; tono: "acero" | "tenue" }> = {
+  active: { texto: "Activo", tono: "acero" },
+  draft: { texto: "Borrador", tono: "tenue" },
+  suspended: { texto: "Suspendido", tono: "tenue" },
+};
 
-const EXCUSABLES: Array<{ value: string; label: string }> = [
-  { value: "lluvia_nieve", label: "Lluvia / nieve" },
-  { value: "marchas", label: "Marchas / manifestaciones" },
-  { value: "obstruccion", label: "Obstrucción de vialidad" },
-  { value: "falla_mecanica", label: "Falla mecánica" },
-  { value: "ponchadura", label: "Ponchadura" },
-  { value: "obra_sin_aviso", label: "Obra sin aviso" },
-];
+/**
+ * Las etiquetas y los defaults se leen del catálogo de perillas, nunca se
+ * reescriben aquí: el Marco prohíbe hornear un umbral en un componente, y una
+ * segunda copia de "60%" es exactamente la forma en que los dos números se
+ * separan sin que nadie se entere.
+ */
+const perillaDe = (llave: string) => PERILLAS.find((p) => p.llave === llave);
+
+function etiquetaEstrictez(valor: string): string {
+  const forma = perillaDe("routeStrictness")?.forma;
+  if (forma?.tipo !== "opciones") return valor;
+  return forma.opciones.find((o) => o.valor === valor)?.etiqueta ?? valor;
+}
+
+/** Las cuatro reglas que más mueven el resultado, con lo que el esquema pone. */
+const DEFAULTS_AL_NACER = [
+  "arrivalAnticipationMinutes",
+  "toleranceMinutes",
+  "evidenceMinCoveragePct",
+  "evidenceMaxGapMinutes",
+]
+  .map(perillaDe)
+  .filter((p): p is NonNullable<typeof p> => Boolean(p));
 
 const createdLabels: Record<string, string> = {
-  contrato: "Contrato creado (en borrador). Actívalo cuando esté listo.",
-  activado: "Contrato activado.",
-  eliminado: "Borrador eliminado.",
-  vigencia: "Vigencia del contrato actualizada.",
+  contrato: "Nace en borrador. Actívalo cuando esté listo.",
+  activado: "El contrato quedó activo.",
+  eliminado: "Se eliminó el borrador.",
+  vigencia: "Se actualizó la vigencia.",
   politica:
-    "Política guardada. Aplica solo a servicios futuros; los hechos definitivos pasados no se modifican.",
+    "Aplica solo a servicios futuros. Los hechos ya sellados conservan la política que estaba vigente.",
 };
 
 function contractScopeLabel(
@@ -99,7 +122,7 @@ export async function ContratosUnitView({
   const todayIso = localDateIso();
   const yearAhead = new Date();
   yearAhead.setFullYear(yearAhead.getFullYear() + 1);
-  const yearAheadIso = localDateIso(yearAhead);;
+  const yearAheadIso = localDateIso(yearAhead);
 
   return (
     <UnitShell
@@ -107,64 +130,59 @@ export async function ContratosUnitView({
       unit={unit}
       title={`Contratos — ${operationalUnitLabel(unit)}`}
     >
-      <p className="text-sm text-[var(--muted)]">
-        El contrato define la <span className="text-[var(--texto)]">política</span> entre este cliente y un
-        carrier para <span className="text-[var(--texto)]">{operationalUnitLabel(unit)}</span>. Desde ahí se
-        calculan deadline, ventana GPS y reglas de cumplimiento para los perfiles de servicio.
+      <p className="max-w-[76ch] text-[13.5px] text-[var(--tenue)]">
+        El contrato es el acuerdo con el que se juzga a{" "}
+        <span className="text-[var(--texto)]">{operationalUnitLabel(unit)}</span>: de él salen la
+        hora límite, la ventana que se observa y cuánta señal hace falta para poder dictar un
+        resultado. Las dos partes lo ven igual.
       </p>
 
-      {error ? (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-          {error}
-        </div>
-      ) : null}
+      {error ? <AvisoSistema lead="No se guardó.">{error}</AvisoSistema> : null}
       {created ? (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-          {createdLabels[created] ?? "Guardado."}
-        </div>
+        <AvisoSistema lead="Guardado.">{createdLabels[created] ?? null}</AvisoSistema>
       ) : null}
 
       {authorizedCarriers.length === 0 ? (
-        <Card title="Sin carriers autorizados">
-          <p className="text-sm text-[var(--muted)]">
-            Este cliente aún no tiene carriers autorizados por J-Staff. Solicita a JTEL que
-            autorice al carrier correcto antes de crear contratos.
+        <Panel titulo="Sin transportistas autorizados">
+          <p className="max-w-[70ch] text-[13.5px] text-[var(--tenue)]">
+            Este cliente todavía no tiene transportistas autorizados por J-Staff. Pide que
+            autoricen al correcto antes de crear el contrato.
           </p>
-        </Card>
+        </Panel>
       ) : allCarriersHaveOpenContract ? (
-        <Card title={`Contrato existente — ${operationalUnitLabel(activeUnit)}`}>
-          <p className="text-sm text-[var(--muted)]">
+        <Panel titulo={`Ya hay contrato — ${operationalUnitLabel(activeUnit)}`}>
+          <p className="max-w-[70ch] text-[13.5px] text-[var(--tenue)]">
             {scopedContracts.some((c) => c.status === "draft")
-              ? "Ya hay un contrato en borrador o activo para cada carrier autorizado en esta unidad. Activa el borrador que quieras usar o elimina los duplicados de abajo."
-              : "Cada carrier autorizado ya tiene contrato en esta unidad. Para perfiles de servicio usa el contrato activo de la lista."}
+              ? "Cada transportista autorizado ya tiene un contrato en borrador o activo en esta unidad. Activa el borrador que vayas a usar, o elimina el que sobre."
+              : "Cada transportista autorizado ya tiene contrato en esta unidad. Para los servicios usa el contrato activo de la lista."}
           </p>
-        </Card>
+        </Panel>
       ) : (
-        <Card title={`Nuevo contrato — ${operationalUnitLabel(activeUnit)}`}>
-          <p className="mb-3 text-xs text-[var(--muted)]">
-            Solo puede existir un contrato (borrador o activo) por carrier y unidad operativa.
-          </p>
+        <Panel
+          titulo={`Nuevo contrato — ${operationalUnitLabel(activeUnit)}`}
+          nota="Solo puede existir un contrato —borrador o activo— por transportista y unidad operativa."
+        >
           <ConfirmForm
             action="/api/cliente/contratos"
             method="post"
-            className="space-y-4"
+            className="space-y-5"
             confirmMessage={confirmMessages.createContract(operationalUnitLabel(activeUnit))}
           >
             <input type="hidden" name="clientSlug" value={client.slug} />
             <input type="hidden" name="action" value="create" />
             {scopeHidden}
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className={labelClass}>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className={etiqueta}>
                 Nombre del contrato
-                <input name="name" required className={inputClass} placeholder="Ej. Transporte Personal 2026" />
+                <input name="name" required className={campo} placeholder="Ej. Transporte Personal 2026" />
               </label>
-                <label className={labelClass}>
-                  Carrier autorizado
-                  <select name="carrierAccountId" required className={inputClass} defaultValue="">
-                    <option value="" disabled>
-                      Elige carrier…
-                    </option>
+              <label className={etiqueta}>
+                Transportista autorizado
+                <select name="carrierAccountId" required className={campo} defaultValue="">
+                  <option value="" disabled>
+                    Elige transportista…
+                  </option>
                   {authorizedCarriers.map((c) => {
                     const taken = openByCarrier.has(c.id);
                     return (
@@ -176,700 +194,228 @@ export async function ContratosUnitView({
                   })}
                 </select>
               </label>
-              <label className={labelClass}>
+              <label className={etiqueta}>
                 Vigencia desde
                 <input
                   name="validFrom"
                   type="date"
                   required
                   defaultValue={todayIso}
-                  className={inputClass}
+                  className={campo}
                 />
               </label>
-              <label className={labelClass}>
+              <label className={etiqueta}>
                 Vigencia hasta
                 <input
                   name="validTo"
                   type="date"
                   required
                   defaultValue={yearAheadIso}
-                  className={inputClass}
+                  className={campo}
                 />
-                <span className="mt-1 block text-xs text-[var(--muted)]">
-                  Las ocurrencias de perfiles no pueden salir de este rango.
+                <span className="mt-1.5 block text-[12px] text-[var(--tenue)]">
+                  Ningún servicio puede generarse fuera de este rango.
+                </span>
+              </label>
+              <label className={` md:col-span-2 md:max-w-sm`}>
+                {perillaDe("timeZone")?.nombre ?? "El reloj de este contrato"}
+                <select
+                  name="timeZone"
+                  className={campo}
+                  defaultValue={ZONAS_HORARIAS[0]?.valor}
+                >
+                  {ZONAS_HORARIAS.map((z) => (
+                    <option key={z.valor} value={z.valor}>
+                      {z.etiqueta}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1.5 block max-w-[62ch] text-[12px] text-[var(--tenue)]">
+                  Con este reloj se convierte la hora del turno en un instante real. Una zona
+                  equivocada corre la hora límite horas enteras sin que nada se vea roto.
                 </span>
               </label>
             </div>
 
-            <fieldset className="rounded-lg border border-[var(--linea)] p-3">
-              <legend className="px-1 text-sm text-[var(--muted)]">Política</legend>
-              <div className="grid gap-3 md:grid-cols-3">
-                <label className={labelClass}>
-                  Anticipación de llegada (min antes del turno)
-                  <input
-                    name="arrivalAnticipationMinutes"
-                    type="number"
-                    min={0}
-                    defaultValue={15}
-                    className={inputClass}
-                  />
-                  <span className="mt-1 block text-xs text-[var(--muted)]">
-                    Ej. turno 7:00 y 15 min → deadline 6:45 en geocerca.
-                  </span>
-                </label>
-                <label className={labelClass}>
-                  Minutos de cierre del turno tras la hora de entrada
-                  <input
-                    name="shiftCloseMinutesAfterStart"
-                    type="number"
-                    min={0}
-                    placeholder="sin configurar"
-                    className={inputClass}
-                  />
-                  <span className="mt-1 block text-xs text-[var(--muted)]">
-                    A esa hora se sella el turno. Ej. turno 7:00 y 120 min →
-                    cierra 9:00. Una unidad que llega después no retrasa el
-                    cierre: el turno se sella igual y ese servicio carga su
-                    propio resultado. Vacío = sin hora de cierre.
-                  </span>
-                </label>
-                <label className={labelClass}>
-                  Tolerancia puntualidad (min)
-                  <input name="toleranceMinutes" type="number" min={0} defaultValue={5} className={inputClass} />
-                </label>
-                <label className={labelClass}>
-                  Gracia de verificación (min)
-                  <input
-                    name="verificationGraceMinutes"
-                    type="number"
-                    min={0}
-                    defaultValue={15}
-                    className={inputClass}
-                  />
-                </label>
-                <label className={labelClass}>
-                  Estrictez de ruta
-                  <select name="routeStrictness" className={inputClass} defaultValue="destino_only">
-                    <option value="destino_only">Solo destino</option>
-                    <option value="kml_full">Ruta completa (waypoints)</option>
-                  </select>
-                </label>
-                <label className={labelClass}>
-                  Umbral match KML — métrica A (%)
-                  <input
-                    name="kmlMatchMinPct"
-                    type="number"
-                    min={0}
-                    max={100}
-                    defaultValue={60}
-                    className={inputClass}
-                  />
-                  <span className="mt-1 block text-xs text-[var(--muted)]">
-                    % de waypoints del KML con GPS dentro del corredor. Default: 60.
-                  </span>
-                </label>
-                <label className={labelClass}>
-                  Radio del corredor KML (m)
-                  <input
-                    name="kmlCorridorMeters"
-                    type="number"
-                    min={10}
-                    max={500}
-                    defaultValue={120}
-                    className={inputClass}
-                  />
-                </label>
-                <label className={labelClass}>
-                  Umbral precisión — métrica B (%)
-                  <input
-                    name="kmlCorridorMinPct"
-                    type="number"
-                    min={0}
-                    max={100}
-                    defaultValue={60}
-                    className={inputClass}
-                  />
-                </label>
-                <label className={labelClass}>
-                  Margen evidencia antes (min)
-                  <input
-                    name="evidenceMarginMinutesBefore"
-                    type="number"
-                    min={0}
-                    defaultValue={60}
-                    className={inputClass}
-                  />
-                </label>
-                <label className={labelClass}>
-                  Duración máx. de ruta (min)
-                  <input
-                    name="maxRouteDurationMinutes"
-                    type="number"
-                    min={1}
-                    defaultValue={60}
-                    className={inputClass}
-                  />
-                </label>
-                <label className={labelClass}>
-                  Margen evidencia después (min)
-                  <input
-                    name="evidenceMarginMinutesAfter"
-                    type="number"
-                    min={0}
-                    defaultValue={30}
-                    className={inputClass}
-                  />
-                </label>
-                <label className={labelClass}>
-                  Cobertura mínima de la ventana (%)
-                  <input
-                    name="evidenceMinCoveragePct"
-                    type="number"
-                    min={0}
-                    max={100}
-                    defaultValue={80}
-                    className={inputClass}
-                  />
-                  <span className="mt-1 block text-xs text-[var(--muted)]">
-                    Qué tanto de la ventana necesita señal para poder dictar un
-                    resultado. Por debajo, el servicio queda pendiente por
-                    evidencia — nunca no cumplido. Default: 80.
-                  </span>
-                </label>
-                <label className={labelClass}>
-                  Hueco máximo de señal (min)
-                  <input
-                    name="evidenceMaxGapMinutes"
-                    type="number"
-                    min={1}
-                    defaultValue={10}
-                    className={inputClass}
-                  />
-                  <span className="mt-1 block text-xs text-[var(--muted)]">
-                    El silencio continuo más largo que se tolera dentro de la
-                    ventana. Si se supera, el servicio queda pendiente por
-                    evidencia. Default: 10.
-                  </span>
-                </label>
-                <label className={labelClass}>
-                  Zona horaria
-                  <select name="timeZone" className={inputClass} defaultValue="America/Ciudad_Juarez">
-                    {MEXICO_TIMEZONES.map((tz) => (
-                      <option key={tz.value} value={tz.value}>{tz.label}</option>
-                    ))}
-                  </select>
-                  <span className="mt-1 block text-xs text-[var(--muted)]">
-                    Todas las horas de este contrato se muestran en esta zona.
-                  </span>
-                </label>
-              </div>
-            </fieldset>
-
-            <fieldset className="rounded-lg border border-[var(--linea)] p-3">
-              <legend className="px-1 text-sm text-[var(--muted)]">Motivos excusables (opcional)</legend>
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-                {EXCUSABLES.map((e) => (
-                  <label key={e.value} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="excusableReasons" value={e.value} />
-                    {e.label}
-                  </label>
+            {/*
+             * El alta no pide dieciocho decisiones antes de que el contrato
+             * exista: nace con lo que pone el esquema y se dice exactamente
+             * qué es, porque un número que gobierna el resultado no puede
+             * entrar en silencio.
+             */}
+            <div className="border-t border-[var(--linea)] pt-4">
+              <p className="text-[12.5px] text-[var(--tenue)]">
+                Nace con la política por defecto del sistema:
+              </p>
+              <dl className="mt-2.5 grid gap-x-8 gap-y-2 sm:grid-cols-2">
+                {DEFAULTS_AL_NACER.map((p) => (
+                  <div key={p.llave} className="flex items-baseline justify-between gap-3">
+                    <dt className="text-[12.5px] text-[var(--tenue)]">{p.nombre}</dt>
+                    <dd className={`shrink-0 text-[12.5px] text-[var(--acero)] ${mono}`}>
+                      {p.porDefecto}
+                    </dd>
+                  </div>
                 ))}
-              </div>
-            </fieldset>
+              </dl>
+              <p className="mt-3 max-w-[70ch] text-[12.5px] text-[var(--tenue)]">
+                Cada una se ajusta después en la oficina del contrato, donde viene explicada, con
+                su consecuencia y medida contra tu operación real.
+              </p>
+            </div>
 
-            <fieldset className="rounded-lg border border-[var(--linea)] p-3">
-              <legend className="px-1 text-sm text-[var(--muted)]">Regla de enforcement (opcional)</legend>
-              <div className="grid gap-3 md:grid-cols-3">
-                <label className={labelClass}>
-                  Tipo
-                  <select name="enforcementType" className={inputClass} defaultValue="">
-                    <option value="">Ninguna</option>
-                    <option value="no_pago_viaje">No pago del viaje</option>
-                    <option value="rebate_escalonado">Rebate escalonado</option>
-                    <option value="reembolso">Reembolso</option>
-                  </select>
-                </label>
-                <label className={labelClass}>
-                  Tolerancia de la regla (min)
-                  <input name="enforcementTolerance" type="number" min={1} defaultValue={5} className={inputClass} />
-                </label>
-                <label className={labelClass}>
-                  Reembolso: monto (opcional)
-                  <input name="reembolsoAmount" type="number" min={0} className={inputClass} />
-                </label>
-                <label className={labelClass}>
-                  Rebate base (%)
-                  <input name="baseRebatePercent" type="number" step="0.1" defaultValue={0} className={inputClass} />
-                </label>
-                <label className={labelClass}>
-                  Fallas para base
-                  <input name="baseFailureCount" type="number" min={1} defaultValue={1} className={inputClass} />
-                </label>
-                <label className={labelClass}>
-                  Rebate adicional (%)
-                  <input
-                    name="additionalRebatePercent"
-                    type="number"
-                    step="0.1"
-                    defaultValue={0}
-                    className={inputClass}
-                  />
-                </label>
-              </div>
-            </fieldset>
-
-            <button type="submit" className={btnClass}>
+            <button type="submit" className={botonPrimario}>
               Crear contrato
             </button>
           </ConfirmForm>
-        </Card>
+        </Panel>
       )}
 
-      <Card title={`Contratos — ${operationalUnitLabel(activeUnit)} (${scopedContracts.length})`}>
+      <Panel
+        titulo={`Contratos — ${operationalUnitLabel(activeUnit)} (${scopedContracts.length})`}
+      >
         {scopedContracts.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">Sin contratos para esta unidad.</p>
+          <p className="text-[13.5px] text-[var(--tenue)]">Sin contratos para esta unidad.</p>
         ) : (
-          <ul className="space-y-2 text-sm">
-            {scopedContracts.map((c) => (
-              <li
-                key={c.id}
-                className="space-y-2 rounded border border-[var(--linea-tenue)] p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium">
-                    {c.name}{" "}
-                    <span className="ml-1 rounded-full bg-[var(--t-acero)] px-2 py-0.5 text-xs">
-                      {c.status}
-                    </span>
-                  </p>
-                  <p className="text-xs text-[var(--muted)]">
-                    {c.carrier?.name ?? "—"} · {contractScopeLabel(c, operationalUnits)} ·
-                    Vigencia {c.validFrom} → {c.validTo} · Tolerancia {c.policy.toleranceMinutes}{" "}
-                    min · anticipación {c.policy.arrivalAnticipationMinutes ?? 15} min ·{" "}
-                    {c.policy.routeStrictness} · KML ≥{c.policy.kmlMatchMinPct ?? 60}% ·{" "}
-                    {c.profiles.length} perfil(es)
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {c.status !== "active" ? (
-                    <ConfirmForm
-                      action="/api/cliente/contratos"
-                      method="post"
-                      confirmMessage={confirmMessages.activateContract(c.name)}
-                    >
-                      <input type="hidden" name="clientSlug" value={client.slug} />
-                      <input type="hidden" name="action" value="activate" />
-                      <input type="hidden" name="contractId" value={c.id} />
-                      <button
-                        type="submit"
-                        className="rounded-lg border border-[var(--linea)] px-3 py-1.5 text-xs hover:border-[var(--accent)]"
-                      >
-                        Activar
-                      </button>
-                    </ConfirmForm>
-                  ) : null}
-                  {c.status === "draft" && c.profiles.length === 0 ? (
-                    <ConfirmForm
-                      action="/api/cliente/contratos"
-                      method="post"
-                      confirmMessage={confirmMessages.deleteContractDraft(c.name)}
-                    >
-                      <input type="hidden" name="clientSlug" value={client.slug} />
-                      <input type="hidden" name="action" value="delete" />
-                      <input type="hidden" name="contractId" value={c.id} />
-                      <button
-                        type="submit"
-                        className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-200 hover:border-red-400"
-                      >
-                        Eliminar borrador
-                      </button>
-                    </ConfirmForm>
-                  ) : null}
-                </div>
-                </div>
-                <ConfirmForm
-                  action="/api/cliente/contratos"
-                  method="post"
-                  className="flex flex-wrap items-end gap-2 border-t border-[var(--linea-tenue)] pt-2"
-                  confirmMessage={`¿Actualizar vigencia de «${c.name}»?`}
+          <ul className="space-y-3">
+            {scopedContracts.map((c) => {
+              const estado = ESTADO[c.status] ?? { texto: c.status, tono: "tenue" as const };
+              const anticipacion = c.policy.arrivalAnticipationMinutes ?? 15;
+              return (
+                <li
+                  key={c.id}
+                  className="space-y-3 rounded border border-[var(--linea-tenue)] p-4"
                 >
-                  <input type="hidden" name="clientSlug" value={client.slug} />
-                  <input type="hidden" name="action" value="updateValidity" />
-                  <input type="hidden" name="contractId" value={c.id} />
-                  <label className="text-xs">
-                    Desde
-                    <input
-                      name="validFrom"
-                      type="date"
-                      required
-                      defaultValue={c.validFrom}
-                      className={inputClass}
-                    />
-                  </label>
-                  <label className="text-xs">
-                    Hasta
-                    <input
-                      name="validTo"
-                      type="date"
-                      required
-                      defaultValue={c.validTo}
-                      className={inputClass}
-                    />
-                  </label>
-                  <button
-                    type="submit"
-                    className="rounded-lg border border-[var(--linea)] px-3 py-2 text-xs hover:border-[var(--accent)]"
-                  >
-                    Guardar vigencia
-                  </button>
-                </ConfirmForm>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="flex flex-wrap items-center gap-2.5">
+                        <span className="text-[15px] font-medium text-[var(--texto)]">{c.name}</span>
+                        <ChipEstado tono={estado.tono}>{estado.texto}</ChipEstado>
+                      </p>
+                      <p className="mt-1 text-[12.5px] text-[var(--tenue)]">
+                        {c.carrier?.name ?? "—"} · {contractScopeLabel(c, operationalUnits)} ·{" "}
+                        {c.profiles.length} servicio{c.profiles.length === 1 ? "" : "s"}
+                      </p>
+                      <dl
+                        className={`mt-2.5 flex flex-wrap gap-x-6 gap-y-1 text-[12px] ${mono} text-[var(--tenue)]`}
+                      >
+                        <div>
+                          <dt className="inline">Vigencia </dt>
+                          <dd className="inline text-[var(--acero)]">
+                            {c.validFrom} → {c.validTo}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="inline">Hora límite </dt>
+                          <dd className="inline text-[var(--acero)]">
+                            {anticipacion} min antes del turno
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="inline">Se perdonan </dt>
+                          <dd className="inline text-[var(--acero)]">
+                            {c.policy.toleranceMinutes} min de retraso
+                          </dd>
+                        </div>
+                      </dl>
+                      <p className="mt-1 text-[12px] text-[var(--tenue)]">
+                        Del recorrido: {etiquetaEstrictez(c.policy.routeStrictness)}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {c.status !== "active" ? (
+                        <ConfirmForm
+                          action="/api/cliente/contratos"
+                          method="post"
+                          confirmMessage={confirmMessages.activateContract(c.name)}
+                        >
+                          <input type="hidden" name="clientSlug" value={client.slug} />
+                          <input type="hidden" name="action" value="activate" />
+                          <input type="hidden" name="contractId" value={c.id} />
+                          <button type="submit" className={botonSecundario}>
+                            Activar
+                          </button>
+                        </ConfirmForm>
+                      ) : null}
+                      {c.status === "draft" && c.profiles.length === 0 ? (
+                        <ConfirmForm
+                          action="/api/cliente/contratos"
+                          method="post"
+                          confirmMessage={confirmMessages.deleteContractDraft(c.name)}
+                        >
+                          <input type="hidden" name="clientSlug" value={client.slug} />
+                          <input type="hidden" name="action" value="delete" />
+                          <input type="hidden" name="contractId" value={c.id} />
+                          {/*
+                           * Sin rojo: el rojo dice `no cumplido` y nada más. Que
+                           * la acción borra lo dice la palabra y lo confirma el
+                           * diálogo, no el color.
+                           */}
+                          <button type="submit" className={botonSecundario}>
+                            Eliminar borrador
+                          </button>
+                        </ConfirmForm>
+                      ) : null}
+                    </div>
+                  </div>
 
-                <p className="border-t border-[var(--linea-tenue)] pt-2 text-sm">
-                  <a
-                    href={`/cliente/contrato/${c.id}?account=${encodeURIComponent(client.slug)}`}
-                    className="text-[var(--accent)] hover:underline"
-                  >
-                    Abrir la oficina del contrato →
-                  </a>
-                  <span className="ml-2 text-xs text-[var(--muted)]">
-                    cada regla explicada, medida contra la operación real
-                  </span>
-                </p>
-
-                <details className="border-t border-[var(--linea-tenue)] pt-2">
-                  <summary className="cursor-pointer text-sm text-[var(--muted)]">
-                    Editar la política en crudo
-                  </summary>
                   <ConfirmForm
                     action="/api/cliente/contratos"
                     method="post"
-                    className="mt-3 space-y-4"
-                    confirmMessage={confirmMessages.updatePolicy(c.name)}
+                    className="flex flex-wrap items-end gap-3 border-t border-[var(--linea-tenue)] pt-3"
+                    confirmMessage={`¿Actualizar vigencia de «${c.name}»?`}
                   >
                     <input type="hidden" name="clientSlug" value={client.slug} />
-                    <input type="hidden" name="action" value="updatePolicy" />
+                    <input type="hidden" name="action" value="updateValidity" />
                     <input type="hidden" name="contractId" value={c.id} />
-
-                    <fieldset className="rounded-lg border border-[var(--linea)] p-3">
-                      <legend className="px-1 text-sm text-[var(--muted)]">Política</legend>
-                      <div className="grid gap-3 md:grid-cols-3">
-                        <label className={labelClass}>
-                          Anticipación de llegada (min antes del turno)
-                          <input
-                            name="arrivalAnticipationMinutes"
-                            type="number"
-                            min={0}
-                            defaultValue={c.policy.arrivalAnticipationMinutes ?? 15}
-                            className={inputClass}
-                          />
-                        </label>
-                        <label className={labelClass}>
-                          Minutos de cierre del turno tras la hora de entrada
-                          <input
-                            name="shiftCloseMinutesAfterStart"
-                            type="number"
-                            min={0}
-                            placeholder="sin configurar"
-                            defaultValue={c.policy.shiftCloseMinutesAfterStart ?? ""}
-                            className={inputClass}
-                          />
-                          <span className="mt-1 block text-xs text-[var(--muted)]">
-                            A esa hora se sella el turno. Ej. turno 7:00 y 120 min →
-                            cierra 9:00. Una unidad que llega después no retrasa el
-                            cierre: el turno se sella igual y ese servicio carga su
-                            propio resultado. Déjalo vacío para quitar la hora de
-                            cierre.
-                          </span>
-                        </label>
-                        <label className={labelClass}>
-                          Tolerancia puntualidad (min)
-                          <input
-                            name="toleranceMinutes"
-                            type="number"
-                            min={0}
-                            defaultValue={c.policy.toleranceMinutes}
-                            className={inputClass}
-                          />
-                        </label>
-                        <label className={labelClass}>
-                          Gracia de verificación (min)
-                          <input
-                            name="verificationGraceMinutes"
-                            type="number"
-                            min={0}
-                            defaultValue={c.policy.verificationGraceMinutes ?? 15}
-                            className={inputClass}
-                          />
-                        </label>
-                        <label className={labelClass}>
-                          Estrictez de ruta
-                          <select
-                            name="routeStrictness"
-                            className={inputClass}
-                            defaultValue={c.policy.routeStrictness}
-                          >
-                            <option value="destino_only">Solo destino</option>
-                            <option value="kml_full">Ruta completa (waypoints)</option>
-                          </select>
-                        </label>
-                        <label className={labelClass}>
-                          Umbral match KML — métrica A (%)
-                          <input
-                            name="kmlMatchMinPct"
-                            type="number"
-                            min={0}
-                            max={100}
-                            defaultValue={c.policy.kmlMatchMinPct ?? 60}
-                            className={inputClass}
-                          />
-                          <span className="mt-1 block text-xs text-[var(--muted)]">
-                            % de waypoints del KML con GPS dentro del corredor (radio abajo).
-                            Default recomendado: 60.
-                          </span>
-                        </label>
-                        <label className={labelClass}>
-                          Radio del corredor KML (m)
-                          <input
-                            name="kmlCorridorMeters"
-                            type="number"
-                            min={10}
-                            max={500}
-                            defaultValue={c.policy.kmlCorridorMeters ?? 120}
-                            className={inputClass}
-                          />
-                          <span className="mt-1 block text-xs text-[var(--muted)]">
-                            Distancia máxima GPS ↔ trazado. Default: 120 m.
-                          </span>
-                        </label>
-                        <label className={labelClass}>
-                          Umbral precisión — métrica B (%)
-                          <input
-                            name="kmlCorridorMinPct"
-                            type="number"
-                            min={0}
-                            max={100}
-                            defaultValue={c.policy.kmlCorridorMinPct ?? 60}
-                            className={inputClass}
-                          />
-                          <span className="mt-1 block text-xs text-[var(--muted)]">
-                            % de puntos GPS dentro del corredor. Cumple ruta si A y B pasan.
-                            Default: 60.
-                          </span>
-                        </label>
-                        <label className={labelClass}>
-                          Margen evidencia antes (min)
-                          <input
-                            name="evidenceMarginMinutesBefore"
-                            type="number"
-                            min={0}
-                            defaultValue={c.policy.evidenceMarginMinutesBefore ?? 60}
-                            className={inputClass}
-                          />
-                        </label>
-                        <label className={labelClass}>
-                          Margen evidencia después (min)
-                          <input
-                            name="evidenceMarginMinutesAfter"
-                            type="number"
-                            min={0}
-                            defaultValue={c.policy.evidenceMarginMinutesAfter ?? 30}
-                            className={inputClass}
-                          />
-                        </label>
-                        <label className={labelClass}>
-                          Cobertura mínima de la ventana (%)
-                          <input
-                            name="evidenceMinCoveragePct"
-                            type="number"
-                            min={0}
-                            max={100}
-                            defaultValue={c.policy.evidenceMinCoveragePct ?? 80}
-                            className={inputClass}
-                          />
-                          <span className="mt-1 block text-xs text-[var(--muted)]">
-                            Qué tanto de la ventana necesita señal para poder dictar
-                            un resultado. Por debajo, el servicio queda pendiente por
-                            evidencia — nunca no cumplido. Default: 80.
-                          </span>
-                        </label>
-                        <label className={labelClass}>
-                          Hueco máximo de señal (min)
-                          <input
-                            name="evidenceMaxGapMinutes"
-                            type="number"
-                            min={1}
-                            defaultValue={c.policy.evidenceMaxGapMinutes ?? 10}
-                            className={inputClass}
-                          />
-                          <span className="mt-1 block text-xs text-[var(--muted)]">
-                            El silencio continuo más largo que se tolera dentro de la
-                            ventana. Si se supera, el servicio queda pendiente por
-                            evidencia. Default: 10.
-                          </span>
-                        </label>
-                        <label className={labelClass}>
-                          Duración máx. de ruta (min)
-                          <input
-                            name="maxRouteDurationMinutes"
-                            type="number"
-                            min={1}
-                            defaultValue={c.policy.maxRouteDurationMinutes ?? 60}
-                            className={inputClass}
-                          />
-                        </label>
-                        <label className={labelClass}>
-                          Zona horaria
-                          <select
-                            name="timeZone"
-                            className={inputClass}
-                            defaultValue={c.policy.timeZone ?? "America/Ciudad_Juarez"}
-                          >
-                            {MEXICO_TIMEZONES.map((tz) => (
-                              <option key={tz.value} value={tz.value}>{tz.label}</option>
-                            ))}
-                          </select>
-                          <span className="mt-1 block text-xs text-[var(--muted)]">
-                            Todas las horas de este contrato se muestran en esta zona.
-                          </span>
-                        </label>
-                      </div>
-                      <p className="mt-2 text-xs text-[var(--muted)]">
-                        Ventana GPS = deadline − margen antes → deadline +{" "}
-                        <span className="text-[var(--texto)]">gracia</span> +{" "}
-                        <span className="text-[var(--texto)]">margen después</span>. Con tus
-                        valores actuales: −{c.policy.evidenceMarginMinutesBefore ?? 60} / +
-                        {(c.policy.verificationGraceMinutes ?? 15) +
-                          (c.policy.evidenceMarginMinutesAfter ?? 30)}{" "}
-                        min (gracia {c.policy.verificationGraceMinutes ?? 15} + después{" "}
-                        {c.policy.evidenceMarginMinutesAfter ?? 30}). Los viajes ya
-                        generados conservan su ventana anterior hasta re-generar/re-verificar.
-                      </p>
-                    </fieldset>
-
-                    <fieldset className="rounded-lg border border-[var(--linea)] p-3">
-                      <legend className="px-1 text-sm text-[var(--muted)]">Motivos excusables</legend>
-                      <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-                        {EXCUSABLES.map((e) => (
-                          <label key={e.value} className="flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              name="excusableReasons"
-                              value={e.value}
-                              defaultChecked={(c.policy.excusableReasons ?? []).includes(
-                                e.value as (typeof c.policy.excusableReasons)[number],
-                              )}
-                            />
-                            {e.label}
-                          </label>
-                        ))}
-                      </div>
-                    </fieldset>
-
-                    {(() => {
-                      const rule = c.policy.enforcementRules?.[0];
-                      return (
-                        <fieldset className="rounded-lg border border-[var(--linea)] p-3">
-                          <legend className="px-1 text-sm text-[var(--muted)]">
-                            Regla de enforcement
-                          </legend>
-                          <div className="grid gap-3 md:grid-cols-3">
-                            <label className={labelClass}>
-                              Tipo
-                              <select
-                                name="enforcementType"
-                                className={inputClass}
-                                defaultValue={rule?.type ?? ""}
-                              >
-                                <option value="">Ninguna</option>
-                                <option value="no_pago_viaje">No pago del viaje</option>
-                                <option value="rebate_escalonado">Rebate escalonado</option>
-                                <option value="reembolso">Reembolso</option>
-                              </select>
-                            </label>
-                            <label className={labelClass}>
-                              Tolerancia de la regla (min)
-                              <input
-                                name="enforcementTolerance"
-                                type="number"
-                                min={1}
-                                defaultValue={
-                                  rule && "toleranceMinutes" in rule
-                                    ? rule.toleranceMinutes
-                                    : 5
-                                }
-                                className={inputClass}
-                              />
-                            </label>
-                            <label className={labelClass}>
-                              Reembolso: monto
-                              <input
-                                name="reembolsoAmount"
-                                type="number"
-                                min={0}
-                                defaultValue={
-                                  rule?.type === "reembolso" ? (rule.amount ?? "") : ""
-                                }
-                                className={inputClass}
-                              />
-                            </label>
-                            <label className={labelClass}>
-                              Rebate base (%)
-                              <input
-                                name="baseRebatePercent"
-                                type="number"
-                                step="0.1"
-                                defaultValue={
-                                  rule?.type === "rebate_escalonado"
-                                    ? rule.baseRebatePercent
-                                    : 0
-                                }
-                                className={inputClass}
-                              />
-                            </label>
-                            <label className={labelClass}>
-                              Fallas para base
-                              <input
-                                name="baseFailureCount"
-                                type="number"
-                                min={1}
-                                defaultValue={
-                                  rule?.type === "rebate_escalonado"
-                                    ? rule.baseFailureCount
-                                    : 1
-                                }
-                                className={inputClass}
-                              />
-                            </label>
-                            <label className={labelClass}>
-                              Rebate adicional (%)
-                              <input
-                                name="additionalRebatePercent"
-                                type="number"
-                                step="0.1"
-                                defaultValue={
-                                  rule?.type === "rebate_escalonado"
-                                    ? rule.additionalRebatePercent
-                                    : 0
-                                }
-                                className={inputClass}
-                              />
-                            </label>
-                          </div>
-                        </fieldset>
-                      );
-                    })()}
-
-                    <button type="submit" className={btnClass}>
-                      Guardar política
+                    <label className="text-[12px] text-[var(--tenue)]">
+                      Desde
+                      <input
+                        name="validFrom"
+                        type="date"
+                        required
+                        defaultValue={c.validFrom}
+                        className={campo}
+                      />
+                    </label>
+                    <label className="text-[12px] text-[var(--tenue)]">
+                      Hasta
+                      <input
+                        name="validTo"
+                        type="date"
+                        required
+                        defaultValue={c.validTo}
+                        className={campo}
+                      />
+                    </label>
+                    <button type="submit" className={botonSecundario}>
+                      Guardar vigencia
                     </button>
                   </ConfirmForm>
-                </details>
-              </li>
-            ))}
+
+                  {/*
+                   * El único camino a la política. Antes había además un editor
+                   * "en crudo" aquí mismo, con los nombres del motor —"Umbral
+                   * match KML — métrica A", "Estrictez de ruta"— que el skill
+                   * saca de la cara del cliente. Dos editores de la misma
+                   * política terminan contradiciéndose; queda el que explica.
+                   */}
+                  <p className="border-t border-[var(--linea-tenue)] pt-3 text-[13.5px]">
+                    <a
+                      href={`/cliente/contrato/${c.id}?account=${encodeURIComponent(client.slug)}`}
+                      className="text-[var(--azul)] hover:underline"
+                    >
+                      Abrir la oficina del contrato →
+                    </a>
+                    <span className="ml-2 text-[12.5px] text-[var(--tenue)]">
+                      con qué reglas se juzga: cada una explicada y medida contra tu operación
+                    </span>
+                  </p>
+                </li>
+              );
+            })}
           </ul>
         )}
-      </Card>
+      </Panel>
     </UnitShell>
   );
 }

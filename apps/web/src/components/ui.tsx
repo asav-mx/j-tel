@@ -103,6 +103,124 @@ export function Card({
   );
 }
 
+const mono = "font-[family-name:var(--fuente-mono)]";
+
+/*
+ * Las clases de formulario de la configuración, en un solo lugar.
+ *
+ * Las seis vistas las repetían palabra por palabra, y ahí es donde una piel se
+ * desarma: basta que una se quede sin actualizar para que el usuario vea dos
+ * productos distintos en dos pasos del mismo alta.
+ *
+ * `campo` lleva `tabular-nums` porque casi todo lo que se escribe aquí son
+ * minutos, metros y porcentajes, y las columnas de números tienen que alinear.
+ */
+export const campo =
+  "mt-1.5 w-full rounded border border-[var(--linea)] bg-[var(--panel2)] px-3 py-1.5 text-sm text-[var(--texto)] tabular-nums placeholder:text-[var(--tenue)]";
+
+export const etiqueta = "block text-[13.5px] text-[var(--texto)]";
+
+/**
+ * La acción principal. Azul —el color de las acciones— y nunca verde: un botón
+ * verde en esta plataforma se lee como `cumplido`.
+ */
+export const botonPrimario =
+  "rounded border border-[var(--azul)]/50 bg-[var(--azul)]/10 px-4 py-2 text-sm font-medium text-[var(--azul)] hover:bg-[var(--azul)]/20";
+
+/**
+ * Todo lo demás, incluido lo que borra. El rojo dice `no cumplido` y nada más;
+ * que una acción destruye lo dicen la palabra y el diálogo de confirmación.
+ */
+export const botonSecundario =
+  "rounded border border-[var(--linea-fuerte)] px-3 py-1.5 text-xs text-[var(--texto)] hover:border-[var(--azul)] hover:text-[var(--azul)]";
+
+/**
+ * Un panel de la configuración. Es el `Card` que sí obedece los tokens de tema:
+ * `--panel` en vez del heredado `--card`, que en oscuro tira a azul y en claro
+ * ni siquiera es el mismo color.
+ *
+ * El `nota` existe para que un título nunca vaya solo cuando necesita contexto —
+ * la regla de que ningún dato obligue a deducir empieza en el encabezado.
+ */
+export function Panel({
+  titulo,
+  nota,
+  children,
+}: {
+  titulo?: string;
+  nota?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-[var(--linea)] bg-[var(--panel)] p-6">
+      {titulo ? (
+        <header className="mb-4">
+          <h2 className="text-[15px] font-semibold text-[var(--texto)]">{titulo}</h2>
+          {nota ? <p className="mt-1 max-w-[76ch] text-[12.5px] text-[var(--tenue)]">{nota}</p> : null}
+        </header>
+      ) : null}
+      {children}
+    </section>
+  );
+}
+
+/**
+ * Estado operativo — activo, borrador, listo, sin configurar.
+ *
+ * **No es un veredicto y por eso no lleva verde, ámbar ni rojo.** Esos tres
+ * colores son de `cumplido`, `pendiente por evidencia` y `no cumplido`, y nada
+ * más; un "listo" en verde hace que el ojo lea un resultado donde solo hay un
+ * paso de configuración terminado. Aquí manda el acero, que es el color de lo
+ * medido, y el tenue para lo que todavía no existe.
+ *
+ * La forma es la misma impresión con borde del chip de resultado, no una
+ * pastilla rellena.
+ */
+export function ChipEstado({
+  children,
+  tono = "tenue",
+}: {
+  children: React.ReactNode;
+  /** `acero` para lo que ya está en pie; `tenue` para lo que falta. */
+  tono?: "acero" | "tenue";
+}) {
+  return (
+    <span
+      className={`inline-block rounded-[2px] border px-2 pt-[3px] pb-[2px] text-[9.5px] font-medium tracking-[.12em] whitespace-nowrap uppercase ${mono} ${
+        tono === "acero"
+          ? "border-[var(--b-acero)] text-[var(--acero)]"
+          : "border-[var(--linea-fuerte)] text-[var(--tenue)]"
+      }`}
+    >
+      {children}
+    </span>
+  );
+}
+
+/**
+ * Aviso del sistema: se guardó, no se guardó, falta un paso.
+ *
+ * Va en azul —el color de los avisos y las acciones— tanto si salió bien como
+ * si salió mal. Un "no se guardó" en rojo y un "guardado" en verde se leen como
+ * `no cumplido` y `cumplido`, que es exactamente la confusión que el producto
+ * no se puede permitir: el resultado de un servicio y el resultado de un
+ * formulario no comparten alfabeto.
+ */
+export function AvisoSistema({
+  lead,
+  children,
+}: {
+  /** La primera frase, en azul. Ej. "No se guardó." · "Guardado." */
+  lead: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-[var(--azul)]/40 bg-[var(--azul)]/10 p-4 text-[13.5px] text-[var(--texto)]">
+      <span className="text-[var(--azul)]">{lead}</span> {children}
+    </div>
+  );
+}
+
 /**
  * Marca de cuenta demo. Es un estado operativo, no un resultado: va en tenue,
  * nunca en verde/ámbar/rojo, que están reservados a los veredictos.
