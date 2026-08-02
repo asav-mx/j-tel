@@ -347,12 +347,12 @@ export async function POST(request: Request) {
   const plantGroupId = String(formData.get("plantGroupId") ?? "").trim();
   const scope = parseOperationalScope({ plantId, plantGroupId });
   if (!scope) {
-    return back(request, client.slug, null, { error: "Elige una unidad operativa válida." });
+    return back(request, client.slug, null, { error: "Elige un sitio válido." });
   }
 
   const resolved = await repos.clients.resolveOperationalScope(client.id, scope);
   if (!resolved) {
-    return back(request, client.slug, scope, { error: "Unidad operativa no válida." });
+    return back(request, client.slug, scope, { error: "Sitio no válido." });
   }
 
   const scopeCols = operationalScopeColumns(resolved);
@@ -450,7 +450,7 @@ export async function POST(request: Request) {
           ? "borrador"
           : existing.status;
     return back(request, client.slug, resolved, {
-      error: `Ya existe un contrato ${statusLabel} para ${carrier.name} en esta unidad operativa («${existing.name}»). Actívalo, elimínalo si es borrador, o suspende el anterior.`,
+      error: `Ya existe un contrato ${statusLabel} para ${carrier.name} en este sitio («${existing.name}»). Actívalo, elimínalo si es borrador, o suspende el anterior.`,
     });
   }
 

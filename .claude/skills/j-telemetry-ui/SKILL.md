@@ -479,6 +479,41 @@ Dos verbos son de la casa y todo cuelga de ellos: **verificar** (lo que hace el 
 
 El silencio es mensaje: si la marca solo dice "Verificado y sellado" con su fecha, la ausencia de más texto significa que no hubo más. No hace falta prometer que nada cambió.
 
+### «Unidad» es un camión, y solo vive en la cara del transportista
+
+El código llama **unidad operativa** a una planta o a un campus. Es nombre interno y **no aparece
+nunca en pantalla del cliente**.
+
+En la cara del cliente el vocabulario es: **planta · campus · sitio · servicio**. "Sitio" es el
+paraguas cuando hay que nombrar a planta y campus juntos.
+
+| No se escribe en la cara del cliente | Se escribe |
+|---|---|
+| "Tecma — Unidades operativas" | **"Tecma — Sitios"** |
+| nav "Unidades" | nav **"Sitios"** |
+| "Configuración de esta unidad" | **"Configuración de este sitio"** |
+| "Sin contratos para esta unidad" | **"Sin contratos para este sitio"** |
+| "Elige una unidad operativa." | **"Elige un sitio."** |
+| "Unidad operativa no válida." | **"Sitio no válido."** |
+
+**Por qué, y esto es lo que hay que conservar:** un cliente de transporte lee "unidad" y entiende
+camión; en la cara del transportista eso es exactamente lo que significa. La misma palabra con dos
+significados en un producto donde el vocabulario es la mitad del valor. Por eso la regla NO es
+"unificar términos" — es al revés: cada cara se queda con su palabra, y la que colisiona sale de
+la cara donde miente.
+
+Dos consecuencias que se olvidan:
+
+- **"Unidad" sí se queda en la cara del cliente cuando significa camión** — la columna Unidad del
+  cierre, "Unidad observada", la perilla "una misma unidad puede cubrir varias rutas". Ahí el
+  cliente lo lee bien y no hay nada que arreglar.
+- **El código puede llamarle como quiera.** `OperationalUnit`, `operationalUnitLabel`, las rutas
+  `/unit/*` y los comentarios se quedan. La regla gobierna la pantalla, no el símbolo. Y en la cara
+  J-Staff "unidad operativa" es correcto: ahí el usuario es interno y ese es su nombre.
+
+Los mensajes de error de formulario son los que más fácil se quedan viejos, porque nadie los ve
+hasta que fallan. Al revisar, provoca uno de verdad en el navegador.
+
 ### La pantalla no le explica al usuario quién es
 
 Escribir *"declarado por el transportista"* en la cara del transportista lo pone en posición de

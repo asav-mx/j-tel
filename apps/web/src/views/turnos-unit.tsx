@@ -141,7 +141,7 @@ export async function TurnosUnitView({
             ) : (
               <>
                 {" "}
-                mientras no haya contrato en esta unidad. En cuanto exista, manda el suyo.
+                mientras no haya contrato en este sitio. En cuanto exista, manda el suyo.
               </>
             )}
           </p>

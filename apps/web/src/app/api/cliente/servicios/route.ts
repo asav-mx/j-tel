@@ -135,7 +135,7 @@ export async function POST(request: Request) {
       ? await repos.clients.resolveOperationalScope(client.id, redirectScope)
       : null;
     if (!scope) {
-      return back(request, client.slug, redirectScope, { error: "Unidad operativa no válida." });
+      return back(request, client.slug, redirectScope, { error: "Sitio no válido." });
     }
 
     const name = String(formData.get("name") ?? "").trim();
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
     }
     if (!scopedRowMatches(routeShift, scope)) {
       return back(request, client.slug, scope, {
-        error: "La ruta + turno no pertenecen a esta unidad operativa.",
+        error: "La ruta + turno no pertenecen a este sitio.",
       });
     }
 
@@ -165,7 +165,7 @@ export async function POST(request: Request) {
     const memberPlantIds = await memberPlantIdsForScope(repos, client.id, scope);
     if (!geofenceMatchesScope(geofence, scope, memberPlantIds)) {
       return back(request, client.slug, scope, {
-        error: "La geocerca no corresponde a esta unidad operativa.",
+        error: "La geocerca no corresponde a este sitio.",
       });
     }
 
@@ -212,7 +212,7 @@ export async function POST(request: Request) {
     }
     const scope = await repos.clients.resolveOperationalScope(client.id, formScope);
     if (!scope || scope.kind !== "plant") {
-      return back(request, client.slug, formScope, { error: "Unidad operativa no válida." });
+      return back(request, client.slug, formScope, { error: "Sitio no válido." });
     }
     const geofence = await repos.geofences.findById(geofenceId);
     if (!geofence) {
@@ -254,12 +254,12 @@ export async function POST(request: Request) {
   }
 
   if (!formScope) {
-    return back(request, client.slug, null, { error: "Elige una unidad operativa." });
+    return back(request, client.slug, null, { error: "Elige un sitio." });
   }
 
   const scope = await repos.clients.resolveOperationalScope(client.id, formScope);
   if (!scope) {
-    return back(request, client.slug, formScope, { error: "Unidad operativa no válida." });
+    return back(request, client.slug, formScope, { error: "Sitio no válido." });
   }
 
   const name = String(formData.get("name") ?? "").trim();
@@ -284,7 +284,7 @@ export async function POST(request: Request) {
 
   if (!contractMatchesScope(contract, scope)) {
     return back(request, client.slug, scope, {
-      error: "El contrato no corresponde a la unidad operativa seleccionada.",
+      error: "El contrato no corresponde al sitio seleccionado.",
     });
   }
 
@@ -300,7 +300,7 @@ export async function POST(request: Request) {
   }
   if (!scopedRowMatches(routeShift, scope)) {
     return back(request, client.slug, scope, {
-      error: "La ruta + turno no pertenecen a esta unidad operativa.",
+      error: "La ruta + turno no pertenecen a este sitio.",
     });
   }
 
@@ -312,7 +312,7 @@ export async function POST(request: Request) {
   const memberPlantIds = await memberPlantIdsForScope(repos, client.id, scope);
   if (!geofenceMatchesScope(geofence, scope, memberPlantIds)) {
     return back(request, client.slug, scope, {
-      error: "La geocerca no corresponde a esta unidad operativa.",
+      error: "La geocerca no corresponde a este sitio.",
     });
   }
 

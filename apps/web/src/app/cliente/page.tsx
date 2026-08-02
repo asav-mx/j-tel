@@ -61,7 +61,7 @@ export default async function ClienteDashboardPage({
   );
 
   return (
-    <CorporateShell client={client} title={`${client.name} — Unidades operativas`}>
+    <CorporateShell client={client} title={`${client.name} — Sitios`}>
       {error ? (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
           {error}
@@ -81,7 +81,7 @@ export default async function ClienteDashboardPage({
       </div>
 
       {operationalUnits.length === 0 ? (
-        <Card title="Sin unidades operativas">
+        <Card title="Sin sitios">
           <p className="text-sm text-[var(--muted)]">
             Crea plantas o campus en{" "}
             <Link href={withAccount("/cliente/plantas", client.slug)} className="text-[var(--accent)]">
@@ -145,7 +145,7 @@ export default async function ClienteDashboardPage({
           className="block rounded-xl border border-[var(--linea)] bg-[var(--card)] p-5 transition hover:border-[var(--accent)]"
         >
           <h2 className="font-semibold">Reportes corporativos</h2>
-          <p className="mt-2 text-sm text-[var(--muted)]">Resumen exportable de todas las unidades.</p>
+          <p className="mt-2 text-sm text-[var(--muted)]">Resumen exportable de todos los sitios.</p>
         </Link>
       </div>
     </CorporateShell>
