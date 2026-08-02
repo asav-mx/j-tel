@@ -3,7 +3,7 @@ import { ConfirmForm } from "@/components/confirm-form";
 import { PurgePlantForm } from "@/components/purge-plant-form";
 import { PurgeProfileForm } from "@/components/purge-profile-form";
 import { ReverifyRangeForm } from "@/components/reverify-range-form";
-import { AppNav, Card } from "@/components/ui";
+import { AppNav, AvisoSistema, Card } from "@/components/ui";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { confirmMessages } from "@/lib/confirm-messages";
 import {
@@ -131,37 +131,33 @@ export default async function JStaffSoportePage({
         <AppNav title="Compuerta de atención" links={[{ href: "/jstaff", label: "← Panel" }]} />
 
         {error || loadError ? (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-            {error ?? loadError}
-          </div>
+          <AvisoSistema lead="No se hizo.">{error ?? loadError}</AvisoSistema>
         ) : null}
         {resync === "ok" ? (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-            Re-sync listo{status ? ` → ${status}` : ""}.
-          </div>
+          <AvisoSistema lead="Re-sync listo.">{status ? `→ ${status}` : null}</AvisoSistema>
         ) : null}
         {resync === "skip" ? (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-            No se recalculó: el hecho ya está cerrado ({status ?? "cumplido/no_cumplido"}).
-            Para reabrir un día cerrado usa «Re-verificar» abajo.
-          </div>
+          <AvisoSistema lead="No se recalculó.">
+            El hecho ya está cerrado ({status ?? "cumplido/no_cumplido"}). Para reabrir un día
+            cerrado usa «Re-verificar» abajo.
+          </AvisoSistema>
         ) : null}
         {reverify === "ok" ? (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+          <AvisoSistema lead="Listo.">
             Día {day} re-verificado ({n} servicios). Resumen: {summary}.
-          </div>
+          </AvisoSistema>
         ) : null}
         {purge === "ok" ? (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-            Purga lista en planta {purgedPlant}: {purgedProfiles} perfiles, {purgedOccs}{" "}
-            ocurrencias, {purgedGeofences} geocercas huérfanas.
-          </div>
+          <AvisoSistema lead="Purga lista.">
+            Planta {purgedPlant}: {purgedProfiles} perfiles, {purgedOccs} ocurrencias,{" "}
+            {purgedGeofences} geocercas huérfanas.
+          </AvisoSistema>
         ) : null}
         {purgeOne === "ok" ? (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-            Perfil borrado: {purgedOneCode}
+          <AvisoSistema lead="Perfil borrado.">
+            {purgedOneCode}
             {purgedOneName ? ` («${purgedOneName}»)` : ""} · {purgedOneOccs ?? "0"} ocurrencias.
-          </div>
+          </AvisoSistema>
         ) : null}
 
         <Card title="Re-verificar resultados (rango)">

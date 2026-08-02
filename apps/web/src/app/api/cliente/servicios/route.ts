@@ -135,7 +135,8 @@ export async function POST(request: Request) {
       ? await repos.clients.resolveOperationalScope(client.id, redirectScope)
       : null;
     if (!scope) {
-      return back(request, client.slug, redirectScope, { error: "Sitio no válido." });
+      // No resolvió: sin sitio no hay página a la cual volver (ver configApiBack).
+      return back(request, client.slug, null, { error: "Sitio no válido." });
     }
 
     const name = String(formData.get("name") ?? "").trim();
@@ -212,7 +213,8 @@ export async function POST(request: Request) {
     }
     const scope = await repos.clients.resolveOperationalScope(client.id, formScope);
     if (!scope || scope.kind !== "plant") {
-      return back(request, client.slug, formScope, { error: "Sitio no válido." });
+      // No resolvió: sin sitio no hay página a la cual volver (ver configApiBack).
+      return back(request, client.slug, null, { error: "Sitio no válido." });
     }
     const geofence = await repos.geofences.findById(geofenceId);
     if (!geofence) {
@@ -259,7 +261,8 @@ export async function POST(request: Request) {
 
   const scope = await repos.clients.resolveOperationalScope(client.id, formScope);
   if (!scope) {
-    return back(request, client.slug, formScope, { error: "Sitio no válido." });
+    // No resolvió: sin sitio no hay página a la cual volver (ver configApiBack).
+    return back(request, client.slug, null, { error: "Sitio no válido." });
   }
 
   const name = String(formData.get("name") ?? "").trim();

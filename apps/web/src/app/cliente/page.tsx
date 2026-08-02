@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getRepos } from "@/lib/db";
 import { CorporateShell } from "@/components/unit-shell";
-import { Card } from "@/components/ui";
+import { AvisoSistema, Card } from "@/components/ui";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { operationalUnitLabel } from "@/lib/operational-scope";
 import { contractMatchesScope } from "@/lib/operational-scope";
@@ -62,11 +62,7 @@ export default async function ClienteDashboardPage({
 
   return (
     <CorporateShell client={client} title={`${client.name} — Sitios`}>
-      {error ? (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-          {error}
-        </div>
-      ) : null}
+      {error ? <AvisoSistema lead="No se guardó.">{error}</AvisoSistema> : null}
 
       <p className="text-sm text-[var(--muted)]">
         Vista corporativa de <span className="text-[var(--texto)]">{client.name}</span>. Cada planta

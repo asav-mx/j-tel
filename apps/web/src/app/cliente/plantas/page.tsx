@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getRepos } from "@/lib/db";
 import { CorporateShell } from "@/components/unit-shell";
 import { ConfirmForm } from "@/components/confirm-form";
-import { AppNav, Card } from "@/components/ui";
+import { AppNav, AvisoSistema, Card } from "@/components/ui";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { confirmMessages } from "@/lib/confirm-messages";
 import { campusHref, plantHref } from "@/lib/navigation";
@@ -54,20 +54,16 @@ export default async function ClientePlantasPage({
         <span className="text-[var(--texto)]">sitio</span> desde el hub principal.
       </p>
 
-      {error ? (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-          {error}
-        </div>
-      ) : null}
+      {error ? <AvisoSistema lead="No se guardó.">{error}</AvisoSistema> : null}
       {created ? (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+        <AvisoSistema lead="Guardado.">
           {created === "grupo"
             ? "Grupo creado."
             : created === "actualizada"
               ? "Planta actualizada."
               : "Planta creada."}{" "}
           Ya aparece en la lista.
-        </div>
+        </AvisoSistema>
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">

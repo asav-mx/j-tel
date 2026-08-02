@@ -88,7 +88,8 @@ export async function POST(request: Request) {
 
     scope = await repos.clients.resolveOperationalScope(client.id, parsedScope);
     if (!scope) {
-      return back(request, client.slug, parsedScope, { error: "Sitio no válido." });
+      // No resolvió: sin sitio no hay página a la cual volver (ver configApiBack).
+      return back(request, client.slug, null, { error: "Sitio no válido." });
     }
 
     const scopeCols = operationalScopeColumns(scope);

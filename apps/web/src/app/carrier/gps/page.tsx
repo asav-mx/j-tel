@@ -1,6 +1,6 @@
 import { getRepos } from "@/lib/db";
 import { isEncryptionConfigured } from "@jtel/db";
-import { AppNav, Card } from "@/components/ui";
+import { AppNav, AvisoSistema, Card } from "@/components/ui";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
@@ -56,20 +56,16 @@ export default async function CarrierGpsPage({
         </p>
 
         {!encryptionReady ? (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
-            El servidor todavía no tiene configurada la llave de cifrado (JTEL_SECRET_KEY). Guardar
-            credenciales estará deshabilitado hasta que el equipo de J-Tel la configure.
-          </div>
+          <AvisoSistema lead="Guardar está deshabilitado.">
+            El servidor todavía no tiene configurada la llave de cifrado (JTEL_SECRET_KEY). Se
+            habilita en cuanto el equipo de J-Tel la configure.
+          </AvisoSistema>
         ) : null}
-        {error ? (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-            {error}
-          </div>
-        ) : null}
+        {error ? <AvisoSistema lead="No se guardó.">{error}</AvisoSistema> : null}
         {saved ? (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+          <AvisoSistema lead="Guardado.">
             Credenciales guardadas. El verificador ya las usará para este carrier.
-          </div>
+          </AvisoSistema>
         ) : null}
 
         <Card
