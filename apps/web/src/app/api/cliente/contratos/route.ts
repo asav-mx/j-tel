@@ -352,7 +352,8 @@ export async function POST(request: Request) {
 
   const resolved = await repos.clients.resolveOperationalScope(client.id, scope);
   if (!resolved) {
-    return back(request, client.slug, scope, { error: "Sitio no válido." });
+    // `scope` aquí es el leído del formulario, no el resuelto (ver configApiBack).
+    return back(request, client.slug, null, { error: "Sitio no válido." });
   }
 
   const scopeCols = operationalScopeColumns(resolved);

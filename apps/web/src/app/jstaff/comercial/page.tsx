@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getRepos } from "@/lib/db";
 import { ConfirmForm } from "@/components/confirm-form";
-import { AppNav, Card } from "@/components/ui";
+import { AppNav, AvisoSistema, Card } from "@/components/ui";
 import { withAccount } from "@/lib/account-context";
 import { confirmMessages } from "@/lib/confirm-messages";
 
@@ -62,17 +62,13 @@ export default async function JStaffComercialPage({
           <span className="text-[var(--texto)]">Contratos</span> de cada unidad operativa.
         </p>
 
-        {error ? (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-            {error}
-          </div>
-        ) : null}
+        {error ? <AvisoSistema lead="No se guardó.">{error}</AvisoSistema> : null}
         {updated ? (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+          <AvisoSistema lead="Guardado.">
             {updated === "autorizado"
               ? "Carrier autorizado para el cliente."
               : "Autorización suspendida."}
-          </div>
+          </AvisoSistema>
         ) : null}
 
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--linea)] bg-black/20 p-3 text-sm">

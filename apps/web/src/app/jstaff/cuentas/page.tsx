@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getRepos } from "@/lib/db";
-import { AppNav, Card, DemoChip, DemoToggle } from "@/components/ui";
+import { AppNav, AvisoSistema, Card, DemoChip, DemoToggle } from "@/components/ui";
 import { withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
@@ -33,15 +33,11 @@ export default async function JStaffCuentasPage({
           { href: "/jstaff/comercial", label: "Comercial" },
         ]} />
 
-        {error ? (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-            {error}
-          </div>
-        ) : null}
+        {error ? <AvisoSistema lead="No se guardó.">{error}</AvisoSistema> : null}
         {created ? (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-            Cuenta creada correctamente. Ya aparece en la lista de abajo.
-          </div>
+          <AvisoSistema lead="Guardado.">
+            Cuenta creada. Ya aparece en la lista de abajo.
+          </AvisoSistema>
         ) : null}
 
         <div className="grid gap-6 lg:grid-cols-2">

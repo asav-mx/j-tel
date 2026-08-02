@@ -42,7 +42,9 @@ export async function POST(request: Request) {
 
   const scope = await repos.clients.resolveOperationalScope(client.id, parsedScope);
   if (!scope) {
-    return back(request, client.slug, parsedScope, { error: "Sitio no válido." });
+    // No resolvió: el alcance del formulario no existe, así que no hay página
+    // de sitio a la cual volver. El aviso va al inicio corporativo.
+    return back(request, client.slug, null, { error: "Sitio no válido." });
   }
 
   const scopeCols = operationalScopeColumns(scope);
