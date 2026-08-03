@@ -3298,6 +3298,31 @@ export class ComplianceRepository {
     return entry!;
   }
 
+  /**
+   * Cuántas verificaciones automáticas se le han corrido a una ocurrencia.
+   *
+   * Se cuenta en la base y no trayendo las filas: uno de los servicios atorados
+   * acumuló 31 424 entradas, y materializarlas para contarlas es justo el tipo
+   * de lectura sin tope que dejó al motor sin memoria.
+   *
+   * Es cota INFERIOR de intentos fallidos, no la cifra exacta: quien la usa
+   * solo la consulta cuando el estado ya es `pendiente_evidencia` con la
+   * evidencia indisponible, y en ese caso cada entrada previa fue un intento
+   * que tampoco encontró nada.
+   */
+  async countAutomaticVerifications(serviceOccurrenceId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(ledgerEntries)
+      .where(
+        and(
+          eq(ledgerEntries.serviceOccurrenceId, serviceOccurrenceId),
+          eq(ledgerEntries.action, "verificacion_automatica"),
+        ),
+      );
+    return Number(row?.n ?? 0);
+  }
+
   async getLedgerForTrip(tripId: string) {
     return this.db.query.ledgerEntries.findMany({
       where: eq(ledgerEntries.tripId, tripId),
@@ -3373,7 +3398,7 @@ export class EvidenceRepository {
 
   async updateTripStatus(
     tripId: string,
-    status: "disponible" | "parcial" | "en_espera" | "indisponible",
+    status: "disponible" | "parcial" | "en_espera" | "indisponible" | "sin_evidencia_posible",
   ) {
     await this.db.update(trips).set({ evidenceStatus: status }).where(eq(trips.id, tripId));
   }
@@ -3531,6 +3556,25 @@ export class TelemetryRepository {
       where: and(...conditions),
       orderBy: (p, { asc }) => [asc(p.recordedAt)],
     });
+  }
+
+  /**
+   * El punto de telemetría propia MÁS ANTIGUO que existe para un carrier, o
+   * `null` si todavía no hay ninguno.
+   *
+   * Es el horizonte de la memoria: una ventana de evidencia que termina antes
+   * de esta fecha no puede ser cubierta por ningún punto guardado, ni hoy ni
+   * después. Sirve para dejar de reintentar servicios irresolubles.
+   *
+   * Va por el índice (carrier_account_id, recorded_at), así que es una lectura
+   * del extremo del índice y no un recorrido de la tabla.
+   */
+  async getMemoryHorizon(carrierAccountId: string): Promise<Date | null> {
+    const [row] = await this.db
+      .select({ primero: sql<Date | null>`min(${telemetryPoints.recordedAt})` })
+      .from(telemetryPoints)
+      .where(eq(telemetryPoints.carrierAccountId, carrierAccountId));
+    return row?.primero ? new Date(row.primero) : null;
   }
 
   /** Puntos de la memoria propia para un conjunto de IMEIs en una ventana. */

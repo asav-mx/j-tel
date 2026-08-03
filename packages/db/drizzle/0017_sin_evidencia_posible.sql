@@ -1,0 +1,23 @@
+-- Un quinto valor para `evidence_status`. ADITIVA: no toca ninguna fila.
+--
+-- POR QUÉ EXISTE. Cinco servicios de junio llevaban desde el 10 de julio
+-- reintentándose cada minuto —31 400 verificaciones cada uno, y una llamada al
+-- proveedor de GPS por minuto por cada uno— porque la cola no tenía forma de
+-- expresar "esto no se puede resolver". Su ventana de evidencia es del 22 al
+-- 26 de junio; la memoria propia empieza el 28. No hay dato que las cubra.
+--
+-- POR QUÉ AQUÍ Y NO EN `compliance_status`. Los veredictos son tres y es ley
+-- del producto: sin evidencia NO es incumplimiento. Este valor describe qué se
+-- pudo observar, no qué hizo el transportista. El hecho se queda en
+-- `pendiente_evidencia`; lo único que cambia es que deja de reintentarse.
+--
+-- ⚠️ ALTER TYPE ... ADD VALUE no puede usarse en la MISMA transacción que lo
+-- agrega. Por eso va sola en su archivo y por eso NO se aplica con
+-- `pnpm db:migrate` (que envuelve cada archivo en una transacción). Se ejecuta
+-- suelta contra la base, según docs/Procedimiento-Migraciones.md.
+--
+-- Verificación después de aplicar:
+--   SELECT unnest(enum_range(NULL::evidence_status));
+--   -- debe listar los cinco valores.
+
+ALTER TYPE "evidence_status" ADD VALUE IF NOT EXISTS 'sin_evidencia_posible';
