@@ -820,6 +820,30 @@ export class RouteRepository {
     return results;
   }
 
+  /**
+   * Cuántas veces se ha medido el recorrido de cada ruta×turno.
+   *
+   * No devuelve una duración: devuelve **con cuánta evidencia se podría
+   * calcular una**. Medido el 2026-08-02: las 48 combinaciones ruta×turno de
+   * esta operación tienen **exactamente una medición cada una**.
+   *
+   * Un percentil sobre una sola muestra no es un percentil, es esa muestra con
+   * nombre de estadística. El motor ya se niega a resumir con tan poco
+   * (`routeDurationMinSamples`); esto existe para que la pantalla pueda decir
+   * **por qué** el renglón no está, en vez de dejarlo en blanco.
+   */
+  async medicionesDeRecorridoPorRutaTurno(routeShiftIds: string[]) {
+    if (routeShiftIds.length === 0) return [];
+    return this.db
+      .select({
+        routeShiftId: routeTraversalMeasurements.routeShiftId,
+        muestras: count(),
+      })
+      .from(routeTraversalMeasurements)
+      .where(inArray(routeTraversalMeasurements.routeShiftId, routeShiftIds))
+      .groupBy(routeTraversalMeasurements.routeShiftId);
+  }
+
   async getVariantsForRoute(routeId: string) {
     return this.db.query.routeKmlVariants.findMany({
       where: eq(routeKmlVariants.routeId, routeId),
@@ -2945,6 +2969,85 @@ export class OccurrenceRepository {
         profile: { with: { contract: true, geofence: true, routeShift: true } },
       },
     });
+  }
+
+  /**
+   * El periodo día por día de UNA ruta, contado por resultado.
+   *
+   * Es la tira de días del expediente de ruta. Se agrega en la base porque la
+   * alternativa —traer las ocurrencias del cliente con todas sus relaciones y
+   * filtrar por ruta en el proceso— lee más de mil filas con sus contratos,
+   * perfiles y geocercas para pintar treinta cuadritos.
+   *
+   * Cuenta también los que **no tienen hecho**: un día sin sellar y un día
+   * cumplido no son el mismo día, y la tira que los pinta igual borra la
+   * distinción que el producto existe para sostener.
+   */
+  async diasDeRuta(routeId: string, desdeFecha: string, hastaFecha: string) {
+    return this.db
+      .select({
+        fecha: serviceOccurrences.serviceDate,
+        status: complianceFacts.status,
+        total: count(),
+      })
+      .from(serviceOccurrences)
+      .innerJoin(routeShifts, eq(routeShifts.id, serviceOccurrences.routeShiftId))
+      .leftJoin(
+        complianceFacts,
+        eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id),
+      )
+      .where(
+        and(
+          eq(routeShifts.routeId, routeId),
+          gte(serviceOccurrences.serviceDate, desdeFecha),
+          // El techo NO es opcional. El generador crea ocurrencias por
+          // adelantado, así que sin él la tira pinta días que todavía no
+          // ocurren como "sin sellar" — y un día futuro sin sellar se ve
+          // idéntico a uno pasado que el árbitro no alcanzó a juzgar.
+          lte(serviceOccurrences.serviceDate, hastaFecha),
+        ),
+      )
+      .groupBy(serviceOccurrences.serviceDate, complianceFacts.status)
+      .orderBy(serviceOccurrences.serviceDate);
+  }
+
+  /**
+   * Los últimos servicios de una ruta, con lo que hace falta para leerlos.
+   *
+   * **Acotado a hoy.** El generador crea ocurrencias con semanas de
+   * anticipación, así que ordenar por fecha descendente sin techo devuelve el
+   * futuro: una lista llamada "últimos servicios" encabezada por el 1 de
+   * septiembre, todos sin sellar. Es correcto como consulta y falso como
+   * afirmación.
+   */
+  async ultimosServiciosDeRuta(routeId: string, limite: number, hastaFecha: string) {
+    return this.db
+      .select({
+        ocurrenciaId: serviceOccurrences.id,
+        fecha: serviceOccurrences.serviceDate,
+        deadline: serviceOccurrences.expectedDeadline,
+        turno: shifts.name,
+        status: complianceFacts.status,
+        timing: complianceFacts.timing,
+        llegada: complianceFacts.observedArrivalAt,
+        cobertura: complianceFacts.observedRouteMatchPct,
+        excusable: complianceFacts.lateExcusable,
+      })
+      .from(serviceOccurrences)
+      .innerJoin(routeShifts, eq(routeShifts.id, serviceOccurrences.routeShiftId))
+      .innerJoin(shifts, eq(shifts.id, routeShifts.shiftId))
+      .leftJoin(
+        complianceFacts,
+        eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id),
+      )
+      .where(
+        and(
+          eq(routeShifts.routeId, routeId),
+          lte(serviceOccurrences.serviceDate, hastaFecha),
+        ),
+      )
+      .orderBy(desc(serviceOccurrences.serviceDate))
+      .limit(limite);
   }
 
   /**
