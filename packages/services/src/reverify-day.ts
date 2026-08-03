@@ -74,15 +74,7 @@ async function main() {
   );
   console.log("force + keepEvidence:false + exclusiveUnits");
 
-  const svc = new VerificationService(repos, {
-    umbrellaBaseUrl: normalizeUmbrellaBaseUrl(
-      process.env.UMBRELLA_GPS_URL ??
-        process.env.UMBRELLA_GPS_BASE_URL ??
-        "http://gps2.umbrellasoluciones.com/openapi",
-    ),
-    umbrellaUserId: process.env.UMBRELLA_GPS_USERID ?? "",
-    umbrellaPassword: process.env.UMBRELLA_GPS_PASSWORD ?? "",
-  });
+  const svc = new VerificationService(repos);
 
   const results = await svc.reverifyContract(contract.id, {
     serviceDate,

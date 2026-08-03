@@ -29,12 +29,9 @@ describe("occupiedUnitIdsForResidual", () => {
 });
 
 describe("VerificationService", () => {
-  it("expone processPending e ingestEvidenceForOccurrence", () => {
-    const service = new VerificationService({} as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+  it("expone processPending", () => {
+    const service = new VerificationService({} as never);
     expect(typeof service.processPending).toBe("function");
-    expect(typeof service.ingestEvidenceForOccurrence).toBe("function");
     expect(typeof service.verifyOccurrence).toBe("function");
   });
 });
@@ -293,9 +290,7 @@ describe("cambio de política no toca hechos definitivos", () => {
         },
         compliance: { deleteFactForOccurrence: deleteFact, saveFact },
       };
-      const service = new VerificationService(repos as never, {
-        umbrellaBaseUrl: "http://example.com",
-      });
+      const service = new VerificationService(repos as never);
       const result = await service.verifyOccurrence(`occ-${status}`);
       expect(result).toEqual({
         occurrenceId: `occ-${status}`,
@@ -411,9 +406,7 @@ describe("cambio de política no toca hechos definitivos", () => {
       notifications: { create: vi.fn() },
     };
 
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
     const result = await service.verifyOccurrence("occ-pendiente", {
       keepEvidence: true,
     });
@@ -546,9 +539,7 @@ describe("actorIntent: decision vs maintenance (force:true)", () => {
 
   it("decision: archiva siempre aunque el veredicto no cambie (cumplido → cumplido)", async () => {
     const repos = buildRepos("cumplido");
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
 
     await service.verifyOccurrence("occ-1", {
       force: true,
@@ -567,9 +558,7 @@ describe("actorIntent: decision vs maintenance (force:true)", () => {
 
   it("maintenance: no archiva cuando el veredicto no cambia (cumplido → cumplido)", async () => {
     const repos = buildRepos("cumplido");
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
 
     await service.verifyOccurrence("occ-1", {
       force: true,
@@ -587,9 +576,7 @@ describe("actorIntent: decision vs maintenance (force:true)", () => {
 
   it("maintenance: archiva cuando el veredicto cambia (cumplido → no_cumplido)", async () => {
     const repos = buildRepos("no_cumplido");
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
 
     await service.verifyOccurrence("occ-1", {
       force: true,
@@ -722,9 +709,7 @@ describe("perdedor exclusivo sin alternativa", () => {
       ],
     });
 
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
     const result = await service.verifyOccurrence("occ-loser", {
       force: true,
       actorIntent: "maintenance",
@@ -752,9 +737,7 @@ describe("perdedor exclusivo sin alternativa", () => {
     }
     const { repos, saveFact } = buildRepos({ evidencePoints });
 
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
     const result = await service.verifyOccurrence("occ-loser", {
       force: true,
       actorIntent: "maintenance",
@@ -782,9 +765,7 @@ describe("perdedor exclusivo sin alternativa", () => {
     const { repos, saveFact } = buildRepos({ evidencePoints });
     const addLedger = repos.compliance.addLedgerEntry as ReturnType<typeof vi.fn>;
 
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
     const result = await service.verifyOccurrence("occ-loser", {
       force: true,
       actorIntent: "maintenance",
@@ -946,9 +927,7 @@ describe("Tarea 3 — contexto llegada fuera de ventana", () => {
       ],
     });
 
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
     const result = await service.verifyOccurrence("occ-tardia");
     // El hecho quedó sin llegada (no_cumplido o pendiente): el contexto aplica igual.
     expect(result.status).not.toBe("cumplido");
@@ -998,9 +977,7 @@ describe("Tarea 3 — contexto llegada fuera de ventana", () => {
           : Promise.resolve([]),
       );
 
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
     await service.verifyOccurrence("occ-tardia");
 
     const ctx = addLedgerEntry.mock.calls
@@ -1015,9 +992,7 @@ describe("Tarea 3 — contexto llegada fuera de ventana", () => {
   it("no anota nada cuando no hay GPS extendido en memoria propia (cero Umbrella)", async () => {
     const { repos, addLedgerEntry } = buildRepos({ extendedPoints: [] });
 
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
     await service.verifyOccurrence("occ-tardia");
 
     const ctx = addLedgerEntry.mock.calls
@@ -1132,9 +1107,7 @@ describe("sin evidencia posible — el servicio sale de la cola de reintento", (
       headers: { get: () => null },
     } as never);
 
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
     const result = await service.verifyOccurrence("occ-atorada");
 
     expect(result.sinEvidenciaPosible).toBe("ventana_anterior_a_la_memoria");
@@ -1176,9 +1149,7 @@ describe("sin evidencia posible — el servicio sale de la cola de reintento", (
       headers: { get: () => null },
     } as never);
 
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
     const result = await service.verifyOccurrence("occ-atorada");
 
     expect(result.sinEvidenciaPosible).toBeNull();
@@ -1216,9 +1187,7 @@ describe("el catch deja rastro — el silencio que costó 35 días", () => {
       compliance: { addLedgerEntry },
     };
 
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
     const results = await service.processPending();
 
     expect(results[0]).toMatchObject({ occurrenceId: "occ-que-truena", skipped: true });
@@ -1248,12 +1217,135 @@ describe("el catch deja rastro — el silencio que costó 35 días", () => {
       compliance: { addLedgerEntry: vi.fn().mockRejectedValue(new Error("ledger caído")) },
     };
 
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
     const results = await service.processPending();
 
     expect(results).toHaveLength(2);
     expect(results.every((r) => (r as { skipped?: boolean }).skipped)).toBe(true);
+  });
+});
+
+describe("la puerta al proveedor está cerrada en el motor", () => {
+  /**
+   * LA VALLA DE ESTE PR.
+   *
+   * El archivador es la única puerta al proveedor de GPS. Si alguien vuelve a
+   * poner una llamada en vivo dentro de `verifyOccurrence` —aunque sea "solo
+   * para este caso"— este test se pone rojo.
+   *
+   * No es preferencia de arquitectura: esa llamada es la que convertía un
+   * servicio irresoluble en una petición saliente por minuto, y esas peticiones
+   * se formaban en una cola de proceso que tumbó el cron cuatro veces.
+   */
+  function reposSinMemoria() {
+    const occ = {
+      id: "occ-sin-memoria",
+      serviceDate: "2026-08-01",
+      contractId: "contract-1",
+      expectedDeadline: new Date("2026-08-01T12:20:00Z"),
+      expectedGeofenceId: "geo-1",
+      referenceUnitId: null,
+      complianceFact: null,
+      trip: {
+        id: "trip-1",
+        evidenceWindowStart: new Date("2026-08-01T10:45:00Z"),
+        evidenceWindowEnd: new Date("2026-08-01T12:20:00Z"),
+        evidenceStatus: "en_espera",
+      },
+      profile: {
+        id: "profile-1",
+        contractId: "contract-1",
+        geofenceId: "geo-1",
+        geofence: { id: "geo-1", polygon: [] },
+        contract: {
+          id: "contract-1",
+          carrierAccountId: "carrier-1",
+          clientAccountId: "client-1",
+          policy: {
+            toleranceMinutes: 5,
+            verificationGraceMinutes: 15,
+            routeStrictness: "destino_only" as const,
+            kmlMatchMinPct: 60,
+            excusableReasons: [] as string[],
+          },
+        },
+        routeShift: { routeId: "route-1" },
+      },
+      kmlVersionId: null,
+    };
+    return {
+      occurrences: { findById: vi.fn().mockResolvedValue(occ) },
+      evidence: {
+        getPointsForTrip: vi.fn().mockResolvedValue([]),
+        clearPointsForTrip: vi.fn(),
+        updateTripStatus: vi.fn(),
+        savePoints: vi.fn(),
+      },
+      compliance: {
+        deleteFactForOccurrence: vi.fn(),
+        saveFact: vi.fn().mockResolvedValue({ id: "fact-1", status: "pendiente_evidencia" }),
+        insertHistoryEntry: vi.fn().mockResolvedValue("h1"),
+        updateHistorySuccessor: vi.fn(),
+        addLedgerEntry: vi.fn(),
+        countAutomaticVerifications: vi.fn().mockResolvedValue(0),
+      },
+      profiles: {
+        getPossibleUnitIds: vi.fn().mockResolvedValue([]),
+        findForContract: vi.fn().mockResolvedValue([]),
+      },
+      fleet: {
+        getDevicesForCarrier: vi
+          .fn()
+          .mockResolvedValue([{ id: "dev-1", imei: "imei-1", carrierAccountId: "carrier-1" }]),
+        getUnitsForCarrier: vi.fn().mockResolvedValue([{ id: "unit-1" }]),
+        resolveUnitAtTime: vi.fn().mockResolvedValue(null),
+      },
+      // Memoria propia VACÍA: el caso que antes salía a buscar a Umbrella.
+      telemetry: {
+        getForImeis: vi.fn().mockResolvedValue([]),
+        getMemoryHorizon: vi.fn().mockResolvedValue(null),
+        getWatermark: vi.fn().mockResolvedValue({
+          lastRecordedAt: new Date("2026-08-02T00:00:00Z"),
+        }),
+      },
+      routes: {
+        getKmlVersionForDate: vi.fn().mockResolvedValue(null),
+        getActiveVariantVersionsForDate: vi.fn().mockResolvedValue([]),
+      },
+      carriers: { getGpsCredentials: vi.fn().mockResolvedValue(null) },
+      contracts: { findForCarrier: vi.fn().mockResolvedValue([]) },
+      notifications: { create: vi.fn() },
+      routeTraversals: { record: vi.fn() },
+    };
+  }
+
+  it("con la memoria vacía NO hace ni una petición de red", async () => {
+    const espia = vi.spyOn(globalThis, "fetch");
+    const repos = reposSinMemoria();
+
+    const service = new VerificationService(repos as never);
+    const result = await service.verifyOccurrence("occ-sin-memoria");
+
+    // Cero salidas a la red. Esta es la afirmación entera del PR.
+    expect(espia).not.toHaveBeenCalled();
+    // Y el veredicto es el honesto: no se pudo observar.
+    expect(result.status).toBe("pendiente_evidencia");
+    expect(result.ingestSource).toBe("none");
+
+    espia.mockRestore();
+  });
+
+  it("el origen de la evidencia nunca vuelve a ser 'umbrella'", async () => {
+    const repos = reposSinMemoria();
+    const service = new VerificationService(repos as never);
+    await service.verifyOccurrence("occ-sin-memoria");
+
+    const auto = repos.compliance.addLedgerEntry.mock.calls
+      .map((c) => c[0])
+      .find((e) => e.action === "verificacion_automatica");
+    expect(auto.metadata.ingestSource).not.toBe("umbrella");
+    expect(auto.metadata.ingestSource).toBe("none");
+    // Y el viaje queda declarado indisponible, no en espera de una respuesta.
+    expect(repos.evidence.updateTripStatus).toHaveBeenCalledWith("trip-1", "indisponible");
   });
 });

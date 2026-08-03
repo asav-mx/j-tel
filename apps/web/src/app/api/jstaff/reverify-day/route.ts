@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
 import { exigir } from "@/lib/guardia-api";
-import { getUmbrellaConfig } from "@/lib/umbrella-config";
 import { VerificationService } from "@jtel/services";
 
 export const maxDuration = 300;
@@ -67,7 +66,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const service = new VerificationService(repos, getUmbrellaConfig());
+    const service = new VerificationService(repos);
     const results = await service.reverifyContract(contractId, {
       serviceDate,
       keepEvidence,

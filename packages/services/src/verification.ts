@@ -1,6 +1,5 @@
 import { verifyService, pointInPolygon } from "@jtel/verification";
 import { measureBestTraversal, corridorKmFromMeters } from "./medicion-recorrido.js";
-import { createUmbrellaProvider, ingestEvidenceForTrip } from "@jtel/gps-umbrella";
 import {
   razonSinEvidenciaPosible,
   explicarRazon,
@@ -18,11 +17,11 @@ import type { ComplianceFact, Repositories } from "@jtel/db";
 import type { ContractPolicy, VerificationResult } from "@jtel/domain";
 import { localDateIso, JTTEL_TZ } from "@jtel/domain";
 
-export interface VerificationServiceConfig {
-  umbrellaBaseUrl: string;
-  umbrellaUserId?: string;
-  umbrellaPassword?: string;
-}
+/**
+ * El motor ya no recibe configuración del proveedor de GPS: no habla con él.
+ * El tipo queda vacío y exportado solo para no romper importaciones sueltas.
+ */
+export type VerificationServiceConfig = Record<string, never>;
 
 /** Hueco máximo entre puntos GPS para considerar la ventana “cubierta”. */
 export const EVIDENCE_COVERAGE_MAX_GAP_MS = 5 * 60 * 1000;
@@ -190,13 +189,6 @@ type VerifyOccurrenceOpts =
     };
 
 export class VerificationService {
-  // Un proveedor por carrier (cacheado por corrida) para reutilizar el token y
-  // evitar 429. Cada carrier puede usar un proveedor/credenciales distintos.
-  private providersByCarrier = new Map<
-    string,
-    ReturnType<typeof createUmbrellaProvider>
-  >();
-
   /**
    * Primer punto de telemetría propia por carrier, cacheado por corrida. No
    * cambia dentro de una pasada del cron y la consulta es la misma para todos
@@ -207,48 +199,7 @@ export class VerificationService {
   /** Marca de agua del archivador por carrier, cacheada por corrida. */
   private marcaDeAguaPorCarrier = new Map<string, Date | null>();
 
-  constructor(
-    private repos: Repositories,
-    private config: VerificationServiceConfig,
-  ) {}
-
-  private buildProvider(provider: string, baseUrl: string, userId: string, password: string) {
-    switch (provider) {
-      case "umbrella":
-        return createUmbrellaProvider({ baseUrl, credentials: { userId, password } });
-      default:
-        throw new Error(`Proveedor GPS no soportado todavía: ${provider}`);
-    }
-  }
-
-  /**
-   * Devuelve el proveedor GPS del carrier usando sus credenciales guardadas en
-   * la base. Si el carrier aún no configuró credenciales, cae al respaldo por
-   * variables de entorno globales (transición).
-   */
-  private async getProviderForCarrier(carrierAccountId: string) {
-    const cached = this.providersByCarrier.get(carrierAccountId);
-    if (cached) return cached;
-
-    const creds = await this.repos.carriers.getGpsCredentials(carrierAccountId);
-
-    const provider = creds
-      ? this.buildProvider(
-          creds.provider,
-          creds.baseUrl ?? this.config.umbrellaBaseUrl,
-          creds.userId,
-          creds.password,
-        )
-      : this.buildProvider(
-          "umbrella",
-          this.config.umbrellaBaseUrl,
-          this.config.umbrellaUserId ?? "demo_user",
-          this.config.umbrellaPassword ?? "demo_pass",
-        );
-
-    this.providersByCarrier.set(carrierAccountId, provider);
-    return provider;
-  }
+  constructor(private repos: Repositories) {}
 
   async processPending(now = new Date()) {
     const pending = await this.repos.occurrences.findPendingVerification(now);
@@ -929,7 +880,10 @@ export class VerificationService {
       return { unitId: assignment.unitId, deviceId: device.id };
     };
 
-    let ingestSource: "memory" | "umbrella" | "none" | "cached" = "none";
+    // Ya no existe "umbrella": el motor no habla con el proveedor. El valor
+    // sigue en entradas de ledger anteriores al 2026-08-03, así que quien las
+    // LEE debe contemplarlo — pero no se escribe nunca más.
+    let ingestSource: "memory" | "none" | "cached" = "none";
     let ingestStatus: "disponible" | "parcial" | "indisponible" = "indisponible";
     let ingestPointCount = 0;
     let razonRetiro: RazonSinEvidencia | null = null;
@@ -945,8 +899,31 @@ export class VerificationService {
             ? "disponible"
             : "parcial";
     } else {
-      // 1) Memoria propia primero (telemetry_points).
-      // 2) Si no hay, Umbrella en vivo.
+      /*
+       * EL MOTOR SOLO LEE LA MEMORIA PROPIA. NUNCA SALE A BUSCAR.
+       *
+       * El archivador es la única puerta al proveedor de GPS. Si el expediente
+       * está vacío, el árbitro dicta `pendiente_evidencia` y se acabó: no
+       * pregunta, no espera, no depende de que un tercero conteste.
+       *
+       * POR QUÉ. La caída en vivo que vivía aquí convertía un servicio
+       * irresoluble en una llamada saliente por minuto, y esas llamadas se
+       * formaban en una cola de proceso que creció hasta tumbar
+       * `/api/cron/verify` cuatro veces el 3 de agosto de 2026. Verificar es
+       * juzgar con lo que hay; conseguir los datos es otro trabajo, con su
+       * propio cron, su propio ritmo y su propio límite de peticiones.
+       *
+       * NO CUESTA UN SOLO VEREDICTO, y está medido, no supuesto:
+       *   · Umbrella no entregó UN punto en 30 días — 0 verificaciones con
+       *     origen `umbrella` en el ledger; las 162 787 que salieron a buscar
+       *     volvieron con `none`.
+       *   · De 928 ocurrencias vencidas en 30 días, CERO tenían la memoria
+       *     vacía para su ventana.
+       * La puerta ya estaba cerrada de hecho: esto quita el cable muerto.
+       *
+       * Si un día la memoria no alcanza una ventana, lo que se arregla es el
+       * archivador — no que el árbitro salga a suplirlo.
+       */
       const memoryPoints = await this.repos.telemetry.getForImeis(
         imeis,
         trip.evidenceWindowStart,
@@ -969,23 +946,11 @@ export class VerificationService {
         ingestSource = "memory";
         ingestPointCount = resolved.length;
       } else {
-        const provider = await this.getProviderForCarrier(contract.carrierAccountId);
-        const ingestResult = await ingestEvidenceForTrip(provider, {
-          tripId: trip.id,
-          imeis,
-          windowStart: trip.evidenceWindowStart,
-          windowEnd: trip.evidenceWindowEnd,
-          resolveUnit,
-          savePoints: async (points) => {
-            await this.repos.evidence.savePoints(trip.id, points);
-          },
-          updateStatus: async (status) => {
-            await this.repos.evidence.updateTripStatus(trip.id, status);
-          },
-        });
-        ingestSource = ingestResult.pointCount > 0 ? "umbrella" : "none";
-        ingestStatus = ingestResult.status;
-        ingestPointCount = ingestResult.pointCount;
+        // Sin memoria no hay con qué juzgar, y no hay a quién preguntarle.
+        ingestSource = "none";
+        ingestStatus = "indisponible";
+        ingestPointCount = 0;
+        await this.repos.evidence.updateTripStatus(trip.id, "indisponible");
       }
     }
 
@@ -1452,74 +1417,4 @@ export class VerificationService {
     };
   }
 
-  async ingestEvidenceForOccurrence(occurrenceId: string) {
-    const occurrence = await this.repos.occurrences.findById(occurrenceId);
-    if (!occurrence?.trip) throw new Error("Ocurrencia o viaje no encontrado");
-
-    const profile = occurrence.profile!;
-    const contract = profile.contract!;
-    const possibleUnitIds = await this.repos.profiles.getPossibleUnitIds(profile.id);
-    const devices = await this.repos.fleet.getDevicesForCarrier(contract.carrierAccountId);
-    const imeis =
-      possibleUnitIds.length === 0
-        ? devices.map((d) => d.imei)
-        : devices.map((d) => d.imei);
-    const imeiToDevice = new Map(devices.map((d) => [d.imei, d]));
-
-    const memoryPoints = await this.repos.telemetry.getForImeis(
-      imeis,
-      occurrence.trip.evidenceWindowStart,
-      occurrence.trip.evidenceWindowEnd,
-    );
-    if (memoryPoints.length > 0) {
-      const resolved = await Promise.all(
-        memoryPoints.map(async (p) => {
-          const device = imeiToDevice.get(p.imei);
-          let unitId: string | undefined;
-          let deviceId: string | undefined;
-          if (device) {
-            const assignment = await this.repos.fleet.resolveUnitAtTime(device.id, p.recordedAt);
-            if (assignment) {
-              unitId = assignment.unitId;
-              deviceId = device.id;
-            }
-          }
-          return {
-            imei: p.imei,
-            latitude: p.latitude,
-            longitude: p.longitude,
-            speed: p.speed ?? undefined,
-            recordedAt: p.recordedAt,
-            deviceId,
-            unitId,
-          };
-        }),
-      );
-      await this.repos.evidence.savePoints(occurrence.trip.id, resolved);
-      const status = resolved.some((p) => p.unitId) ? "disponible" : "parcial";
-      await this.repos.evidence.updateTripStatus(occurrence.trip.id, status);
-      return { pointCount: resolved.length, status, source: "memory" as const };
-    }
-
-    const provider = await this.getProviderForCarrier(contract.carrierAccountId);
-    return ingestEvidenceForTrip(provider, {
-      tripId: occurrence.trip.id,
-      imeis,
-      windowStart: occurrence.trip.evidenceWindowStart,
-      windowEnd: occurrence.trip.evidenceWindowEnd,
-      resolveUnit: async (imei, at) => {
-        const device = imeiToDevice.get(imei);
-        if (!device) return null;
-        const assignment = await this.repos.fleet.resolveUnitAtTime(device.id, at);
-        if (!assignment) return null;
-        return { unitId: assignment.unitId, deviceId: device.id };
-      },
-      savePoints: async (points) => {
-        await this.repos.evidence.savePoints(occurrence.trip!.id, points);
-      },
-      updateStatus: async (status) => {
-        await this.repos.evidence.updateTripStatus(occurrence.trip!.id, status);
-      },
-    });
-  }
 }
