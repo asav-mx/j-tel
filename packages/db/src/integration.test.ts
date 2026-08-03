@@ -1155,3 +1155,100 @@ describe("savePoints — el INSERT que no cabía", () => {
   });
 
 });
+
+describe("el techo del contador — el futuro no cuenta como faltante", () => {
+  /**
+   * LA VALLA DE ESTE PR.
+   *
+   * El generador crea ocurrencias por adelantado: al escribir esto había 1 153
+   * en el futuro, hasta un mes después. Un contador de "vencidas sin veredicto"
+   * sin techo las cuenta a todas como si les faltara juicio, y el instrumento
+   * nace mintiendo. Ya costó dos investigaciones.
+   *
+   * Si alguien quita el `<= now() - umbral`, este test se pone rojo.
+   */
+  it("una ocurrencia futura sin hecho NO cuenta como fallo mudo", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const tecma = await repos.accounts.findBySlug("tecma");
+    if (!tecma) return;
+    const profiles = await repos.profiles.findForClient(tecma.id);
+    if (profiles.length === 0) return;
+    const profile = profiles[0]!;
+
+    const antes = await repos.occurrences.contarFallosMudos(2);
+
+    const enUnaSemana = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const serviceDate = "2099-05-05";
+    const previa = await db.query.serviceOccurrences.findFirst({
+      where: (o, { and, eq: e }) =>
+        and(e(o.serviceProfileId, profile.id), e(o.serviceDate, serviceDate)),
+    });
+    if (previa) await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, previa.id));
+
+    const [futura] = await db
+      .insert(serviceOccurrences)
+      .values({
+        serviceProfileId: profile.id,
+        contractId: profile.contractId,
+        routeShiftId: profile.routeShiftId,
+        serviceDate,
+        expectedDeadline: enUnaSemana,
+        expectedGeofenceId: profile.geofenceId,
+      })
+      .returning();
+    if (!futura) throw new Error("No se pudo insertar la ocurrencia futura");
+
+    try {
+      const despues = await repos.occurrences.contarFallosMudos(2);
+      // Sin hecho, pero su plazo no ha llegado: el contador no se inmuta.
+      expect(despues.total).toBe(antes.total);
+    } finally {
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, futura.id));
+    }
+  });
+
+  it("una vencida hace días SIN hecho sí cuenta, y el umbral la deja fuera si es reciente", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const tecma = await repos.accounts.findBySlug("tecma");
+    if (!tecma) return;
+    const profiles = await repos.profiles.findForClient(tecma.id);
+    if (profiles.length === 0) return;
+    const profile = profiles[0]!;
+
+    const antes = await repos.occurrences.contarFallosMudos(2);
+
+    // Venció hace 6 h: pasa el umbral de 2 h, no el de 24 h.
+    const hace6h = new Date(Date.now() - 6 * 60 * 60 * 1000);
+    const serviceDate = "2099-05-06";
+    const previa = await db.query.serviceOccurrences.findFirst({
+      where: (o, { and, eq: e }) =>
+        and(e(o.serviceProfileId, profile.id), e(o.serviceDate, serviceDate)),
+    });
+    if (previa) await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, previa.id));
+
+    const [vencida] = await db
+      .insert(serviceOccurrences)
+      .values({
+        serviceProfileId: profile.id,
+        contractId: profile.contractId,
+        routeShiftId: profile.routeShiftId,
+        serviceDate,
+        expectedDeadline: hace6h,
+        expectedGeofenceId: profile.geofenceId,
+      })
+      .returning();
+    if (!vencida) throw new Error("No se pudo insertar la ocurrencia vencida");
+
+    try {
+      expect((await repos.occurrences.contarFallosMudos(2)).total).toBe(antes.total + 1);
+      // El umbral es el techo: con 24 h esta misma fila queda fuera.
+      expect((await repos.occurrences.contarFallosMudos(24)).total).toBe(antes.total);
+    } finally {
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, vencida.id));
+    }
+  });
+});

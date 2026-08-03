@@ -1,6 +1,7 @@
 export * from "./verification.js";
 export * from "./sin-evidencia-posible.js";
 export * from "./recuperacion-tardia.js";
+export * from "./motivo-sin-evidencia.js";
 export * from "./providers.js";
 export * from "./archiver.js";
 export * from "./ingest-health.js";

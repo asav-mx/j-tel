@@ -10,6 +10,10 @@ import {
   recuperacionTardia,
   FILAS_QUE_CABIAN_ANTES_DEL_LOTEO,
 } from "./recuperacion-tardia.js";
+import {
+  motivoSinEvidencia,
+  type MotivoSinEvidencia,
+} from "./motivo-sin-evidencia.js";
 import type { ComplianceFact, Repositories } from "@jtel/db";
 import type { ContractPolicy, VerificationResult } from "@jtel/domain";
 import { localDateIso, JTTEL_TZ } from "@jtel/domain";
@@ -200,6 +204,9 @@ export class VerificationService {
    */
   private horizonteMemoriaPorCarrier = new Map<string, Date | null>();
 
+  /** Marca de agua del archivador por carrier, cacheada por corrida. */
+  private marcaDeAguaPorCarrier = new Map<string, Date | null>();
+
   constructor(
     private repos: Repositories,
     private config: VerificationServiceConfig,
@@ -254,10 +261,56 @@ export class VerificationService {
         results.push(result);
         verifiedIds.push(row.occurrence.id);
       } catch (err) {
+        /*
+         * EL FALLO DEJA RASTRO. ESTE `catch` ES EL QUE ESCONDIÓ 35 DÍAS.
+         *
+         * Antes solo empujaba `{ skipped: true }` a un arreglo que se
+         * devolvía en el JSON de la respuesta del cron. Nadie lee esa
+         * respuesta: Vercel la descarta, y cuando el proceso muere por falta
+         * de memoria ni siquiera llega a devolverse. Ocho servicios de un
+         * cliente vivo reventaron aquí cada minuto durante cinco semanas sin
+         * dejar una sola marca en ningún lado.
+         *
+         * La regla que sale de eso: **la verdad tiene que salir del estado de
+         * la base, no del valor que devuelve la corrida.** Por eso se escribe
+         * en el ledger, donde vive el resto de la historia del servicio y
+         * donde una consulta lo puede encontrar después.
+         */
+        const mensaje = err instanceof Error ? err.message : String(err);
+        try {
+          await this.repos.compliance.addLedgerEntry({
+            tripId: row.trip.id,
+            serviceOccurrenceId: row.occurrence.id,
+            actorKind: "system:cron",
+            actorId: null,
+            action: "verificacion_fallida",
+            steps: [
+              {
+                step: "verificacion_interrumpida",
+                result: "error",
+                details: {
+                  error: mensaje.slice(0, 500),
+                  tipo: err instanceof Error ? err.name : "desconocido",
+                  nota: "La verificación de este servicio se interrumpió y NO dejó veredicto. No es 'sin evidencia': es que el árbitro no llegó a dictar.",
+                },
+              },
+            ],
+            metadata: { fallo: true, tipo: err instanceof Error ? err.name : "desconocido" },
+          });
+        } catch (errLedger) {
+          // Si ni el rastro se puede escribir, al menos que salga por consola.
+          // Nunca dejar que registrar el fallo se coma el resto de la corrida.
+          console.error(
+            `[verify] ${row.occurrence.id}: falló la verificación Y su registro —`,
+            errLedger,
+          );
+        }
+        console.error(`[verify] ${row.occurrence.id}: ${mensaje}`);
+
         results.push({
           occurrenceId: row.occurrence.id,
           skipped: true,
-          error: err instanceof Error ? err.message : String(err),
+          error: mensaje,
         });
       }
     }
@@ -728,6 +781,16 @@ export class VerificationService {
    * intentarlo. NO toca el veredicto: eso es `pendiente_evidencia` y así se
    * queda — sin evidencia no es incumplimiento.
    */
+  /** Hasta qué instante tiene dato guardado el archivador para ese carrier. */
+  private async marcaDeAguaDe(carrierAccountId: string): Promise<Date | null> {
+    const cache = this.marcaDeAguaPorCarrier.get(carrierAccountId);
+    if (cache !== undefined) return cache;
+    const marca = await this.repos.telemetry.getWatermark(carrierAccountId);
+    const valor = marca?.lastRecordedAt ?? null;
+    this.marcaDeAguaPorCarrier.set(carrierAccountId, valor);
+    return valor;
+  }
+
   private async evaluarSinEvidenciaPosible(input: {
     occurrenceId: string;
     tripId: string;
@@ -870,6 +933,7 @@ export class VerificationService {
     let ingestStatus: "disponible" | "parcial" | "indisponible" = "indisponible";
     let ingestPointCount = 0;
     let razonRetiro: RazonSinEvidencia | null = null;
+    let motivoPendiente: MotivoSinEvidencia | null = null;
 
     if (reuseEvidence) {
       ingestSource = "cached";
@@ -929,6 +993,15 @@ export class VerificationService {
     // volver a intentarlo el minuto que viene, o este servicio no se puede
     // resolver? Sin esta pregunta, cinco servicios de junio se reintentaron
     // 31 400 veces cada uno. Ver `sin-evidencia-posible.ts`.
+    if (ingestStatus === "indisponible") {
+      // ¿La memoria todavía no llega, o el camión no transmitió? Instrumental
+      // interno: va al ledger y a J-Staff, NUNCA a la cara del cliente.
+      motivoPendiente = motivoSinEvidencia({
+        finDeVentana: trip.evidenceWindowEnd,
+        marcaDeAgua: await this.marcaDeAguaDe(contract.carrierAccountId),
+      });
+    }
+
     if (ingestStatus === "indisponible" && !opts.force) {
       razonRetiro = await this.evaluarSinEvidenciaPosible({
         occurrenceId,
@@ -1284,6 +1357,8 @@ export class VerificationService {
         ingestStatus,
         ingestSource,
         pointCount: ingestPointCount,
+        // Solo cuando no llegó un punto. Interno: J-Staff lo lee, el cliente no.
+        ...(motivoPendiente ? { motivoSinEvidencia: motivoPendiente } : {}),
         candidateUnits: verification.candidateUnits,
         ...(opts.eliminationPass
           ? {

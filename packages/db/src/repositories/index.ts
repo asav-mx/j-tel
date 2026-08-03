@@ -2596,6 +2596,148 @@ export class OccurrenceRepository {
     await this.queryOccurrencesWithRelations([], 1);
   }
 
+  /**
+   * ⚠️ EL TECHO NO ES OPCIONAL. ⚠️
+   *
+   * Estas dos consultas cuentan lo que le FALTA veredicto al motor. El
+   * generador de ocurrencias trabaja por adelantado —hoy hay 1 161 ocurrencias
+   * futuras creadas, hasta el 2026-09-02—, así que una consulta sin techo las
+   * cuenta a todas como si les faltara juicio y el instrumento nace mintiendo.
+   * Eso ya costó dos investigaciones.
+   *
+   * El techo es el propio umbral: `plazo + gracia <= ahora − umbral`. Una sola
+   * condición cierra las dos puertas —el futuro y lo recién vencido—, y por eso
+   * no puede haber una llamada sin umbral.
+   */
+
+  /**
+   * Servicios que YA deberían tener veredicto y no tienen NINGUNO.
+   *
+   * No es lo mismo que "pendiente por evidencia": un servicio sin señal sí
+   * escribe su hecho. Sin hecho significa que la verificación **reventó** y
+   * nadie se enteró — el fallo mudo que escondió ocho servicios 35 días.
+   *
+   * Umbral por omisión 2 h: el camino sano escribe el primer hecho en menos de
+   * 5 minutos (785 de 926 medidos), y la caída más larga que no fue de
+   * credenciales duró 101 min. 2 h la despeja con margen.
+   */
+  async contarFallosMudos(umbralHoras = 2): Promise<{ total: number; masAntiguoHoras: number | null }> {
+    // Entero finito y no negativo: el intervalo viaja como parámetro, nunca
+    // interpolado en el SQL.
+    const horas = Number.isFinite(umbralHoras) ? Math.max(0, Math.floor(umbralHoras)) : 0;
+    const [row] = await this.db
+      .select({
+        total: sql<number>`count(*)::int`,
+        masViejo: sql<Date | null>`min(${serviceOccurrences.expectedDeadline})`,
+      })
+      .from(serviceOccurrences)
+      .innerJoin(serviceContracts, eq(serviceOccurrences.contractId, serviceContracts.id))
+      .leftJoin(complianceFacts, eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id))
+      .where(
+        and(
+          isNull(complianceFacts.id),
+          sql`${serviceOccurrences.expectedDeadline}
+              + COALESCE((${serviceContracts.policy}->>'verificationGraceMinutes')::int, 0) * interval '1 minute'
+              <= now() - make_interval(hours => ${horas})`,
+        ),
+      );
+    const total = Number(row?.total ?? 0);
+    const masAntiguoHoras = row?.masViejo
+      ? (Date.now() - new Date(row.masViejo).getTime()) / 3_600_000
+      : null;
+    return { total, masAntiguoHoras };
+  }
+
+  /**
+   * Servicios atascados en `pendiente_evidencia` desde hace demasiado, sin
+   * haber sido retirados de la cola.
+   *
+   * Umbral por omisión 48 h y no 2: aquí el piso de ruido es el archivador, que
+   * tarda una media de ~7 h y un p95 de ~30 h en cubrir una ventana. Medir esto
+   * con el umbral del otro contador lo dejaría rojo de forma permanente, y un
+   * instrumento que siempre grita es un instrumento apagado.
+   *
+   * Los ya retirados (`sin_evidencia_posible`) NO cuentan: ya se declaró que no
+   * tienen arreglo y salieron de la cola a propósito.
+   */
+  async contarPendientesEstancados(
+    umbralHoras = 48,
+  ): Promise<{ total: number; masAntiguoHoras: number | null }> {
+    // Entero finito y no negativo: el intervalo viaja como parámetro, nunca
+    // interpolado en el SQL.
+    const horas = Number.isFinite(umbralHoras) ? Math.max(0, Math.floor(umbralHoras)) : 0;
+    const [row] = await this.db
+      .select({
+        total: sql<number>`count(*)::int`,
+        masViejo: sql<Date | null>`min(${serviceOccurrences.expectedDeadline})`,
+      })
+      .from(serviceOccurrences)
+      .innerJoin(serviceContracts, eq(serviceOccurrences.contractId, serviceContracts.id))
+      .innerJoin(trips, eq(trips.serviceOccurrenceId, serviceOccurrences.id))
+      .innerJoin(complianceFacts, eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id))
+      .where(
+        and(
+          eq(complianceFacts.status, "pendiente_evidencia"),
+          ne(trips.evidenceStatus, "sin_evidencia_posible"),
+          sql`${serviceOccurrences.expectedDeadline}
+              + COALESCE((${serviceContracts.policy}->>'verificationGraceMinutes')::int, 0) * interval '1 minute'
+              <= now() - make_interval(hours => ${horas})`,
+        ),
+      );
+    const total = Number(row?.total ?? 0);
+    const masAntiguoHoras = row?.masViejo
+      ? (Date.now() - new Date(row.masViejo).getTime()) / 3_600_000
+      : null;
+    return { total, masAntiguoHoras };
+  }
+
+  /**
+   * Los pendientes estancados, uno por uno, con el motivo que el motor dejó
+   * escrito en el ledger de su última verificación.
+   *
+   * El motivo (`memoria_no_alcanza` vs `sin_senal`) es instrumental interno:
+   * esta consulta la usa la cara J-Staff y nadie más. La planta ve
+   * `pendiente_evidencia` y nada más.
+   */
+  async listarPendientesEstancados(umbralHoras = 48, limite = 50) {
+    const horas = Number.isFinite(umbralHoras) ? Math.max(0, Math.floor(umbralHoras)) : 0;
+    const rows = await this.db
+      .select({
+        occurrenceId: serviceOccurrences.id,
+        serviceDate: serviceOccurrences.serviceDate,
+        expectedDeadline: serviceOccurrences.expectedDeadline,
+        contrato: serviceContracts.name,
+        evidenceStatus: trips.evidenceStatus,
+        motivo: sql<string | null>`(
+          SELECT le.metadata->>'motivoSinEvidencia'
+            FROM ${ledgerEntries} le
+           WHERE le.service_occurrence_id = ${serviceOccurrences.id}
+             AND le.action = 'verificacion_automatica'
+           ORDER BY le.created_at DESC
+           LIMIT 1)`,
+        intentos: sql<number>`(
+          SELECT count(*)::int FROM ${ledgerEntries} le
+           WHERE le.service_occurrence_id = ${serviceOccurrences.id}
+             AND le.action = 'verificacion_automatica')`,
+      })
+      .from(serviceOccurrences)
+      .innerJoin(serviceContracts, eq(serviceOccurrences.contractId, serviceContracts.id))
+      .innerJoin(trips, eq(trips.serviceOccurrenceId, serviceOccurrences.id))
+      .innerJoin(complianceFacts, eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id))
+      .where(
+        and(
+          eq(complianceFacts.status, "pendiente_evidencia"),
+          ne(trips.evidenceStatus, "sin_evidencia_posible"),
+          sql`${serviceOccurrences.expectedDeadline}
+              + COALESCE((${serviceContracts.policy}->>'verificationGraceMinutes')::int, 0) * interval '1 minute'
+              <= now() - make_interval(hours => ${horas})`,
+        ),
+      )
+      .orderBy(serviceOccurrences.expectedDeadline)
+      .limit(limite);
+    return rows;
+  }
+
   private async queryOccurrencesWithRelations(conditions: unknown[], limit?: number) {
     return this.db.query.serviceOccurrences.findMany({
       where: and(...(conditions as Parameters<typeof and>)),
@@ -3321,6 +3463,43 @@ export class ComplianceRepository {
         ),
       );
     return Number(row?.n ?? 0);
+  }
+
+  /**
+   * Cuándo escribió el motor por última vez, sea lo que sea que haya escrito.
+   *
+   * Es el latido: el cron corre cada minuto, así que un silencio largo aquí
+   * significa que el árbitro dejó de dictar. Hubo 810 interrupciones en 14 días
+   * sin que nadie se enterara porque nada miraba esto.
+   */
+  async ultimoLatidoDelMotor(): Promise<Date | null> {
+    const [row] = await this.db
+      .select({ ultimo: sql<Date | null>`max(${ledgerEntries.createdAt})` })
+      .from(ledgerEntries)
+      .where(
+        inArray(ledgerEntries.action, [
+          "verificacion_automatica",
+          "sin_evidencia_posible",
+          "verificacion_fallida",
+        ]),
+      );
+    return row?.ultimo ? new Date(row.ultimo) : null;
+  }
+
+  /** Verificaciones que reventaron y dejaron rastro. Cara J-Staff. */
+  async listarFallosDeVerificacion(limite = 20) {
+    return this.db
+      .select({
+        id: ledgerEntries.id,
+        serviceOccurrenceId: ledgerEntries.serviceOccurrenceId,
+        createdAt: ledgerEntries.createdAt,
+        error: sql<string | null>`${ledgerEntries.steps}->0->'details'->>'error'`,
+        tipo: sql<string | null>`${ledgerEntries.metadata}->>'tipo'`,
+      })
+      .from(ledgerEntries)
+      .where(eq(ledgerEntries.action, "verificacion_fallida"))
+      .orderBy(desc(ledgerEntries.createdAt))
+      .limit(limite);
   }
 
   async getLedgerForTrip(tripId: string) {
