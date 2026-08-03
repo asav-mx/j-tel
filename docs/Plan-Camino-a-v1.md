@@ -32,8 +32,9 @@ razonamiento interno del árbitro.
 
 ### 1.a — `CRON_SECRET`
 
-Las siete rutas conservan `?? "dev-cron-secret"`, y el valor está publicado en
-**dos lugares**: `README.md:64` y `docs/DESPUES.md:1064`.
+Las siete rutas conservan un valor de respaldo fijo detrás de `??`, y ese valor
+está publicado en **dos lugares**: `README.md:64` y `docs/DESPUES.md:1064`. No se
+transcribe aquí — un plan que lo repita es un tercer lugar donde queda escrito.
 
 Matiz confirmado: `verificar-env.mjs` sí exige la variable al arrancar, **pero
 eso valida el entorno, no quita el respaldo del código.** Si falta en runtime, el
