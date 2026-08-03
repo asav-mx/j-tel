@@ -1,6 +1,11 @@
 import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
-import { computeDayRecall } from "@jtel/services";
+import {
+  computeDayRecall,
+  HORAS_FALLO_MUDO,
+  explicarMotivo,
+  type MotivoSinEvidencia,
+} from "@jtel/services";
 import { localDateTimeShort } from "@jtel/domain";
 import Link from "next/link";
 
@@ -14,6 +19,34 @@ export default async function JStaffVerificacionPage() {
   const unresolved = await repos.ingestAlerts.listUnresolved(20);
   const recentAlerts = await repos.ingestAlerts.listRecent(15);
   const groundTruth = await repos.groundTruth.listRecent(20);
+
+  /*
+   * EL MOTOR, ANTES QUE LA INGESTA.
+   *
+   * Esta pantalla vigilaba marcas de agua, alertas y recall — todo sobre los
+   * datos que ENTRAN— y nada sobre si el árbitro llegó a dictar con ellos. Por
+   * eso ocho servicios de un cliente vivo pasaron 35 días sin veredicto con
+   * todo en verde.
+   *
+   * Los dos conteos miden cosas distintas y por eso llevan umbrales distintos:
+   * sin veredicto es una verificación que reventó (2 h, porque el camino sano
+   * escribe en minutos); estancado es un pendiente que no se resuelve (48 h,
+   * porque el archivador tarda un p95 de ~30 h en cubrir una ventana).
+   */
+  const HORAS_ESTANCADO = 48;
+  const [fallosMudos, estancados, detalleEstancados, ultimoLatido, fallosRegistrados] =
+    await Promise.all([
+      repos.occurrences.contarFallosMudos(HORAS_FALLO_MUDO),
+      repos.occurrences.contarPendientesEstancados(HORAS_ESTANCADO),
+      repos.occurrences.listarPendientesEstancados(HORAS_ESTANCADO, 25),
+      repos.compliance.ultimoLatidoDelMotor(),
+      repos.compliance.listarFallosDeVerificacion(10),
+    ]);
+
+  const minutosSinLatido = ultimoLatido
+    ? (Date.now() - ultimoLatido.getTime()) / 60_000
+    : null;
+  const un = (n: number) => n.toFixed(1);
 
   const clients = await repos.accounts.listByType("client");
   const contracts = [];
@@ -65,6 +98,118 @@ export default async function JStaffVerificacionPage() {
             { href: "/jstaff/soporte", label: "Soporte" },
           ]}
         />
+
+        <Card title="El motor">
+          <p className="mb-4 text-sm text-[var(--muted)]">
+            Si el árbitro llegó a dictar. Todo lo de abajo mide la ingesta —los datos que
+            entran—; esto mide si alguien los está usando para sellar.
+          </p>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded border border-[var(--linea-tenue)] p-3">
+              <p className="font-[family-name:var(--fuente-mono)] text-2xl tabular-nums text-[var(--acero)]">
+                {fallosMudos.total}
+              </p>
+              <p className="mt-1 text-sm">servicios vencidos SIN veredicto</p>
+              <p className="mt-1 font-[family-name:var(--fuente-mono)] text-[11px] text-[var(--tenue)]">
+                umbral {HORAS_FALLO_MUDO} h
+                {fallosMudos.masAntiguoHoras != null
+                  ? ` · el más viejo hace ${un(fallosMudos.masAntiguoHoras)} h`
+                  : ""}
+              </p>
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                No es &quot;sin evidencia&quot;: un servicio sin señal sí escribe su hecho.
+                Cero hechos = la verificación reventó.
+              </p>
+            </div>
+
+            <div className="rounded border border-[var(--linea-tenue)] p-3">
+              <p className="font-[family-name:var(--fuente-mono)] text-2xl tabular-nums text-[var(--acero)]">
+                {estancados.total}
+              </p>
+              <p className="mt-1 text-sm">pendientes sin resolver</p>
+              <p className="mt-1 font-[family-name:var(--fuente-mono)] text-[11px] text-[var(--tenue)]">
+                umbral {HORAS_ESTANCADO} h
+                {estancados.masAntiguoHoras != null
+                  ? ` · el más viejo hace ${un(estancados.masAntiguoHoras)} h`
+                  : ""}
+              </p>
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                Los retirados por no tener evidencia posible no cuentan: salieron de la cola a
+                propósito.
+              </p>
+            </div>
+
+            <div className="rounded border border-[var(--linea-tenue)] p-3">
+              <p className="font-[family-name:var(--fuente-mono)] text-2xl tabular-nums text-[var(--acero)]">
+                {minutosSinLatido == null ? "—" : un(minutosSinLatido)}
+              </p>
+              <p className="mt-1 text-sm">min desde el último sello</p>
+              <p className="mt-1 font-[family-name:var(--fuente-mono)] text-[11px] text-[var(--tenue)]">
+                {ultimoLatido ? localDateTimeShort(ultimoLatido) : "sin sellos registrados"}
+              </p>
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                Actividad, NO latido del cron: el motor solo escribe cuando hay algo que
+                sellar, así que el silencio es normal si no hay servicios vencidos. Que el
+                cron esté vivo necesita su propia señal, y todavía no existe.
+              </p>
+            </div>
+          </div>
+
+          {detalleEstancados.length > 0 && (
+            <details className="mt-4 text-sm">
+              <summary className="cursor-pointer text-[var(--azul)]">
+                Por qué siguen pendientes · {detalleEstancados.length} de {estancados.total},
+                los más viejos
+              </summary>
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                Interno. El motivo distingue lo que se arregla esperando de lo que no. La
+                planta no lo ve: para ella el resultado es pendiente por evidencia y nada más.
+              </p>
+              <ul className="mt-2 space-y-1">
+                {detalleEstancados.map((e) => (
+                  <li
+                    key={e.occurrenceId}
+                    className="rounded border border-[var(--linea-tenue)] p-2 text-xs"
+                  >
+                    <Link
+                      href={`/jstaff/diagnostico/${e.occurrenceId}`}
+                      className="font-[family-name:var(--fuente-mono)] text-[var(--azul)]"
+                    >
+                      {e.serviceDate}
+                    </Link>{" "}
+                    <span className="text-[var(--muted)]">
+                      · {e.contrato} · {e.intentos} intentos
+                    </span>
+                    <p className="mt-1 text-[var(--tenue)]">
+                      {e.motivo
+                        ? explicarMotivo(e.motivo as MotivoSinEvidencia)
+                        : "El motor no dejó motivo escrito para este servicio."}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+
+          {fallosRegistrados.length > 0 && (
+            <details className="mt-3 text-sm">
+              <summary className="cursor-pointer text-[var(--azul)]">
+                Verificaciones que reventaron ({fallosRegistrados.length})
+              </summary>
+              <ul className="mt-2 space-y-1">
+                {fallosRegistrados.map((f) => (
+                  <li key={f.id} className="text-xs text-[var(--muted)]">
+                    <span className="font-[family-name:var(--fuente-mono)] text-[var(--tenue)]">
+                      {localDateTimeShort(f.createdAt)}
+                    </span>{" "}
+                    · {f.tipo ?? "error"} · {(f.error ?? "").slice(0, 120)}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </Card>
 
         <Card title="Salud de ingesta">
           <p className="mb-4 text-sm text-[var(--muted)]">

@@ -3,6 +3,7 @@ import {
   evaluarSalud,
   diagnostico,
   UMBRALES_SALUD,
+  HORAS_FALLO_MUDO,
   type MuestraSalud,
 } from "./salud.js";
 
@@ -15,6 +16,7 @@ const muestra = (over: Partial<MuestraSalud> = {}): MuestraSalud => ({
   carriersEsperados: 1,
   alertasCriticasAbiertas: 0,
   alertaCriticaMasAntigua: null,
+  verificacion: { fallosMudos: 0, masAntiguoHoras: null },
   ...over,
 });
 
@@ -106,5 +108,42 @@ describe("diagnostico", () => {
   it("sin marcas no inventa diagnóstico", () => {
     const r = evaluarSalud(muestra({ marcas: [], carriersEsperados: 0 }));
     expect(diagnostico(r)).toContain("sin marcas");
+  });
+});
+
+describe("el chequeo que faltaba — servicios vencidos sin veredicto", () => {
+  it("uno solo enferma la plataforma: no hay tolerancia", () => {
+    // Un servicio sin señal SÍ escribe su hecho. Cero hechos = la verificación
+    // reventó, y eso es lo que estuvo mudo 35 días.
+    const r = evaluarSalud(muestra({ verificacion: { fallosMudos: 1, masAntiguoHoras: 840 } }));
+    expect(chequeo(r, "verificacion").estado).toBe("enfermo");
+    expect(r.estado).toBe("enfermo");
+  });
+
+  it("el motor manda sobre la ingesta en el diagnóstico", () => {
+    // Que la telemetría entre puntual no consuela si nadie dicta veredictos.
+    const r = evaluarSalud(muestra({ verificacion: { fallosMudos: 8, masAntiguoHoras: 840 } }));
+    expect(diagnostico(r)).toContain("8 servicios");
+    expect(diagnostico(r)).not.toContain("ingesta al día");
+  });
+
+  it("la lectura trae la medición junto a su umbral", () => {
+    const sano = chequeo(evaluarSalud(muestra()), "verificacion");
+    expect(sano.lectura).toContain(`${HORAS_FALLO_MUDO} h`);
+    expect(sano.umbralMinutos).toBe(HORAS_FALLO_MUDO * 60);
+  });
+
+  it("SIN el conteo, la salud NO se da por buena", () => {
+    /*
+     * La valla de este PR. Si el conteo no llega —consulta caída, refactor que
+     * la olvida— la respuesta honesta es "no sé", y "no sé" no es "sano". Un
+     * vigilante que calla lo que no midió es el que dejó pasar los 35 días.
+     */
+    const sinConteo = muestra();
+    delete (sinConteo as Partial<MuestraSalud>).verificacion;
+    const r = evaluarSalud(sinConteo);
+    expect(chequeo(r, "verificacion").estado).toBe("enfermo");
+    expect(r.estado).toBe("enfermo");
+    expect(diagnostico(r)).toContain("no se pudo contar");
   });
 });

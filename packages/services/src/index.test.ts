@@ -1102,6 +1102,9 @@ describe("sin evidencia posible — el servicio sale de la cola de reintento", (
       telemetry: {
         getForImeis: vi.fn().mockResolvedValue([]),
         getMemoryHorizon: vi.fn().mockResolvedValue(opciones.horizonte),
+        // El archivador ya pasó de esta ventana de junio: si no hay puntos,
+        // es que la unidad no transmitió, no que falte esperar.
+        getWatermark: vi.fn().mockResolvedValue({ lastRecordedAt: new Date("2026-08-01T00:00:00Z") }),
       },
       routes: {
         getKmlVersionForDate: vi.fn().mockResolvedValue(null),
@@ -1153,6 +1156,13 @@ describe("sin evidencia posible — el servicio sale de la cola de reintento", (
     // Y no vuelve a notificar lo mismo: el veredicto no cambió.
     expect(repos.notifications.create).not.toHaveBeenCalled();
 
+    // El motivo queda en el ledger — y SOLO ahí. La marca de agua del
+    // archivador ya pasó de esta ventana, así que la unidad no transmitió.
+    const auto = repos.compliance.addLedgerEntry.mock.calls
+      .map((c) => c[0])
+      .find((e) => e.action === "verificacion_automatica");
+    expect(auto.metadata.motivoSinEvidencia).toBe("sin_senal");
+
     vi.restoreAllMocks();
   });
 
@@ -1183,5 +1193,67 @@ describe("sin evidencia posible — el servicio sale de la cola de reintento", (
     ).toBeUndefined();
 
     vi.restoreAllMocks();
+  });
+});
+
+describe("el catch deja rastro — el silencio que costó 35 días", () => {
+  it("una verificación que revienta escribe verificacion_fallida en el ledger", async () => {
+    /*
+     * Antes esto solo empujaba { skipped: true } a un arreglo que se devolvía
+     * en el JSON del cron. Nadie lee esa respuesta, y cuando el proceso muere
+     * por falta de memoria ni siquiera llega a devolverse. Ocho servicios
+     * reventaron aquí cada minuto durante cinco semanas sin dejar una marca.
+     */
+    const addLedgerEntry = vi.fn();
+    const repos = {
+      occurrences: {
+        findPendingVerification: vi.fn().mockResolvedValue([
+          { occurrence: { id: "occ-que-truena" }, contract: {}, trip: { id: "trip-1" } },
+        ]),
+        // Lo que hace tronar verifyOccurrence: no encuentra la ocurrencia.
+        findById: vi.fn().mockResolvedValue(null),
+      },
+      compliance: { addLedgerEntry },
+    };
+
+    const service = new VerificationService(repos as never, {
+      umbrellaBaseUrl: "http://example.com",
+    });
+    const results = await service.processPending();
+
+    expect(results[0]).toMatchObject({ occurrenceId: "occ-que-truena", skipped: true });
+
+    const rastro = addLedgerEntry.mock.calls
+      .map((c) => c[0])
+      .find((e) => e.action === "verificacion_fallida");
+    expect(rastro).toBeDefined();
+    expect(rastro.serviceOccurrenceId).toBe("occ-que-truena");
+    expect(rastro.tripId).toBe("trip-1");
+    expect(rastro.steps[0].result).toBe("error");
+    expect(rastro.steps[0].details.error).toContain("no encontrado");
+    // La distinción que importa: esto NO es "sin evidencia".
+    expect(rastro.steps[0].details.nota).toContain("no llegó a dictar");
+  });
+
+  it("si ni el rastro se puede escribir, la corrida sigue", async () => {
+    // Registrar el fallo nunca puede comerse el resto de los servicios.
+    const repos = {
+      occurrences: {
+        findPendingVerification: vi.fn().mockResolvedValue([
+          { occurrence: { id: "occ-a" }, contract: {}, trip: { id: "trip-a" } },
+          { occurrence: { id: "occ-b" }, contract: {}, trip: { id: "trip-b" } },
+        ]),
+        findById: vi.fn().mockResolvedValue(null),
+      },
+      compliance: { addLedgerEntry: vi.fn().mockRejectedValue(new Error("ledger caído")) },
+    };
+
+    const service = new VerificationService(repos as never, {
+      umbrellaBaseUrl: "http://example.com",
+    });
+    const results = await service.processPending();
+
+    expect(results).toHaveLength(2);
+    expect(results.every((r) => (r as { skipped?: boolean }).skipped)).toBe(true);
   });
 });

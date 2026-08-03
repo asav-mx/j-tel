@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos, isDatabaseConfigured } from "@/lib/db";
-import { evaluarSalud, diagnostico, UMBRALES_SALUD } from "@jtel/services";
+import { evaluarSalud, diagnostico, UMBRALES_SALUD, HORAS_FALLO_MUDO } from "@jtel/services";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +24,17 @@ function responder(estado: "sano" | "enfermo", cuerpo: Record<string, unknown>) 
     { estado, ...cuerpo },
     {
       status: estado === "sano" ? 200 : 503,
-      headers: { "cache-control": "no-store" },
+      /*
+       * El charset va explícito. JSON es UTF-8 por definición (RFC 8259) y los
+       * bytes que salen de aquí siempre fueron correctos, pero `application/json`
+       * a secas deja que el consumidor decida: un vigilante o una terminal con
+       * locale latin-1 pinta "día" como "dÃ­a" y el diagnóstico se lee roto
+       * justo cuando hace falta leerlo bien. Decirlo cuesta una cabecera.
+       */
+      headers: {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8",
+      },
     },
   );
 }
@@ -87,9 +97,13 @@ export async function GET(request: Request) {
     const carriers = await repos.accounts.listByType("carrier", { includeDemo: false });
     const reales = new Set(carriers.map((c) => c.id));
 
-    const [marcasTodas, abiertas] = await Promise.all([
+    const [marcasTodas, abiertas, fallosMudos] = await Promise.all([
       repos.telemetry.listWatermarks(),
       repos.ingestAlerts.listUnresolved(100),
+      // El chequeo que faltaba: si el árbitro llegó a dictar. Todo lo demás que
+      // vigila esta ruta es INGESTA, y por eso pudo decir "sano" durante 35
+      // días con ocho servicios de un cliente vivo sin veredicto.
+      repos.occurrences.contarFallosMudos(HORAS_FALLO_MUDO),
     ]);
 
     const marcas = marcasTodas
@@ -107,6 +121,10 @@ export async function GET(request: Request) {
         alertaCriticaMasAntigua: criticas.length
           ? criticas.reduce((v, a) => (a.createdAt < v ? a.createdAt : v), criticas[0]!.createdAt)
           : null,
+        verificacion: {
+          fallosMudos: fallosMudos.total,
+          masAntiguoHoras: fallosMudos.masAntiguoHoras,
+        },
       },
       UMBRALES_SALUD,
     );

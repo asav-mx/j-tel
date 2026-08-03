@@ -29,6 +29,21 @@ export const UMBRALES_SALUD: UmbralesSalud = {
   archivadorMaxMinutos: 30,
 };
 
+/**
+ * Horas que puede llevar un servicio vencido SIN NINGÚN hecho antes de que esto
+ * sea una falla de plataforma.
+ *
+ * El camino sano escribe el primer hecho en menos de 5 minutos (785 de 926
+ * medidos el 2026-08-03), y la caída más larga del cron que no fue de
+ * credenciales duró 101 minutos. 2 h la despeja con margen y sigue siendo ~120×
+ * el camino normal.
+ *
+ * NO confundir con el umbral de pendientes estancados (48 h): un pendiente por
+ * evidencia SÍ tiene hecho. Aquí se cuenta lo que no tiene ninguno, que es
+ * siempre una verificación que reventó.
+ */
+export const HORAS_FALLO_MUDO = 2;
+
 export type MarcaDeAgua = {
   /** Instante del dato de GPS más nuevo ya archivado. */
   lastRecordedAt: Date;
@@ -45,12 +60,21 @@ export type MuestraSalud = {
   alertasCriticasAbiertas: number;
   /** La crítica abierta más antigua, para poder decir desde cuándo. */
   alertaCriticaMasAntigua: Date | null;
+  /**
+   * Servicios vencidos hace más de `HORAS_FALLO_MUDO` SIN ningún hecho.
+   *
+   * Opcional para no romper a quien ya llamaba a `evaluarSalud`, pero cuando
+   * falta el chequeo se declara ausente en vez de darse por bueno: un
+   * vigilante que calla lo que no midió es exactamente el que dejó pasar 35
+   * días de silencio.
+   */
+  verificacion?: { fallosMudos: number; masAntiguoHoras: number | null };
 };
 
 export type EstadoSalud = "sano" | "enfermo";
 
 export type Chequeo = {
-  id: "gps" | "archivador" | "marcas" | "alertas";
+  id: "gps" | "archivador" | "marcas" | "alertas" | "verificacion";
   estado: EstadoSalud;
   /** Frase lista para leer: la medición SIEMPRE junto a su umbral. */
   lectura: string;
@@ -143,6 +167,46 @@ export function evaluarSalud(
     umbralMinutos: null,
   });
 
+  /*
+   * EL CHEQUEO QUE FALTABA.
+   *
+   * Hasta hoy esta ruta vigilaba marcas de agua, GPS, archivador y alertas —
+   * todo sobre la INGESTA— y ni una sola señal sobre si el árbitro llegó a
+   * dictar. Por eso pudo responder "sano" durante 35 días mientras ocho
+   * servicios de un cliente vivo no tenían veredicto: la telemetría entraba
+   * puntual, y eso era lo único que se miraba.
+   *
+   * Un servicio sin señal SÍ escribe su hecho (`pendiente_evidencia`). Cero
+   * hechos significa que la verificación reventó, y eso no tiene tolerancia:
+   * basta uno para declarar enfermo.
+   */
+  if (muestra.verificacion) {
+    const { fallosMudos, masAntiguoHoras } = muestra.verificacion;
+    const desde =
+      fallosMudos > 0 && masAntiguoHoras != null
+        ? ` · el más viejo vencido hace ${un(masAntiguoHoras)} h`
+        : "";
+    chequeos.push({
+      id: "verificacion",
+      estado: fallosMudos > 0 ? "enfermo" : "sano",
+      lectura:
+        fallosMudos === 0
+          ? `sin servicios vencidos sin veredicto · umbral ${HORAS_FALLO_MUDO} h`
+          : `${fallosMudos} servicio${fallosMudos === 1 ? "" : "s"} vencido${fallosMudos === 1 ? "" : "s"} hace más de ${HORAS_FALLO_MUDO} h SIN veredicto${desde}`,
+      minutos: null,
+      umbralMinutos: HORAS_FALLO_MUDO * 60,
+    });
+  } else {
+    // La ausencia se declara. Un chequeo que no corrió no es un chequeo sano.
+    chequeos.push({
+      id: "verificacion",
+      estado: "enfermo",
+      lectura: "no se pudo contar los servicios vencidos sin veredicto",
+      minutos: null,
+      umbralMinutos: HORAS_FALLO_MUDO * 60,
+    });
+  }
+
   return {
     estado: chequeos.some((c) => c.estado === "enfermo") ? "enfermo" : "sano",
     chequeos,
@@ -159,6 +223,11 @@ export function evaluarSalud(
  * Confundirlas fue lo que hizo dudar del diagnóstico el 2026-07-28.
  */
 export function diagnostico(r: ResultadoSalud): string {
+  // El motor manda sobre la ingesta: que la telemetría entre puntual no
+  // consuela si nadie está dictando veredictos con ella.
+  const ver = r.chequeos.find((c) => c.id === "verificacion");
+  if (ver?.estado === "enfermo") return ver.lectura;
+
   const gps = r.chequeos.find((c) => c.id === "gps");
   const arch = r.chequeos.find((c) => c.id === "archivador");
   if (!gps || !arch) return "sin marcas de agua que evaluar";
