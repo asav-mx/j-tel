@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { exigirCron } from "@/lib/guardia-cron";
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET ?? "dev-cron-secret";
-
-  if (authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const negada = exigirCron(request, "cron/renew-occurrences");
+  if (negada) return negada;
 
   const repos = getRepos();
   const result = await repos.occurrences.renewRollingWindow(30);

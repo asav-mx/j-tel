@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from "node:crypto";
+import { igualEnTiempoConstante } from "./comparacion-segura";
 
 /**
  * El bypass de desarrollo, sin base de datos ni encabezados.
@@ -40,17 +40,6 @@ export type EntornoDeIdentidad = {
   /** `JTEL_DEV_USER` del servidor. */
   usuarioPorVariable: string | undefined;
 };
-
-/**
- * Comparación en tiempo constante. Se compara el digest y no el texto para que
- * dos largos distintos no hagan lanzar a `timingSafeEqual`, que exige búferes
- * del mismo tamaño — y para que el largo del secreto tampoco se filtre.
- */
-function igualEnTiempoConstante(a: string, b: string): boolean {
-  const da = createHash("sha256").update(a).digest();
-  const db = createHash("sha256").update(b).digest();
-  return timingSafeEqual(da, db);
-}
 
 /**
  * ¿Se puede elegir identidad con un encabezado en esta petición?
