@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos, isDatabaseConfigured } from "@/lib/db";
+import { exigirCron } from "@/lib/guardia-cron";
 import { aplicarIncidentes, detectarAvisos } from "@/lib/alertas/datos";
 import { renderAvisos } from "@/lib/alertas/correo";
 import { ErrorDeCanal, resolverCanal } from "@/lib/alertas/canal";
@@ -27,11 +28,8 @@ export const dynamic = "force-dynamic";
  * esperar a que algo se caiga de verdad.
  */
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET ?? "dev-cron-secret";
-  if (authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const negada = exigirCron(request, "cron/alertas");
+  if (negada) return negada;
 
   if (!isDatabaseConfigured()) {
     return NextResponse.json(

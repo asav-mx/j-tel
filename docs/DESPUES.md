@@ -124,7 +124,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Medición honesta de kilómetros con brincos de GPS](#medición-honesta-de-kilómetros-con-brincos-de-gps) | v1.1 |
 | [Compuerta per-candidata](#compuerta-per-candidata) | v1.1 |
 | [Qué pasa si la política cambia con la ventana abierta](#qué-pasa-si-la-política-cambia-con-la-ventana-abierta) | **Al Marco Maestro** |
-| [`CRON_SECRET` cae a un secreto publicado](#cron_secret-cae-a-un-secreto-publicado) | 🔴 **Riesgo verificado — primero de la fila** |
+| [`CRON_SECRET` cae a un secreto publicado](#cron_secret-cae-a-un-secreto-publicado) | ✅ Código cerrado · 🤝 **falta rotarlo en Vercel** |
 | [Las páginas no comprueban permisos](#las-páginas-no-comprueban-permisos) | 🔴 **Antes del primer usuario real** |
 | [Cerrar el default de identidad heredada](#cerrar-el-default-de-identidad-heredada) | ⏸ Después de la guardia de páginas |
 | [El expediente por id sigue abierto](#el-expediente-por-id-sigue-abierto) | 🟡 Con la guardia por alcance |
@@ -1048,43 +1048,50 @@ estricta, que nunca descarta nada.
 
 ## `CRON_SECRET` cae a un secreto publicado
 
-**Qué es.** 🔴 **Verificado el 1 de agosto de 2026 leyendo el repo.** Las **siete rutas de
-cron** traen el mismo respaldo:
+> ✅ **El código quedó cerrado el 2 de agosto de 2026** (Fase 1.a de
+> `Plan-Camino-a-v1.md`). Ya no hay respaldo: sin `CRON_SECRET` las siete rutas
+> responden **503 con registro**, la comprobación vive en un solo
+> `apps/web/src/lib/guardia-cron.ts` y compara en tiempo constante, y el valor
+> salió del `README.md` y de esta entrada.
+>
+> **Sigue abierto el trámite:** 🤝 rotar el secreto en Vercel, asumiéndolo
+> comprometido. Mientras no se rote, el secreto viejo sigue publicado en el
+> historial de git de este repositorio. La entrada se queda hasta entonces.
 
-```ts
-const cronSecret = process.env.CRON_SECRET ?? "dev-cron-secret";
-```
+**Qué era.** 🔴 **Verificado el 1 de agosto de 2026 leyendo el repo.** Las **siete rutas de
+cron** traían el mismo respaldo — `process.env.CRON_SECRET` con un valor por omisión fijo
+escrito en el código:
 
 `cron/verify` · `cron/archive` · `cron/renew-occurrences` · `cron/ingest-heartbeat` ·
 `cron/gap-backfill` · las dos de alertas.
 
-**Y el `README.md` publica el valor:**
+**Y el `README.md` publicaba ese mismo valor** en el `curl` de ejemplo, así que la cadena
+que abría las siete se leía en la portada del repositorio.
 
-```
-curl -H "Authorization: Bearer dev-cron-secret" .../api/cron/verify
-```
-
-**Por qué es grave.** Un despliegue sin la variable —entorno nuevo, preview, variable que
+**Por qué era grave.** Un despliegue sin la variable —entorno nuevo, preview, variable que
 no se propagó— queda protegido por **una cadena que cualquiera lee en el repositorio**. Con
 ella se dispara verificación y archivado. Y **no hay error ni alerta: la app arranca y se
 ve bien.** Fallo abierto y silencioso a la vez, que es la peor combinación posible y la
 razón de ser de [la regla de los defaults](#defaults-que-fallan-abiertos).
 
-**Y hay dos criterios distintos en el mismo repo.** La comparación es `!==` sobre cadenas,
-**no en tiempo constante**, mientras `identidad-dev.ts` ya usa `igualEnTiempoConstante`.
+**Y había dos criterios distintos en el mismo repo.** La comparación era `!==` sobre
+cadenas, **no en tiempo constante**, mientras `identidad-dev.ts` ya usaba
+`igualEnTiempoConstante`.
 
 **Qué lo desbloquea.** Nada. Media hora de trabajo, riesgo alto, arreglo trivial — es lo
 primero de [el orden recomendado](#el-orden-recomendado). El arreglo completo:
 
-- **Quitar el respaldo.** Sin variable → **503 y registro, nunca 200.**
-- **Extraer a un solo `lib/guardia-cron.ts`** con comparación en tiempo constante.
-- **Quitar el valor del README.**
+- ✅ **Quitar el respaldo.** Sin variable → **503 y registro, nunca 200.**
+- ✅ **Extraer a un solo `lib/guardia-cron.ts`** con comparación en tiempo constante. La
+  comparación salió a `lib/comparacion-segura.ts`, que ahora usan la guardia y
+  `identidad-dev.ts`: un solo criterio, no dos implementaciones del mismo.
+- ✅ **Quitar el valor del README.**
 - 🤝 **Rotar el secreto en Vercel**, asumiéndolo comprometido — y por la
-  [Ley 5](#leyes-de-producto), **redesplegando en el mismo movimiento.**
+  [Ley 5](#leyes-de-producto), **redesplegando en el mismo movimiento.** **Pendiente.**
 
 **Dónde toca.** Las siete rutas bajo `apps/web/src/app/api/cron/`; `README.md`;
-`lib/guardia-cron.ts` (nuevo); `identidad-dev.ts` como referencia de la comparación
-correcta.
+`lib/guardia-cron.ts` (nuevo); `lib/comparacion-segura.ts` (nuevo);
+`identidad-dev.ts`, que dejó de tener su propia copia de la comparación.
 
 ## Las páginas no comprueban permisos
 

@@ -60,8 +60,12 @@ Abrir http://localhost:3000
 
 ## Cron verificación
 
+Las siete rutas de cron exigen `CRON_SECRET`. **No hay valor por omisión, tampoco en
+local:** sin la variable responden `503` y lo dejan en el registro — nunca `200`. Ponla en
+tu `.env` (`verificar-env.mjs` la exige al arrancar) y úsala desde ahí:
+
 ```bash
-curl -H "Authorization: Bearer dev-cron-secret" http://localhost:3000/api/cron/verify
+curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/verify
 ```
 
 <!-- deploy: credenciales GPS por carrier (JTEL_SECRET_KEY) -->
