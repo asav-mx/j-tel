@@ -14,6 +14,7 @@ import {
   motivoSinEvidencia,
   type MotivoSinEvidencia,
 } from "./motivo-sin-evidencia.js";
+import { motivoCuentaDemo } from "./cuenta-demo.js";
 import type { ComplianceFact, Repositories } from "@jtel/db";
 import type { ContractPolicy, VerificationResult } from "@jtel/domain";
 import { localDateIso, JTTEL_TZ } from "@jtel/domain";
@@ -252,6 +253,24 @@ export class VerificationService {
 
   async processPending(now = new Date()) {
     const pending = await this.repos.occurrences.findPendingVerification(now);
+
+    /*
+     * Lo excluido se cuenta y se dice. Un filtro mudo y un filtro que no filtra
+     * se ven idénticos desde afuera, y ya nos pasó con `candidateDevices`.
+     *
+     * Va a consola y no al ledger a propósito: son los MISMOS servicios cada
+     * minuto que corre el cron. Una entrada por servicio por minuto inundaría la
+     * historia de las cuentas reales con ruido de cuentas de ejemplo. El número
+     * exacto se puede pedir cuando se quiera con `contarVencidasDeCuentaDemo`.
+     */
+    const excluidasPorDemo = await this.repos.occurrences.contarVencidasDeCuentaDemo(now);
+    if (excluidasPorDemo > 0) {
+      console.warn(
+        `[verify] ${excluidasPorDemo} servicio(s) vencido(s) fuera de la cola por ser de cuenta de ejemplo. ` +
+          `El motor no sella sobre cuentas demo. Los hechos ya sellados antes de esta regla siguen en pie.`,
+      );
+    }
+
     const results = [];
     const verifiedIds: string[] = [];
 
@@ -850,6 +869,32 @@ export class VerificationService {
     const occurrence = await this.repos.occurrences.findById(occurrenceId);
     if (!occurrence?.trip) {
       throw new Error("Ocurrencia o viaje no encontrado");
+    }
+
+    /*
+     * LA LLAVE. Antes de leer evidencia, antes de borrar el hecho pendiente,
+     * antes de cualquier cosa que deje marca.
+     *
+     * Va aquí y no en la consulta del cron porque hay CUATRO puertas hasta este
+     * punto —`processPending` (cron y worker), `reverifyContract`, y dos rutas
+     * de API que llaman `verifyOccurrence` directo— y un filtro en la consulta
+     * solo cierra una. Este es el único sitio por el que pasan las cuatro.
+     *
+     * No lanza: devuelve. Las rutas de API llaman esto de cara a un humano, y un
+     * throw se convertiría en 500 sin decir qué pasó. El motivo viaja en el
+     * resultado para que quien haya llamado pueda enunciarlo.
+     */
+    const motivoDemo = motivoCuentaDemo({
+      cuentaClienteEsDemo: occurrence.contract?.client?.isDemo,
+      estadoDelContrato: occurrence.contract?.status,
+    });
+    if (motivoDemo) {
+      return {
+        occurrenceId,
+        skipped: true as const,
+        cuentaDeEjemplo: true as const,
+        motivo: motivoDemo,
+      };
     }
 
     const trip = occurrence.trip;

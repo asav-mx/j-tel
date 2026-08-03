@@ -8,6 +8,8 @@ import {
   complianceFacts,
   drivers,
   driverCredentials,
+  accounts,
+  serviceContracts,
 } from "../src/index.js";
 import { eq, inArray } from "drizzle-orm";
 import type { ContractPolicy } from "@jtel/domain";
@@ -1250,5 +1252,170 @@ describe("el techo del contador — el futuro no cuenta como faltante", () => {
     } finally {
       await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, vencida.id));
     }
+  });
+});
+
+describe("la llave de cuentas demo — los dos cerrojos, en SQL", () => {
+  /**
+   * LA VALLA DE ESTE PR, del lado de la base.
+   *
+   * La regla vive escrita DOS veces: en TypeScript (`motivoCuentaDemo`, que
+   * ejerce `verifyOccurrence`) y en SQL (`findPendingVerification`, que decide
+   * qué entra a la cola del cron). Las pruebas de unidad cubren la primera. Si
+   * la segunda se rompe o se va desincronizando, solo lo ve una prueba que
+   * hable con Postgres — y por eso está aquí.
+   *
+   * Lo que protege: el 2026-08-03 se midieron 84 hechos vinculantes sellados
+   * sobre cuentas de ejemplo, 52 de ellos acusaciones formales contra
+   * transportistas por servicios que nadie prestó.
+   *
+   * La base de prueba no trae cuentas demo, así que el test las marca él mismo
+   * y las devuelve a su estado en el `finally`.
+   */
+  const SERVICE_DATE = "2099-06-06";
+
+  async function conOcurrenciaVencida(
+    fn: (ctx: {
+      db: ReturnType<typeof createDb>;
+      repos: ReturnType<typeof createRepositories>;
+      ahora: Date;
+      contractId: string;
+      clientAccountId: string;
+    }) => Promise<void>,
+  ) {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const honeywell = await repos.accounts.findBySlug("honeywell");
+    if (!honeywell) return;
+    const profiles = await repos.profiles.findForClient(honeywell.id);
+    if (profiles.length === 0) return;
+    const profile = profiles[0]!;
+
+    const contrato = await db.query.serviceContracts.findFirst({
+      where: eq(serviceContracts.id, profile.contractId),
+    });
+    if (!contrato) return;
+
+    const previa = await db.query.serviceOccurrences.findFirst({
+      where: (o, { and, eq: e }) =>
+        and(e(o.serviceProfileId, profile.id), e(o.serviceDate, SERVICE_DATE)),
+    });
+    if (previa) await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, previa.id));
+
+    const vencioHace6h = new Date(Date.now() - 6 * 60 * 60 * 1000);
+    const [occ] = await db
+      .insert(serviceOccurrences)
+      .values({
+        serviceProfileId: profile.id,
+        contractId: profile.contractId,
+        routeShiftId: profile.routeShiftId,
+        serviceDate: SERVICE_DATE,
+        expectedDeadline: vencioHace6h,
+        expectedGeofenceId: profile.geofenceId,
+      })
+      .returning();
+    if (!occ) throw new Error("No se pudo insertar la ocurrencia vencida");
+
+    // `findPendingVerification` hace innerJoin con trips: sin viaje no aparece
+    // ni siquiera cuando la cuenta es real, y el test mediría un espejismo.
+    await db.insert(trips).values({
+      serviceOccurrenceId: occ.id,
+      evidenceWindowStart: new Date(vencioHace6h.getTime() - 60 * 60 * 1000),
+      evidenceWindowEnd: vencioHace6h,
+      evidenceStatus: "en_espera",
+    });
+
+    try {
+      await fn({
+        db,
+        repos,
+        ahora: new Date(),
+        contractId: contrato.id,
+        clientAccountId: contrato.clientAccountId,
+      });
+    } finally {
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, occ.id));
+    }
+  }
+
+  it("cerrojo 1 · is_demo en la cuenta la saca de la cola y la cuenta aparte", async () => {
+    await conOcurrenciaVencida(async ({ db, repos, ahora, clientAccountId }) => {
+      // Primero se comprueba que SIN la marca sí entra. Sin esta mitad, un bug
+      // que la dejara fuera por cualquier otra razón daría verde igual.
+      const enCola = await repos.occurrences.findPendingVerification(ahora);
+      const estabaEnCola = enCola.some((r) => r.occurrence.serviceDate === SERVICE_DATE);
+      expect(estabaEnCola).toBe(true);
+      const excluidasAntes = await repos.occurrences.contarVencidasDeCuentaDemo(ahora);
+
+      await db
+        .update(accounts)
+        .set({ isDemo: true })
+        .where(eq(accounts.id, clientAccountId));
+      try {
+        const despues = await repos.occurrences.findPendingVerification(ahora);
+        expect(despues.some((r) => r.occurrence.serviceDate === SERVICE_DATE)).toBe(false);
+
+        // NADA SE EVAPORA. Marcar la cuenta saca de la cola todas sus vencidas,
+        // no solo la de este test, así que el número exacto no se puede predecir.
+        // Lo que sí tiene que cumplirse siempre —y es la propiedad que separa
+        // «excluir» de «esconder»— es que lo que salió de la cola es exactamente
+        // lo que el contador recogió.
+        const excluidasDespues = await repos.occurrences.contarVencidasDeCuentaDemo(ahora);
+        expect(enCola.length - despues.length).toBe(excluidasDespues - excluidasAntes);
+        expect(excluidasDespues).toBeGreaterThan(excluidasAntes);
+      } finally {
+        await db
+          .update(accounts)
+          .set({ isDemo: false })
+          .where(eq(accounts.id, clientAccountId));
+      }
+    });
+  });
+
+  it("cerrojo 2 · status='demo' en el contrato la saca aunque la cuenta sea real", async () => {
+    /*
+     * El agujero que quedaría si solo se cerrara `is_demo`. Hoy no muerde
+     * —los cuatro contratos de producción tienen `status='active'`— y por eso
+     * mismo hace falta la prueba: sin ella, borrar este cerrojo pasa en verde.
+     */
+    await conOcurrenciaVencida(async ({ db, repos, ahora, contractId, clientAccountId }) => {
+      const cuenta = await db.query.accounts.findFirst({
+        where: eq(accounts.id, clientAccountId),
+      });
+      expect(cuenta?.isDemo).toBe(false); // la cuenta es real: solo cambia el contrato
+
+      const enCola = await repos.occurrences.findPendingVerification(ahora);
+      expect(enCola.some((r) => r.occurrence.serviceDate === SERVICE_DATE)).toBe(true);
+      const excluidasAntes = await repos.occurrences.contarVencidasDeCuentaDemo(ahora);
+
+      await db
+        .update(serviceContracts)
+        .set({ status: "demo" })
+        .where(eq(serviceContracts.id, contractId));
+      try {
+        const despues = await repos.occurrences.findPendingVerification(ahora);
+        expect(despues.some((r) => r.occurrence.serviceDate === SERVICE_DATE)).toBe(false);
+        const excluidasDespues = await repos.occurrences.contarVencidasDeCuentaDemo(ahora);
+        expect(enCola.length - despues.length).toBe(excluidasDespues - excluidasAntes);
+        expect(excluidasDespues).toBeGreaterThan(excluidasAntes);
+      } finally {
+        await db
+          .update(serviceContracts)
+          .set({ status: "active" })
+          .where(eq(serviceContracts.id, contractId));
+      }
+    });
+  });
+
+  it("sin ninguna marca, la vencida sigue en la cola y no se cuenta como demo", async () => {
+    // La mitad que impide satisfacer la valla apagando el motor entero.
+    await conOcurrenciaVencida(async ({ repos, ahora }) => {
+      const enCola = await repos.occurrences.findPendingVerification(ahora);
+      expect(enCola.some((r) => r.occurrence.serviceDate === SERVICE_DATE)).toBe(true);
+      const excluidas = await repos.occurrences.contarVencidasDeCuentaDemo(ahora);
+      const conMarca = await repos.occurrences.findPendingVerification(ahora);
+      expect(conMarca.length + excluidas).toBeGreaterThanOrEqual(enCola.length);
+    });
   });
 });
