@@ -237,6 +237,29 @@ Lo que hay que decidir está en la ficha:
 se congela dentro del hecho, qué pasa con el campo huérfano que hoy engaña, y
 cómo se re-verifica un hecho viejo sin aplicarle la configuración de hoy.
 
+**2.g — La identificación unidad↔ruta no existe en vivo.**
+
+Salió de construir Monitoreo, y es la cuarta hermana de esta misma familia. La
+sala de control del transportista **no puede decir qué unidad cubre qué ruta
+mientras el turno corre**: la identificación se resuelve al cierre, cuando el
+árbitro evalúa candidatas contra el trazado. Antes de eso no hay respuesta.
+
+Lo que eso cuesta hoy se ve en la pantalla: una unidad callada y un servicio por
+cerrar no se pueden ligar, y la sala tiene que decirlo — *"J-Telemetry todavía
+no puede decir en vivo cuál cubre cuál, así que la relación la pones tú"*. Es la
+línea honesta, y también la confesión de que el producto todavía no reemplaza
+al monitorista en el momento en que más falta hace: **cuando algo se puede
+evitar.**
+
+Va aquí y no en una lista aparte porque es el mismo problema que el 2.e y el
+2.f visto desde otro lado: el árbitro sabe identificar, pero solo mirando hacia
+atrás. Cuando se le entre a esta familia, las cuatro se piensan juntas.
+
+**Lo que NO se hace ahora:** perseguirlo desde la pantalla. Inferir en vivo con
+menos evidencia produciría una atribución probable presentada como declarada —
+que es exactamente lo que el skill prohíbe (*"lo inferido no se presenta como
+declarado"*) y lo que la torre del cliente ya resuelve marcando `probable`.
+
 **Compuerta de salida:** **≥90% sostenido dos semanas**, cero rojos sin
 expediente, ningún hecho sellado sobre una cuenta que nadie declaró, **y ningún
 hecho cuya frontera de evidencia viva fuera de él.**

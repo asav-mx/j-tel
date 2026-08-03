@@ -701,6 +701,10 @@ Cómo se atrapa: **buscar en el código quién LEE la columna**, no solo quién 
 
 **Un vigilante que no puede ver la falla es peor que no tener vigilante: da tranquilidad falsa.** La regla que queda: un sondeo de salud ejerce **la misma consulta** que sirve a las pantallas, no una parecida. Y como toda valla, no cuenta hasta **verla fallar** — se reproduce el estado roto contra la base desechable y se comprueba que se pone roja. Una puerta que nadie vio fallar es una suposición con nombre de garantía.
 
+**Medir mal un algoritmo correcto produce evidencia falsa contra el algoritmo.** Douglas-Peucker garantiza, por construcción, que ningún punto quede a más de la tolerancia de la línea simplificada. La medición dio **102 m para una tolerancia de 8 m**, y el número se iba a publicar como "desvío máximo" de un instrumento de defensa. El algoritmo estaba bien: el medidor muestreaba cada segmento en cinco puntos en vez de calcular la perpendicular real, así que medía a un punto cualquiera de la recta y no al más cercano. Corregido, el desvío da exactamente la tolerancia.
+
+La regla que queda: **cuando lo medido contradice una garantía del algoritmo, el sospechoso es el medidor, no el algoritmo.** Una garantía por construcción no se refuta con una corrida — se refuta con una demostración. Y la trampa es doblemente peligrosa porque el número falso era plausible y conservador: nadie discute un desvío que suena grande, y sobre él se habría decidido que la simplificación no servía.
+
 **El denominador de otro universo.** Si el numerador cuenta servicios contratados y el denominador cuenta la flota entera, la fracción no habla de nada. Es §D, eje del ALCANCE, y en una cifra se ve limpia: "45 de 82 unidades no cubrieron ningún servicio" era cierta en los dos números y falsa como afirmación. Cuando los dos lados vienen de universos distintos, o se cambia el denominador o se declara el alcance junto al número.
 
 ---
