@@ -3465,6 +3465,43 @@ export class NotificationRepository {
       where: eq(notifications.accountId, accountId),
     });
   }
+
+  /**
+   * Notificaciones de una cuenta dentro de una ventana, las más recientes
+   * primero y con tope.
+   *
+   * `findForAccount` las trae TODAS. Cuando el motor llevaba meses generando
+   * un aviso por reintento, eso eran 159 815 filas materializadas en memoria
+   * para pintar una lista de veintitantas: la página murió por falta de
+   * memoria el 2 de agosto de 2026.
+   *
+   * La ventana se acota en la base y el filtro fino por día civil se sigue
+   * haciendo arriba —la zona horaria del cliente decide qué día es cada fila—,
+   * así que aquí se pide un poco de más a propósito: los bordes de ±1 día
+   * cubren cualquier huso sin cambiar qué se muestra.
+   *
+   * Devuelve también `hayMas`, y no es un adorno: quien pinta el total tiene
+   * que poder decir si está contando todo o solo lo que cupo. Un número
+   * correcto bajo un rótulo que promete el total es un número que miente.
+   */
+  async findForAccountInWindow(
+    accountId: string,
+    desde: Date,
+    hasta: Date,
+    limite: number,
+  ): Promise<{ filas: Array<typeof notifications.$inferSelect>; hayMas: boolean }> {
+    const filas = await this.db.query.notifications.findMany({
+      where: and(
+        eq(notifications.accountId, accountId),
+        gte(notifications.createdAt, desde),
+        lte(notifications.createdAt, hasta),
+      ),
+      orderBy: (n, { desc: d }) => [d(n.createdAt)],
+      // Uno de más: si vuelve, es que había más de los que caben.
+      limit: limite + 1,
+    });
+    return { filas: filas.slice(0, limite), hayMas: filas.length > limite };
+  }
 }
 
 export class DemoRepository {
