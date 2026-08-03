@@ -16,6 +16,8 @@ export {
   acquireToken,
   fullJitterDelayMs,
   parseRetryAfterMs,
+  pedidosEnCola,
+  ColaDeGpsLlenaError,
   _resetRateLimitForTests,
 } from "./rate-limit.js";
 
@@ -259,7 +261,15 @@ export async function ingestEvidenceForTrip(
       });
       allPoints.push(...points);
     }
-  } catch {
+  } catch (err) {
+    // "Indisponible" es el resultado correcto, pero POR QUÉ no se pudo observar
+    // no puede perderse aquí: sin esta línea, una cola llena, un token vencido
+    // y un GPS de verdad apagado se ven exactamente igual desde fuera.
+    console.warn(
+      `[umbrella] viaje ${input.tripId}: evidencia indisponible — ${
+        err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+      }`,
+    );
     await input.updateStatus("indisponible");
     return { pointCount: 0, status: "indisponible" };
   }

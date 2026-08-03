@@ -6,6 +6,8 @@ import {
   _resetRateLimitForTests,
   acquireToken,
   ingestEvidenceForTrip,
+  pedidosEnCola,
+  ColaDeGpsLlenaError,
 } from "./index.js";
 
 describe("UmbrellaGpsProvider", () => {
@@ -123,5 +125,45 @@ describe("ingestEvidenceForTrip — un proveedor caído es un resultado, no una 
       status: "indisponible",
     });
     expect(input.updateStatus).toHaveBeenCalledWith("indisponible");
+  });
+});
+
+describe("la cola del balde tiene tope", () => {
+  beforeEach(() => {
+    _resetRateLimitForTests();
+  });
+
+  it("rechaza en vez de encolar cuando ya hay demasiados formados", async () => {
+    /*
+     * La cola vive a nivel de módulo: sobrevive a la invocación que la llenó y
+     * cada pedido formado retiene la verificación entera que lo pidió. Mientras
+     * entren más pedidos por minuto de los que salen, crece sin techo. Así
+     * murió /api/cron/verify cuatro veces el 3 de agosto de 2026, con el montón
+     * en ~1.7 GB tras 20, 26 y 47 minutos de vida del proceso.
+     */
+    const opts = { capacity: 1, refillPerMinute: 1, maxEnCola: 5 };
+
+    // El primero se lleva el único token; los siguientes se forman.
+    const formados = [];
+    for (let i = 0; i < 6; i++) formados.push(acquireToken("tope", opts).catch(() => "rechazado"));
+
+    // El séptimo ya no cabe: la cola está en su tope.
+    await expect(acquireToken("tope", opts)).rejects.toThrow(ColaDeGpsLlenaError);
+    expect(pedidosEnCola("tope")).toBeLessThanOrEqual(5);
+  });
+
+  it("por debajo del tope sigue entregando como antes", async () => {
+    const t0 = Date.now();
+    await acquireToken("holgado", { capacity: 3, refillPerMinute: 60, maxEnCola: 100 });
+    await acquireToken("holgado", { capacity: 3, refillPerMinute: 60, maxEnCola: 100 });
+    expect(Date.now() - t0).toBeLessThan(500);
+    expect(pedidosEnCola("holgado")).toBe(0);
+  });
+
+  it("una cola llena se traduce a evidencia indisponible, no a excepción", async () => {
+    // La razón de que el tope viva aquí y no en quien llama: el camino que ya
+    // existe para "no pude observar" absorbe el rechazo sin tumbar nada.
+    const opts = { capacity: 0, refillPerMinute: 0.0001, maxEnCola: 0 };
+    await expect(acquireToken("lleno", opts)).rejects.toThrow(ColaDeGpsLlenaError);
   });
 });
