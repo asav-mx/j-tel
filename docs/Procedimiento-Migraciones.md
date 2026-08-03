@@ -220,6 +220,39 @@ entrada del journal y el esquema.
 
 ---
 
+## El paso que faltaba en este procedimiento: aplicarla
+
+Este documento explicaba muy bien **cómo** aplicar una migración y no decía en
+ningún lado **cuándo**. El 2026-08-02 eso tumbó producción.
+
+`0016_drivers.sql` se escribió, se probó contra la rama desechable, se declaró
+en el esquema de Drizzle y se mergeó — y nadie la aplicó. El código desplegado
+pedía dos columnas que la base no tenía, y toda la cara cliente devolvió 500
+con `column compliance_facts.declared_driver_name does not exist`.
+
+> **Una migración se aplica ANTES de mergear el código que la necesita.**
+>
+> Es el orden que permiten las migraciones aditivas y la única razón de peso
+> para preferirlas: la columna nueva no le molesta al código viejo, así que se
+> puede aplicar primero y desplegar después. Al revés no funciona, y el hueco
+> entre las dos cosas es una caída.
+
+Un `.sql` commiteado **no es un cambio aplicado**. Escribirlo, probarlo en la
+rama desechable y declararlo en el esquema son tres pasos que se sienten como
+terminar, y no lo son.
+
+Lo que ahora lo vigila, porque el criterio de nadie basta:
+
+- **`.github/workflows/esquema.yml`** — levanta un Postgres desechable, aplica
+  solo las migraciones del repo y comprueba que el esquema del código cabe en
+  esa base, ejecutando además la consulta relacional que se rompió. Un `.sql`
+  que nadie ejecuta ya no pasa en verde.
+- **`/api/salud`** — ejerce esa misma consulta relacional en cada sondeo. Antes
+  leía todo con listas explícitas de columnas y por eso devolvió 200 durante
+  toda la caída.
+
+---
+
 ## Dos ejemplos reales
 
 ### `0013_route_traversal_measurements` — tabla nueva, en transacción

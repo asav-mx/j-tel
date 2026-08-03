@@ -697,6 +697,10 @@ Cómo se atrapa: **buscar en el código quién LEE la columna**, no solo quién 
 
 **Medir sobre datos que nadie declaró.** Datos sembrados tienen forma de datos, y un hallazgo construido sobre ellos describe la siembra, no el producto. Antes de medir: declarar de quién es cada fila y qué cuentas son de demostración. Ver `Ficha-Diagnostico-Datos-No-Declarados`.
 
+**Un vigilante que no ejerce el camino que puede romperse.** `/api/salud` devolvió 200 durante toda una caída de la cara cliente. No por casualidad: leía cuentas, marcas de agua y alertas **con listas explícitas de columnas**, y una lista explícita no se entera de que falte una columna que no nombra. Las pantallas usan la API relacional, que pide todas las columnas de la tabla, y ahí es donde reventaba.
+
+**Un vigilante que no puede ver la falla es peor que no tener vigilante: da tranquilidad falsa.** La regla que queda: un sondeo de salud ejerce **la misma consulta** que sirve a las pantallas, no una parecida. Y como toda valla, no cuenta hasta **verla fallar** — se reproduce el estado roto contra la base desechable y se comprueba que se pone roja. Una puerta que nadie vio fallar es una suposición con nombre de garantía.
+
 **El denominador de otro universo.** Si el numerador cuenta servicios contratados y el denominador cuenta la flota entera, la fracción no habla de nada. Es §D, eje del ALCANCE, y en una cifra se ve limpia: "45 de 82 unidades no cubrieron ningún servicio" era cierta en los dos números y falsa como afirmación. Cuando los dos lados vienen de universos distintos, o se cambia el denominador o se declara el alcance junto al número.
 
 ---

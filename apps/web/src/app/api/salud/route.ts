@@ -49,6 +49,39 @@ export async function GET(request: Request) {
   try {
     const repos = getRepos();
 
+    // ── La sonda de esquema, antes que nada ──────────────────────────────
+    //
+    // El 2026-08-02 la cara cliente entera devolvió 500 —monitoreo, cierre,
+    // cumplimiento, pendiente por evidencia— con
+    // `column compliance_facts.declared_driver_name does not exist`, y **esta
+    // ruta siguió respondiendo 200 durante todo el episodio.**
+    //
+    // No por casualidad: todo lo que vigilaba —cuentas, marcas de agua,
+    // alertas— se lee con listas explícitas de columnas, y una lista explícita
+    // no se entera de que falte una columna que no nombra. La API relacional
+    // de Drizzle pide TODAS las columnas de la tabla, y ahí es donde el hueco
+    // revienta. El vigilante miraba el único estilo de consulta que no podía
+    // fallar.
+    //
+    // Va primero y su fallo es terminal: un esquema que no sirve a las
+    // pantallas es un producto caído, por muy fresca que venga la telemetría.
+    // Decirlo en ese orden es la diferencia entre un 503 que explica y un 200
+    // que miente.
+    try {
+      await repos.occurrences.sondaDeEsquema();
+    } catch (err) {
+      console.error("[api/salud] sonda de esquema", err);
+      return responder("enfermo", {
+        diagnostico:
+          "el esquema de la base no sirve la consulta que usan las pantallas del cliente",
+        ...(autenticado
+          ? { error: err instanceof Error ? err.message.slice(0, 200) : "desconocido" }
+          : {}),
+        chequeos: [],
+        ahora: ahora.toISOString(),
+      });
+    }
+
     // Las cuentas demo no se vigilan: archivarlas fue sacarlas de la vista, y
     // una demo sin telemetría no es una falla de plataforma.
     const carriers = await repos.accounts.listByType("carrier", { includeDemo: false });
