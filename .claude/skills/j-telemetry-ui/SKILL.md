@@ -687,9 +687,19 @@ Y la parte que importa más: al rehacerla con servidor limpio, el número se sos
 
 **Publicar un instrumento sin probarlo contra casos conocidos.** Antes de usar una prueba propia —una geometría, un cruce, una heurística— pásala por los hechos que el motor **ya selló** y cuya respuesta se conoce. Si no reproduce lo que el árbitro ya decidió, el instrumento está mal y todo lo cruzado con él también. El caso: una prueba de punto-en-polígono que reprodujo 51 de 60 llegadas selladas; las 9 que falló apuntaban todas a la misma geocerca, y ahí estaba el error.
 
+**Creerle al nombre de una columna.** Un campo llamado `expected_geofence_id`, congelado dentro de un hecho sellado, se lee como la geocerca que el árbitro aplicó. No lo es: el motor juzga contra la geocerca **viva** del perfil y guarda ese campo por separado. Sobre esa suposición se escribió una ficha entera —"333 servicios acusados contra el destino equivocado"— y era falsa.
+
+La lección es más fina que la anterior y por eso duele más: **el instrumento geométrico sí se había validado contra hechos sellados. Lo que no se validó fue la interpretación del campo.** Validar la medición no valida lo que se cree que la medición significa.
+
+Cómo se atrapa: **buscar en el código quién LEE la columna**, no solo quién la escribe. Si nadie la lee, no describe nada. Y cuando el dato guardado se puede contrastar contra un hecho físico —una llegada tiene coordenadas— se contrasta antes de escribir la conclusión. Aquí bastaba probar 24 llegadas selladas contra los dos polígonos: **cero cayeron en la geocerca que el campo nombraba.**
+
 **Contar filas que son reintentos.** Un servicio re-verificado deja varias entradas de ledger. Contar entradas en vez de servicios multiplicó por ocho el tamaño aparente de un hallazgo. Deduplicar por la cosa de la que se habla, no por la fila que la registra.
 
 **Medir sobre datos que nadie declaró.** Datos sembrados tienen forma de datos, y un hallazgo construido sobre ellos describe la siembra, no el producto. Antes de medir: declarar de quién es cada fila y qué cuentas son de demostración. Ver `Ficha-Diagnostico-Datos-No-Declarados`.
+
+**Un vigilante que no ejerce el camino que puede romperse.** `/api/salud` devolvió 200 durante toda una caída de la cara cliente. No por casualidad: leía cuentas, marcas de agua y alertas **con listas explícitas de columnas**, y una lista explícita no se entera de que falte una columna que no nombra. Las pantallas usan la API relacional, que pide todas las columnas de la tabla, y ahí es donde reventaba.
+
+**Un vigilante que no puede ver la falla es peor que no tener vigilante: da tranquilidad falsa.** La regla que queda: un sondeo de salud ejerce **la misma consulta** que sirve a las pantallas, no una parecida. Y como toda valla, no cuenta hasta **verla fallar** — se reproduce el estado roto contra la base desechable y se comprueba que se pone roja. Una puerta que nadie vio fallar es una suposición con nombre de garantía.
 
 **El denominador de otro universo.** Si el numerador cuenta servicios contratados y el denominador cuenta la flota entera, la fracción no habla de nada. Es §D, eje del ALCANCE, y en una cifra se ve limpia: "45 de 82 unidades no cubrieron ningún servicio" era cierta en los dos números y falsa como afirmación. Cuando los dos lados vienen de universos distintos, o se cambia el denominador o se declara el alcance junto al número.
 

@@ -1,0 +1,97 @@
+name: Esquema
+
+# La puerta que faltaba, escrita el día que tumbó producción.
+#
+# El 2026-08-02 la cara cliente entera devolvió 500 con
+# `column compliance_facts.declared_driver_name does not exist`. El esquema de
+# Drizzle declaraba dos columnas que la migración `0016_drivers.sql` creaba, y
+# **nadie aplicó la migración**: `db:migrate` existe en package.json y no lo
+# invoca ni CI ni el build de Vercel. Un archivo .sql commiteado no es un
+# cambio aplicado.
+#
+# `pruebas.yml` no podía verlo y no es su culpa: compila, revisa tipos y corre
+# las pruebas unitarias, y **ninguna de las tres toca una base de datos**. Un
+# archivo .sql que nadie ejecuta pasa los tres en verde.
+#
+# Lo que este workflow comprueba es exactamente lo que faltaba:
+#
+#   una base construida SOLO con las migraciones del repo sirve para todo lo
+#   que el esquema del código pide.
+#
+# No usa la base de producción ni una rama de Neon: levanta un Postgres
+# desechable aquí mismo. Así puede correr en cada PR sin credenciales y sin
+# escribir una sola fila en nada de nadie.
+#
+# La prueba real es la del final: ejecuta la MISMA consulta relacional que
+# tumbó producción. Drizzle en su API relacional pide todas las columnas de la
+# tabla, y por eso el hueco explota ahí y no en las consultas con lista
+# explícita de columnas — que fue justo por qué `/api/salud` siguió en verde
+# mientras las pantallas caían.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: esquema-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  esquema:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jtel_esquema
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/jtel_esquema
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar
+        run: pnpm install --frozen-lockfile
+
+      # El verificador lee el esquema compilado, igual que la aplicación.
+      #
+      # Por turbo y no con `--filter @jtel/db`: ese filtro compila el paquete
+      # SIN sus dependencias, y `@jtel/db` importa tipos de `@jtel/domain`. En
+      # una máquina de trabajo pasa porque `packages/domain/dist` ya está de
+      # antes; en un runner limpio son 16 errores de `Cannot find module`.
+      # `turbo` respeta `dependsOn: ["^build"]` y construye en orden.
+      #
+      # Lo encontró esta misma puerta en su propio PR, que es lo que se le pide
+      # a una valla.
+      - name: Compilar en orden de dependencias
+        run: pnpm turbo run build --filter=@jtel/db
+
+      # En orden y por nombre de archivo, que es como se aplican de verdad.
+      # `--> statement-breakpoint` es el separador que escribe drizzle-kit.
+      - name: Aplicar las migraciones del repo
+        run: node packages/db/ci/aplicar-migraciones.mjs
+
+      # El contrato: cada tabla y cada columna que el código declara existe en
+      # la base que acaban de construir las migraciones. Si alguien agrega una
+      # columna al esquema y olvida la migración, aquí se cae.
+      #
+      # Probado contra el estado que rompió producción: nombra las 5 cosas que
+      # faltaban —las 2 columnas y las 3 tablas de choferes— y sale con 1.
+      - name: El esquema del código contra la base
+        run: node packages/db/ci/verificar-esquema.mjs

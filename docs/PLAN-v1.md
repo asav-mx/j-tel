@@ -213,32 +213,33 @@ niega a sellar sobre cuentas demo o sella marcando el hecho, dónde vive esa
 marca (tiene que viajar **dentro** del hecho, como la política congelada), qué
 se hace con los 73 ya sellados, y quién puede poner una cuenta en `active`.
 
-**2.f — Una ruta no puede esperar llegada donde no hay destino. PRIORIDAD
-ALTA — corre el reloj.**
+**2.f — La geocerca tiene que viajar congelada dentro del hecho.**
 
-Mismo hallazgo de fondo que el 2.e —**la marca existe y el motor no la lee**—
-pero aquí ya está costando resultados. **Veintiuna rutas variante esperan la
-llegada en una geocerca llamada `VOID`, con rol `otro` en vez de `destino`, a
-ocho kilómetros del destino real.** Sobre ellas el árbitro sella 8.6% de
-cumplidos; sobre las rutas hermanas que apuntan al destino verdadero, 51.4% —
-mismo cliente, mismo umbral, mismo rigor, mismo periodo. **333 de 357 servicios
-del periodo salieron no cumplidos o pendientes, y 189 servicios futuros siguen
-apuntando ahí.**
+**Corrección:** la primera versión de este punto decía que 333 servicios se
+habían acusado contra una geocerca equivocada. **Era falso y se retiró** — el
+árbitro juzgó contra el destino correcto; lo que estaba mal era la lectura de
+un campo. El registro del error queda en la ficha.
 
-Es la misma clase de falla que el 2.e y por eso va junto: cada uno de esos 333
-está bien calculado y todos descansan sobre una premisa falsa. El auditado
-recibe rojos con expediente completo por una ruta mal dada de alta. **Ningún
-número de cumplimiento delata esto** — al contrario, lo hunde.
+Lo que sí quedó, y es de otra clase: **el árbitro juzga contra la geocerca viva
+del perfil, que es configuración editable, y el campo que sí se congela dentro
+del hecho —`expected_geofence_id`— no es el que se usa.** Las dos mitades de la
+ley del hecho congelado están cruzadas: lo que se congela no se usa, y lo que se
+usa no se congela. Medido: **546 ocurrencias** donde los dos valores difieren.
 
-Lo urgente no es reparar el pasado sino detener el futuro: qué se hace con los
-189 servicios que todavía no ocurren. Lo demás —mover la geocerca implica
-re-sellar 357 hechos vinculantes, que es re-verificación auditada y no
-corrección de datos— está en la ficha:
-`docs/marco-limpio/Ficha-Diagnostico-Rutas-Variante-Sin-Destino.md`.
+Por qué importa: `contract_policy_snapshot` viaja dentro del hecho justo para
+que el auditado reconstruya con qué regla se le juzgó. **La geocerca no**, y es
+la frontera de la evidencia (Ley 4), no un parámetro menor. Hoy una edición de
+configuración cambia en silencio cómo se re-verifica un servicio de hace tres
+semanas — lo mismo que la ficha del expediente ya prohibió para el radio.
+
+Lo que hay que decidir está en la ficha:
+`docs/marco-limpio/Ficha-Diagnostico-Geocerca-No-Congelada.md` — si el polígono
+se congela dentro del hecho, qué pasa con el campo huérfano que hoy engaña, y
+cómo se re-verifica un hecho viejo sin aplicarle la configuración de hoy.
 
 **Compuerta de salida:** **≥90% sostenido dos semanas**, cero rojos sin
-expediente, ningún hecho sellado sobre una cuenta que nadie declaró, **y ninguna
-ocurrencia esperando llegada en una geocerca que no sea de rol `destino`.**
+expediente, ningún hecho sellado sobre una cuenta que nadie declaró, **y ningún
+hecho cuya frontera de evidencia viva fuera de él.**
 
 ---
 

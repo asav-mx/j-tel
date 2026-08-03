@@ -2423,9 +2423,32 @@ export class OccurrenceRepository {
     return this.findForPlantGroup(scope.plantGroupId, from, to);
   }
 
-  private async queryOccurrencesWithRelations(conditions: unknown[]) {
+  /**
+   * Sonda de esquema para el vigilante de salud. Una fila, sin filtros.
+   *
+   * Ejerce **exactamente** `queryOccurrencesWithRelations`, que es la consulta
+   * que sirve a monitoreo, cierre, cumplimiento, pendiente-por-evidencia y el
+   * expediente. No una parecida: la misma.
+   *
+   * Por qué existe: el 2026-08-02 la cara cliente entera devolvió 500 con
+   * `column compliance_facts.declared_driver_name does not exist`, y
+   * `/api/salud` **siguió respondiendo 200 durante todo el episodio**. Vigilaba
+   * cuentas, marcas de agua y alertas, todas leídas con listas explícitas de
+   * columnas — el estilo que no explota cuando falta una columna. La API
+   * relacional de Drizzle pide TODAS las columnas de la tabla, y solo ahí
+   * revienta el hueco.
+   *
+   * Un vigilante que no puede ver la falla es peor que no tener vigilante:
+   * da tranquilidad falsa. `limit: 1` para que verlo no cueste.
+   */
+  async sondaDeEsquema(): Promise<void> {
+    await this.queryOccurrencesWithRelations([], 1);
+  }
+
+  private async queryOccurrencesWithRelations(conditions: unknown[], limit?: number) {
     return this.db.query.serviceOccurrences.findMany({
       where: and(...(conditions as Parameters<typeof and>)),
+      ...(limit === undefined ? {} : { limit }),
       with: {
         complianceFact: { with: { observedUnit: true } },
         trip: true,
