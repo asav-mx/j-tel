@@ -180,7 +180,12 @@ export function gruposCarrier(carrierSlug: string): GrupoNav[] {
   return [
     {
       titulo: "Operación",
-      renglones: [{ href: withAccount("/carrier", carrierSlug), label: "Inicio" }],
+      renglones: [
+        { href: withAccount("/carrier", carrierSlug), label: "Inicio" },
+        // La sala de control va en Operación y no en Análisis: aquí los
+        // segundos importan y se actúa. Pensar es el Workbench.
+        { href: withAccount("/carrier/monitoreo", carrierSlug), label: "Monitoreo" },
+      ],
     },
     {
       titulo: "Recursos",

@@ -2373,7 +2373,23 @@ export class OccurrenceRepository {
       | { kind: "plant"; plantId: string }
       | { kind: "plant_group"; plantGroupId: string }
       | { kind: "client"; clientAccountId: string }
-      | { kind: "contract"; contractId: string },
+      | { kind: "contract"; contractId: string }
+      /**
+       * Todos los contratos de un transportista. Es el alcance de la sala de
+       * control del carrier: un transportista con tres clientes no puede tener
+       * tres pantallas abiertas.
+       *
+       * Resultó ser una extensión, no un motor nuevo: la resolución de varios
+       * contratos ya existía aquí para planta y grupo, y este caso solo cambia
+       * por dónde se buscan.
+       *
+       * `incluirDemo` es explícito y por omisión falso. Un contrato de prueba
+       * en la sala del transportista mete servicios que nadie declaró entre los
+       * que sí tienen consecuencia — el hallazgo abierto de Ola 2. La pantalla
+       * que use esto tiene que ENUNCIAR lo que excluyó: quien opera tiene
+       * derecho a saber que no está viendo todo.
+       */
+      | { kind: "carrier"; carrierAccountId: string; incluirDemo?: boolean },
     from?: Date,
     to?: Date,
   ) {
@@ -2381,6 +2397,24 @@ export class OccurrenceRepository {
 
     if (target.kind === "contract") {
       conditions.push(eq(serviceOccurrences.contractId, target.contractId));
+    } else if (target.kind === "carrier") {
+      const contratos = await this.db
+        .select({ id: serviceContracts.id })
+        .from(serviceContracts)
+        .innerJoin(accounts, eq(accounts.id, serviceContracts.clientAccountId))
+        .where(
+          and(
+            eq(serviceContracts.carrierAccountId, target.carrierAccountId),
+            ...(target.incluirDemo ? [] : [eq(accounts.isDemo, false)]),
+          ),
+        );
+      if (contratos.length === 0) return null;
+      conditions.push(
+        inArray(
+          serviceOccurrences.contractId,
+          contratos.map((c) => c.id),
+        ),
+      );
     } else {
       const where =
         target.kind === "plant"
@@ -2416,6 +2450,72 @@ export class OccurrenceRepository {
     );
     if (!conditions) return [];
     return this.queryOccurrencesWithRelations(conditions);
+  }
+
+  /**
+   * Los servicios de TODOS los contratos de un transportista, en una ventana.
+   *
+   * Devuelve además qué contratos quedaron fuera por ser de prueba, para que la
+   * pantalla lo pueda enunciar en vez de esconderlo.
+   */
+  async findForCarrier(
+    carrierAccountId: string,
+    from?: Date,
+    to?: Date,
+    opts: { incluirDemo?: boolean } = {},
+  ) {
+    const conditions = await this.occurrenceConditions(
+      { kind: "carrier", carrierAccountId, incluirDemo: opts.incluirDemo },
+      from,
+      to,
+    );
+    const excluidos = opts.incluirDemo
+      ? 0
+      : (
+          await this.db
+            .select({ id: serviceContracts.id })
+            .from(serviceContracts)
+            .innerJoin(accounts, eq(accounts.id, serviceContracts.clientAccountId))
+            .where(
+              and(
+                eq(serviceContracts.carrierAccountId, carrierAccountId),
+                eq(accounts.isDemo, true),
+              ),
+            )
+        ).length;
+    if (!conditions) return { ocurrencias: [], contratosDePruebaExcluidos: excluidos };
+    return {
+      ocurrencias: await this.queryOccurrencesWithRelations(conditions),
+      contratosDePruebaExcluidos: excluidos,
+    };
+  }
+
+  /**
+   * El siguiente servicio que abre para este transportista, después de `desde`.
+   *
+   * Es lo que vuelve honesto el estado vacío de la sala de control. "Sin
+   * servicios programados hoy" a secas deja a quien mira sin saber si el
+   * sistema está roto o si de verdad no hay nada; con la hora del próximo
+   * turno, el vacío se explica solo.
+   *
+   * Un `min()` en la base, sin traer filas: la sala se abre a cada rato.
+   */
+  async proximoServicioParaCarrier(carrierAccountId: string, desde: Date) {
+    const [fila] = await this.db
+      .select({ expectedDeadline: serviceOccurrences.expectedDeadline })
+      .from(serviceOccurrences)
+      .innerJoin(serviceContracts, eq(serviceContracts.id, serviceOccurrences.contractId))
+      .innerJoin(accounts, eq(accounts.id, serviceContracts.clientAccountId))
+      .where(
+        and(
+          eq(serviceContracts.carrierAccountId, carrierAccountId),
+          eq(accounts.isDemo, false),
+          gte(serviceOccurrences.expectedDeadline, desde),
+        ),
+      )
+      .orderBy(serviceOccurrences.expectedDeadline)
+      .limit(1);
+    return fila ?? null;
   }
 
   async findForScope(scope: OperationalScope, from?: Date, to?: Date) {
