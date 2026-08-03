@@ -52,6 +52,17 @@ Y "guardar esta vista" al margen.
 ### 3.3 El mapa
 Fondo oscuro en ambos temas (excepción del skill: el lienzo es evidencia).
 
+**Ley de la simplificación — decidida el 2026-08-02, con los números medidos.**
+
+> **Simplificar es para explorar. La ventana de un servicio va completa, siempre.**
+
+La cadencia real es **un punto por minuto** (mediana y p90 los dos en 60 s), y tres unidades por un mes son **124 396 puntos**. Explorar así no se sostiene: hay que simplificar. Pero un punto por minuto no es telemetría dispersa — **cada punto puede ser el que decide una disputa**, y simplificar ahí sería quitar evidencia sin que nadie lo note.
+
+Dos condiciones, las dos obligatorias:
+
+1. **La vista simplificada lo declara, y visible.** *"Traza simplificada para explorar · abre un servicio para verla completa."* No un asterisco al pie.
+2. **Douglas-Peucker, no muestreo por distancia.** Douglas-Peucker conserva los vértices donde la traza cambia de dirección, que es justo donde se ve una desviación. El muestreo por distancia puede saltarse una vuelta entera.
+
 Capas **agrupadas por familia, con su audiencia implícita**:
 
 **Recorrido** — real · contratado (punteado) · paradas
@@ -65,16 +76,32 @@ Al final del panel, con borde punteado: *"Más capas y herramientas se agregan a
 Las unidades en el lienzo, cada una con su color de identidad (la paleta de 196°–312°, separada 47° de todo veredicto).
 
 Medidas del rango, todas en acero:
-recorrido total · sobre trazado contratado con su porcentaje · fuera del corredor · tiempo detenido · paradas · huecos de señal con su duración.
+recorrido total · huecos de señal con su duración · sus servicios del rango.
 
-Y sus servicios del rango: verificados · con evidencia completa · quedaron pendientes.
+**Tiempo detenido y conteo de paradas: fuera, y por medición — 2026-08-02.**
+
+Los rastreadores **reportan las veinticuatro horas**. A las 3 de la mañana, 2 924 de 2 930 puntos están en velocidad cero: 99.8%. Eso no es un camión detenido en ruta, es la flota estacionada con el equipo encendido. Un "tiempo detenido" sobre un rango cualquiera mide sobre todo el estacionamiento nocturno.
+
+Acotarlo a la operación contratada tampoco alcanza: de **53 unidades con traza en 7 días, solo 29 tienen alguna ventana de servicio acreditada**, y la unidad con más traza tiene 11 974 puntos con **196 dentro de ventanas** — el 1.6%. La medida existiría para una fracción de la flota y de su recorrido, y quien la lea no tendría cómo saberlo.
+
+Es el mismo eje del ALCANCE que sacó al kilómetro muerto de Monitoreo, y por eso se decide igual: **el número no va hasta que se pueda distinguir "detenido en operación" de "estacionado fuera de turno".**
+
+**Las paradas sí se dibujan en el mapa**, con su duración, porque ahí el que mira ve dónde ocurrieron y las interpreta — una parada de ocho horas en el patio se lee como lo que es. Lo que no va es **colapsarlas a un número**: "12 paradas" o "6 h detenido" pierden justo el lugar y la hora que las hacían legibles. Es la REDUCCIÓN de §D.
 
 ### 3.5 El bloque de defensa
 Explícito, con su propósito escrito: *"Cuando un cliente dispute un servicio, esta es la pantalla."*
 
-Dos acciones: abrir un servicio disputado · exportar el recorrido con su evidencia.
+Una acción en la v1: **abrir un servicio disputado.**
 
 **Por qué está declarado y no implícito:** el transportista no va a descubrir solo que esta pantalla lo defiende. Decírselo es parte del producto.
+
+#### Exportar con evidencia — DECISIÓN ABIERTA, no se construye
+
+**El botón no entra en la v1**, y la razón no es técnica.
+
+Un documento que sirve en una disputa comercial **no es una decisión de diseño: es una decisión legal.** Qué lo hace verificable, si lleva firma o sello, si el cliente puede impugnarlo, y qué pasa cuando las dos partes exportan versiones distintas del mismo servicio. Eso se define con asesoría legal antes de escribirlo, y está en la lista de temas legales pendientes del PO.
+
+Hasta entonces: **un botón sin destino es peor que ningún botón.** Exportar algo que parece un documento probatorio y no lo es le daría al transportista una confianza que el archivo no sostiene — y la primera vez que un cliente lo impugne, el que pierde credibilidad es el árbitro.
 
 ---
 
