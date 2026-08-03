@@ -705,6 +705,12 @@ Cómo se atrapa: **buscar en el código quién LEE la columna**, no solo quién 
 
 La regla que queda: **cuando lo medido contradice una garantía del algoritmo, el sospechoso es el medidor, no el algoritmo.** Una garantía por construcción no se refuta con una corrida — se refuta con una demostración. Y la trampa es doblemente peligrosa porque el número falso era plausible y conservador: nadie discute un desvío que suena grande, y sobre él se habría decidido que la simplificación no servía.
 
+**El fallo silencioso que devuelve de menos.** Una consulta agregada nueva reventó en el primer intento porque el controlador HTTP no sabe enlazar un `Date` en SQL crudo, y se atrapó porque la pantalla dio 500. Ese fue el modo de falla afortunado.
+
+El mismo error puede fallar del otro lado: un `timestamptz` mal enlazado que se interpreta como un instante distinto no revienta — **filtra de más y devuelve de menos.** Entonces no hay 500 que mirar, solo una gráfica de huecos de señal con menos huecos de los que hubo, dibujada con todos los tokens correctos y perfectamente legible.
+
+**En una pantalla de evidencia, el fallo silencioso que devuelve de menos es peor que el que revienta, porque se ve normal.** Un error visible cuesta una hora; un archivo incompleto que parece completo se defiende en una disputa. La regla que queda: cuando una consulta nueva acota por tiempo, se comprueba contra un total conocido —cuántas filas hay sin el filtro, cuántas con él— antes de creerle al número. Y si el resultado se puede contar por otro camino, se cuenta.
+
 **El denominador de otro universo.** Si el numerador cuenta servicios contratados y el denominador cuenta la flota entera, la fracción no habla de nada. Es §D, eje del ALCANCE, y en una cifra se ve limpia: "45 de 82 unidades no cubrieron ningún servicio" era cierta en los dos números y falsa como afirmación. Cuando los dos lados vienen de universos distintos, o se cambia el denominador o se declara el alcance junto al número.
 
 ---
