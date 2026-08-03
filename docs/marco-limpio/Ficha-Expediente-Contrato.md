@@ -26,7 +26,9 @@ Es **la quinta y última identidad con expediente propio**, y hasta ahora no exi
 ## 2. Estructura
 
 ### 2.1 Cabecera
-Migas · nombre del contrato como titular · las dos partes y la vigencia en la línea de contexto · navegación entre hermanos si hay más de un contrato · pestañas: **Resumen · Alcance · Política · Historia · Documentos**.
+Migas · nombre del contrato como titular · las dos partes y la vigencia en la línea de contexto · navegación entre hermanos si hay más de un contrato.
+
+**Construido sin pestañas.** Con documentos y módulos fuera por §5, lo que queda —la relación, el alcance, la política, el bloque reservado y las ausencias— cabe en una sola lectura corrida. Unas pestañas sobre cinco secciones cortas esconderían el expediente detrás de clics y sugerirían profundidad que no hay.
 
 ### 2.2 La relación — identidad
 Cliente y carrier · vigencia con su fecha de fin · estado del contrato · fecha de alta · política vigente con su versión.
@@ -36,6 +38,8 @@ Plantas o campus · rutas activas · turnos con sus horas · geocercas · servic
 
 Cada uno **enlaza a su propia identidad**: las rutas abren su expediente, las geocercas su configuración.
 
+**La unidad del alcance son los servicios al día, no las rutas.** Construyéndolo se vio que "Rutas del alcance: 27" no cuadra con la tabla de abajo, donde el mismo nombre aparece dos y tres veces: son registros de ruta distintos, con trazados distintos, que comparten nombre visible. El conteo era correcto y el lector no podía reconstruirlo. Un contrato se contrata en servicios al día —un perfil por ruta, turno y destino—, y esa es la unidad que las dos partes reconocen; rutas y turnos van como lectura al lado. Deduplicar por nombre habría dado un número más bonito y más falso. Quedó en el Marco §D como el caso de la UNIDAD.
+
 ### 2.4 Cumplimiento del contrato — **BLOQUE RESERVADO, ver §4**
 El agregado histórico: cumplimiento por mes, servicios sellados, pendientes acumulados.
 
@@ -44,8 +48,10 @@ Las versiones con qué cambió en cada una y desde cuándo rigió. Ya existe (`c
 
 Con la nota: *"cada versión queda; los hechos conservan la que estaba vigente el día que se sellaron."*
 
-### 2.6 Módulos contratados
-Qué está activo y qué no, con su requisito. Los no contratados con borde punteado, nunca escondidos.
+**Se construye aunque esté vacía.** Hay 0 versiones en toda la base, y cero versiones no es "no sé": es que la política no ha cambiado desde el alta. Eso se escribe, para que el silencio no se lea como un dato perdido.
+
+### 2.6 Módulos contratados — **NO SE CONSTRUYÓ, ver §5**
+Qué está activo y qué no, con su requisito. Los no contratados con borde punteado, nunca escondidos. El concepto no existe en el modelo: la sección quedó como ausencia declarada.
 
 ---
 
@@ -53,15 +59,17 @@ Qué está activo y qué no, con su requisito. Los no contratados con borde punt
 
 **Mismo contenido para cliente y carrier.** Es el documento de la relación, y una relación no tiene dos versiones.
 
-**La única diferencia es dónde vive:** `portal.j-tel.io` para el cliente, `carrier.j-tel.io` para el transportista.
+**La única diferencia es dónde vive:** `portal.j-tel.io` para el cliente, `carrier.j-tel.io` para el transportista — y la puerta a la Oficina, que solo aparece del lado del cliente, porque el auditado no edita las reglas con las que se le juzga (ley 5). La política que los dos leen es la misma.
 
-**Lo que NO cambia entre las dos caras:** el alcance, la política, la historia, los módulos. Si algo tuviera que ocultarse de una de las partes, no pertenece a este expediente.
+**Lo que NO cambia entre las dos caras:** el alcance, la política, la historia. Si algo tuviera que ocultarse de una de las partes, no pertenece a este expediente.
+
+**La ley se construyó como estructura, no como intención:** las dos caras renderizan **el mismo componente**. Si mañana alguien quisiera esconderle algo a una de las partes tendría que partirlo, y eso se ve en un diff. Una condición que sólo vive en la disciplina se rompe el día que alguien tiene prisa; ésta se rompe ruidosamente.
 
 ---
 
 ## 4. EL CORTE
 
-**Va hoy:** identidad, alcance, historia de la política, módulos. Todo es configuración y hechos administrativos.
+**Va hoy:** identidad, alcance, historia de la política. Todo es configuración y hechos administrativos. Los módulos salieron del corte por §5.
 
 **Espera la compuerta de Ola 2 (§2.4):** el bloque de cumplimiento agregado. Espacio reservado declarado: *"Disponible cuando la verificación alcance su umbral de confianza"*.
 
@@ -77,11 +85,18 @@ Qué está activo y qué no, con su requisito. Los no contratados con borde punt
 - `plants` y `plantGroups` — a quién sirve
 - `complianceFacts` — base del agregado cuando llegue su momento
 
-**Debe confirmar desarrollo:**
+**Medido contra producción el 2026-08-02 (lectura por `jtel_readonly`):**
 
-1. **Documentos.** La pestaña de documentos supone que hay dónde guardar archivos del contrato. **Probablemente no existe** — si es así, la pestaña no se construye y queda anotada.
-2. **Contratos por cuenta.** ¿Un cliente puede tener varios contratos con distintos carriers? De eso depende si la navegación entre hermanos aplica.
-3. **Qué roles ven qué.** Con `auth-rbac`, ¿todos los roles del cliente ven el expediente completo, o hay partes solo para `admin_corporativo` y `procurement`?
+1. **Documentos: no hay dónde guardarlos.** Ninguna tabla de archivos en el esquema. La pestaña no se construyó; quedó como ausencia declarada, con la razón escrita en pantalla.
+2. **Módulos contratados: el concepto no existe.** Ninguna tabla de módulos. Dibujar hoy una lista de activos e inactivos sería hornearla en la vista, y lo que se cobra en una relación comercial no puede vivir en el código de una pantalla (ley 6). Ausencia declarada también.
+3. **Historia de la política: 0 versiones en toda la base.** El lector existe; la sección se construye y dice que no ha cambiado (§2.5).
+4. **Contratos por cuenta: sí aplica.** Una cuenta tiene 2 contratos, así que la navegación entre hermanos se construyó.
+5. **Alcance real de un contrato:** 27 perfiles de servicio · 27 rutas · 3 turnos · 1 geocerca. De ahí salió el caso de la UNIDAD de §2.3.
+
+**Sigue abierto:**
+
+- **Qué roles ven qué.** Con `auth-rbac`, ¿todos los roles del cliente ven el expediente completo, o hay partes solo para `admin_corporativo` y `procurement`? Hoy la pertenencia se comprueba por cuenta: quien pide tiene que ser **parte del contrato**, o no hay expediente.
+- **Términos comerciales** (tarifas, penalizaciones): no modelados, ausencia declarada. Un expediente que insinúa términos que el sistema no sostiene es peor que uno que no los menciona.
 
 ---
 
