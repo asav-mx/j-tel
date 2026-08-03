@@ -1,4 +1,4 @@
-import { eq, and, or, gte, lte, isNull, inArray, sql, ne, desc, count } from "drizzle-orm";
+import { eq, and, or, not, gte, lte, isNull, inArray, sql, ne, desc, count } from "drizzle-orm";
 import {
   computeExpectedDeadline,
   computeEvidenceWindow,
@@ -2370,7 +2370,12 @@ export class OccurrenceRepository {
     return { cutoff: lastKept, deleted, skipped };
   }
 
-  async findPendingVerification(now: Date) {
+  /**
+   * Las dos condiciones que ponen a un servicio en la cola del motor.
+   * Compartidas por `findPendingVerification` y por el conteo de lo que esa
+   * consulta excluye, para que ambos midan **lo mismo** y no dos cosas parecidas.
+   */
+  private condicionesDeCola(now: Date) {
     const deadlinePassed = lte(
       sql`${serviceOccurrences.expectedDeadline} + (${serviceContracts.policy}->>'verificationGraceMinutes')::int * interval '1 minute'`,
       now.toISOString(),
@@ -2379,6 +2384,30 @@ export class OccurrenceRepository {
     // 1) Nunca verificados
     // 2) Pendientes por evidencia con GPS indisponible → reintento (p. ej. cuando
     //    la memoria propia ya se puso al día).
+    return and(
+      deadlinePassed,
+      or(
+        isNull(complianceFacts.id),
+        and(
+          eq(complianceFacts.status, "pendiente_evidencia"),
+          eq(trips.evidenceStatus, "indisponible"),
+        ),
+      ),
+    );
+  }
+
+  /**
+   * Los dos cerrojos de cuenta de ejemplo, en SQL.
+   *
+   * Es la misma regla que `motivoCuentaDemo` en services, escrita aquí para
+   * poder excluirlos sin traerlos. Si una cambia y la otra no, la valla de
+   * integración se pone roja: sella sobre demo o deja pasar lo real.
+   */
+  private esDeCuentaDeEjemplo() {
+    return or(eq(accounts.isDemo, true), eq(serviceContracts.status, "demo"));
+  }
+
+  async findPendingVerification(now: Date) {
     const rows = await this.db
       .select({
         occurrence: serviceOccurrences,
@@ -2387,22 +2416,41 @@ export class OccurrenceRepository {
       })
       .from(serviceOccurrences)
       .innerJoin(serviceContracts, eq(serviceOccurrences.contractId, serviceContracts.id))
+      .innerJoin(accounts, eq(accounts.id, serviceContracts.clientAccountId))
       .innerJoin(trips, eq(trips.serviceOccurrenceId, serviceOccurrences.id))
       .leftJoin(complianceFacts, eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id))
       .where(
         and(
-          deadlinePassed,
-          or(
-            isNull(complianceFacts.id),
-            and(
-              eq(complianceFacts.status, "pendiente_evidencia"),
-              eq(trips.evidenceStatus, "indisponible"),
-            ),
-          ),
+          this.condicionesDeCola(now),
+          // El motor no sella sobre cuentas de ejemplo. Se excluyen aquí, antes
+          // de cargarlas, y `verifyOccurrence` vuelve a comprobarlo por si
+          // alguien llega por otra puerta. Cuántas se quedaron fuera lo dice
+          // `contarVencidasDeCuentaDemo` — excluir en silencio es lo que ya nos
+          // costó 35 días.
+          not(this.esDeCuentaDeEjemplo()!),
         ),
       );
 
     return rows;
+  }
+
+  /**
+   * Cuántos servicios vencidos NO entraron a la cola por ser de cuenta de ejemplo.
+   *
+   * Existe para que el número se pueda enunciar en vez de esconderlo: un filtro
+   * mudo y un filtro que no filtra se ven idénticos desde afuera.
+   */
+  async contarVencidasDeCuentaDemo(now: Date): Promise<number> {
+    const [fila] = await this.db
+      .select({ total: count() })
+      .from(serviceOccurrences)
+      .innerJoin(serviceContracts, eq(serviceOccurrences.contractId, serviceContracts.id))
+      .innerJoin(accounts, eq(accounts.id, serviceContracts.clientAccountId))
+      .innerJoin(trips, eq(trips.serviceOccurrenceId, serviceOccurrences.id))
+      .leftJoin(complianceFacts, eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id))
+      .where(and(this.condicionesDeCola(now), this.esDeCuentaDeEjemplo()));
+
+    return Number(fila?.total ?? 0);
   }
 
   /**
@@ -3110,6 +3158,11 @@ export class OccurrenceRepository {
         complianceFact: { with: { observedUnit: true } },
         trip: { with: { evidencePoints: true } },
         profile: { with: { contract: true, geofence: true, routeShift: true } },
+        // El contrato PROPIO de la ocurrencia (no el del perfil) con su cuenta
+        // cliente: es lo que el motor lee para saber si esta cuenta es de
+        // ejemplo antes de sellar nada. Se trae aquí porque `verifyOccurrence`
+        // ya hace esta lectura y no hay razón para pagar una segunda.
+        contract: { with: { client: true } },
       },
     });
   }

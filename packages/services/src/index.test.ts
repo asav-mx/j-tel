@@ -1183,6 +1183,7 @@ describe("el catch deja rastro — el silencio que costó 35 días", () => {
         ]),
         // Lo que hace tronar verifyOccurrence: no encuentra la ocurrencia.
         findById: vi.fn().mockResolvedValue(null),
+        contarVencidasDeCuentaDemo: vi.fn().mockResolvedValue(0),
       },
       compliance: { addLedgerEntry },
     };
@@ -1213,6 +1214,7 @@ describe("el catch deja rastro — el silencio que costó 35 días", () => {
           { occurrence: { id: "occ-b" }, contract: {}, trip: { id: "trip-b" } },
         ]),
         findById: vi.fn().mockResolvedValue(null),
+        contarVencidasDeCuentaDemo: vi.fn().mockResolvedValue(0),
       },
       compliance: { addLedgerEntry: vi.fn().mockRejectedValue(new Error("ledger caído")) },
     };
