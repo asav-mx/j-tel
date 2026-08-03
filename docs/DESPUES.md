@@ -9,6 +9,11 @@ cuando alguien decidió aplazar algo concreto, y sale cuando se construye.
 **El Marco Maestro manda sobre este archivo.** Si una entrada choca con
 `docs/marco-limpio/Marco-Limpio-J-Telemetry-MAESTRO.md`, gana el Marco.
 
+**Este archivo dice qué falta; `Plan-Camino-a-v1.md` dice por dónde se empieza.**
+Una entrada de aquí no lleva prioridad escrita a propósito — el orden vive allá,
+en fases con su compuerta. Si buscas qué construir hoy, esa es la lectura;
+esta es la que te dice por qué esa entrada existe y qué la desbloquea.
+
 ## Cómo se agrega una entrada
 
 Cuatro líneas, siempre las mismas:

@@ -11,6 +11,11 @@ existía — la política como acuerdo entre las partes.
 **Este documento es el orden** (en qué secuencia, y qué desbloquea qué).
 El `Marco-Limpio-J-Telemetry-MAESTRO.md` manda sobre los dos.
 
+**`Plan-Camino-a-v1.md` es el camino** (qué se hace primero, y por qué ese y no
+otro). Este documento dice en qué ola vive cada cosa; aquel dice por dónde se
+empieza mañana. Cuando los dos hablen de lo mismo, gana el camino: está fechado
+más tarde y verificado contra el repo.
+
 ---
 
 ## 0. Cómo se usa este plan
