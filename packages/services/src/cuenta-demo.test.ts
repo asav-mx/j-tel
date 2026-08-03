@@ -102,9 +102,7 @@ describe("el motor no sella sobre cuentas de ejemplo", () => {
   for (const caso of casos) {
     it(`${caso.nombre} → ni sella, ni borra, ni toca la evidencia`, async () => {
       const f = reposCon(ocurrenciaDe(caso.contract));
-      const service = new VerificationService(f.repos as never, {
-        umbrellaBaseUrl: "http://example.com",
-      });
+      const service = new VerificationService(f.repos as never);
 
       const result = await service.verifyOccurrence("occ-1");
 
@@ -128,9 +126,7 @@ describe("el motor no sella sobre cuentas de ejemplo", () => {
     // El caso real: J-Staff dándole a «verificar» en la pantalla de soporte.
     // Devuelve el motivo en vez de reventar, para que se pueda enunciar.
     const f = reposCon(ocurrenciaDe({ status: "active", client: { isDemo: true } }));
-    const service = new VerificationService(f.repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(f.repos as never);
 
     const result = await service.verifyOccurrence("occ-1", {
       force: true,
@@ -150,9 +146,7 @@ describe("el motor no sella sobre cuentas de ejemplo", () => {
      * cerrojo mal escrito que apagara el motor entero pasaría en verde.
      */
     const f = reposCon(ocurrenciaDe({ status: "active", client: { isDemo: false } }));
-    const service = new VerificationService(f.repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(f.repos as never);
 
     const result = (await service.verifyOccurrence("occ-1").catch((e) => e)) as {
       cuentaDeEjemplo?: boolean;
@@ -177,9 +171,7 @@ describe("el motor no sella sobre cuentas de ejemplo", () => {
       avisos.push(String(m));
     });
 
-    const service = new VerificationService(repos as never, {
-      umbrellaBaseUrl: "http://example.com",
-    });
+    const service = new VerificationService(repos as never);
     await service.processPending();
     warn.mockRestore();
 
