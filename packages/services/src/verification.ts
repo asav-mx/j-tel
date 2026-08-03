@@ -1,6 +1,15 @@
 import { verifyService, pointInPolygon } from "@jtel/verification";
 import { measureBestTraversal, corridorKmFromMeters } from "./medicion-recorrido.js";
 import { createUmbrellaProvider, ingestEvidenceForTrip } from "@jtel/gps-umbrella";
+import {
+  razonSinEvidenciaPosible,
+  explicarRazon,
+  type RazonSinEvidencia,
+} from "./sin-evidencia-posible.js";
+import {
+  recuperacionTardia,
+  FILAS_QUE_CABIAN_ANTES_DEL_LOTEO,
+} from "./recuperacion-tardia.js";
 import type { ComplianceFact, Repositories } from "@jtel/db";
 import type { ContractPolicy, VerificationResult } from "@jtel/domain";
 import { localDateIso, JTTEL_TZ } from "@jtel/domain";
@@ -183,6 +192,13 @@ export class VerificationService {
     string,
     ReturnType<typeof createUmbrellaProvider>
   >();
+
+  /**
+   * Primer punto de telemetría propia por carrier, cacheado por corrida. No
+   * cambia dentro de una pasada del cron y la consulta es la misma para todos
+   * los servicios del mismo transportista.
+   */
+  private horizonteMemoriaPorCarrier = new Map<string, Date | null>();
 
   constructor(
     private repos: Repositories,
@@ -704,6 +720,66 @@ export class VerificationService {
     return polygons;
   }
 
+  /**
+   * ¿Este servicio salió de la cola de reintento, y por qué?
+   *
+   * Devuelve la razón si lo retiró (y la deja escrita en el ledger y en el
+   * estado de evidencia del viaje), o `null` si todavía tiene sentido volver a
+   * intentarlo. NO toca el veredicto: eso es `pendiente_evidencia` y así se
+   * queda — sin evidencia no es incumplimiento.
+   */
+  private async evaluarSinEvidenciaPosible(input: {
+    occurrenceId: string;
+    tripId: string;
+    carrierAccountId: string;
+    finDeVentana: Date;
+    actorKind: string;
+    actorId: string | null;
+  }): Promise<RazonSinEvidencia | null> {
+    let horizonte = this.horizonteMemoriaPorCarrier.get(input.carrierAccountId);
+    if (horizonte === undefined) {
+      horizonte = await this.repos.telemetry.getMemoryHorizon(input.carrierAccountId);
+      this.horizonteMemoriaPorCarrier.set(input.carrierAccountId, horizonte);
+    }
+
+    const intentosPrevios = await this.repos.compliance.countAutomaticVerifications(
+      input.occurrenceId,
+    );
+
+    const razon = razonSinEvidenciaPosible({
+      finDeVentana: input.finDeVentana,
+      horizonteDeMemoria: horizonte,
+      intentosPrevios,
+      ahora: new Date(),
+    });
+    if (!razon) return null;
+
+    await this.repos.evidence.updateTripStatus(input.tripId, "sin_evidencia_posible");
+    await this.repos.compliance.addLedgerEntry({
+      tripId: input.tripId,
+      serviceOccurrenceId: input.occurrenceId,
+      actorKind: input.actorKind,
+      actorId: input.actorId,
+      action: "sin_evidencia_posible",
+      steps: [
+        {
+          step: "retiro_de_la_cola",
+          result: razon,
+          details: {
+            explicacion: explicarRazon(razon),
+            intentosPrevios,
+            finDeVentana: input.finDeVentana.toISOString(),
+            horizonteDeMemoria: horizonte ? horizonte.toISOString() : null,
+            nota: "El veredicto NO cambia: sigue en pendiente_evidencia. Lo que cambia es que deja de reintentarse cada minuto. Reversible: una re-verificación forzada lo vuelve a juzgar.",
+          },
+        },
+      ],
+      metadata: { razon, intentosPrevios },
+    });
+
+    return razon;
+  }
+
   async verifyOccurrence(
     occurrenceId: string,
     opts: VerifyOccurrenceOpts = {},
@@ -723,6 +799,10 @@ export class VerificationService {
     // Guardamos el hecho pendiente COMPLETO para archivar condicionalmente después de
     // saveFact, solo si el veredicto cambió (ver comentario en el bloque post-saveFact).
     let pendingRetryFact: ComplianceFact | null = null;
+    // Se lee ANTES de borrar nada: después de este bloque la ocurrencia se
+    // queda sin hecho por construcción y ya no se puede distinguir un primer
+    // veredicto de un re-juicio.
+    const esPrimerVeredicto = !occurrence.complianceFact;
 
     // Sin force: cumplido/no_cumplido son definitivos; pendiente se reintenta.
     if (occurrence.complianceFact) {
@@ -789,6 +869,7 @@ export class VerificationService {
     let ingestSource: "memory" | "umbrella" | "none" | "cached" = "none";
     let ingestStatus: "disponible" | "parcial" | "indisponible" = "indisponible";
     let ingestPointCount = 0;
+    let razonRetiro: RazonSinEvidencia | null = null;
 
     if (reuseEvidence) {
       ingestSource = "cached";
@@ -842,6 +923,21 @@ export class VerificationService {
         ingestStatus = ingestResult.status;
         ingestPointCount = ingestResult.pointCount;
       }
+    }
+
+    // Ni la memoria propia ni el proveedor trajeron un punto. ¿Tiene sentido
+    // volver a intentarlo el minuto que viene, o este servicio no se puede
+    // resolver? Sin esta pregunta, cinco servicios de junio se reintentaron
+    // 31 400 veces cada uno. Ver `sin-evidencia-posible.ts`.
+    if (ingestStatus === "indisponible" && !opts.force) {
+      razonRetiro = await this.evaluarSinEvidenciaPosible({
+        occurrenceId,
+        tripId: trip.id,
+        carrierAccountId: contract.carrierAccountId,
+        finDeVentana: trip.evidenceWindowEnd,
+        actorKind: resolvedActorKind,
+        actorId: resolvedActorId,
+      });
     }
 
     // Construye imei→unidad una sola vez (preferir unitId ya en evidencia).
@@ -1136,6 +1232,45 @@ export class VerificationService {
       await this.repos.compliance.updateHistorySuccessor(retryHistoryId, fact.id);
     }
 
+    // ¿Este primer veredicto llega con semanas de retraso? Entonces el
+    // expediente tiene que decir por qué, o aparecería indistinguible de uno
+    // normal y nadie —ni el cliente ni el transportista— podría entenderlo.
+    const tardia = recuperacionTardia({
+      esPrimerVeredicto,
+      plazo: occurrence.expectedDeadline,
+      selladoEn: new Date(),
+      puntosDeEvidencia: ingestPointCount,
+      filasQueCabianEnUnaSentencia: FILAS_QUE_CABIAN_ANTES_DEL_LOTEO,
+    });
+    if (tardia) {
+      await this.repos.compliance.addLedgerEntry({
+        tripId: trip.id,
+        serviceOccurrenceId: occurrenceId,
+        actorKind: resolvedActorKind,
+        actorId: resolvedActorId,
+        action: "recuperacion_tardia",
+        steps: [
+          {
+            step: "primer_veredicto_tardio",
+            result: tardia.causa,
+            details: {
+              explicacion: tardia.explicacion,
+              diasDeRetraso: tardia.diasDeRetraso,
+              horasDeRetraso: tardia.horasDeRetraso,
+              plazo: occurrence.expectedDeadline.toISOString(),
+              puntosDeEvidencia: ingestPointCount,
+              origenDeLaEvidencia: ingestSource,
+            },
+          },
+        ],
+        metadata: {
+          recuperacionTardia: true,
+          causa: tardia.causa,
+          diasDeRetraso: tardia.diasDeRetraso,
+        },
+      });
+    }
+
     await this.repos.compliance.addLedgerEntry({
       tripId: trip.id,
       serviceOccurrenceId: occurrenceId,
@@ -1171,7 +1306,11 @@ export class VerificationService {
     // (3) Cero Umbrella: se lee EXCLUSIVAMENTE de la telemetría propia (Neon).
     const savedArrivalAt =
       finalStatus === "cumplido" ? verification.observedArrivalAt : null;
-    if (!savedArrivalAt) {
+    // Si el servicio acaba de salir de la cola por no tener evidencia posible,
+    // este contexto tampoco la va a encontrar: lee de la misma memoria propia
+    // que ya sabemos que no cubre la ventana. Saltarlo evita una consulta por
+    // los IMEIs del carrier entero cuyo resultado conocemos.
+    if (!savedArrivalAt && !razonRetiro) {
       try {
         await this.recordArrivalOutsideWindowContext({
           occurrenceId,
@@ -1195,7 +1334,16 @@ export class VerificationService {
       }
     }
 
-    if (finalStatus === "pendiente_evidencia") {
+    // Se avisa cuando el veredicto CAMBIA, no cada vez que se recalcula.
+    //
+    // Antes se creaba una notificación por corrida: cinco servicios atorados
+    // reintentándose cada minuto produjeron 159 783 avisos de `sin_evidencia`
+    // —~6 800 al día— que decían todos exactamente lo mismo. Eso no es avisar,
+    // es tapar: la notificación que sí importaba quedaba enterrada, y la
+    // pantalla que las lee se quedó sin memoria al traerlas.
+    const veredictoCambio = !pendingRetryFact || pendingRetryFact.status !== finalStatus;
+
+    if (finalStatus === "pendiente_evidencia" && veredictoCambio) {
       await this.repos.notifications.create({
         accountId: contract.clientAccountId,
         type: "sin_evidencia",
@@ -1224,6 +1372,8 @@ export class VerificationService {
       factId: fact?.id,
       ingestSource,
       pointCount: ingestPointCount,
+      /** Si salió de la cola de reintento, por qué. `null` = sigue en cola. */
+      sinEvidenciaPosible: razonRetiro,
     };
   }
 

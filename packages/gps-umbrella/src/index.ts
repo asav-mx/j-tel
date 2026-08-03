@@ -16,6 +16,8 @@ export {
   acquireToken,
   fullJitterDelayMs,
   parseRetryAfterMs,
+  pedidosEnCola,
+  ColaDeGpsLlenaError,
   _resetRateLimitForTests,
 } from "./rate-limit.js";
 
@@ -237,11 +239,19 @@ export async function ingestEvidenceForTrip(
   provider: UmbrellaGpsProvider,
   input: EvidenceIngestInput & { imeiBatchSize?: number },
 ): Promise<{ pointCount: number; status: "disponible" | "parcial" | "indisponible" }> {
-  const token = await provider.login();
   const batchSize = input.imeiBatchSize ?? 3;
   const allPoints: Awaited<ReturnType<UmbrellaGpsProvider["getHistoryLocations"]>> = [];
 
   try {
+    // El login va DENTRO del try. Estuvo fuera, y eso convertía un fallo de
+    // sesión —credenciales vencidas, 500 del proveedor, corte de red— en una
+    // excepción que escapaba de aquí, tumbaba la verificación entera y la
+    // dejaba SIN hecho. Quien llama se la traga en un catch y el servicio
+    // vuelve a la cola: el mismo minuto siguiente, para siempre, sin que nadie
+    // vea un error. No poder hablar con el proveedor es exactamente lo que
+    // "evidencia indisponible" significa; no es una excepción, es un resultado.
+    const token = await provider.login();
+
     for (let i = 0; i < input.imeis.length; i += batchSize) {
       const batch = input.imeis.slice(i, i + batchSize);
       const points = await provider.getHistoryLocations(token, {
@@ -251,7 +261,15 @@ export async function ingestEvidenceForTrip(
       });
       allPoints.push(...points);
     }
-  } catch {
+  } catch (err) {
+    // "Indisponible" es el resultado correcto, pero POR QUÉ no se pudo observar
+    // no puede perderse aquí: sin esta línea, una cola llena, un token vencido
+    // y un GPS de verdad apagado se ven exactamente igual desde fuera.
+    console.warn(
+      `[umbrella] viaje ${input.tripId}: evidencia indisponible — ${
+        err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+      }`,
+    );
     await input.updateStatus("indisponible");
     return { pointCount: 0, status: "indisponible" };
   }

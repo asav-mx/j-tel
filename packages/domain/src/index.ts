@@ -170,11 +170,24 @@ export type ComplianceStatus = z.infer<typeof ComplianceStatus>;
 export const TimingStatus = z.enum(["temprano", "a_tiempo", "tarde"]);
 export type TimingStatus = z.infer<typeof TimingStatus>;
 
+/**
+ * Qué se pudo observar de un servicio. Describe la EVIDENCIA, no la conducta
+ * del transportista — el veredicto son otros tres valores (`ComplianceStatus`)
+ * y no se tocan desde aquí.
+ *
+ * `sin_evidencia_posible` es el reconocimiento de que no hay dato que pueda
+ * cubrir esta ventana: la memoria propia empieza después de que terminó, o
+ * pasaron semanas sin que apareciera por ninguna vía. Saca al servicio de la
+ * cola de reintento —de ahí que exista— y NO es un veredicto: el hecho se
+ * queda en `pendiente_evidencia`. Sin evidencia no es incumplimiento.
+ * Es reversible: una re-verificación forzada lo ignora.
+ */
 export const EvidenceStatus = z.enum([
   "disponible",
   "parcial",
   "en_espera",
   "indisponible",
+  "sin_evidencia_posible",
 ]);
 export type EvidenceStatus = z.infer<typeof EvidenceStatus>;
 

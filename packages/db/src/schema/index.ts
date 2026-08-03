@@ -31,6 +31,8 @@ export const evidenceStatusEnum = pgEnum("evidence_status", [
   "parcial",
   "en_espera",
   "indisponible",
+  // Ver `EvidenceStatus` en @jtel/domain: estado de cola, no veredicto.
+  "sin_evidencia_posible",
 ]);
 export const routeStrictnessEnum = pgEnum("route_strictness", [
   "destino_only",

@@ -1075,3 +1075,83 @@ describe("choferes — la purga no rompe la historia", () => {
     }
   });
 });
+
+describe("savePoints — el INSERT que no cabía", () => {
+  /**
+   * La regresión que este archivo existe para impedir.
+   *
+   * Ocho servicios de Honeywell pasaron 35 días sin veredicto con su evidencia
+   * completa esperando en memoria propia: `savePoints` metía ~12 000 puntos en
+   * una sola sentencia, Postgres la rechazaba por exceso de parámetros, y el
+   * `catch` de `processPending` se comía el error sin dejar rastro.
+   *
+   * Un test de unidad no habría atrapado esto: el límite no vive en nuestro
+   * código, vive en el protocolo de Postgres. Por eso este test escribe de
+   * verdad, contra la rama desechable.
+   */
+  const PUNTOS = 12_000;
+
+  it(`guarda ${PUNTOS} puntos de evidencia sin que la base rechace la sentencia`, async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const tecma = await repos.accounts.findBySlug("tecma");
+    if (!tecma) return;
+    const profiles = await repos.profiles.findForClient(tecma.id);
+    if (profiles.length === 0) return;
+    const profile = profiles[0]!;
+
+    const serviceDate = "2099-03-01";
+    const ventanaIni = new Date("2099-03-01T10:50:00Z");
+    const ventanaFin = new Date("2099-03-01T13:25:00Z");
+
+    const previa = await db.query.serviceOccurrences.findFirst({
+      where: (o, { and, eq: e }) =>
+        and(e(o.serviceProfileId, profile.id), e(o.serviceDate, serviceDate)),
+    });
+    if (previa) await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, previa.id));
+
+    const [occ] = await db
+      .insert(serviceOccurrences)
+      .values({
+        serviceProfileId: profile.id,
+        contractId: profile.contractId,
+        routeShiftId: profile.routeShiftId,
+        serviceDate,
+        expectedDeadline: new Date("2099-03-01T12:20:00Z"),
+        expectedGeofenceId: profile.geofenceId,
+      })
+      .returning();
+    if (!occ) throw new Error("No se pudo insertar la ocurrencia de test");
+
+    try {
+      const [trip] = await db
+        .insert(trips)
+        .values({
+          serviceOccurrenceId: occ.id,
+          evidenceWindowStart: ventanaIni,
+          evidenceWindowEnd: ventanaFin,
+          evidenceStatus: "en_espera",
+        })
+        .returning();
+      if (!trip) throw new Error("No se pudo insertar el viaje de test");
+
+      const puntos = Array.from({ length: PUNTOS }, (_, i) => ({
+        imei: `imei-lote-${i % 82}`,
+        latitude: 31.7 + i * 1e-6,
+        longitude: -106.4 + i * 1e-6,
+        speed: 40,
+        recordedAt: new Date(ventanaIni.getTime() + i * 500),
+      }));
+
+      const guardados = await repos.evidence.savePoints(trip.id, puntos);
+      expect(guardados.length).toBe(PUNTOS);
+
+      const leidos = await repos.evidence.getPointsForTrip(trip.id);
+      expect(leidos.length).toBe(PUNTOS);
+    } finally {
+      await db.delete(serviceOccurrences).where(eq(serviceOccurrences.id, occ.id));
+    }
+  });
+
+});

@@ -1026,3 +1026,162 @@ describe("Tarea 3 — contexto llegada fuera de ventana", () => {
     expect(ctx).toBeUndefined();
   });
 });
+
+describe("sin evidencia posible — el servicio sale de la cola de reintento", () => {
+  /**
+   * El caso real: cinco servicios de TECMA del 22–26 de junio, con la memoria
+   * propia empezando el 28. Reintentados cada minuto desde el 10 de julio:
+   * 31 424 verificaciones, 31 424 entradas de ledger, 31 424 notificaciones y
+   * una llamada al proveedor de GPS por minuto por cada uno.
+   */
+  function armarRepos(opciones: { intentosPrevios: number; horizonte: Date | null }) {
+    const occ = {
+      id: "occ-atorada",
+      serviceDate: "2026-06-22",
+      contractId: "contract-1",
+      expectedDeadline: new Date("2026-06-22T12:20:00Z"),
+      expectedGeofenceId: "geo-1",
+      referenceUnitId: null,
+      // Ya venía en pendiente_evidencia: este es un reintento, no la primera vez.
+      complianceFact: { id: "fact-viejo", status: "pendiente_evidencia" },
+      trip: {
+        id: "trip-1",
+        evidenceWindowStart: new Date("2026-06-22T10:45:00Z"),
+        evidenceWindowEnd: new Date("2026-06-22T12:20:00Z"),
+        evidenceStatus: "indisponible",
+      },
+      profile: {
+        id: "profile-1",
+        contractId: "contract-1",
+        geofenceId: "geo-1",
+        geofence: { id: "geo-1", polygon: [] },
+        contract: {
+          id: "contract-1",
+          carrierAccountId: "carrier-1",
+          clientAccountId: "client-1",
+          policy: {
+            toleranceMinutes: 5,
+            verificationGraceMinutes: 15,
+            routeStrictness: "destino_only" as const,
+            kmlMatchMinPct: 60,
+            excusableReasons: [] as string[],
+          },
+        },
+        routeShift: { routeId: "route-1" },
+      },
+      kmlVersionId: null,
+    };
+
+    return {
+      occurrences: { findById: vi.fn().mockResolvedValue(occ) },
+      evidence: {
+        getPointsForTrip: vi.fn().mockResolvedValue([]),
+        clearPointsForTrip: vi.fn(),
+        updateTripStatus: vi.fn(),
+        savePoints: vi.fn(),
+      },
+      compliance: {
+        deleteFactForOccurrence: vi.fn(),
+        saveFact: vi.fn().mockResolvedValue({ id: "fact-1", status: "pendiente_evidencia" }),
+        insertHistoryEntry: vi.fn().mockResolvedValue("history-1"),
+        updateHistorySuccessor: vi.fn().mockResolvedValue(undefined),
+        addLedgerEntry: vi.fn(),
+        countAutomaticVerifications: vi.fn().mockResolvedValue(opciones.intentosPrevios),
+      },
+      profiles: {
+        getPossibleUnitIds: vi.fn().mockResolvedValue([]),
+        findForContract: vi.fn().mockResolvedValue([]),
+      },
+      fleet: {
+        getDevicesForCarrier: vi
+          .fn()
+          .mockResolvedValue([{ id: "dev-1", imei: "imei-1", carrierAccountId: "carrier-1" }]),
+        getUnitsForCarrier: vi.fn().mockResolvedValue([{ id: "unit-1" }]),
+        resolveUnitAtTime: vi.fn().mockResolvedValue(null),
+      },
+      telemetry: {
+        getForImeis: vi.fn().mockResolvedValue([]),
+        getMemoryHorizon: vi.fn().mockResolvedValue(opciones.horizonte),
+      },
+      routes: {
+        getKmlVersionForDate: vi.fn().mockResolvedValue(null),
+        getActiveVariantVersionsForDate: vi.fn().mockResolvedValue([]),
+      },
+      carriers: { getGpsCredentials: vi.fn().mockResolvedValue(null) },
+      contracts: { findForCarrier: vi.fn().mockResolvedValue([]) },
+      notifications: { create: vi.fn() },
+      routeTraversals: { record: vi.fn() },
+    };
+  }
+
+  it("ventana anterior a la memoria y miles de intentos: se retira y queda escrito", async () => {
+    const repos = armarRepos({
+      intentosPrevios: 31_424,
+      horizonte: new Date("2026-06-28T02:23:16Z"),
+    });
+    // El proveedor en vivo tampoco trae nada: ingestEvidenceForTrip se traga
+    // el fallo de red y devuelve indisponible, igual que en producción.
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+      text: async () => "",
+      headers: { get: () => null },
+    } as never);
+
+    const service = new VerificationService(repos as never, {
+      umbrellaBaseUrl: "http://example.com",
+    });
+    const result = await service.verifyOccurrence("occ-atorada");
+
+    expect(result.sinEvidenciaPosible).toBe("ventana_anterior_a_la_memoria");
+    expect(repos.evidence.updateTripStatus).toHaveBeenCalledWith(
+      "trip-1",
+      "sin_evidencia_posible",
+    );
+
+    const retiro = repos.compliance.addLedgerEntry.mock.calls
+      .map((c) => c[0])
+      .find((e) => e.action === "sin_evidencia_posible");
+    expect(retiro).toBeDefined();
+    expect(retiro.steps[0].result).toBe("ventana_anterior_a_la_memoria");
+    expect(retiro.steps[0].details.intentosPrevios).toBe(31_424);
+
+    // EL VEREDICTO NO CAMBIA. Sin evidencia no es incumplimiento.
+    expect(repos.compliance.saveFact.mock.calls[0]![0].status).toBe("pendiente_evidencia");
+
+    // Y no vuelve a notificar lo mismo: el veredicto no cambió.
+    expect(repos.notifications.create).not.toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+  });
+
+  it("los primeros intentos no retiran nada, aunque la ventana sea vieja", async () => {
+    const repos = armarRepos({ intentosPrevios: 3, horizonte: new Date("2026-06-28T02:23:16Z") });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+      text: async () => "",
+      headers: { get: () => null },
+    } as never);
+
+    const service = new VerificationService(repos as never, {
+      umbrellaBaseUrl: "http://example.com",
+    });
+    const result = await service.verifyOccurrence("occ-atorada");
+
+    expect(result.sinEvidenciaPosible).toBeNull();
+    expect(repos.evidence.updateTripStatus).not.toHaveBeenCalledWith(
+      "trip-1",
+      "sin_evidencia_posible",
+    );
+    expect(
+      repos.compliance.addLedgerEntry.mock.calls
+        .map((c) => c[0])
+        .find((e) => e.action === "sin_evidencia_posible"),
+    ).toBeUndefined();
+
+    vi.restoreAllMocks();
+  });
+});
