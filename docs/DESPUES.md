@@ -25,6 +25,10 @@ que no lleva "por qué se aplazó". Lleva **por qué ahora**. Vive aquí porque 
 archivo es el único lugar donde el alcance completo se lee de un jalón, y porque una
 entrada que baja de la sección 1 a la 2 deja rastro de la decisión.
 
+**Excepción, la sección 5.** Los trámites y las decisiones de producto **no son entradas
+de construcción**: no se desbloquean escribiendo código, así que no llevan las cuatro
+líneas. Van en tablas, cada renglón apuntando a la entrada que espera por él.
+
 ---
 
 # Leyes de producto
@@ -84,6 +88,8 @@ de estas leyes está mal escrita, y se corrige la entrada.
 
 ## Índice
 
+> **Leyenda:** 🔴 riesgo real · 🟡 importante · 🟢 deuda · 🤝 trámite de Asav · ⏸ bloqueado
+
 ### 1 · v1 — en construcción ahora
 
 | Entrada | Estado |
@@ -101,6 +107,11 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [El hecho debe bastarse a sí mismo](#el-hecho-debe-bastarse-a-sí-mismo) | **Bloquea a Lenore-narradora** |
 | [Cierre del turno](#cierre-del-turno) | **Construida contra el molde aprobado** |
 | [Ponderación de la cobertura por valor del tramo](#ponderación-de-la-cobertura-por-valor-del-tramo) | Hipótesis medible, sin caso todavía |
+| [Afinar la ventana derivada con el match observable](#afinar-la-ventana-derivada-con-el-match-observable) | Ola 2 — espera historia, no trabajo |
+| [Las 300 congeladas — la foto de referencia](#las-300-congeladas--la-foto-de-referencia) | **PR #124 abierto a propósito** |
+| [Las tres rutas con falla real](#las-tres-rutas-con-falla-real) | Pide ojo humano sobre el KML |
+| [Dirección visual del producto](#dirección-visual-del-producto) | 🔴 **PENDIENTE DE ASAV — bloquea pantallas** |
+| [El resto de la cara del producto](#el-resto-de-la-cara-del-producto) | Después de la dirección visual |
 | [Pendientes puntuales de v1](#pendientes-puntuales-de-v1) | En cola |
 
 ### 2 · v1.1 — inmediatamente después del demo
@@ -113,23 +124,36 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Medición honesta de kilómetros con brincos de GPS](#medición-honesta-de-kilómetros-con-brincos-de-gps) | v1.1 |
 | [Compuerta per-candidata](#compuerta-per-candidata) | v1.1 |
 | [Qué pasa si la política cambia con la ventana abierta](#qué-pasa-si-la-política-cambia-con-la-ventana-abierta) | **Al Marco Maestro** |
+| [`CRON_SECRET` cae a un secreto publicado](#cron_secret-cae-a-un-secreto-publicado) | 🔴 **Riesgo verificado — primero de la fila** |
+| [Las páginas no comprueban permisos](#las-páginas-no-comprueban-permisos) | 🔴 **Antes del primer usuario real** |
+| [Cerrar el default de identidad heredada](#cerrar-el-default-de-identidad-heredada) | ⏸ Después de la guardia de páginas |
+| [El expediente por id sigue abierto](#el-expediente-por-id-sigue-abierto) | 🟡 Con la guardia por alcance |
+| [Defaults que fallan abiertos](#defaults-que-fallan-abiertos) | 🟡 La regla, y encadenarla a CI |
+| [Lo que falta del candado de auth-rbac](#lo-que-falta-del-candado-de-auth-rbac) | ⏸ 🤝 Bloqueado en el mapeo de Clerk |
 | [`/cliente/*` no tiene autenticación](#cliente-no-tiene-autenticación) | **Bloqueante antes del segundo cliente** |
 | [El enforcement usa la política de hoy, no la congelada](#el-enforcement-usa-la-política-de-hoy-no-la-congelada) | Antes de encender enforcement |
 | [La herramienta de geocercas solo captura círculos](#la-herramienta-de-geocercas-solo-captura-círculos) | Un solo trabajo con el versionado |
 | [Gesto explícito para borrar la hora de cierre](#gesto-explícito-para-borrar-la-hora-de-cierre) | Si más gente configura contratos |
 | [Distinguir "sin hora de cierre" de "no configurado"](#distinguir-sin-hora-de-cierre-de-no-configurado) | v1.1 |
+| [`maxRouteDurationMinutes` fijo en 60](#maxroutedurationminutes-fijo-en-60) | 🟢 Tarea propia, sin mezclar |
+| [Reconocer caminos](#reconocer-caminos) | Mitad motor en v1; la otra mitad v1.1 |
+| [Map matching como capa de explicación](#map-matching-como-capa-de-explicación) | v1.1 |
 
 ### 3 · v2 — línea Lenore completa
 
 | Entrada | Horizonte |
 |---|---|
 | [El loop de aprendizaje de la operación](#el-loop-de-aprendizaje-de-la-operación) | **Marco — gobierna varias entradas** |
+| [Sandbox — el banco de pruebas de la política de rutas](#sandbox--el-banco-de-pruebas-de-la-política-de-rutas) | **Ficha propia — el producto v2** |
+| [La política como acuerdo vivo](#la-política-como-acuerdo-vivo) | 1 de 3 piezas hecha (#125) |
 | [Lenore — el copiloto](#lenore--el-copiloto) | Línea de producto propia |
 | [Lenore-auditora](#lenore-auditora) | **Caso de uso estrella** |
 | [Lenore-copiloto de configuración](#lenore-copiloto-de-configuración) | v2 |
 | [Lenore-detección de deriva](#lenore-detección-de-deriva) | v2 |
 | [Lenore-copiloto general en J-Staff](#lenore-copiloto-general-en-j-staff) | v2 |
 | [Modo pasajero](#modo-pasajero) | Producto aparte |
+| [Pre-nómina](#pre-nómina) | Futuro — hoy solo se deja el rol |
+| [Compartir información entre plantas](#compartir-información-entre-plantas) | Configurable, nunca horneada |
 
 ### 4 · Deuda técnica y datos — sin horizonte fijo
 
@@ -145,7 +169,22 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [El vigilante se apaga tras 60 días de repo inactivo](#el-vigilante-se-apaga-tras-60-días-de-repo-inactivo) | Vigilar |
 | [`apps/web` no tiene corredor de pruebas](#appsweb-no-tiene-corredor-de-pruebas) | Antes de mover lógica a la web |
 | [Migrar `autopsia.ts` al emparejamiento nuevo](#migrar-autopsiats-al-emparejamiento-nuevo) | Herramienta interna |
+| [La contraseña del readonly es la misma que la del dueño](#la-contraseña-del-readonly-es-la-misma-que-la-del-dueño) | 🟡 🤝 Toca producción |
+| [La base de pruebas está atrasada](#la-base-de-pruebas-está-atrasada) | 🟡 La red de seguridad, sin actualizar |
+| [`demos/activate` cruza cuentas](#demosactivate-cruza-cuentas) | 🟡 Protegida; falta decidir qué hace |
+| [No hay configuración de ESLint](#no-hay-configuración-de-eslint) | 🟢 Junto con el corredor de pruebas |
+| ["Consolidación" significa dos cosas](#consolidación-significa-dos-cosas) | 🟢 Renombrar la de política |
+| [Los documentos llegan con la codificación rota](#los-documentos-llegan-con-la-codificación-rota) | 🟢 Revisar el traspaso, no el síntoma |
+| [Documentación por marcar como superseded](#documentación-por-marcar-como-superseded) | Desbloqueado por el #130 |
 | [Los 15 pendientes del 28-jul se quedan pendientes](#los-15-pendientes-del-28-jul-se-quedan-pendientes) | Decidido, no se toca |
+
+### 5 · Trámites y decisiones abiertas
+
+| Entrada | Dueño |
+|---|---|
+| [Trámites que solo Asav puede hacer](#trámites-que-solo-asav-puede-hacer) | 🤝 Asav |
+| [Decisiones de producto pendientes](#decisiones-de-producto-pendientes) | Producto |
+| [El orden recomendado](#el-orden-recomendado) | Corte del 1 de agosto de 2026 |
 
 ---
 
@@ -428,6 +467,13 @@ para el GPS, **30 minutos** para el archivador.
   que responde 200 mientras falla es un vigilante que miente.
 - **Entrega de alertas** — `notified_at` en `ingest_alerts` + Issues de GitHub, para
   que una alerta crítica salga de la plataforma.
+- **El vigilante externo tiene que empujar al mismo canal.** Hoy no lo hace, y ahí queda
+  el agujero: **si Vercel se cae, el correo tampoco sale.** El vigilante de GitHub
+  Actions es el único de los dos que sobrevive a ese apagón, así que es el único que
+  puede avisar cuando más falta hace. Es la [Ley 4](#leyes-de-producto) llevada hasta el
+  canal de salida — de nada sirve un vigilante fuera de la plataforma si su único modo de
+  gritar vive dentro. Cierra el agujero del **28 de julio**: 13 horas caído y nadie
+  avisado.
 - **Semáforo de salud en la portada de J-Staff** — acero/tenue cuando está sano,
   **azul** cuando está enfermo. Los colores de veredicto no se tocan.
 
@@ -666,6 +712,128 @@ presupone dónde termina la recolección, y entonces la medición ya no puede co
 a quien la diseñó. Las paradas son la unidad correcta del producto; el kilómetro es el
 instrumento neutro de la medición.
 
+## Afinar la ventana derivada con el match observable
+
+**Qué es.** El #115 conectó la ventana derivada, pero hoy corre con **estimación
+geométrica**: `route_traversal_measurements` estaba vacía cuando se midió. Esa tabla
+**se llena sola con la operación diaria**, así que lo que falta no es escribir datos, es
+esperar historia y afinar contra ella.
+
+**Por qué ahora.** Es la mitad que le falta al arreglo del motor, y hasta que cierre no
+se puede sellar nada encima. Medición del **30 de julio de 2026** con el motor arreglado:
+**139 / 160 / 1**, contra **91 / 209 / 0** con la ventana rota.
+
+**Lo que el desglose destapó, y es el punto de la entrada.** De ese movimiento, **+50 se
+enderezan por el match observable y −2 se caen por la ventana derivada**. Las dos mitades
+**no están afinadas entre sí**: una empuja y la otra retiene. Afinar solo una vuelve a
+mover el número sin que nadie sepa cuál de las dos lo movió.
+
+**Qué lo desbloquea.** Que `route_traversal_measurements` acumule historia real de la
+operación. Es tiempo, no trabajo.
+
+**Y qué desbloquea a su vez.** [Las 300 congeladas](#las-300-congeladas--la-foto-de-referencia),
+que no se re-verifican antes que esto.
+
+**Dónde toca.** `route_traversal_measurements`; las perillas de derivación de ventana
+—`windowDerivationEnabled`, `routeDurationPercentile`, `routeDurationMinSamples`, con
+`routeAvgSpeedKmh` de respaldo—, descritas en `docs/marco-limpio/Despues.md` §2.
+
+## Las 300 congeladas — la foto de referencia
+
+**Qué es.** El **PR #124 está abierto a propósito y sin mergear.** No es un pendiente
+olvidado: es la **foto de referencia reproducible** contra la que se mide si el motor
+mejoró.
+
+**Por qué no se re-verifica todavía.** Porque
+[la ventana derivada y el match observable no están afinados entre sí](#afinar-la-ventana-derivada-con-el-match-observable),
+y `route_traversal_measurements` todavía no tiene historia real. **Sellar hoy es sellar
+un efecto a medio hornear** — y un sello nuevo mete una versión más en la historia del
+hecho, así que re-verificar en falso no es gratis.
+
+**Qué lo desbloquea.** Las dos cosas juntas: la afinación cerrada y la tabla de duraciones
+con historia. Y una decisión que no es técnica —
+[cómo se le cuenta a Tecma que su número cambia al re-verificar](#decisiones-de-producto-pendientes).
+
+**Dónde toca.** PR #124; `compliance_facts`; `compliance_fact_history`.
+
+## Las tres rutas con falla real
+
+**Qué es.** **Huertas - B, Centro - A y Parajes del Sur - A** fallan **incluso con la
+ventana corregida** — alrededor de **43 servicios**. No son residuo de los bugs de reloj:
+es el remanente que sobrevive a todos los arreglos de motor hechos hasta hoy.
+
+**El diagnóstico de Huertas, que es el que está medido.** No es la geocerca: **entran
+14-15 unidades al destino cada día** y el servicio **sí se da**. Lo que no corresponde es
+**el trazado KML contra el camino real.**
+
+**Por qué no se cierra solo.** Requiere que **una persona abra el KML en un visor y lo
+compare a ojo** con el recorrido observado. No hay medición automática que lo sustituya
+hoy — es justamente el insumo que
+[reconocer caminos](#reconocer-caminos) automatizaría más adelante.
+
+**Ojo con no confundirla con su vecina.** `Huertas - B` también aparece en
+[Turno B de Planta 47](#turno-b-de-planta-47-declarado-1800-operado-1400), que es un
+problema **de hora declarada**. Son dos capas distintas sobre la misma ruta: primero el
+reloj, y debajo el trazado.
+
+**Dónde toca.** `route_kml_versions.waypoints`; los perfiles de esas tres rutas; ningún
+cambio de motor.
+
+## Dirección visual del producto
+
+**Qué es.** 🔴 **PENDIENTE DE ASAV.** El homescreen del #138 **cumple la ficha** —sin
+cifras de juicio, alcance resuelto, seis puertas— **y aun así se ve como un directorio de
+texto, no como una plataforma.**
+
+**La causa, y es de la ficha, no de quien la ejecutó.** `Ficha-Cara-De-Producto.md` §2
+decidió *"puertas, no tableros"*, que era la decisión correcta y protegía de pintar cifras
+que todavía se mueven. Pero **no dijo nada de cómo debe verse.** Se cumplió al pie de la
+letra y salió pobre. Una ficha que define qué NO mostrar y calla sobre el registro visual
+deja el resultado al azar.
+
+**Por qué ahora, y por qué bloquea.** Va **antes** de seguir construyendo pantallas, o las
+siguientes nacen con el mismo problema y hay que rehacerlas todas juntas. Es la única
+entrada de este archivo cuyo desbloqueo son tres respuestas, no trabajo.
+
+**Qué lo desbloquea — tres respuestas de Asav, y con ellas una ficha de dirección visual
+que el skill `j-telemetry-ui` absorba:**
+
+1. **¿Qué producto le gusta cómo se ve?** Para entender el registro, no para copiarlo.
+2. **¿Qué le falta para sentirse plataforma?** ¿Navegación lateral permanente? ¿Tarjetas
+   con peso? ¿Que se vea *quién* eres?
+3. **¿Las puertas son tarjetas con algo adentro, o enlaces bien hechos?**
+
+**Dónde toca.** `docs/marco-limpio/Ficha-Cara-De-Producto.md` §2 y §5; el skill
+`j-telemetry-ui`; el homescreen del #138.
+
+## El resto de la cara del producto
+
+**Qué es.** Lo que sigue del frente, ya fichado en `Ficha-Cara-De-Producto.md` §7:
+homescreen de carrier · coherencia visual de J-Staff · pase de coherencia sobre lo
+existente · enrutamiento por **subdominios**.
+
+**Por qué se aplazó.** Va **después de [la dirección visual](#dirección-visual-del-producto)**,
+por la razón de esa entrada: construir más pantallas antes de resolver el registro visual
+es fabricar trabajo que se rehace.
+
+**Los subdominios, aparte y bloqueados.** ⏸ **`j-tel.io` no está comprado.** Se diseñan y
+se deja el código listo para que apuntarlos sea configuración y no obra; **no se enciende
+nada** hasta que el dominio exista. Ver
+[trámites](#trámites-que-solo-asav-puede-hacer).
+
+**La regla que no se rompe.**
+
+> **El subdominio es una puerta, no un permiso.**
+
+Llegar por `portal.j-tel.io` **no convierte a nadie en cliente**. Quién es y qué alcance
+tiene lo decide su membresía, siempre. Si esto se invierte se abre el agujero más obvio de
+todos —escribir otra URL para ser otra persona— y la guardia sigue siendo la de
+`auth-rbac`, sin excepciones por subdominio.
+
+**Dónde toca.** `docs/marco-limpio/Ficha-Cara-De-Producto.md` §4 y §7;
+`docs/Brief-Identidad-J-Tel.md` — la única definición escrita de los subdominios, ver
+[documentación por marcar como superseded](#documentación-por-marcar-como-superseded).
+
 ## Pendientes puntuales de v1
 
 **Anomalía del sello anticipado — verificación pendiente.** Sospecha sin comprobar:
@@ -743,6 +911,13 @@ el snapshot dice qué valor gobernó, pero no quién lo puso ni contra qué lo c
 reconstruyendo a mano, desde snapshots congelados, que el corredor pasó de 120 a
 150 m y el match de 40 a 60% entre el 13 y el 14 de julio. Con esta historia, esa
 reconstrucción era una consulta.
+
+**Lo que ya entró — #125, en producción.** La **historia de la política** existe y está
+viva: es la primera de las tres piezas de
+[la política como acuerdo vivo](#la-política-como-acuerdo-vivo). Lo que esta entrada
+sigue pidiendo es **el resto del río arriba —KML y perfiles—**, que no tienen historia.
+Su tabla `contract_policy_history` es además la que
+[le falta a la base de pruebas](#la-base-de-pruebas-está-atrasada).
 
 **Qué lo desbloquea.** Nada técnico — es una decisión de prioridad. **Requisito antes
 del segundo cliente:** con un solo cliente y una sola persona configurando, la memoria
@@ -871,6 +1046,181 @@ estricta, que nunca descarta nada.
 **Dónde toca.** `packages/db/src/corregir-deadlines.ts`;
 `packages/db/src/deadline-diff.ts`; la pantalla de contratos.
 
+## `CRON_SECRET` cae a un secreto publicado
+
+**Qué es.** 🔴 **Verificado el 1 de agosto de 2026 leyendo el repo.** Las **siete rutas de
+cron** traen el mismo respaldo:
+
+```ts
+const cronSecret = process.env.CRON_SECRET ?? "dev-cron-secret";
+```
+
+`cron/verify` · `cron/archive` · `cron/renew-occurrences` · `cron/ingest-heartbeat` ·
+`cron/gap-backfill` · las dos de alertas.
+
+**Y el `README.md` publica el valor:**
+
+```
+curl -H "Authorization: Bearer dev-cron-secret" .../api/cron/verify
+```
+
+**Por qué es grave.** Un despliegue sin la variable —entorno nuevo, preview, variable que
+no se propagó— queda protegido por **una cadena que cualquiera lee en el repositorio**. Con
+ella se dispara verificación y archivado. Y **no hay error ni alerta: la app arranca y se
+ve bien.** Fallo abierto y silencioso a la vez, que es la peor combinación posible y la
+razón de ser de [la regla de los defaults](#defaults-que-fallan-abiertos).
+
+**Y hay dos criterios distintos en el mismo repo.** La comparación es `!==` sobre cadenas,
+**no en tiempo constante**, mientras `identidad-dev.ts` ya usa `igualEnTiempoConstante`.
+
+**Qué lo desbloquea.** Nada. Media hora de trabajo, riesgo alto, arreglo trivial — es lo
+primero de [el orden recomendado](#el-orden-recomendado). El arreglo completo:
+
+- **Quitar el respaldo.** Sin variable → **503 y registro, nunca 200.**
+- **Extraer a un solo `lib/guardia-cron.ts`** con comparación en tiempo constante.
+- **Quitar el valor del README.**
+- 🤝 **Rotar el secreto en Vercel**, asumiéndolo comprometido — y por la
+  [Ley 5](#leyes-de-producto), **redesplegando en el mismo movimiento.**
+
+**Dónde toca.** Las siete rutas bajo `apps/web/src/app/api/cron/`; `README.md`;
+`lib/guardia-cron.ts` (nuevo); `identidad-dev.ts` como referencia de la comparación
+correcta.
+
+## Las páginas no comprueban permisos
+
+**Qué es.** 🔴 Las **26 rutas de API están protegidas**. Las **páginas no**: llaman a
+`getRepos()` directo y renderizan, **sin pasar por ninguna guardia**. `middleware.ts` solo
+adjunta la sesión; proteger exige `auth.protect()`, deliberadamente ausente.
+
+Confirmado por **dos vías independientes**: una revisión externa y el propio Devin al
+cerrar las rutas de API.
+
+**Lo más filoso.** `/jstaff/diagnostico` y `/jstaff/verificacion` muestran el **razonamiento
+interno del árbitro**. La ruta de API equivalente (`autopsia-no-cumplidos`) **ya está
+protegida y marcada como confidencial**; la pantalla que enseña lo mismo, no.
+
+> Un árbitro cuya cocina es visible para el auditado deja de ser árbitro.
+
+**Por qué se aplazó, y cuándo deja de poder aplazarse.** Hoy **Deployment Protection de
+Vercel tapa todo desde afuera**, así que el riesgo es teórico. Se vuelve urgente **el día
+que entre el primer usuario real** — porque ese día la puerta de Vercel se abre para que
+alguien entre, y al abrirse deja de tapar a los demás.
+
+**Qué lo desbloquea.** Nada técnico. El arreglo es `lib/guardia-pagina.ts`, hermana de
+`guardia-api.ts` —**reutilizando `decidir`, no duplicándola**— que en vez de responder HTTP
+haga `redirect()`. **Falla cerrado.** Aplicar en `/jstaff`, revisar `/cliente` y
+`/carrier`.
+
+**Dónde toca.** `apps/web/src/middleware.ts`; `guardia-api.ts` y su `decidir`; las páginas
+bajo `/jstaff`, `/cliente` y `/carrier`;
+`docs/marco-limpio/Ficha-Diseno-Permisos.md`.
+
+## Cerrar el default de identidad heredada
+
+**Qué es.** ⏸ Sin sesión, sin `JTEL_DEV_USER` y sin encabezado válido, la identidad cae en
+`tecma_admin` — **falla abierto, y además en la cuenta de un cliente real.** En producción
+debe dejar de aplicar: **sin identidad, no se entra.**
+
+**Por qué se aplazó, y el orden no es negociable.**
+
+> ⚠ **Va después de [las guardias de página](#las-páginas-no-comprueban-permisos).** Al
+> revés, quedamos todos fuera.
+
+Ese default es hoy lo que sostiene el acceso mientras el bypass de desarrollo vive.
+Cerrarlo antes de que exista la guardia —y antes del mapeo de Clerk— deja el producto sin
+ninguna forma de entrar.
+
+**Qué lo desbloquea.** Las guardias de página cerradas **y** el mapeo de Clerk hecho. Ver
+[lo que falta del candado](#lo-que-falta-del-candado-de-auth-rbac).
+
+**Dónde toca.** `identidad-dev.ts`; la variable `JTEL_DEV_USER`.
+
+## El expediente por id sigue abierto
+
+**Qué es.** 🟡 `cliente/servicio/[id]` carga por **id de ocurrencia sin ningún alcance**.
+Cualquier id de cualquier cliente renderiza.
+
+**Por qué es entrada aparte y no un caso de la anterior.** Aunque la guardia de páginas
+quede cerrada, esta ruta **seguiría entregando datos de otra cuenta a un usuario
+legítimamente autenticado**. Es exactamente la diferencia entre *"¿perteneces a la
+cuenta?"* y *"¿tu alcance cubre estos datos?"* — ver
+[lo que falta del candado](#lo-que-falta-del-candado-de-auth-rbac).
+
+**Qué lo desbloquea.** La guardia por alcance. Mientras tanto, el mismo remiendo que el
+resto: Deployment Protection.
+
+**Dónde toca.** `apps/web/src/app/cliente/servicio/[id]`.
+
+## Defaults que fallan abiertos
+
+**Qué es.** 🟡 El patrón del que
+[`CRON_SECRET`](#cron_secret-cae-a-un-secreto-publicado) es un caso, no la excepción.
+Medido sobre el repo:
+
+| Dónde | Default | Qué causa |
+|---|---|---|
+| `apps/worker/src/run.ts` | `UMBRELLA_USER_ID` / `UMBRELLA_PASSWORD` (nombres viejos) | **Autentica con `undefined`** — corre y no trae datos |
+| `apps/worker/src/run.ts` | `postgresql://...localhost:5432` | El worker de producción apunta a **base local** si falta la variable |
+| `lib/umbrella-config.ts` | `""` de usuario y contraseña | Falla contra el GPS; en pantalla se ve como *"no hay datos"* |
+| `.env.example` | Pide `UMBRELLA_USER_ID` / `UMBRELLA_PASSWORD` | Nombres viejos, desincronizado con el código |
+
+**La regla que sale de aquí.**
+
+> Si el default de un `process.env` es **un secreto, una credencial, una identidad o una
+> URL de base de datos, no lleva default — revienta.**
+> Un fallo ruidoso cuesta diez minutos. Uno silencioso cuesta el hallazgo entero.
+
+⚠ **Candidata a ley de producto.** Se anota aquí como regla y queda pendiente de
+ratificación, igual que la arista de la [Ley 7](#leyes-de-producto). Es la
+[Ley 1](#leyes-de-producto) aplicada a la configuración: **la ausencia de un dato no se lee
+como una decisión.**
+
+**El mecanismo ya existe y no se está usando.** `scripts/verificar-env.mjs` sabe exigir
+variables y salir con código 1. Lo que falta es que **el código confíe en él** en vez de
+traer cada uno su propio paracaídas, y **encadenarlo a CI** para que un despliegue sin
+variables *no despliegue*, en vez de desplegar en modo inseguro.
+
+**Ojo con el bug del worker, que es tarea propia.** La fila 1 **cambia comportamiento en
+producción** —hoy el worker de GPS autentica con `undefined`—, así que se arregla sola, no
+mezclada con el barrido del patrón.
+
+**Qué lo desbloquea.** Nada. Es el tercer paso de
+[el orden recomendado](#el-orden-recomendado): la regla que evita que esto se repita.
+
+**Dónde toca.** `apps/worker/src/run.ts`; `lib/umbrella-config.ts`; `.env.example`;
+`scripts/verificar-env.mjs`; la configuración de CI.
+
+## Lo que falta del candado de auth-rbac
+
+**Qué es.** El diseño completo ya existe en `docs/marco-limpio/Ficha-Diseno-Permisos.md`.
+Esto es lo que **le falta al candado** para cerrar:
+
+- **⏸ 🤝 Mapeo de Clerk (Paso 2).** `clerk_user_id` guarda hoy **cadenas del seed**
+  (`tecma_admin`), no los identificadores que emite Clerk. Una sesión real trae **cero
+  membresías**. **Bloquea todo lo demás de esta lista.**
+- **Guardia por alcance, no por cuenta.** Hoy pregunta *"¿perteneces a la cuenta?"* cuando
+  debe preguntar *"¿tu alcance cubre estos datos?"*. Lo marcó el bot en el #134, y aquí
+  entra la **regla del campus** (ficha §2.2). Es lo que cierra
+  [el expediente por id](#el-expediente-por-id-sigue-abierto).
+- **Administración de usuarios.** No existe. Hoy dar de alta a alguien es **trabajo manual
+  de J-Staff**, aunque el Marco dice que **el admin corporativo administra los suyos**.
+- **Escalación configurable.** Se engancha a la plomería de alertas **ya construida**.
+- **Exportar.** No existe. Sale de la ficha §3.2: si Procurement y los roles de escalación
+  **no entran a la aplicación**, alguien tiene que poder **sacarles el dato**.
+
+**Por qué se aplazó.** El mapeo de Clerk es 🤝 trámite de Asav, y sin él lo demás no se
+puede probar contra una sesión real.
+
+**Mientras el bypass viva, la regla operativa.** `JTEL_DEV_USER=jstaff_admin` en Vercel —ya
+está—, y **no iniciar sesión en Clerk** hasta que el mapeo exista. Una sesión real hoy
+entra sin membresías y se ve como un usuario sin permisos, no como un error.
+
+**Qué lo desbloquea.** 🤝 [Crear la cuenta en Clerk y sus dos
+llaves](#trámites-que-solo-asav-puede-hacer).
+
+**Dónde toca.** `packages/auth-rbac`; `userMemberships.clerk_user_id`;
+`docs/marco-limpio/Ficha-Diseno-Permisos.md` §2.2 y §3.2.
+
 ## `/cliente/*` no tiene autenticación
 
 **Qué es.** Las rutas de cara al cliente no están protegidas. El único middleware que
@@ -878,6 +1228,14 @@ las toca (`apps/web/src/middleware.ts`) solo **repara parámetros `?account=` ma
 pegados**; no verifica identidad. Cualquiera con la URL ve **cualquier cuenta**
 cambiando el parámetro, y `resolveAccountByType` cae a la primera cuenta del tipo
 cuando no se pasa ninguno.
+
+**Actualización — 1 de agosto de 2026.** Una parte de esto ya se cerró y conviene no
+volver a diagnosticarlo entero: **las 26 rutas de API ya están protegidas**. Lo que
+queda abierto es de otra forma y vive en tres entradas propias — las páginas, que
+[no comprueban permisos](#las-páginas-no-comprueban-permisos); el
+[expediente por id](#el-expediente-por-id-sigue-abierto), que no filtra por alcance; y
+[el default de identidad heredada](#cerrar-el-default-de-identidad-heredada), que hace
+que la ausencia de sesión caiga en una cuenta real.
 
 **Por qué es grave.** Choca de frente con la ley del Marco de que las cuentas son
 privadas: el carrier no ve a otros carriers, el cliente no ve a otros clientes. Hoy esa
@@ -982,6 +1340,65 @@ ambigüedad que la Ley 1 combate — ausencia de dato leída como decisión.
 callar. Ahí hace falta un tercer estado explícito.
 
 **Dónde toca.** `contractPolicySchema` en `packages/domain/src`.
+
+## `maxRouteDurationMinutes` fijo en 60
+
+**Qué es.** 🟢 Un **segundo *"cuánto dura una ruta"* sin derivar**, clavado en 60 minutos,
+que gobierna las **ventanas de exclusividad y de cobertura**.
+
+**Por qué se aplazó.** Hoy **no causa falsos negativos**, así que no compite con lo que sí
+está mordiendo. Pero es exactamente la clase de constante que la ventana derivada vino a
+eliminar: un número de código donde debería haber una medición.
+
+**Por qué es tarea propia y no se mezcla.** No se toca junto con otro cambio de motor. La
+lección es de la entrada de al lado: cuando
+[se afinó la ventana derivada](#afinar-la-ventana-derivada-con-el-match-observable), **+50
+y −2 se movieron a la vez** y costó trabajo saber cuál mitad había hecho qué. Dos
+derivaciones cambiando juntas hacen inatribuible el resultado.
+
+**Qué lo desbloquea.** La misma historia que la otra derivación:
+`route_traversal_measurements` con datos reales de la operación.
+
+**Dónde toca.** `maxRouteDurationMinutes` en la política del contrato; las ventanas de
+exclusividad y cobertura en `packages/verification/src`.
+
+## Reconocer caminos
+
+**Qué es.** La capacidad de juzgar bien cuando el KML no es fino. **Se parte en dos
+mitades con horizontes distintos, y esa partición es el punto de la entrada:**
+
+- **La mitad motor** —juzgar honestamente sin KML fino: **geocerca + corredor + paradas**—
+  **es v1**, y vive en la Ola 2.
+- **La maquinaria de descubrir y proponer variantes**, con su UI de aprobación, es
+  **v1.1**, candidata a subir según lo que muestren las pruebas.
+
+**Por qué importa partirla.** Sin la partición, *"reconocer caminos"* suena a una sola cosa
+grande y se aplaza entera — cuando la mitad que arregla veredictos **ya está en v1**.
+
+**Qué gana la segunda mitad.** Es la que convierte
+[las tres rutas con falla real](#las-tres-rutas-con-falla-real) de un trabajo de ojo humano
+sobre un visor de KML en algo que el sistema propone solo.
+
+**Qué lo desbloquea.** El agrupador de variantes —pieza 3 de
+[Identificación que se explica](#identificación-que-se-explica)— y la promoción de
+variantes de `docs/Ficha-Handoff-Variantes-Trazado.md`.
+
+## Map matching como capa de explicación
+
+**Qué es.** Interpretar el recorrido observado **en términos de calles**, no de puntos
+sueltos. Entra como **capa de aprendizaje y explicación, nunca de juicio.**
+
+**La advertencia que no se puede perder.** **No arregla *"no vimos media ruta"*.** Es
+**afinación, no arreglo**. Esperar de aquí una corrección de veredictos es esperar algo que
+no va a llegar, y esa confusión es la razón por la que la entrada existe escrita.
+
+**Qué gana.** Entender la operación en términos de calles alimenta el
+[descubrimiento de caminos](#reconocer-caminos) y hace **las explicaciones de Lenore mucho
+más humanas** — la diferencia entre *"se desvió 4.8 km"* y *"se fue por Tecnológico en vez
+de Ejército Nacional"*.
+
+**Por qué se aplazó.** v1.1. Ninguna decisión depende de ella y ningún veredicto la
+necesita.
 
 ---
 
@@ -1173,6 +1590,75 @@ lo que los corrige.
 `docs/Pieza3-Expediente-Contenido-Canonico.md` — la vista de defensa del carrier; la
 etiqueta de calibración ya construida; `compliance_fact_history`; `ledger_entries`.
 
+## Sandbox — el banco de pruebas de la política de rutas
+
+**Qué es.** Un banco de pruebas donde **la planta rediseña su propia política de rutas
+contra el historial real de la operación**, y aprueba el resultado como **versión nueva con
+fecha de vigencia**. Es el primer módulo del producto que **no juzga: propone.**
+
+📄 **Ficha propia y completa:** `docs/marco-limpio/Ficha-Concepto-Sandbox.md`.
+
+**Lo que lo hace defendible, y es lo que nadie más puede copiar.** Cualquiera simula rutas
+con los tiempos teóricos de un mapa genérico. **Solo J-Telemetry puede simular con los
+tiempos que de verdad se hicieron en esos corredores, a esa hora, medidos durante meses.**
+
+**La consecuencia que cambia una prioridad de este archivo.** El **Archivador deja de ser
+deuda técnica y se vuelve el combustible del producto v2.** Refuerza la decisión ya tomada
+de guardar la telemetría **cruda y completa**, no recortada a lo que el árbitro necesita —
+y le pone precio a [la retención de Neon](#retención-de-neon), que es donde esa tensión se
+decide de verdad.
+
+**La trampa que la ficha nombra (§7).** Si el Sandbox optimiza con los tiempos del carrier
+actual y luego **el contrato se aprieta contra esa propuesta**, el desempeño del auditado
+se vuelve el estándar contra el que se le juzga. Es [la trampa de calibración](#la-trampa)
+con otra ropa. **El estándar es el deadline del contrato; los tiempos históricos son
+insumo de factibilidad, nunca la vara.**
+
+**El insumo nuevo que introduce.** **Puntos de origen del personal — coordenadas agregadas
+y conteos, no identidad de pasajeros.** Es dato distinto y **mucho menos invasivo** que el
+expediente de pasajero parqueado en [Modo pasajero](#modo-pasajero).
+
+**Por qué se aplazó.** Es v2 y depende de tres cosas que todavía no están: el Archivador
+con historia suficiente para tener tiempos por hora del día, `auth-rbac` para saber qué rol
+puede aprobar una versión, y el versionado de ruta × turno funcionando de verdad.
+
+**Dónde toca.** `docs/marco-limpio/Ficha-Concepto-Sandbox.md`; `route_traversal_measurements`;
+`route_kml_versions`.
+
+## La política como acuerdo vivo
+
+**Qué es.** Que un cambio de política deje de ser una edición unilateral. **Tres piezas,
+una ya hecha:**
+
+- ✅ **Historia de la política** — entregada en el **#125, en producción**. Ver
+  [Historia de cambios de configuración](#historia-de-cambios-de-configuración).
+- **Referencia de cláusula por regla** — **no existe ningún campo de cláusula en el
+  esquema.** El Marco la pide: vive **dentro del objeto de política** y **se congela con
+  cada hecho**.
+- **⏸ Acuerdo de las partes** — un cambio de política **no es una edición, es una
+  propuesta**. Misma forma que la promoción de variantes de trazado. **Configurable desde
+  J-Staff**, porque hay contratos donde la planta se reserva el derecho de modificar a su
+  criterio. **Lo que nunca es opcional es que exista método de comunicación:** el carrier
+  se entera siempre, aunque no apruebe.
+
+> El acuerdo **jamás reescribe el pasado.** Entra en vigor desde una fecha.
+
+**Por qué la cláusula pesa más de lo que parece.** **El landing ya promete que *"cada regla
+puede citar su cláusula"*, y hoy el esquema no puede cumplirlo.** Es la única entrada de
+este archivo que corrige una afirmación **que ya está de cara al público**, no un pendiente
+interno.
+
+**Por qué se aplazó.** Está anclada a `auth-rbac`: sin saber quién es cada quién, no hay a
+quién pedirle acuerdo ni a quién avisarle. Ver
+[lo que falta del candado](#lo-que-falta-del-candado-de-auth-rbac).
+
+**Qué lo desbloquea.** `auth-rbac` cableado, y la decisión de
+[qué contratos permiten que la planta modifique sin acuerdo del
+carrier](#decisiones-de-producto-pendientes).
+
+**Dónde toca.** `service_contracts.policy` — el objeto de política;
+`contract_policy_history`; `compliance_facts.contract_policy_snapshot`.
+
 ## Lenore — el copiloto
 
 **Qué es.** Línea de producto propia. J-Tel es el juez: espera a que el viaje termine
@@ -1283,6 +1769,37 @@ contrato deje de salir rojo es apagar la verificación de ruta y llamarlo otra c
 [Identificación que se explica](#identificación-que-se-explica): las paradas detectadas
 son puntos de abordaje inferidos, y eso habilita el modo pasajero **sin registrar
 pasajeros**. Conecta con jrz-pass y con ausentismo anticipado.
+
+**Precisión — 1 de agosto de 2026.** El **expediente de pasajero** —saber *quién* subió—
+**requiere hardware** para registrarlo, así que se va a futuro sin fecha. Lo importante es
+lo que eso **no** bloquea: **las paradas se infieren del GPS sin identificar a nadie**
+(capa 5 de la identificación por capas), así que **nada de v1 espera a esto**. **`jrz-pass`
+queda descartado por ahora.**
+
+## Pre-nómina
+
+**Qué es.** Vincular los viajes verificados con **la nómina del carrier**.
+
+**Por qué se aplazó.** No se diseña hoy. Lo único que se hace ahora es **dejar el rol
+creado**, para poder configurarlo después **sin migración**.
+
+**Qué lo desbloquea.** `auth-rbac`, y que exista demanda real de un carrier.
+
+## Compartir información entre plantas
+
+**Qué es.** Una opción en la interfaz para que **dos plantas compartan información aunque
+no compartan campus**.
+
+**Por qué se aplazó.** No entra hoy. Y la forma en que entre importa más que la fecha:
+
+> Es **configuración futura, no excepción horneada.**
+
+Una excepción metida en el código para un caso particular rompe la regla del campus de
+`Ficha-Diseno-Permisos.md` §2.2 en silencio; una opción configurable la respeta y deja
+rastro de quién la activó.
+
+**Qué lo desbloquea.** `auth-rbac` con la guardia por alcance funcionando — ver
+[lo que falta del candado](#lo-que-falta-del-candado-de-auth-rbac).
 
 ---
 
@@ -1492,6 +2009,128 @@ sabe interpretarlo.
 
 **Dónde toca.** `apps/web/src/lib/autopsia.ts`; `packages/db/src/ledger-pairing.ts`.
 
+## La contraseña del readonly es la misma que la del dueño
+
+**Qué es.** 🟡 `jtel_readonly` y `neondb_owner` **comparten la misma contraseña**. Los
+`GRANT` del rol de solo lectura **son sólidos** — el problema no está ahí. Está en que
+**quien tenga la URL "segura" solo tiene que cambiar el nombre de usuario para escribir.**
+
+**Por qué es la misma familia que el resto de esta sección.** El candado existe, está bien
+puesto, y **la llave de al lado lo abre**. Igual que
+[`CRON_SECRET`](#cron_secret-cae-a-un-secreto-publicado): no falta el mecanismo, falta que
+el secreto sea secreto.
+
+**La regla ya está escrita, y eso es lo bueno.** `docs/Procedimiento-Credenciales.md` §
+ya dice que **el password de `jtel_readonly` debe ser distinto al del dueño**, y trae el
+`ALTER ROLE`. **Lo que falta no es decidir, es ejecutar.**
+
+**Qué lo desbloquea.** 🤝 [Rotar la contraseña del readonly en
+producción](#trámites-que-solo-asav-puede-hacer) — y por la
+[Ley 5](#leyes-de-producto), **redesplegando en el mismo movimiento**. Toca producción, así
+que es de Asav.
+
+**Dónde toca.** `docs/Procedimiento-Credenciales.md`; las variables de conexión en Vercel.
+
+## La base de pruebas está atrasada
+
+**Qué es.** 🟡 A `DATABASE_URL_TEST` **le falta la migración de `contract_policy_history`**.
+
+**Por qué es peor que una migración pendiente cualquiera.** Es
+[la ley de no probar contra producción](#datos-sintéticos-en-producción) mordiéndose la
+cola: **la base que existe justamente para no probar contra un cliente vivo no está al
+día**, así que la suite o falla o —peor— tienta a correrla contra otra base. Una red de
+seguridad desactualizada empuja a saltársela.
+
+**Qué lo desbloquea.** Nada: correr la migración pendiente sobre la base de pruebas y
+dejarlo dentro del procedimiento, para que la siguiente no vuelva a quedarse atrás.
+
+**Dónde toca.** `DATABASE_URL_TEST`; `contract_policy_history`;
+`docs/Procedimiento-Migraciones.md`.
+
+## `demos/activate` cruza cuentas
+
+**Qué es.** 🟡 La ruta **recorre todos los clientes y activa todos sus contratos**,
+cruzando cuentas. Busca una plantilla y **no la usa**.
+
+**Por qué se aplazó, y qué falta exactamente.** **Ya está protegida**, así que el riesgo de
+acceso está cerrado. Lo que queda abierto **no es seguridad, es producto: qué debe hacer**.
+Una ruta que toca todas las cuentas a la vez contradice la pared entre cuentas del Marco
+aunque solo la invoque J-Staff, así que no basta con dejarla como está y protegida.
+
+**Qué lo desbloquea.** Una [decisión de producto](#decisiones-de-producto-pendientes) sobre
+su alcance: si debe operar sobre una sola cuenta, si debe usar la plantilla que ya busca, o
+si debe desaparecer.
+
+**Dónde toca.** `apps/web/src/app/api/demos/activate`.
+
+## No hay configuración de ESLint
+
+**Qué es.** 🟢 **No existe configuración de ESLint en ningún árbol** del monorepo.
+
+**Por qué importa.** La **única red automática que hay hoy es el chequeo de tipos de Next**.
+Y esa red ya está rota por otro lado: los [dos archivos de prueba
+huérfanos](#appsweb-no-tiene-corredor-de-pruebas) son errores permanentes de
+`tsc --noEmit`, que **entrenan a ignorar la salida del compilador**. Sin linter y con el
+compilador ruidoso, no queda ninguna comprobación automática en la que confiar.
+
+**Qué lo desbloquea.** Decisión de prioridad. Emparenta con el corredor de pruebas de
+`apps/web`: conviene un solo rato para dejar las dos redes puestas, y encadenarlas a CI
+junto con [el verificador de variables](#defaults-que-fallan-abiertos).
+
+## "Consolidación" significa dos cosas
+
+**Qué es.** 🟢 La palabra se usa con **dos sentidos distintos, y los dos salen en
+pantalla**:
+
+| Sentido | Qué quiere decir | Dónde se ve |
+|---|---|---|
+| **Política** | *"una unidad cubre varias rutas"* | configuración del contrato |
+| **Sello** | *"el sistema cuadró solo"* | historia del sello, expedientes |
+
+**Por qué se anota.** Es vocabulario de cara al usuario, y un término que significa dos
+cosas en la misma aplicación produce exactamente la clase de lectura equivocada contra la
+que existe el `Diccionario-J-Telemetry.md`.
+
+**Cuál se renombra.** **La de política**, que es la de **menor exposición** — la del sello
+ya está en más superficies y en la cabeza de quien opera.
+
+**Dónde toca.** `apps/web/src/app/cliente/contrato/[contractId]/page.tsx` y
+`apps/web/src/app/api/cliente/contratos/route.ts` (sentido de política);
+`apps/web/src/components/historia-del-sello.tsx` y `apps/web/src/lib/historia-sello.ts`
+(sentido de sello); `docs/Diccionario-J-Telemetry.md`, donde el término **todavía no está
+definido**.
+
+## Los documentos llegan con la codificación rota
+
+**Qué es.** 🟢 **Cuatro fichas seguidas** llegaron con los acentos rotos — UTF-8 leído como
+Latin-1, el clásico `Ã³` en vez de `ó`. Se repara cada vez, a mano.
+
+**Por qué se anota en vez de seguir reparando.** Porque **se repite**, y porque un
+documento con la codificación rota es el único defecto de este archivo que **se propaga a
+todo lo que se escriba a partir de él**. Cuatro veces seguidas deja de ser accidente y
+pasa a ser el proceso de traspaso.
+
+**Qué lo desbloquea.** Revisar **cómo se están pasando** los documentos —qué herramienta
+los escribe y con qué codificación los guarda— en vez de arreglar el resultado.
+
+## Documentación por marcar como superseded
+
+**Qué es.** Dos documentos que ya fueron reemplazados y **siguen sin marcarse**:
+`Sistema-Diseno-Superficies-Internas.md` y `Brief-Identidad-J-Tel.md`.
+
+**Por qué ya se puede hacer.** Estaba esperando al rescate al skill, **que ya está mergeado
+(#130)**. Así que **este ya puede entrar**: el bloqueo desapareció.
+
+**⚠ La trampa, y es la razón de que la entrada exista.** El **Brief contiene la única
+definición escrita de los subdominios**, y **esa sigue vigente**. Su encabezado ya lo
+señala, pero dejar información viva dentro de un documento marcado como superseded es
+pedirle a quien lo lea que distinga cuál párrafo sigue valiendo. **Antes de marcarlo, esa
+sección se mueve a un documento vigente** — el candidato natural es
+`docs/marco-limpio/Ficha-Cara-De-Producto.md` §4, que ya la cita.
+
+**Dónde toca.** `docs/Sistema-Diseno-Superficies-Internas.md`;
+`docs/Brief-Identidad-J-Tel.md`; `docs/marco-limpio/Ficha-Cara-De-Producto.md`.
+
 ## Los 15 pendientes del 28-jul se quedan pendientes
 
 **Qué es.** Una decisión tomada, anotada aquí para que no se vuelva a abrir.
@@ -1507,3 +2146,76 @@ y sí mete una versión extra en la historia del sello, ensuciando el expediente
 ganar nada.
 
 **Qué lo desbloquea.** Nada. Es un estado honesto y así se queda.
+
+---
+
+# 5 · Trámites y decisiones abiertas
+
+**Esto no es backlog de construcción.** Son los bloqueos que **no se resuelven escribiendo
+código**: trámites que solo Asav puede hacer, y decisiones de producto que faltan por
+tomar.
+
+Viven aquí porque varias entradas de las secciones anteriores esperan a uno de estos
+renglones, y **un bloqueo sin dueño escrito es un bloqueo que nadie recuerda que le toca**.
+
+## Trámites que solo Asav puede hacer
+
+| Qué | Qué desbloquea |
+|---|---|
+| 🔴 **Rotar `CRON_SECRET` en Vercel** | [El secreto publicado](#cron_secret-cae-a-un-secreto-publicado) — **el más urgente de todos** |
+| **Crear cuenta en Clerk** y sus dos llaves | Todo el Paso 2 de [auth-rbac](#lo-que-falta-del-candado-de-auth-rbac) |
+| **Comprar `j-tel.io`** | [Los subdominios](#el-resto-de-la-cara-del-producto) |
+| **Resend** — verificar dominio, API key y tres variables | Que las alertas **de verdad lleguen** a alguien |
+| **Rotar la contraseña del readonly** | [El readonly que puede escribir](#la-contraseña-del-readonly-es-la-misma-que-la-del-dueño) |
+
+**Y una que no es trámite, pero solo Asav la puede dar:** las
+[tres respuestas de dirección visual](#dirección-visual-del-producto), que hoy bloquean el
+frente de producto entero.
+
+> ⚠ **Las dos rotaciones cargan la [Ley 5](#leyes-de-producto):** nunca rotar credenciales
+> sin **redesplegar en el mismo movimiento**. Se aprendió a lo caro el 27–28 de julio —
+> trece horas de crones sin acceso y nadie enterado.
+
+## Decisiones de producto pendientes
+
+| # | Decisión | Cuándo |
+|---|---|---|
+| 1 | [**Dirección visual**](#dirección-visual-del-producto) — qué significa *"tipo plataforma"* | **Ahora** |
+| 2 | Regla de cierre del pendiente por evidencia — con la planta y con legal | Hoy corre en modo demo |
+| 3 | Qué debe hacer [`demos/activate`](#demosactivate-cruza-cuentas) | Cuando toque |
+| 4 | ¿`jornada-instrumento` quedó superseded por [Cierre del turno](#cierre-del-turno)? | Ola 3 |
+| 5 | Cómo se le cuenta a Tecma que **su número cambia** al re-verificar | **Antes de** [las 300 congeladas](#las-300-congeladas--la-foto-de-referencia) |
+| 6 | Qué contratos permiten que la planta modifique la política **sin acuerdo del carrier** | Con [auth-rbac](#la-política-como-acuerdo-vivo) |
+
+## El orden recomendado
+
+**Corte del 1 de agosto de 2026.** No es un calendario ni un compromiso de fechas: es **en
+qué orden conviene tomarlas, y por qué en ese orden**.
+
+**Primero — cerrar el riesgo verificado.**
+
+1. [`CRON_SECRET`](#cron_secret-cae-a-un-secreto-publicado). Media hora, riesgo alto,
+   arreglo trivial. 🤝 Incluye rotar el secreto.
+2. [La guardia de páginas](#las-páginas-no-comprueban-permisos) — y **después**
+   [el default de identidad heredada](#cerrar-el-default-de-identidad-heredada). **En ese
+   orden, o quedamos todos fuera.**
+
+**Segundo — destrabar el frente de producto.**
+
+3. Las [tres respuestas de dirección visual](#dirección-visual-del-producto) y la ficha que
+   sale de ellas.
+4. [El resto de la cara del producto](#el-resto-de-la-cara-del-producto).
+
+**Tercero — la regla que evita que se repita.**
+
+5. [Defaults que fallan abiertos](#defaults-que-fallan-abiertos), y **encadenar el
+   verificador de variables a CI** para que un despliegue sin variables *no despliegue*.
+
+**Cuarto — el corazón.**
+
+6. [Afinar el árbitro](#afinar-la-ventana-derivada-con-el-match-observable) →
+   [re-verificar las 300](#las-300-congeladas--la-foto-de-referencia) →
+   [identificación por capas](#identificación-que-se-explica).
+
+**En el camino, sin bloquear a nadie:** la higiene de la **sección 4** y los trámites de
+arriba.
