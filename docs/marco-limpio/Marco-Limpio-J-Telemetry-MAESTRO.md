@@ -56,18 +56,20 @@ Datos y privacidad. Se protegen datos personales/sensibles hasta el mínimo que 
 Un servicio cumplido siempre tiene unidad observada. No puede existir una hora de llegada sin una unidad observada detrás.
 La verificación no se calcula al abrir una pantalla. Se genera sola tras el deadline, y cuándo se genera es configurable por contrato (justo al deadline, o con la gracia que cada cliente prefiera por clima/tráfico/historial). Las pantallas sólo leen el hecho ya guardado.
 El producto siempre debe poder soportarse. Existe una compuerta interna para diagnosticar y resolver fallas, respetando datos personales y sin alterar la verdad guardada.
-Un dato correcto puede volverse una afirmación falsa según dónde se lea, cómo se agrupe, sobre qué universo hable, de qué color se pinte, o cuántos valores se hayan colapsado para producirlo. El valor guardado siendo correcto no basta: lo que el usuario recibe es la afirmación completa, y esa la arman también el lugar, la agrupación, el alcance, el color y la reducción. Ver la sección D.
+Un dato correcto puede volverse una afirmación falsa según dónde se lea, cómo se agrupe, sobre qué universo hable, de qué color se pinte, cuántos valores se hayan colapsado para producirlo, o qué cosa se haya contado. El valor guardado siendo correcto no basta: lo que el usuario recibe es la afirmación completa, y esa la arman también el lugar, la agrupación, el alcance, el color, la reducción y la unidad. Ver la sección D.
 Y lo que el sistema no midió no se dibuja, aunque quede feo. Una pantalla que completa lo que le falta se ve mejor que una que admite el hueco, y por eso la tentación de completarlo es permanente. Ver la sección E.
 Idioma nativo del sistema: español.
 
 
 D. Cuando un dato correcto miente
 
-Esta sección existe porque el mismo error apareció cuatro veces en un solo piloto de interfaz, y las cuatro veces el valor guardado era correcto. Ninguna se detectó compilando ni leyendo el código: se detectaron mirando la pantalla contra la ley. El quinto caso llegó después, construyendo el inicio corporativo, y se detectó igual: mirándolo.
+Esta sección existe porque el mismo error apareció cuatro veces en un solo piloto de interfaz, y las cuatro veces el valor guardado era correcto. Ninguna se detectó compilando ni leyendo el código: se detectaron mirando la pantalla contra la ley. El quinto caso llegó después, construyendo el inicio corporativo, y el sexto construyendo el expediente del contrato; los dos se detectaron igual: mirándolos.
+
+La forma corta de toda esta sección, y conviene reconocerla de lejos: **correcto como consulta, falso como afirmación.** La consulta hizo exactamente lo que se le pidió. Lo que miente es el título de encima.
 
 Es la clase de falla que más le cuesta a un árbitro. Un motor que calcula mal se arregla y se vuelve a sellar. Un motor que calcula bien y se muestra mal produce una afirmación falsa con toda la autoridad del sello detrás — y el auditado no tiene cómo distinguirlas.
 
-Los cinco casos, con lo que hacía falsa cada afirmación:
+Los seis casos, con lo que hacía falsa cada afirmación:
 
 1. Unidades ya llegadas marcadas "sin señal". El dato era la antigüedad del último punto GPS, correcta al minuto. Pero la traza se corta al entrar a la geocerca porque la geocerca es la frontera de la evidencia: el silencio posterior es la ley funcionando, no una unidad callada. Once de catorce unidades acusaban al carrier de perder señal justo donde el sistema deja de mirar a propósito. Lo falso lo puso el LUGAR donde se leyó el dato.
 
@@ -81,13 +83,19 @@ Los cinco casos, con lo que hacía falsa cada afirmación:
 
 Este caso se distingue del segundo aunque suenen parecidos. En el segundo, cada conteo seguía siendo legible y lo falso venía de junto a qué se puso. Aquí el problema es anterior a colocarlo: al reducir muchos valores a uno se eligió una regla —el peor— que descarta la magnitud, y ninguna colocación posterior podía devolverla. La pregunta que lo atrapa es **qué se pierde al colapsar**, y si lo que se pierde es justo lo que el elemento existía para mostrar. Cuando el dato de un día es una proporción, el elemento muestra la proporción.
 
+6. "Rutas del alcance: 27" en el expediente del contrato. El conteo era correcto: veintisiete registros de ruta cuelgan de ese contrato. Pero en la tabla de abajo "Finca" aparecía dos veces y "Km 30" tres, porque son registros distintos —con trazados distintos— que comparten nombre visible. Quien lee cuenta nombres, no filas, y no le cuadra: o el sistema duplica rutas, o el conteo miente. Ninguna de las dos cosas es cierta, y esa es exactamente la clase de duda que le cuesta el producto a un árbitro. Lo falso lo puso la UNIDAD — qué cosa se contó, frente a qué cosa cree el lector que se contó.
+
+El arreglo no fue deduplicar. Deduplicar por nombre habría borrado rutas reales y habría producido un número más bonito y más falso. Un contrato no se contrata en rutas: se contrata en servicios al día —un perfil por ruta, turno y destino—, y esa es la unidad que las dos partes reconocen. El alcance pasó a medirse ahí, con las rutas y los turnos como lectura al lado. La pregunta que atrapa este caso: ¿puede el lector reconstruir este número con lo que le estoy enseñando debajo? Si no puede, o la unidad está mal elegida o falta la lectura.
+
 Lo que esto exige al construir:
 
-Cada dato que llega a una pantalla se pregunta no sólo si es correcto, sino qué afirma ahí: al lado de qué queda, sobre qué universo habla, qué dice el color que se le pone, y —si resume a varios— qué se perdió al resumirlos. Un dato correcto en el lugar equivocado no es un detalle de presentación — es el árbitro mintiendo.
+Cada dato que llega a una pantalla se pregunta no sólo si es correcto, sino qué afirma ahí: al lado de qué queda, sobre qué universo habla, qué dice el color que se le pone, —si resume a varios— qué se perdió al resumirlos, y qué cosa cuenta frente a qué cosa va a creer el lector que cuenta. Un dato correcto en el lugar equivocado no es un detalle de presentación — es el árbitro mintiendo.
 
 Sobre las pruebas, con precisión: ninguna prueba unitaria ENCUENTRA estos casos, porque no hay valor equivocado contra el cual comparar. Pero una vez encontrados, sí se pueden CERCAR, y los cinco están cercados: cuatro con pruebas que fallan si el error vuelve, y el del agregado con una valla de tipos — lo que sale del filtro va marcado y la función que cuenta el periodo se niega a recibirlo, así que repetirlo deja de compilar.
 
 El quinto muestra el límite de la valla: la prueba fija que un día mixto conserva sus cifras separadas, así que nadie las vuelve a colapsar al construir los datos. Pero **la decisión de con qué regla se pintan vive en la pantalla**, y ninguna prueba de datos la alcanza. Ese sigue dependiendo de mirar.
+
+El sexto no tiene valla, y conviene decirlo en vez de fingir que la tiene: el conteo era correcto en la base y el desajuste sólo existía frente a la tabla que iba debajo. Ninguna prueba de datos ve eso, porque no hay dato equivocado — hay un rótulo mal elegido. Lo único que lo previene es la pregunta de arriba, hecha al escoger la unidad y antes de escribir el rótulo.
 
 Esa diferencia importa al elegir la valla. El caso del agregado no vivía dentro de la función —contar siempre contó bien— sino en el sitio de llamada, y eso ninguna prueba sobre una función pura lo ve. Cuando el error está en quién llama y no en qué hace, la valla es el compilador.
 
