@@ -6,6 +6,10 @@ import {
   explicarRazon,
   type RazonSinEvidencia,
 } from "./sin-evidencia-posible.js";
+import {
+  recuperacionTardia,
+  FILAS_QUE_CABIAN_ANTES_DEL_LOTEO,
+} from "./recuperacion-tardia.js";
 import type { ComplianceFact, Repositories } from "@jtel/db";
 import type { ContractPolicy, VerificationResult } from "@jtel/domain";
 import { localDateIso, JTTEL_TZ } from "@jtel/domain";
@@ -795,6 +799,10 @@ export class VerificationService {
     // Guardamos el hecho pendiente COMPLETO para archivar condicionalmente después de
     // saveFact, solo si el veredicto cambió (ver comentario en el bloque post-saveFact).
     let pendingRetryFact: ComplianceFact | null = null;
+    // Se lee ANTES de borrar nada: después de este bloque la ocurrencia se
+    // queda sin hecho por construcción y ya no se puede distinguir un primer
+    // veredicto de un re-juicio.
+    const esPrimerVeredicto = !occurrence.complianceFact;
 
     // Sin force: cumplido/no_cumplido son definitivos; pendiente se reintenta.
     if (occurrence.complianceFact) {
@@ -1222,6 +1230,45 @@ export class VerificationService {
         resolvedActorId,
       );
       await this.repos.compliance.updateHistorySuccessor(retryHistoryId, fact.id);
+    }
+
+    // ¿Este primer veredicto llega con semanas de retraso? Entonces el
+    // expediente tiene que decir por qué, o aparecería indistinguible de uno
+    // normal y nadie —ni el cliente ni el transportista— podría entenderlo.
+    const tardia = recuperacionTardia({
+      esPrimerVeredicto,
+      plazo: occurrence.expectedDeadline,
+      selladoEn: new Date(),
+      puntosDeEvidencia: ingestPointCount,
+      filasQueCabianEnUnaSentencia: FILAS_QUE_CABIAN_ANTES_DEL_LOTEO,
+    });
+    if (tardia) {
+      await this.repos.compliance.addLedgerEntry({
+        tripId: trip.id,
+        serviceOccurrenceId: occurrenceId,
+        actorKind: resolvedActorKind,
+        actorId: resolvedActorId,
+        action: "recuperacion_tardia",
+        steps: [
+          {
+            step: "primer_veredicto_tardio",
+            result: tardia.causa,
+            details: {
+              explicacion: tardia.explicacion,
+              diasDeRetraso: tardia.diasDeRetraso,
+              horasDeRetraso: tardia.horasDeRetraso,
+              plazo: occurrence.expectedDeadline.toISOString(),
+              puntosDeEvidencia: ingestPointCount,
+              origenDeLaEvidencia: ingestSource,
+            },
+          },
+        ],
+        metadata: {
+          recuperacionTardia: true,
+          causa: tardia.causa,
+          diasDeRetraso: tardia.diasDeRetraso,
+        },
+      });
     }
 
     await this.repos.compliance.addLedgerEntry({
