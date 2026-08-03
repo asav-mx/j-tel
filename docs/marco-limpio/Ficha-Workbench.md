@@ -52,6 +52,22 @@ Y "guardar esta vista" al margen.
 ### 3.3 El mapa
 Fondo oscuro en ambos temas (excepción del skill: el lienzo es evidencia).
 
+**Ley del fondo geográfico — decidida el 2026-08-02.**
+
+> **Van calles debajo.** Este mapa es un instrumento de defensa, y su público final no es el árbitro: **es una persona discutiendo un pago.**
+
+Una desviación sin calles no se puede juzgar. *"Se salió del corredor 400 metros"* sin ver que se metió por una lateral porque la avenida estaba cerrada no defiende a nadie: solo muestra una línea torcida.
+
+La objeción —que el fondo mete en pantalla cosas que el árbitro no mide— **no se resuelve quitando el fondo sino con jerarquía**, y es la misma regla que ya gobierna el mapa de la torre: el basemap va **muy atenuado y en gris**, y todo lo medido va encima y con contraste alto. Las calles son referencia; la evidencia es lo de arriba, y la jerarquía visual lo dice sin escribirlo.
+
+**La condición, y es dura: el basemap no inventa nada.** Sin rótulos de negocios, sin tráfico, sin capas de terceros que puedan contradecir lo medido. **Calles y nada más.**
+
+Eso descarta los mosaicos estándar de OSM que usa el resto del producto —esos sí traen nombres de comercios— y obliga a la variante sin rótulos. El costo se acepta a ojos abiertos: **tampoco hay nombres de calle.** Se prefirió perder el nombre a admitir una capa que pueda decir algo que el árbitro no midió.
+
+> **DECISIÓN REVERSIBLE, con su condición.** Si en una disputa real hace falta el nombre de la vialidad, se cambia a la variante **con rótulos de vialidad y sin POI**. Es un cambio de una línea, y se decide **cuando haya un caso, no antes**. Anotarlo aquí es lo que evita que la ausencia de nombres se convierta en dogma por olvido — la decisión se tomó con un costo aceptado, no con un costo inexistente.
+
+**Y la traza se corta en cada hueco de señal.** Una polilínea que atraviesa un hueco dibuja un camino que nadie demostró, con el mismo brillo que la evidencia real — en un rango de varios días son diagonales limpias cruzando la ciudad de noche. El hueco se sigue marcando en ámbar; lo que ya no se hace es afirmar un camino dentro de él.
+
 **Ley de la simplificación — decidida el 2026-08-02, con los números medidos.**
 
 > **Simplificar es para explorar. La ventana de un servicio va completa, siempre.**
@@ -77,6 +93,8 @@ Las unidades en el lienzo, cada una con su color de identidad (la paleta de 196�
 
 Medidas del rango, todas en acero:
 recorrido total · huecos de señal con su duración · sus servicios del rango.
+
+**Con un servicio abierto, las medidas son de SU ventana.** Medido: la unidad 10254 el 2026-07-31 recorrió **107.1 km en el día y 22.2 km dentro de la ventana verificada**. Poner 107.1 junto a un servicio de dos horas es el eje del ALCANCE de §D — el número correcto contestando otra pregunta. La cifra del día va al lado, como lectura, para que las dos se puedan comparar sin que ninguna suplante a la otra.
 
 **Tiempo detenido y conteo de paradas: fuera, y por medición — 2026-08-02.**
 

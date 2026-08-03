@@ -1,388 +1,437 @@
-import { getRepos } from "@/lib/db";
-import { AppNav, Card } from "@/components/ui";
+import { CarrierShell } from "@/components/unit-shell";
+import { WorkbenchLienzo } from "@/components/workbench-lienzo";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
-import { JTTEL_TZ, localDateIso } from "@/lib/local-time";
-import { construirCenso, ventanaLocal, SALTO_GPS_KMH } from "@jtel/services";
+import { JTTEL_TZ } from "@jtel/domain";
+import { colorDeIdentidad } from "@/lib/colores-identidad";
+import { loadWorkbench, MAX_UNIDADES, type ServicioEnRango } from "@/lib/workbench-data";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Recorrido de la flota — observación pura de lo propio.
+ * Workbench — el instrumento de análisis y de defensa del transportista.
  *
- * El carrier ve TODAS sus unidades sobre una ventana de tiempo, sin depender
- * del match ni de las ocurrencias. Cero veredicto: esta pantalla no sabe qué
- * es un cumplido, y por eso no usa verde, ámbar ni rojo en ningún lado.
+ * Monitoreo mira el ahora; esta pantalla mira hacia atrás. El corte es por
+ * tiempo y no por objeto: cualquier pregunta sobre el pasado vive aquí, sobre
+ * el mismo lienzo, con el contexto ya cargado según por dónde se entró.
  *
- * PR 1 de 3: el censo y la medición por unidad. El mapa viene en el 2.
+ * **Todo en acero.** Los tres colores de veredicto aparecen en un solo lugar —
+ * la lista de servicios, donde sí hay un resultado sellado que nombrar— y el
+ * ámbar del mapa marca lo que quedó sin ver, nunca una falta.
  */
-
-const HORA_POR_DEFECTO_DESDE = 5 * 60; // 05:00 local
-const HORA_POR_DEFECTO_HASTA = 11 * 60; // 11:00 local
-
-function minutosDeHhMm(raw: string | string[] | undefined, porDefecto: number): number {
-  if (typeof raw !== "string") return porDefecto;
-  const m = /^(\d{1,2}):(\d{2})$/.exec(raw.trim());
-  if (!m) return porDefecto;
-  const h = Number(m[1]);
-  const min = Number(m[2]);
-  if (h > 23 || min > 59) return porDefecto;
-  return h * 60 + min;
-}
-
-function hhMm(minutos: number): string {
-  const h = Math.floor(minutos / 60) % 24;
-  const m = minutos % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-function fechaValida(raw: string | string[] | undefined): string | null {
-  return typeof raw === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : null;
-}
-
-/** Hora del reloj del despliegue. La zona SIEMPRE se escribe en pantalla. */
-function reloj(d: Date): string {
-  return new Intl.DateTimeFormat("es-MX", {
-    timeZone: JTTEL_TZ,
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  }).format(d);
-}
-
-/** Fecha completa. En contexto de evidencia no se abrevia. */
-function fechaCompleta(d: Date): string {
-  return new Intl.DateTimeFormat("es-MX", {
-    timeZone: JTTEL_TZ,
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  }).format(d);
-}
-
-function duracion(minutos: number): string {
-  const h = Math.floor(minutos / 60);
-  const m = minutos % 60;
-  if (h === 0) return `${m} min`;
-  return m === 0 ? `${h} h` : `${h} h ${m} min`;
-}
-
-/**
- * Categorías del censo. Son estados de observación, no veredictos: van en
- * acero y tenue. El anillo azul de "nunca reportó" marca aviso del sistema —
- * es configuración incompleta, no un resultado de la operación.
- */
-const CATEGORIA = {
-  reporto: {
-    etiqueta: "Reportó",
-    clase: "bg-[var(--acero)]/15 text-[var(--acero)]",
-  },
-  dejo_de_reportar: {
-    etiqueta: "Dejó de reportar",
-    clase: "bg-[var(--hover)] text-[var(--tenue)]",
-  },
-  nunca_reporto: {
-    etiqueta: "Nunca ha reportado",
-    clase: "bg-[var(--hover)] text-[var(--tenue)] ring-1 ring-[var(--azul)]/50",
-  },
-} as const;
-
-const num = "font-[var(--fuente-mono)] tabular-nums text-[var(--acero)]";
-const sinDato = <span className="text-[var(--tenue)]">sin dato</span>;
-
-export default async function CarrierRecorridoPage({
+export default async function CarrierWorkbenchPage({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const sp = searchParams ? await searchParams : undefined;
   const carrier = await resolveAccountByType("carrier", searchParams);
-
   if (!carrier) {
     return (
       <main className="p-8">
-        <p>Sin datos de carrier. Crea una en J-Staff → Cuentas.</p>
+        <p className="text-sm">Sin cuentas de transportista. Crea una en J-Staff → Cuentas.</p>
       </main>
     );
   }
 
-  const fecha = fechaValida(sp?.fecha) ?? localDateIso(new Date(), JTTEL_TZ);
-  const minDesde = minutosDeHhMm(sp?.desde, HORA_POR_DEFECTO_DESDE);
-  const minHasta = minutosDeHhMm(sp?.hasta, HORA_POR_DEFECTO_HASTA);
-  const ventana = ventanaLocal(fecha, minDesde, minHasta, JTTEL_TZ);
+  const sp = searchParams ? await searchParams : undefined;
+  const data = await loadWorkbench(carrier, sp);
 
-  const repos = getRepos();
+  const seleccionadas = new Set(data.unidades.map((u) => u.unitId));
 
-  // Las dos consultas no dependen entre sí: en paralelo, no en fila.
-  const [todasLasUnidades, puntos, marcas] = await Promise.all([
-    repos.fleet.getUnitsForCarrier(carrier.id),
-    repos.telemetry.getForCarrierWindow(carrier.id, ventana.desde, ventana.hasta),
-    repos.telemetry.listWatermarks(),
-  ]);
-
-  const unidades = todasLasUnidades
-    .filter((u) => u.active)
-    .map((u) => ({ id: u.id, label: u.label, plateNumber: u.plateNumber }));
-
-  const observados = puntos
-    .filter((p): p is typeof p & { unitId: string } => Boolean(p.unitId))
-    .map((p) => ({
-      unitId: p.unitId,
-      imei: p.imei,
-      latitude: p.latitude,
-      longitude: p.longitude,
-      recordedAt: p.recordedAt,
-    }));
-
-  // La consulta del último dato conocido barre la tabla entera (462 ms
-  // medidos). Solo hace falta si hay unidades mudas, así que se salta cuando
-  // toda la flota reportó.
-  const conDatoEnVentana = new Set(observados.map((p) => p.unitId));
-  const hayMudas = unidades.some((u) => !conDatoEnVentana.has(u.id));
-  const ultimoDatoPorUnidad = hayMudas
-    ? await repos.telemetry.getLastPointPerUnit(carrier.id)
-    : new Map<string, Date>();
-
-  const censo = construirCenso({
-    ventana: { desde: ventana.desde, hasta: ventana.hasta },
-    unidades,
-    puntos: observados,
-    ultimoDatoPorUnidad,
-  });
-
-  // El archivador puede ir atrás de la ventana. Sin decirlo, un hueco de
-  // archivado se lee como un hueco de operación — el error del 28 de julio.
-  const marca = marcas.find((m) => m.carrierAccountId === carrier.id);
-  const ventanaAunSeLlena = marca ? marca.lastRecordedAt < ventana.hasta : true;
-
-  const href = (o: { fecha?: string; desde?: string; hasta?: string }) => {
-    const p = new URLSearchParams();
-    p.set("fecha", o.fecha ?? fecha);
-    p.set("desde", o.desde ?? hhMm(minDesde));
-    p.set("hasta", o.hasta ?? hhMm(minHasta));
-    return withAccount(`/carrier/recorrido?${p.toString()}`, carrier.slug);
+  /** Arma un enlace conservando la composición y cambiando una sola cosa. */
+  const href = (cambio: {
+    unidades?: string[];
+    desde?: string;
+    hasta?: string;
+    servicio?: string | null;
+  }) => {
+    const q = new URLSearchParams();
+    for (const id of cambio.unidades ?? [...seleccionadas]) q.append("unidad", id);
+    q.set("desde", cambio.desde ?? data.rango.desde);
+    q.set("hasta", cambio.hasta ?? data.rango.hasta);
+    const servicio =
+      cambio.servicio === null
+        ? null
+        : (cambio.servicio ?? data.servicioAbierto?.ocurrenciaId ?? null);
+    if (servicio) q.set("servicio", servicio);
+    if (data.paradaUmbralMinutos !== 5) q.set("parada", String(data.paradaUmbralMinutos));
+    return withAccount(`/carrier/recorrido?${q.toString()}`, carrier.slug);
   };
 
+  const disputables = data.servicios.filter(
+    (s) => s.resultado === "no_cumplido" || s.resultado === "pendiente",
+  );
+
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto max-w-6xl">
-        <AppNav
-          title={`Recorrido — ${carrier.name}`}
-          links={[
-            { href: withAccount("/carrier", carrier.slug), label: "Panel" },
-            { href: withAccount("/carrier/flota", carrier.slug), label: "Flota" },
-            { href: withAccount("/carrier/gps", carrier.slug), label: "Proveedor GPS" },
-            {
-              href: withAccount("/carrier/cumplimiento", carrier.slug),
-              label: "Cumplimiento contractual",
-            },
-          ]}
-        />
-
-        <p className="mb-6 text-sm text-[var(--muted)]">
-          Todas tus unidades sobre una ventana de tiempo, tal como las reportó el GPS.
-          Esta pantalla <span className="text-[var(--texto)]">no emite ningún veredicto</span>: no
-          consulta hechos sellados ni sabe qué ruta debía hacerse. Es tu flota, y solo la
-          tuya.
+    <CarrierShell carrier={carrier} title={`${carrier.name} — Workbench`}>
+      <header>
+        <h1 className="font-[family-name:var(--fuente-archivo)] text-2xl font-semibold text-[var(--texto)]">
+          {data.titular}
+        </h1>
+        <p className="mt-1 font-[family-name:var(--fuente-mono)] text-xs tabular-nums text-[var(--tenue)]">
+          {data.subtitulo}
+          {data.alcance ? ` · ${data.alcance}` : null}
         </p>
+      </header>
 
-        <form method="GET" className="mb-6 flex flex-wrap items-end gap-3">
-          {carrier.slug ? <input type="hidden" name="account" value={carrier.slug} /> : null}
-          <label className="flex flex-col gap-1 text-xs text-[var(--muted)]">
-            Fecha
-            <input
-              type="date"
-              name="fecha"
-              defaultValue={fecha}
-              className="rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] [color-scheme:dark]"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-[var(--muted)]">
-            Desde
-            <input
-              type="time"
-              name="desde"
-              defaultValue={hhMm(minDesde)}
-              className="rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] [color-scheme:dark]"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-[var(--muted)]">
-            Hasta
-            <input
-              type="time"
-              name="hasta"
-              defaultValue={hhMm(minHasta)}
-              className="rounded-lg border border-[var(--linea)] bg-black/30 px-3 py-1.5 text-sm text-[var(--texto)] [color-scheme:dark]"
-            />
-          </label>
-          <button
-            type="submit"
-            className="rounded-lg bg-[var(--accent)] px-4 py-1.5 text-sm text-black"
-          >
-            Ver
-          </button>
-          <a
-            href={href({ desde: "22:00", hasta: "06:00" })}
-            className="rounded-full border border-[var(--linea)] px-3 py-1 text-sm hover:border-[var(--azul)]"
-          >
-            Turno de noche
-          </a>
-          <a
-            href={href({ desde: "00:00", hasta: "00:00" })}
-            className="rounded-full border border-[var(--linea)] px-3 py-1 text-sm hover:border-[var(--azul)]"
-          >
-            Día completo
-          </a>
-        </form>
+      {/* ── La barra de composición: DOS campos, no más ────────────────────
+          Toda la programabilidad de la v1. Está pensada para que agregar una
+          dimensión después sea agregar un campo, no rehacer la pantalla. */}
+      <section
+        aria-labelledby="composicion"
+        className="rounded-xl border border-[var(--linea)] bg-[var(--panel)] p-4"
+      >
+        <h2 id="composicion" className="sr-only">
+          Composición del lienzo
+        </h2>
 
-        <p className="mb-6 text-xs text-[var(--tenue)]">
-          Ventana: {fechaCompleta(ventana.desde)}, de {reloj(ventana.desde)} a{" "}
-          {reloj(ventana.hasta)} — {duracion(censo.ventana.minutos)}.{" "}
-          {ventana.cruzaMedianoche ? "Cruza medianoche y termina al día siguiente. " : ""}
-          Todas las horas de esta pantalla están en el reloj de{" "}
-          <span className="text-[var(--acero)]">{JTTEL_TZ}</span>.
-        </p>
-
-        {ventanaAunSeLlena ? (
-          <div className="mb-6 rounded-xl border border-[var(--azul)]/40 bg-[var(--azul)]/10 p-4 text-sm">
-            <span className="text-[var(--azul)]">Aviso del sistema.</span> Esta ventana
-            todavía se está llenando: el archivador va{" "}
-            {marca ? (
-              <>
-                al {fechaCompleta(marca.lastRecordedAt)}, {reloj(marca.lastRecordedAt)}
-              </>
-            ) : (
-              "sin marca de agua registrada"
-            )}
-            , antes del final de la ventana. Los huecos que veas aquí pueden ser de
-            archivado y no de operación.
-          </div>
-        ) : null}
-
-        <div className="mb-6">
-          <Card title="Censo de la flota">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <div>
-                <div className={`text-3xl ${num}`}>{censo.activas}</div>
-                <div className="text-xs text-[var(--muted)]">unidades activas</div>
-              </div>
-              <div>
-                <div className={`text-3xl ${num}`}>{censo.reportaron}</div>
-                <div className="text-xs text-[var(--muted)]">reportaron en la ventana</div>
-              </div>
-              <div>
-                <div className={`text-3xl ${num}`}>{censo.dejaronDeReportar}</div>
-                <div className="text-xs text-[var(--muted)]">dejaron de reportar</div>
-              </div>
-              <div>
-                <div className={`text-3xl ${num}`}>{censo.nuncaReportaron}</div>
-                <div className="text-xs text-[var(--muted)]">nunca han reportado</div>
-              </div>
+        <div className="grid gap-4 min-[820px]:grid-cols-[1fr_auto]">
+          <div>
+            <p className="font-[family-name:var(--fuente-mono)] text-[10px] uppercase tracking-[0.13em] text-[var(--tenue)]">
+              Quién
+            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              {data.unidades.map((u) => (
+                <a
+                  key={u.unitId}
+                  href={href({ unidades: [...seleccionadas].filter((id) => id !== u.unitId) })}
+                  className="flex items-center gap-1.5 rounded-sm border border-[var(--linea-fuerte)] px-2 py-0.5 font-[family-name:var(--fuente-mono)] text-[11px] text-[var(--texto)] transition-colors hover:border-[var(--azul)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--azul)]"
+                  aria-label={`Quitar ${u.label} del lienzo`}
+                >
+                  <span
+                    aria-hidden
+                    className="inline-block h-2.5 w-2.5 rounded-[1px]"
+                    style={{ backgroundColor: colorDeIdentidad(u.colorIndex) }}
+                  />
+                  {u.label}
+                  <span className="text-[var(--tenue)]">×</span>
+                </a>
+              ))}
+              {data.unidades.length === 0 ? (
+                <span className="text-[11px] text-[var(--tenue)]">
+                  Ninguna unidad en el lienzo.
+                </span>
+              ) : null}
             </div>
 
-            {censo.nuncaReportaron > 0 ? (
-              <p className="mt-4 border-t border-[var(--linea)] pt-4 text-sm text-[var(--muted)]">
-                <span className="text-[var(--texto)]">
-                  {censo.nuncaReportaron}{" "}
-                  {censo.nuncaReportaron === 1 ? "unidad activa" : "unidades activas"} sin un
-                  solo punto en toda su historia.
-                </span>{" "}
-                Si alguna hace una ruta, el sistema no ve nada — y eso no es una falla de la
-                verificación, es una unidad que nunca llegó a estar conectada.
-              </p>
+            {/* Agregar unidad. La lista dice cuántos puntos reportó cada una en
+                el rango: elegir a ciegas entre ochenta y dos unidades no es
+                elegir, y una unidad muda no es una unidad quieta. */}
+            {data.unidades.length < MAX_UNIDADES ? (
+              <details className="mt-2">
+                <summary className="w-fit cursor-pointer rounded-sm border border-dashed border-[var(--linea)] px-2 py-0.5 text-[11px] text-[var(--tenue)] hover:border-[var(--azul)]">
+                  Agregar unidad
+                </summary>
+                <div className="mt-2 max-h-56 overflow-y-auto rounded-sm border border-[var(--linea)]">
+                  <ul className="divide-y divide-[var(--linea-tenue)]">
+                    {data.candidatas
+                      .filter((c) => !seleccionadas.has(c.id))
+                      .map((c) => (
+                        <li key={c.id}>
+                          <a
+                            href={href({ unidades: [...seleccionadas, c.id] })}
+                            className="flex items-baseline justify-between gap-3 px-2.5 py-1.5 text-[12px] transition-colors hover:bg-[var(--hover)]"
+                          >
+                            <span className="text-[var(--texto)]">
+                              {c.label}
+                              {c.plateNumber ? (
+                                <span className="ml-1.5 text-[10px] text-[var(--tenue)]">
+                                  {c.plateNumber}
+                                </span>
+                              ) : null}
+                            </span>
+                            <span
+                              className={`font-[family-name:var(--fuente-mono)] text-[11px] tabular-nums ${
+                                c.puntos > 0 ? "text-[var(--acero)]" : "text-[var(--tenue)]"
+                              }`}
+                            >
+                              {c.puntos > 0
+                                ? `${c.puntos.toLocaleString("es-MX")} puntos`
+                                : "sin dato en el rango"}
+                            </span>
+                          </a>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              </details>
             ) : null}
-          </Card>
+          </div>
+
+          <form method="GET" className="flex flex-wrap items-end gap-2">
+            {carrier.slug ? <input type="hidden" name="account" value={carrier.slug} /> : null}
+            {[...seleccionadas].map((id) => (
+              <input key={id} type="hidden" name="unidad" value={id} />
+            ))}
+            <div>
+              <p className="font-[family-name:var(--fuente-mono)] text-[10px] uppercase tracking-[0.13em] text-[var(--tenue)]">
+                Cuándo
+              </p>
+              <div className="mt-1.5 flex items-end gap-2">
+                <label className="flex flex-col gap-1 text-[10px] text-[var(--tenue)]">
+                  Desde
+                  <input
+                    type="date"
+                    name="desde"
+                    defaultValue={data.rango.desde}
+                    className="rounded-sm border border-[var(--linea)] bg-transparent px-2 py-1 font-[family-name:var(--fuente-mono)] text-[12px] text-[var(--texto)]"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-[10px] text-[var(--tenue)]">
+                  Hasta
+                  <input
+                    type="date"
+                    name="hasta"
+                    defaultValue={data.rango.hasta}
+                    className="rounded-sm border border-[var(--linea)] bg-transparent px-2 py-1 font-[family-name:var(--fuente-mono)] text-[12px] text-[var(--texto)]"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  className="rounded-sm border border-[var(--b-acero)] bg-[var(--t-acero)] px-3 py-1.5 text-[12px] text-[var(--acero)] transition-colors hover:border-[var(--azul)]"
+                >
+                  Ver
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
 
-        <Card title={`Por unidad (${censo.filas.length})`}>
-          {censo.filas.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              Este carrier no tiene unidades activas registradas.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--linea)] text-left text-xs text-[var(--muted)]">
-                    <th className="pb-2 pr-4 font-medium">Unidad</th>
-                    <th className="pb-2 pr-4 font-medium">Estado</th>
-                    <th className="pb-2 pr-4 text-right font-medium">Puntos</th>
-                    <th className="pb-2 pr-4 text-right font-medium">Ping mediano</th>
-                    <th className="pb-2 pr-4 text-right font-medium">Km aprox.</th>
-                    <th className="pb-2 pr-4 font-medium">Primer dato</th>
-                    <th className="pb-2 font-medium">Último dato</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {censo.filas.map((f) => (
-                    <tr key={f.unitId} className="border-b border-[var(--linea-tenue)]">
-                      <td className="py-2 pr-4">
-                        <div className="text-[var(--texto)]">{f.label}</div>
-                        {f.plateNumber ? (
-                          <div className="text-xs text-[var(--tenue)]">{f.plateNumber}</div>
-                        ) : null}
-                      </td>
-                      <td className="py-2 pr-4">
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs ${CATEGORIA[f.categoria].clase}`}
-                        >
-                          {CATEGORIA[f.categoria].etiqueta}
-                        </span>
-                        {f.equipos > 1 ? (
-                          <div className="mt-1 text-xs text-[var(--tenue)]">
-                            {f.equipos} equipos GPS
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className={`py-2 pr-4 text-right ${num}`}>
-                        {f.categoria === "reporto" ? f.puntos : "—"}
-                      </td>
-                      <td className={`py-2 pr-4 text-right ${num}`}>
-                        {f.intervaloMedianoSegundos != null
-                          ? `${f.intervaloMedianoSegundos.toFixed(1)} s`
-                          : "—"}
-                      </td>
-                      <td className={`py-2 pr-4 text-right ${num}`}>
-                        {f.kmAproximados != null ? f.kmAproximados.toFixed(2) : "—"}
-                        {f.saltosDescartados > 0 ? (
-                          <div className="text-xs text-[var(--tenue)]">
-                            {f.saltosDescartados}{" "}
-                            {f.saltosDescartados === 1 ? "salto" : "saltos"} descartado
-                            {f.saltosDescartados === 1 ? "" : "s"}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="py-2 pr-4 text-[var(--tenue)]">
-                        {f.primerDato ? reloj(f.primerDato) : sinDato}
-                      </td>
-                      <td className="py-2 text-[var(--tenue)]">
-                        {f.ultimoDato ? (
-                          reloj(f.ultimoDato)
-                        ) : f.ultimoDatoConocido ? (
-                          <span title="Fuera de esta ventana">
-                            {fechaCompleta(f.ultimoDatoConocido)}, {reloj(f.ultimoDatoConocido)}
-                          </span>
-                        ) : (
-                          sinDato
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        {/* Ningún tope en silencio. */}
+        {data.limites.length > 0 ? (
+          <ul className="mt-3 space-y-1 border-t border-[var(--linea)] pt-2.5">
+            {data.limites.map((l) => (
+              <li key={l} className="text-[10.5px] leading-relaxed text-[var(--tenue)]">
+                {l}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
 
-          <p className="mt-4 border-t border-[var(--linea)] pt-4 text-xs text-[var(--muted)]">
-            <span className="text-[var(--tenue)]">Ping mediano</span> es el tiempo típico
-            entre dos lecturas consecutivas del equipo con más puntos de esa unidad — mide
-            con qué resolución se pudo observar, no cómo se manejó. Los{" "}
-            <span className="text-[var(--tenue)]">kilómetros son aproximados</span>: los
-            tramos con velocidad implícita mayor a {SALTO_GPS_KMH} km/h se descartan por ser saltos
-            del equipo, y cada descarte deja un hueco en la suma.
+      {/* La ventana de un servicio abierta: se dice cuál, y se puede soltar. */}
+      {data.servicioAbierto ? (
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-sm border border-[var(--b-acero)] bg-[var(--t-acero)] px-3 py-2">
+          <span className="font-[family-name:var(--fuente-mono)] text-[10px] uppercase tracking-[0.11em] text-[var(--acero)]">
+            Servicio abierto
+          </span>
+          <span className="text-[12px] text-[var(--texto)]">
+            {data.servicioAbierto.ruta} · {data.servicioAbierto.turno} ·{" "}
+            {data.servicioAbierto.cliente}
+          </span>
+          <span className="font-[family-name:var(--fuente-mono)] text-[11px] tabular-nums text-[var(--acero)]">
+            cierre {data.servicioAbierto.cierre}
+          </span>
+          {/* Un `no_cumplido` NUNCA tiene unidad acreditada. Decirlo es la
+              diferencia entre "no fue nadie" y "el árbitro no acreditó a
+              nadie" — y esa diferencia es justo lo que se viene a disputar. */}
+          {data.servicioAbierto.unidadAcreditada ? (
+            <span className="font-[family-name:var(--fuente-mono)] text-[11px] text-[var(--acero)]">
+              unidad acreditada {data.servicioAbierto.unidadAcreditada.label}
+            </span>
+          ) : (
+            <span className="text-[11px] text-[var(--tenue)]">
+              El árbitro no acreditó ninguna unidad en este servicio. Elige tú cuál enseñar.
+            </span>
+          )}
+          <a
+            href={href({ servicio: null })}
+            className="ml-auto text-[11px] text-[var(--azul)] hover:underline"
+          >
+            Salir de la ventana
+          </a>
+        </div>
+      ) : null}
+
+      {/* ── El lienzo ─────────────────────────────────────────────────────── */}
+      <WorkbenchLienzo data={data} />
+
+      {/* ── Las medidas del rango. Todas en acero, cada una con su lectura. */}
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {data.medidas.map((m) => (
+          <div
+            key={m.etiqueta}
+            className="rounded-xl border border-[var(--linea)] bg-[var(--panel)] px-4 py-3"
+          >
+            <dt className="font-[family-name:var(--fuente-mono)] text-[10px] uppercase tracking-[0.11em] text-[var(--tenue)]">
+              {m.etiqueta}
+            </dt>
+            <dd className="mt-1 font-[family-name:var(--fuente-mono)] text-lg tabular-nums text-[var(--acero)]">
+              {m.valor}
+            </dd>
+            <p className="mt-1 text-[10px] leading-relaxed text-[var(--tenue)]">{m.lectura}</p>
+          </div>
+        ))}
+      </dl>
+
+      {/* ── El bloque de defensa, declarado y no implícito ────────────────── */}
+      <section
+        aria-labelledby="defensa"
+        className="rounded-xl border border-[var(--b-acero)] bg-[var(--panel)] p-4"
+      >
+        <h2
+          id="defensa"
+          className="font-[family-name:var(--fuente-archivo)] text-base text-[var(--texto)]"
+        >
+          Cuando un cliente dispute un servicio, esta es la pantalla.
+        </h2>
+        <p className="mt-1 max-w-3xl text-[11.5px] leading-relaxed text-[var(--tenue)]">
+          Abre el servicio y el lienzo se ajusta a la ventana que miró el árbitro, con la traza
+          completa —sin simplificar— y el trazado contratado encima. Lo que se ve aquí es lo
+          medido; interpretarlo es tuyo.
+        </p>
+
+        {disputables.length > 0 ? (
+          <ul className="mt-3 divide-y divide-[var(--linea-tenue)] rounded-sm border border-[var(--linea)]">
+            {disputables.slice(0, 8).map((s) => (
+              <li key={s.ocurrenciaId}>
+                <a
+                  href={href({ servicio: s.ocurrenciaId, desde: s.fecha, hasta: s.fecha })}
+                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-3 py-2 transition-colors hover:bg-[var(--hover)]"
+                >
+                  <ChipResultado resultado={s.resultado} />
+                  <span className="text-[12.5px] text-[var(--texto)]">{s.ruta}</span>
+                  <span className="text-[11px] text-[var(--tenue)]">
+                    {s.turno} · {s.cliente}
+                  </span>
+                  <span className="ml-auto font-[family-name:var(--fuente-mono)] text-[11px] tabular-nums text-[var(--acero)]">
+                    cierre {s.cierre}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 rounded-sm border border-dashed border-[var(--linea)] px-3 py-2.5 text-[11px] leading-relaxed text-[var(--tenue)]">
+            Ningún servicio del rango quedó como no cumplido ni pendiente por evidencia. Si te
+            disputan uno que sí cumplió, ábrelo desde la lista de abajo.
           </p>
-        </Card>
-      </div>
-    </main>
+        )}
+
+        {disputables.length > 8 ? (
+          <p className="mt-2 font-[family-name:var(--fuente-mono)] text-[10.5px] tabular-nums text-[var(--tenue)]">
+            Se listan 8 de {disputables.length}. Acota el rango para ver el resto.
+          </p>
+        ) : null}
+      </section>
+
+      {/* ── Los servicios del rango ───────────────────────────────────────── */}
+      {data.servicios.length > 0 ? (
+        <div className="overflow-x-auto rounded-xl border border-[var(--linea)] bg-[var(--panel)]">
+          <table className="w-full min-w-[640px] border-collapse text-sm">
+            <caption className="sr-only">Servicios del rango</caption>
+            <thead>
+              <tr className="border-b border-[var(--linea)]">
+                {["Fecha", "Ruta", "Cliente", "Resultado", "Unidad acreditada", "Cierre"].map(
+                  (h, i) => (
+                    <th
+                      key={h}
+                      scope="col"
+                      className={`px-4 py-3 font-[family-name:var(--fuente-mono)] text-[10.5px] font-medium uppercase tracking-[0.11em] text-[var(--tenue)] ${
+                        i === 5 ? "text-right" : "text-left"
+                      }`}
+                    >
+                      {h}
+                    </th>
+                  ),
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--linea-tenue)]">
+              {data.servicios.slice(0, 60).map((s) => (
+                <tr key={s.ocurrenciaId} className="transition-colors hover:bg-[var(--hover)]">
+                  <td className="px-4 py-2.5 font-[family-name:var(--fuente-mono)] tabular-nums text-[var(--tenue)]">
+                    {s.fecha}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <a
+                      href={href({ servicio: s.ocurrenciaId, desde: s.fecha, hasta: s.fecha })}
+                      className="text-[var(--texto)] hover:text-[var(--azul)] hover:underline"
+                    >
+                      {s.ruta}
+                    </a>
+                    <span className="ml-1.5 text-[11px] text-[var(--tenue)]">{s.turno}</span>
+                  </td>
+                  <td className="px-4 py-2.5 text-[var(--tenue)]">{s.cliente}</td>
+                  <td className="px-4 py-2.5">
+                    <ChipResultado resultado={s.resultado} />
+                  </td>
+                  <td className="px-4 py-2.5 font-[family-name:var(--fuente-mono)] text-[12px] text-[var(--acero)]">
+                    {s.unidadAcreditada ? (
+                      s.unidadAcreditada.label
+                    ) : (
+                      <span className="text-[var(--tenue)]">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-[family-name:var(--fuente-mono)] tabular-nums text-[var(--acero)]">
+                    {s.cierre}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      {/* ── Lo que este instrumento todavía no hace, con su razón ─────────── */}
+      <section aria-labelledby="ausentes">
+        <h2
+          id="ausentes"
+          className="mb-2 font-[family-name:var(--fuente-mono)] text-[10.5px] font-medium uppercase tracking-[0.11em] text-[var(--tenue)]"
+        >
+          Lo que este instrumento todavía no hace
+        </h2>
+        <dl className="max-w-3xl space-y-2">
+          {data.ausentes.map((a) => (
+            <div key={a.titulo} className="text-[11px] leading-relaxed">
+              <dt className="inline font-[family-name:var(--fuente-mono)] uppercase tracking-[0.08em] text-[var(--tenue)]">
+                {a.titulo}
+              </dt>
+              <dd className="inline text-[var(--tenue)]"> — {a.razon}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <p className="max-w-3xl text-[11px] leading-relaxed text-[var(--tenue)]">
+        Todas las horas de esta pantalla están en el reloj de{" "}
+        <span className="text-[var(--acero)]">{JTTEL_TZ}</span>. Para el ahora, ve a Monitoreo.
+        Nada de esta pantalla llega a los clientes.
+      </p>
+    </CarrierShell>
+  );
+}
+
+
+/**
+ * El chip de resultado: impresión con borde, no pastilla de color.
+ *
+ * Es el único lugar de la pantalla donde aparece un color de veredicto, y
+ * aparece porque aquí sí hay un resultado sellado que nombrar. Lo que todavía
+ * no se selló va en acero: no tiene resultado, y pintarlo de cualquier color
+ * sería la pantalla adelantándose al árbitro.
+ */
+function ChipResultado({ resultado }: { resultado: ServicioEnRango["resultado"] }) {
+  const estilo =
+    resultado === "cumplido"
+      ? "text-[var(--verde)] bg-[var(--t-verde)] border-[var(--b-verde)]"
+      : resultado === "no_cumplido"
+        ? "text-[var(--rojo)] bg-[var(--t-rojo)] border-[var(--b-rojo)]"
+        : resultado === "pendiente"
+          ? "text-[var(--ambar)] bg-[var(--t-ambar)] border-[var(--b-ambar)]"
+          : "text-[var(--tenue)] border-[var(--linea)]";
+  const texto =
+    resultado === "cumplido"
+      ? "Cumplido"
+      : resultado === "no_cumplido"
+        ? "No cumplido"
+        : resultado === "pendiente"
+          ? "Pendiente por evidencia"
+          : "Sin sellar";
+  return (
+    <span
+      className={`inline-block rounded-[2px] border px-2 py-[2px] font-[family-name:var(--fuente-mono)] text-[9.5px] font-medium uppercase tracking-[0.13em] ${estilo}`}
+    >
+      {texto}
+    </span>
   );
 }
