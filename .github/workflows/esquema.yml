@@ -70,8 +70,17 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # El verificador lee el esquema compilado, igual que la aplicación.
-      - name: Compilar @jtel/db
-        run: pnpm --filter @jtel/db build
+      #
+      # Por turbo y no con `--filter @jtel/db`: ese filtro compila el paquete
+      # SIN sus dependencias, y `@jtel/db` importa tipos de `@jtel/domain`. En
+      # una máquina de trabajo pasa porque `packages/domain/dist` ya está de
+      # antes; en un runner limpio son 16 errores de `Cannot find module`.
+      # `turbo` respeta `dependsOn: ["^build"]` y construye en orden.
+      #
+      # Lo encontró esta misma puerta en su propio PR, que es lo que se le pide
+      # a una valla.
+      - name: Compilar en orden de dependencias
+        run: pnpm turbo run build --filter=@jtel/db
 
       # En orden y por nombre de archivo, que es como se aplican de verdad.
       # `--> statement-breakpoint` es el separador que escribe drizzle-kit.
