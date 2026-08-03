@@ -24,6 +24,12 @@ export {
   MINUTOS_MARCO_DISTINTO,
   type CausaDeDiferencia,
 } from "./deadline-diff.js";
+export {
+  MAX_PARAMETROS_POR_SENTENCIA,
+  filasPorSentencia,
+  enLotes,
+  escribirEnLotes,
+} from "./lote-de-escritura.js";
 export { routeWindowSizing, windowForOccurrence } from "./ventana-ocurrencia.js";
 export {
   huecosDeVentana,

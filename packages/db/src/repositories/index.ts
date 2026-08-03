@@ -12,6 +12,7 @@ import type {
 } from "@jtel/domain";
 import { operationalScopeColumns } from "@jtel/domain";
 import type { Database } from "../index.js";
+import { escribirEnLotes, filasPorSentencia } from "../lote-de-escritura.js";
 import { routeWindowSizing } from "../ventana-ocurrencia.js";
 import {
   resumirUnidadDia,
@@ -3349,11 +3350,14 @@ export class EvidenceRepository {
     }>,
   ) {
     if (points.length === 0) return [];
-    const rows = await this.db
-      .insert(evidencePoints)
-      .values(points.map((p) => ({ tripId, ...p })))
-      .returning();
-    return rows;
+    // En lotes: una ventana de evidencia de un carrier entero pasa de 12 000
+    // puntos, y eso en una sola sentencia excede el techo de parámetros de
+    // Postgres y la rechaza completa. Ver `lote-de-escritura.ts`.
+    return escribirEnLotes(
+      points.map((p) => ({ tripId, ...p })),
+      filasPorSentencia(evidencePoints),
+      (lote) => this.db.insert(evidencePoints).values(lote).returning(),
+    );
   }
 
   async getPointsForTrip(tripId: string) {
@@ -3475,24 +3479,24 @@ export class TelemetryRepository {
     }>,
   ) {
     if (points.length === 0) return [];
-    const rows = await this.db
-      .insert(telemetryPoints)
-      .values(
-        points.map((p) => ({
-          carrierAccountId: p.carrierAccountId,
-          imei: p.imei,
-          latitude: p.latitude,
-          longitude: p.longitude,
-          speed: p.speed,
-          recordedAt: p.recordedAt,
-          deviceId: p.deviceId ?? undefined,
-          unitId: p.unitId ?? undefined,
-          source: p.source ?? "umbrella",
-        })),
-      )
-      .onConflictDoNothing()
-      .returning();
-    return rows;
+    // En lotes por la misma razón que `evidence.savePoints`: el archivador y el
+    // relleno de huecos traen tandas grandes, y una sentencia que excede el
+    // techo de parámetros de Postgres no se recorta — se rechaza entera.
+    return escribirEnLotes(
+      points.map((p) => ({
+        carrierAccountId: p.carrierAccountId,
+        imei: p.imei,
+        latitude: p.latitude,
+        longitude: p.longitude,
+        speed: p.speed,
+        recordedAt: p.recordedAt,
+        deviceId: p.deviceId ?? undefined,
+        unitId: p.unitId ?? undefined,
+        source: p.source ?? "umbrella",
+      })),
+      filasPorSentencia(telemetryPoints),
+      (lote) => this.db.insert(telemetryPoints).values(lote).onConflictDoNothing().returning(),
+    );
   }
 
   async getWatermark(carrierAccountId: string) {
