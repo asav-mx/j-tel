@@ -1,4 +1,4 @@
-import { eq, and, or, gte, lte, isNull, inArray, sql, ne, desc } from "drizzle-orm";
+import { eq, and, or, gte, lte, isNull, inArray, sql, ne, desc, count } from "drizzle-orm";
 import {
   computeExpectedDeadline,
   computeEvidenceWindow,
@@ -2920,6 +2920,32 @@ export class OccurrenceRepository {
       },
     });
   }
+
+  /**
+   * La fecha civil de una ocurrencia, **solo si es de este transportista**.
+   *
+   * Existe para que el Workbench pueda abrir un servicio por su identificador
+   * sin pagar `findById`, que arrastra los puntos de evidencia del viaje
+   * entero — miles de filas para leer una fecha.
+   *
+   * La pertenencia se resuelve en el `where` y no después en el proceso web:
+   * un identificador de otro carrier no devuelve fecha, así que no hay camino
+   * por el que la pantalla se entere de que existe. Es la ley 3 hecha consulta.
+   */
+  async serviceDateForCarrier(id: string, carrierAccountId: string): Promise<string | null> {
+    const [fila] = await this.db
+      .select({ serviceDate: serviceOccurrences.serviceDate })
+      .from(serviceOccurrences)
+      .innerJoin(serviceContracts, eq(serviceContracts.id, serviceOccurrences.contractId))
+      .where(
+        and(
+          eq(serviceOccurrences.id, id),
+          eq(serviceContracts.carrierAccountId, carrierAccountId),
+        ),
+      )
+      .limit(1);
+    return fila?.serviceDate ?? null;
+  }
 }
 
 export class ComplianceRepository {
@@ -3450,6 +3476,87 @@ export class TelemetryRepository {
   }
 
   /**
+   * Puntos de UNAS unidades en una ventana — la traza del Workbench.
+   *
+   * Distinta de `getForCarrierWindow` en tres cosas, y las tres importan:
+   *
+   * 1. **Filtra por unidad.** Nativo al índice `(unit_id, recorded_at)` de la
+   *    migración 0014: pedir un día de una unidad leía 58 464 filas sin él y
+   *    lee las suyas con él.
+   * 2. **Trae `speed`.** Sin velocidad no hay forma de derivar dónde estuvo
+   *    quieta una unidad, y las paradas son capa del mapa.
+   * 3. **Viene ordenada por unidad y tiempo.** Las medidas del Workbench
+   *    —huecos, paradas, kilómetros— son todas sobre puntos consecutivos, y
+   *    ordenar 124 396 puntos en el proceso web es trabajo que la base ya hace
+   *    con el índice.
+   *
+   * El filtro por `carrierAccountId` se conserva aunque las unidades ya lo
+   * impliquen: es la fila la que declara de quién es, y no depende de que quien
+   * llame haya resuelto bien la lista de unidades.
+   */
+  async getForUnitsWindow(
+    carrierAccountId: string,
+    unitIds: string[],
+    from: Date,
+    to: Date,
+  ) {
+    if (unitIds.length === 0) return [];
+    return this.db
+      .select({
+        unitId: telemetryPoints.unitId,
+        imei: telemetryPoints.imei,
+        latitude: telemetryPoints.latitude,
+        longitude: telemetryPoints.longitude,
+        speed: telemetryPoints.speed,
+        recordedAt: telemetryPoints.recordedAt,
+      })
+      .from(telemetryPoints)
+      .where(
+        and(
+          eq(telemetryPoints.carrierAccountId, carrierAccountId),
+          inArray(telemetryPoints.unitId, unitIds),
+          gte(telemetryPoints.recordedAt, from),
+          lte(telemetryPoints.recordedAt, to),
+        ),
+      )
+      .orderBy(telemetryPoints.unitId, telemetryPoints.recordedAt);
+  }
+
+  /**
+   * Cuántos puntos reportó cada unidad en la ventana.
+   *
+   * Es lo que llena el campo "Quién" del Workbench: elegir a ciegas entre
+   * ochenta y dos unidades no es elegir. Con esto, la lista dice cuáles
+   * reportaron algo en el rango que se está mirando y cuáles no — y la
+   * diferencia es la misma que enseñó el censo: una unidad muda no es una
+   * unidad quieta.
+   *
+   * Agrega en la base a propósito. Traer los puntos para contarlos serían
+   * cientos de miles de filas cruzando la red para producir un número por
+   * unidad.
+   */
+  async countPointsPerUnit(
+    carrierAccountId: string,
+    from: Date,
+    to: Date,
+  ): Promise<Map<string, number>> {
+    const filas = await this.db
+      .select({ unitId: telemetryPoints.unitId, total: count() })
+      .from(telemetryPoints)
+      .where(
+        and(
+          eq(telemetryPoints.carrierAccountId, carrierAccountId),
+          gte(telemetryPoints.recordedAt, from),
+          lte(telemetryPoints.recordedAt, to),
+        ),
+      )
+      .groupBy(telemetryPoints.unitId);
+    const salida = new Map<string, number>();
+    for (const f of filas) if (f.unitId) salida.set(f.unitId, f.total);
+    return salida;
+  }
+
+  /**
    * Último punto conocido por unidad, en toda la historia del carrier.
    *
    * Es lo que separa "dejó de reportar el 25 de julio" de "nunca ha reportado
@@ -3504,24 +3611,11 @@ export class TelemetryRepository {
     from: Date,
     to: Date,
   ) {
-    return this.db
-      .select({
-        unitId: telemetryPoints.unitId,
-        imei: telemetryPoints.imei,
-        latitude: telemetryPoints.latitude,
-        longitude: telemetryPoints.longitude,
-        recordedAt: telemetryPoints.recordedAt,
-      })
-      .from(telemetryPoints)
-      .where(
-        and(
-          eq(telemetryPoints.carrierAccountId, carrierAccountId),
-          eq(telemetryPoints.unitId, unitId),
-          gte(telemetryPoints.recordedAt, from),
-          lte(telemetryPoints.recordedAt, to),
-        ),
-      )
-      .orderBy(telemetryPoints.recordedAt);
+    // El caso de una unidad es el de varias con la lista de uno. Se delega en
+    // vez de repetir la consulta: dos lecturas casi iguales del mismo índice
+    // son dos lugares donde arreglar el siguiente problema de rendimiento, y
+    // uno de los dos se queda sin arreglar.
+    return this.getForUnitsWindow(carrierAccountId, [unitId], from, to);
   }
 
   /**

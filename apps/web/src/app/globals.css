@@ -212,3 +212,34 @@ body {
 [data-tema="claro"] .mapa-torre .leaflet-tile-pane {
   filter: saturate(0.4) contrast(0.92) brightness(1.04);
 }
+
+/*
+ * — El lienzo del Workbench: calles de referencia, jamás evidencia —
+ *
+ *   Aquí el fondo geográfico SÍ hace falta: el público final de este mapa no es
+ *   el árbitro, es una persona discutiendo un pago, y una desviación sin calles
+ *   no se puede juzgar. "Se salió del corredor 400 metros" sin ver que entró
+ *   por una lateral no defiende a nadie.
+ *
+ *   Y por eso mismo la jerarquía tiene que ser inequívoca: **gris y muy
+ *   atenuado abajo, lo medido con contraste alto encima.** El `grayscale`
+ *   completo no es cosmético — es lo que garantiza que ningún tono del basemap
+ *   pueda leerse como una capa de veredicto, sin importar qué mosaicos ponga
+ *   quien venga después.
+ *
+ *   Fondo oscuro en los dos temas: el lienzo es evidencia, y es la excepción
+ *   declarada del skill.
+ */
+.lienzo-workbench .leaflet-tile-pane {
+  /*
+   * El brillo SUBE, no baja: los mosaicos sin rótulos ya son casi negros, y
+   * atenuarlos más dejaba unas calles que no se distinguían del fondo — o sea,
+   * el fondo pagaba su costo sin dar lo único que justifica ponerlo. Atenuado
+   * quiere decir que no compite con lo medido, no que no se vea.
+   */
+  filter: grayscale(1) brightness(1.9) contrast(0.72);
+}
+
+.lienzo-workbench .leaflet-container {
+  background: #0a0d10;
+}
