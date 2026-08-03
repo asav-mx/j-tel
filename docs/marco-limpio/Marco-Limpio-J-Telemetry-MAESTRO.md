@@ -57,6 +57,7 @@ Un servicio cumplido siempre tiene unidad observada. No puede existir una hora d
 La verificación no se calcula al abrir una pantalla. Se genera sola tras el deadline, y cuándo se genera es configurable por contrato (justo al deadline, o con la gracia que cada cliente prefiera por clima/tráfico/historial). Las pantallas sólo leen el hecho ya guardado.
 El producto siempre debe poder soportarse. Existe una compuerta interna para diagnosticar y resolver fallas, respetando datos personales y sin alterar la verdad guardada.
 Un dato correcto puede volverse una afirmación falsa según dónde se lea, cómo se agrupe, sobre qué universo hable, de qué color se pinte, o cuántos valores se hayan colapsado para producirlo. El valor guardado siendo correcto no basta: lo que el usuario recibe es la afirmación completa, y esa la arman también el lugar, la agrupación, el alcance, el color y la reducción. Ver la sección D.
+Y lo que el sistema no midió no se dibuja, aunque quede feo. Una pantalla que completa lo que le falta se ve mejor que una que admite el hueco, y por eso la tentación de completarlo es permanente. Ver la sección E.
 Idioma nativo del sistema: español.
 
 
@@ -91,6 +92,23 @@ El quinto muestra el límite de la valla: la prueba fija que un día mixto conse
 Esa diferencia importa al elegir la valla. El caso del agregado no vivía dentro de la función —contar siempre contó bien— sino en el sitio de llamada, y eso ninguna prueba sobre una función pura lo ve. Cuando el error está en quién llama y no en qué hace, la valla es el compilador.
 
 La regla completa: la revisión contra la ley es lo único que los descubre; la valla es lo que impide que regresen. Las dos hacen falta, en ese orden, y nunca al revés.
+
+
+E. Lo correcto puede verse peor que lo falso
+
+Una traza continua es más bonita que una traza rota.
+
+El caso que lo enseñó salió del Workbench. El lienzo dibujaba el recorrido de una unidad como una sola línea, y esa línea atravesaba los huecos de señal: entre el último punto de una noche y el primero de la mañana siguiente quedaba una recta limpia cruzando la ciudad, dibujada con el mismo brillo que la evidencia de verdad. Sobre un rango de cinco días eran varias. El mapa se veía impecable, y estaba afirmando un camino que nadie observó.
+
+La versión correcta corta la línea en cada hueco y marca el hueco aparte. Se ve interrumpida. Y esa fealdad es la forma real de la evidencia: hubo horas en las que nadie vio nada, y el mapa lo admite.
+
+La consecuencia práctica, que es lo que hace falta escribir: cuando la versión honesta se ve peor que la falsa, la tentación de "arreglarla" no es un error de una vez — es un riesgo permanente. Alguien va a proponer suavizar la traza, rellenar el hueco, interpolar el punto que falta o completar la línea, y va a sonar razonable, porque el resultado se ve mejor. No es mala fe: una pantalla rota parece un defecto de la pantalla.
+
+La prueba que lo resuelve, y se aplica antes de dibujar: ¿esto que estoy por dibujar lo midió el sistema, o lo estoy completando yo? Si es lo segundo, no va — por bonito que quede.
+
+Por qué esto no lo atrapa ninguna prueba, y aquí se distingue de la sección D: en D el dato es correcto y engaña por dónde queda. Aquí el dato ni siquiera existe — se está inventando para tapar un hueco, y el invento se ve mejor que el hueco. **El error no se veía como error: se veía mejor.** Lo atrapó mirar el mapa y preguntarse por qué un camión cruzaba la ciudad en línea recta a las tres de la mañana.
+
+La valla, cuando la hay, es la misma que en D: una vez encontrado el caso se cerca. La traza partida en tramos observados tiene su prueba, y la parada cortada por hueco de señal también. Lo que ninguna valla cubre es la próxima vez que lo honesto se vea peor en otro lugar de la pantalla.
 
 
 Cómo se usa este documento
