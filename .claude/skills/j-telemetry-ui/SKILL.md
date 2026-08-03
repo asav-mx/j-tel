@@ -705,6 +705,10 @@ Cómo se atrapa: **buscar en el código quién LEE la columna**, no solo quién 
 
 La regla que queda: **cuando lo medido contradice una garantía del algoritmo, el sospechoso es el medidor, no el algoritmo.** Una garantía por construcción no se refuta con una corrida — se refuta con una demostración. Y la trampa es doblemente peligrosa porque el número falso era plausible y conservador: nadie discute un desvío que suena grande, y sobre él se habría decidido que la simplificación no servía.
 
+**Ordenar por fecha sin techo devuelve el futuro. Ya pasó dos veces.** El generador crea ocurrencias por adelantado, así que cualquier consulta que ordena por `serviceDate` descendente y no acota a hoy trae servicios que todavía no ocurren. La primera vez costó una investigación entera: 1 056 ocurrencias "sin hecho" que eran de agosto y septiembre. La segunda salió en una tabla llamada **"últimos servicios" encabezada por el 1 de septiembre**, todos sin sellar, y se atrapó mirando las fechas contra el calendario — no compilando.
+
+El patrón es siempre el mismo y por eso conviene reconocerlo de lejos: **correcto como consulta, falso como afirmación.** La consulta hizo exactamente lo que se le pidió; lo que miente es el título encima. Regla: toda consulta sobre ocurrencias lleva techo, y el techo lleva su porqué escrito al lado, para que nadie lo quite pensando que sobra.
+
 **El fallo silencioso que devuelve de menos.** Una consulta agregada nueva reventó en el primer intento porque el controlador HTTP no sabe enlazar un `Date` en SQL crudo, y se atrapó porque la pantalla dio 500. Ese fue el modo de falla afortunado.
 
 El mismo error puede fallar del otro lado: un `timestamptz` mal enlazado que se interpreta como un instante distinto no revienta — **filtra de más y devuelve de menos.** Entonces no hay 500 que mirar, solo una gráfica de huecos de señal con menos huecos de los que hubo, dibujada con todos los tokens correctos y perfectamente legible.
