@@ -142,7 +142,7 @@ export default async function CarrierUnidadesPage({
                 <tr key={f.id} className="transition-colors hover:bg-[var(--hover)]">
                   <td className="px-4 py-2.5">
                     <Link
-                      href={withAccount(`/carrier/historial/${f.id}`, carrier.slug)}
+                      href={withAccount(`/carrier/flota/${f.id}`, carrier.slug)}
                       className="text-[var(--texto)] hover:text-[var(--azul)] hover:underline"
                     >
                       {f.label}

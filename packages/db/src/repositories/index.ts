@@ -572,6 +572,32 @@ export class FleetRepository {
     return record!;
   }
 
+  /**
+   * Todos los rastreadores que ha traído una unidad, con sus periodos.
+   *
+   * Es la ley del expediente hecha consulta: **el rastreador no es la identidad
+   * de la unidad.** Una unidad puede traer varios aparatos a lo largo de su
+   * vida, y su historia es una sola — no se parte cuando el equipo se cambia.
+   *
+   * Trae las cerradas y la vigente, en orden de instalación. Medido el
+   * 2026-08-02: de 82 unidades de esta flota, ninguna ha cambiado de equipo, lo
+   * cual no es un hueco del modelo sino un hecho que todavía no ocurre.
+   */
+  async asignacionesDeUnidad(unitId: string) {
+    return this.db
+      .select({
+        deviceId: devices.id,
+        imei: devices.imei,
+        etiqueta: devices.label,
+        desde: deviceAssignments.validFrom,
+        hasta: deviceAssignments.validTo,
+      })
+      .from(deviceAssignments)
+      .innerJoin(devices, eq(devices.id, deviceAssignments.deviceId))
+      .where(eq(deviceAssignments.unitId, unitId))
+      .orderBy(deviceAssignments.validFrom);
+  }
+
   async getMaintenanceForCarrier(carrierAccountId: string) {
     return this.db.query.maintenanceRecords.findMany({
       where: eq(maintenanceRecords.carrierAccountId, carrierAccountId),
@@ -2922,6 +2948,63 @@ export class OccurrenceRepository {
   }
 
   /**
+   * Los servicios que una unidad cubrió, contados por resultado.
+   *
+   * **Solo cuenta hechos donde el árbitro ACREDITÓ a esta unidad.** Un
+   * `no_cumplido` nunca tiene unidad acreditada, así que este conteo no puede
+   * traer ninguno — y eso es correcto, no un filtro escondido: la unidad no
+   * tiene resultado propio, los servicios que cubrió sí tienen el suyo.
+   *
+   * Se agrega en la base porque el expediente mira meses, y la alternativa
+   * —traer las ocurrencias de todos los contratos y filtrar en el proceso—
+   * lee miles de filas para contar decenas.
+   */
+  async serviciosCubiertosPorUnidad(unitId: string, desdeFecha: string) {
+    return this.db
+      .select({
+        status: complianceFacts.status,
+        total: count(),
+      })
+      .from(complianceFacts)
+      .innerJoin(
+        serviceOccurrences,
+        eq(serviceOccurrences.id, complianceFacts.serviceOccurrenceId),
+      )
+      .where(
+        and(
+          eq(complianceFacts.observedUnitId, unitId),
+          gte(serviceOccurrences.serviceDate, desdeFecha),
+        ),
+      )
+      .groupBy(complianceFacts.status);
+  }
+
+  /** Los últimos servicios que cubrió esta unidad, para poder abrirlos. */
+  async ultimosServiciosDeUnidad(unitId: string, limite: number) {
+    return this.db
+      .select({
+        ocurrenciaId: serviceOccurrences.id,
+        fecha: serviceOccurrences.serviceDate,
+        status: complianceFacts.status,
+        timing: complianceFacts.timing,
+        deadline: serviceOccurrences.expectedDeadline,
+        ruta: routes.name,
+        turno: shifts.name,
+      })
+      .from(complianceFacts)
+      .innerJoin(
+        serviceOccurrences,
+        eq(serviceOccurrences.id, complianceFacts.serviceOccurrenceId),
+      )
+      .innerJoin(routeShifts, eq(routeShifts.id, serviceOccurrences.routeShiftId))
+      .innerJoin(routes, eq(routes.id, routeShifts.routeId))
+      .innerJoin(shifts, eq(shifts.id, routeShifts.shiftId))
+      .where(eq(complianceFacts.observedUnitId, unitId))
+      .orderBy(desc(serviceOccurrences.serviceDate))
+      .limit(limite);
+  }
+
+  /**
    * La fecha civil de una ocurrencia, **solo si es de este transportista**.
    *
    * Existe para que el Workbench pueda abrir un servicio por su identificador
@@ -3535,6 +3618,106 @@ export class TelemetryRepository {
    * cientos de miles de filas cruzando la red para producir un número por
    * unidad.
    */
+  /**
+   * Huecos de señal de UNA unidad, agregados por mes civil.
+   *
+   * Es el motor de la sección más valiosa del expediente de unidad. Se agrega
+   * **en la base y no en el proceso web** por una razón de tamaño: dos meses de
+   * una unidad son del orden de cincuenta mil filas, y todas viajarían por la
+   * red para producir cinco renglones.
+   *
+   * El umbral entra como parámetro y no horneado aquí: es el mismo
+   * `SIN_SENAL_MINUTOS` que usa el resto del producto, y dos definiciones de
+   * "hueco" en dos pantallas destruyen la credibilidad de las dos.
+   *
+   * El mes se corta en el reloj de la operación, no en UTC. Un turno que
+   * termina a la 1 de la mañana del día 1 pertenece al mes anterior en la
+   * cabeza de quien opera, y a este en UTC.
+   */
+  async huecosPorMesDeUnidad(
+    carrierAccountId: string,
+    unitId: string,
+    desde: Date,
+    opts: { timeZone: string; umbralMinutos: number },
+  ): Promise<
+    Array<{
+      mes: string;
+      puntos: number;
+      huecos: number;
+      minutosSinVer: number;
+      primero: Date;
+      ultimo: Date;
+    }>
+  > {
+    const filas = await this.db.execute<{
+      mes: string;
+      puntos: string | number;
+      huecos: string | number;
+      minutos_sin_ver: string | number;
+      primero: Date | string;
+      ultimo: Date | string;
+    }>(sql`
+      WITH d AS (
+        SELECT
+          recorded_at,
+          lag(recorded_at) OVER (ORDER BY recorded_at) AS previo
+        FROM telemetry_points
+        WHERE carrier_account_id = ${carrierAccountId}
+          AND unit_id = ${unitId}
+          -- El controlador HTTP no sabe enlazar un Date en SQL crudo: viaja
+          -- como ISO y se castea aquí. Un timestamptz enlazado mal no falla
+          -- devolviendo de más, falla no devolviendo nada.
+          AND recorded_at >= ${desde.toISOString()}::timestamptz
+      )
+      SELECT
+        to_char(recorded_at AT TIME ZONE ${opts.timeZone}, 'YYYY-MM') AS mes,
+        count(*)::int AS puntos,
+        count(*) FILTER (
+          WHERE previo IS NOT NULL
+            AND recorded_at - previo > make_interval(mins => ${opts.umbralMinutos}::int)
+        )::int AS huecos,
+        coalesce(sum(
+          CASE
+            WHEN previo IS NOT NULL
+              AND recorded_at - previo > make_interval(mins => ${opts.umbralMinutos}::int)
+            THEN extract(epoch FROM (recorded_at - previo)) / 60
+            ELSE 0
+          END
+        ), 0)::int AS minutos_sin_ver,
+        min(recorded_at) AS primero,
+        max(recorded_at) AS ultimo
+      FROM d
+      GROUP BY 1
+      ORDER BY 1
+    `);
+
+    return [...filas].map((f) => ({
+      mes: f.mes,
+      puntos: Number(f.puntos),
+      huecos: Number(f.huecos),
+      minutosSinVer: Number(f.minutos_sin_ver),
+      primero: f.primero instanceof Date ? f.primero : new Date(f.primero),
+      ultimo: f.ultimo instanceof Date ? f.ultimo : new Date(f.ultimo),
+    }));
+  }
+
+  /**
+   * El punto más viejo del carrier: hasta dónde llega el archivo.
+   *
+   * Sin esto, un expediente de unidad enseñaría "dos meses" y quien lo lea
+   * supondría que antes no hubo huecos. No hubo ARCHIVO — que es otra cosa, y
+   * es la misma distinción que hace la marca de agua en el censo.
+   */
+  async primerPuntoDeCarrier(carrierAccountId: string): Promise<Date | null> {
+    const [fila] = await this.db
+      .select({ primero: telemetryPoints.recordedAt })
+      .from(telemetryPoints)
+      .where(eq(telemetryPoints.carrierAccountId, carrierAccountId))
+      .orderBy(telemetryPoints.recordedAt)
+      .limit(1);
+    return fila?.primero ?? null;
+  }
+
   async countPointsPerUnit(
     carrierAccountId: string,
     from: Date,
