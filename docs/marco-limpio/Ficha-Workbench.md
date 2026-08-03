@@ -64,6 +64,8 @@ La objeción —que el fondo mete en pantalla cosas que el árbitro no mide— *
 
 Eso descarta los mosaicos estándar de OSM que usa el resto del producto —esos sí traen nombres de comercios— y obliga a la variante sin rótulos. El costo se acepta a ojos abiertos: **tampoco hay nombres de calle.** Se prefirió perder el nombre a admitir una capa que pueda decir algo que el árbitro no midió.
 
+> **DECISIÓN REVERSIBLE, con su condición.** Si en una disputa real hace falta el nombre de la vialidad, se cambia a la variante **con rótulos de vialidad y sin POI**. Es un cambio de una línea, y se decide **cuando haya un caso, no antes**. Anotarlo aquí es lo que evita que la ausencia de nombres se convierta en dogma por olvido — la decisión se tomó con un costo aceptado, no con un costo inexistente.
+
 **Y la traza se corta en cada hueco de señal.** Una polilínea que atraviesa un hueco dibuja un camino que nadie demostró, con el mismo brillo que la evidencia real — en un rango de varios días son diagonales limpias cruzando la ciudad de noche. El hueco se sigue marcando en ámbar; lo que ya no se hace es afirmar un camino dentro de él.
 
 **Ley de la simplificación — decidida el 2026-08-02, con los números medidos.**

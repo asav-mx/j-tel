@@ -28,6 +28,12 @@ import type { WorkbenchData } from "@/lib/workbench-data";
  * que usa el resto del producto —esos sí traen nombres de comercios— sino la
  * variante sin rótulos: lo único que aporta el fondo es geometría de calles.
  *
+ * El costo se aceptó a ojos abiertos: **así tampoco hay nombres de calle.** Y
+ * la decisión quedó anotada como REVERSIBLE con su condición: si en una disputa
+ * real hace falta el nombre de la vialidad, se cambia a la variante con rótulos
+ * de vialidad y sin POI —una línea, la de abajo— y se decide **cuando haya un
+ * caso, no antes.** Ver `Ficha-Workbench` §3.3.
+ *
  * ── Las capas ───────────────────────────────────────────────────────────────
  *
  * Agrupadas por familia y con su audiencia: **todo esto es del transportista y
