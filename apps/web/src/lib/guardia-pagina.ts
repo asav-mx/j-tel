@@ -62,6 +62,26 @@ export type VeredictoDePagina =
   | { ok: false; motivo: MotivoDeNegativa };
 
 /**
+ * ¿Esta identidad sirve para entrar?
+ *
+ * Se exporta porque **la portada la necesita sin redirigir**: la raíz no niega
+ * el paso, elige qué cara enseñar —landing sin sesión, portada con ella—. Si
+ * la portada llevara su propia copia de esta condición, las dos se separarían
+ * a la primera vez que alguien corrigiera una y olvidara la otra, y la que se
+ * quedaría vieja sería justo la que decide si se enseñan nombres de clientes.
+ *
+ * En producción: sesión de Clerk real. Fuera: vale el bypass, o no se puede
+ * trabajar en local ni en CI.
+ */
+export function sesionUtilizable(
+  identidad: Identidad,
+  entorno: { enProduccion?: boolean } = {},
+): boolean {
+  const enProduccion = entorno.enProduccion ?? process.env.NODE_ENV === "production";
+  return !enProduccion || identidad.sesionActiva;
+}
+
+/**
  * La decisión, sin redirigir.
  *
  * Vive aparte de `exigirEnPagina` a propósito: `redirect()` funciona lanzando
@@ -73,8 +93,6 @@ export async function decidirPagina(
   audiencia: Audiencia,
   entorno: { enProduccion?: boolean } = {},
 ): Promise<VeredictoDePagina> {
-  const enProduccion = entorno.enProduccion ?? process.env.NODE_ENV === "production";
-
   let identidad: Identidad;
   try {
     identidad = await getIdentidad();
@@ -83,7 +101,7 @@ export async function decidirPagina(
   }
 
   // Antes que el alcance: sin sesión real no hay a quién medirle el alcance.
-  if (enProduccion && !identidad.sesionActiva) {
+  if (!sesionUtilizable(identidad, entorno)) {
     return { ok: false, motivo: "sin-sesion" };
   }
 
