@@ -41,7 +41,13 @@ export type Vinculo = {
  *
  * Se llena con una línea por persona cuando exista el flujo de altas.
  */
-export const MAPEO: Vinculo[] = [];
+export const MAPEO: Vinculo[] = [
+  {
+    desde: "jstaff_admin",
+    hacia: "user_3HQuURm3OmMaJXub9RMpRMYHVkN",
+    nota: "Asav — J-Staff, admin_plataforma, alcance global",
+  },
+];
 
 /** Lo que hace falta para decidir si dos membresías son la misma. */
 export type FilaDeMembresia = {
