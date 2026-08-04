@@ -24,6 +24,7 @@ import { duracion, fechaDeIso, reloj } from "@/lib/formato-tiempo";
 import { HistoriaDelSello } from "@/components/historia-del-sello";
 import type { LedgerPairing } from "@jtel/db";
 import type { EstadoServicio } from "@jtel/services";
+import { exigirEnPagina } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,10 @@ export default async function DiagnosticoPage({
 }: {
   params: Promise<{ occurrenceId: string }>;
 }) {
+  // La comprobación va cerca del dato: un layout no se re-renderiza
+  // al navegar entre rutas hermanas, así que como única guardia es frágil.
+  await exigirEnPagina({ tipo: "jstaff" });
+
   const { occurrenceId } = await params;
   const datos = await cargarDiagnostico(occurrenceId);
   if (!datos) notFound();
