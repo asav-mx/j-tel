@@ -42,7 +42,7 @@ const cierreBase = {
     },
   ],
   pendientes: 1,
-  urlCierre: "https://portal.j-tel.io/cierre",
+  urlCierre: "https://portal.j-telemetry.com/cierre",
   rol: "Cumplimiento",
   contrato: "Transporte Personal 2026",
 };
@@ -94,7 +94,7 @@ describe("correo de pendientes", () => {
         medida: "cobertura 46.7% · mínimo del contrato 80.0%",
       },
     ],
-    urlBandeja: "https://portal.j-tel.io/pendientes",
+    urlBandeja: "https://portal.j-telemetry.com/pendientes",
     rol: "Cumplimiento",
     contrato: "Transporte Personal 2026",
   };
@@ -136,8 +136,8 @@ describe("aviso operativo al carrier", () => {
     titulo: "Una unidad operó sin declararse",
     hecho: "El sistema registra que la unidad operó en el primer turno.",
     medidas: [{ etiqueta: "Unidad", valor: "sin declarar", lectura: "detectada por telemetría" }],
-    urlResolver: "https://carrier.j-tel.io/declarar",
-    urlInvestigar: "https://carrier.j-tel.io/recorrido",
+    urlResolver: "https://carrier.j-telemetry.com/declarar",
+    urlInvestigar: "https://carrier.j-telemetry.com/recorrido",
     rol: "Operación",
     contrato: "Transporte Personal 2026",
   };
@@ -169,7 +169,7 @@ describe("correo de sistema caído", () => {
     sinSenalDesde: "2 h 14 min",
     unidadesAfectadas: 8,
     serviciosEnRiesgo: 3,
-    urlEstado: "https://portal.j-tel.io/estado",
+    urlEstado: "https://portal.j-telemetry.com/estado",
   };
 
   it("la negación va antes que cualquier dato", () => {

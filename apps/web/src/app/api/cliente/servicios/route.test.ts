@@ -40,7 +40,7 @@ const MIA = "cuenta-tecma";
 function peticion(campos: Record<string, string>) {
   const body = new FormData();
   for (const [k, v] of Object.entries(campos)) body.set(k, v);
-  return new Request("https://j-tel.io/api/cliente/servicios", { method: "POST", body });
+  return new Request("https://j-telemetry.com/api/cliente/servicios", { method: "POST", body });
 }
 
 const GENERAR = {

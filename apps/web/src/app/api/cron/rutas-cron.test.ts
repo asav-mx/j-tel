@@ -76,7 +76,7 @@ const RUTAS = [
 const RESPALDO_RETIRADO = "dev" + "-cron-" + "secret";
 
 function peticion(autorizacion?: string): Request {
-  return new Request("https://j-tel.io/api/cron/x", {
+  return new Request("https://j-telemetry.com/api/cron/x", {
     headers: autorizacion ? { authorization: autorizacion } : {},
   });
 }

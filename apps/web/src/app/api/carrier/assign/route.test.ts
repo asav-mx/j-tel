@@ -40,7 +40,7 @@ const PROPIO = { id: "cuenta-jb", type: "carrier", slug: "juarez-bus" };
 function peticion(campos: Record<string, string>) {
   const body = new FormData();
   for (const [k, v] of Object.entries(campos)) body.set(k, v);
-  return new Request("https://j-tel.io/api/carrier/assign", { method: "POST", body });
+  return new Request("https://j-telemetry.com/api/carrier/assign", { method: "POST", body });
 }
 
 beforeEach(() => {
