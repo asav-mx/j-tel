@@ -184,7 +184,8 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [`apps/web` no tiene corredor de pruebas](#appsweb-no-tiene-corredor-de-pruebas) | Antes de mover lógica a la web |
 | [Migrar `autopsia.ts` al emparejamiento nuevo](#migrar-autopsiats-al-emparejamiento-nuevo) | Herramienta interna |
 | [La contraseña del readonly es la misma que la del dueño](#la-contraseña-del-readonly-es-la-misma-que-la-del-dueño) | 🟡 🤝 Toca producción |
-| [La base de pruebas está atrasada](#la-base-de-pruebas-está-atrasada) | 🟡 La red de seguridad, sin actualizar |
+| [La base de pruebas está atrasada](#la-base-de-pruebas-está-atrasada) | ✅ Cerrada el 4 de agosto · eran tres, no una |
+| [Las migraciones del repo crean una columna que el código no conoce](#las-migraciones-del-repo-crean-una-columna-que-el-código-no-conoce) | 🟡 🤝 `0018` escrita · falta aplicarla a producción |
 | [`demos/activate` cruza cuentas](#demosactivate-cruza-cuentas) | 🟡 Protegida; falta decidir qué hace |
 | [No hay configuración de ESLint](#no-hay-configuración-de-eslint) | 🟢 Junto con el corredor de pruebas |
 | ["Consolidación" significa dos cosas](#consolidación-significa-dos-cosas) | 🟢 Renombrar la de política |
@@ -930,8 +931,9 @@ reconstrucción era una consulta.
 viva: es la primera de las tres piezas de
 [la política como acuerdo vivo](#la-política-como-acuerdo-vivo). Lo que esta entrada
 sigue pidiendo es **el resto del río arriba —KML y perfiles—**, que no tienen historia.
-Su tabla `contract_policy_history` es además la que
-[le falta a la base de pruebas](#la-base-de-pruebas-está-atrasada).
+Su tabla `contract_policy_history` era además la que
+[le faltaba a la base de pruebas](#la-base-de-pruebas-está-atrasada) — ya no: se aplicó
+el 4 de agosto de 2026.
 
 **Qué lo desbloquea.** Nada técnico — es una decisión de prioridad. **Requisito antes
 del segundo cliente:** con un solo cliente y una sola persona configurando, la memoria
@@ -2054,6 +2056,30 @@ que es de Asav.
 
 ## La base de pruebas está atrasada
 
+> ✅ **Cerrada el 4 de agosto de 2026.** La rama desechable quedó al día y la
+> suite de integración corre **23/23** contra ella. El paso «aplicar también a
+> `DATABASE_URL_TEST`» ya vive en `docs/Procedimiento-Migraciones.md`, que es lo
+> que esta entrada pedía para que no volviera a pasar.
+>
+> **Eran tres cosas, no una.** Esta entrada solo tenía anotada la primera; las
+> otras dos aparecieron comparando el catálogo real contra las migraciones del
+> repo, objeto por objeto:
+>
+> | Faltaba | De dónde |
+> |---|---|
+> | tabla `contract_policy_history` + índice `cph_contract_idx` | `0015` |
+> | valor de enum `evidence_status.'sin_evidencia_posible'` | `0017` |
+> | índice `telemetry_points_carrier_unit_recorded_idx` | `0014` |
+>
+> Foto antes y después: hechos 0, ocurrencias 19, contratos 3 — **sin mover**;
+> tablas 40 → 41. Cero índices inválidos. `contract_policy_history` con 0 filas,
+> sin backfill, como manda la `0015`.
+>
+> **Lo que se aprendió, y por eso el hallazgo vale más que el arreglo:** leer la
+> bitácora del migrador no sirve para saber si una base está al día — en esa
+> rama está vacía porque todo se aplicó a mano, así que diría "cero migraciones"
+> y no significaría nada. Se compara contra la base, no contra el papel.
+
 **Qué es.** 🟡 A `DATABASE_URL_TEST` **le falta la migración de `contract_policy_history`**.
 
 **Por qué es peor que una migración pendiente cualquiera.** Es
@@ -2066,6 +2092,31 @@ seguridad desactualizada empuja a saltársela.
 dejarlo dentro del procedimiento, para que la siguiente no vuelva a quedarse atrás.
 
 **Dónde toca.** `DATABASE_URL_TEST`; `contract_policy_history`;
+`docs/Procedimiento-Migraciones.md`.
+
+## Las migraciones del repo crean una columna que el código no conoce
+
+**Qué es.** 🟡 `ledger_entries.actor_user_id` la crea la `0000`, el esquema de Drizzle
+**no la declara** desde la `0012`, y **producción todavía la tiene**. La `0012` anunció
+su baja —«se elimina en Migración B después del deploy»— y esa Migración B nunca se
+escribió.
+
+**Por qué se aplazó.** No se aplazó: **fue invisible durante tres semanas.**
+`esquema.yml` atrapa la columna que **falta**, no la que **sobra** — levanta una base
+solo con las migraciones y comprueba que el esquema del código quepa ahí, y una columna
+de más cabe perfectamente. Es
+[el hueco del 2 de agosto](#el-paso-que-faltaba-en-este-procedimiento-aplicarla) por el
+otro lado — sigue en verde porque una columna de más no molesta, hasta el día que sí.
+
+**Medido el 2026-08-04 con `jtel_readonly`**, nunca con el dueño: `ledger_entries` tiene
+**167 372 filas y 0 con `actor_user_id`**. La columna está vacía; quien firma hoy es
+`actor_kind` (64 661 filas). Ninguna línea de `packages/` ni de `apps/` la nombra.
+
+**Qué lo desbloquea.** 🤝 **Aplicar la `0018` a producción — es de Asav**, porque toca la
+base real. El archivo ya existe, es idempotente (`DROP COLUMN IF EXISTS`) y quedó
+aplicado y comprobado dos veces contra la rama desechable, donde es un no-op.
+
+**Dónde toca.** `packages/db/drizzle/0018_ledger_actor_user_id.sql`;
 `docs/Procedimiento-Migraciones.md`.
 
 ## `demos/activate` cruza cuentas

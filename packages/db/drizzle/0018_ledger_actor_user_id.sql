@@ -1,0 +1,51 @@
+-- Migración B — la que la 0012 anunció y nadie escribió.
+--
+-- QUÉ HACE. Quita `ledger_entries.actor_user_id`, la columna de actor vieja.
+--
+-- POR QUÉ EXISTE ESTE ARCHIVO Y NO SOLO EL BORRADO. La 0012 dice, en su
+-- primera línea: «actor_user_id se conserva; se elimina en Migración B después
+-- del deploy». El deploy ocurrió. La Migración B nunca se escribió. Mientras
+-- tanto el esquema de Drizzle **dejó de declarar la columna**, así que desde el
+-- 0012 el repo lleva dos verdades distintas: las migraciones la crean y el
+-- código no la conoce.
+--
+-- POR QUÉ NADIE LO VIO. `esquema.yml` levanta un Postgres construido SOLO con
+-- las migraciones de este directorio y comprueba que sirva para lo que el
+-- código pide. Una columna **de más** no le molesta a Drizzle: la consulta
+-- relacional pide las columnas que declara el esquema, y sobrar no rompe nada.
+-- Solo revienta cuando **falta** una — que es exactamente lo que pasó el
+-- 2026-08-02 con `declared_driver_name`. Este es el mismo hueco por el otro
+-- lado, y por eso sigue en verde: hasta el día que no.
+--
+-- MEDIDO ANTES DE ESCRIBIRLO, el 2026-08-04, contra producción y con
+-- `jtel_readonly` (nunca con el dueño):
+--
+--   ledger_entries: 167 372 filas
+--     actor_user_id con valor: 0
+--     actor_kind    con valor: 64 661
+--     actor_id      con valor: 0
+--
+-- La columna está **vacía en producción**. El DROP no pierde ni una
+-- atribución: quien firma hoy es `actor_kind`. Y ninguna línea de código en
+-- `packages/` ni en `apps/` la nombra — comprobado por búsqueda, no supuesto.
+--
+-- IDEMPOTENTE A PROPÓSITO (`IF EXISTS`). La rama desechable de
+-- `DATABASE_URL_TEST` ya no la tiene: allá esta migración es un no-op. Una
+-- migración que solo se puede correr una vez obliga a adivinar el estado de
+-- cada base antes de aplicarla, y adivinar es lo que se quiere evitar.
+--
+-- ADITIVA NO ES: es un DROP. Va en transacción (no lleva CONCURRENTLY) y se
+-- aplica **antes** de nada, sin plan de dos pasos, porque el plan de dos pasos
+-- ya se cumplió — la 0012 fue el paso A y el código lleva desde entonces sin
+-- tocarla. Esto es el paso B, tarde.
+--
+-- ⚠️ APLICARLA A PRODUCCIÓN ES DE ASAV. Toca la base real; este PR solo la
+-- escribe y la deja aplicada en la desechable.
+--
+-- Verificación después de aplicar:
+--   SELECT count(*) FROM information_schema.columns
+--    WHERE table_schema='public' AND table_name='ledger_entries'
+--      AND column_name='actor_user_id';
+--   -- debe dar 0, y el conteo de ledger_entries no debe haberse movido.
+
+ALTER TABLE "ledger_entries" DROP COLUMN IF EXISTS "actor_user_id";
