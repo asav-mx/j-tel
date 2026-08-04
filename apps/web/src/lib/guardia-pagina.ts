@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { canAccessClientAccount } from "@jtel/auth-rbac";
 import { decidir, type Audiencia, type Decision } from "@/lib/guardia-api";
 import { getIdentidad, type Identidad } from "@/lib/auth";
 
@@ -131,4 +132,115 @@ export async function exigirEnPagina(audiencia: Audiencia): Promise<Identidad> {
   // Fuera de cualquier `try`: `redirect()` lanza a propósito, y un catch de
   // más lo convertiría en «no pasó nada» — la página seguiría renderizando.
   redirect(`${DESTINO_SIN_PASO}?motivo=${veredicto.motivo}`);
+}
+
+/**
+ * Solo la sesión, sin preguntar por alcance.
+ *
+ * Es la pregunta que se puede contestar **sin leer un dato de nadie**, y por eso
+ * sirve de puerta para una cara entera —las 41 pantallas de `/cliente`,
+ * incluidas las que aún no existen— mientras el alcance se decide más adentro,
+ * donde ya se sabe qué recurso se está mirando.
+ *
+ * No es un sustituto de la guardia de alcance: es la mitad que se puede cerrar
+ * antes de saber contra qué comparar.
+ */
+export async function exigirSesion(): Promise<Identidad> {
+  let identidad: Identidad;
+  try {
+    identidad = await getIdentidad();
+  } catch {
+    redirect(`${DESTINO_SIN_PASO}?motivo=identidad-irresoluble`);
+  }
+
+  if (!sesionUtilizable(identidad)) {
+    redirect(`${DESTINO_SIN_PASO}?motivo=sin-sesion`);
+  }
+
+  return identidad;
+}
+
+export type VeredictoDeRecurso =
+  | { ok: true; identidad: Identidad; cuenta: string }
+  | { ok: false; motivo: "sin-sesion" | "identidad-irresoluble" }
+  /** Ni existe ni es tuyo. **Son el mismo caso a propósito.** */
+  | { ok: false; motivo: "inexistente-o-ajeno" };
+
+/**
+ * La decisión para una pantalla que cuelga de un recurso, sin efectos.
+ *
+ * ## La cuenta sale de la fila, nunca de la URL
+ *
+ * Lo único que la petición aporta es un id, y **un id no dice de quién es** —
+ * eso lo dice la base. `?account=` deja de participar en la decisión: antes
+ * `/cliente/servicio/[id]` hacía `accountSlug ?? data.clientSlug`, o sea **el
+ * parámetro ganaba sobre el recurso**, que es dejar que la petición elija
+ * contra quién se la compara. Ahora el recurso manda siempre y el parámetro
+ * sobrevive solo para pintar enlaces.
+ *
+ * ## Por qué «no existe» y «no es tuyo» contestan lo mismo
+ *
+ * Si se vieran distinto, un extraño podría **enumerar ids y aprender qué
+ * servicios existen** sin ver ninguno. Los dos caen en `inexistente-o-ajeno`, y
+ * quien llama contesta 404 a los dos. **La existencia de un servicio solo es
+ * distinguible desde dentro de la cuenta que lo posee.**
+ *
+ * Queda un límite conocido y escrito en el plan: los dos 404 **no son
+ * indistinguibles en el tiempo** —uno hace una consulta, el otro dos—. No se
+ * cierra aquí.
+ *
+ * ## El orden
+ *
+ * 1. sesión — **cero consultas**
+ * 2. procedencia — **una consulta, una columna**
+ * 3. autorizar — ninguna
+ * 4. y recién entonces, quien llama carga la pantalla
+ */
+export async function decidirRecurso(
+  duenoDelRecurso: () => Promise<string | null>,
+  entorno: { enProduccion?: boolean } = {},
+): Promise<VeredictoDeRecurso> {
+  let identidad: Identidad;
+  try {
+    identidad = await getIdentidad();
+  } catch {
+    return { ok: false, motivo: "identidad-irresoluble" };
+  }
+
+  // Antes de tocar el recurso. Así la negativa por falta de sesión es idéntica
+  // exista o no el id, y no filtra nada por sí misma.
+  if (!sesionUtilizable(identidad, entorno)) return { ok: false, motivo: "sin-sesion" };
+
+  let cuenta: string | null;
+  try {
+    cuenta = await duenoDelRecurso();
+  } catch {
+    // Ante la duda, no. Y con la misma cara que un id inexistente.
+    return { ok: false, motivo: "inexistente-o-ajeno" };
+  }
+
+  if (!cuenta) return { ok: false, motivo: "inexistente-o-ajeno" };
+  if (!canAccessClientAccount(identidad.memberships, cuenta)) {
+    return { ok: false, motivo: "inexistente-o-ajeno" };
+  }
+
+  return { ok: true, identidad, cuenta };
+}
+
+/**
+ * Lo que llaman las pantallas de recurso. Devuelve la cuenta dueña, o no vuelve.
+ *
+ * Se le pasa **cómo** obtener el dueño, no el dueño ya obtenido: así la lectura
+ * de procedencia ocurre **dentro** de la guardia y no antes, que es todo el
+ * punto de invertir el orden.
+ */
+export async function exigirRecurso(
+  duenoDelRecurso: () => Promise<string | null>,
+): Promise<{ identidad: Identidad; cuenta: string }> {
+  const v = await decidirRecurso(duenoDelRecurso);
+  if (v.ok) return { identidad: v.identidad, cuenta: v.cuenta };
+
+  // Los dos lanzan; ninguno va dentro de un `try`.
+  if (v.motivo === "inexistente-o-ajeno") notFound();
+  redirect(`${DESTINO_SIN_PASO}?motivo=${v.motivo}`);
 }

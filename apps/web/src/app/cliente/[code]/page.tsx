@@ -2,6 +2,7 @@ import { getRepos } from "@/lib/db";
 import { resolveAccountByType } from "@/lib/account-context";
 import { plantHref } from "@/lib/navigation";
 import { notFound, redirect } from "next/navigation";
+import { exigirSesion } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,10 @@ export default async function LegacyPlantaRedirectPage({
   params: Promise<{ code: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Antes de resolver nada: esta ruta busca una planta por código, y eso ya es
+  // leer la base. Sin sesión no se llega a preguntar.
+  await exigirSesion();
+
   const { code } = await params;
   if (!code.startsWith("planta-")) notFound();
 

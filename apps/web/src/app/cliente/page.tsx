@@ -4,6 +4,7 @@ import { AvisoSistema } from "@/components/ui";
 import { TiraCatorceDias } from "@/components/tira-catorce-dias";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { loadInicioCorporativo } from "@/lib/inicio-corporativo-data";
+import { exigirSesion } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,11 @@ export default async function ClienteInicioPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Sin sesión no se renderiza. Va en la PÁGINA y no solo en el layout:
+  // un redirect de layout no impide que la hija se renderice, y su
+  // payload —con datos reales dentro— viaja igual en la respuesta.
+  await exigirSesion();
+
   const sp = searchParams ? await searchParams : undefined;
   const error = typeof sp?.error === "string" ? sp.error : null;
 

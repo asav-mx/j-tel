@@ -4,6 +4,8 @@ import { AppNav } from "@/components/ui";
 import { ExpedienteContratoView } from "@/views/expediente-contrato";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { loadExpedienteContrato } from "@/lib/expediente-contrato-data";
+import { exigirRecurso } from "@/lib/guardia-pagina";
+import { getRepos } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,11 @@ export default async function ExpedienteContratoClientePage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { contractId } = await params;
+  // La cuenta sale de la fila del recurso, nunca de `?account=`.
+  // Va en la PÁGINA y no solo en el layout: un redirect de layout no
+  // impide que la hija se renderice, y su payload viaja igual.
+  await exigirRecurso(() => getRepos().procedencia.deContrato(contractId));
+
   const cuenta = await resolveAccountByType("client", searchParams);
   if (!cuenta) {
     return (

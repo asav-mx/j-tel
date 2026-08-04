@@ -1,5 +1,7 @@
 import { resolveCampusUnitPage } from "@/lib/unit-context";
 import { ServiciosUnitView } from "@/views/servicios-unit";
+import { exigirRecurso } from "@/lib/guardia-pagina";
+import { getRepos } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,11 @@ export default async function Page({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { groupId } = await params;
+  // La cuenta sale de la fila del recurso, nunca de `?account=`.
+  // Va en la PÁGINA y no solo en el layout: un redirect de layout no
+  // impide que la hija se renderice, y su payload viaja igual.
+  await exigirRecurso(() => getRepos().procedencia.deCampus(groupId));
+
   const ctx = await resolveCampusUnitPage(groupId, searchParams);
   return <ServiciosUnitView ctx={ctx} searchParams={searchParams} />;
 }
