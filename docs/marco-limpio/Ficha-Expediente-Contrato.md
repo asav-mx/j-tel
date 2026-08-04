@@ -59,7 +59,7 @@ Qué está activo y qué no, con su requisito. Los no contratados con borde punt
 
 **Mismo contenido para cliente y carrier.** Es el documento de la relación, y una relación no tiene dos versiones.
 
-**La única diferencia es dónde vive:** `portal.j-tel.io` para el cliente, `carrier.j-tel.io` para el transportista — y la puerta a la Oficina, que solo aparece del lado del cliente, porque el auditado no edita las reglas con las que se le juzga (ley 5). La política que los dos leen es la misma.
+**La única diferencia es dónde vive:** `portal.j-telemetry.com` para el cliente, `carrier.j-telemetry.com` para el transportista — y la puerta a la Oficina, que solo aparece del lado del cliente, porque el auditado no edita las reglas con las que se le juzga (ley 5). La política que los dos leen es la misma.
 
 **Lo que NO cambia entre las dos caras:** el alcance, la política, la historia. Si algo tuviera que ocultarse de una de las partes, no pertenece a este expediente.
 
