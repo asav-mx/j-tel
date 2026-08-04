@@ -330,6 +330,7 @@ una cortina.
 | **1.e** | Cerrar el default `tecma_admin`. **Va después de 1.c** o quedamos todos fuera | |
 | **1.f** | **La portada.** Una ruta con dos caras: **sin sesión → landing público; con sesión → portada**, y la portada **enseña solo lo tuyo** (de las membresías, no de `listByType`). **Sin nombres de clientes.** El bloque «Estado del sistema» **se quita, no se protege** — ya vive en `/jstaff` y en `/api/salud`. Aquí entra también sacar `j-tel.io` del landing y su CSS | |
 | **1.g** | Quitar el valor viejo de `CRON_SECRET` del historial y de los documentos | |
+| **1.h** | **La guardia por alcance, no por cuenta.** 1.c cierra a nivel **cuenta**: pregunta «¿es tu cuenta?», que es lo que sabe `canAccessClientAccount`. Falta la pregunta fina — «¿tu alcance cubre **esta planta**?» — y con ella **la regla del campus de `Ficha-Diseno-Permisos.md` §2.2, que no está implementada**: `canAccessPlant` resuelve alcance `plant` y `account`, pero **no tiene rama para `plant_group`**. **Sin diseñar todavía** | **Después de 1.c.** Hoy no protege a nadie —la única identidad real es global— y mezclarlo con 1.c serían dos cambios de comportamiento en un PR |
 
 **Regla de oro mientras dure este tramo:** **no iniciar sesión en Clerk hasta que
 1.a esté hecho.** La sesión de Clerk gana sobre el bypass de desarrollo; entrar
@@ -345,6 +346,27 @@ eso 1.a va antes que 1.b, y no al revés.
 
 **Prueba de aceptación (ya escrita en el código):** `/quien-soy` debe decir
 `origen: clerk` con las membresías **pobladas**, no vacías.
+
+### Cómo se niega el paso, y qué NO se cierra con eso
+
+Dos negativas distintas, y la diferencia es lo que impide que un extraño
+averigüe qué existe:
+
+| Caso | Respuesta | Por qué no filtra |
+|---|---|---|
+| **Sin sesión** | redirección a `/quien-soy?motivo=sin-sesion` | Se decide **antes de mirar el recurso**, así que es idéntica exista o no |
+| **Con sesión, el recurso no es tuyo** | **404**, igual que si no existiera | Decir «no perteneces a esa cuenta» **confirmaría que el id existe** |
+
+**La existencia de un servicio solo es distinguible desde dentro de la cuenta
+que lo posee.** Fuera de ella, no existe.
+
+> ⚠ **Límite conocido, y queda escrito para que nadie lo descubra creyendo que
+> estaba resuelto: los dos 404 no son indistinguibles en el tiempo.** Un 404 por
+> id inexistente hace una consulta; uno por recurso ajeno hace una o dos. Con
+> suficientes intentos y un cronómetro, esa diferencia es un canal. **No se
+> cierra en este tramo** — hacerlo es trabajo de otra naturaleza (respuesta de
+> tiempo constante) y hoy no compite con lo que sí está abierto. Si alguien
+> decide que importa, entra como pieza propia, no como parche.
 
 **Compuerta:** ventana anónima contra `/jstaff/*` → redirección, nunca contenido ·
 un usuario con membresía solo de carrier no abre ninguna pantalla de cliente ·
@@ -586,3 +608,19 @@ bloqueante.
 - **Ficha-Cara-De-Producto §4.1 corregida**: decía que el dominio no estaba
   comprado. Ya lo está; lo que sigue pendiente son los subdominios y las llaves
   de producción de Clerk.
+
+**4 de agosto de 2026.**
+- **1.b y la primera tanda de 1.c, hechas** (#214, #215). `/jstaff` cierra en
+  producción: nueve páginas más su layout, comprobado contra el build **con
+  `JTEL_DEV_USER` puesto** — el bypass no abre la puerta.
+- **1.f hecha** (#216), y era **fuga activa**: `www.j-telemetry.com` servía
+  «Tecma» y «Juárez Bus» sin login, ya sin la cortina de Vercel. La raíz pasa a
+  ser una ruta con dos caras y la portada enseña solo lo tuyo.
+- **Los dos dominios son uno.** `j-telemetry.com` responde **308 permanente** a
+  `www.j-telemetry.com`; el ápex nunca sirve contenido, así que las guardias
+  cubren las dos direcciones por construcción.
+- **Pieza 1.h abierta:** la guardia por alcance. 1.c cierra a nivel cuenta; el
+  alcance fino va aparte, y arrastra la regla del campus de la ficha §2.2, que
+  **no está implementada** en `canAccessPlant`.
+- **Queda escrito el límite del canal de tiempo** entre los dos 404. No se
+  cierra en este tramo, y ahora está donde se ve.
