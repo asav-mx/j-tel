@@ -30,7 +30,7 @@ Ambos inicios comparten arquitectura; cambia el contenido, nunca la forma.
 ### 2.1 Navegación lateral permanente
 Según `## La arquitectura de la plataforma` del skill. Grupos por cara:
 
-| Cara planta (`portal.j-tel.io`) | Cara carrier (`carrier.j-tel.io`) |
+| Cara planta (`portal.j-telemetry.com`) | Cara carrier (`carrier.j-telemetry.com`) |
 |---|---|
 | **Operación:** Inicio · Monitoreo · Cierre del turno · Cumplimiento · Pendientes | **Operación:** Inicio · Torre · Flota del día · Sin declarar |
 | **Contrato:** Oficina · Rutas y turnos · Quejas *(atenuado)* | **Recursos:** Unidades · Choferes · Asignaciones · Diésel |
