@@ -1,3 +1,17 @@
+> # ⛔ SUPERSEDED — este documento ya no manda
+>
+> **Reemplazado el 3 de agosto de 2026 por [`docs/PLAN.md`](../PLAN.md) (el
+> orden) y [`docs/DESPUES.md`](../DESPUES.md) (el backlog).** No se edita y no
+> se sigue.
+>
+> Este archivo y `docs/DESPUES.md` se llamaban casi igual y decían cosas
+> distintas — parte de los cinco documentos que se gobernaban entre sí. **El
+> backlog vivo es `docs/DESPUES.md`, uno solo.**
+>
+> Si buscas qué quedó fuera y por qué, la respuesta está en `docs/DESPUES.md`.
+
+---
+
 # Después — lo que decidimos no hacer ahora, y por qué
 
 **Qué es esto:** la fila de lo que quedó fuera del alcance actual **por decisión, no por olvido**.
