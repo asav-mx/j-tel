@@ -4661,8 +4661,82 @@ export class IngestAlertRepository {
   }
 }
 
+/**
+ * De quién es un recurso — y **nada más que eso**.
+ *
+ * Existe para invertir el orden de leer y autorizar. Hoy una pantalla como
+ * `/cliente/servicio/[id]` carga el expediente completo —veredicto, evidencia,
+ * puntos GPS, ledger, telemetría— **antes** de que nadie pregunte quién está
+ * mirando. Autorizar después de leer no es autorizar: es leer y luego decidir
+ * si se enseña lo que ya se leyó.
+ *
+ * Cada método de aquí devuelve **una columna**: el id de la cuenta dueña. Ni un
+ * campo más. Es lo único que hace falta para decidir, y lo único que se puede
+ * leer sin haber decidido.
+ *
+ * Devuelve `null` cuando el recurso no existe. Quien llama trata «no existe» y
+ * «no es tuyo» **igual**, para que la forma de la negativa no revele cuáles ids
+ * existen.
+ */
+export class ProcedenciaRepository {
+  constructor(private db: Database) {}
+
+  async dePlanta(plantId: string): Promise<string | null> {
+    const [f] = await this.db
+      .select({ cuenta: plants.clientAccountId })
+      .from(plants)
+      .where(eq(plants.id, plantId))
+      .limit(1);
+    return f?.cuenta ?? null;
+  }
+
+  async deCampus(plantGroupId: string): Promise<string | null> {
+    const [f] = await this.db
+      .select({ cuenta: plantGroups.clientAccountId })
+      .from(plantGroups)
+      .where(eq(plantGroups.id, plantGroupId))
+      .limit(1);
+    return f?.cuenta ?? null;
+  }
+
+  async deContrato(contractId: string): Promise<string | null> {
+    const [f] = await this.db
+      .select({ cuenta: serviceContracts.clientAccountId })
+      .from(serviceContracts)
+      .where(eq(serviceContracts.id, contractId))
+      .limit(1);
+    return f?.cuenta ?? null;
+  }
+
+  async deRuta(routeId: string): Promise<string | null> {
+    const [f] = await this.db
+      .select({ cuenta: routes.clientAccountId })
+      .from(routes)
+      .where(eq(routes.id, routeId))
+      .limit(1);
+    return f?.cuenta ?? null;
+  }
+
+  /**
+   * El único que salta, y salta una vez: la ocurrencia guarda `contractId`
+   * como columna propia, así que basta un join con el contrato. No se toca la
+   * ocurrencia entera —`findById` arrastra el hecho, el viaje y sus puntos de
+   * evidencia—, solo la arista de propiedad.
+   */
+  async deServicio(occurrenceId: string): Promise<string | null> {
+    const [f] = await this.db
+      .select({ cuenta: serviceContracts.clientAccountId })
+      .from(serviceOccurrences)
+      .innerJoin(serviceContracts, eq(serviceContracts.id, serviceOccurrences.contractId))
+      .where(eq(serviceOccurrences.id, occurrenceId))
+      .limit(1);
+    return f?.cuenta ?? null;
+  }
+}
+
 export function createRepositories(db: Database) {
   return {
+    procedencia: new ProcedenciaRepository(db),
     accounts: new AccountRepository(db),
     carriers: new CarrierRepository(db),
     clients: new ClientRepository(db),

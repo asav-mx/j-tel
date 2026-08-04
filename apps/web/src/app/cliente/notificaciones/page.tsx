@@ -3,6 +3,7 @@ import { AppNav, Card } from "@/components/ui";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { inCreatedAtRange, resolveDateRange } from "@/lib/date-range";
+import { exigirSesion } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,11 @@ export default async function ClienteNotificacionesPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Sin sesión no se renderiza. Va en la PÁGINA y no solo en el layout:
+  // un redirect de layout no impide que la hija se renderice, y su
+  // payload —con datos reales dentro— viaja igual en la respuesta.
+  await exigirSesion();
+
   const sp = searchParams ? await searchParams : undefined;
   const range = resolveDateRange(sp, { defaultDaysBack: 29 });
 

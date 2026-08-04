@@ -2,6 +2,7 @@ import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { plantHref } from "@/lib/navigation";
+import { exigirSesion } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,11 @@ export default async function ClienteInspeccionesPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Sin sesión no se renderiza. Va en la PÁGINA y no solo en el layout:
+  // un redirect de layout no impide que la hija se renderice, y su
+  // payload —con datos reales dentro— viaja igual en la respuesta.
+  await exigirSesion();
+
   const repos = getRepos();
   const client = await resolveAccountByType("client", searchParams);
   const plants = client ? await repos.clients.getPlantsForAccount(client.id) : [];

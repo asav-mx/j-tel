@@ -4,6 +4,8 @@ import { AppNav } from "@/components/ui";
 import { RutaTrazadoMapa } from "@/components/ruta-trazado-mapa";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { DIAS_DEL_PERIODO, loadExpedienteRuta } from "@/lib/expediente-ruta-data";
+import { getRepos } from "@/lib/db";
+import { exigirRecurso } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +44,10 @@ export default async function ExpedienteRutaPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { routeId } = await params;
+  // La cuenta sale de la fila del recurso, nunca de `?account=`.
+  // «No existe» y «no es tuyo» contestan la misma 404.
+  await exigirRecurso(() => getRepos().procedencia.deRuta(routeId));
+
   const cliente = await resolveAccountByType("client", searchParams);
   if (!cliente) {
     return (

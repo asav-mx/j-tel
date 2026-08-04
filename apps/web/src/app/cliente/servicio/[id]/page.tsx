@@ -8,6 +8,7 @@ import {
   unitContratosHref,
 } from "@/lib/unit-routes";
 import type { OperationalUnit } from "@jtel/domain";
+import { exigirRecurso } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +20,16 @@ export default async function ClienteServicioPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  // La cuenta sale de la fila del recurso, nunca de `?account=`.
+  // «No existe» y «no es tuyo» contestan la misma 404.
+  await exigirRecurso(() => getRepos().procedencia.deServicio(id));
+
   const sp = searchParams ? await searchParams : undefined;
   const accountSlug = typeof sp?.account === "string" ? sp.account : undefined;
   const data = await loadServiceDetail(id, { showEnforcement: true });
 
-  const slug = accountSlug ?? data.clientSlug ?? undefined;
+  // El recurso manda; `?account=` solo sobrevive como respaldo para pintar.
+  const slug = data.clientSlug ?? accountSlug ?? undefined;
   const repos = getRepos();
 
   let unit: OperationalUnit | null = null;
