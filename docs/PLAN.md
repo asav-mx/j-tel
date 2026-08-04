@@ -133,16 +133,23 @@ dominio se resolvieron el mismo día.
 | # | Trámite | Qué desbloquea | Estado |
 |---|---|---|---|
 | **T1** | **Clerk** | Todo el candado, el login real y el tramo vendible | ✅ **Hecho.** Aplicación `J-Telemetry` creada · **sin organizaciones** (verificado contra el código) · **solo Email** · llaves de test en Vercel: la pública en los 3 entornos sin sensitive, la secreta en Production y Preview con sensitive. Las llaves de producción se generan al conectar el dominio |
-| **T2** | **Resend** — verificar dominio, API key, tres variables | Que las alertas salgan de verdad. Hoy `/api/cron/alertas` responde 503 cada 5 min: el sistema detecta y no puede avisar | **Pendiente.** Alta. El instrumento existe y no tiene bocina |
+| **T2** | **Correo — y son dos cosas, no una.** (a) **Resend**: verificar dominio, API key, tres variables. (b) **Que exista `hola@j-telemetry.com`** | (a) Que las alertas salgan de verdad. Hoy `/api/cron/alertas` responde 503 cada 5 min: el sistema detecta y no puede avisar. (b) Que un cliente pueda escribir. **(b) es de negocio, no de sistema** | **Pendiente.** Alta. El instrumento existe y no tiene bocina — y el landing no tiene buzón |
 | **T3** | **Dominio** | Los subdominios del producto | ✅ **Resuelto: `j-telemetry.com`.** `j-tel.io` queda descartado — pero ver la deuda que deja, abajo |
 | **T4** | **Rotar la contraseña del readonly** | `jtel_readonly` y `neondb_owner` comparten contraseña | **Pendiente.** Media. Con redespliegue en el mismo movimiento |
 | **T5** | **`CRON_SECRET`** | — | ✅ Rotado. Queda anotado que el valor viejo sigue en el historial de git |
 
-**Deuda que deja T3:** `j-tel.io` **no vive solo en documentos — está en el
-landing público**, en `landing/page.tsx`, su CSS, nueve archivos de prueba, el
-Brief de identidad y tres fichas del Marco. Cambiar el dominio toca la cara de
-afuera del producto. **No es configuración: es un frente.** Va junto con la
-portada (Tramo 1, pieza 1.f).
+**Deuda que dejó T3 — ✅ saldada el 3 de agosto** (#212 y el PR de fichas).
+`j-tel.io` salió del landing, su CSS, nueve archivos de prueba, el Brief de
+identidad, el skill de interfaz y las tres fichas del Marco. Solo sigue escrito
+donde se le nombra **como descartado**: aquí, en `DESPUES.md` y en la foto de
+`corte-2026-08-03/`.
+
+**Y destapó algo peor que el dominio viejo.** Los dos botones de contacto del
+landing —«Solicitar demo» y «Hablar con el equipo»— apuntaban a
+`hola@j-tel.io`, **un buzón en un dominio que nunca se compró**. Es decir:
+el botón de solicitar demo lleva muerto desde que el landing existe. Cambiarlo
+a `hola@j-telemetry.com` no lo revive por sí solo — hace falta que el buzón
+exista. Por eso T2 tiene ahora dos mitades.
 
 ### 3.2 Decisiones
 
@@ -565,3 +572,17 @@ bloqueante.
   intactas. Y **se agrega, no se reemplaza** — reemplazar dejaría las pantallas
   en blanco sin error.
 - Bloqueos de §3: de trece a nueve.
+
+**3 de agosto de 2026, noche.**
+- **Pieza 1.a cerrada.** El mapeo se construyó (#209), se ligó la identidad de
+  Asav (#211) y se aplicó a producción: `admin_plataforma` · alcance global ·
+  cuenta J-Staff. Se comprobó que `/quien-soy` dice `origen: clerk` con 1
+  membresía. Las tres filas del seed restantes, intactas.
+- **La deuda del dominio, saldada** (#212 y este PR). Verificado en el
+  navegador, no solo compilando.
+- **T2 pasa a tener dos mitades**, y la segunda no la resuelve el sistema: que
+  exista `hola@j-telemetry.com`. El botón «Solicitar demo» del landing llevaba
+  apuntando a un buzón inexistente desde que se construyó.
+- **Ficha-Cara-De-Producto §4.1 corregida**: decía que el dominio no estaba
+  comprado. Ya lo está; lo que sigue pendiente son los subdominios y las llaves
+  de producción de Clerk.

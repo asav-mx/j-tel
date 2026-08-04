@@ -105,20 +105,26 @@ pero esta sección sigue vigente y así está declarado en su encabezado):
 
 | Subdominio | Para quién |
 |---|---|
-| `j-tel.io` | Landing pública |
-| `portal.j-tel.io` | Cliente — **el alcance lo decide el rol, no la URL** |
-| `carrier.j-tel.io` | Transportista |
-| `staff.j-tel.io` | Consola interna |
+| `j-telemetry.com` | Landing pública |
+| `portal.j-telemetry.com` | Cliente — **el alcance lo decide el rol, no la URL** |
+| `carrier.j-telemetry.com` | Transportista |
+| `staff.j-telemetry.com` | Consola interna |
 
-### 4.1 ⚠ El dominio no está comprado
+### 4.1 El dominio ya existe; los subdominios todavía no
 
-**`j-tel.io` todavía no se ha adquirido.** Consecuencia práctica:
+**Actualizado el 3 de agosto de 2026.** El dominio quedó resuelto —
+**`j-telemetry.com`**, y `j-tel.io` descartado (`PLAN.md` D8). La raíz ya sirve
+la aplicación.
 
-- **Se diseña y se deja el código listo**, de modo que apuntar los subdominios sea
-  configuración y no obra.
-- **No se enciende nada** hasta que el dominio exista.
-- El landing sigue viviendo en `/landing` y la raíz sigue siendo el selector
-  interno, tal como se decidió al construirlo.
+Lo que **sigue pendiente** es la capa de encima:
+
+- **Los subdominios no están encendidos.** Se diseñan y se deja el código listo,
+  de modo que apuntarlos sea configuración y no obra.
+- **Las llaves de producción de Clerk** se generan al conectar el dominio; hoy
+  corren las de test.
+- El landing vive en `/landing` y la raíz es el selector interno — **pero eso
+  cambia en el Tramo 1**: la raíz pasa a ser una ruta con dos caras, landing
+  público sin sesión y portada con ella. Ver `PLAN.md`, pieza 1.f.
 
 **Esto no bloquea los homescreens**, que son el trabajo real de este frente. El
 enrutamiento por subdominio es la capa de encima.
@@ -127,7 +133,7 @@ enrutamiento por subdominio es la capa de encima.
 
 > **El subdominio es una puerta, no un permiso.**
 
-Que alguien llegue por `portal.j-tel.io` **no lo convierte en cliente**. Quién es
+Que alguien llegue por `portal.j-telemetry.com` **no lo convierte en cliente**. Quién es
 y qué alcance tiene lo decide su membresía, siempre — la URL solo lo lleva a la
 puerta correcta.
 
