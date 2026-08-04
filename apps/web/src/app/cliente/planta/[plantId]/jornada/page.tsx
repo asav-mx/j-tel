@@ -23,7 +23,7 @@ export default async function Page({
   // La cuenta sale de la fila del recurso, nunca de `?account=`.
   // Va en la PÁGINA y no solo en el layout: un redirect de layout no
   // impide que la hija se renderice, y su payload viaja igual.
-  await exigirRecurso(() => getRepos().procedencia.dePlanta(plantId));
+  await exigirRecurso("cliente", () => getRepos().procedencia.dePlanta(plantId));
 
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries((await searchParams) ?? {})) {

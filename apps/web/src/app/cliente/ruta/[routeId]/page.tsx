@@ -46,7 +46,7 @@ export default async function ExpedienteRutaPage({
   const { routeId } = await params;
   // La cuenta sale de la fila del recurso, nunca de `?account=`.
   // «No existe» y «no es tuyo» contestan la misma 404.
-  await exigirRecurso(() => getRepos().procedencia.deRuta(routeId));
+  await exigirRecurso("cliente", () => getRepos().procedencia.deRuta(routeId));
 
   const cliente = await resolveAccountByType("client", searchParams);
   if (!cliente) {

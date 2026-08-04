@@ -14,6 +14,6 @@ export default async function ContratoLayout({
   params: Promise<{ contractId: string }>;
 }) {
   const { contractId } = await params;
-  await exigirRecurso(() => getRepos().procedencia.deContrato(contractId));
+  await exigirRecurso("cliente", () => getRepos().procedencia.deContrato(contractId));
   return <>{children}</>;
 }

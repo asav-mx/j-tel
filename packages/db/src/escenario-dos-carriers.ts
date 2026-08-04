@@ -45,8 +45,23 @@ export const ESCENARIO_B = {
   perfilId: "b0000000-0000-4000-8000-000000000004",
   ocurrenciaId: "b0000000-0000-4000-8000-000000000005",
   membresiaId: "b0000000-0000-4000-8000-000000000006",
+  membresiaFlotaId: "b0000000-0000-4000-8000-000000000007",
   slug: "transportes-frontera",
   usuario: "frontera_admin",
+  /**
+   * El usuario que hace REAL la prueba de audiencia.
+   *
+   * `canAccessClientAccount` y `canAccessCarrierAccount` coinciden en
+   * `scopeType: "account"` y se separan justo afuera: la de cliente acepta
+   * además el rol `admin_corporativo`, la de carrier acepta además
+   * `scopeType: "fleet"`.
+   *
+   * Con solo el `frontera_admin` —que es de cuenta— cambiar la audiencia de la
+   * guardia **no cambiaría nada**, y la mutación que confunde las dos paredes
+   * sobreviviría en verde. Éste, que alcanza por flota, es invisible para la
+   * función de cliente: es el único testigo que nota la diferencia.
+   */
+  usuarioFlota: "frontera_flota",
 } as const;
 
 export type EscenarioDosCarriers = {
@@ -137,6 +152,17 @@ export async function sembrarEscenarioDosCarriers(
       clerkUserId: ESCENARIO_B.usuario,
       role: "admin",
       scopeType: "account",
+    })
+    .onConflictDoNothing();
+
+  await db
+    .insert(userMemberships)
+    .values({
+      id: ESCENARIO_B.membresiaFlotaId,
+      accountId: ESCENARIO_B.cuentaId,
+      clerkUserId: ESCENARIO_B.usuarioFlota,
+      role: "admin",
+      scopeType: "fleet",
     })
     .onConflictDoNothing();
 

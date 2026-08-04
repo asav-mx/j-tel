@@ -22,7 +22,7 @@ export default async function ClienteServicioPage({
   const { id } = await params;
   // La cuenta sale de la fila del recurso, nunca de `?account=`.
   // «No existe» y «no es tuyo» contestan la misma 404.
-  await exigirRecurso(() => getRepos().procedencia.deServicio(id));
+  await exigirRecurso("cliente", () => getRepos().procedencia.deServicio(id));
 
   const sp = searchParams ? await searchParams : undefined;
   const accountSlug = typeof sp?.account === "string" ? sp.account : undefined;

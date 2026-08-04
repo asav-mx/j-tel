@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { canAccessClientAccount } from "@jtel/auth-rbac";
+import { canAccessCarrierAccount, canAccessClientAccount } from "@jtel/auth-rbac";
 import { decidir, type Audiencia, type Decision } from "@/lib/guardia-api";
 import { getIdentidad, type Identidad } from "@/lib/auth";
 
@@ -167,6 +167,29 @@ export type VeredictoDeRecurso =
   | { ok: false; motivo: "inexistente-o-ajeno" };
 
 /**
+ * Contra qué pared se mide la pertenencia.
+ *
+ * **Va explícita y no tiene default.** Un default a `"cliente"` convertiría a
+ * la pantalla de transportista que se olvide de declararla en una guardia que
+ * pregunta por la tabla equivocada — y ésa es la peor forma del fallo, porque
+ * **se ve exactamente igual que una que funciona**: devuelve un veredicto,
+ * niega a los extraños y deja pasar al dueño. Solo se equivoca con las
+ * membresías que distinguen a las dos caras, que hoy son pocas y mañana no.
+ *
+ * Es la misma regla de los defaults que fallan abiertos, aplicada a la
+ * pregunta en vez de al valor.
+ */
+export type AudienciaDeRecurso = "cliente" | "carrier";
+
+const ALCANZA: Record<
+  AudienciaDeRecurso,
+  (memberships: Identidad["memberships"], cuenta: string) => boolean
+> = {
+  cliente: canAccessClientAccount,
+  carrier: canAccessCarrierAccount,
+};
+
+/**
  * La decisión para una pantalla que cuelga de un recurso, sin efectos.
  *
  * ## La cuenta sale de la fila, nunca de la URL
@@ -197,6 +220,7 @@ export type VeredictoDeRecurso =
  * 4. y recién entonces, quien llama carga la pantalla
  */
 export async function decidirRecurso(
+  audiencia: AudienciaDeRecurso,
   duenoDelRecurso: () => Promise<string | null>,
   entorno: { enProduccion?: boolean } = {},
 ): Promise<VeredictoDeRecurso> {
@@ -220,7 +244,7 @@ export async function decidirRecurso(
   }
 
   if (!cuenta) return { ok: false, motivo: "inexistente-o-ajeno" };
-  if (!canAccessClientAccount(identidad.memberships, cuenta)) {
+  if (!ALCANZA[audiencia](identidad.memberships, cuenta)) {
     return { ok: false, motivo: "inexistente-o-ajeno" };
   }
 
@@ -235,9 +259,10 @@ export async function decidirRecurso(
  * punto de invertir el orden.
  */
 export async function exigirRecurso(
+  audiencia: AudienciaDeRecurso,
   duenoDelRecurso: () => Promise<string | null>,
 ): Promise<{ identidad: Identidad; cuenta: string }> {
-  const v = await decidirRecurso(duenoDelRecurso);
+  const v = await decidirRecurso(audiencia, duenoDelRecurso);
   if (v.ok) return { identidad: v.identidad, cuenta: v.cuenta };
 
   // Los dos lanzan; ninguno va dentro de un `try`.

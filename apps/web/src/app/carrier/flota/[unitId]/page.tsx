@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { CarrierShell } from "@/components/unit-shell";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { loadExpedienteUnidad, MESES_DEL_EXPEDIENTE } from "@/lib/expediente-unidad-data";
-import { exigirSesion } from "@/lib/guardia-pagina";
+import { exigirRecurso, exigirSesion } from "@/lib/guardia-pagina";
+import { getRepos } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,9 @@ export default async function ExpedienteUnidadPage({
   await exigirSesion();
 
   const { unitId } = await params;
+  // La cuenta dueña sale de la FILA de la unidad, no de `?account=`.
+  await exigirRecurso("carrier", () => getRepos().procedencia.deUnidad(unitId));
+
   const carrier = await resolveAccountByType("carrier", searchParams);
   if (!carrier) {
     return (

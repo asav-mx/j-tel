@@ -19,6 +19,6 @@ export default async function PlantaLayout({
   params: Promise<{ plantId: string }>;
 }) {
   const { plantId } = await params;
-  await exigirRecurso(() => getRepos().procedencia.dePlanta(plantId));
+  await exigirRecurso("cliente", () => getRepos().procedencia.dePlanta(plantId));
   return <>{children}</>;
 }

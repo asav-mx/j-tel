@@ -149,7 +149,29 @@ verificación como **valor agregado** de su operación frente a la planta.
 **Consecuencia para las guardias:** el alcance del carrier se resuelve contra
 **su universo**, no contra el contrato por el que llegó. Por eso `/carrier`
 necesita la misma procedencia por fila que `/cliente` — no para partirle la
-vista, sino para que el día que haya dos carriers ninguno alcance al otro.
+vista, sino para que la pared entre carriers la sostenga la estructura y no la
+memoria de quien escribe cada pantalla.
+
+**Y esto último hay que decirlo medido, porque la primera redacción de este
+párrafo sugería que hoy los carriers se alcanzan entre sí, y es falso.** El 4
+de agosto de 2026 se armó el escenario en la rama desechable —dos
+transportistas sirviendo a la misma planta— y se pidió, desde B, todo lo de A:
+la unidad, el contrato, el servicio, el lienzo con la unidad ajena por
+parámetro y el lienzo entrado por el servicio ajeno. **Los seis caminos
+niegan.**
+
+Lo que sí es cierto es otra cosa, y es la que manda el trabajo:
+
+> `/carrier` está cerrado **por disciplina repetida, no por construcción.**
+> Son cinco comprobaciones escritas cinco veces, en cinco archivos, cada una
+> dependiendo de que quien escribió esa pantalla se acordara de filtrar por
+> carrier. `/cliente` tiene **un solo** `exigirRecurso`, en un lugar.
+
+El riesgo, entonces, no es lo que hoy se ve. Es **la pantalla dieciséis**: la
+que alguien escriba mañana y olvide el filtro. No rompe nada, no falla ninguna
+prueba, y filtra en silencio. Es la forma exacta del `[0]` de
+`resolveAccountByType` que cerró el #222 — invisible mientras haya una sola
+cuenta de ese tipo, y una fuga el día que haya dos.
 
 **Lo que es real y lo que no:** la única cuenta con operación real es **Tecma**.
 Honeywell y PRUEBA REAL son cuentas de ejemplo. Ningún análisis, conteo ni
@@ -717,6 +739,14 @@ bloqueante.
   demás: nadie crea a alguien con más alcance del que tiene.
 - **Piezas 1.i y 1.j abiertas:** `/entrar` como puerta limpia, y volver al
   destino tras entrar. Las dos van después de cerrar `/cliente` y `/carrier`.
+- **§2 corregido, y la corrección es del tipo que este plan existe para
+  registrar.** El párrafo del carrier sugería que hoy los carriers se alcanzan
+  entre sí. **Medido con dos transportistas de verdad en la rama desechable
+  (#225): los seis caminos con id niegan lo ajeno.** Lo que sí falla es la
+  forma: cerrado por disciplina repetida —cinco comprobaciones en cinco
+  archivos— y no por construcción. El riesgo es la pantalla dieciséis, no la
+  quince. Y lo que lo destapó fue exigir la medición antes de escribir la
+  guardia: leer cinco archivos era exactamente lo que iba a fallar.
 - **El carrier queda encuadrado como producto, no como anexo.** Entra a §2 «De
   producto» y gana fila propia en el Tramo 7. Las dos caras no son simétricas:
   para el carrier sus unidades son una sola operación, así que ve todo su
