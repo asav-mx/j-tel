@@ -96,9 +96,15 @@ async function perteneceA(
     : canAccessCarrierAccount(identidad.memberships, cuenta.id);
 }
 
-type Decision = { permitido: boolean; motivo: string };
+export type Decision = { permitido: boolean; motivo: string };
 
-async function decidir(identidad: Identidad, audiencia: Audiencia): Promise<Decision> {
+/**
+ * Quién puede ver qué. **Se exporta para que la guardia de páginas la reutilice**
+ * — la regla de alcance es una sola, y dos copias se separan a la primera
+ * corrección que alguien haga en una y olvide en la otra. Lo que cambia entre
+ * API y página no es la decisión: es cómo se contesta un `no`.
+ */
+export async function decidir(identidad: Identidad, audiencia: Audiencia): Promise<Decision> {
   switch (audiencia.tipo) {
     case "jstaff":
       return {
