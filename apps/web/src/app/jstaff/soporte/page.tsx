@@ -10,6 +10,7 @@ import {
   inServiceDateRange,
   resolveDateRange,
 } from "@/lib/date-range";
+import { exigirEnPagina } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,10 @@ export default async function JStaffSoportePage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // La comprobación va cerca del dato: un layout no se re-renderiza
+  // al navegar entre rutas hermanas, así que como única guardia es frágil.
+  await exigirEnPagina({ tipo: "jstaff" });
+
   const sp = searchParams ? await searchParams : undefined;
   const error = typeof sp?.error === "string" ? sp.error : null;
   const resync = typeof sp?.resync === "string" ? sp.resync : null;

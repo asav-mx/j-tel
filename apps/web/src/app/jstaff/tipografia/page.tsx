@@ -1,4 +1,5 @@
 import { AppNav } from "@/components/ui";
+import { exigirEnPagina } from "@/lib/guardia-pagina";
 
 /*
  * Espécimen tipográfico de J-Telemetry — cara J-Staff.
@@ -53,7 +54,11 @@ function Papel({
   );
 }
 
-export default function TipografiaPage() {
+export default async function TipografiaPage() {
+  // Se guarda como las demás aunque no consuma datos: es una pantalla interna,
+  // y una excepción sin razón escrita es la que alguien copia después.
+  await exigirEnPagina({ tipo: "jstaff" });
+
   return (
     <main className="min-h-screen bg-[var(--fondo)] p-8">
       <div className="mx-auto max-w-4xl">

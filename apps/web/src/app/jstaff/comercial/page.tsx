@@ -4,6 +4,7 @@ import { ConfirmForm } from "@/components/confirm-form";
 import { AppNav, AvisoSistema, Card } from "@/components/ui";
 import { withAccount } from "@/lib/account-context";
 import { confirmMessages } from "@/lib/confirm-messages";
+import { exigirEnPagina } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,10 @@ export default async function JStaffComercialPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // La comprobación va cerca del dato: un layout no se re-renderiza
+  // al navegar entre rutas hermanas, así que como única guardia es frágil.
+  await exigirEnPagina({ tipo: "jstaff" });
+
   const sp = searchParams ? await searchParams : undefined;
   const error = typeof sp?.error === "string" ? sp.error : null;
   const updated = typeof sp?.updated === "string" ? sp.updated : null;

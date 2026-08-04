@@ -13,6 +13,7 @@ import { getRepos } from "@/lib/db";
 import { listarParaDiagnostico } from "@/lib/diagnostico-data";
 import { addDaysIso, isIsoDate, todayIso } from "@/lib/date-range";
 import { fechaDeIsoSinAnio } from "@/lib/formato-tiempo";
+import { exigirEnPagina } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,10 @@ export default async function IndiceDeDiagnosticoPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // La comprobación va cerca del dato: un layout no se re-renderiza
+  // al navegar entre rutas hermanas, así que como única guardia es frágil.
+  await exigirEnPagina({ tipo: "jstaff" });
+
   const sp = searchParams ? await searchParams : undefined;
   const primero = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 

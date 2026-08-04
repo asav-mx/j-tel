@@ -8,10 +8,15 @@ import {
 } from "@jtel/services";
 import { localDateTimeShort } from "@jtel/domain";
 import Link from "next/link";
+import { exigirEnPagina } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
 export default async function JStaffVerificacionPage() {
+  // La comprobación va cerca del dato: un layout no se re-renderiza
+  // al navegar entre rutas hermanas, así que como única guardia es frágil.
+  await exigirEnPagina({ tipo: "jstaff" });
+
   const repos = getRepos();
   const carriers = await repos.accounts.listByType("carrier");
   const watermarks = await repos.telemetry.listWatermarks();
