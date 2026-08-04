@@ -107,6 +107,9 @@ Cuatro archivos, siempre los cuatro:
 2. **La entrada en la bitácora del repo** — `packages/db/drizzle/meta/_journal.json`.
    Se agrega a mano, con el `idx` siguiente y el mismo `tag` que el nombre del
    archivo. Sirve de índice legible aunque el migrador no la use.
+   **Que el migrador no la use es justo por lo que se olvida:** el 4 de agosto
+   de 2026 se descubrió que la `0017` nunca se anotó, y nada falló por eso. Se
+   puso al día junto con la `0018`.
 
 3. **El esquema de Drizzle** — `packages/db/src/schema/index.ts`.
    La tabla, columna o índice se declara también aquí. Si no, la próxima vez que
@@ -250,6 +253,67 @@ Lo que ahora lo vigila, porque el criterio de nadie basta:
 - **`/api/salud`** — ejerce esa misma consulta relacional en cada sondeo. Antes
   leía todo con listas explícitas de columnas y por eso devolvió 200 durante
   toda la caída.
+
+### El punto ciego de `esquema.yml`, medido el 4 de agosto de 2026
+
+Ese workflow atrapa la columna que **falta**. No atrapa la que **sobra**.
+
+Levanta una base construida solo con las migraciones de este directorio y
+comprueba que el esquema del código quepa ahí. Una columna que las migraciones
+crean y el esquema ya no declara **cabe perfectamente**: Drizzle pide en su
+consulta relacional las columnas que declara, y sobrar no rompe nada. El job
+queda en verde con las dos verdades distintas.
+
+Así vivió `ledger_entries.actor_user_id` desde la `0012`, que anunció su baja
+—«se elimina en Migración B después del deploy»— y se quedó sin Migración B. El
+código dejó de declararla, ninguna migración registró el borrado, y durante ese
+tiempo **las migraciones del repo y el esquema del código diferían en una
+columna sin que nada lo dijera**. Es el hueco del 2 de agosto por el otro lado.
+La `0018` es esa Migración B, tarde.
+
+**Lo que se aprende, y aplica a la próxima:** cuando se quita algo del esquema
+de Drizzle, la migración que lo quita de la base se escribe **en el mismo PR**.
+Quitarlo solo del código no deja error en ningún lado — y por eso hay que
+buscarlo a propósito.
+
+---
+
+## Y aplicarla también a la base de pruebas
+
+**Toda migración se aplica a `DATABASE_URL_TEST` además de a producción.** No es
+opcional ni "cuando haga falta": es parte de aplicarla.
+
+El 4 de agosto de 2026 se midió la rama desechable objeto por objeto contra las
+18 migraciones del repo. Le faltaban **tres cosas**, no una:
+
+| Faltaba | De dónde |
+|---|---|
+| tabla `contract_policy_history` + índice `cph_contract_idx` | `0015` |
+| valor de enum `evidence_status.'sin_evidencia_posible'` | `0017` |
+| índice `telemetry_points_carrier_unit_recorded_idx` | `0014` |
+
+`DESPUES.md` solo tenía anotada la primera. Las otras dos se descubrieron
+comparando, no leyendo.
+
+**Por qué importa más que en cualquier otra base.** Ésta existe justamente para
+que ninguna prueba que escribe toque a un cliente vivo. Una red de seguridad
+desactualizada empuja a saltársela: la suite falla por una razón que no es la
+que se está probando, y la salida cómoda es correrla contra otra base. La
+segunda regla de este documento se muerde la cola sola.
+
+**Cómo se comprueba que está al día** — comparando contra la base, no contra el
+papel. La bitácora del migrador (`drizzle.__drizzle_migrations`) está **vacía**
+en esa rama, porque todo se aplicó a mano: leerla diría "cero migraciones" y no
+significaría nada. Lo que se compara es el catálogo real —tablas, columnas,
+enums con sus valores, índices— contra lo que las migraciones del repo
+producen.
+
+**Y la prueba de que sirve** es correr la suite, no mirar el esquema:
+
+```bash
+pnpm build                                   # sin esto, @jtel/domain no resuelve
+pnpm --filter @jtel/db test:integration      # 23/23 el 2026-08-04
+```
 
 ---
 
