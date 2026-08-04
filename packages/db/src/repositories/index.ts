@@ -13,6 +13,7 @@ import type {
 import { operationalScopeColumns } from "@jtel/domain";
 import type { Database } from "../index.js";
 import { escribirEnLotes, filasPorSentencia } from "../lote-de-escritura.js";
+import { planDeVinculacion } from "../mapeo-identidades.js";
 import { routeWindowSizing } from "../ventana-ocurrencia.js";
 import {
   resumirUnidadDia,
@@ -3654,6 +3655,42 @@ export class MembershipRepository {
     return this.db.query.userMemberships.findMany({
       where: eq(userMemberships.clerkUserId, clerkUserId),
     });
+  }
+
+  /**
+   * Copia las membresías de una identidad hacia otra — Paso 2 de auth-rbac.
+   *
+   * **Solo inserta.** No actualiza ni borra nada del origen: la cadena del seed
+   * conserva sus filas porque es lo que sostiene el bypass de desarrollo
+   * (`JTEL_DEV_USER`). Reemplazarlas dejaría al producto sin ninguna forma de
+   * entrar, y en silencio — las pantallas abrirían vacías, no con un error.
+   *
+   * Idempotente: el plan sale de `planDeVinculacion`, que deduplica a mano
+   * porque el índice único no puede hacerlo cuando `scope_id` es nulo.
+   */
+  async vincular(desde: string, hacia: string) {
+    const [origen, destino] = await Promise.all([
+      this.findForUser(desde),
+      this.findForUser(hacia),
+    ]);
+
+    const plan = planDeVinculacion(origen, destino);
+    if (plan.length === 0) return { insertadas: [], yaExistian: origen.length };
+
+    const insertadas = await this.db
+      .insert(userMemberships)
+      .values(
+        plan.map((f) => ({
+          accountId: f.accountId,
+          clerkUserId: hacia,
+          role: f.role,
+          scopeType: f.scopeType,
+          scopeId: f.scopeId ?? undefined,
+        })),
+      )
+      .returning();
+
+    return { insertadas, yaExistian: origen.length - plan.length };
   }
 }
 
