@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CarrierShell } from "@/components/unit-shell";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { loadExpedienteUnidad, MESES_DEL_EXPEDIENTE } from "@/lib/expediente-unidad-data";
+import { exigirSesion } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,11 @@ export default async function ExpedienteUnidadPage({
   params: Promise<{ unitId: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Sin sesión no se renderiza. Va en la PÁGINA y no solo en el layout:
+  // un redirect de layout no impide que la hija se renderice, y su payload
+  // viaja igual en la respuesta (regla 7 del plan).
+  await exigirSesion();
+
   const { unitId } = await params;
   const carrier = await resolveAccountByType("carrier", searchParams);
   if (!carrier) {

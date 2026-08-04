@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CarrierShell } from "@/components/unit-shell";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { loadUnidades, LENTES } from "@/lib/unidades-explorador-data";
+import { exigirSesion } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,11 @@ export default async function CarrierUnidadesPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Sin sesión no se renderiza. Va en la PÁGINA y no solo en el layout:
+  // un redirect de layout no impide que la hija se renderice, y su payload
+  // viaja igual en la respuesta (regla 7 del plan).
+  await exigirSesion();
+
   const sp = searchParams ? await searchParams : undefined;
   const carrier = await resolveAccountByType("carrier", searchParams);
   if (!carrier) {
