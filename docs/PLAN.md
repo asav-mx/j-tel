@@ -260,12 +260,35 @@ código, que va en el Tramo 1 junto con la portada.
 
 ---
 
-**D9 · El modelo de altas** — ✅ **DECIDIDA el 3 de agosto, sin diseñar**
+**D9 · El modelo de altas** — ✅ **DECIDIDA. Completada el 4 de agosto. Sin diseñar**
 
-*El criterio, ya fijado:* una cuenta **no se crea sola, se invita.** Dos caminos
-de entrada: **invitación de J-Tel**, o **solicitud del cliente, planta o carrier**
-aprobada desde la configuración de cuentas de J-Staff. Una cuenta puede tener
-**uno o varios usuarios** monitoreando su servicio, según el cliente.
+*El criterio, ya fijado:* una cuenta **no se crea sola, se invita.** Una cuenta
+puede tener **uno o varios usuarios** monitoreando su servicio, según el cliente.
+
+*Las cinco reglas, completas:*
+
+**1. El alta la hace cada cuenta, no J-Staff.** El **admin corporativo** da de
+alta a su gente; el **admin del carrier**, a la suya. J-Staff deja de ser el
+cuello de botella de cada usuario nuevo.
+
+**2. Nadie crea a alguien con más alcance del que él tiene.** Un usuario de
+planta solo crea usuarios **de su planta** — nunca corporativos, nunca de otra
+planta. **Sin esta ley un usuario se asciende solo**, creándose a sí mismo un
+segundo usuario con más alcance. Es la regla que sostiene a las otras cuatro.
+
+**3. El permiso de dar de alta es un interruptor por contrato, no automático
+por ser admin.** Hay plantas que van a querer que todo pase por J-Tel y otras
+que quieren autonomía; las dos son legítimas y la diferencia se configura.
+
+**4. Cuenta nueva: la crea J-Staff, y con ella su primer admin.** Ese primer
+admin es la semilla desde la que la cuenta se administra sola. **Solo J-Staff
+crea J-Staff.**
+
+**5. El demo del landing es una presentación, no un modo de la app.** No toca
+la base, no tiene cuenta, y **nunca comparte superficie con datos reales**. Un
+demo que vive dentro de la aplicación termina teniendo una cuenta, y una cuenta
+termina teniendo hechos sellados — que es exactamente cómo nacieron los 84 de
+la causa C1.
 
 *Dónde vive:* Tramo 7, junto con el interruptor de J-Staff y la administración de
 usuarios. **No se diseña todavía** — decorar una casa sin puerta es el orden
@@ -330,6 +353,8 @@ una cortina.
 | **1.e** | Cerrar el default `tecma_admin`. **Va después de 1.c** o quedamos todos fuera | |
 | **1.f** | **La portada.** Una ruta con dos caras: **sin sesión → landing público; con sesión → portada**, y la portada **enseña solo lo tuyo** (de las membresías, no de `listByType`). **Sin nombres de clientes.** El bloque «Estado del sistema» **se quita, no se protege** — ya vive en `/jstaff` y en `/api/salud`. Aquí entra también sacar `j-tel.io` del landing y su CSS | |
 | **1.g** | Quitar el valor viejo de `CRON_SECRET` del historial y de los documentos | |
+| **1.i** | **`/entrar` como puerta limpia.** Hoy el botón de iniciar sesión vive en `/quien-soy`, que es **pantalla de diagnóstico**: enseña el origen de la identidad, las membresías y si el encabezado fue rechazado. Pedirle a alguien que entre por ahí es hacerle leer el tablero del taller para abrir la puerta | **Después de cerrar `/cliente` y `/carrier`.** Antes no urge: hoy el único que entra sabe qué es `/quien-soy` |
+| **1.j** | **Volver al destino después de entrar.** Quien llega por un enlace profundo —el correo de una alerta, un expediente compartido— hoy termina en `/quien-soy` y tiene que volver a navegar a mano. La guardia ya sabe a dónde iba: falta llevarlo de vuelta al entrar. **Ojo al diseñarlo:** el destino viaja en la URL, así que hay que validarlo como ruta propia y relativa — un `?volver=` sin comprobar es un redirector abierto | **Con 1.i**, que es su puerta |
 | **1.h** | **La guardia por alcance, no por cuenta.** 1.c cierra a nivel **cuenta**: pregunta «¿es tu cuenta?», que es lo que sabe `canAccessClientAccount`. Falta la pregunta fina — «¿tu alcance cubre **esta planta**?» — y con ella **la regla del campus de `Ficha-Diseno-Permisos.md` §2.2, que no está implementada**: `canAccessPlant` resuelve alcance `plant` y `account`, pero **no tiene rama para `plant_group`**. **Sin diseñar todavía** | **Después de 1.c.** Hoy no protege a nadie —la única identidad real es global— y mezclarlo con 1.c serían dos cambios de comportamiento en un PR |
 
 **Regla de oro mientras dure este tramo:** **no iniciar sesión en Clerk hasta que
@@ -624,3 +649,16 @@ bloqueante.
   **no está implementada** en `canAccessPlant`.
 - **Queda escrito el límite del canal de tiempo** entre los dos 404. No se
   cierra en este tramo, y ahora está donde se ve.
+- **1.f solo era el escaparate, y hay que decirlo:** comprobado contra
+  producción, `/cliente?account=tecma` responde **200 sin sesión** y entrega
+  «Tecma Planta 47 (73) y Campus Santos Dumont (25)». Quitar los nombres de la
+  portada **no cerró el acceso**. Por eso `/cliente` pasa delante de `/carrier`
+  en 1.c: es la fuga más urgente, no la más simple.
+- **`tieneAlcanceGlobal`** (#218): la portada leía membresías en vez de
+  alcance, y una identidad global tiene una sola fila. La regla vive en
+  `@jtel/auth-rbac` y la usan también las funciones de acceso — ofrecer una
+  puerta que no abre es la misma mentira al revés.
+- **D9 completada** con sus cinco reglas. La segunda es la que sostiene a las
+  demás: nadie crea a alguien con más alcance del que tiene.
+- **Piezas 1.i y 1.j abiertas:** `/entrar` como puerta limpia, y volver al
+  destino tras entrar. Las dos van después de cerrar `/cliente` y `/carrier`.
