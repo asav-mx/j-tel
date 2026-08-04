@@ -31,6 +31,15 @@ export {
   escribirEnLotes,
 } from "./lote-de-escritura.js";
 export { routeWindowSizing, windowForOccurrence } from "./ventana-ocurrencia.js";
+/**
+ * Fixture de pruebas, no de producto. Se niega a sembrar fuera de
+ * `DATABASE_URL_TEST`; ver el candado dentro del archivo.
+ */
+export {
+  sembrarEscenarioDosCarriers,
+  ESCENARIO_B,
+  type EscenarioDosCarriers,
+} from "./escenario-dos-carriers.js";
 export {
   huecosDeVentana,
   resumirUnidadDia,

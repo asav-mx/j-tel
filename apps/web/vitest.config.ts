@@ -29,5 +29,14 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.test.ts"],
+    /*
+     * Las de integración quedan fuera de la corrida normal, y no por gusto:
+     * `*.integration.test.ts` casa con el `include` de arriba, así que sin esta
+     * línea CI las levantaría sin `DATABASE_URL_TEST` y el job caería por no
+     * tener base — un rojo que no habla de ningún defecto del código.
+     * Viven en `vitest.integration.config.ts` y se corren con
+     * `pnpm --filter @jtel/web test:integration`.
+     */
+    exclude: ["node_modules/**", "src/**/*.integration.test.ts"],
   },
 });

@@ -7,7 +7,8 @@
     "build": "next build",
     "typecheck": "tsc --noEmit",
     "start": "next start",
-    "test": "TZ=UTC vitest run"
+    "test": "TZ=UTC vitest run",
+    "test:integration": "TZ=UTC vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.23.0",
