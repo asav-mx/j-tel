@@ -104,6 +104,16 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
    movimiento.**
 6. **Antes de mergear una rama vieja, revisar si toca archivos que cambiaron
    mientras esperaba.**
+7. **Un `redirect()` desde un layout NO impide que la página hija se
+   renderice.** Next las renderiza en paralelo, así que la respuesta sale con
+   el código de la redirección **y el payload de la página dentro**. La guardia
+   va **en el layout y en la página**: el layout como red para lo que nadie ha
+   escrito todavía, la página como la comprobación que cuenta.
+   **Y se verifica midiendo el cuerpo de la respuesta, no el código de
+   estado.** Medido el 4 de agosto de 2026: `/cliente?account=tecma` contestaba
+   **307 con 35 901 bytes** de payload RSC y «Tecma Planta 47 (73) y Campus
+   Santos Dumont (25)» adentro. Una puerta que dice que no y pasa el expediente
+   por debajo. Ver un 307 y darlo por bueno era lo fácil.
 
 **De producto:**
 
@@ -624,3 +634,12 @@ bloqueante.
   **no está implementada** en `canAccessPlant`.
 - **Queda escrito el límite del canal de tiempo** entre los dos 404. No se
   cierra en este tramo, y ahora está donde se ve.
+- **La tanda de `/cliente` cerrada** (#220): 41 páginas, con la cuenta sacada
+  de la fila del recurso y no de `?account=`. Barrido contra el build de
+  producción: 25 rutas, cero con datos reales en el cuerpo.
+- **Regla 7 de «las ganadas por las malas»**, salida de ahí: un `redirect()` de
+  layout no impide que la hija se renderice, y por eso se verifica el cuerpo y
+  no el código de estado.
+- **Sigue vivo el fallback de `resolveAccountByType`.** Ya no es fuga anónima
+  —hace falta sesión para llegar— pero entre cuentas autenticadas sigue
+  tomando la primera cuenta del tipo. Va con las 11 páginas por parámetro.
