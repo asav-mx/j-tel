@@ -35,11 +35,32 @@ export function hasPermission(membership: UserMembership, permission: string): b
   return perms.includes("*") || perms.includes(permission);
 }
 
+/**
+ * ¿Esta identidad alcanza toda la plataforma?
+ *
+ * `global` es uno de los seis alcances del esquema, y significa literalmente
+ * eso: **todas las cuentas**. No es un rol ni una excepción — es la respuesta a
+ * «sobre qué datos», que la ficha de permisos separa de «qué puede hacer»
+ * (`permisos = rol × alcance`). Quien lo tiene cruza cuentas porque ese es su
+ * alcance, no porque se le haya hecho un hueco.
+ *
+ * El Marco lo contempla: las cuentas son privadas **salvo J-Staff por la
+ * compuerta de soporte**. Esto es esa compuerta, escrita como regla y no como
+ * caso particular — **el código no conoce nombres**, así que no hay identidad
+ * ni cuenta privilegiada por su nombre en ningún punto.
+ *
+ * Lo que NO cambia: un alcance de cuenta sigue viendo su cuenta y nada más.
+ */
+export function tieneAlcanceGlobal(memberships: UserMembership[]): boolean {
+  return memberships.some((m) => m.scopeType === "global");
+}
+
 export function canAccessPlant(
   memberships: UserMembership[],
   plantId: string,
   clientAccountId: string,
 ): boolean {
+  if (tieneAlcanceGlobal(memberships)) return true;
   return memberships.some((m) => {
     if (m.accountId !== clientAccountId) return false;
     if (m.scopeType === "account" || m.role === "admin_corporativo") return true;
@@ -52,6 +73,7 @@ export function canAccessClientAccount(
   memberships: UserMembership[],
   clientAccountId: string,
 ): boolean {
+  if (tieneAlcanceGlobal(memberships)) return true;
   return memberships.some(
     (m) =>
       m.accountId === clientAccountId &&
@@ -63,6 +85,7 @@ export function canAccessCarrierAccount(
   memberships: UserMembership[],
   carrierAccountId: string,
 ): boolean {
+  if (tieneAlcanceGlobal(memberships)) return true;
   return memberships.some(
     (m) =>
       m.accountId === carrierAccountId &&

@@ -1,8 +1,10 @@
 import { LandingView } from "./landing/landing-view";
-import { getIdentidad } from "@/lib/auth";
+import { getIdentidad, type Identidad } from "@/lib/auth";
 import { sesionUtilizable } from "@/lib/guardia-pagina";
 import { getRepos } from "@/lib/db";
 import { withAccount } from "@/lib/account-context";
+import { isJStaff, tieneAlcanceGlobal } from "@jtel/auth-rbac";
+import { DemoChip } from "@/components/ui";
 
 /**
  * La raíz — una ruta con dos caras.
@@ -29,10 +31,26 @@ import { withAccount } from "@/lib/account-context";
  * todas las cuentas a quien entre rompe igual la ley de que una planta jamás ve
  * otra, solo que un nivel más adentro.
  *
- * ## De dónde salen ahora las cuentas
+ * ## De dónde salen ahora las cuentas: del ALCANCE, no de las filas
  *
- * De **las membresías de quien pregunta**, no de un `listByType`. Si tienes una
- * sola, es la única que se ve. La cuenta nunca sale de la URL.
+ * La primera versión de esta portada listaba **las membresías** de quien
+ * pregunta, y eso estaba mal por debajo: una identidad con alcance `global`
+ * tiene **una sola fila** —la de J-Staff— y sin embargo su alcance es *toda la
+ * plataforma*. Listar sus filas le enseñaba una puerta cuando tiene derecho a
+ * todas. **La fila no es el alcance.**
+ *
+ * Ahora se pregunta por alcance, con la regla que vive en `@jtel/auth-rbac`:
+ *
+ * - **Alcance global** → todas las cuentas. Es literalmente lo que significa,
+ *   y es la compuerta de soporte que el Marco ya contempla.
+ * - **Cualquier otro alcance** → solo sus cuentas. Un usuario de Tecma sigue
+ *   viendo únicamente Tecma. **Eso no se toca.**
+ *
+ * No hay caso especial para ninguna identidad ni para ninguna cuenta: el código
+ * no conoce nombres. Un privilegio escrito con nombre propio sobrevive al
+ * desarrollo y se queda de puerta trasera en producción.
+ *
+ * La cuenta nunca sale de la URL.
  *
  * ## El bloque «Estado del sistema» no está, y no se protegió: se quitó
  *
@@ -43,7 +61,32 @@ import { withAccount } from "@/lib/account-context";
 
 export const dynamic = "force-dynamic";
 
-type Puerta = { nombre: string; href: string };
+type Puerta = { nombre: string; href: string; esDemo: boolean };
+
+/**
+ * Las cuentas que esta identidad alcanza.
+ *
+ * Con alcance global se leen todas —**incluidas las de ejemplo, marcadas**, no
+ * escondidas: descontarlas en silencio es la baja silenciosa que ya decidimos
+ * no repetir—. Con cualquier otro alcance, solo las de sus membresías, y ahí no
+ * se lee ni una fila de más.
+ */
+async function cuentasAlcanzadas(identidad: Identidad) {
+  const repos = getRepos();
+
+  if (tieneAlcanceGlobal(identidad.memberships)) {
+    const [clientes, carriers] = await Promise.all([
+      repos.accounts.listByType("client"),
+      repos.accounts.listByType("carrier"),
+    ]);
+    return { cuentas: [...clientes, ...carriers], global: true };
+  }
+
+  const cuentas = await Promise.all(
+    identidad.memberships.map((m) => repos.accounts.findById(m.accountId)),
+  );
+  return { cuentas: cuentas.filter((c) => c !== undefined && c !== null), global: false };
+}
 
 export default async function HomePage() {
   let identidad;
@@ -59,27 +102,23 @@ export default async function HomePage() {
 
   if (!sesionUtilizable(identidad)) return <LandingView />;
 
-  const repos = getRepos();
-
-  // Una consulta por membresía, y solo por las que tiene. Nada de listar todas
-  // las cuentas para después filtrarlas: lo que no es tuyo no se lee.
-  const cuentas = await Promise.all(
-    identidad.memberships.map((m) => repos.accounts.findById(m.accountId)),
-  );
+  const { cuentas } = await cuentasAlcanzadas(identidad);
 
   const clientes: Puerta[] = [];
   const carriers: Puerta[] = [];
-  let hayJStaff = false;
+  // La puerta de J-Staff se ofrece por rol, no por cuenta: es la consola, no
+  // una cuenta que se visite.
+  const hayJStaff = isJStaff(identidad.memberships);
 
   for (const cuenta of cuentas) {
     if (!cuenta) continue;
-    if (cuenta.type === "client") {
-      clientes.push({ nombre: cuenta.name, href: withAccount("/cliente", cuenta.slug) });
-    } else if (cuenta.type === "carrier") {
-      carriers.push({ nombre: cuenta.name, href: withAccount("/carrier", cuenta.slug) });
-    } else if (cuenta.type === "jstaff") {
-      hayJStaff = true;
-    }
+    const puerta = (base: string) => ({
+      nombre: cuenta.name,
+      href: withAccount(base, cuenta.slug),
+      esDemo: cuenta.isDemo,
+    });
+    if (cuenta.type === "client") clientes.push(puerta("/cliente"));
+    else if (cuenta.type === "carrier") carriers.push(puerta("/carrier"));
   }
 
   const sinNada = clientes.length === 0 && carriers.length === 0 && !hayJStaff;
@@ -126,6 +165,7 @@ export default async function HomePage() {
                       <a href={c.href} className="text-[var(--accent)] hover:underline">
                         {c.nombre} →
                       </a>
+                      {c.esDemo && <DemoChip />}
                     </li>
                   ))}
                 </ul>
@@ -144,6 +184,7 @@ export default async function HomePage() {
                       <a href={c.href} className="text-[var(--accent)] hover:underline">
                         {c.nombre} →
                       </a>
+                      {c.esDemo && <DemoChip />}
                     </li>
                   ))}
                 </ul>
