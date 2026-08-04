@@ -18,7 +18,7 @@ const SECRETO = "secreto-de-prueba-no-usado-en-ninguna-parte";
 const RESPALDO_RETIRADO = "dev" + "-cron-" + "secret";
 
 function peticion(autorizacion?: string): Request {
-  return new Request("https://j-tel.io/api/cron/verify", {
+  return new Request("https://j-telemetry.com/api/cron/verify", {
     headers: autorizacion ? { authorization: autorizacion } : {},
   });
 }

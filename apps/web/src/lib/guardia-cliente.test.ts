@@ -22,7 +22,7 @@ vi.mock("@/lib/db", () => ({
 
 const { exigir } = await import("./guardia-api");
 
-const PETICION = new Request("https://j-tel.io/api/cliente/turnos", { method: "POST" });
+const PETICION = new Request("https://j-telemetry.com/api/cliente/turnos", { method: "POST" });
 
 const TECMA = [
   {

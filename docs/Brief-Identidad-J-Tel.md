@@ -11,14 +11,14 @@
 > Design— describe una fase de exploración que ya cerró.
 >
 > **Qué sigue vigente y no está en otro lado:** la definición de los subdominios
-> (`j-tel.io` pública · `portal.j-tel.io` cliente, donde el alcance lo decide el rol y no
-> la URL · `carrier.j-tel.io` transportista · `staff.j-tel.io` consola interna). Esa
+> (`j-telemetry.com` pública · `portal.j-telemetry.com` cliente, donde el alcance lo decide el rol y no
+> la URL · `carrier.j-telemetry.com` transportista · `staff.j-telemetry.com` consola interna). Esa
 > sección se cita desde aquí hasta que viva en un documento vigente.
 >
 > **Por qué se conserva:** es el registro del posicionamiento de marca y de por qué el
 > sello es el activo comercial central.
 
-# Brief de Identidad Visual — J-Telemetry (j-tel.io)
+# Brief de Identidad Visual — J-Telemetry (j-telemetry.com)
 
 **Uso:** este documento se pega **completo** al inicio de cualquier herramienta de diseño (v0, Framer, Claude Design, Claude Code). Sin él, todas producen el mismo promedio del internet. Con él, producen J-Telemetry.
 
@@ -151,16 +151,16 @@ Ese "no se edita" es el activo comercial más grande que tienes. Debe estar en l
 
 Mismo sistema, distinta temperatura:
 
-- **`j-tel.io` (pública):** cinematográfica, editorial, oscura o clara según la prueba. Vende autoridad. Encamina al login que toque; **no guarda datos**.
-- **`portal.j-tel.io` (cliente):** clara, evidenciaria, tranquila. Una sola puerta; el alcance (corporativo vs. planta) lo decide el rol, no la URL.
-- **`carrier.j-tel.io` (transportista):** densa, operativa, tabla-primero. Es una herramienta de trabajo diario.
-- **`staff.j-tel.io` (J-Staff):** utilitaria, sin adorno. Consola interna.
+- **`j-telemetry.com` (pública):** cinematográfica, editorial, oscura o clara según la prueba. Vende autoridad. Encamina al login que toque; **no guarda datos**.
+- **`portal.j-telemetry.com` (cliente):** clara, evidenciaria, tranquila. Una sola puerta; el alcance (corporativo vs. planta) lo decide el rol, no la URL.
+- **`carrier.j-telemetry.com` (transportista):** densa, operativa, tabla-primero. Es una herramienta de trabajo diario.
+- **`staff.j-telemetry.com` (J-Staff):** utilitaria, sin adorno. Consola interna.
 
 ---
 
 ## 9. Cómo correr la prueba entre las tres herramientas
 
-Pégale este documento completo a cada una, con el mismo encargo: **"Construye sólo el hero de la landing pública de j-tel.io, con la secuencia del veredicto."**
+Pégale este documento completo a cada una, con el mismo encargo: **"Construye sólo el hero de la landing pública de j-telemetry.com, con la secuencia del veredicto."**
 
 - **v0 (Vercel):** te devuelve React + Tailwind que se lleva directo al repo `j-tel`. Es el que mejor sobrevive al pasar a producción.
 - **Framer:** te devuelve el sitio publicado más pulido, pero vive en su plataforma. Bueno para la landing, no para las caras internas.

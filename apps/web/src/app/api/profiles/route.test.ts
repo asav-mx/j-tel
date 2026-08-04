@@ -40,7 +40,7 @@ const CUERPO = {
 };
 
 function peticion(body: unknown = CUERPO) {
-  return new Request("https://j-tel.io/api/profiles", {
+  return new Request("https://j-telemetry.com/api/profiles", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),

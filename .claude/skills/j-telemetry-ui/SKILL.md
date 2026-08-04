@@ -1,6 +1,6 @@
 ---
 name: j-telemetry-ui
-description: Lenguaje visual y reglas de interfaz de J-Telemetry (repo asav-mx/j-tel), el árbitro automático de cumplimiento de transporte de personal. Úsalo SIEMPRE que se diseñe, construya, revise o modifique cualquier pantalla, componente, gráfico, tabla, correo o vista de J-Telemetry — cara cliente/planta, cara carrier, cara J-Staff o el landing j-tel.io. Aplícalo aunque la petición no hable de diseño; vale igual para "agrega una columna", "haz el endpoint y su pantalla", "arregla este componente", "muestra los veredictos", "hazme un gráfico de esto", "dashboard", "tabla de servicios", "vista de jornada", "preventivo", "hallazgos", "expediente", "mapa de evidencia". Si el trabajo produce algo que un humano va a ver dentro de J-Telemetry, este skill aplica.
+description: Lenguaje visual y reglas de interfaz de J-Telemetry (repo asav-mx/j-tel), el árbitro automático de cumplimiento de transporte de personal. Úsalo SIEMPRE que se diseñe, construya, revise o modifique cualquier pantalla, componente, gráfico, tabla, correo o vista de J-Telemetry — cara cliente/planta, cara carrier, cara J-Staff o el landing j-telemetry.com. Aplícalo aunque la petición no hable de diseño; vale igual para "agrega una columna", "haz el endpoint y su pantalla", "arregla este componente", "muestra los veredictos", "hazme un gráfico de esto", "dashboard", "tabla de servicios", "vista de jornada", "preventivo", "hallazgos", "expediente", "mapa de evidencia". Si el trabajo produce algo que un humano va a ver dentro de J-Telemetry, este skill aplica.
 ---
 
 # J-Telemetry — Lenguaje de interfaz
@@ -94,7 +94,7 @@ Cada una es su propio subdominio y acceso. La misma información base, presentac
 | **Cliente — planta** | Vive la operación diaria | Detalle por servicio. Instrumento denso. |
 | **Carrier** | La empresa auditada | Mismo lenguaje; ve su flota y aporta calibración. |
 | **J-Staff** | El operador de la plataforma | Puede ser más cruda: aquí el usuario es experto y sí quiere el razonamiento completo. El ledger completo vive aquí. |
-| **Landing (j-tel.io)** | Público | **Excepción total.** No trata datos ni veredictos. Puede ser todo lo expresivo que quiera: animación, shaders, componentes de catálogo. Nada de este skill aplica ahí salvo la identidad. |
+| **Landing (j-telemetry.com)** | Público | **Excepción total.** No trata datos ni veredictos. Puede ser todo lo expresivo que quiera: animación, shaders, componentes de catálogo. Nada de este skill aplica ahí salvo la identidad. |
 
 Corporativo y planta comparten **idioma** (chips, colores, tipografía, tono) pero son **pantallas distintas**, porque sus necesidades de información son distintas.
 

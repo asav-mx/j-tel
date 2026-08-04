@@ -38,7 +38,7 @@ const CLIENTE_A = "11111111-1111-4111-8111-111111111111";
 const CLIENTE_B = "22222222-2222-4222-8222-222222222222";
 
 function peticionGet(account = "tecma") {
-  const url = new URL("https://j-tel.io/api/contracts");
+  const url = new URL("https://j-telemetry.com/api/contracts");
   if (account) url.searchParams.set("account", account);
   return new Request(url);
 }
@@ -54,7 +54,7 @@ const CUERPO = {
 };
 
 function peticionPost(body: unknown = CUERPO) {
-  return new Request("https://j-tel.io/api/contracts", {
+  return new Request("https://j-telemetry.com/api/contracts", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),

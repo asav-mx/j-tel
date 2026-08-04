@@ -27,7 +27,7 @@ vi.mock("@/lib/db", () => ({
 const { exigir } = await import("./guardia-api");
 
 /** Una petición cualquiera: la guardia la usa de origen para los redirects. */
-const PETICION = new Request("https://j-tel.io/api/jstaff/purge-profile", { method: "POST" });
+const PETICION = new Request("https://j-telemetry.com/api/jstaff/purge-profile", { method: "POST" });
 
 /** Membresías tal como salen del seed. */
 const JSTAFF = [

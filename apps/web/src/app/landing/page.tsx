@@ -2,7 +2,7 @@ import { EscenaCiudad } from "./escena-ciudad";
 import estilos from "./landing.module.css";
 
 /**
- * Landing público de j-tel.io.
+ * Landing público de j-telemetry.com.
  *
  * Excepción declarada del lenguaje de producto: aquí no se muestra un solo
  * dato real ni un resultado sellado, así que no hay confidencialidad que
@@ -263,10 +263,10 @@ export default function LandingPage() {
             vería verificado — con tus rutas, tus turnos y tus tolerancias.
           </p>
           <div className={estilos.ctaFila}>
-            <a className={`${estilos.btn} ${estilos.btnPrim}`} href="mailto:hola@j-tel.io">
+            <a className={`${estilos.btn} ${estilos.btnPrim}`} href="mailto:hola@j-telemetry.com">
               Solicitar demo
             </a>
-            <a className={estilos.btn} href="mailto:hola@j-tel.io">
+            <a className={estilos.btn} href="mailto:hola@j-telemetry.com">
               Hablar con el equipo
             </a>
           </div>
@@ -276,7 +276,7 @@ export default function LandingPage() {
       <footer className={estilos.pie}>
         <div className={estilos.c}>
           <span>
-            J·Telemetry · j-tel.io
+            J·Telemetry · j-telemetry.com
             <br />
             Arbitraje automático de cumplimiento de transporte de personal
           </span>
