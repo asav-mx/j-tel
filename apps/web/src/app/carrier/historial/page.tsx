@@ -7,6 +7,7 @@ import { hhMm, resolverPeriodo } from "@/lib/historial-periodo";
 import { REGLAS_POR_DEFECTO, SALTO_GPS_KMH } from "@/lib/historial-unidad";
 import { duracion, fechaDeIso, relojCorto } from "@/lib/formato-tiempo";
 import { JTTEL_TZ } from "@/lib/local-time";
+import { exigirSesion } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,11 @@ export default async function CarrierHistorialPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Sin sesión no se renderiza. Va en la PÁGINA y no solo en el layout:
+  // un redirect de layout no impide que la hija se renderice, y su payload
+  // viaja igual en la respuesta (regla 7 del plan).
+  await exigirSesion();
+
   const sp = searchParams ? await searchParams : undefined;
   const carrier = await resolveAccountByType("carrier", searchParams);
 

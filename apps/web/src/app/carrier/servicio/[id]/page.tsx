@@ -18,6 +18,7 @@ import {
 } from "@/lib/map-evidence";
 import type { ContractPolicy } from "@jtel/domain";
 import { localDateTimeShort, JTTEL_TZ } from "@jtel/domain";
+import { exigirSesion } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,11 @@ export default async function CarrierServicioPage({
   params: Promise<{ id: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Sin sesión no se renderiza. Va en la PÁGINA y no solo en el layout:
+  // un redirect de layout no impide que la hija se renderice, y su payload
+  // viaja igual en la respuesta (regla 7 del plan).
+  await exigirSesion();
+
   const { id } = await params;
   const carrier = await resolveAccountByType("carrier", searchParams);
   if (!carrier) {

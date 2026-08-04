@@ -3,6 +3,7 @@ import { CarrierShell } from "@/components/unit-shell";
 import { ExpedienteContratoView } from "@/views/expediente-contrato";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { loadExpedienteContrato } from "@/lib/expediente-contrato-data";
+import { exigirSesion } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,11 @@ export default async function ExpedienteContratoCarrierPage({
   params: Promise<{ contractId: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Sin sesión no se renderiza. Va en la PÁGINA y no solo en el layout:
+  // un redirect de layout no impide que la hija se renderice, y su payload
+  // viaja igual en la respuesta (regla 7 del plan).
+  await exigirSesion();
+
   const { contractId } = await params;
   const cuenta = await resolveAccountByType("carrier", searchParams);
   if (!cuenta) {
