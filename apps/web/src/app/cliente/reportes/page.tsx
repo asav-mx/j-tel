@@ -5,6 +5,7 @@ import { buildMonthlyReport, reportToCsv } from "@jtel/reports";
 import type { ContractPolicy } from "@jtel/domain";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { resolveDateRange } from "@/lib/date-range";
+import { exigirSesion } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,11 @@ export default async function ClienteReportesPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Sin sesión no se renderiza. Va en la PÁGINA y no solo en el layout:
+  // un redirect de layout no impide que la hija se renderice, y su
+  // payload —con datos reales dentro— viaja igual en la respuesta.
+  await exigirSesion();
+
   const sp = searchParams ? await searchParams : undefined;
   // Por defecto mes corriente aproximado (últimos 30 días)
   const range = resolveDateRange(sp, { defaultDaysBack: 29 });
