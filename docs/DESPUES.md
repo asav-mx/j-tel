@@ -1,5 +1,14 @@
 # DESPUÉS — lo que aplazamos a propósito
 
+> **Este archivo es el backlog, y solo el backlog. Sin orden y sin fechas.**
+>
+> Desde el 3 de agosto de 2026 el orden vive **únicamente** en
+> [`docs/PLAN.md`](PLAN.md): qué se construye, en qué secuencia y qué desbloquea
+> qué. Aquí solo vive **qué falta y por qué se aplazó**.
+>
+> Los tres documentos vivos son el `Marco-Limpio-J-Telemetry-MAESTRO.md` (la
+> ley), `PLAN.md` (el orden) y este (el backlog). Ninguno más.
+
 Backlog de J-Telemetry. Aquí vive todo lo que se decidió **no** construir todavía,
 con la razón por la que se aplazó y qué tiene que pasar para retomarlo.
 
@@ -9,9 +18,9 @@ cuando alguien decidió aplazar algo concreto, y sale cuando se construye.
 **El Marco Maestro manda sobre este archivo.** Si una entrada choca con
 `docs/marco-limpio/Marco-Limpio-J-Telemetry-MAESTRO.md`, gana el Marco.
 
-**Este archivo dice qué falta; `Plan-Camino-a-v1.md` dice por dónde se empieza.**
+**Este archivo dice qué falta; `PLAN.md` dice por dónde se empieza.**
 Una entrada de aquí no lleva prioridad escrita a propósito — el orden vive allá,
-en fases con su compuerta. Si buscas qué construir hoy, esa es la lectura;
+en tramos con su compuerta. Si buscas qué construir hoy, esa es la lectura;
 esta es la que te dice por qué esa entrada existe y qué la desbloquea.
 
 ## Cómo se agrega una entrada
@@ -189,7 +198,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 |---|---|
 | [Trámites que solo Asav puede hacer](#trámites-que-solo-asav-puede-hacer) | 🤝 Asav |
 | [Decisiones de producto pendientes](#decisiones-de-producto-pendientes) | Producto |
-| [El orden recomendado](#el-orden-recomendado) | Corte del 1 de agosto de 2026 |
+| [El orden recomendado](#el-orden-recomendado) | ⛔ Se movió a `PLAN.md` §4 |
 
 ---
 
@@ -2201,33 +2210,13 @@ frente de producto entero.
 
 ## El orden recomendado
 
-**Corte del 1 de agosto de 2026.** No es un calendario ni un compromiso de fechas: es **en
-qué orden conviene tomarlas, y por qué en ese orden**.
-
-**Primero — cerrar el riesgo verificado.**
-
-1. [`CRON_SECRET`](#cron_secret-cae-a-un-secreto-publicado). Media hora, riesgo alto,
-   arreglo trivial. 🤝 Incluye rotar el secreto.
-2. [La guardia de páginas](#las-páginas-no-comprueban-permisos) — y **después**
-   [el default de identidad heredada](#cerrar-el-default-de-identidad-heredada). **En ese
-   orden, o quedamos todos fuera.**
-
-**Segundo — destrabar el frente de producto.**
-
-3. Las [tres respuestas de dirección visual](#dirección-visual-del-producto) y la ficha que
-   sale de ellas.
-4. [El resto de la cara del producto](#el-resto-de-la-cara-del-producto).
-
-**Tercero — la regla que evita que se repita.**
-
-5. [Defaults que fallan abiertos](#defaults-que-fallan-abiertos), y **encadenar el
-   verificador de variables a CI** para que un despliegue sin variables *no despliegue*.
-
-**Cuarto — el corazón.**
-
-6. [Afinar el árbitro](#afinar-la-ventana-derivada-con-el-match-observable) →
-   [re-verificar las 300](#las-300-congeladas--la-foto-de-referencia) →
-   [identificación por capas](#identificación-que-se-explica).
-
-**En el camino, sin bloquear a nadie:** la higiene de la **sección 4** y los trámites de
-arriba.
+> ⛔ **Se movió.** El orden vive ahora en [`docs/PLAN.md`](PLAN.md) §4, en
+> tramos con su compuerta, y es el único lugar donde vive.
+>
+> Lo que decía aquí —el corte del 1 de agosto de 2026— quedó viejo el 3 de
+> agosto: el candado subió a Tramo 1 con evidencia nueva (la portada pública
+> nombra a los clientes), `CRON_SECRET` ya se rotó, y el dominio se resolvió.
+> Mantener dos órdenes es exactamente lo que este movimiento vino a terminar.
+>
+> La foto de cómo se veía este orden el 3 de agosto está en
+> [`docs/corte-2026-08-03/DESPUES.md`](corte-2026-08-03/DESPUES.md).

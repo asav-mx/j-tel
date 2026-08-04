@@ -1,3 +1,17 @@
+> # ⛔ SUPERSEDED — este documento ya no manda
+>
+> **Reemplazado el 3 de agosto de 2026 por [`docs/PLAN.md`](PLAN.md), que es el
+> único plan.** No se edita y no se sigue: se conserva como registro de cómo se
+> veía el camino el 2 de agosto.
+>
+> Lo que este documento aportaba —el orden de fases y sus compuertas— vive ahora
+> en `PLAN.md` §4, y sus causas del árbitro en `PLAN.md` §5, donde son **once y
+> no ocho**.
+>
+> Si buscas qué se construye y en qué orden, la respuesta está en `PLAN.md`.
+
+---
+
 # Plan — el camino de aquí a v1
 
 **Corte: 2 de agosto de 2026.** `main` en `7000926`. PRs #151–#199 mergeados.

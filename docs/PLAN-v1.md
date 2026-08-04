@@ -1,3 +1,19 @@
+> # ⛔ SUPERSEDED — este documento ya no manda
+>
+> **Reemplazado el 3 de agosto de 2026 por [`docs/PLAN.md`](PLAN.md), que es el
+> único plan.** No se edita y no se sigue: se conserva porque explica de dónde
+> vienen varias decisiones y porque `PLAN.md` §7 registra, una por una, las once
+> contradicciones medidas entre este documento y `DESPUES.md`.
+>
+> **Al menos una de sus afirmaciones es falsa y está corregida en el plan:**
+> este documento declara el Turno B de Planta 47 como resuelto (§9). No lo está
+> — falla 6 de 6 días y espera una conversación con la Planta. Ver `PLAN.md`
+> §7, F1.
+>
+> Si buscas qué se construye y en qué orden, la respuesta está en `PLAN.md`.
+
+---
+
 # J-Telemetry — Plan de v1
 
 **Corte: 30 de julio de 2026 (tercera versión, fin del día).** Reemplaza las dos
