@@ -123,6 +123,34 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
 >
 > **Planta 47 es el laboratorio, no el paciente.**
 
+**Las dos caras no son simétricas. El carrier es producto, no anexo.**
+
+La cara del cliente y la del carrier no son dos vistas del mismo sistema con
+distinta pintura. Son **dos productos que se tocan en el contrato**.
+
+Para el carrier, sus unidades son **una sola operación**. El mismo camión sirve a
+una planta el lunes y a otra el martes; su mantenimiento, su diésel, su chofer y
+su historial son los mismos sin importar a quién sirvió ese día. El carrier ve
+**todo su universo, sin partir por contrato**. Partírselo sería romperle su
+realidad para acomodar la de otro.
+
+Sobre estos cimientos se construyen pisos: la suite del carrier crece hacia sus
+propias unidades y actividades, y esa suite se vuelve más valiosa cuando
+J-Telemetry sustituya a los proveedores de GPS actuales —obsoletos y casi
+imposibles de programar alrededor. El carrier además puede ofrecer la
+verificación como **valor agregado** de su operación frente a la planta.
+
+**Las dos líneas que no se cruzan**, y son del Marco («Las leyes (intocables)»):
+
+1. El carrier ve **todo lo suyo**, y **nada de lo interno del cliente** — ni
+   otros carriers de la misma planta, ni operación que no sea suya.
+2. El cliente **jamás** ve la operación interna del carrier.
+
+**Consecuencia para las guardias:** el alcance del carrier se resuelve contra
+**su universo**, no contra el contrato por el que llegó. Por eso `/carrier`
+necesita la misma procedencia por fila que `/cliente` — no para partirle la
+vista, sino para que el día que haya dos carriers ninguno alcance al otro.
+
 **Lo que es real y lo que no:** la única cuenta con operación real es **Tecma**.
 Honeywell y PRUEBA REAL son cuentas de ejemplo. Ningún análisis, conteo ni
 conversación con cliente las incluye.
@@ -495,6 +523,7 @@ definición de v1.
 | **Lenore-narradora** | El diff estructural contado en cristiano dentro del expediente. **Bloqueada por el Tramo 4** |
 | Interruptor de J-Staff | Activar / desactivar / eliminar cuentas y contratos. Hoy la única vía es tocar la base a mano, y eso no es producto. **Desactivar es hacia adelante y no toca el pasado; eliminar abre la pregunta de qué pasa con los hechos ya sellados.** Y J-Staff **enuncia, no esconde**: los excluidos por cuenta de ejemplo se muestran con su motivo |
 | **J-Staff altas y demos** | Con el modelo ya decidido en **D9**: invitación de J-Tel o solicitud del cliente aprobada desde J-Staff · uno o varios usuarios por cuenta |
+| **La suite del carrier** | **No es una cara pendiente de pulir: es un producto con piso propio** (§2, «las dos caras no son simétricas»). Lo que entra a v1 son **los cimientos** — que el carrier vea todo lo suyo, con el alcance resuelto contra **su universo** y no contra el contrato por el que llegó. Su alcance completo —sus propias unidades y actividades, sustituir a los proveedores de GPS, la verificación como valor agregado frente a la planta— **vive más allá de v1**, en `DESPUES.md` |
 | Pase de interfaz final | |
 
 **Compuerta de v1:** un cliente nuevo se da de alta, entra con su usuario, ve solo
@@ -665,9 +694,16 @@ bloqueante.
 - **Regla 7 de «las ganadas por las malas»**, salida de ahí: un `redirect()` de
   layout no impide que la hija se renderice, y por eso se verifica el cuerpo y
   no el código de estado.
-- **Sigue vivo el fallback de `resolveAccountByType`.** Ya no es fuga anónima
-  —hace falta sesión para llegar— pero entre cuentas autenticadas sigue
-  tomando la primera cuenta del tipo. Va con las 11 páginas por parámetro.
+- **El fallback de `resolveAccountByType`, cerrado** (#222, la tanda que cerró
+  `/carrier`). Y resultaron ser **dos agujeros, no uno**: sin `?account=` la
+  función terminaba en `listByType(type)[0]` y devolvía la primera cuenta de la
+  tabla, fuera de quien fuera; y **con** `?account=` tampoco comprobaba nada —
+  el parámetro elegía contra quién compararse. Ahora el default sale del
+  **alcance** de quien pregunta, no del orden de la tabla: con parámetro, la
+  cuenta tiene que existir, ser del tipo y estar dentro de tu alcance; sin
+  parámetro, si tu alcance cubre exactamente una, esa, y si cubre varias o
+  ninguna, `null` y que decida quien llama. Un solo cambio arregló los 26
+  sitios que lo llamaban.
 - **1.f solo era el escaparate, y hay que decirlo:** comprobado contra
   producción, `/cliente?account=tecma` responde **200 sin sesión** y entrega
   «Tecma Planta 47 (73) y Campus Santos Dumont (25)». Quitar los nombres de la
@@ -681,3 +717,10 @@ bloqueante.
   demás: nadie crea a alguien con más alcance del que tiene.
 - **Piezas 1.i y 1.j abiertas:** `/entrar` como puerta limpia, y volver al
   destino tras entrar. Las dos van después de cerrar `/cliente` y `/carrier`.
+- **El carrier queda encuadrado como producto, no como anexo.** Entra a §2 «De
+  producto» y gana fila propia en el Tramo 7. Las dos caras no son simétricas:
+  para el carrier sus unidades son una sola operación, así que ve todo su
+  universo sin partir por contrato. De ahí sale la consecuencia para las
+  guardias — el alcance se resuelve contra su universo, no contra el contrato
+  por el que llegó — y el encuadre de v1: **lo que entra son los cimientos**, y
+  la suite completa vive en `DESPUES.md`.
