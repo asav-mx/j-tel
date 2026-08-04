@@ -3,7 +3,8 @@ import { CarrierShell } from "@/components/unit-shell";
 import { ExpedienteContratoView } from "@/views/expediente-contrato";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { loadExpedienteContrato } from "@/lib/expediente-contrato-data";
-import { exigirSesion } from "@/lib/guardia-pagina";
+import { exigirRecurso, exigirSesion } from "@/lib/guardia-pagina";
+import { getRepos } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,9 @@ export default async function ExpedienteContratoCarrierPage({
   await exigirSesion();
 
   const { contractId } = await params;
+  // La cuenta dueña sale de la FILA del contrato, no de `?account=`.
+  await exigirRecurso("carrier", () => getRepos().procedencia.carrierDeContrato(contractId));
+
   const cuenta = await resolveAccountByType("carrier", searchParams);
   if (!cuenta) {
     return (

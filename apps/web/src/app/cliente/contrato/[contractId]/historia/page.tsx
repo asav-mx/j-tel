@@ -43,7 +43,7 @@ export default async function HistoriaDePoliticaPage({
   // La cuenta sale de la fila del recurso, nunca de `?account=`.
   // Va en la PÁGINA y no solo en el layout: un redirect de layout no
   // impide que la hija se renderice, y su payload viaja igual.
-  await exigirRecurso(() => getRepos().procedencia.deContrato(contractId));
+  await exigirRecurso("cliente", () => getRepos().procedencia.deContrato(contractId));
 
   const cliente = await resolveAccountByType("client", searchParams);
   if (!cliente) notFound();

@@ -15,6 +15,6 @@ export default async function CampusLayout({
   params: Promise<{ groupId: string }>;
 }) {
   const { groupId } = await params;
-  await exigirRecurso(() => getRepos().procedencia.deCampus(groupId));
+  await exigirRecurso("cliente", () => getRepos().procedencia.deCampus(groupId));
   return <>{children}</>;
 }

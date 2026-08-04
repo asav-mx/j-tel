@@ -4732,6 +4732,49 @@ export class ProcedenciaRepository {
       .limit(1);
     return f?.cuenta ?? null;
   }
+
+  /*
+   * ── El lado del transportista ──────────────────────────────────────────
+   *
+   * Los cinco de arriba devuelven la cuenta CLIENTE dueña de la fila. Los de
+   * abajo devuelven la cuenta CARRIER. Son consultas distintas sobre las
+   * mismas tablas, y confundirlas no da error: da una guardia que compara
+   * contra la pared equivocada y se ve idéntica a una que funciona.
+   *
+   * Un contrato y un servicio tienen DOS dueños —cliente y carrier— y por eso
+   * llevan las dos versiones. Una unidad tiene uno solo: es del carrier y de
+   * nadie más, así que `deUnidad` no necesita apellido.
+   */
+
+  /** La unidad es del carrier y de nadie más. */
+  async deUnidad(unitId: string): Promise<string | null> {
+    const [f] = await this.db
+      .select({ cuenta: units.carrierAccountId })
+      .from(units)
+      .where(eq(units.id, unitId))
+      .limit(1);
+    return f?.cuenta ?? null;
+  }
+
+  async carrierDeContrato(contractId: string): Promise<string | null> {
+    const [f] = await this.db
+      .select({ cuenta: serviceContracts.carrierAccountId })
+      .from(serviceContracts)
+      .where(eq(serviceContracts.id, contractId))
+      .limit(1);
+    return f?.cuenta ?? null;
+  }
+
+  /** Salta una vez, igual que `deServicio`: la ocurrencia guarda `contractId`. */
+  async carrierDeServicio(occurrenceId: string): Promise<string | null> {
+    const [f] = await this.db
+      .select({ cuenta: serviceContracts.carrierAccountId })
+      .from(serviceOccurrences)
+      .innerJoin(serviceContracts, eq(serviceContracts.id, serviceOccurrences.contractId))
+      .where(eq(serviceOccurrences.id, occurrenceId))
+      .limit(1);
+    return f?.cuenta ?? null;
+  }
 }
 
 export function createRepositories(db: Database) {

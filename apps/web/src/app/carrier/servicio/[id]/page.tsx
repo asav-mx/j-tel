@@ -18,7 +18,7 @@ import {
 } from "@/lib/map-evidence";
 import type { ContractPolicy } from "@jtel/domain";
 import { localDateTimeShort, JTTEL_TZ } from "@jtel/domain";
-import { exigirSesion } from "@/lib/guardia-pagina";
+import { exigirRecurso, exigirSesion } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +41,13 @@ export default async function CarrierServicioPage({
   await exigirSesion();
 
   const { id } = await params;
+  // La cuenta dueña sale de la FILA del servicio, no de `?account=`. Va ADEMÁS
+  // de la comprobación del cargador, no en su lugar: la guardia es la puerta
+  // uniforme —la que una pantalla nueva hereda por convención— y el filtro del
+  // cargador es el respaldo de datos. Quitar el de adentro para "centralizar"
+  // cambiaría una disciplina por otra y dejaría el producto con una sola capa.
+  await exigirRecurso("carrier", () => getRepos().procedencia.carrierDeServicio(id));
+
   const carrier = await resolveAccountByType("carrier", searchParams);
   if (!carrier) {
     return (

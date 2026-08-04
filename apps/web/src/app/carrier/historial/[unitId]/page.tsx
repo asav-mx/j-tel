@@ -21,7 +21,7 @@ import {
   relojCorto,
 } from "@/lib/formato-tiempo";
 import { JTTEL_TZ } from "@/lib/local-time";
-import { exigirSesion } from "@/lib/guardia-pagina";
+import { exigirRecurso, exigirSesion } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +52,9 @@ export default async function CarrierUnidadHistorialPage({
   await exigirSesion();
 
   const { unitId } = await params;
+  // La cuenta dueña sale de la FILA de la unidad, no de `?account=`.
+  await exigirRecurso("carrier", () => getRepos().procedencia.deUnidad(unitId));
+
   const sp = searchParams ? await searchParams : undefined;
   const carrier = await resolveAccountByType("carrier", searchParams);
 
