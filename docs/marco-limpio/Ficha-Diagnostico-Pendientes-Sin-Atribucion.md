@@ -838,6 +838,116 @@ la que rompe el par; si no, hay que mirar la asignación viaje↔unidad.
 
 ---
 
+## 4-quindecies. Las dos perillas, nombradas por separado
+
+**Se confunden con facilidad, y por eso a partir de aquí van con nombre largo.**
+Son dos preguntas distintas sobre el mismo recorrido:
+
+| Campo | La pregunta que hace | Cómo se llama de aquí en adelante |
+|---|---|---|
+| `kmlMatchMinPct` — **A** | **¿Cuánto de la ruta recorrió?** Qué fracción del trazado contratado quedó cubierta por su GPS | **cobertura de ruta** |
+| `kmlCorridorMinPct` — **B** | **¿Qué tan pegada fue?** Qué fracción de sus puntos GPS cayó dentro del corredor | **precisión de corredor** |
+
+**Se cumplen las dos o no hay atribución.** Una unidad puede recorrer la ruta
+entera dando vueltas por fuera —cobertura alta, precisión baja— o ir pegadísima
+a un pedacito —precisión alta, cobertura baja—. Ninguna de las dos sola dice que
+sirvió el servicio.
+
+Y el tercer valor que las acompaña, que no es umbral sino ancho:
+`kmlCorridorMeters` — **cuánto mide de ancho el corredor**. Planta 47 lo tiene en
+**120 m** y el Campus en **150 m**.
+
+---
+
+## 4-sexdecies. El campo que existe en un contrato y no en el otro
+
+**La pregunta de Asav:** *dime cuál es y con qué valor de fábrica corre.*
+
+🟢 **Es `kmlOriginToleranceFraction`.** Planta 47 lo tiene en **0.15**; el Campus
+**no lo tiene**, así que corre con el valor de fábrica:
+
+```ts
+// packages/verification/src/index.ts:136
+export const DEFAULT_KML_ORIGIN_TOLERANCE_FRACTION = 0.15;
+```
+
+🟢 **El valor de fábrica es 0.15 — el mismo que Planta 47 tiene escrito.** Así
+que **hoy no hay divergencia de comportamiento**: los dos contratos corren con
+0.15. Lo que hay es una diferencia de **procedencia**: en uno está pactado y en
+el otro se aplica porque sí.
+
+**Qué hace esa perilla**, porque no es obvia y gobierna dos cosas a la vez —lo
+dice su propio comentario en el motor—: **cuánto arranque de ruta se tolera
+perder.** De ahí salen las dos mitades:
+
+1. **El piso del tramo observable** — con 0.15, la ventana tiene que alcanzar a
+   ver al menos el **85 %** de la ruta para que una unidad pueda acreditar.
+2. **La compuerta que manda a `pendiente_evidencia`** por
+   `observacion_insuficiente` — 🟢 diez de los servicios de este corte cayeron
+   ahí.
+
+🟡 **Por qué importa aunque el número coincida:** el día que alguien cambie el
+valor de fábrica, el Campus cambia de regla **sin que nadie toque su contrato y
+sin que quede rastro** — y con `contract_policy_history` vacía (§4-septies), no
+habría cómo notarlo. Es C16 con una cara concreta.
+
+---
+
+## 4-septendecies. A sin ponderar — la mejor pista, medida
+
+**La pregunta de Asav:** *recalcula A sin ponderar, y dime si A y B se mueven
+juntas.*
+
+🟢 **Control primero:** las 3 054 candidatas reproducen su precisión de corredor
+contra el ledger. Y las **3 054** traen `weightedIdf: true` — **la cobertura de
+ruta va ponderada por TF-IDF en todos los casos**, sin excepción.
+
+### ¿Se mueven juntas?
+
+🟢 Correlación entre cobertura de ruta y precisión de corredor, sobre las 3 054:
+
+| Cobertura medida así | Correlación con la precisión de corredor |
+|---|---|
+| **Ponderada** (lo que usa el motor hoy) | **0.373** |
+| **Sin ponderar** | **0.672** |
+
+> 🟢 **Sí: sin ponderar, las dos se mueven mucho más juntas.** La ponderación es
+> lo que desacopla el par, y era la sospecha correcta.
+
+### Y el número que lo aterriza
+
+🟢 **168 de las 3 054 candidatas tienen cobertura ponderada ≥ 60 % mientras su
+cobertura real es < 60 %. La mediana de la cobertura real de esas 168 es
+3.9 %.**
+
+> **El expediente les acredita haber recorrido más del 60 % de la ruta cuando
+> recorrieron menos del 4 %.** Y el campo se llama `routeMatchPct`, que se lee
+> como un porcentaje llano.
+
+🟡 **La ponderación no está mal por existir** — pesar más los waypoints que
+distinguen esta ruta de las demás es deliberado y tiene sentido cuando varias
+rutas comparten corredor. **Lo que está mal es que el número resultante se
+guarde y se muestre como si fuera «cuánto de la ruta recorrió».** Es la misma
+familia de C15: **el expediente dice algo que no significa.**
+
+### Lo que NO arregla
+
+🟢 Con la cobertura sin ponderar, los servicios que pasarían las dos condiciones
+son **9 de 61** — contra 11 con la ponderada. **Menos, no más.**
+
+**No es un arreglo: es una corrección de honestidad.** Quitar la ponderación no
+rescata servicios; **quita la ilusión de que 27 candidatas cubrían la ruta.** La
+conclusión real es más dura y más simple:
+
+> 🟢 **Casi ninguna unidad recorre la ruta Y va pegada al trazado.** El 27/26 de
+> §4-sexies era, en buena parte, cobertura inflada.
+
+**Y eso deja la pregunta donde tiene que estar:** no en los umbrales, no en el
+trazado, no en la ventana — en **por qué las unidades que sirven estas quince
+rutas no aparecen recorriéndolas.** No está medido.
+
+---
+
 ## 5. Contra qué lista se comparó — las once de `PLAN.md` §5
 
 El handoff pide decirlo explícitamente, no decir «es la séptima».
