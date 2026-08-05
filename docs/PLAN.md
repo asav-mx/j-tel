@@ -765,8 +765,10 @@ lo suyo, y el ≥90% de capacidad de mostrar se sostiene.
 
 **Esta es la ficha de consolidación.** Vive aquí, no en un documento aparte.
 
-**Son once, no seis.** El plan viejo decía seis en una línea y listaba ocho en su
-propia tabla; el 3 de agosto se sumaron tres más.
+**Son trece, no once.** El plan viejo decía seis en una línea y listaba ocho en
+su propia tabla; el 3 de agosto se sumaron tres, y el 4 de agosto **C12 y C13**
+salieron de investigar C11. Quien compare contra esta lista **dice contra cuántas
+y cuáles**, nunca «es la séptima».
 
 | # | Causa | Qué se sabe | Estado |
 |---|---|---|---|
@@ -779,11 +781,15 @@ propia tabla; el 3 de agosto se sumaron tres más.
 | **C7** | **`maxRouteDurationMinutes` fijo en 60** | Segundo "cuánto dura una ruta" sin derivar. Hoy no causa falsos negativos | **Tarea propia, no se mezcla.** Dos derivaciones cambiando juntas hacen inatribuible el resultado |
 | **C8** | **Identificación en vivo** | La sala no sabe qué unidad cubre qué ruta antes del cierre | Se piensa junto con C1 y C4 |
 | **C9** | **Nombre del chofer sin congelar** | Falta congelarlo en `complianceFacts` al sellar | Toca el camino del árbitro |
-| **C10** | **Planta 47 sella 6.7% vs Campus 55.2%** | Diferencia medida, **causa no identificada** | Probablemente conectada con D2 (Turno B) y con C11 |
-| **C11** | **71 de Tecma con evidencia y sin atribución** | 54 de Planta 47, 17 del Campus. **Todos tienen evidencia guardada.** El motor no logró atribuir unidad | **En investigación.** Puede ser causa nueva o manifestación de otra |
+| **C10** | **Planta 47 sella 8.8% vs Campus 54.0%** | **Causa identificada** (C11): el Campus **no tiene ni un solo** `llegada_sin_atribucion`; los 57 son todos de Planta 47 · Turno A. Los dos sitios fallan por razones distintas. Los porcentajes se remidieron el 4 ago —el 6.7 % / 55.2 % era del 3 ago— y la brecha sigue igual | **Explicada.** Deja de ser causa propia: es la sombra de C11 |
+| **C11** | **Servicios con evidencia y sin atribución** | **Investigada y cerrada** — `Ficha-Diagnostico-Pendientes-Sin-Atribucion.md`. Son **100**, no 71; los 71 eran la ventana vieja. La dominante es `llegada_sin_atribucion` (57), **toda de Planta 47 · Turno A**, y lo que la produce es que **ninguna candidata cumple A (cobertura ≥ 60 %) y B (corredor ≥ 60 %) a la vez** — 27 cumplen A, 26 cumplen B, **cero las dos** | **Medida.** Falta decidir el arreglo |
+| **C12** | **`frechetMaxKm` horneado fuera de la política** | Es el **único** umbral de KML que no vive en `contractPolicySchema`: el motor lo resuelve con `?? 0.8` y quien lo llama en producción le pasa seis umbrales de política y **no éste**. Repetido literal además en `monitoreo-data.ts`. **NO causa C11** —solo ordena candidatas, no las rechaza— y aun así incumple la **Ley 6** | **Sin construir.** Entra porque está mal, no porque convenga. C7 es su gemelo |
+| **C13** | **El veredicto del mismo fallo lo decide `routeStrictness`** | Con `destino_only` + llegada → `pendiente_evidencia`; con `kml_full` → `no_cumplido`. Planta 47 cambió de una a otra **dos veces en tres semanas**. Medido: **330 servicios de Tecma sellados `no_cumplido` con una unidad que sí llegó** a la geocerca | **Sin construir.** No es un defecto por sí solo —`kml_full` es una elección válida— pero decide acusaciones y hoy nadie lo ve. Misma familia que las «194 de 439» |
 
-**Rutas compartidas:** Huertas-B aparece en C5 y en C6. Planta 47 aparece en C10,
-C11 y D2. Ninguna de esas se arregla sin saber cuál movió el número.
+**Rutas compartidas:** Huertas-B aparece en C5 y en C6 — 🟢 **y NO aparece entre
+los 57 de C11**, medido el 4 de agosto. Planta 47 aparece en C10, C11 y C13.
+**Ya no aparece en D2:** los 57 son del **Turno A**, y D2 habla del **Turno B**,
+así que resolver D2 no los mueve.
 
 **Dependencias conocidas:** C3 → C2 (arreglar cuándo se juzga reduce el borrado) ·
 C5 espera datos, no trabajo · C4 y C1 comparten la pregunta "qué se congela dentro
@@ -1003,6 +1009,28 @@ bloqueante.
 - **Del historial no se quita, y queda escrito por qué.** Estando rotado, ese
   valor no abre nada: es un registro de lo que pasó, no una llave. No se
   reescribe historia por esto.
+
+- **C11 investigada y cerrada, y salieron dos causas nuevas.** La ficha vive en
+  `marco-limpio/`. Son 100, no 71. La dominante es que **ninguna candidata
+  cumple A y B a la vez** — 27 cumplen una, 26 la otra, cero las dos.
+- **Y una corrección mía, dicha completa porque la primera versión de la ficha ya
+  se había mergeado:** concluí que el tope de Fréchet de 0.8 km rechazaba los 57.
+  **Es falso.** `shapeOk` no entra en `servedRoute` —solo ordena candidatas— y el
+  grupo de control lo gritaba: **300 de los 319 servicios aprobados también
+  exceden ese tope**. Medir que 0 de 57 lo fallan era el dato; «por eso los
+  rechaza» era la interpretación, y no la comprobé contra los que sí pasan.
+- **C10 deja de ser causa propia:** es la sombra de C11. Y **sale de D2**, porque
+  los 57 son del Turno A y D2 habla del Turno B.
+- **C12 — `frechetMaxKm` horneado fuera de la política.** No causa C11. Entra
+  igual: es el único umbral de KML que ningún contrato puede configurar, y eso
+  incumple la Ley 6. **Se arregla porque está mal, no porque convenga.**
+- **C13 — el veredicto del mismo fallo lo decide `routeStrictness`.** Con
+  `destino_only` es pendiente; con `kml_full` es acusación. Planta 47 cambió dos
+  veces en tres semanas, y por eso las «dos semanas limpias» de la primera
+  lectura no eran limpias: **75 servicios sellados `no_cumplido` en vez de
+  pendientes**. Medido: **330 acusaciones de Tecma con una unidad que sí llegó**.
+- **El handoff de la investigación queda archivado en `docs/handoffs/` con sus
+  correcciones adentro**, no aparte. Un handoff guardado se vuelve a leer.
 
 - **Frente nuevo: el alcance fino y quién administra dentro de él.** Sale del
   Tramo 7 y se coloca **al cerrar el Tramo 2**. Tres piezas juntas —1.h, el
