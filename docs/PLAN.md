@@ -914,7 +914,7 @@ y cuáles**, nunca «es la séptima».
 | **C11** | **Servicios con evidencia y sin atribución** | **Investigada y cerrada** — `Ficha-Diagnostico-Pendientes-Sin-Atribucion.md`. Son **100**, no 71; los 71 eran la ventana vieja. La dominante es `llegada_sin_atribucion` (57), **toda de Planta 47 · Turno A**, y lo que la produce es que **ninguna candidata cumple A (cobertura ≥ 60 %) y B (corredor ≥ 60 %) a la vez** — 27 cumplen A, 26 cumplen B, **cero las dos** | **Medida.** Falta decidir el arreglo |
 | **C12** | **`frechetMaxKm` horneado fuera de la política** | Es el **único** umbral de KML que no vive en `contractPolicySchema`: el motor lo resuelve con `?? 0.8` y quien lo llama en producción le pasa seis umbrales de política y **no éste**. Repetido literal además en `monitoreo-data.ts`. **NO causa C11** —solo ordena candidatas, no las rechaza— y aun así incumple la **Ley 6** | **Sin construir.** Entra porque está mal, no porque convenga. C7 es su gemelo |
 | **C13** | **El veredicto del mismo fallo lo decide `routeStrictness`, y el cambio no deja rastro** | Con `destino_only` + llegada → `pendiente_evidencia`; con `kml_full` → `no_cumplido`. Planta 47 cambió **dos veces en tres semanas**. Medido: **330 hechos de Tecma sellados `no_cumplido` con una unidad que sí llegó**. **Nadie los ha visto** — el único usuario del sistema es Asav y ningún cliente ni carrier ha recibido un resultado, así que **no hay acusación emitida contra nadie**. Y `contract_policy_history` existe, tiene la forma correcta —`policy_before`, `policy_after`, `actor_kind`, `note`— y está **vacía en toda la base: cero filas, y ningún código escribe en ella** | **Sin construir.** Urgencia baja hoy; **el día que esto sea vinculante ese campo es una cláusula**, y una cláusula que cambia sin rastro no se puede sostener ante nadie |
-| **C17** | **La cobertura de ruta se guarda ponderada y se lee llana** | `routeMatchPct` va **ponderada por TF-IDF** —`weightedIdf: true` en las 3 054 candidatas medidas— y se guarda con un nombre que se lee como porcentaje llano. Medido: **168 candidatas acreditan ≥ 60 % de cobertura teniendo una cobertura real con mediana de 3.9 %**. Y desacopla el par: la correlación con la precisión de corredor pasa de **0.373 ponderada a 0.672 sin ponderar**. **La ponderación no está mal por existir** —pesar los waypoints distintivos es deliberado— lo que está mal es guardarla y mostrarla como si fuera «cuánto de la ruta recorrió». **Corregirlo NO rescata servicios** (9 en vez de 11): quita la ilusión, no el problema | **Sin construir.** Misma familia que C15 |
+| **C17** | **La cobertura de ruta se guarda ponderada y se lee llana** | ✅ **Arreglado en el motor.** Ahora se guardan **las dos**: `routeMatchPct` —la que decide, ponderada— y `routeMatchPlainPct` —la llana, «qué fracción del trazado cubrió»—. **No cambia un solo veredicto** y los hechos ya sellados no se tocan: los viejos traen solo la ponderada y quien los lea debe decirlo así. Lo medido que lo motivó: `routeMatchPct` va **ponderada por TF-IDF** —`weightedIdf: true` en las 3 054 candidatas medidas— y se guarda con un nombre que se lee como porcentaje llano. Medido: **168 candidatas acreditan ≥ 60 % de cobertura teniendo una cobertura real con mediana de 3.9 %**, y la correlación con la precisión pasa de **0.373 ponderada a 0.672 sin ponderar** | **Hecho.** Falta que las pantallas del expediente lean la llana |
 | **C15** | **El expediente etiqueta mal su propia evidencia** | El ledger escribe cada candidata con el campo **`imei:`** y adentro guarda un **id de UNIDAD** — comprobado: casa con `units.id` y no con `evidence_points.imei`, que son números de 15 dígitos. **Quien lea un expediente creerá que está viendo el aparato y está viendo el vehículo.** No cambia ningún veredicto y **sí cambia lo que el expediente dice**, que es el activo del producto | **Sin construir.** Es evidencia mal etiquetada en el documento que sostiene una acusación |
 | **C16** | **La configuración del contrato no coincide con lo acordado, y no hay contra qué comparar** | Medido el 5 de agosto: el corredor del Campus está en **50 % / 150 m** y Asav lo recordaba acordado en **60 %**. Seis campos difieren entre los dos contratos y `kmlOriginToleranceFraction` **existe en uno y no en el otro**, así que el Campus corre con el valor por omisión sin que nadie lo decidiera. Con `contract_policy_history` vacía (C13), **no hay forma de leer del sistema qué se pactó** | **Sin construir.** Más grave que un umbral flojo: el árbitro puede estar aplicando una regla que las partes no pactaron |
 | **C14** | **`routeStrictness` no gobierna lo que su nombre promete** | Se lee en **un solo punto** del motor (`index.ts:980`) y **solo elige entre `pendiente_evidencia` y `no_cumplido` DESPUÉS de que la atribución ya falló**. La comprobación A∧B de KML corre **siempre que la ruta tenga trazado**, sin mirar la estrictez. Consecuencia: con `destino_only` un servicio cuya unidad llegó pero no pasa A∧B **no puede ser `cumplido` jamás** — queda pendiente para siempre. Lo que de verdad decide «¿basta con llegar?» **no es el contrato: es si la ruta tiene KML cargado** | **Sin construir.** Es la causa de que los 61 no se puedan cerrar solos |
@@ -1142,6 +1142,29 @@ bloqueante.
 - **Del historial no se quita, y queda escrito por qué.** Estando rotado, ese
   valor no abre nada: es un registro de lo que pasó, no una llave. No se
   reescribe historia por esto.
+
+**5 de agosto de 2026 (los viajes).**
+- **C17 arreglado en el motor.** El ledger guarda ahora `routeMatchPct` —la que
+  decide— y `routeMatchPlainPct` —la llana—. **No mueve un solo veredicto**, y
+  hay una prueba que lo fija para que no pueda convertirse en uno. Comprobado por
+  mutación: no escribir la llana pone 1 en rojo; hacer que la llana **sea** la
+  ponderada, otro.
+- **Cinco viajes, contados uno por uno.** Los cinco del Turno A del 9 de julio
+  **llegaron antes de la hora límite** —05:17, 05:17, 05:19, 05:36, 05:41 contra
+  un límite de 05:45—, los cinco recorrieron **más kilómetros que su trazado**, y
+  los cinco **siguieron manejando después de llegar**: la ventana cierra ~45 min
+  después.
+- **Y uno de los cinco tira la explicación fácil.** *Finca - A* **nunca se alejó
+  700 metros del trazado**, tuvo **87.6 % de precisión de corredor** y llegó
+  **veintiséis minutos antes** — y está en `pendiente_evidencia` porque su
+  cobertura es **27 %**. La vuelta explica a los otros; a éste no.
+- **La pregunta que queda:** el trazado contratado mide 27.9 km y esa unidad
+  recorrió del kilómetro 2 al 16. **¿El trazado describe un viaje, o el recorrido
+  completo de una ruta que se sirve en tramos?** No está medido, y es la primera
+  del frente de C14.
+- **`kmlOriginToleranceFraction` para el Campus:** guion escrito, **en seco por
+  omisión**, corrido y verificado — escribiría `0.15` en un contrato, **sin
+  cambiar comportamiento** y sin tocar un hecho sellado. **No se ejecutó.**
 
 **5 de agosto de 2026 (cierre 2).**
 - **C17 — la cobertura de ruta se guarda ponderada y se lee llana.** 168

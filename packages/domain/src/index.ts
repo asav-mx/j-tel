@@ -645,9 +645,20 @@ export interface VerificationResult {
     unitId: string;
     servedRoute: boolean;
     arrivalAt: Date | null;
-    /** Métrica A: % waypoints KML cubiertos por GPS (uniforme o TF-IDF). */
+    /**
+     * Métrica A — **cobertura de ruta**, la que DECIDE. Va ponderada por TF-IDF
+     * cuando hay corpus de rutas, así que **no se lee como porcentaje llano**.
+     */
     routeMatchPct: number;
-    /** Métrica B: % puntos GPS dentro del corredor. */
+    /**
+     * La misma cobertura **sin ponderar**: qué fracción del trazado cubrió, a
+     * secas. Existe porque la de arriba acreditaba ≥ 60 % a candidatas con una
+     * cobertura real de 3.9 % de mediana — 168 de 3 054 medidas el 5 de agosto
+     * de 2026. **No decide nada:** informa, para que el expediente no tenga que
+     * elegir entre creerle a un nombre o no saber.
+     */
+    routeMatchPlainPct: number;
+    /** Métrica B — **precisión de corredor**: % de puntos GPS dentro del corredor. */
     corridorPrecisionPct: number;
     /** Distancia de Fréchet discreta (km); null sin KML. */
     frechetKm?: number | null;
