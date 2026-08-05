@@ -666,6 +666,30 @@ estaban repartidas y se ponen juntas.
 > que resolvieron juntas: dar `admin_corporativo` porque es el único admin que
 > existe rompe la regla 2 de D9 **sin que nada lo señale**.
 
+### La prueba viva de por qué hace falta, y por qué esto deja de ser teórico
+
+🟢 **`tecma_planta47` no puede ver su propia cara.** Tiene alcance `plant`,
+`canAccessClientAccount` exige `account`, y `/cliente` le contesta **«No hay
+cuentas cliente»**. No ve de más: **ve nada**.
+
+> **Ésa es 1.h dejando de ser un argumento y volviéndose una pantalla en
+> blanco.** Un usuario de planta con su membresía correcta, entrando bien, sin
+> poder trabajar.
+
+**Y cambia el estado del frente.** Con las tres identidades de prueba del T6,
+**dos de las tres caras van a funcionar** y la tercera va a fallar **de la forma
+exacta que 1.h arregla**. Eso es el escenario que hoy no existe:
+
+| Antes | Con T6 |
+|---|---|
+| Una sola identidad, alcance global · una guardia por alcance **pasa siempre** contra ella | Tres identidades reales, **dos alcances distintos**, y una que debe ser negada |
+| «No se puede medir» | **«Ya casi»** — falta el usuario de campus |
+
+🟡 **Sigue sin estar completo:** para la regla del campus de §2.2 hace falta
+además un usuario con alcance `plant_group`, que el seed no tiene. Pero el salto
+es real: se pasa de **no poder probar nada** a poder probar **la mitad que hoy
+rompe**.
+
 ### Lo que hoy hace imposible probarlo, y es la razón de que no se empiece ya
 
 **La única identidad real del sistema tiene alcance `global`.** Contra ella, una
@@ -870,9 +894,9 @@ lo suyo, y el ≥90% de capacidad de mostrar se sostiene.
 
 **Esta es la ficha de consolidación.** Vive aquí, no en un documento aparte.
 
-**Son dieciséis, no once.** El plan viejo decía seis en una línea y listaba ocho en
+**Son diecisiete, no once.** El plan viejo decía seis en una línea y listaba ocho en
 su propia tabla; el 3 de agosto se sumaron tres, y entre el 4 y el 5 de agosto
-**C12 a C16** salieron de investigar C11. Quien compare contra esta lista **dice contra cuántas
+**C12 a C17** salieron de investigar C11. Quien compare contra esta lista **dice contra cuántas
 y cuáles**, nunca «es la séptima».
 
 | # | Causa | Qué se sabe | Estado |
@@ -890,6 +914,7 @@ y cuáles**, nunca «es la séptima».
 | **C11** | **Servicios con evidencia y sin atribución** | **Investigada y cerrada** — `Ficha-Diagnostico-Pendientes-Sin-Atribucion.md`. Son **100**, no 71; los 71 eran la ventana vieja. La dominante es `llegada_sin_atribucion` (57), **toda de Planta 47 · Turno A**, y lo que la produce es que **ninguna candidata cumple A (cobertura ≥ 60 %) y B (corredor ≥ 60 %) a la vez** — 27 cumplen A, 26 cumplen B, **cero las dos** | **Medida.** Falta decidir el arreglo |
 | **C12** | **`frechetMaxKm` horneado fuera de la política** | Es el **único** umbral de KML que no vive en `contractPolicySchema`: el motor lo resuelve con `?? 0.8` y quien lo llama en producción le pasa seis umbrales de política y **no éste**. Repetido literal además en `monitoreo-data.ts`. **NO causa C11** —solo ordena candidatas, no las rechaza— y aun así incumple la **Ley 6** | **Sin construir.** Entra porque está mal, no porque convenga. C7 es su gemelo |
 | **C13** | **El veredicto del mismo fallo lo decide `routeStrictness`, y el cambio no deja rastro** | Con `destino_only` + llegada → `pendiente_evidencia`; con `kml_full` → `no_cumplido`. Planta 47 cambió **dos veces en tres semanas**. Medido: **330 hechos de Tecma sellados `no_cumplido` con una unidad que sí llegó**. **Nadie los ha visto** — el único usuario del sistema es Asav y ningún cliente ni carrier ha recibido un resultado, así que **no hay acusación emitida contra nadie**. Y `contract_policy_history` existe, tiene la forma correcta —`policy_before`, `policy_after`, `actor_kind`, `note`— y está **vacía en toda la base: cero filas, y ningún código escribe en ella** | **Sin construir.** Urgencia baja hoy; **el día que esto sea vinculante ese campo es una cláusula**, y una cláusula que cambia sin rastro no se puede sostener ante nadie |
+| **C17** | **La cobertura de ruta se guarda ponderada y se lee llana** | `routeMatchPct` va **ponderada por TF-IDF** —`weightedIdf: true` en las 3 054 candidatas medidas— y se guarda con un nombre que se lee como porcentaje llano. Medido: **168 candidatas acreditan ≥ 60 % de cobertura teniendo una cobertura real con mediana de 3.9 %**. Y desacopla el par: la correlación con la precisión de corredor pasa de **0.373 ponderada a 0.672 sin ponderar**. **La ponderación no está mal por existir** —pesar los waypoints distintivos es deliberado— lo que está mal es guardarla y mostrarla como si fuera «cuánto de la ruta recorrió». **Corregirlo NO rescata servicios** (9 en vez de 11): quita la ilusión, no el problema | **Sin construir.** Misma familia que C15 |
 | **C15** | **El expediente etiqueta mal su propia evidencia** | El ledger escribe cada candidata con el campo **`imei:`** y adentro guarda un **id de UNIDAD** — comprobado: casa con `units.id` y no con `evidence_points.imei`, que son números de 15 dígitos. **Quien lea un expediente creerá que está viendo el aparato y está viendo el vehículo.** No cambia ningún veredicto y **sí cambia lo que el expediente dice**, que es el activo del producto | **Sin construir.** Es evidencia mal etiquetada en el documento que sostiene una acusación |
 | **C16** | **La configuración del contrato no coincide con lo acordado, y no hay contra qué comparar** | Medido el 5 de agosto: el corredor del Campus está en **50 % / 150 m** y Asav lo recordaba acordado en **60 %**. Seis campos difieren entre los dos contratos y `kmlOriginToleranceFraction` **existe en uno y no en el otro**, así que el Campus corre con el valor por omisión sin que nadie lo decidiera. Con `contract_policy_history` vacía (C13), **no hay forma de leer del sistema qué se pactó** | **Sin construir.** Más grave que un umbral flojo: el árbitro puede estar aplicando una regla que las partes no pactaron |
 | **C14** | **`routeStrictness` no gobierna lo que su nombre promete** | Se lee en **un solo punto** del motor (`index.ts:980`) y **solo elige entre `pendiente_evidencia` y `no_cumplido` DESPUÉS de que la atribución ya falló**. La comprobación A∧B de KML corre **siempre que la ruta tenga trazado**, sin mirar la estrictez. Consecuencia: con `destino_only` un servicio cuya unidad llegó pero no pasa A∧B **no puede ser `cumplido` jamás** — queda pendiente para siempre. Lo que de verdad decide «¿basta con llegar?» **no es el contrato: es si la ruta tiene KML cargado** | **Sin construir.** Es la causa de que los 61 no se puedan cerrar solos |
@@ -1117,6 +1142,28 @@ bloqueante.
 - **Del historial no se quita, y queda escrito por qué.** Estando rotado, ese
   valor no abre nada: es un registro de lo que pasó, no una llave. No se
   reescribe historia por esto.
+
+**5 de agosto de 2026 (cierre 2).**
+- **C17 — la cobertura de ruta se guarda ponderada y se lee llana.** 168
+  candidatas acreditan ≥ 60 % teniendo una cobertura real con mediana de 3.9 %.
+  La ponderación no está mal por existir; está mal guardarla con un nombre que
+  se lee como porcentaje llano. **Corregirlo no rescata servicios** —9 en vez de
+  11—: quita la ilusión de que 27 candidatas cubrían la ruta.
+- **Y contesta la sospecha de Asav: sí se desacoplan.** La correlación entre
+  cobertura y precisión pasa de **0.373 ponderada a 0.672 sin ponderar**.
+- **El campo huérfano tiene nombre:** `kmlOriginToleranceFraction`, ausente en el
+  Campus, con valor de fábrica **0.15** — el mismo que Planta 47 tiene escrito,
+  así que **hoy no hay divergencia de comportamiento**, solo de procedencia. El
+  día que alguien cambie el valor de fábrica, el Campus cambia de regla sin que
+  nadie toque su contrato.
+- **Las dos perillas se nombran por separado de aquí en adelante:** «cobertura de
+  ruta» —cuánto de la ruta recorrió— y «precisión de corredor» —qué tan pegada
+  fue—. Se confunden con facilidad.
+- **El frente del alcance fino pasa de «no se puede medir» a «ya casi».**
+  `tecma_planta47` sin poder ver su cara es 1.h volviéndose una pantalla en
+  blanco, y con T6 habrá dos alcances distintos y una negativa que comprobar.
+- **Letrero de calibración en «Tu operación medida»** (#243): el rango sirve para
+  entender dónde cae la operación, no para ajustarlo hasta que pase.
 
 **5 de agosto de 2026 (cierre).**
 - **La ventana de evidencia tampoco era.** El motor recibe todos los puntos del
