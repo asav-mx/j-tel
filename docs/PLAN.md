@@ -128,6 +128,12 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
    ninguna entrada podía disparar, y se borró — **un candado que no cierra nada
    solo infla la cuenta de candados.** Es el mismo criterio que la pared entre
    carriers: cerrado por construcción, no por disciplina repetida.
+   **Y se aplica al instrumento tanto como al código.** Un medidor que devuelve
+   cero cuando no midió nada se ve idéntico a uno que midió y encontró todo
+   limpio: la compuerta de este mismo tramo dio verde en su primera corrida
+   **con el servidor caído** —`curl` contestando `000`, cuerpo vacío, y contar
+   ocurrencias sobre nada da cero—. La corrección es la misma de los dos lados:
+   **contar también algo que TIENE que estar**, no solo lo que no debe estar.
 
 **De producto:**
 
@@ -375,6 +381,74 @@ tres filas del seed se quedan intactas hasta que haya gente real.
 
 ---
 
+**D10 · Falta el rol de admin de planta** — ✅ **DECIDIDA el 4 de agosto. Sin
+diseñar**
+
+*Qué falta.* Hoy no existe un administrador **dentro** de una planta. La
+administración vive entera en el corporativo: `admin_corporativo` tiene
+`client.manage` y `usuario_planta` no —solo `plant.read`, `compliance.read` e
+`inspection.manage`—, así que un usuario de planta puede operar e inspeccionar
+pero **no puede dar de alta a nadie**.
+
+*Por qué es un hueco y no una preferencia.* Choca de frente con la **regla 2 de
+D9**, que es la que sostiene a las otras cuatro: *«nadie crea a alguien con más
+alcance del que él tiene · un usuario de planta solo crea usuarios de su
+planta»*. Esa regla **presupone un admin dentro de la planta**, y ese rol no
+existe. Sin él, la única forma de que una planta administre su gente es darle un
+`admin_corporativo` —que ve todas las plantas de la cuenta— y eso es exactamente
+lo que la regla 2 prohíbe. **El hueco no se ve hoy porque el único usuario del
+sistema es Asav; se ve el día que un cliente tenga diez plantas.**
+
+*Decisión:* **se declara el rol ahora, con la lista de permisos vacía.** Mismo
+trato de fondo que `chofer` (`Ficha-Diseno-Permisos.md` §5): existe, nombrado, y
+no puede hacer nada todavía. **Los permisos se definen en el Tramo 7**, junto con
+la administración de usuarios y el interruptor de altas por contrato de la regla
+3 de D9.
+
+> **Ojo con el precedente, porque no es exacto y conviene saberlo antes de
+> copiarlo:** la ficha dice que `chofer` quedó «sin permisos activos», pero en el
+> código tiene `["self.read"]`. Es una diferencia chica y sin efecto —nadie
+> entra con ese rol— pero el rol nuevo se declara con lista **vacía de verdad**,
+> no con un permiso nominal. Queda anotado, no arreglado.
+
+*Y aquí va una corrección, porque la razón que se dio al pedirlo no se
+sostiene y el registro tiene que ser exacto.* Declararlo **no evita una
+migración**: `user_memberships.role` es una columna de **texto**, no un enum de
+Postgres —el que sí es enum es `scope_type`—, así que un rol nuevo nunca costó
+migración. Lo que declararlo sí evita es peor que una migración:
+
+> Mientras el rol no exista, quien necesite que una planta administre a su gente
+> va a alcanzarle lo único que hay — `admin_corporativo` — y eso **rompe la
+> regla 2 sin que nada lo señale**. Un rol declarado y vacío es una respuesta
+> que ya existe cuando llegue la pregunta.
+
+*Y hay un segundo motivo, que es la regla 8 aplicada a los roles.*
+`hasPermission` resuelve `ROLE_PERMISSIONS[rol] ?? []`, así que **un rol que
+nadie declaró se comporta exactamente igual que un rol declarado sin permisos:
+sin ninguno.** Los dos estados son indistinguibles desde el código. Declararlo
+es lo que convierte «no lo hemos definido» en algo que se puede leer, en vez de
+en un silencio que se ve idéntico a una decisión.
+
+*Nota de higiene que sale de mirar esto:* `ClientRole` está declarado en
+`@jtel/domain` con seis roles y **no lo valida nadie** — cero llamadores fuera
+de su propia definición. Es la misma forma de `canAccessPlant`. Declarar el rol
+ahí no cierra nada por sí solo; que la validación exista es trabajo del Tramo 7.
+
+---
+
+**D11 · J-Staff crece sin rol nuevo** — ✅ **DECIDIDA el 4 de agosto**
+
+Los roles del equipo de J-Tel **ya existen**: `admin_plataforma`, `soporte` y
+`comercial`, con sus permisos repartidos en `@jtel/auth-rbac`. Cuando entre gente
+al equipo, entra **bajo `admin_plataforma`** con el rol que le toque de esos
+tres. **No hace falta inventar ninguno**, y por la regla 4 de D9 **solo J-Staff
+crea J-Staff**.
+
+Se anota justamente para que nadie lo abra como pendiente: es el caso donde la
+respuesta correcta es que no hay nada que hacer.
+
+---
+
 ### 3.3 Trabajo humano que no es código ni decisión
 
 **H1 · Las tres rutas con falla real** — Huertas-B, Centro-A, Parajes del Sur-A,
@@ -618,7 +692,7 @@ definición de v1.
 
 | Pieza | Qué |
 |---|---|
-| `auth-rbac` cerrado | Guardia por alcance, no por cuenta · administración de usuarios · retirar el bypass |
+| `auth-rbac` cerrado | Guardia por alcance, no por cuenta · administración de usuarios · **los permisos del `admin_planta` de D10**, que hasta aquí es un rol declarado y vacío · retirar el bypass |
 | **Lenore-vigía** | Alertas preventivas durante la operación: *"6 unidades no reportan y el turno cierra en 20 minutos"*. **No está bloqueada por nada técnico** — necesita T2 (que las alertas salgan) y saber a quién avisar |
 | **Lenore-narradora** | El diff estructural contado en cristiano dentro del expediente. **Bloqueada por el Tramo 4** |
 | Interruptor de J-Staff | Activar / desactivar / eliminar cuentas y contratos. Hoy la única vía es tocar la base a mano, y eso no es producto. **Desactivar es hacia adelante y no toca el pasado; eliminar abre la pregunta de qué pasa con los hechos ya sellados.** Y J-Staff **enuncia, no esconde**: los excluidos por cuenta de ejemplo se muestran con su motivo |
@@ -872,6 +946,32 @@ bloqueante.
 - **Del historial no se quita, y queda escrito por qué.** Estando rotado, ese
   valor no abre nada: es un registro de lo que pasó, no una llave. No se
   reescribe historia por esto.
+
+- **Regla 8 extendida al instrumento.** Un medidor que devuelve cero cuando no
+  midió nada se ve idéntico a uno que midió y encontró todo limpio. La
+  corrección es la misma de los dos lados: contar también algo que **tiene** que
+  estar.
+- **D10 abierta y decidida: falta el rol de admin de planta.** Se declara sin
+  permisos activos, como `chofer`; los permisos se definen en el Tramo 7.
+- **Y su justificación se corrigió al verificarla.** Se pidió como «evita una
+  migración», y **no la evita**: `user_memberships.role` es columna de texto, no
+  enum de Postgres. Lo que evita es peor — que alguien alcance
+  `admin_corporativo` por ser el único admin que existe, rompiendo la regla 2 de
+  D9 sin que nada lo señale.
+- **Y hay un segundo motivo, que es la regla 8 aplicada a los roles:**
+  `hasPermission` resuelve `ROLE_PERMISSIONS[rol] ?? []`, así que un rol **no
+  declarado** se comporta igual que uno declarado **sin permisos**. Los dos
+  estados son indistinguibles; declararlo es lo que hace legible la diferencia.
+- **Y el precedente de `chofer` no era exacto:** la ficha lo declara «sin
+  permisos activos» y el código le da `["self.read"]`. Sin efecto —nadie entra
+  con ese rol— pero el rol nuevo va con lista vacía de verdad. Anotado, no
+  arreglado.
+- **D11: J-Staff crece sin rol nuevo.** `admin_plataforma`, `soporte` y
+  `comercial` ya existen y alcanzan. Se anota para que no se abra como
+  pendiente: la respuesta correcta es que no hay nada que hacer.
+- **Higiene detectada de paso:** `ClientRole` está declarado en `@jtel/domain` y
+  **no lo valida nadie** — misma forma que `canAccessPlant`. Queda anotado, no
+  arreglado.
 
 - **TRAMO 1 CERRADO.** Diez piezas, 1.a a 1.j. Nueve hechas; **1.h sale
   abierta** y se hereda al Tramo 2. La compuerta se corrió y se midió el 4 de
