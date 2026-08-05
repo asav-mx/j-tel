@@ -803,6 +803,60 @@ la telemetría, siempre.**
 
 ---
 
+### Frente — Los sensores: ver el instrumento, no solo el veredicto
+
+**Se coloca al cerrar el Tramo 2, con los otros frentes.** **Sin diseñar.**
+
+**Por qué existe, y la fecha lo dice:** el 29 de julio la densidad de muestreo de
+Planta 47 se multiplicó por ~1.5 y **la cobertura del trazado saltó de 5–7 a 9.9
+de 10 sin que nadie manejara distinto** (C19). 🟢 **No fue un cambio nuestro** —
+ningún commit toca el archivador ni la cadencia en esa ventana— y **nadie se
+enteró**. Lo supimos investigando otra cosa, once días después.
+
+> **Un árbitro que no puede ver su propio instrumento no sabe cuándo dejó de
+> medir bien.**
+
+#### Pieza 1 — Tablero de sensores en J-Staff, por cuenta y por unidad
+
+| Sensor | Qué enseña | El caso que lo pide |
+|---|---|---|
+| **Cadencia** | Puntos por unidad por hora, **y su cambio contra la semana anterior** | 🟢 **Es el que habría avisado del 29 de julio** |
+| **Aparatos vivos** | Cuántos de los declarados reportan hoy, contra los declarados | 🟢 Hoy se sabe que fueron 50–53 de punta a punta **solo porque se midió a mano** |
+| **Retraso del archivador** | Cuánto tarda la evidencia en llegar | 🟢 **Ya costó 28 servicios** juzgados con el expediente a medias — sellados viendo 13–46 puntos cuando hoy hay 370–1 992 (C3) |
+| **Salud del trazado** | Qué rutas tienen KML y **de cuándo es cada versión** | 🟢 **Tener KML o no decide más que el contrato**: `!hasKml` es lo único que apaga A∧B, y `routeStrictness` se lee después (C14) |
+| **Divergencias de política** | Qué campos difieren entre contratos y **cuáles corren con valor de fábrica** | 🟢 Seis campos difieren entre los dos contratos de Tecma, y `kmlOriginToleranceFraction` **existe en uno y no en el otro** (C16) |
+| **Observación contra conducta** | Un contador que separe **«no cumplió»** de **«no pudimos ver»** | 🟢 335 hechos `no_cumplido` con una unidad que **sí llegó** (C13), y 100 pendientes que no son falta de datos |
+
+#### Pieza 2 — Que el hecho sellado cargue su densidad de evidencia
+
+**Cuántos puntos, qué cadencia, qué huecos**, congelados dentro del hecho.
+
+🟢 **Hoy hay servicios de julio y de agosto que parecen comparables y no lo son**,
+y **sin ese dato adentro nadie lo puede saber después**. Es el Tramo 4 con nombre
+propio: *el hecho debe bastarse a sí mismo*. Ya está anotado en su tabla.
+
+#### La ley del tablero, escrita antes de dibujarlo
+
+> **Es instrumento, no juicio.**
+>
+> **Lenguaje de radar: azules y grises.** **Nunca los colores del veredicto** — y
+> **verde sigue significando cumplido y nada más**, que es la ley 1 del Marco y
+> la primera del skill de interfaz. Un sensor en rojo enseñaría a leer un
+> problema de medición como un incumplimiento, que es exactamente la confusión
+> que este frente existe para deshacer.
+>
+> **Ver la cadencia para entender está bien; ajustar umbrales hasta que la
+> operación pase, no.** Es la misma frontera del letrero de «Tu operación
+> medida» (#243), y la pantalla **no puede distinguir las dos intenciones** — así
+> que se enuncia.
+
+**Y una consecuencia de leerlos juntos:** si la cadencia cae y la cobertura cae
+con ella, **el tablero tiene que poder decir que el problema es de observación y
+no de conducta**. Esa distinción es la ley 7 del Marco —«sin evidencia no hay
+incumplimiento»— convertida en algo que se ve.
+
+---
+
 ### Frente — La reconciliación del expediente
 
 **Sale del Tramo 7 y se coloca al cerrar el Tramo 2, junto al frente del alcance
@@ -871,6 +925,7 @@ buscar cosas del catálogo que pudieron cambiar debajo de él.
 | Conjunto de variantes evaluadas | ❌ no se congela |
 | Forma de la geocerca | ❌ no se versiona, y el campo guardado no es el que el motor usó (546 divergen) |
 | Versión del motor | ❌ |
+| **Densidad de la evidencia** | ❌ **— pieza 2 del Frente de los sensores.** Cuántos puntos, qué cadencia, qué huecos. 🟢 Sin esto, un servicio de julio y uno de agosto **parecen comparables y no lo son**: los mismos aparatos, las mismas rutas y ~1.5× más puntos por aparato movieron la cobertura de 5–7 a 9.9 de 10 (C19) |
 
 **Por qué es bloqueante y no deuda:** sin esto, explicar un no cumplido de julio
 leyendo el motor de agosto **miente sin querer**. Y explicar es la mitad de la
@@ -1194,6 +1249,25 @@ bloqueante.
 - **El guion de `kmlOriginToleranceFraction` ya no copia el valor a mano:** lo lee
   de `packages/verification/src/index.ts` y **se niega a correr si no puede
   leerlo**. Regla 10 aplicada al propio guion.
+
+**5 de agosto de 2026 (los sensores).**
+- **Frente nuevo: los sensores.** Dos piezas que van juntas — un **tablero en
+  J-Staff** con seis sensores por cuenta y por unidad, y que **el hecho sellado
+  cargue su densidad de evidencia**. **Sin diseñar**, al cerrar el Tramo 2.
+- **La fecha es el argumento:** el 29 de julio la cadencia cambió, la cobertura
+  saltó de 5–7 a 9.9 de 10, **no fue nuestro y nadie se enteró**. Lo supimos
+  investigando otra cosa, once días después.
+- **Cada sensor entra con el caso que lo pide**, no como buena idea: la cadencia
+  habría avisado del 29; el retraso del archivador ya costó 28 servicios; la
+  salud del trazado existe porque **tener KML o no decide más que el contrato**;
+  y el contador de observación contra conducta, porque hay 335 acusaciones con
+  una unidad que sí llegó.
+- **Y la ley del tablero queda escrita antes de dibujarlo:** es instrumento, no
+  juicio. **Azules y grises, nunca los colores del veredicto** — verde sigue
+  siendo cumplido y nada más. Ver la cadencia para entender, sí; ajustar umbrales
+  hasta que la operación pase, no.
+- **La pieza 2 entra además a la tabla del Tramo 4**, que es donde vive «el hecho
+  debe bastarse a sí mismo».
 
 **5 de agosto de 2026 (cierre de la investigación).**
 - **C19, y va arriba de la lista: la cobertura depende de la densidad del
