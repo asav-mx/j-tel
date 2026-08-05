@@ -44,8 +44,21 @@ import { getIdentidad, type Identidad } from "@/lib/auth";
  * Una guardia que se cae y deja pasar no es una guardia.
  */
 
-/** A dónde va quien no pasa. Es la pantalla que explica quién eres y ofrece entrar. */
-export const DESTINO_SIN_PASO = "/quien-soy";
+/**
+ * A dónde va quien no pasa.
+ *
+ * Era `/quien-soy` — pantalla de **diagnóstico**: origen de la identidad,
+ * conteo de membresías, si el encabezado de suplantación fue rechazado. Mandar
+ * ahí a quien solo quiere entrar es hacerle leer el tablero del taller para
+ * abrir la puerta. Desde la pieza 1.i el destino es `/entrar`, que es una
+ * puerta y nada más; `/quien-soy` sigue existiendo, y se llega a ella desde
+ * ahí.
+ *
+ * Lo que **no** cambia: el motivo viaja como código corto, nunca el nombre de
+ * una cuenta ni la identidad. El destino sigue siendo una pantalla que ve
+ * cualquiera.
+ */
+export const DESTINO_SIN_PASO = "/entrar";
 
 /**
  * Por qué no pasó. Se manda como código corto en la URL, **nunca el nombre de
@@ -121,9 +134,9 @@ export async function decidirPagina(
 /**
  * Lo que llaman las páginas. Devuelve la identidad, o no vuelve.
  *
- * ⚠ **`/quien-soy` no se guarda con esto.** Es el destino de la negativa, así
- * que guardarla haría un bucle de redirecciones. Es también la única pantalla
- * que tiene sentido ver sin haber entrado.
+ * ⚠ **`/entrar` no se guarda con esto**, y `/quien-soy` tampoco. La primera es
+ * el destino de la negativa —guardarla haría un bucle de redirecciones— y las
+ * dos son las únicas pantallas que tienen sentido ver sin haber entrado.
  */
 export async function exigirEnPagina(audiencia: Audiencia): Promise<Identidad> {
   const veredicto = await decidirPagina(audiencia);

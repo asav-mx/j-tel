@@ -84,6 +84,10 @@ describe("donde ya hay otra identidad en pantalla, el distintivo se calla", () =
     ["/landing", "es público y no trata datos ni veredictos"],
     ["/cliente", "la nav lateral ya tiene su caja de usuario"],
     ["/cliente/planta/abc/monitoreo", "misma razón, ruta adentro"],
+    // La puerta: ahí el distintivo no era redundante, era contradictorio.
+    // «Necesitas entrar» arriba y `tecma_admin · variable` en la esquina.
+    // El encabezado trae el pathname sin query, así que el motivo no participa.
+    ["/entrar", "la puerta dice que entres; el distintivo decía que ya eres alguien"],
   ])("en %s no se pinta: %s", async (ruta) => {
     headers.mockImplementation(() => encabezadosDe(ruta));
     getIdentidad.mockResolvedValue({
