@@ -146,6 +146,27 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
    Es la regla 8 mirando al otro lado: **la mitad que confirma una causa es la
    que la descarta.**
 
+10. **Un check cuyo resultado se descarta no es un check.** **Nunca `>/dev/null`
+    sobre una verificación**, y **`&&` en vez de `;`** para que el fallo detenga
+    la cadena. Salió del #245: la build corrió, falló, y la línea decía
+    `pnpm -r build >/dev/null 2>&1; pnpm ... tsc --noEmit && ...`. El error se
+    fue a la basura y el `;` dejó seguir. Lo que se vio después —`tsc OK`,
+    `548 passed`— **era cierto**: el paquete que fallaba no estaba en ninguno de
+    esos dos. **Un verde honesto de la mitad equivocada se lee igual que un
+    verde entero.**
+11. **Una edición que no encuentra su patrón tiene que gritar.** **Toda
+    sustitución lleva su `assert`, sin excepción.** Del mismo PR: una de doce
+    sustituciones se escribió sin comprobación, su patrón vivía en otro paquete,
+    y `.replace()` devolvió el texto intacto **sin decir nada**. Un editor que no
+    distingue «cambié» de «no encontré» es la regla 8 aplicada a la herramienta:
+    los dos estados se ven idénticos desde fuera.
+12. **Hay defectos que solo el compilador ve. `pnpm build` va siempre, no solo
+    la suite.** Vitest transpila con esbuild y **no typechequea**, así que un
+    campo que falta en un tipo pasa la suite entera y revienta en `tsc`. En el
+    #245 las pruebas **sí** atraparon la mitad —el campo llegaba `undefined` en
+    tiempo de ejecución— y **ninguna podía ver la otra**. No fue un problema de
+    orden ni de escribir la prueba primero: **fue no correr el compilador.**
+
 **De producto:**
 
 > *"¿Esto tendría sentido para una planta en Bogotá cuyas rutas nunca hemos
@@ -1142,6 +1163,33 @@ bloqueante.
 - **Del historial no se quita, y queda escrito por qué.** Estando rotado, ese
   valor no abre nada: es un registro de lo que pasó, no una llave. No se
   reescribe historia por esto.
+
+**5 de agosto de 2026 (los tramos).**
+- **La pregunta abierta, contestada: ni un viaje ni la ruta en tramos.** Las 15
+  rutas del Turno A del 9 de julio, cada trazado partido en diez tramos: **la
+  mejor unidad cubre 4.8 de 10**, y **las 52 unidades del turno juntas, 7.1**.
+  Solo 2 de 15 rutas llegan a 10/10. En *Sanders - A* **siete tramos no los pisó
+  nadie** ese día.
+- **Se concilia con «el trazado sí corresponde» porque el eje es distinto:**
+  aquél agregaba veinte días, éste mira uno. 🟡 **Cada día se recorre una parte
+  distinta del trazado.**
+- **Y eso reencuadra la métrica entera:** exigir que **una** unidad cubra el 60 %
+  de un trazado que **ninguna** recorre entero **no es un umbral apretado, es una
+  cuenta que no puede salir.**
+- **Lo siguiente:** si la selección diaria sigue un patrón —variantes declaradas,
+  paradas de algunos días— o es arbitraria. Ahí entran C5 y las variantes sin
+  congelar.
+- **El guion de `kmlOriginToleranceFraction` ya no copia el valor a mano:** lo lee
+  de `packages/verification/src/index.ts` y **se niega a correr si no puede
+  leerlo**. Regla 10 aplicada al propio guion.
+
+**5 de agosto de 2026 (la autopsia del #245).**
+- **Reglas 10, 11 y 12**, las tres del mismo PR y las tres sobre instrumentos
+  que dieron verde sin haber medido: la salida silenciada, la edición que no
+  encontró su patrón, y la suite que no typechequea.
+- **Es la regla 8 aplicada a las herramientas, dos veces en el mismo PR.** Un
+  check descartado y una edición silenciosa **no se distinguen de su ausencia**,
+  que es exactamente lo que esa regla nombra.
 
 **5 de agosto de 2026 (los viajes).**
 - **C17 arreglado en el motor.** El ledger guarda ahora `routeMatchPct` —la que
