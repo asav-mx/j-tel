@@ -135,6 +135,17 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
    ocurrencias sobre nada da cero—. La corrección es la misma de los dos lados:
    **contar también algo que TIENE que estar**, no solo lo que no debe estar.
 
+9. **Una causa no se acredita contra los que fallan; se acredita contra los que
+   pasan.** Medir que el 100 % de los reprobados incumple una condición no
+   prueba que esa condición los reprobó — solo prueba que la incumplen. La
+   comprobación que decide es la del **grupo de control**: si los que **sí**
+   pasaron también la incumplen, no era esa. Salió de la investigación de C11:
+   se midió que 0 de 57 pendientes estaban dentro del tope de Fréchet y se
+   concluyó que ese tope los rechazaba; **300 de los 319 aprobados también lo
+   exceden**, y cumplieron igual. El dato era correcto y la conclusión falsa.
+   Es la regla 8 mirando al otro lado: **la mitad que confirma una causa es la
+   que la descarta.**
+
 **De producto:**
 
 > *"¿Esto tendría sentido para una planta en Bogotá cuyas rutas nunca hemos
@@ -765,9 +776,9 @@ lo suyo, y el ≥90% de capacidad de mostrar se sostiene.
 
 **Esta es la ficha de consolidación.** Vive aquí, no en un documento aparte.
 
-**Son trece, no once.** El plan viejo decía seis en una línea y listaba ocho en
-su propia tabla; el 3 de agosto se sumaron tres, y el 4 de agosto **C12 y C13**
-salieron de investigar C11. Quien compare contra esta lista **dice contra cuántas
+**Son catorce, no once.** El plan viejo decía seis en una línea y listaba ocho en
+su propia tabla; el 3 de agosto se sumaron tres, y entre el 4 y el 5 de agosto
+**C12, C13 y C14** salieron de investigar C11. Quien compare contra esta lista **dice contra cuántas
 y cuáles**, nunca «es la séptima».
 
 | # | Causa | Qué se sabe | Estado |
@@ -784,7 +795,8 @@ y cuáles**, nunca «es la séptima».
 | **C10** | **Planta 47 sella 8.8% vs Campus 54.0%** | **Causa identificada** (C11): el Campus **no tiene ni un solo** `llegada_sin_atribucion`; los 57 son todos de Planta 47 · Turno A. Los dos sitios fallan por razones distintas. Los porcentajes se remidieron el 4 ago —el 6.7 % / 55.2 % era del 3 ago— y la brecha sigue igual | **Explicada.** Deja de ser causa propia: es la sombra de C11 |
 | **C11** | **Servicios con evidencia y sin atribución** | **Investigada y cerrada** — `Ficha-Diagnostico-Pendientes-Sin-Atribucion.md`. Son **100**, no 71; los 71 eran la ventana vieja. La dominante es `llegada_sin_atribucion` (57), **toda de Planta 47 · Turno A**, y lo que la produce es que **ninguna candidata cumple A (cobertura ≥ 60 %) y B (corredor ≥ 60 %) a la vez** — 27 cumplen A, 26 cumplen B, **cero las dos** | **Medida.** Falta decidir el arreglo |
 | **C12** | **`frechetMaxKm` horneado fuera de la política** | Es el **único** umbral de KML que no vive en `contractPolicySchema`: el motor lo resuelve con `?? 0.8` y quien lo llama en producción le pasa seis umbrales de política y **no éste**. Repetido literal además en `monitoreo-data.ts`. **NO causa C11** —solo ordena candidatas, no las rechaza— y aun así incumple la **Ley 6** | **Sin construir.** Entra porque está mal, no porque convenga. C7 es su gemelo |
-| **C13** | **El veredicto del mismo fallo lo decide `routeStrictness`** | Con `destino_only` + llegada → `pendiente_evidencia`; con `kml_full` → `no_cumplido`. Planta 47 cambió de una a otra **dos veces en tres semanas**. Medido: **330 servicios de Tecma sellados `no_cumplido` con una unidad que sí llegó** a la geocerca | **Sin construir.** No es un defecto por sí solo —`kml_full` es una elección válida— pero decide acusaciones y hoy nadie lo ve. Misma familia que las «194 de 439» |
+| **C13** | **El veredicto del mismo fallo lo decide `routeStrictness`, y el cambio no deja rastro** | Con `destino_only` + llegada → `pendiente_evidencia`; con `kml_full` → `no_cumplido`. Planta 47 cambió **dos veces en tres semanas**. Medido: **330 hechos de Tecma sellados `no_cumplido` con una unidad que sí llegó**. **Nadie los ha visto** — el único usuario del sistema es Asav y ningún cliente ni carrier ha recibido un resultado, así que **no hay acusación emitida contra nadie**. Y `contract_policy_history` existe, tiene la forma correcta —`policy_before`, `policy_after`, `actor_kind`, `note`— y está **vacía en toda la base: cero filas, y ningún código escribe en ella** | **Sin construir.** Urgencia baja hoy; **el día que esto sea vinculante ese campo es una cláusula**, y una cláusula que cambia sin rastro no se puede sostener ante nadie |
+| **C14** | **`routeStrictness` no gobierna lo que su nombre promete** | Se lee en **un solo punto** del motor (`index.ts:980`) y **solo elige entre `pendiente_evidencia` y `no_cumplido` DESPUÉS de que la atribución ya falló**. La comprobación A∧B de KML corre **siempre que la ruta tenga trazado**, sin mirar la estrictez. Consecuencia: con `destino_only` un servicio cuya unidad llegó pero no pasa A∧B **no puede ser `cumplido` jamás** — queda pendiente para siempre. Lo que de verdad decide «¿basta con llegar?» **no es el contrato: es si la ruta tiene KML cargado** | **Sin construir.** Es la causa de que los 61 no se puedan cerrar solos |
 
 **Rutas compartidas:** Huertas-B aparece en C5 y en C6 — 🟢 **y NO aparece entre
 los 57 de C11**, medido el 4 de agosto. Planta 47 aparece en C10, C11 y C13.
@@ -1010,6 +1022,26 @@ bloqueante.
   valor no abre nada: es un registro de lo que pasó, no una llave. No se
   reescribe historia por esto.
 
+**5 de agosto de 2026.**
+- **Regla 9 de «las ganadas por las malas»:** una causa no se acredita contra los
+  que fallan; se acredita contra los que pasan.
+- **C14 — `routeStrictness` no gobierna lo que su nombre promete.** Se lee en un
+  solo punto del motor y solo elige el nombre del fallo, no si hay fallo. **La
+  perilla no protege nada:** aunque el contrato diga «basta con llegar», el motor
+  necesita el KML para saber quién llegó.
+- **El proveedor queda descartado como causa de la cobertura:** Umbrella entrega
+  un punto cada ~1 s contra un hueco máximo de 10 min. Los 28 que fallaron
+  cobertura traen 13–46 puntos y huecos de 20–40 min — **evidencia rala en esos
+  servicios concretos**, no cadencia lenta del proveedor.
+- **El reparto A/B es extremo, no un rozar:** cero servicios donde la MISMA
+  unidad cumpla las dos; a la que cumple cobertura le faltan **53.3 puntos** de
+  corredor, y a la que cumple corredor le faltan **54.1** de cobertura.
+- **`contract_policy_history` está vacía en toda la base y nadie escribe en
+  ella.** El cambio que decidió 330 veredictos no dejó rastro.
+- **Los 330 no los ha visto nadie**, y eso queda escrito: baja la urgencia y no
+  cierra la pregunta.
+
+**4 de agosto de 2026 (continuación).**
 - **C11 investigada y cerrada, y salieron dos causas nuevas.** La ficha vive en
   `marco-limpio/`. Son 100, no 71. La dominante es que **ninguna candidata
   cumple A y B a la vez** — 27 cumplen una, 26 la otra, cero las dos.
