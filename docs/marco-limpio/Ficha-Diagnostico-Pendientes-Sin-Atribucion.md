@@ -1106,6 +1106,111 @@ arbitraria. Ahí es donde entra C5 y las variantes no congeladas.
 
 ---
 
+## 4-vicies. ¿Patrón o arbitrario? — no hay variante escondida, y el trazado sí se recorre entero
+
+Las 15 rutas del Turno A, **los 20 días con servicio**, 300 servicios-día.
+
+### ¿Se repiten los tramos entre días?
+
+🟢 **Poco, pero el patrón más común dice algo que no esperábamos.**
+
+| | |
+|---|---|
+| Patrones distintos por ruta | **2 a 11** en 20 días |
+| Días que caen en el patrón más común de su ruta | **103 de 300 (34 %)** |
+| Tramos cubiertos por día | mediana **6/10** |
+
+> 🟢 **Y en 8 de las 15 rutas el patrón más común es `██████████` — el trazado
+> COMPLETO.** *Centro - A* lo cubre entero **16 de 20 días**, con solo dos
+> patrones distintos en todo el periodo.
+
+**El trazado no describe algo que nadie recorre: describe algo que sí se recorre
+entero, y hay días en que no.**
+
+### ¿Hay tramos condicionales — un ramal de lunes, una parada de ciertos días?
+
+🟢 **No. De los 150 tramos (15 rutas × 10):**
+
+| | Tramos |
+|---|---|
+| **SIEMPRE** recorridos | **0** |
+| **NUNCA** recorridos | **0** |
+| A veces | **150 (100 %)** |
+
+**Ni un solo tramo se comporta como un ramal condicional.** Un ramal que solo
+aplica lunes daría frecuencia ~0.2 estable; un tramo muerto daría 0. **No hay ni
+uno de los dos.** Las frecuencias van de 1 a 9 sobre 10, repartidas.
+
+### ¿Depende del día de la semana?
+
+🟢 **No.** En las 15 rutas, **el mismo día de la semana varía entre semanas**.
+
+### ¿Coincide con variantes declaradas?
+
+🟢 **No puede: hay exactamente una variante por ruta**, activa y de origen
+`manual`, en las 15. **No hay un catálogo de recorridos alternativos** con el que
+comparar.
+
+---
+
+### Y entonces apareció lo que sí tiene forma: el calendario
+
+🟢 Promedio de las 15 rutas, por día:
+
+| Día | pts/viaje | tramos/10 |
+|---|---|---|
+| 9 jul | 5 566 | 7.1 |
+| 10 jul | 3 025 | 6.0 |
+| **13 jul** | 2 764 | **0.3** |
+| 14–17 jul | ~3 270 | 5.3 – 5.7 |
+| **20 jul** | 1 732 | **0.3** |
+| 21–24 jul | ~3 350 | 5.3 – 5.6 |
+| **27 jul** | **5 166** | **0.3** |
+| 28 jul | 383 | 0.9 |
+| **29 jul** | 14 563 | **9.9** |
+| **30 jul – 5 ago** | 5 100 – 5 900 | **9.7 – 10.0** |
+
+**Dos cosas saltan, y son distintas:**
+
+🟢 **1. Desde el 29 de julio el trazado se cubre entero, todos los días.** Siete
+días seguidos entre 9.7 y 10.0 de 10. **La partialidad era un fenómeno de la
+ventana del 9 al 28 de julio, no una propiedad de estas rutas.**
+
+🟢 **2. Tres días —13, 20 y 27 de julio— tienen ~0.3 tramos con volumen de puntos
+NORMAL.** El 27 de julio hubo **5 166 puntos por viaje** —más que un día
+cualquiera— **y cobertura casi cero**. Eso **no es falta de evidencia**: es
+evidencia que no coincide con el trazado.
+
+🟢 **Correlación entre puntos del viaje y tramos cubiertos: 0.506** (0.595 por
+día). **Explica parte y no el todo** — el 27 de julio es la prueba.
+
+---
+
+### La respuesta, y lo que deja abierto
+
+🟢 **No hay patrón de variantes ni condicionalidad por día de la semana.** No hay
+ramal de lunes, no hay tramo muerto, no hay catálogo alternativo.
+
+🟢 **Y el trazado no está mal: se recorre entero, y hoy se recorre entero todos
+los días.**
+
+🟡 **Inferencia:** la partialidad diaria **no es una propiedad de la ruta**. Se
+comporta como un fenómeno con fecha —empieza y termina— y no como una regla de
+operación. Los tres días de cobertura casi nula con evidencia abundante apuntan a
+que en esas fechas **la evidencia guardada no corresponde al trazado contra el
+que se juzgó**, que es la forma de C4 —geocerca congelada distinta de la usada— y
+de las versiones de KML que entraron el 14 de julio.
+
+**Lo que sigue sin medirse, y es la pregunta concreta:** qué versión de trazado
+tenía cada ocurrencia del 13, 20 y 27 de julio, y si es la misma contra la que se
+sellaron sus hechos. **No se midió aquí.**
+
+> **Lo que esta sección NO dice:** no dice cuál es el arreglo. Dice que **la
+> hipótesis de la variante diaria queda descartada** — no hay nada que declarar
+> por día porque no hay nada que varíe por día de forma estable.
+
+---
+
 ## 5. Contra qué lista se comparó — las once de `PLAN.md` §5
 
 El handoff pide decirlo explícitamente, no decir «es la séptima».

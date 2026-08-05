@@ -167,6 +167,16 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
     tiempo de ejecución— y **ninguna podía ver la otra**. No fue un problema de
     orden ni de escribir la prueba primero: **fue no correr el compilador.**
 
+13. **Una medición agregada puede confirmar lo que la medición por caso
+    desmiente. El eje es parte del resultado.** Sobre veinte días, el 100 % del
+    trazado tenía traza real a menos de 500 m — «el trazado sí corresponde». En
+    **un** día, un tercio no lo pisaba nadie. Las dos mediciones eran correctas
+    y decían cosas opuestas **porque agregaban distinto**. Al reportar, el eje
+    —por día, por servicio, por unidad, por mes— **va dicho junto al número**, y
+    una conclusión sacada de un agregado **no se aplica al caso** sin volver a
+    medir ahí. Es la hermana de §D del Marco: aquélla es sobre el alcance
+    temporal de una cifra, ésta sobre el nivel al que se agregó.
+
 **De producto:**
 
 > *"¿Esto tendría sentido para una planta en Bogotá cuyas rutas nunca hemos
@@ -1182,6 +1192,28 @@ bloqueante.
 - **El guion de `kmlOriginToleranceFraction` ya no copia el valor a mano:** lo lee
   de `packages/verification/src/index.ts` y **se niega a correr si no puede
   leerlo**. Regla 10 aplicada al propio guion.
+
+**5 de agosto de 2026 (el patrón).**
+- **Regla 13:** una medición agregada puede confirmar lo que la medición por caso
+  desmiente. El eje es parte del resultado.
+- **La hipótesis de la variante diaria queda descartada.** 300 servicios-día: **0
+  tramos siempre recorridos, 0 nunca, 150 de 150 a veces**. No hay ramal
+  condicional ni tramo muerto. **No depende del día de la semana** en ninguna de
+  las 15 rutas. Y hay **exactamente una variante declarada por ruta**, así que no
+  hay catálogo con el que comparar.
+- **Y el trazado no está mal: en 8 de las 15 rutas el patrón más común es el
+  trazado COMPLETO.** *Centro - A* lo cubre entero 16 de 20 días.
+- **Lo que sí tiene forma es el calendario.** Desde el **29 de julio** el trazado
+  se cubre entero **todos los días** —9.7 a 10.0 de 10, siete días seguidos—. La
+  partialidad era un fenómeno **con fecha**, del 9 al 28 de julio.
+- **Y tres días rompen la explicación fácil:** 13, 20 y 27 de julio con ~0.3
+  tramos y volumen de puntos **normal** — el 27 con **5 166 puntos por viaje** y
+  cobertura casi cero. **No es falta de evidencia: es evidencia que no coincide
+  con el trazado.** La correlación puntos↔tramos es 0.506; explica parte y no el
+  todo.
+- **La siguiente pregunta, concreta y sin medir:** qué versión de trazado tenía
+  cada ocurrencia del 13, 20 y 27 de julio, y si es la misma contra la que se
+  sellaron sus hechos. Huele a C4.
 
 **5 de agosto de 2026 (la autopsia del #245).**
 - **Reglas 10, 11 y 12**, las tres del mismo PR y las tres sobre instrumentos
