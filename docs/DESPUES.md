@@ -138,7 +138,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Medición honesta de kilómetros con brincos de GPS](#medición-honesta-de-kilómetros-con-brincos-de-gps) | v1.1 |
 | [Compuerta per-candidata](#compuerta-per-candidata) | v1.1 |
 | [Qué pasa si la política cambia con la ventana abierta](#qué-pasa-si-la-política-cambia-con-la-ventana-abierta) | **Al Marco Maestro** |
-| [`CRON_SECRET` cae a un secreto publicado](#cron_secret-cae-a-un-secreto-publicado) | ✅ Código cerrado · 🤝 **falta rotarlo en Vercel** |
+| [`CRON_SECRET` cae a un secreto publicado](#cron_secret-cae-a-un-secreto-publicado) | ✅ **Cerrado** — código, documentos y rotación |
 | [Las páginas no comprueban permisos](#las-páginas-no-comprueban-permisos) | 🔴 **Antes del primer usuario real** |
 | [Cerrar el default de identidad heredada](#cerrar-el-default-de-identidad-heredada) | ⏸ Después de la guardia de páginas |
 | [El expediente por id sigue abierto](#el-expediente-por-id-sigue-abierto) | 🟡 Con la guardia por alcance |
@@ -1064,15 +1064,23 @@ estricta, que nunca descarta nada.
 
 ## `CRON_SECRET` cae a un secreto publicado
 
-> ✅ **El código quedó cerrado el 2 de agosto de 2026** (Fase 1.a de
-> `Plan-Camino-a-v1.md`). Ya no hay respaldo: sin `CRON_SECRET` las siete rutas
-> responden **503 con registro**, la comprobación vive en un solo
-> `apps/web/src/lib/guardia-cron.ts` y compara en tiempo constante, y el valor
-> salió del `README.md` y de esta entrada.
+> ✅ **CERRADO.** Tres mitades, y las tres están hechas.
 >
-> **Sigue abierto el trámite:** 🤝 rotar el secreto en Vercel, asumiéndolo
-> comprometido. Mientras no se rote, el secreto viejo sigue publicado en el
-> historial de git de este repositorio. La entrada se queda hasta entonces.
+> **El código, el 2 de agosto de 2026** (Fase 1.a de `Plan-Camino-a-v1.md`). Ya
+> no hay respaldo: sin `CRON_SECRET` las siete rutas responden **503 con
+> registro**, la comprobación vive en un solo `apps/web/src/lib/guardia-cron.ts`
+> y compara en tiempo constante.
+>
+> **Los documentos, el mismo día.** El valor salió del `README.md` y de esta
+> entrada en el mismo commit que quitó el respaldo. Comprobado sobre `main` el 4
+> de agosto de 2026: **no aparece en ningún archivo versionado.**
+>
+> **La rotación, hecha.** El secreto está rotado en Vercel.
+>
+> **Y lo que queda escrito a propósito:** el valor viejo **sigue en el historial
+> de git**, y ahí se queda. No se reescribe historia por esto. Estando rotado,
+> ese valor ya no abre nada: es un registro de lo que pasó, no una llave.
+> Decisión de Asav, 4 de agosto de 2026.
 
 **Qué era.** 🔴 **Verificado el 1 de agosto de 2026 leyendo el repo.** Las **siete rutas de
 cron** traían el mismo respaldo — `process.env.CRON_SECRET` con un valor por omisión fijo
@@ -2039,9 +2047,9 @@ sabe interpretarlo.
 **quien tenga la URL "segura" solo tiene que cambiar el nombre de usuario para escribir.**
 
 **Por qué es la misma familia que el resto de esta sección.** El candado existe, está bien
-puesto, y **la llave de al lado lo abre**. Igual que
-[`CRON_SECRET`](#cron_secret-cae-a-un-secreto-publicado): no falta el mecanismo, falta que
-el secreto sea secreto.
+puesto, y **la llave de al lado lo abre**. Es lo que le pasó a
+[`CRON_SECRET`](#cron_secret-cae-a-un-secreto-publicado) —ya cerrado, rotado incluido—:
+no falta el mecanismo, falta que el secreto sea secreto. Éste sigue abierto.
 
 **La regla ya está escrita, y eso es lo bueno.** `docs/Procedimiento-Credenciales.md` §
 ya dice que **el password de `jtel_readonly` debe ser distinto al del dueño**, y trae el
@@ -2234,7 +2242,6 @@ renglones, y **un bloqueo sin dueño escrito es un bloqueo que nadie recuerda qu
 
 | Qué | Qué desbloquea |
 |---|---|
-| 🔴 **Rotar `CRON_SECRET` en Vercel** | [El secreto publicado](#cron_secret-cae-a-un-secreto-publicado) — **el más urgente de todos** |
 | **Crear cuenta en Clerk** y sus dos llaves | Todo el Paso 2 de [auth-rbac](#lo-que-falta-del-candado-de-auth-rbac) |
 | **Comprar `j-tel.io`** | [Los subdominios](#el-resto-de-la-cara-del-producto) |
 | **Resend** — verificar dominio, API key y tres variables | Que las alertas **de verdad lleguen** a alguien |
