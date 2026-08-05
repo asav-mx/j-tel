@@ -141,6 +141,27 @@
   cursor: pointer;
 }
 
+/*
+  «¿Ya usas J-Telemetry?» — el renglón de abajo del hero.
+  Discreto a propósito: la acción destacada del landing sigue siendo la demo.
+  Esto es una salida para quien ya es cliente, no una segunda llamada.
+*/
+.yaCliente {
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--tenue);
+}
+
+.yaCliente a {
+  color: var(--azul);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--azul) 40%, transparent);
+}
+
+.yaCliente a:hover {
+  border-bottom-color: var(--azul);
+}
+
 .btn:hover {
   background: rgba(255, 255, 255, 0.06);
   border-color: var(--texto);

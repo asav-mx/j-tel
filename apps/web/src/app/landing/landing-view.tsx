@@ -35,6 +35,17 @@ export function LandingView() {
             <a href="#como">Cómo funciona</a>
             <a href="#partes">Para quién</a>
             <a href="#limites">Lo que no hace</a>
+            {/*
+              Entrar va ANTES de «Solicitar demo» y sin el estilo primario.
+              El landing vende a quien no es cliente todavía, así que la acción
+              destacada sigue siendo la demo — pero **quien ya es cliente tiene
+              que poder entrar sin escribir la ruta a mano**, que es lo que
+              pasaba: `/entrar` existía y no había un solo enlace hacia ella en
+              toda la cara pública.
+            */}
+            <a className={estilos.btn} href="/entrar">
+              Entrar
+            </a>
             <a className={`${estilos.btn} ${estilos.btnPrim}`} href="#contacto">
               Solicitar demo
             </a>
@@ -60,6 +71,16 @@ export function LandingView() {
             <a className={estilos.btn} href="#como">
               Ver cómo llega a un resultado
             </a>
+          </div>
+          {/*
+            Y una segunda salida, discreta, para quien llegó aquí por costumbre
+            y solo quiere su operación. No compite con la demo: es un renglón,
+            no un botón.
+          */}
+          <div className={estilos.ctaFila}>
+            <p className={estilos.yaCliente}>
+              ¿Ya usas J-Telemetry? <a href="/entrar">Entra a tu operación</a>.
+            </p>
           </div>
           <div className={estilos.heroLinea}>
             <span className={estilos.hl}>
