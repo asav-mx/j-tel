@@ -691,6 +691,62 @@ el bypass.
 
 ---
 
+### Frente — La puerta sin salida de `destino_only` (C14)
+
+**Se coloca al cerrar el Tramo 2, con los otros dos frentes.** **Sin diseñar.**
+
+**Qué se arregla, dicho por Asav:** *un contrato que dice «basta con llegar» y un
+motor que no puede decirlo.*
+
+🟢 **Medido:** con `destino_only`, un servicio cuya unidad **llegó a la geocerca**
+pero no pasa A∧B **no puede salir `cumplido` jamás**. `serving` queda vacío, el
+motor cae a `pendiente_evidencia` con `llegada_sin_atribucion`, y **ninguna
+re-verificación lo mueve** mientras el trazado y los umbrales sean los mismos.
+Es una **puerta sin salida**, no una falta de datos.
+
+**Por qué pasa:** la comprobación A∧B vive en `servedRoute` y **lo único que la
+apaga es `!hasKml`**. La estrictez se lee después, y solo elige el nombre del
+fallo. **Lo que hoy decide «¿basta con llegar?» es si la ruta tiene KML cargado**
+— o sea, un dato de configuración, no el contrato.
+
+**Lo que este frente NO puede hacer:** apagar A∧B para todos. El KML no está de
+adorno — es lo que permite decir **cuál** unidad sirvió cuando hay varias
+candidatas llegando a la misma geocerca. La pregunta de diseño es **cómo atribuir
+con destino cuando la ruta no acredita**, no cómo saltarse la ruta.
+
+**Dato que acota el diseño:** 🟢 el trazado contratado **sí corresponde** a lo
+que se maneja —100 % de los waypoints con traza real a menos de 500 m, mediana
+20 m—, así que **el problema no es el KML**. Ver
+`Ficha-Diagnostico-Pendientes-Sin-Atribucion.md` §4-duodecies.
+
+---
+
+### Frente — La app del coordinador de planta
+
+**Se coloca al cerrar el Tramo 2.** **Sin diseñar.**
+
+**Qué es:** que el coordinador de planta pueda declarar, desde el teléfono y
+**antes del turno**, qué unidad va a servir qué ruta.
+
+**La ley que la gobierna, y no se negocia:**
+
+> **Opcional siempre.** Es la señal de rol declarado ya escrita: **si el sistema
+> depende de que alguien declare, dejó de ser autónomo.** Es una comodidad para
+> quien la quiera, **nunca un requisito**, y un servicio sin declaración se
+> verifica exactamente igual que hoy.
+
+**Por qué ahora tiene sentido y antes no:** con la atribución fallando en 61
+servicios, una declaración previa sería **una señal más para desempatar
+candidatas** — no la verdad, una pista. El árbitro sigue midiendo; la declaración
+solo le dice por dónde empezar a mirar.
+
+**Lo que hay que cuidar al diseñarla:** una declaración que el motor **crea** en
+vez de **comprobar** convierte al coordinador en el que decide el veredicto. Eso
+rompe la misma ley que protege al carrier. **La declaración se contrasta contra
+la telemetría, siempre.**
+
+---
+
 ### Frente — La reconciliación del expediente
 
 **Sale del Tramo 7 y se coloca al cerrar el Tramo 2, junto al frente del alcance
@@ -813,9 +869,9 @@ lo suyo, y el ≥90% de capacidad de mostrar se sostiene.
 
 **Esta es la ficha de consolidación.** Vive aquí, no en un documento aparte.
 
-**Son catorce, no once.** El plan viejo decía seis en una línea y listaba ocho en
+**Son dieciséis, no once.** El plan viejo decía seis en una línea y listaba ocho en
 su propia tabla; el 3 de agosto se sumaron tres, y entre el 4 y el 5 de agosto
-**C12, C13 y C14** salieron de investigar C11. Quien compare contra esta lista **dice contra cuántas
+**C12 a C16** salieron de investigar C11. Quien compare contra esta lista **dice contra cuántas
 y cuáles**, nunca «es la séptima».
 
 | # | Causa | Qué se sabe | Estado |
@@ -833,6 +889,8 @@ y cuáles**, nunca «es la séptima».
 | **C11** | **Servicios con evidencia y sin atribución** | **Investigada y cerrada** — `Ficha-Diagnostico-Pendientes-Sin-Atribucion.md`. Son **100**, no 71; los 71 eran la ventana vieja. La dominante es `llegada_sin_atribucion` (57), **toda de Planta 47 · Turno A**, y lo que la produce es que **ninguna candidata cumple A (cobertura ≥ 60 %) y B (corredor ≥ 60 %) a la vez** — 27 cumplen A, 26 cumplen B, **cero las dos** | **Medida.** Falta decidir el arreglo |
 | **C12** | **`frechetMaxKm` horneado fuera de la política** | Es el **único** umbral de KML que no vive en `contractPolicySchema`: el motor lo resuelve con `?? 0.8` y quien lo llama en producción le pasa seis umbrales de política y **no éste**. Repetido literal además en `monitoreo-data.ts`. **NO causa C11** —solo ordena candidatas, no las rechaza— y aun así incumple la **Ley 6** | **Sin construir.** Entra porque está mal, no porque convenga. C7 es su gemelo |
 | **C13** | **El veredicto del mismo fallo lo decide `routeStrictness`, y el cambio no deja rastro** | Con `destino_only` + llegada → `pendiente_evidencia`; con `kml_full` → `no_cumplido`. Planta 47 cambió **dos veces en tres semanas**. Medido: **330 hechos de Tecma sellados `no_cumplido` con una unidad que sí llegó**. **Nadie los ha visto** — el único usuario del sistema es Asav y ningún cliente ni carrier ha recibido un resultado, así que **no hay acusación emitida contra nadie**. Y `contract_policy_history` existe, tiene la forma correcta —`policy_before`, `policy_after`, `actor_kind`, `note`— y está **vacía en toda la base: cero filas, y ningún código escribe en ella** | **Sin construir.** Urgencia baja hoy; **el día que esto sea vinculante ese campo es una cláusula**, y una cláusula que cambia sin rastro no se puede sostener ante nadie |
+| **C15** | **El expediente etiqueta mal su propia evidencia** | El ledger escribe cada candidata con el campo **`imei:`** y adentro guarda un **id de UNIDAD** — comprobado: casa con `units.id` y no con `evidence_points.imei`, que son números de 15 dígitos. **Quien lea un expediente creerá que está viendo el aparato y está viendo el vehículo.** No cambia ningún veredicto y **sí cambia lo que el expediente dice**, que es el activo del producto | **Sin construir.** Es evidencia mal etiquetada en el documento que sostiene una acusación |
+| **C16** | **La configuración del contrato no coincide con lo acordado, y no hay contra qué comparar** | Medido el 5 de agosto: el corredor del Campus está en **50 % / 150 m** y Asav lo recordaba acordado en **60 %**. Seis campos difieren entre los dos contratos y `kmlOriginToleranceFraction` **existe en uno y no en el otro**, así que el Campus corre con el valor por omisión sin que nadie lo decidiera. Con `contract_policy_history` vacía (C13), **no hay forma de leer del sistema qué se pactó** | **Sin construir.** Más grave que un umbral flojo: el árbitro puede estar aplicando una regla que las partes no pactaron |
 | **C14** | **`routeStrictness` no gobierna lo que su nombre promete** | Se lee en **un solo punto** del motor (`index.ts:980`) y **solo elige entre `pendiente_evidencia` y `no_cumplido` DESPUÉS de que la atribución ya falló**. La comprobación A∧B de KML corre **siempre que la ruta tenga trazado**, sin mirar la estrictez. Consecuencia: con `destino_only` un servicio cuya unidad llegó pero no pasa A∧B **no puede ser `cumplido` jamás** — queda pendiente para siempre. Lo que de verdad decide «¿basta con llegar?» **no es el contrato: es si la ruta tiene KML cargado** | **Sin construir.** Es la causa de que los 61 no se puedan cerrar solos |
 
 **Rutas compartidas:** Huertas-B aparece en C5 y en C6 — 🟢 **y NO aparece entre
@@ -1058,6 +1116,28 @@ bloqueante.
 - **Del historial no se quita, y queda escrito por qué.** Estando rotado, ese
   valor no abre nada: es un registro de lo que pasó, no una llave. No se
   reescribe historia por esto.
+
+**5 de agosto de 2026 (continuación).**
+- **El landing gana por dónde entrar** (#240). No había un solo enlace a
+  `/entrar` en la cara pública: se llegaba escribiendo la ruta a mano.
+- **Y estuve a punto de arreglar un desbordamiento que no existía.** Chrome en
+  macOS no baja de ~500 px de ventana, así que un `--window-size=390` entrega una
+  página de 500 recortada en un PNG de 390. **El control —`main` a 500 px
+  reales— tenía la barra perfecta.** Regla 9 del lado del instrumento.
+- **El trazado SÍ corresponde, y eso mata la hipótesis.** 1 461 waypoints de las
+  15 rutas del Turno A contra toda su traza real: **100 % a menos de 500 m,
+  mediana 20 m**, el más solitario a 430 m. No hay un tramo contratado por el que
+  nadie pase. **Hacia dónde mirar ahora: cómo se arma el conjunto de puntos de
+  cada candidata**, no el KML ni los umbrales.
+- **C15 — el expediente etiqueta mal su propia evidencia.** El ledger escribe
+  `imei:` y guarda un id de unidad. No cambia veredictos; cambia lo que el
+  expediente dice, que es el activo.
+- **C16 — la configuración no coincide con lo acordado.** El corredor del Campus
+  está en 50 % y Asav lo recordaba en 60 %. Seis campos difieren entre contratos
+  y uno existe en uno y no en el otro. **Y con el historial de política vacío, no
+  hay contra qué comparar.**
+- **Dos frentes nuevos:** la puerta sin salida de `destino_only` (C14) y la app
+  del coordinador de planta, **opcional siempre**.
 
 **5 de agosto de 2026.**
 - **Frente nuevo: la reconciliación del expediente.** Tres piezas —enseñar el
