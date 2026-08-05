@@ -27,11 +27,19 @@ export const ORIGEN_CORTO: Record<OrigenDeIdentidad, string> = {
  *
  * No se pinta sobre el landing: es público, no trata datos ni veredictos, y un
  * distintivo de identidad interna no tiene nada que hacer ahí.
+ *
+ * Tampoco sobre `/entrar`, y por una razón más fuerte que la del landing: ahí
+ * **se contradecía con la pantalla**. La puerta dice «necesitas entrar» y el
+ * distintivo, en la esquina, decía `tecma_admin · variable` — o sea, le
+ * anunciaba a un visitante sin sesión un identificador interno y, de paso, que
+ * el bypass está puesto. Medido en el arranque de producción local al construir
+ * la pieza 1.i.
  */
 async function distintivo() {
   const { headers } = await import("next/headers");
   const ruta = (await headers()).get("x-jtel-path") ?? "";
   if (ruta.startsWith("/landing")) return null;
+  if (ruta.startsWith("/entrar")) return null;
   /*
    * Tampoco donde ya hay navegación lateral: su caja de usuario dice lo mismo
    * y mejor, en el lugar que le toca. Este distintivo sigue vivo para carrier
