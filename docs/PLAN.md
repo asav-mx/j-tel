@@ -227,6 +227,7 @@ dominio se resolvieron el mismo día.
 | **T2** | **Correo — y son dos cosas, no una.** (a) **Resend**: verificar dominio, API key, tres variables. (b) **Que exista `hola@j-telemetry.com`** | (a) Que las alertas salgan de verdad. Hoy `/api/cron/alertas` responde 503 cada 5 min: el sistema detecta y no puede avisar. (b) Que un cliente pueda escribir. **(b) es de negocio, no de sistema** | **Pendiente.** Alta. El instrumento existe y no tiene bocina — y el landing no tiene buzón |
 | **T3** | **Dominio** | Los subdominios del producto | ✅ **Resuelto: `j-telemetry.com`.** `j-tel.io` queda descartado — pero ver la deuda que deja, abajo |
 | **T4** | **Rotar la contraseña del readonly** | `jtel_readonly` y `neondb_owner` comparten contraseña | **Pendiente.** Media. Con redespliegue en el mismo movimiento |
+| **T6** | **Tres identidades de prueba en Clerk** | Que Asav pueda abrir **las tres caras a la vez** en navegadores distintos, que hoy no puede | **Pendiente.** Alta. Tres usuarios en la instancia de prueba con la convención `+clerk_test` —sin buzón real, marcados por construcción—, con nombre y apellido, y sus tres `user_...`. Deja **3 filas** en `user_memberships` y nada más: ni cuentas, ni hechos, ni veredictos. Ver `Ficha-Identidades-De-Prueba.md`. **La cara de planta no se podrá ver hasta 1.h** |
 | **T5** | **`CRON_SECRET`** | — | ✅ **Cerrado.** Rotado en Vercel · el valor viejo fuera de los documentos desde el 2 de agosto (comprobado sobre `main` el 4: cero archivos versionados) · **permanece en el historial de git, rotado y sin efecto** — no se reescribe historia por esto (decisión de Asav, 4 de agosto) |
 
 **Deuda que dejó T3 — ✅ saldada el 3 de agosto** (#212 y el PR de fichas).
@@ -1116,6 +1117,23 @@ bloqueante.
 - **Del historial no se quita, y queda escrito por qué.** Estando rotado, ese
   valor no abre nada: es un registro de lo que pasó, no una llave. No se
   reescribe historia por esto.
+
+**5 de agosto de 2026 (cierre).**
+- **La ventana de evidencia tampoco era.** El motor recibe todos los puntos del
+  viaje sin filtro —`getPointsForTrip`, la ventana solo mide cobertura— pero ese
+  conjunto abarca **76 minutos de mediana** contra una ruta de 60+5. **No es la
+  jornada.** Recortarlo a la ventana descarta el **1 %** de los puntos y rescata
+  **12 de 61**, casi los mismos 10 que rescataba quitar el tope de forma.
+  **Las dos hipótesis —la de Asav y la mía— caen.**
+- **Y queda la pregunta mejor planteada:** cada servicio evalúa **~50
+  candidatas** —los autobuses del turno— y 🟢 **A está ponderada por TF-IDF**
+  (`weightedIdf: true` en el ledger) mientras **B es una fracción simple**. Una
+  unidad puede puntuar alto en una y bajísimo en la otra sin contradecirse. **La
+  siguiente medición: recalcular A sin ponderar y ver si A y B se mueven
+  juntas.** No está hecha.
+- **T6 — tres identidades de prueba.** Las tres membresías del seed ya existen;
+  falta ligarles Clerk. Deja **3 filas** y nada más, el nombre **se lee de Clerk
+  y no se guarda nunca**, y **la cara de planta no se podrá ver hasta 1.h**.
 
 **5 de agosto de 2026 (continuación).**
 - **El landing gana por dónde entrar** (#240). No había un solo enlace a

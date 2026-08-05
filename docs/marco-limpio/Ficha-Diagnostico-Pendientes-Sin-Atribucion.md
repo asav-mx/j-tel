@@ -771,6 +771,73 @@ vacía (§4-septies) y no hay contra qué comparar.
 
 ---
 
+## 4-quaterdecies. La ventana tampoco era — y con esto se acaban las hipótesis fáciles
+
+**La pregunta de Asav:** *si es el día entero del camión, B se hunde por todo lo
+que hizo fuera del servicio; si es un pedazo, A se hunde. Compara la ventana de
+evidencia usada contra la duración real del recorrido.*
+
+### Primero, lo que el código hace
+
+🟢 El motor recibe **todos los puntos del viaje**:
+`storedPoints = getPointsForTrip(trip.id)` — **sin filtro de ventana**. La
+ventana de contención (`deadline − maxRouteDuration`, `deadline + tolerancia`)
+**solo se usa para medir cobertura**, no para recortar el conjunto sobre el que
+se calculan A y B.
+
+O sea que la sospecha estaba bien planteada: **A y B se calculan sobre lo que
+haya en el viaje.**
+
+### Y luego, lo que hay en el viaje
+
+🟢 **No es el día entero.** El conjunto de puntos que recibe el motor abarca:
+
+| | Minutos |
+|---|---|
+| mediana | **76** |
+| mínimo | 66 |
+| máximo | 105 |
+
+Contra una ruta contratada de **60 minutos + 5 de tolerancia**. Es el recorrido
+más un margen, no una jornada.
+
+🟢 **Recortar a la ventana descarta el 1 % de los puntos** (mediana). Y con los
+puntos recortados:
+
+| Recorte | Pasan A ∧ B |
+|---|---|
+| Sin recortar (hoy) | 0 de 61 |
+| A la ventana de contención | **12 de 61** |
+| A una ventana amplia (deadline − 3 h) | **12 de 61** |
+
+> 🟢 **La ventana no era.** No sobra el día entero —sobra un 1 %— y recortarla
+> rescata 12, prácticamente los mismos 10 que rescataba quitar el tope de forma.
+> **Ninguna de las dos hipótesis sobrevive.**
+
+*(Control: 3 054 de 3 054 candidatas reproducidas antes de recortar nada.)*
+
+### Lo que queda en pie, dicho como pregunta y no como respuesta
+
+🟢 **Cada servicio evalúa unas 50 candidatas** —3 054 entre 61—. Son los ~50
+autobuses del turno, y el viaje guarda los puntos de todos.
+
+🟢 Y el reparto medido antes: la candidata que **sí** cubre la ruta (A ≥ 60) tiene
+**el 6.7 %** de sus puntos dentro del corredor; la que sí está en el corredor
+(B ≥ 60) cubre **el 5.9 %** de la ruta.
+
+🟡 **Eso ya no se explica con el conjunto de puntos**, porque el conjunto es del
+tamaño correcto. Apunta a que **A y B no miden cosas comparables**: 🟢 el ledger
+registra `weightedIdf: true`, así que **A está ponderada por TF-IDF** —pesa más
+los waypoints que distinguen a esta ruta de las demás— mientras **B es una
+fracción simple** de puntos dentro del corredor. Una unidad puede puntuar alto en
+una ponderación y bajísimo en la otra sin contradicción.
+
+**Ésa es la siguiente medición, y no está hecha:** recalcular A **sin ponderar**
+y ver si entonces A y B se mueven juntas. Si se mueven juntas, la ponderación es
+la que rompe el par; si no, hay que mirar la asignación viaje↔unidad.
+
+---
+
 ## 5. Contra qué lista se comparó — las once de `PLAN.md` §5
 
 El handoff pide decirlo explícitamente, no decir «es la séptima».
