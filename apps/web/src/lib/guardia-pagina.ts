@@ -25,12 +25,17 @@ import { getIdentidad, type Identidad } from "@/lib/auth";
  *
  * Ésta es la parte que hay que leer antes de tocar este archivo.
  *
- * Mientras el bypass de desarrollo viva, **`getIdentidad()` siempre devuelve
- * alguien**: si no hay sesión de Clerk, cae a `JTEL_DEV_USER` y, si tampoco,
- * al heredado `tecma_admin`. En producción `JTEL_DEV_USER=jstaff_admin` está
- * puesto, así que **un visitante anónimo *es* `jstaff_admin`, con sus
- * membresías**. Una guardia que preguntara «¿hay identidad?» pasaría a todo el
- * mundo y se vería exactamente igual que una que funciona.
+ * Mientras el bypass de desarrollo viva, **`getIdentidad()` sigue devolviendo
+ * alguien en producción**: si no hay sesión de Clerk cae a `JTEL_DEV_USER`, y
+ * ahí `jstaff_admin` está puesto en Vercel — así que **un visitante anónimo
+ * *es* `jstaff_admin`, con sus membresías**. Una guardia que preguntara «¿hay
+ * identidad?» pasaría a todo el mundo y se vería exactamente igual que una que
+ * funciona.
+ *
+ * (Desde la pieza 1.e ya no hay un tercer escalón: sin sesión y sin
+ * `JTEL_DEV_USER`, `getIdentidad()` devuelve `userId: null`. Eso cierra el
+ * caso de local y CI, **no** el de producción, donde la variable sí está
+ * puesta. La razón de esta guardia no cambió ni un milímetro.)
  *
  * Por eso en producción se exige **sesión de Clerk real** (`sesionActiva`), no
  * identidad a secas. Fuera de producción se acepta el bypass: es lo que permite

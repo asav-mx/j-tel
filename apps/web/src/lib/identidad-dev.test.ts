@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   bypassPorEncabezadoPermitido,
   resolverIdentidadDeDesarrollo,
-  USUARIO_HEREDADO,
   type EntornoDeIdentidad,
 } from "./identidad-dev";
 
@@ -31,8 +30,8 @@ describe("en producción, el encabezado no alcanza por sí solo", () => {
   it("sin secreto configurado, el encabezado se rechaza", () => {
     const r = resolverIdentidadDeDesarrollo(entorno({ pedido: "jstaff_admin" }));
 
-    expect(r.userId).not.toBe("jstaff_admin");
-    expect(r.origen).toBe("default-heredado");
+    expect(r.userId).toBeNull();
+    expect(r.origen).toBe("anonimo");
     expect(r.encabezadoRechazado).toBe(true);
   });
 
@@ -41,7 +40,7 @@ describe("en producción, el encabezado no alcanza por sí solo", () => {
       entorno({ pedido: "jstaff_admin", token: "adivinado", secretoEsperado: "el-bueno" }),
     );
 
-    expect(r.userId).toBe(USUARIO_HEREDADO);
+    expect(r.userId).toBeNull();
     expect(r.encabezadoRechazado).toBe(true);
   });
 
@@ -60,7 +59,7 @@ describe("en producción, el encabezado no alcanza por sí solo", () => {
       entorno({ token: "el-bueno", secretoEsperado: "el-bueno" }),
     );
 
-    expect(r.origen).toBe("default-heredado");
+    expect(r.origen).toBe("anonimo");
     expect(r.encabezadoRechazado).toBe(false);
   });
 });
@@ -89,7 +88,7 @@ describe("el encabezado rechazado se ignora entero, nunca a medias", () => {
 });
 
 describe("sin encabezado, manda el servidor", () => {
-  it("la variable de entorno gana al default heredado", () => {
+  it("la variable de entorno sigue mandando", () => {
     const r = resolverIdentidadDeDesarrollo(entorno({ usuarioPorVariable: "jb_admin" }));
 
     expect(r).toEqual({
@@ -99,11 +98,37 @@ describe("sin encabezado, manda el servidor", () => {
     });
   });
 
-  it("sin nada, queda el default heredado — nombrado, para que se vea que es muleta", () => {
+  /**
+   * Pieza 1.e — la muleta retirada.
+   *
+   * Aquí el código devolvía `tecma_admin`: un admin corporativo de una cuenta
+   * de CLIENTE REAL, con todas sus membresías, entregado a quien llegara sin
+   * ninguna señal. El peor fallo posible —quedarse sin nada— daba el acceso más
+   * ancho que hay en una cuenta.
+   */
+  it("sin nada, no hay nadie — y `nadie` no es un usuario", () => {
     const r = resolverIdentidadDeDesarrollo(entorno());
 
-    expect(r.userId).toBe(USUARIO_HEREDADO);
-    expect(r.origen).toBe("default-heredado");
+    expect(r).toEqual({ userId: null, origen: "anonimo", encabezadoRechazado: false });
+  });
+
+  it("ninguna combinación devuelve una identidad que nadie eligió", () => {
+    const combinaciones: Array<Partial<EntornoDeIdentidad>> = [
+      {},
+      { enProduccion: false },
+      { pedido: "tecma_admin" },
+      { pedido: "tecma_admin", token: "equivocado", secretoEsperado: "el-bueno" },
+      { token: "el-bueno", secretoEsperado: "el-bueno" },
+      { usuarioPorVariable: "" },
+    ];
+
+    for (const over of combinaciones) {
+      const r = resolverIdentidadDeDesarrollo(entorno(over));
+      // Nadie sale `tecma_admin` sin que alguien lo haya pedido a propósito.
+      if (over.pedido !== "tecma_admin" || r.origen !== "encabezado-dev") {
+        expect(r.userId).not.toBe("tecma_admin");
+      }
+    }
   });
 });
 

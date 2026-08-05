@@ -34,10 +34,10 @@ const ORIGEN: Record<OrigenDeIdentidad, { titulo: string; lectura: string }> = {
     lectura:
       "La identidad la fija JTEL_DEV_USER en el servidor. No se puede cambiar desde el navegador, pero es la misma para todos los que entren.",
   },
-  "default-heredado": {
-    titulo: "Default heredado",
+  anonimo: {
+    titulo: "Nadie",
     lectura:
-      "Nadie eligió esta identidad: es la que el código asume cuando no hay ninguna otra. Es la muleta que auth-rbac existe para retirar.",
+      "No hay identidad: ni sesión de Clerk, ni encabezado válido, ni JTEL_DEV_USER. Aquí el código asumía tecma_admin —un admin corporativo de un cliente real— y eso se retiró en la pieza 1.e. Sin señal no hay usuario.",
   },
 };
 
@@ -96,7 +96,7 @@ export default async function QuienSoyPage() {
               Identificador
             </div>
             <div className="mt-1.5 font-[family-name:var(--fuente-archivo)] text-[26px] leading-none font-bold tracking-[-0.015em] text-[var(--texto)]">
-              {id.userId}
+              {id.userId ?? "— sin identidad —"}
             </div>
             <p className="mt-3 max-w-[58ch] text-[13.5px] text-[var(--tenue)]">
               <b className="font-medium text-[var(--texto)]">{origen.titulo}.</b> {origen.lectura}

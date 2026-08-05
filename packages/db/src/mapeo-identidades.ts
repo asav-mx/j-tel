@@ -8,10 +8,12 @@
  *
  * **Se agrega, no se reemplaza, y esa es la decisión que gobierna este archivo.**
  * Esas cadenas no son datos muertos: son lo que hoy deja entrar a cualquiera.
- * `JTEL_DEV_USER=jstaff_admin` está puesto en Vercel y `USUARIO_HEREDADO` del
- * bypass es `tecma_admin`. Un `UPDATE` sobre esas filas deja al bypass sin
- * membresías y **cierra el producto en silencio** — las pantallas siguen
- * abriendo, en blanco. Insertando, las dos identidades conviven: la cadena del
+ * `JTEL_DEV_USER=jstaff_admin` está puesto en Vercel, y eso es lo que sostiene
+ * el acceso. (El respaldo `tecma_admin` del bypass **ya no existe**: la pieza
+ * 1.e lo retiró y sin señal no hay identidad. La cadena del seed sigue en la
+ * tabla porque es la que usa `JTEL_DEV_USER`.) Un `UPDATE` sobre esas filas
+ * deja al bypass sin membresías y **cierra el producto en silencio** — las
+ * pantallas siguen abriendo, en blanco. Insertando, las dos identidades conviven: la cadena del
  * seed sostiene el bypass y el `user_...` empieza a funcionar en cuanto haya
  * sesión. Las del seed se retiran cuando se retire el bypass, no antes.
  *
