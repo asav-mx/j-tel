@@ -1,6 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { canAccessCarrierAccount, canAccessClientAccount } from "@jtel/auth-rbac";
 import { decidir, type Audiencia, type Decision } from "@/lib/guardia-api";
+import {
+  destinoDeVuelta,
+  ENCABEZADO_RUTA_COMPLETA,
+  PARAM_VOLVER,
+} from "@/lib/destino-de-vuelta";
 import { getIdentidad, type Identidad } from "@/lib/auth";
 
 /**
@@ -20,12 +25,17 @@ import { getIdentidad, type Identidad } from "@/lib/auth";
  *
  * Ésta es la parte que hay que leer antes de tocar este archivo.
  *
- * Mientras el bypass de desarrollo viva, **`getIdentidad()` siempre devuelve
- * alguien**: si no hay sesión de Clerk, cae a `JTEL_DEV_USER` y, si tampoco,
- * al heredado `tecma_admin`. En producción `JTEL_DEV_USER=jstaff_admin` está
- * puesto, así que **un visitante anónimo *es* `jstaff_admin`, con sus
- * membresías**. Una guardia que preguntara «¿hay identidad?» pasaría a todo el
- * mundo y se vería exactamente igual que una que funciona.
+ * Mientras el bypass de desarrollo viva, **`getIdentidad()` sigue devolviendo
+ * alguien en producción**: si no hay sesión de Clerk cae a `JTEL_DEV_USER`, y
+ * ahí `jstaff_admin` está puesto en Vercel — así que **un visitante anónimo
+ * *es* `jstaff_admin`, con sus membresías**. Una guardia que preguntara «¿hay
+ * identidad?» pasaría a todo el mundo y se vería exactamente igual que una que
+ * funciona.
+ *
+ * (Desde la pieza 1.e ya no hay un tercer escalón: sin sesión y sin
+ * `JTEL_DEV_USER`, `getIdentidad()` devuelve `userId: null`. Eso cierra el
+ * caso de local y CI, **no** el de producción, donde la variable sí está
+ * puesta. La razón de esta guardia no cambió ni un milímetro.)
  *
  * Por eso en producción se exige **sesión de Clerk real** (`sesionActiva`), no
  * identidad a secas. Fuera de producción se acepta el bypass: es lo que permite
@@ -74,6 +84,51 @@ export type MotivoDeNegativa =
 export type VeredictoDePagina =
   | { ok: true; identidad: Identidad }
   | { ok: false; motivo: MotivoDeNegativa };
+
+/**
+ * A dónde mandar al que no pasó — pieza 1.j.
+ *
+ * La guardia es la única que sabe a dónde iba la persona, así que es la que
+ * tiene que apuntarlo. Lo lee del encabezado que pone el middleware, que trae
+ * ruta y búsqueda y **nunca origen**.
+ *
+ * ## Con `sin-alcance` no se adjunta destino, y es a propósito
+ *
+ * `sin-alcance` significa que la sesión es buena y el recurso no es tuyo.
+ * Devolver a esa persona al mismo sitio la mete en un ciclo de negativas: entra,
+ * vuelve, la niegan otra vez. Los otros tres motivos —sin sesión, identidad
+ * irresoluble, membresía irresoluble— sí se arreglan entrando o reintentando,
+ * y ahí volver es exactamente lo que hace falta.
+ *
+ * ## Se valida aquí, y **otra vez** al consumirlo
+ *
+ * Que el valor salga de un encabezado nuestro no lo vuelve de fiar en la
+ * pantalla: cualquiera puede teclear `?volver=` a mano en la URL de la puerta.
+ * Aquí se valida para no escribir basura en un enlace; allá se valida porque es
+ * el único lugar donde importa.
+ *
+ * Se exporta para poder probarla: `redirect()` lanza a propósito, así que la
+ * URL que arma no se puede leer en una aserción normal desde fuera. Mismo
+ * reparto que en el resto del archivo — la decisión de un lado, el efecto del
+ * otro.
+ */
+export async function destinoDeLaNegativa(motivo: MotivoDeNegativa): Promise<string> {
+  const base = `${DESTINO_SIN_PASO}?motivo=${motivo}`;
+  if (motivo === "sin-alcance") return base;
+
+  let destino: string | null = null;
+  try {
+    const { headers } = await import("next/headers");
+    destino = destinoDeVuelta((await headers()).get(ENCABEZADO_RUTA_COMPLETA));
+  } catch {
+    // Sin encabezado no hay a dónde volver, y eso no es motivo para no negar
+    // el paso. La negativa manda; el destino es una comodidad.
+    return base;
+  }
+
+  if (!destino) return base;
+  return `${base}&${PARAM_VOLVER}=${encodeURIComponent(destino)}`;
+}
 
 /**
  * ¿Esta identidad sirve para entrar?
@@ -142,9 +197,11 @@ export async function exigirEnPagina(audiencia: Audiencia): Promise<Identidad> {
   const veredicto = await decidirPagina(audiencia);
   if (veredicto.ok) return veredicto.identidad;
 
+  const destino = await destinoDeLaNegativa(veredicto.motivo);
+
   // Fuera de cualquier `try`: `redirect()` lanza a propósito, y un catch de
   // más lo convertiría en «no pasó nada» — la página seguiría renderizando.
-  redirect(`${DESTINO_SIN_PASO}?motivo=${veredicto.motivo}`);
+  redirect(destino);
 }
 
 /**
@@ -159,15 +216,18 @@ export async function exigirEnPagina(audiencia: Audiencia): Promise<Identidad> {
  * antes de saber contra qué comparar.
  */
 export async function exigirSesion(): Promise<Identidad> {
-  let identidad: Identidad;
+  let identidad: Identidad | null = null;
   try {
     identidad = await getIdentidad();
   } catch {
-    redirect(`${DESTINO_SIN_PASO}?motivo=identidad-irresoluble`);
+    // El destino se arma ANTES del redirect: `redirect()` lanza, así que
+    // cualquier `await` después de él es código que no corre.
   }
 
+  if (identidad === null) redirect(await destinoDeLaNegativa("identidad-irresoluble"));
+
   if (!sesionUtilizable(identidad)) {
-    redirect(`${DESTINO_SIN_PASO}?motivo=sin-sesion`);
+    redirect(await destinoDeLaNegativa("sin-sesion"));
   }
 
   return identidad;
@@ -280,5 +340,5 @@ export async function exigirRecurso(
 
   // Los dos lanzan; ninguno va dentro de un `try`.
   if (v.motivo === "inexistente-o-ajeno") notFound();
-  redirect(`${DESTINO_SIN_PASO}?motivo=${v.motivo}`);
+  redirect(await destinoDeLaNegativa(v.motivo));
 }

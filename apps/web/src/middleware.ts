@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { CLERK_CONFIGURADO } from "@/lib/clerk-estado";
+import { ENCABEZADO_RUTA_COMPLETA } from "@/lib/destino-de-vuelta";
 
 /**
  * El middleware del Paso 1 hace dos cosas y **ninguna de las dos cierra nada**.
@@ -67,14 +68,23 @@ function limpiarUrlDeCuenta(request: NextRequest) {
  * El layout raíz necesita saber en qué ruta está para no pintar el distintivo
  * de identidad encima del landing, que es público y no trata datos. Un layout
  * de servidor no puede leer el pathname, así que se lo pasamos por encabezado.
+ *
+ * Y desde la pieza 1.j viaja también la ruta **con su búsqueda**, que es la que
+ * la guardia necesita para poder devolverte a donde ibas. Van en encabezados
+ * distintos a propósito: `ENCABEZADO_RUTA` lo consumen comparaciones de prefijo
+ * —`/landing`, `/cliente`— y meterle la búsqueda le cambiaría el significado a
+ * quien ya lo usa. Un encabezado que quiere decir dos cosas termina diciendo la
+ * equivocada.
  */
 function conRuta(request: NextRequest) {
   const headers = new Headers(request.headers);
   headers.set(ENCABEZADO_RUTA, request.nextUrl.pathname);
+  headers.set(ENCABEZADO_RUTA_COMPLETA, `${request.nextUrl.pathname}${request.nextUrl.search}`);
   return NextResponse.next({ request: { headers } });
 }
 
 export const ENCABEZADO_RUTA = "x-jtel-path";
+
 
 function manejar(request: NextRequest) {
   return limpiarUrlDeCuenta(request) ?? conRuta(request);

@@ -17,13 +17,25 @@ export type OrigenDeIdentidad =
   | "clerk"
   | "encabezado-dev"
   | "variable-dev"
-  | "default-heredado";
-
-/** El usuario que el código asume cuando no hay ninguna otra señal. */
-export const USUARIO_HEREDADO = "tecma_admin";
+  /**
+   * Nadie. **No es un usuario**: es la ausencia de uno.
+   *
+   * Reemplaza a `default-heredado`, que devolvía `tecma_admin` —un admin
+   * corporativo de un cliente REAL— cuando no había ninguna señal. Pieza 1.e.
+   */
+  | "anonimo";
 
 export type Resuelto = {
-  userId: string;
+  /**
+   * `null` cuando no hay a quién identificar, y por eso no es `string`.
+   *
+   * La regla ganada por las malas número 4 dice que si el default es un
+   * secreto, credencial, identidad o URL de base, no lleva default: revienta.
+   * Aquí «revienta» toma la forma honesta para una identidad: **no hay
+   * ninguna**, dicho en el tipo, para que cada consumidor tenga que decidir qué
+   * hace sin nadie en vez de recibir a alguien que nadie eligió.
+   */
+  userId: string | null;
   origen: OrigenDeIdentidad;
   encabezadoRechazado: boolean;
 };
@@ -73,8 +85,8 @@ export function resolverIdentidadDeDesarrollo(e: EntornoDeIdentidad): Resuelto {
     }
     // Se ignora entero y se deja constancia; nunca se acepta a medias.
     return {
-      userId: porVariable || USUARIO_HEREDADO,
-      origen: porVariable ? "variable-dev" : "default-heredado",
+      userId: porVariable ?? null,
+      origen: porVariable ? "variable-dev" : "anonimo",
       encabezadoRechazado: true,
     };
   }
@@ -84,10 +96,18 @@ export function resolverIdentidadDeDesarrollo(e: EntornoDeIdentidad): Resuelto {
   }
 
   /*
-   * El default heredado. Se conserva porque quitarlo hoy dejaría sin identidad
-   * a todas las pantallas que hoy funcionan, y este paso no cierra puertas —
-   * pero sale nombrado en `/quien-soy` para que se vea que es una muleta y no
-   * una decisión.
+   * Nadie. Aquí vivía el default heredado: sin sesión de Clerk, sin encabezado
+   * válido y sin `JTEL_DEV_USER`, el código devolvía `tecma_admin` — un admin
+   * corporativo de una cuenta de cliente REAL, con todas sus membresías.
+   *
+   * Se conservaba porque quitarlo dejaba sin identidad a pantallas que no
+   * tenían guardia. Ya la tienen: las 65 de la pieza 1.c. La muleta era lo
+   * único que faltaba retirar, y mientras estuvo puesta el peor fallo posible
+   * —quedarse sin ninguna señal— entregaba el acceso más ancho que hay en una
+   * cuenta de cliente.
+   *
+   * Ahora no hay nadie, y eso es lo que se devuelve. Quien no pueda funcionar
+   * sin identidad, que lo diga; lo que no puede pasar es que se la inventemos.
    */
-  return { userId: USUARIO_HEREDADO, origen: "default-heredado", encabezadoRechazado: false };
+  return { userId: null, origen: "anonimo", encabezadoRechazado: false };
 }

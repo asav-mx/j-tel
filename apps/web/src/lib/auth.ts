@@ -32,8 +32,16 @@ const ENCABEZADO_USUARIO = "x-jtel-user";
 const ENCABEZADO_TOKEN = "x-jtel-dev-token";
 
 export type Identidad = {
-  /** El identificador con el que se buscan membresías. */
-  userId: string;
+  /**
+   * El identificador con el que se buscan membresías, o `null` cuando no hay
+   * nadie a quien identificar — pieza 1.e.
+   *
+   * Es `| null` en el tipo a propósito: obliga a cada pantalla a decidir qué
+   * hace sin identidad. Antes esto nunca era nulo porque el código inventaba
+   * `tecma_admin`, así que la pregunta no existía y la respuesta era la peor
+   * posible.
+   */
+  userId: string | null;
   origen: OrigenDeIdentidad;
   memberships: UserMembership[];
   clerkConfigurado: boolean;
@@ -78,16 +86,20 @@ export async function getIdentidad(): Promise<Identidad> {
         usuarioPorVariable: process.env.JTEL_DEV_USER,
       });
 
-  const repos = getRepos();
-  const rows = await repos.memberships.findForUser(resuelto.userId);
-
-  const memberships: UserMembership[] = rows.map((row) => ({
-    accountId: row.accountId,
-    clerkUserId: row.clerkUserId,
-    role: row.role,
-    scopeType: row.scopeType,
-    scopeId: row.scopeId,
-  }));
+  /*
+   * Sin identificador no se consulta la base. No es una optimización: buscar
+   * membresías de `null` es una pregunta sin sentido, y una consulta sin
+   * sentido es la clase de cosa que un día devuelve algo.
+   */
+  const memberships: UserMembership[] = resuelto.userId
+    ? (await getRepos().memberships.findForUser(resuelto.userId)).map((row) => ({
+        accountId: row.accountId,
+        clerkUserId: row.clerkUserId,
+        role: row.role,
+        scopeType: row.scopeType,
+        scopeId: row.scopeId,
+      }))
+    : [];
 
   return {
     userId: resuelto.userId,
@@ -101,7 +113,7 @@ export async function getIdentidad(): Promise<Identidad> {
 
 /** La forma que ya consumían los llamadores existentes. */
 export async function getAccessContext(): Promise<{
-  clerkUserId: string;
+  clerkUserId: string | null;
   memberships: UserMembership[];
 }> {
   const { userId, memberships } = await getIdentidad();

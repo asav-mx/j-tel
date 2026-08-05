@@ -143,11 +143,32 @@ describe("con la base caída, la pantalla sobrevive y solo falta el distintivo",
   });
 });
 
+describe("sin identidad, el distintivo lo dice en vez de inventar un nombre", () => {
+  it("pinta «nadie», no un usuario que nadie eligió", async () => {
+    headers.mockImplementation(() => encabezadosDe(RUTA_CON_DISTINTIVO));
+    getIdentidad.mockResolvedValue({
+      userId: null,
+      origen: "anonimo",
+      memberships: [],
+      clerkConfigurado: false,
+      sesionActiva: false,
+      encabezadoRechazado: false,
+    });
+
+    const html = renderToStaticMarkup(createElement("main", null, await SesionActual()));
+
+    expect(html).toContain("nadie");
+    expect(html).toContain("sin identidad");
+    // Y sobre todo: ni rastro del default que se retiró.
+    expect(html).not.toContain("tecma_admin");
+  });
+});
+
 describe("cuando todo funciona, el distintivo sí se pinta", () => {
   it("muestra identificador y origen", async () => {
     getIdentidad.mockResolvedValue({
       userId: "tecma_admin",
-      origen: "default-heredado",
+      origen: "variable-dev",
       memberships: [{ accountId: "a", clerkUserId: "tecma_admin", role: "admin", scopeType: "account" }],
       clerkConfigurado: false,
       sesionActiva: false,
@@ -159,7 +180,7 @@ describe("cuando todo funciona, el distintivo sí se pinta", () => {
     );
 
     expect(html).toContain("tecma_admin");
-    expect(html).toContain("por defecto");
+    expect(html).toContain("variable");
     expect(html).toContain("quien-soy");
   });
 });
