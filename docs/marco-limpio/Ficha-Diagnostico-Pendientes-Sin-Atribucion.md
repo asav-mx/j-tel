@@ -389,6 +389,202 @@ estrictez cambió a `kml_full`.
 
 ---
 
+## 4-quater. La perilla no protege nada — respondido con el código
+
+**La pregunta de Asav, textual:** *¿la comprobación de corredor que rechaza a los
+57 corre siempre, o solo cuando `routeStrictness` está en `kml_full`?*
+
+🟢 **Corre siempre que la ruta tenga KML. La estrictez no la toca.**
+
+`routeStrictness` aparece **ocho veces** en el motor. **Siete son
+`routeStrictnessApplied: input.routeStrictness`** — la copia al resultado, que no
+decide nada. **La octava es la única que decide**, y es ésta:
+
+```ts
+// index.ts:980, dentro de  if (serving.length === 0) { ... }
+const isDestinoOnly = input.routeStrictness === "destino_only";
+```
+
+Es decir: **se lee después de que `serving` ya salió vacío**, o sea después de
+que la atribución **ya falló**. Solo elige el nombre del fallo.
+
+La comprobación que rechaza no la mira:
+
+```ts
+const servedRoute =
+  arrivalAt !== null &&
+  (!hasKml ||                                    // <- la única condición que la apaga
+    (observableEnough &&
+      routeMatchPct      >= params.minKmlPct &&
+      corridorPrecisionPct >= params.minCorridorPct));
+```
+
+> 🟢 **Lo que decide «¿basta con llegar?» no es el contrato: es si la ruta tiene
+> KML cargado.** `!hasKml` es lo único que apaga A∧B. Con trazado cargado, A∧B
+> corre aunque el contrato diga `destino_only`.
+
+**Consecuencia, y es la que cierra el caso de los 61:** con `destino_only`, un
+servicio cuya unidad llegó pero no pasa A∧B **no puede ser `cumplido` jamás**.
+`serving` sale vacío → `isDestinoOnly && anyArrived` → `pendiente_evidencia`.
+**Queda pendiente para siempre**, y ninguna re-verificación lo mueve mientras el
+trazado y los umbrales sean los mismos.
+
+🟡 **Inferencia:** la perilla se lee como *«¿exijo la ruta o basta el destino?»* y
+hace otra cosa: *«cuando no pueda atribuir, ¿lo llamo pendiente o acusación?»*.
+Entra al plan como **C14**.
+
+---
+
+## 4-quinquies. La cobertura — no es el proveedor
+
+**Lo que exige hoy la política**, 🟢 leído de cada contrato:
+
+| Contrato | estrictez | cobertura mín. | hueco máx. | A | B | corredor |
+|---|---|---|---|---|---|---|
+| Tecma 47 | `destino_only` | 80 % | 10 min | 60 % | **60 %** | **120 m** |
+| Campus Santos Dumont | `kml_full` | 80 % | 10 min | 60 % | **50 %** | **150 m** |
+
+> 🟢 **Planta 47 tiene el corredor MÁS ESTRICTO de los dos** —B ≥ 60 % dentro de
+> 120 m contra B ≥ 50 % dentro de 150 m— y es la que falla. 🟡 Es un candidato
+> directo para explicar por qué el Campus no tiene ni un `llegada_sin_atribucion`,
+> y **no está medido**: se prueba recalculando B de Planta 47 con 150 m.
+
+**Lo que entrega Umbrella**, 🟢 medido sobre los puntos guardados:
+
+| Semana | pts/servicio | mediana entre puntos | peor hueco |
+|---|---|---|---|
+| 6 jul | 4 680 | 1.0 s | 2.0 min |
+| 13 jul | 3 917 | 1.1 s | 1.0 min |
+| 20 jul | 3 834 | 1.1 s | 1.0 min |
+| 27 jul | 4 378 | 1.0 s | 0.7 min |
+| 3 ago | 4 864 | 1.0 s | 2.0 min |
+
+🟢 **El proveedor NO emite más lento que el hueco máximo.** Un punto por segundo
+contra una tolerancia de 10 minutos; el peor hueco agregado es 2 min. **La
+hipótesis del proveedor queda descartada como causa general.**
+
+🟢 **Pero los 28 que fallaron cobertura son otra cosa:** traen **13 a 46 puntos**
+—contra ~4 000 de media— y huecos de **19.7 a 40 minutos**. Fallan **las dos
+condiciones a la vez**, el porcentaje y el hueco.
+
+🟡 **Inferencia:** no es cadencia del proveedor, es **evidencia ausente en esos
+servicios concretos**. Si el aparato estaba apagado, si la unidad no salió, o si
+el proveedor perdió ese tramo, **es una pregunta distinta y no está medida.**
+
+---
+
+## 4-sexies. El reparto A/B — no se turnan, están en extremos opuestos
+
+**La pregunta de Asav:** ¿son las mismas unidades las que fallan cada condición o
+se turnan? Y si una cumple cobertura, ¿qué tan lejos queda de cumplir corredor?
+
+🟢 Medido sobre los servicios con `llegada_sin_atribucion`:
+
+| Situación | Servicios |
+|---|---|
+| Alguna unidad pasa A **y** alguna pasa B, **y es la MISMA** | **0** |
+| ...y son unidades **distintas** (se turnan) | **1** |
+| Solo se cumple **una** de las dos condiciones, por nadie más | **60** |
+
+**No se turnan: en 60 de 61 servicios ni siquiera hay dos unidades que se
+repartan las dos condiciones. Simplemente una de las dos no la cumple nadie.**
+
+Y la distancia a la otra condición **no es un rozar**:
+
+| | Mediana de lo que le falta |
+|---|---|
+| A la unidad que **sí** cumple cobertura, para cumplir corredor | **53.3 puntos** (B ≈ 6.7 %) |
+| A la unidad que **sí** cumple corredor, para cumplir cobertura | **54.1 puntos** (A ≈ 5.9 %) |
+
+> 🟢 **Están en extremos opuestos, no cerca del umbral.** Una unidad que cubre
+> ≥ 60 % del trazado tiene el **6.7 %** de sus puntos dentro del corredor; una que
+> tiene ≥ 60 % de sus puntos en el corredor cubre el **5.9 %** del trazado.
+
+🟡 **Inferencia — y descarta mi hipótesis anterior del relevo.** Dije que parecía
+una ruta servida por varias unidades. **Con 0 casos de la misma unidad y 1 de
+unidades distintas, eso no se sostiene.** Lo que describen estos números son dos
+formas de traza incompatibles con el trazado: una que **pasa cerca de casi todos
+los waypoints pero anda mayormente fuera** —un recorrido mucho más largo que
+incluye la ruta— y otra que **anda muy pegada al trazado pero solo por un
+pedacito**. Ninguna de las dos es «casi cumple».
+
+---
+
+## 4-septies. Los 330 — los tres cortes
+
+**Primero, lo que cambia la lectura entera** *(aclaración de Asav, 5 de agosto)*:
+
+> 🔵 **Nadie los ha visto.** El único usuario del sistema es Asav; ningún cliente
+> ni carrier ha recibido un resultado, y los cambios de `routeStrictness` del 14 y
+> del 31 de julio los hizo él. **No hay acusación emitida contra nadie.**
+>
+> Eso **baja la urgencia y no cierra la pregunta**: el día que esto sea
+> vinculante, ese campo es una cláusula.
+
+### ¿Quedó rastro del cambio?
+
+🟢 **No, y el lugar donde debería estar existe y está vacío.**
+
+- La tabla `contract_policy_history` **existe** (migración 0015) con la forma
+  exacta que haría falta: `policy_before` · `policy_after` · `actor_kind` ·
+  `actor_id` · `note` · `changed_at`.
+- 🟢 **Cero filas en toda la base**, no solo para Tecma.
+- 🟢 **Ningún código escribe en ella.** Está declarada en el esquema y en los
+  repositorios, y no hay un solo `insert`.
+
+**Lo único que queda del cambio es `service_contracts.updated_at`** — una fecha,
+sin antes, sin después, sin quién y sin por qué. El estado real solo se puede
+reconstruir **desde las consecuencias**: la política congelada dentro de cada
+hecho sellado.
+
+🟡 **Inferencia:** es un candado escrito y nunca conectado — la misma forma que
+`canAccessPlant` y `ClientRole`. La regla 8 aplicada a la auditoría: **una tabla
+de historial vacía no se distingue de una que no existe.**
+
+### El desglose por contrato y fecha
+
+🟢 `no_cumplido` bajo `kml_full` **con una unidad que sí llegó**:
+
+| Semana de servicio | Campus | Planta 47 |
+|---|---|---|
+| 6 jul | 14 | — |
+| 13 jul | 52 | **60** |
+| 20 jul | 52 | **59** |
+| 27 jul | 54 | **14** |
+| 3 ago | 30 | — |
+
+**Planta 47 solo aparece en las tres semanas en que estuvo en `kml_full`.** El
+Campus aparece en todas, porque nunca salió de esa estrictez.
+
+### Qué dice el campo hoy
+
+🟢 Leído de `service_contracts.policy` el 5 de agosto:
+
+| Contrato | `routeStrictness` hoy | actualizado |
+|---|---|---|
+| Tecma 47 — Transporte Personal | **`destino_only`** | 31 jul 2026 |
+| TECMA Campus Santos Dumont | **`kml_full`** | 20 jul 2026 |
+
+---
+
+## 4-octies. Nota de vigencia — los datos se movieron
+
+🟢 Entre el 4 y el 5 de agosto el corte cambió solo:
+
+| Razón | 4 ago | 5 ago |
+|---|---|---|
+| `llegada_sin_atribucion` | 57 | **61** |
+| cobertura insuficiente | 28 | 28 |
+| observación insuficiente | 10 | 10 |
+| evidencia indisponible | 5 | 5 |
+| **total** | **100** | **104** |
+
+**Los cuatro nuevos son todos de la causa dominante.** Confirma en un día lo que
+el §2 midió por semana: **sigue produciéndose.** Las cifras de esta ficha llevan
+su fecha por eso.
+
+---
+
 ## 5. Contra qué lista se comparó — las once de `PLAN.md` §5
 
 El handoff pide decirlo explícitamente, no decir «es la séptima».
