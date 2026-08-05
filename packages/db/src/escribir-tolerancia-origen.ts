@@ -24,17 +24,38 @@
  *   pnpm --filter @jtel/db exec tsx src/escribir-tolerancia-origen.ts
  *   pnpm --filter @jtel/db exec tsx src/escribir-tolerancia-origen.ts --ejecutar
  */
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import postgres from "postgres";
 
 for (const p of ["../../.env", ".env"]) {
   if (existsSync(p)) { try { process.loadEnvFile(p); break; } catch { /* ignore */ } }
 }
 
-/** El valor de fábrica del motor. Se copia a mano y a propósito: si algún día
- *  cambia allá, este guion tiene que fallar la comparación y obligar a mirar. */
-const VALOR_DE_FABRICA = 0.15;
 const CAMPO = "kmlOriginToleranceFraction";
+
+/**
+ * El valor de fábrica **leído del motor**, no copiado a mano.
+ *
+ * Copiarlo sería exactamente el defecto que este guion existe para cerrar: un
+ * número que vive en dos lados y se separa sin que nadie lo note. Se lee de
+ * `packages/verification/src/index.ts`, y **si no se puede leer, el guion se
+ * niega a correr** — antes escribir nada que escribir un valor que no se pudo
+ * comprobar.
+ */
+function valorDeFabrica(): number {
+  const ruta = new URL("../../verification/src/index.ts", import.meta.url);
+  const fuente = readFileSync(ruta, "utf8");
+  const m = fuente.match(/DEFAULT_KML_ORIGIN_TOLERANCE_FRACTION\s*=\s*([0-9.]+)/);
+  if (!m) {
+    throw new Error(
+      "No se pudo leer DEFAULT_KML_ORIGIN_TOLERANCE_FRACTION del motor. " +
+        "El guion no escribe un valor que no pudo comprobar.",
+    );
+  }
+  return Number(m[1]);
+}
+
+const VALOR_DE_FABRICA = valorDeFabrica();
 
 const ejecutar = process.argv.includes("--ejecutar");
 const url = ejecutar ? process.env.DATABASE_URL : (process.env.DATABASE_URL_READONLY ?? process.env.DATABASE_URL);
@@ -47,6 +68,9 @@ const filas = await db`
   where a.is_demo = false order by a.slug, c.name`;
 
 console.log(`\n  ${ejecutar ? "EJECUTANDO" : "EN SECO — no se escribe nada"}\n`);
+console.log(`  Valor de fábrica leído del motor: ${VALOR_DE_FABRICA}`);
+console.log(`  (packages/verification/src/index.ts · DEFAULT_KML_ORIGIN_TOLERANCE_FRACTION)`);
+console.log(`  Es EXACTAMENTE lo que se escribiría. Cambia quién manda, no el comportamiento.\n`);
 const faltan = filas.filter((f) => (f.policy as Record<string, unknown>)[CAMPO] === undefined);
 
 for (const f of filas) {

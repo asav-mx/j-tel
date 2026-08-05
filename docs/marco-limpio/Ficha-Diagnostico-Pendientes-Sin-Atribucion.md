@@ -1036,6 +1036,76 @@ mismo día, qué tramo del trazado cubre cada unidad.
 
 ---
 
+## 4-novodecies. ¿Un viaje o la ruta en tramos? — ninguna de las dos
+
+**La pregunta:** ¿el trazado contratado describe **un** viaje, o **el recorrido
+completo de una ruta que se sirve en tramos**?
+
+**Cómo se midió:** las 15 rutas del Turno A del **9 de julio**, cada trazado
+partido en **diez tramos iguales**, mirando qué tramos toca cada una de las **52
+unidades** que el servicio evalúa. Corredor de 120 m.
+
+| Ruta | La mejor unidad sola | Todas las 52 juntas |
+|---|---|---|
+| Centro - A | `████████··` 8/10 | `██████████` **10/10** |
+| Colinas - A | `··██████··` 6/10 | `██████████` **10/10** |
+| Parajes del Sur - A | `████·██···` 6/10 | `████·█████` 9/10 |
+| Juarez Nuevo - A | `····██████` 6/10 | `·██·██████` 8/10 |
+| Riveras 7 - A | `██·██·····` 4/10 | `██·████·██` 8/10 |
+| Safari - A | `··█···████` 5/10 | `·████·████` 8/10 |
+| San Isidro - A | `····███···` 3/10 | `█··███████` 8/10 |
+| Km 20 - A | `···███████` 7/10 | `···███████` 7/10 |
+| Oasis - A | `······████` 4/10 | `█··██·████` 7/10 |
+| Sierra Vista - A | `···████···` 4/10 | `···███████` 7/10 |
+| Finca Auxiliar - A | `····██████` 6/10 | `····██████` 6/10 |
+| Riveras 9 - A | `·····█·███` 4/10 | `█··█·█·███` 6/10 |
+| Finca - A | `·█····███·` 4/10 | `·█····████` 5/10 |
+| Km 30 - A | `······█·██` 3/10 | `······████` 4/10 |
+| Sanders - A | `········██` 2/10 | `···█····██` **3/10** |
+| **Promedio** | **4.8 / 10** | **7.1 / 10** |
+
+### La respuesta: ninguna de las dos
+
+🟢 **No es un viaje.** La mejor unidad de cada ruta cubre **4.8 tramos de 10** —
+menos de la mitad del trazado contratado.
+
+🟢 **Y tampoco se sirve en tramos entre varias.** Juntando **las 52 unidades del
+turno**, el trazado sigue sin cubrirse: **7.1 de 10** de promedio, y **solo 2 de
+las 15 rutas llegan a 10/10**. En *Sanders - A* **siete de los diez tramos no los
+pisó nadie** ese día. En *Km 30 - A*, seis.
+
+> 🟢 **Hay tramos del trazado contratado por los que, ese día, no pasó ninguna de
+> las 52 unidades del turno.**
+
+### Cómo se concilia con §4-duodecies, que decía que el trazado sí corresponde
+
+**No se contradicen, y la diferencia es el eje.** §4-duodecies agregó **veinte
+servicios de días distintos** y encontró que el 100 % de los waypoints tiene
+traza real a menos de 500 m. Esto mira **un solo día** y a 120 m.
+
+🟡 **Inferencia:** **cada día se recorre una parte distinta del trazado.** A lo
+largo de veinte días todo queda cubierto; en cualquier día concreto, cerca de un
+tercio no lo toca nadie.
+
+### Lo que eso dice del trazado, dicho con cuidado
+
+🟡 El trazado contratado **no describe el recorrido de un servicio**: describe
+**algo más grande** —el conjunto de calles por las que esa ruta puede pasar—
+mientras cada día se recorre una selección. Los dibujos lo apoyan: los tramos de
+la mejor unidad son casi siempre **contiguos** —`····██████`, `████████··`— o
+sea que entra y sale del trazado por un pedazo continuo, no que salte.
+
+**Y eso vuelve imposible la métrica tal como está planteada.** Exigir que **una**
+unidad cubra el 60 % de un trazado que **ninguna** unidad recorre entero —y que
+entre todas cubren el 71 %— **no es un umbral apretado: es una cuenta que no
+puede salir.**
+
+**Lo que NO se midió, y es lo siguiente:** si esa selección diaria sigue un patrón
+—variantes ya declaradas, paradas que solo se sirven algunos días— o es
+arbitraria. Ahí es donde entra C5 y las variantes no congeladas.
+
+---
+
 ## 5. Contra qué lista se comparó — las once de `PLAN.md` §5
 
 El handoff pide decirlo explícitamente, no decir «es la séptima».
