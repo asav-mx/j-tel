@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
+  ROLES_DECLARADOS,
+  ROLES_PARQUEADOS,
   canAccessClientAccount,
   canAccessCarrierAccount,
   canAccessPlant,
@@ -110,5 +112,76 @@ describe("lo que el alcance global NO cambia", () => {
     const choferGlobal: UserMembership = { ...global, role: "chofer" };
     expect(tieneAlcanceGlobal([choferGlobal])).toBe(true);
     expect(hasPermission(choferGlobal, "contract.manage")).toBe(false);
+  });
+});
+
+/**
+ * Los roles parqueados — D10 del plan.
+ *
+ * Esto es la regla 8 aplicada a los roles. `hasPermission` resuelve
+ * `ROLE_PERMISSIONS[rol] ?? []`, así que **un rol no declarado y uno declarado
+ * sin permisos son indistinguibles desde el código**: los dos contestan «no» a
+ * todo. Si la declaración no se prueba, declarar no significa nada — es una
+ * defensa que ninguna prueba distingue de su ausencia.
+ *
+ * Estas pruebas son lo que le da sentido a la declaración. Miden las dos
+ * mitades por separado:
+ *
+ *  1. **Que estén declarados** — lo que `hasPermission` no puede decir.
+ *  2. **Que no puedan nada** — y que darle un permiso a uno rompa esto.
+ */
+describe("roles parqueados: declarados a propósito, y sin poder hacer nada", () => {
+  it("los dos están declarados — que es justo lo que hasPermission no distingue", () => {
+    // Sin esta aserción, borrar el rol de la tabla no rompería nada: seguiría
+    // contestando «no» a todo, exactamente igual que ahora.
+    for (const rol of ROLES_PARQUEADOS) {
+      expect(ROLES_DECLARADOS).toContain(rol);
+    }
+    expect(ROLES_PARQUEADOS.length).toBeGreaterThan(0);
+  });
+
+  it("ninguno puede nada, ni siquiera lo suyo", () => {
+    const permisos = [
+      "*",
+      "self.read",
+      "client.manage",
+      "client.read",
+      "plant.read",
+      "compliance.read",
+      "fleet.read",
+      "report.read",
+      "inspection.manage",
+    ];
+
+    for (const rol of ROLES_PARQUEADOS) {
+      const m: UserMembership = { ...plantMembership, role: rol };
+      for (const p of permisos) {
+        expect(hasPermission(m, p), `${rol} no debería poder ${p}`).toBe(false);
+      }
+    }
+  });
+
+  /**
+   * `chofer` traía `["self.read"]` mientras `Ficha-Diseno-Permisos.md` §5 decía
+   * «sin permisos activos». Ganó la ficha: ahí vive la decisión de producto, y
+   * el permiso nunca fue una decisión — era un marcador de sitio sin un solo
+   * llamador. Esta prueba es lo que impide que vuelva a colarse.
+   */
+  it("chofer no recupera self.read por descuido", () => {
+    const m: UserMembership = { ...plantMembership, role: "chofer" };
+    expect(hasPermission(m, "self.read")).toBe(false);
+  });
+
+  /**
+   * El alcance no reparte permisos. Un rol parqueado con alcance global sigue
+   * sin poder nada: `permisos = rol × alcance`, y el rol aporta cero.
+   */
+  it("el alcance global no le presta permisos a un rol parqueado", () => {
+    for (const rol of ROLES_PARQUEADOS) {
+      const m: UserMembership = { ...global, role: rol };
+      expect(hasPermission(m, "client.manage")).toBe(false);
+      // Pero el alcance sí sigue siendo alcance: eso no lo toca el rol.
+      expect(tieneAlcanceGlobal([m])).toBe(true);
+    }
   });
 });

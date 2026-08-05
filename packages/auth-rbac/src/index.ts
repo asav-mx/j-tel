@@ -13,6 +13,19 @@ export interface AccessContext {
   activeAccountId?: string;
 }
 
+/**
+ * Rol → permisos. **Estar en esta tabla con lista vacía es una declaración, no
+ * un olvido**, y la diferencia entre las dos cosas no la puede ver el código.
+ *
+ * `hasPermission` resuelve `ROLE_PERMISSIONS[rol] ?? []`, así que **un rol que
+ * nadie declaró se comporta exactamente igual que uno declarado sin permisos:
+ * sin ninguno.** Los dos estados son indistinguibles desde aquí — es la regla 8
+ * del plan aplicada a los roles, y es la razón de fondo por la que un rol
+ * parqueado se escribe en vez de dejarse fuera.
+ *
+ * Lo que hace legible la diferencia es la lista de abajo y su prueba, no esta
+ * tabla por sí sola.
+ */
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   admin_plataforma: ["*"],
   soporte: ["support.read", "support.diagnose", "support.resync"],
@@ -23,12 +36,58 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   inspecciones: ["inspection.manage", "compliance.read"],
   procurement: ["contract.manage", "escalation.manage"],
   usuario_planta: ["plant.read", "compliance.read", "inspection.manage"],
+  /**
+   * El administrador **dentro** de una planta — D10 del plan.
+   *
+   * Existe porque la regla 2 de D9 lo presupone: «un usuario de planta solo
+   * crea usuarios de su planta». Sin este rol, la única forma de que una planta
+   * administre a su gente es darle un `admin_corporativo` —que ve todas las
+   * plantas de la cuenta— y eso es exactamente lo que esa regla prohíbe.
+   *
+   * **Parqueado: lista vacía de verdad.** Sus permisos se definen en el frente
+   * del alcance fino, junto con 1.h y la pantalla de altas, no antes. Darle
+   * permisos hoy sería peor que no tenerlo: un rol que puede administrar sin
+   * que exista la pregunta «¿tu alcance cubre esta planta?» administra sobre
+   * todo lo que alcance su cuenta.
+   */
+  admin_planta: [],
   admin: ["fleet.manage", "fleet.read", "compliance.read", "report.read"],
   coordinador: ["fleet.manage", "routes.manage", "compliance.read"],
   despacho: ["fleet.read", "monitor.live"],
   mantenimiento: ["maintenance.manage", "fleet.read"],
-  chofer: ["self.read"],
+  /**
+   * Parqueado por `Ficha-Diseno-Permisos.md` §5: «se crea el rol, **sin
+   * permisos activos**». Hoy no entra a la aplicación.
+   *
+   * **Tenía `["self.read"]`, y se retira.** Documento y código decían cosas
+   * distintas; **gana la ficha**, que es donde vive la decisión de producto —
+   * el permiso nunca fue una decisión, era un marcador de sitio que nadie leyó
+   * (cero llamadores, comprobado). Alinear al revés habría sido dejar que un
+   * descuido del código reescribiera una decisión de Asav del 31 de julio.
+   *
+   * Sin efecto observable: ninguna identidad tiene este rol y nadie pregunta
+   * por `self.read`.
+   */
+  chofer: [],
 };
+
+/**
+ * Los roles que el sistema **declara**, tengan permisos o no.
+ *
+ * Existe para que «parqueado» sea comprobable. Sin esto, la única forma de
+ * saber si un rol está parqueado o simplemente no existe es que alguien se
+ * acuerde — y acordarse no es una propiedad del sistema.
+ */
+export const ROLES_DECLARADOS: readonly string[] = Object.keys(ROLE_PERMISSIONS);
+
+/**
+ * Los que existen a propósito y todavía no pueden hacer nada.
+ *
+ * Se listan aquí, y no se deducen de la tabla, para que **agregarle permisos a
+ * uno rompa una prueba** en vez de pasar en silencio. Salir de esta lista es
+ * una decisión de producto y tiene que verse como tal en un diff.
+ */
+export const ROLES_PARQUEADOS: readonly string[] = ["admin_planta", "chofer"];
 
 export function hasPermission(membership: UserMembership, permission: string): boolean {
   const perms = ROLE_PERMISSIONS[membership.role] ?? [];
