@@ -691,6 +691,86 @@ cerrado.
 
 ---
 
+## 4-duodecies. El trazado SÍ corresponde — la hipótesis muere aquí
+
+**La pregunta de Asav:** *que cero candidatas cumplan ambas condiciones en 61
+servicios no parece un umbral apretado — parece que el trazado no corresponde a
+lo que se maneja. ¿Se puede medir directamente?*
+
+**Sí, y se midió.** Para cada una de las 15 rutas del Turno A: el trazado
+contratado contra **toda la traza real agregada** de sus servicios, waypoint por
+waypoint, midiendo a qué distancia pasó alguna vez el vehículo más cercano.
+
+🟢 **1 461 waypoints, 15 rutas, 20 servicios cada una:**
+
+| A menos de | Waypoints |
+|---|---|
+| 150 m | **95.3 %** |
+| **500 m** | **100.0 %** |
+| 2 km | 100.0 % |
+
+**Mediana 0.02 km — veinte metros. El waypoint más solitario de las quince rutas
+está a 0.43 km.**
+
+> 🟢 **El trazado corresponde. No hay un solo tramo contratado por el que nadie
+> haya pasado.** La hipótesis —tuya y mía— de que el KML va por donde no se
+> maneja **queda descartada.**
+
+### Y lo que eso deja en pie, que es más fino
+
+🟡 **Inferencia:** el trazado se cubre **en agregado** —entre los 20 servicios de
+una ruta, la unión pasa por todo— pero **A y B se calculan por servicio y por
+candidata**. Que el agregado cubra y el individuo no significa que **el conjunto
+de puntos que se le atribuye a cada candidata no es el viaje que sirvió la
+ruta**: o trae de más —el día entero, y entonces B se hunde porque casi todos
+sus puntos están fuera del corredor— o trae de menos —un pedazo, y entonces A se
+hunde—.
+
+Eso explica el reparto 27/26 de §4-sexies sin necesidad de un trazado malo, y
+**cambia hacia dónde mirar**: no al KML ni a los umbrales, sino a **cómo se
+arma el conjunto de puntos de cada candidata** —la ventana de observación y la
+asociación viaje/unidad—. **No está medido.** Se prueba comparando, en un mismo
+servicio, cuántos puntos tiene la candidata de mejor A contra la de mejor B.
+
+---
+
+## 4-terdecies. Los umbrales, campo por campo
+
+**La pregunta de Asav:** *mediste 50 % en 150 m para el Campus; yo recuerdo
+haberlo acordado en 60 %.*
+
+🟢 **La configuración no coincide con lo que recuerdas.** Leído de
+`service_contracts.policy` el 5 de agosto:
+
+| Campo | Campus Santos Dumont | Tecma 47 | |
+|---|---|---|---|
+| `routeStrictness` | `kml_full` | `destino_only` | ⚠ |
+| `kmlMatchMinPct` (A) | 60 | 60 | |
+| **`kmlCorridorMinPct` (B)** | **50** | **60** | ⚠ |
+| **`kmlCorridorMeters`** | **150** | **120** | ⚠ |
+| `kmlOriginToleranceFraction` | **— no está en la política** | 0.15 | ⚠ |
+| `evidenceMinCoveragePct` | 80 | 80 | |
+| `evidenceMaxGapMinutes` | 10 | 10 | |
+| `toleranceMinutes` | 5 | 5 | |
+| `arrivalAnticipationMinutes` | 20 | 15 | ⚠ |
+| `verificationGraceMinutes` | 10 | 15 | ⚠ |
+| `maxRouteDurationMinutes` | 60 | 60 | |
+| `frechetMaxKm` | **— no está en la política** | **— no está en la política** | |
+| `excusableReasons` | iguales | iguales | |
+| *actualizado* | 20 jul 2026 | 31 jul 2026 | |
+
+🟢 **Seis campos difieren entre los dos contratos**, y uno —
+`kmlOriginToleranceFraction`— **existe en un contrato y no en el otro**, así que
+el Campus corre con el valor por omisión sin que nadie lo haya decidido.
+
+🟡 **Y es más grave que un umbral flojo, como dijiste:** si la configuración no
+coincide con lo acordado, **el árbitro está aplicando una regla que las partes no
+pactaron.** Esta ficha no dice cuál es el valor correcto — dice que **hoy nadie
+puede leer del sistema qué se acordó**, porque `contract_policy_history` está
+vacía (§4-septies) y no hay contra qué comparar.
+
+---
+
 ## 5. Contra qué lista se comparó — las once de `PLAN.md` §5
 
 El handoff pide decirlo explícitamente, no decir «es la séptima».
