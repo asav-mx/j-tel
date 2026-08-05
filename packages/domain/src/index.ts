@@ -210,6 +210,13 @@ export type JStaffRole = z.infer<typeof JStaffRole>;
 
 export const ClientRole = z.enum([
   "admin_corporativo",
+  /**
+   * El administrador dentro de una planta — D10 del plan. Declarado y
+   * **parqueado sin permisos**: la regla 2 de D9 lo presupone y hoy no existía,
+   * así que la única salida era dar `admin_corporativo`, que ve todas las
+   * plantas. Sus permisos se definen con el alcance fino.
+   */
+  "admin_planta",
   "coord_rutas",
   "cumplimiento",
   "inspecciones",

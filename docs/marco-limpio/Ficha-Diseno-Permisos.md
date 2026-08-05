@@ -94,6 +94,22 @@ plantas**, y solo dentro de lo que está bajo él.
 **Usuario de planta operadora** — alcance `planta` o `campus` según §2.2. Ve solo
 su operación.
 
+### 3.1.1 El tercero, que faltaba — `admin_planta`
+
+Los dos niveles de arriba dejaban un hueco: **nadie administra dentro de una
+planta.** Y §7 de esta misma ficha lo da por hecho al describir la
+administración de usuarios, igual que la regla 2 del modelo de altas —«nadie
+crea a alguien con más alcance del que tiene»—, que **presupone** un admin de
+planta creando usuarios de su planta.
+
+Sin ese rol, la única salida es dar `admin_corporativo`, que ve **todas** las
+plantas de la cuenta. Es decir: la forma de cumplir la operación rompía la ley.
+
+**Declarado el 4 de agosto de 2026, parqueado** (§5). Sus permisos se definen
+junto con el alcance fino y la pantalla de altas, no antes — un admin que puede
+administrar sin que exista la pregunta «¿tu alcance cubre esta planta?»
+administra sobre todo lo que alcance su cuenta, que es el problema otra vez.
+
 ### 3.2 Los roles funcionales — y la decisión que simplifica el arranque
 
 El Marco lista cuatro roles funcionales del cliente: coordinación de rutas (POC),
@@ -162,6 +178,17 @@ la operación interna del carrier. Eso no es configurable.
 **Chofer.** Se crea el rol, **sin permisos activos.** Hoy no entra a la
 aplicación. `jrz-pass` queda **fuera de alcance por decisión de Asav** — no se
 considera por ahora.
+
+> **Corregido el 4 de agosto de 2026.** Esta línea decía «sin permisos activos»
+> desde el 31 de julio, y el código le daba `["self.read"]`. **Ganó la ficha:**
+> aquí vive la decisión de producto, y ese permiso nunca fue una decisión — era
+> un marcador de sitio sin un solo llamador. Alinear al revés habría dejado que
+> un descuido del código reescribiera una decisión tomada. Hoy los dos dicen lo
+> mismo, y una prueba lo sostiene.
+
+**Admin de planta.** Se crea el rol, **con la lista de permisos vacía** — vacía
+de verdad, no un permiso nominal. Ver §3.1.1. Sus permisos se definen con el
+alcance fino y la pantalla de altas.
 
 **Pre-nómina.** Idea anotada: vincular los viajes con la nómina del carrier. No se
 diseña hoy; se deja el rol creado para configurarlo después sin migración.

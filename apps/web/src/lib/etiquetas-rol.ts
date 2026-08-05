@@ -19,6 +19,7 @@ const ETIQUETAS: Record<string, string> = {
 
   // Cara cliente — los roles funcionales que nombra el skill
   admin_corporativo: "Administración corporativa",
+  admin_planta: "Administración de planta",
   coord_rutas: "Coordinación de rutas",
   cumplimiento: "Cumplimiento",
   inspecciones: "Inspecciones",
