@@ -196,7 +196,7 @@ dominio se resolvieron el mismo día.
 | **T2** | **Correo — y son dos cosas, no una.** (a) **Resend**: verificar dominio, API key, tres variables. (b) **Que exista `hola@j-telemetry.com`** | (a) Que las alertas salgan de verdad. Hoy `/api/cron/alertas` responde 503 cada 5 min: el sistema detecta y no puede avisar. (b) Que un cliente pueda escribir. **(b) es de negocio, no de sistema** | **Pendiente.** Alta. El instrumento existe y no tiene bocina — y el landing no tiene buzón |
 | **T3** | **Dominio** | Los subdominios del producto | ✅ **Resuelto: `j-telemetry.com`.** `j-tel.io` queda descartado — pero ver la deuda que deja, abajo |
 | **T4** | **Rotar la contraseña del readonly** | `jtel_readonly` y `neondb_owner` comparten contraseña | **Pendiente.** Media. Con redespliegue en el mismo movimiento |
-| **T5** | **`CRON_SECRET`** | — | ✅ Rotado. Queda anotado que el valor viejo sigue en el historial de git |
+| **T5** | **`CRON_SECRET`** | — | ✅ **Cerrado.** Rotado en Vercel · el valor viejo fuera de los documentos desde el 2 de agosto (comprobado sobre `main` el 4: cero archivos versionados) · **permanece en el historial de git, rotado y sin efecto** — no se reescribe historia por esto (decisión de Asav, 4 de agosto) |
 
 **Deuda que dejó T3 — ✅ saldada el 3 de agosto** (#212 y el PR de fichas).
 `j-tel.io` salió del landing, su CSS, nueve archivos de prueba, el Brief de
@@ -409,12 +409,12 @@ una cortina.
 | **1.a** | **Mapeo de identidad.** Ligar la identidad de Clerk de Asav a `jstaff_admin` (global). **Se agrega, no se reemplaza** — las cadenas del seed son lo que hoy sostiene el acceso; reemplazarlas deja las pantallas en blanco sin error. Tres piezas: `vincular()` en `MembershipRepository` · archivo de mapeo versionado con `user_...`, sin correos · ejecutor en seco por omisión | **Primero.** Destraba la ficha de permisos entera |
 | **1.b** | `lib/guardia-pagina.ts`, hermana de `guardia-api.ts`, **reutilizando `decidir`, no duplicándola**. Hace `redirect()`, no HTTP. Falla cerrado | |
 | **1.c** | Aplicarla en las **65 páginas** (`jstaff` 9 · `cliente` 41 · `carrier` 15), empezando por `/jstaff` — es donde vive el razonamiento del árbitro | |
-| **1.d** | **Junto aquí, no aparte:** el filtro de unidades por membresía del #138 cerrado, en `inicio-corporativo-data.ts:121`. Conservar sus dos advertencias como texto | |
-| **1.e** | Cerrar el default `tecma_admin`. **Va después de 1.c** o quedamos todos fuera | |
+| **1.d** | ✅ **Hecha (#227).** El filtro de unidades por membresía, con las dos advertencias del #138 y una tercera medida al construirlo: **hoy no le cambia la pantalla a nadie**, porque un usuario de planta no pasa de `resolveAccountByType` —que pregunta por cuenta— y nunca llega al filtro. Lo que entra es la estructura para 1.h. Y la mitad que no era obvia: recortar la lista sin recortar las cifras habría sido §D con el eje del lugar | |
+| **1.e** | 🔵 **En PR #230, lo mergea Asav.** Sin señal no hay identidad: `userId` pasa a `string \| null` y el origen `default-heredado` se llama `anonimo`. **En producción no cambia nada hoy** —`JTEL_DEV_USER=jstaff_admin` está puesto—; cierra local, CI y cualquier despliegue al que le falte esa variable | |
 | **1.f** | **La portada.** Una ruta con dos caras: **sin sesión → landing público; con sesión → portada**, y la portada **enseña solo lo tuyo** (de las membresías, no de `listByType`). **Sin nombres de clientes.** El bloque «Estado del sistema» **se quita, no se protege** — ya vive en `/jstaff` y en `/api/salud`. Aquí entra también sacar `j-tel.io` del landing y su CSS | |
-| **1.g** | Quitar el valor viejo de `CRON_SECRET` del historial y de los documentos | |
-| **1.i** | **`/entrar` como puerta limpia.** Hoy el botón de iniciar sesión vive en `/quien-soy`, que es **pantalla de diagnóstico**: enseña el origen de la identidad, las membresías y si el encabezado fue rechazado. Pedirle a alguien que entre por ahí es hacerle leer el tablero del taller para abrir la puerta | **Después de cerrar `/cliente` y `/carrier`.** Antes no urge: hoy el único que entra sabe qué es `/quien-soy` |
-| **1.j** | **Volver al destino después de entrar.** Quien llega por un enlace profundo —el correo de una alerta, un expediente compartido— hoy termina en `/quien-soy` y tiene que volver a navegar a mano. La guardia ya sabe a dónde iba: falta llevarlo de vuelta al entrar. **Ojo al diseñarlo:** el destino viaja en la URL, así que hay que validarlo como ruta propia y relativa — un `?volver=` sin comprobar es un redirector abierto | **Con 1.i**, que es su puerta |
+| **1.g** | ✅ **Hecha.** `CRON_SECRET` fuera de los documentos. Resultó ser más chica de lo escrito: el valor salió del `README.md` y de `DESPUES.md` el 2 de agosto, en el mismo commit que quitó el respaldo de las siete rutas. Lo que quedaba era la redacción — `DESPUES.md` seguía diciendo en tres lugares que **faltaba rotarlo**, y ya estaba rotado. **Del historial NO se quita:** ahí se queda, rotado y sin efecto, como registro y no como llave | |
+| **1.i** | ✅ **Hecha (#228).** **`/entrar` como puerta limpia.** Hoy el botón de iniciar sesión vive en `/quien-soy`, que es **pantalla de diagnóstico**: enseña el origen de la identidad, las membresías y si el encabezado fue rechazado. Pedirle a alguien que entre por ahí es hacerle leer el tablero del taller para abrir la puerta | **Después de cerrar `/cliente` y `/carrier`.** Antes no urge: hoy el único que entra sabe qué es `/quien-soy` |
+| **1.j** | 🔵 **En PR #229** — la validación de `?volver=` la revisa Asav antes del merge. **Volver al destino después de entrar.** Quien llega por un enlace profundo —el correo de una alerta, un expediente compartido— hoy termina en `/quien-soy` y tiene que volver a navegar a mano. La guardia ya sabe a dónde iba: falta llevarlo de vuelta al entrar. **Ojo al diseñarlo:** el destino viaja en la URL, así que hay que validarlo como ruta propia y relativa — un `?volver=` sin comprobar es un redirector abierto | **Con 1.i**, que es su puerta |
 | **1.h** | **La guardia por alcance, no por cuenta.** 1.c cierra a nivel **cuenta**: pregunta «¿es tu cuenta?», que es lo que sabe `canAccessClientAccount`. Falta la pregunta fina — «¿tu alcance cubre **esta planta**?» — y con ella **la regla del campus de `Ficha-Diseno-Permisos.md` §2.2, que no está implementada**: `canAccessPlant` resuelve alcance `plant` y `account`, pero **no tiene rama para `plant_group`**. **Sin diseñar todavía** | **Después de 1.c.** Hoy no protege a nadie —la única identidad real es global— y mezclarlo con 1.c serían dos cambios de comportamiento en un PR |
 
 **Regla de oro mientras dure este tramo:** **no iniciar sesión en Clerk hasta que
@@ -747,6 +747,49 @@ bloqueante.
   archivos— y no por construcción. El riesgo es la pantalla dieciséis, no la
   quince. Y lo que lo destapó fue exigir la medición antes de escribir la
   guardia: leer cinco archivos era exactamente lo que iba a fallar.
+- **La tanda chica del Tramo 1, cerrada o en la puerta: 1.d, 1.e, 1.g, 1.i y 1.j.**
+  Cada una se clasificó por el lado de §2 **antes** de abrirla, como quedamos.
+- **1.d resultó ser estructura, no cambio visible, y hay que decirlo así.** Un
+  usuario de planta no llega al filtro: `resolveAccountByType` pregunta
+  `canAccessClientAccount`, que exige alcance de cuenta, y ahí se queda —
+  medido con el seed contra la base desechable, no inferido. Lo que entra sirve
+  para cuando 1.h abra la puerta.
+- **Y destapó un §D que habría nacido con el filtro.** Las cifras del titular
+  —total de pendientes, antigüedad del más viejo— salen de consultas de
+  **cuenta**. Recortar la lista de sitios sin recortarlas habría dejado un
+  total contando sitios que no aparecen: la misma mentira de «contar desde
+  siempre», cambiando el eje del tiempo por el del lugar.
+- **1.i movió la puerta y destapó una contradicción de pantalla.** Con
+  producción levantada en local, `/entrar` decía «Necesitas entrar para ver
+  eso» y en la esquina el distintivo decía `tecma_admin · variable`: le
+  anunciaba a un visitante sin sesión un identificador interno y que el bypass
+  está puesto. No era redundancia, era contradicción.
+- **1.j: la comprobación obvia del `?volver=` no alcanzaba, y se supo por
+  medir.** Antes de escribir el validador se corrieron cadenas de ataque contra
+  el parser de Node: `new URL("/..//evil.com", centinela)` **conserva el
+  origen** y devuelve `pathname` `//evil.com`, que el navegador lee como
+  externo. De ahí la regla del archivo — se comprueba la cadena que se va a
+  **devolver**, no la que llegó.
+- **Y las pruebas de mutación cambiaron el diseño, no solo lo confirmaron.**
+  Con el validador en una sola función, quitarle la comprobación de origen **no
+  ponía nada en rojo**: la lista blanca atajaba los mismos casos un paso
+  después. Una defensa que ninguna prueba distingue es una defensa que no sabes
+  si tienes. Se partió en dos capas con batería propia cada una; de paso se
+  borró una comprobación que ninguna entrada podía disparar.
+- **1.e retira la muleta, y el tipo hizo el trabajo.** `userId: string | null`
+  obligó a decidir qué hace cada pantalla sin identidad; TypeScript encontró
+  los cuatro consumidores exactos. **En producción no cambia nada hoy** porque
+  `JTEL_DEV_USER` está puesto: lo que cierra es local, CI y el despliegue al
+  que le falte esa variable.
+- **1.g era más chica de lo que este plan decía.** El valor de `CRON_SECRET`
+  salió de `README.md` y `DESPUES.md` el 2 de agosto, en el mismo commit que
+  quitó el respaldo. Comprobado sobre `main` el 4: **cero archivos versionados**
+  lo contienen. Lo que quedaba era documentación mintiendo — `DESPUES.md` decía
+  en **tres lugares** que faltaba rotarlo, y ya estaba rotado.
+- **Del historial no se quita, y queda escrito por qué.** Estando rotado, ese
+  valor no abre nada: es un registro de lo que pasó, no una llave. No se
+  reescribe historia por esto.
+
 - **El carrier queda encuadrado como producto, no como anexo.** Entra a §2 «De
   producto» y gana fila propia en el Tramo 7. Las dos caras no son simétricas:
   para el carrier sus unidades son una sola operación, así que ve todo su
