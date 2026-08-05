@@ -370,7 +370,10 @@ demo que vive dentro de la aplicación termina teniendo una cuenta, y una cuenta
 termina teniendo hechos sellados — que es exactamente cómo nacieron los 84 de
 la causa C1.
 
-*Dónde vive:* Tramo 7, junto con el interruptor de J-Staff y la administración de
+*Dónde vive:* el alta **del lado del cliente** se fue al **Frente del alcance
+fino** (al cerrar el Tramo 2), junto con 1.h y el `admin_planta`. Lo de J-Staff
+—crear cuentas y su primer admin— se queda en el Tramo 7, junto con el
+interruptor de J-Staff y la administración de
 usuarios. **No se diseña todavía** — decorar una casa sin puerta es el orden
 equivocado. La decisión queda tomada para no volver a discutirla cuando llegue.
 
@@ -401,9 +404,11 @@ sistema es Asav; se ve el día que un cliente tenga diez plantas.**
 
 *Decisión:* **se declara el rol ahora, con la lista de permisos vacía.** Mismo
 trato de fondo que `chofer` (`Ficha-Diseno-Permisos.md` §5): existe, nombrado, y
-no puede hacer nada todavía. **Los permisos se definen en el Tramo 7**, junto con
-la administración de usuarios y el interruptor de altas por contrato de la regla
-3 de D9.
+no puede hacer nada todavía. **Los permisos se definen en el Frente del alcance
+fino** —al cerrar el Tramo 2—, junto con 1.h y la pantalla de altas, porque las
+tres se necesitan entre sí: un admin de planta sin alcance fino no tiene sobre
+qué mandar, y sin pantalla de altas es un rol decorativo. Ahí entra también el
+interruptor de altas por contrato de la regla 3 de D9.
 
 > **Ojo con el precedente, porque no es exacto y conviene saberlo antes de
 > copiarlo:** la ficha dice que `chofer` quedó «sin permisos activos», pero en el
@@ -581,7 +586,9 @@ PRUEBA REAL.
 ### Qué queda abierto al cerrar el tramo
 
 **Una sola pieza: 1.h, la guardia por alcance.** Y no es un pendiente
-administrativo — es la pregunta fina que este tramo no supo hacer:
+administrativo — es la pregunta fina que este tramo no supo hacer.
+**Ya no viaja suelta:** es una de las tres piezas del **Frente del alcance fino**,
+que se coloca al cerrar el Tramo 2.
 
 - **`canAccessPlant` no la llama nadie.** Comprobado sobre `main`: cero
   llamadores fuera de sus propias pruebas.
@@ -609,9 +616,9 @@ Tramo 7.
 
 ### Tramo 2 — Ordenar el árbitro (no arreglarlo)
 
-> **Hereda 1.h del Tramo 1.** No se mete dentro de este tramo —que no toca
-> guardias— pero tampoco se pierde: es lo único que quedó abierto del candado y
-> se diseña antes de que exista el primer usuario de planta real.
+> **1.h no entra aquí, y ya no viaja suelta.** Este tramo no toca guardias.
+> 1.h pasó a ser una de las tres piezas del **Frente del alcance fino**, que se
+> coloca al cerrar este tramo — abajo, después de la compuerta.
 
 **No toca el motor.** Es leer, medir y ordenar. Ver §5, que es esta ficha viviendo
 dentro del plan.
@@ -621,6 +628,55 @@ saber cuál movió el número reproduce el problema.
 
 **Compuerta:** cada causa de §5 tiene medición, dependencia y ruta compartida
 declarada.
+
+---
+
+### Frente — El alcance fino y quién administra dentro de él
+
+**Sale del Tramo 7 y se coloca al cerrar el Tramo 2.** No es un tramo: es un
+frente de tres piezas que **se necesitan entre sí**, y por eso se sacan de donde
+estaban repartidas y se ponen juntas.
+
+| Pieza | Qué | De dónde viene |
+|---|---|---|
+| **1.h — el alcance fino** | La guardia deja de preguntar «¿es tu cuenta?» y pregunta «¿tu alcance cubre **esta planta**?». Arrastra **la regla del campus** de `Ficha-Diseno-Permisos.md` §2.2 y §2.3: `canAccessPlant` resuelve `plant` y `account` y **no tiene rama para `plant_group`** | Lo único que quedó abierto del Tramo 1 |
+| **El admin de planta** | `admin_planta` con **permisos de verdad**. Hoy está declarado y parqueado con lista vacía (D10) | D10, y la regla 2 de D9 que lo presupone |
+| **La administración de usuarios** | La pantalla donde un admin da de alta a su gente. **No existe** — hoy dar de alta a alguien es trabajo manual de J-Staff | Tramo 7, y `Ficha-Diseno-Permisos.md` §6 |
+
+**Por qué las tres juntas, y no en tres momentos distintos:**
+
+> **Un admin de planta sin alcance fino no tiene sobre qué mandar** — la guardia
+> solo sabe de cuentas, así que administrar «su planta» no tiene referente.
+> **Y sin pantalla de altas es un rol decorativo:** existe, tiene permisos, y no
+> hay dónde ejercerlos.
+>
+> Las tres por separado son media pieza cada una. Es la misma forma del problema
+> que resolvieron juntas: dar `admin_corporativo` porque es el único admin que
+> existe rompe la regla 2 de D9 **sin que nada lo señale**.
+
+### Lo que hoy hace imposible probarlo, y es la razón de que no se empiece ya
+
+**La única identidad real del sistema tiene alcance `global`.** Contra ella, una
+guardia por alcance **pasa siempre** — y una batería de pruebas contra esa
+identidad **entraría en verde sin haber probado nada**.
+
+Es exactamente lo que pasó en `/carrier`: las comprobaciones parecían sostener la
+pared entre transportistas, y **hasta que no hubo un segundo carrier en la rama
+desechable (#225) no se supo si sostenían algo.** Los seis caminos negaron, pero
+eso se supo **midiendo con dos**, no razonando con uno.
+
+**Consecuencia para este frente:** antes de escribir la guardia por alcance hace
+falta **el escenario** — una cuenta con varias plantas, un campus, y usuarios de
+alcance `plant` y `plant_group` de verdad. Sin eso, cualquier verde que salga es
+del tipo que la regla 8 nombra: no distingue una guardia que funciona de una que
+no está.
+
+**El lugar exacto se decide al cerrar el Tramo 2**, con el dato de los **71
+pendientes de Tecma** (D3) en mano — porque ese dato puede mover el orden de lo
+que sigue, y ordenar este frente antes de tenerlo sería elegir a ciegas.
+
+**Lo que este frente NO es:** el login real. Eso sigue en el Tramo 7, con retirar
+el bypass.
 
 ---
 
@@ -692,7 +748,7 @@ definición de v1.
 
 | Pieza | Qué |
 |---|---|
-| `auth-rbac` cerrado | Guardia por alcance, no por cuenta · administración de usuarios · **los permisos del `admin_planta` de D10**, que hasta aquí es un rol declarado y vacío · retirar el bypass |
+| `auth-rbac` cerrado | **Retirar el bypass** y el login real. La guardia por alcance, los permisos del `admin_planta` y la administración de usuarios **ya no viven aquí**: se fueron juntas al **Frente del alcance fino**, que se coloca al cerrar el Tramo 2 |
 | **Lenore-vigía** | Alertas preventivas durante la operación: *"6 unidades no reportan y el turno cierra en 20 minutos"*. **No está bloqueada por nada técnico** — necesita T2 (que las alertas salgan) y saber a quién avisar |
 | **Lenore-narradora** | El diff estructural contado en cristiano dentro del expediente. **Bloqueada por el Tramo 4** |
 | Interruptor de J-Staff | Activar / desactivar / eliminar cuentas y contratos. Hoy la única vía es tocar la base a mano, y eso no es producto. **Desactivar es hacia adelante y no toca el pasado; eliminar abre la pregunta de qué pasa con los hechos ya sellados.** Y J-Staff **enuncia, no esconde**: los excluidos por cuenta de ejemplo se muestran con su motivo |
@@ -802,7 +858,8 @@ omisión— · historia de la política · plomería de alertas · el árbitro c
 cuatro arreglos de ventana.
 
 **El candado ya no es «identidad sin enforcement».** Lo que falta de él es una
-pieza nombrada, 1.h, y el login real del Tramo 7.
+pieza nombrada —1.h, que vive en el **Frente del alcance fino**— y el login real
+del Tramo 7.
 
 **La foto de referencia del 3 de agosto** de los documentos viejos vive en
 `docs/corte-2026-08-03/`. Es foto, no ley. No se edita.
@@ -947,12 +1004,29 @@ bloqueante.
   valor no abre nada: es un registro de lo que pasó, no una llave. No se
   reescribe historia por esto.
 
+- **Frente nuevo: el alcance fino y quién administra dentro de él.** Sale del
+  Tramo 7 y se coloca **al cerrar el Tramo 2**. Tres piezas juntas —1.h, el
+  `admin_planta` con permisos de verdad, y la pantalla de altas— porque **cada
+  una sin las otras dos es media pieza**: un admin de planta sin alcance fino no
+  tiene sobre qué mandar, y sin pantalla de altas es un rol decorativo.
+- **Y la razón de que no se empiece ya no es de agenda, es de medición.** La
+  única identidad real tiene alcance `global`, así que una guardia por alcance
+  **pasa siempre** contra ella y una batería de pruebas **entraría en verde sin
+  probar nada**. Es lo mismo que pasó en `/carrier`: hasta que no hubo un
+  **segundo** carrier en la rama desechable (#225) no se supo si las
+  comprobaciones sostenían algo. Antes de escribir la guardia hace falta el
+  escenario: varias plantas, un campus, y usuarios de alcance `plant` y
+  `plant_group` de verdad.
+- **El lugar exacto se decide al cerrar el Tramo 2**, con el dato de los 71
+  pendientes de Tecma (D3) en mano.
+
 - **Regla 8 extendida al instrumento.** Un medidor que devuelve cero cuando no
   midió nada se ve idéntico a uno que midió y encontró todo limpio. La
   corrección es la misma de los dos lados: contar también algo que **tiene** que
   estar.
 - **D10 abierta y decidida: falta el rol de admin de planta.** Se declara sin
-  permisos activos, como `chofer`; los permisos se definen en el Tramo 7.
+  permisos activos, como `chofer`; los permisos se definen en el Frente del
+  alcance fino.
 - **Y su justificación se corrigió al verificarla.** Se pidió como «evita una
   migración», y **no la evita**: `user_memberships.role` es columna de texto, no
   enum de Postgres. Lo que evita es peor — que alguien alcance
@@ -974,7 +1048,8 @@ bloqueante.
   arreglado.
 
 - **TRAMO 1 CERRADO.** Diez piezas, 1.a a 1.j. Nueve hechas; **1.h sale
-  abierta** y se hereda al Tramo 2. La compuerta se corrió y se midió el 4 de
+  abierta**, y desde el frente nuevo se coloca al cerrar el Tramo 2. La
+  compuerta se corrió y se midió el 4 de
   agosto —el cuerpo de cada respuesta, no el código de estado— y quedó escrita
   arriba con sus tres resultados.
 - **Nota de conteo, para que el registro sea exacto:** este cierre se pidió con
