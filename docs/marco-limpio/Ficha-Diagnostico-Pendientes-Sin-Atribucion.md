@@ -1298,6 +1298,106 @@ vector medio punto→trazado más cercano y viendo si apunta siempre al mismo la
 
 ---
 
+## 4-quatervicies. El vector medio — y una corrección de método a mitad de camino
+
+**La medición que decide:** si el desplazamiento punto→trazado tiene dirección
+constante es la medición la que falla, no el árbitro ni el carrier. Si apunta a
+todos lados, es ruido.
+
+### La primera corrida estaba contaminada, y el control lo delató
+
+🟢 Promedié **todos** los puntos de los 52 autobuses contra cada trazado — y casi
+todos iban por **otras** rutas. Salió una distancia media de **~1 000 m incluso
+el 29 de julio**, el día en que sabemos que los puntos caen **encima** del
+trazado. **Un número imposible es la señal de que la pregunta estaba mal
+acotada.**
+
+Rehecho sobre los puntos que sí están **cerca del trazado (< 400 m)**, que son
+los candidatos a «va por la ruta pero corrido».
+
+### El resultado
+
+| Día | Sitio | pts < 400 m | media &#124;v&#124; | &#124;media&#124; | **razón** | rumbo |
+|---|---|---|---|---|---|---|
+| **13 jul** | **Planta 47** | 181 | 214 m | 50 m | **0.24** | 151° SSE |
+| 13 jul | Campus | 724 | 119 m | 15 m | 0.13 | 75° ENE |
+| **20 jul** | **Planta 47** | 164 | 245 m | 97 m | **0.40** | **116° ESE** |
+| 20 jul | Campus | 706 | 123 m | 12 m | 0.10 | 126° SE |
+| **27 jul** | **Planta 47** | 231 | 228 m | 83 m | **0.36** | **117° ESE** |
+| 27 jul | Campus | 586 | 138 m | 10 m | 0.07 | 76° ENE |
+| 29 jul | Planta 47 | 508 | 145 m | 5 m | **0.03** | — |
+| 29 jul | Campus | 718 | 115 m | 3 m | 0.03 | — |
+| 4 ago | Planta 47 | 491 | 148 m | 2 m | **0.02** | — |
+| 4 ago | Campus | 692 | 122 m | 5 m | 0.04 | — |
+
+*(razón = &#124;vector medio&#124; ÷ media de las distancias. Cerca de 1 = desplazamiento
+rígido. Cerca de 0 = las direcciones se cancelan, ruido.)*
+
+### Lo que dice, con sus dos mitades
+
+🟢 **Hay sesgo direccional, y solo donde y cuando debería estar si algo pasó.**
+Planta 47 en los tres días partidos: **0.24 · 0.40 · 0.36**, con dos de los tres
+rumbos casi idénticos —**116° y 117° ESE**—. En los días buenos ese sesgo
+**desaparece: 0.03 y 0.02.**
+
+🟢 **Pero no es un desplazamiento rígido.** Un cambio de referencia de coordenadas
+daría razón cercana a **1** y un rumbo único. **0.24–0.40 es un sesgo parcial**,
+no un corrimiento del sistema entero.
+
+🟢 **Y el Campus NO lo tiene:** 0.07–0.13 en los días partidos contra 0.03–0.04 en
+los buenos. Prácticamente sin sesgo.
+
+> **Por tu propio criterio:** si fuera idéntico en las dos plantas apuntaría al
+> proveedor; **difiere, así que apunta al lado del trazado y no al proveedor.**
+
+---
+
+## 4-quinvicies. Los tres días, el proveedor y el archivador
+
+🟢 **Los tres son lunes** — 13, 20 y 27 de julio. **Pero el 3 de agosto también es
+lunes y tuvo 9.9 de 10.** No es «los lunes»: son **esos tres lunes**.
+
+🟢 **El archivador está al día:** la marca de agua de Juárez Bus tiene el último
+punto del 5 de agosto a la hora de la medición.
+
+🟢 **Y aquí está lo que sí cambió, y no lo esperaba:**
+
+| Periodo | Planta 47 | Campus |
+|---|---|---|
+| 9–24 jul | **60 k – 68 k** pts/día | ~120 k – 126 k |
+| 27 jul | 92 k | 94 k |
+| 28 jul | 19 k | 71 k |
+| **29 jul** | **237 k** | 119 k |
+| **30 jul – 5 ago** | **86 k – 108 k** | 107 k – 123 k |
+
+**El volumen de evidencia de Planta 47 se duplica a partir del 29 de julio. El
+del Campus no se mueve en todo el periodo.**
+
+🟢 **Y no es que reporten más aparatos.** El conjunto es el mismo:
+
+| | |
+|---|---|
+| Aparatos antes del 29 | **57** |
+| Aparatos del 29 en adelante | **55** |
+| En los dos periodos | **53** |
+| Solo antes · solo después | 4 · 2 |
+| Aparatos por día | **50 a 53, estable de punta a punta** |
+
+**Mismos aparatos, mismas unidades, y de pronto ~1.5 veces más puntos por
+aparato.**
+
+🟡 **Inferencia:** cambió **la densidad de muestreo de Planta 47**, no su flota.
+Y coincide en fecha con que la cobertura salte de 5–7 a 9.9 de 10. **Una traza
+más densa cubre más waypoints del mismo recorrido** — y eso explicaría por qué
+las mismas rutas, los mismos camiones y el mismo trazado dan cobertura distinta
+antes y después.
+
+**Lo que NO se midió:** por qué cambió la densidad. Puede ser configuración del
+proveedor, del archivador, o del dispositivo. **Es la siguiente pregunta y no se
+contesta desde aquí.**
+
+---
+
 ## 5. Contra qué lista se comparó — las once de `PLAN.md` §5
 
 El handoff pide decirlo explícitamente, no decir «es la séptima».

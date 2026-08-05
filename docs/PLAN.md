@@ -946,7 +946,7 @@ y cuáles**, nunca «es la séptima».
 | **C12** | **`frechetMaxKm` horneado fuera de la política** | Es el **único** umbral de KML que no vive en `contractPolicySchema`: el motor lo resuelve con `?? 0.8` y quien lo llama en producción le pasa seis umbrales de política y **no éste**. Repetido literal además en `monitoreo-data.ts`. **NO causa C11** —solo ordena candidatas, no las rechaza— y aun así incumple la **Ley 6** | **Sin construir.** Entra porque está mal, no porque convenga. C7 es su gemelo |
 | **C13** | **El veredicto del mismo fallo lo decide `routeStrictness`, y el cambio no deja rastro** | Con `destino_only` + llegada → `pendiente_evidencia`; con `kml_full` → `no_cumplido`. Planta 47 cambió **dos veces en tres semanas**. Medido: **330 hechos de Tecma sellados `no_cumplido` con una unidad que sí llegó**. **Nadie los ha visto** — el único usuario del sistema es Asav y ningún cliente ni carrier ha recibido un resultado, así que **no hay acusación emitida contra nadie**. Y `contract_policy_history` existe, tiene la forma correcta —`policy_before`, `policy_after`, `actor_kind`, `note`— y está **vacía en toda la base: cero filas, y ningún código escribe en ella** | **Sin construir.** Urgencia baja hoy; **el día que esto sea vinculante ese campo es una cláusula**, y una cláusula que cambia sin rastro no se puede sostener ante nadie |
 | **C17** | **La cobertura de ruta se guarda ponderada y se lee llana** | ✅ **Arreglado en el motor.** Ahora se guardan **las dos**: `routeMatchPct` —la que decide, ponderada— y `routeMatchPlainPct` —la llana, «qué fracción del trazado cubrió»—. **No cambia un solo veredicto** y los hechos ya sellados no se tocan: los viejos traen solo la ponderada y quien los lea debe decirlo así. Lo medido que lo motivó: `routeMatchPct` va **ponderada por TF-IDF** —`weightedIdf: true` en las 3 054 candidatas medidas— y se guarda con un nombre que se lee como porcentaje llano. Medido: **168 candidatas acreditan ≥ 60 % de cobertura teniendo una cobertura real con mediana de 3.9 %**, y la correlación con la precisión pasa de **0.373 ponderada a 0.672 sin ponderar** | **Hecho.** Falta que las pantallas del expediente lean la llana |
-| **C18** | **El empalme: una unidad sirve dos rutas y el sistema no puede saberlo** | 🟢 **Medido el 29 de julio:** tres unidades cubren dos trazados cada una, y una de ellas los cubre al **79 % y 76 %**. Es práctica real del transporte de personal —consolidar rutas cuando falta unidad o falta gente— y **cada servicio la evalúa contra su propia ruta**, viendo una unidad que «solo» cubre parte. **Hunde las dos condiciones a la vez**, que es el síntoma de C11. **No explica los tres días partidos** —ahí ninguna unidad toca ninguna ruta— pero sí es un modo de falla propio | **Sin construir.** Hipótesis de Asav, medida y confirmada |
+| **C18** | **El empalme: una unidad sirve dos rutas y el sistema no puede saberlo** | 🟢 **Medido el 29 de julio:** tres unidades cubren dos trazados cada una, y una de ellas los cubre al **79 % y 76 %**. Es práctica real del transporte de personal —consolidar rutas cuando falta unidad o falta gente— y **cada servicio la evalúa contra su propia ruta**, viendo una unidad que «solo» cubre parte. **Hunde las dos condiciones a la vez**, que es el síntoma de C11. **No explica los tres días partidos** —ahí ninguna unidad toca ninguna ruta— pero sí es un modo de falla propio. **Y la consecuencia, que no es de umbral sino de planteamiento:** si consolidar rutas es práctica normal del transporte de personal, **el árbitro tiene que poder evaluar una unidad contra el CONJUNTO de rutas que sirvió en el turno, no contra una sola.** Preguntar «¿cubriste la ruta A?» a un camión que sirvió A y B **está mal hecha la pregunta**, y ningún umbral la arregla | **Sin construir.** Hipótesis de Asav, medida y confirmada |
 | **C15** | **El expediente etiqueta mal su propia evidencia** | El ledger escribe cada candidata con el campo **`imei:`** y adentro guarda un **id de UNIDAD** — comprobado: casa con `units.id` y no con `evidence_points.imei`, que son números de 15 dígitos. **Quien lea un expediente creerá que está viendo el aparato y está viendo el vehículo.** No cambia ningún veredicto y **sí cambia lo que el expediente dice**, que es el activo del producto | **Sin construir.** Es evidencia mal etiquetada en el documento que sostiene una acusación |
 | **C16** | **La configuración del contrato no coincide con lo acordado, y no hay contra qué comparar** | Medido el 5 de agosto: el corredor del Campus está en **50 % / 150 m** y Asav lo recordaba acordado en **60 %**. Seis campos difieren entre los dos contratos y `kmlOriginToleranceFraction` **existe en uno y no en el otro**, así que el Campus corre con el valor por omisión sin que nadie lo decidiera. Con `contract_policy_history` vacía (C13), **no hay forma de leer del sistema qué se pactó** | **Sin construir.** Más grave que un umbral flojo: el árbitro puede estar aplicando una regla que las partes no pactaron |
 | **C14** | **`routeStrictness` no gobierna lo que su nombre promete** | Se lee en **un solo punto** del motor (`index.ts:980`) y **solo elige entre `pendiente_evidencia` y `no_cumplido` DESPUÉS de que la atribución ya falló**. La comprobación A∧B de KML corre **siempre que la ruta tenga trazado**, sin mirar la estrictez. Consecuencia: con `destino_only` un servicio cuya unidad llegó pero no pasa A∧B **no puede ser `cumplido` jamás** — queda pendiente para siempre. Lo que de verdad decide «¿basta con llegar?» **no es el contrato: es si la ruta tiene KML cargado** | **Sin construir.** Es la causa de que los 61 no se puedan cerrar solos |
@@ -1193,6 +1193,30 @@ bloqueante.
 - **El guion de `kmlOriginToleranceFraction` ya no copia el valor a mano:** lo lee
   de `packages/verification/src/index.ts` y **se niega a correr si no puede
   leerlo**. Regla 10 aplicada al propio guion.
+
+**5 de agosto de 2026 (el vector).**
+- **Hay sesgo direccional, y solo en Planta 47 y solo en los tres días
+  partidos:** razón 0.24 · 0.40 · 0.36, con dos rumbos casi idénticos (116° y
+  117° ESE). En los días buenos **desaparece: 0.03 y 0.02**.
+- **Pero no es un desplazamiento rígido** —eso daría razón cercana a 1— y **el
+  Campus no lo tiene** (0.07–0.13 contra 0.03–0.04). 🟡 **Por el criterio de
+  Asav, apunta al lado del trazado y no al proveedor.**
+- **Una corrección de método a mitad de camino:** la primera corrida promedió los
+  puntos de los 52 autobuses contra cada trazado, casi todos en otras rutas, y
+  dio ~1 000 m **incluso el día en que los puntos caen encima**. **Un número
+  imposible delató la pregunta mal acotada** — y el control fue, otra vez, el que
+  lo atrapó.
+- **Los tres son lunes, pero el 3 de agosto también y tuvo 9.9 de 10.** No es
+  «los lunes»: son esos tres.
+- **Y lo que sí cambió con fecha: el volumen de evidencia de Planta 47 se duplica
+  a partir del 29 de julio** —de 60–68 k a 86–108 k puntos/día— **con el mismo
+  conjunto de aparatos** (53 en los dos periodos, 50–53 por día, estable). **El
+  Campus no se mueve.** 🟡 Cambió la densidad de muestreo, no la flota, y coincide
+  con el salto de cobertura de 5–7 a 9.9 de 10.
+- **Anotada en C18 la consecuencia de planteamiento:** el árbitro tiene que poder
+  evaluar una unidad contra el **conjunto** de rutas que sirvió en el turno.
+  Preguntar «¿cubriste la ruta A?» a un camión que sirvió A y B **está mal hecha
+  la pregunta, y ningún umbral la arregla.**
 
 **5 de agosto de 2026 (el empalme).**
 - **La pista de la versión de trazado NO cierra la investigación.** Hay una sola
