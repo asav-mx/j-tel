@@ -153,6 +153,28 @@ function LecturaDeOperacion({ lectura }: { lectura: LecturaDeUmbral }) {
           {debajo > 0 ? ` · ${debajo} debajo` : ""}
         </span>
       </div>
+
+      {/*
+        La trampa de calibración, dicha en la pantalla que la habilita.
+
+        Enseñar la mediana de la operación junto al umbral es lo que convierte
+        este formulario en instrumento — y es exactamente lo que permite mover
+        el umbral hasta que la operación pase. **La pantalla no puede distinguir
+        las dos intenciones**: el mismo gesto sirve para entender dónde cae y
+        para acomodar el resultado.
+
+        Lo que sí puede hacer es no callarse. No bloquea nada —el umbral es del
+        contrato y lo pactan las partes, no esta caja— pero deja escrito para
+        qué es el rango, en el único momento en que alguien lo está mirando.
+
+        Va en tenue y sin color de aviso: no es una alarma ni una acusación, es
+        la regla de uso del dato que tiene enfrente.
+      */}
+      <p className="mt-2.5 max-w-[68ch] border-t border-[var(--linea-tenue)] pt-2.5 text-[11.5px] leading-relaxed text-[var(--tenue)]">
+        Este umbral se pacta con el transportista. El rango medido sirve para{" "}
+        <b className="font-medium text-[var(--texto)]">entender dónde cae tu operación</b>, no
+        para ajustarlo hasta que pase.
+      </p>
     </div>
   );
 }
