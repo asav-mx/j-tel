@@ -122,6 +122,79 @@ hay que descartar.**
 servicios en 14 días**, ~4.6 por día. La causa demo (C1) subió de prioridad con
 ~11/semana. **Ésta va a ~32/semana.**
 
+### 2-bis. CORRECCIÓN — las dos semanas «limpias» no eran limpias
+
+**El §2 concluye que dos semanas con 240 servicios y cero pendientes prueban que
+el sistema sí puede atribuir. 🟢 Es falso.** Abierto por contrato y turno:
+
+| Semana | Planta 47 · Turno A | cumplido | no cumplido | pendiente |
+|---|---|---|---|---|
+| 13 jul | 75 | **0** | **75** | 0 |
+| 20 jul | 75 | 1 | **74** | 0 |
+
+**El síntoma no desapareció: cambió de veredicto.** Los mismos servicios, la
+misma ruta, el mismo turno — sellados `no_cumplido` en vez de
+`pendiente_evidencia`.
+
+🟢 **Y se sabe exactamente por qué.** La política congelada dentro de cada hecho
+dice que `routeStrictness` cambió:
+
+| Fecha de servicio | `routeStrictness` de Planta 47 |
+|---|---|
+| hasta el 13 de julio | `destino_only` |
+| **14 al 30 de julio** | **`kml_full`** |
+| desde ~31 de julio (contrato actualizado ese día) | `destino_only` |
+
+En el motor, con el mismo fallo de atribución:
+
+- `destino_only` **+ alguna unidad llegó** → `pendiente_evidencia`
+  (`llegada_sin_atribucion`)
+- cualquier otra estrictez → `no_cumplido` (`ninguna_unidad_coincidio_ruta`)
+
+> 🟢 **El veredicto para la misma evidencia lo decide un campo de la política, y
+> ese campo cambió dos veces en tres semanas.** La «tasa que va y viene» del §2
+> no mide el fallo: mide cuándo el fallo se llamó pendiente y cuándo acusación.
+
+🟡 **Inferencia:** la tasa real de producción del fallo **no baja**. Lo que baja
+es cuántos se cuentan como pendientes.
+
+---
+
+## 2-ter. Lo que esto destapa, y es más grande que los 100
+
+🟢 Medido sobre todo el histórico de Tecma, cruzando el veredicto sellado con la
+política congelada y con si alguna candidata registró llegada:
+
+| Sitio | Estrictez congelada | `no_cumplido` | …**con llegada registrada** |
+|---|---|---|---|
+| Planta 47 | `kml_full` | 241 | **133** |
+| Planta 47 | `destino_only` | 50 | **0** |
+| Campus | `kml_full` | 215 | **197** |
+
+**330 servicios de Tecma están sellados `no_cumplido` con una unidad que sí llegó
+a la geocerca.** Bajo `destino_only` esos mismos hechos habrían sido
+`pendiente_evidencia`.
+
+Los `destino_only` con llegada son **cero**, y no por casualidad: bajo esa
+estrictez el motor los manda a pendiente por construcción. **Es la misma
+bifurcación, vista desde el otro lado.**
+
+🟢 **Que sea legítimo depende del contrato, y esta ficha no lo juzga.**
+`kml_full` es una elección de producto válida: significa «exijo que se recorra la
+ruta, no solo que se llegue». Un transportista que llega sin recorrer **sí**
+incumple bajo esa regla.
+
+🟡 **Lo que sí hay que decir, y es lo que le toca decidir a Asav:** de esos 330,
+la compuerta que los reprobó es la misma A∧B del §4-bis — 🟢 y en el corte de
+control, **300 de 319 servicios aprobados también fallan el tope de forma**, o
+sea que el árbitro aprueba y reprueba con criterios que ninguna de las dos partes
+puede leer desde el contrato. 🔵 El plan ya registró un antecedente de esta misma
+familia: *«194 de 439 acusaciones eran imposibles de aprobar por construcción»*.
+
+**Esta ficha no propone corregir ningún hecho sellado.** Lo enuncia porque una
+acusación mal medida es una acusación, y el tamaño —330— es información que la
+decisión necesita.
+
 ---
 
 ## 3. El corte por contrato — y el 6.7% vs 55.2%
@@ -160,7 +233,84 @@ y en un turno.
 
 ---
 
-## 4. ¿Causa dominante o repartidas? — Dominante, y el gate no es el que se creía
+## 4-bis. CORRECCIÓN — el §4 de abajo estaba equivocado
+
+**Escrito el 4 de agosto, después de medir el grupo de control. Se corrige aquí
+en vez de borrarse: el §4 se mergeó y se leyó, y un error que se borra no avisa
+a quien ya lo leyó.**
+
+El §4 concluye que el tope de Fréchet de 0.8 km es lo que rechaza los 57.
+🟢 **Es falso, y el propio dato que lo desmiente estaba a un query de distancia:**
+
+> De los **319 servicios de Tecma que SÍ sellaron `cumplido`**, solo **19** están
+> dentro de 0.8 km de Fréchet. Los otros **300 lo exceden y cumplieron igual.**
+> Un tope que el 94 % de los aprobados incumple no es lo que rechaza a nadie.
+
+🟢 **Y el código lo dice donde yo no leí.** `servedRoute` es:
+
+```
+arrivalAt !== null && (!hasKml || (observableEnough && routeMatchPct >= minKmlPct
+                                   && corridorPrecisionPct >= minCorridorPct))
+```
+
+**`shapeOk` no aparece.** El comentario de la línea de arriba es explícito:
+*«Fréchet / dirección desambiguan el ranking; el match duro es geocerca + A∧B.
+Un tope duro de Fréchet descartaba recorridos reales con muestreo irregular.»*
+Fréchet **ordena candidatas, no las rechaza**.
+
+**Cómo se coló el error:** medí que 0 de 57 fallaban ese tope y lo leí como
+causa. Cero de 57 es un dato correcto; «por eso los rechaza» era la
+interpretación, y no la comprobé contra el grupo que sí pasa. Es exactamente lo
+que el plan llama validar la medición y no la interpretación.
+
+### La compuerta real, medida
+
+🟢 La compuerta dura es **llegada ∧ tramo observable ∧ A ≥ 60 ∧ B ≥ 60**, donde
+A es cobertura de ruta y B es precisión de corredor. Sobre los 57:
+
+| Situación | Servicios |
+|---|---|
+| Alguna candidata con llegada cumple **A y B a la vez** | **0** |
+| Pasa **A**, pero ninguna candidata pasa B | 27 |
+| Pasa **B**, pero ninguna candidata pasa A | 26 |
+| No pasa ninguna de las dos | 4 |
+
+> 🟢 **Lo que rechaza a los 57 es que ninguna candidata cumple A y B juntas.**
+> 53 de los 57 tienen una candidata que cumple **una** de las dos — nunca la
+> misma candidata las dos.
+
+🟡 **Inferencia, y es la hipótesis con más apoyo:** A alta con B baja es una
+unidad que recorre la ruta y además otra cosa; B alta con A baja es una unidad
+que recorre con precisión **solo un pedazo**. El reparto casi simétrico —27 y
+26— es lo que se esperaría si **la ruta la sirve más de una unidad** (relevo,
+cambio de unidad a media ruta) y ninguna sola cubre el trazado completo. **No
+está medido.** Se prueba mirando si las candidatas que pasan A y las que pasan B
+son unidades distintas dentro del mismo servicio.
+
+### Qué queda de C12
+
+🟢 `frechetMaxKm` **sigue estando horneado fuera de la política del contrato**, y
+eso sigue incumpliendo la Ley 6. Lo que ya **no** se sostiene es que cause los
+57: no rechaza a nadie, solo ordena. **Entra al plan porque está mal, no porque
+resuelva esto.**
+
+### Y la aritmética de 2, 3 y 5 km, que se pidió
+
+🟢 Se corrió igual, y el resultado confirma la corrección desde otro lado:
+
+| Tope de Fréchet | Rescatados (con A∧B) |
+|---|---|
+| 0.8 km (hoy) | 0 / 57 |
+| 2 km | 3 / 57 |
+| 5 km | 9 / 57 |
+| **sin tope alguno** | **10 / 57** |
+
+**Quitar el tope entero rescata 10.** El criterio era «si con 2 km pasan la
+mayoría, es el umbral». No pasan: **el umbral no era.**
+
+---
+
+## 4. ¿Causa dominante o repartidas? — Dominante · ⚠ SECCIÓN CORREGIDA POR §4-bis
 
 `llegada_sin_atribucion` significa: *una unidad llegó a la geocerca, pero su
 recorrido no alcanza el mínimo de ninguna ruta.* Hay **dos** compuertas que
@@ -209,6 +359,33 @@ y no le pasa éste**. Está horneado en 0.8 km, y además repetido literal en
 **dominante**. 57 de 100 caen por una sola compuerta, la misma para todos, en un
 solo contrato y un solo turno. Las otras tres razones suman 43 y son fenómenos
 separados.
+
+---
+
+## 4-ter. Los 57 por ruta — ¿son las tres de C6?
+
+🟢 **No.** Se reparten entre **15 rutas distintas**, todas las «- A» de Planta 47:
+
+| Ruta | n | | Ruta | n |
+|---|---|---|---|---|
+| Sanders - A | 5 | | Riveras 9 - A | 4 |
+| San Isidro - A | 5 | | Parajes del Sur - A | 3 |
+| Finca - A | 5 | | Juarez Nuevo - A | 3 |
+| **Centro - A** | 5 | | Safari - A | 3 |
+| Riveras 7 - A | 5 | | Colinas - A | 2 |
+| Sierra Vista - A | 5 | | Km 30 - A | 2 |
+| Km 20 - A | 4 | | Finca Auxiliar - A | 2 |
+| Oasis - A | 4 | | | |
+
+🟢 **En las tres rutas que C6 nombra: 8 de 57 (14 %).** Y **Huertas - B no aparece
+entre los 57** — está en C6 y no en este grupo.
+
+🟡 **Inferencia:** no son tres trazados malos. Es **el conjunto completo de rutas
+de un turno**, lo que apunta a algo compartido por todas —el turno, su ventana,
+o el lote de KML que entró junto— y no a errores de dibujo ruta por ruta.
+🟢 **Dato que lo apoya:** las 15 versiones de KML de las rutas «- A» se crearon
+**todas el mismo día, el 14 de julio**, que es exactamente el día en que la
+estrictez cambió a `kml_full`.
 
 ---
 
