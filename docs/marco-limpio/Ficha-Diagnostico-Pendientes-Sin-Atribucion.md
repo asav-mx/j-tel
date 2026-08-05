@@ -585,6 +585,112 @@ su fecha por eso.
 
 ---
 
+## 4-nonies. Por qué falta la evidencia en los 28 — es C3, visto
+
+Era la única pregunta que la investigación había dejado abierta.
+
+🟢 **Los 28 no están repartidos: caen en dos días consecutivos.**
+
+| Día | Servicios | Sitio |
+|---|---|---|
+| 27 de julio | 13 | Campus |
+| 28 de julio | 15 | Planta 47 |
+
+🟢 **No es de unidades ni de aparatos.** Los puntos guardados **de toda la base**,
+por día:
+
+| Día | Puntos | Aparatos |
+|---|---|---|
+| 20–24 jul | 180 k – 218 k | 52–54 |
+| **25 jul** (sáb) | **8 996** | 48 |
+| **26 jul** (dom) | **3 482** | 47 |
+| 27 jul | 200 669 | 50 |
+| **28 jul** | **103 080** | 52 |
+| **29 jul** | **371 891** | 51 |
+| 30–31 jul | 222 k – 228 k | 51–52 |
+
+Los desplomes del 25–26 de julio y del 1–2 de agosto son **fines de semana** y no
+tienen nada de raro. Lo que sí lo tiene es el par **28 con la mitad · 29 con el
+doble**.
+
+### La comprobación decisiva
+
+🟢 Para cada uno de los 28, cuántos puntos vio el motor al sellar contra cuántos
+hay hoy en ese mismo viaje y ese mismo día:
+
+| Al sellar | Hoy |
+|---|---|
+| 13 puntos · cobertura 38.5 % | **370 – 420** |
+| 43 puntos · cobertura 46.7 % | **1 992** |
+| 46 puntos · cobertura 69.6 % | **1 269 – 1 389** |
+
+> 🟢 **28 de 28 tienen hoy más del doble de puntos que cuando se selló su
+> veredicto.** La evidencia no faltaba: **todavía no había llegado.**
+
+🟡 **Inferencia:** el archivador se atrasó y se puso al día el 29 —de ahí el día
+con el doble—, y los servicios del 27 y 28 se juzgaron con el expediente a
+medias. **Esto no es una causa nueva: es C3 —«se juzga antes de que llegue el
+expediente»— observada directamente**, con el número que el plan estimaba (~7 h
+de atraso, p95 30 h) hecho consecuencia visible.
+
+**Lo que NO se midió:** por qué el archivador se atrasó ese fin de semana.
+
+---
+
+## 4-decies. El recálculo con los umbrales del Campus
+
+**La pregunta:** ¿cuántos de los 61 pasarían con B ≥ 50 % en 150 m, que es lo que
+usa el Campus?
+
+### Primero el control — regla 9 aplicada a mi propio método
+
+Antes de recalcular a 150 m se recalculó a **120 m** y se comparó contra lo que el
+ledger ya tenía guardado. Si no reproducía, el número a 150 m no valdría nada.
+
+🟢 **3 054 de 3 054 candidatas coinciden · desviación mediana 0.0 puntos.** El
+recálculo es exacto.
+
+> **El primer intento falló el control (0 de 0 emparejadas) y por eso no se
+> reporta.** Destapó dos cosas: el ledger escribe el campo como **`imei:` y
+> guarda un id de UNIDAD** —quien lea el expediente creerá que es el aparato— y
+> el trazado hay que tomarlo de `kml_version_id` de la ocurrencia, que las 61
+> traen, y no derivarlo por vigencia.
+
+### El resultado
+
+| Umbrales | Pasan A ∧ B |
+|---|---|
+| **120 m · B ≥ 60** — los de hoy | **0 de 61** |
+| 120 m · B ≥ 50 — solo aflojar B | **16** |
+| 150 m · B ≥ 60 — solo ensanchar | **13** |
+| **150 m · B ≥ 50** — los del Campus | **17 de 61** |
+
+🟢 **Adoptar la política del Campus rescataría 17 de 61 — el 28 %.** 🟡 **La
+política explica alrededor de un cuarto del problema, no el problema.** Los otros
+44 seguirían pendientes con los umbrales más flojos de los dos contratos que
+existen.
+
+---
+
+## 4-undecies. Los 330, por contrato y fecha
+
+🟢 `no_cumplido` bajo `kml_full` **con llegada registrada**, al 5 de agosto son
+**335** (eran 330 el 4 — sigue creciendo):
+
+| | Total | Rango de fechas |
+|---|---|---|
+| **Planta 47** | **133** | 14 → 30 de julio |
+| **Campus** | **202** | 9 de julio → **5 de agosto** |
+
+**Planta 47 aparece solo dentro de la ventana en que estuvo en `kml_full`** —
+empieza el **14 de julio**, el día exacto del cambio, y termina el 30. **El
+Campus aparece todos los días hasta hoy**, porque nunca salió de esa estrictez.
+
+🟢 **El Campus sigue produciéndolos: 5 el 5 de agosto.** No es un episodio
+cerrado.
+
+---
+
 ## 5. Contra qué lista se comparó — las once de `PLAN.md` §5
 
 El handoff pide decirlo explícitamente, no decir «es la séptima».
