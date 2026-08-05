@@ -33,7 +33,7 @@ export default async function ClienteInicioPage({
   // Sin sesión no se renderiza. Va en la PÁGINA y no solo en el layout:
   // un redirect de layout no impide que la hija se renderice, y su
   // payload —con datos reales dentro— viaja igual en la respuesta.
-  await exigirSesion();
+  const identidad = await exigirSesion();
 
   const sp = searchParams ? await searchParams : undefined;
   const error = typeof sp?.error === "string" ? sp.error : null;
@@ -50,6 +50,7 @@ export default async function ClienteInicioPage({
   const data = await loadInicioCorporativo(client.id, {
     nombre: client.name,
     slug: client.slug,
+    memberships: identidad.memberships,
   });
 
   const sinAtender = data.pendientesAbiertos === 0;
@@ -79,6 +80,17 @@ export default async function ClienteInicioPage({
           {plural(data.sitios.length, "sitio", "sitios")} · {data.transportistas.length}{" "}
           {plural(data.transportistas.length, "transportista", "transportistas")} · {data.fechaHoy}
         </p>
+        {/*
+          El alcance de la vista se enuncia, no se deduce. Quien opera tiene
+          derecho a saber que no está viendo la cuenta entera — y sin esta línea
+          las cifras de abajo se leerían como si lo fueran, que es un dato
+          correcto afirmando algo falso.
+        */}
+        {!data.vistaCompleta ? (
+          <p className="mt-1.5 text-xs text-[var(--tenue)]">
+            Estás viendo los sitios a tu cargo. Todas las cifras de esta pantalla miden solo esos.
+          </p>
+        ) : null}
       </header>
 
       {/* El aviso: solo si hay algo que atender, con su antigüedad y su comparación. */}
@@ -196,10 +208,19 @@ export default async function ClienteInicioPage({
             {
               etiqueta: "Servicios pendientes",
               valor: data.pendientesAbiertos,
+              /*
+                "Ninguno abierto" solo cuando el número es cero. Antes esa nota
+                colgaba de que hubiera antigüedad, no de que hubiera pendientes:
+                con la vista recortada no hay antigüedad que leer y la tarjeta
+                habría dicho "ninguno abierto" encima de una cifra distinta de
+                cero. Un dato correcto con su lectura al lado negándolo.
+              */
               nota:
-                data.diasDelPendienteMasViejo != null
-                  ? `el más viejo lleva ${data.diasDelPendienteMasViejo} ${plural(data.diasDelPendienteMasViejo, "día", "días")}`
-                  : "ninguno abierto",
+                data.pendientesAbiertos === 0
+                  ? "ninguno abierto"
+                  : data.diasDelPendienteMasViejo != null
+                    ? `el más viejo lleva ${data.diasDelPendienteMasViejo} ${plural(data.diasDelPendienteMasViejo, "día", "días")}`
+                    : "en los sitios a tu cargo",
             },
             { etiqueta: "Sin verificar hoy", valor: data.sumado.sinVerificar, nota: data.fechaHoy },
             {

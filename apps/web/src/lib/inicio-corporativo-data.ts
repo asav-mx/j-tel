@@ -13,9 +13,18 @@
  * adelantado; contarlas junto a las juzgadas infla el total con servicios que
  * todavía no ocurren. `sin_hecho` viaja aparte y significa "programado, aún sin
  * juzgar" — no es un cuarto veredicto.
+ *
+ * **Y desde la pieza 1.d, una tercera: toda cifra trae también su alcance de
+ * lugar.** Los sitios se filtran por membresía (`alcance-cliente.ts`), así que
+ * el titular no puede seguir contando la cuenta entera cuando la lista enseña
+ * una parte. Un total de 22 pendientes encima de una lista con un solo sitio es
+ * §D del Marco igual que contar desde siempre — la misma mentira, cambiando el
+ * eje del tiempo por el del lugar.
  */
 
 import { getRepos } from "@/lib/db";
+import { unidadesVisibles, vistaCubreLaCuenta } from "@/lib/alcance-cliente";
+import type { UserMembership } from "@jtel/auth-rbac";
 import { JTTEL_TZ, localDateIso, type OperationalUnit } from "@jtel/domain";
 
 /** Un día de la tira. `programados === 0` no existe: ese día no trae cuadro. */
@@ -56,6 +65,17 @@ export type InicioCorporativoData = {
   diasDelPendienteMasViejo: number | null;
   /** Los sitios que concentran pendientes, para que el aviso pueda comparar. */
   sitiosConPendientes: Array<{ nombre: string; pendientes: number }>;
+  /**
+   * ¿La lista de sitios es la cuenta entera, o un recorte por membresía?
+   *
+   * Viaja hasta la pantalla porque cambia lo que se puede afirmar, no solo lo
+   * que se dibuja. Con la vista recortada no hay antigüedad del pendiente más
+   * viejo —la única consulta que la sabe es de cuenta, y usarla contaría un
+   * sitio que no está en la lista—, y `null` en ese caso **no significa
+   * "ninguno abierto"**. Quien pinte esto tiene que distinguir las dos cosas o
+   * inventa un dato tranquilizador donde no hay ninguno.
+   */
+  vistaCompleta: boolean;
 };
 
 export const DIAS_TIRA = 14;
@@ -108,21 +128,40 @@ export function ventanaTira(hoy: Date): { desde: Date; hasta: Date; dias: string
   return { desde, hasta, dias };
 }
 
+/**
+ * `memberships` va **obligatorio y explícito**, no opcional con respaldo.
+ *
+ * Un parámetro opcional aquí significaría "si no me pasas membresías, enseño
+ * todo", que es el default que falla abierto con otro nombre — y la pantalla
+ * que se olvidara de pasarlas se vería exactamente igual que una que funciona.
+ * Prefiero que no compile.
+ */
 export async function loadInicioCorporativo(
   clientAccountId: string,
-  opts: { nombre: string; slug: string | null; ahora?: Date },
+  opts: {
+    nombre: string;
+    slug: string | null;
+    memberships: UserMembership[];
+    ahora?: Date;
+  },
 ): Promise<InicioCorporativoData> {
   const repos = getRepos();
   const ahora = opts.ahora ?? new Date();
   const hoyIso = localDateIso(ahora, JTTEL_TZ);
   const { desde, hasta, dias } = ventanaTira(ahora);
 
-  const [unidades, contratos, pendienteMasViejo, conteoAbiertos] = await Promise.all([
+  const [todasLasUnidades, contratos, pendienteMasViejo, conteoAbiertos] = await Promise.all([
     repos.clients.getOperationalUnits(clientAccountId),
     repos.contracts.findForClient(clientAccountId),
     repos.occurrences.pendienteMasViejoForClientAccount(clientAccountId),
     repos.occurrences.countByStatusForClientAccount(clientAccountId),
   ]);
+
+  // Pieza 1.d. Es presentación, no candado — la advertencia larga vive en
+  // `alcance-cliente.ts` y no se repite aquí para que no se dupliquen al
+  // corregir una sola.
+  const unidades = unidadesVisibles(todasLasUnidades, opts.memberships, clientAccountId);
+  const vistaCompleta = vistaCubreLaCuenta(opts.memberships, clientAccountId);
 
   const { contractMatchesScope } = await import("@/lib/operational-scope");
   const { unitDashboardHref } = await import("@/lib/unit-routes");
@@ -192,13 +231,35 @@ export async function loadInicioCorporativo(
       pendientes: sitios.reduce((n, s) => n + s.hoy.pendientes, 0),
       sinVerificar: sitios.reduce((n, s) => n + s.hoy.sinVerificar, 0),
     },
-    pendientesAbiertos: conteoAbiertos.pendiente_evidencia,
-    diasDelPendienteMasViejo: pendienteMasViejo ? diasEntre(pendienteMasViejo, ahora) : null,
+    /*
+     * Con la cuenta entera a la vista, el conteo de la base — que es el que se
+     * viene enseñando y sigue dando el mismo número, porque la consulta no
+     * cambió. Con la vista recortada, la suma de los sitios que SÍ salen: el
+     * total tiene que medir lo mismo que la lista que lo acompaña.
+     *
+     * No se sustituye siempre por la suma a propósito. Un contrato de la cuenta
+     * puede colgar de una planta que vive dentro de un campus, y esa planta no
+     * es un sitio propio en `getOperationalUnits` — la suma podría quedar por
+     * debajo del conteo de la cuenta. Cambiar en silencio una cifra que hoy se
+     * muestra, por elegancia, es justo lo que este archivo existe para no hacer.
+     */
+    pendientesAbiertos: vistaCompleta
+      ? conteoAbiertos.pendiente_evidencia
+      : sitios.reduce((n, s) => n + s.pendientesAbiertos, 0),
+    /*
+     * La antigüedad solo la sabe una consulta de cuenta. Con la vista recortada
+     * no hay de dónde sacarla sin contar un sitio que no está en la lista, así
+     * que va `null` — y `vistaCompleta` viaja al lado para que la pantalla no
+     * lo lea como "ninguno abierto".
+     */
+    diasDelPendienteMasViejo:
+      vistaCompleta && pendienteMasViejo ? diasEntre(pendienteMasViejo, ahora) : null,
     // Para que el aviso pueda comparar: un número solo no dice si es mucho.
     // Mismo alcance que `pendientesAbiertos`, a propósito.
     sitiosConPendientes: sitios
       .filter((s) => s.pendientesAbiertos > 0)
       .map((s) => ({ nombre: s.unidad.name, pendientes: s.pendientesAbiertos }))
       .sort((a, b) => b.pendientes - a.pendientes),
+    vistaCompleta,
   };
 }
