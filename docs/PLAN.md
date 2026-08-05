@@ -115,6 +115,20 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
    Santos Dumont (25)» adentro. Una puerta que dice que no y pasa el expediente
    por debajo. Ver un 307 y darlo por bueno era lo fácil.
 
+8. **Una defensa que ninguna prueba distingue de su ausencia no cuenta como
+   defensa.** No basta con que las pruebas pasen: hay que poder quitar cada
+   comprobación y ver cuál se cae. Si al borrarla nada se pone en rojo, o sobra
+   —otra capa la tapa— o no sirve —ninguna entrada la dispara—, y las dos cosas
+   se arreglan distinto pero ninguna se arregla dejándola ahí. Salió del
+   validador de `?volver=` (#229): con las comprobaciones estructurales y la
+   lista blanca en una sola función, **quitar la comprobación de origen no ponía
+   nada en rojo** porque la lista blanca atajaba los mismos casos un paso
+   después. Se partió en dos capas con batería propia cada una, y ahí sí: las
+   seis mueren en rojo al quitarlas. De paso se descubrió una séptima que
+   ninguna entrada podía disparar, y se borró — **un candado que no cierra nada
+   solo infla la cuenta de candados.** Es el mismo criterio que la pared entre
+   carriers: cerrado por construcción, no por disciplina repetida.
+
 **De producto:**
 
 > *"¿Esto tendría sentido para una planta en Bogotá cuyas rutas nunca hemos
@@ -387,7 +401,7 @@ PRs #203 · #204 · #205 · #206 · #207 · #208. `main` protegida.
 
 ---
 
-### Tramo 1 — El candado
+### Tramo 1 — El candado · ✅ CERRADO el 4 de agosto
 
 **Por qué primero, y ahora con evidencia:** el 3 de agosto se abrió
 `j-telemetry.com` y **la portada muestra, sin login**, tres tarjetas que entran
@@ -406,16 +420,16 @@ una cortina.
 
 | Pieza | Qué | Orden |
 |---|---|---|
-| **1.a** | **Mapeo de identidad.** Ligar la identidad de Clerk de Asav a `jstaff_admin` (global). **Se agrega, no se reemplaza** — las cadenas del seed son lo que hoy sostiene el acceso; reemplazarlas deja las pantallas en blanco sin error. Tres piezas: `vincular()` en `MembershipRepository` · archivo de mapeo versionado con `user_...`, sin correos · ejecutor en seco por omisión | **Primero.** Destraba la ficha de permisos entera |
-| **1.b** | `lib/guardia-pagina.ts`, hermana de `guardia-api.ts`, **reutilizando `decidir`, no duplicándola**. Hace `redirect()`, no HTTP. Falla cerrado | |
-| **1.c** | Aplicarla en las **65 páginas** (`jstaff` 9 · `cliente` 41 · `carrier` 15), empezando por `/jstaff` — es donde vive el razonamiento del árbitro | |
+| **1.a** | ✅ **Hecha (#209).** **Mapeo de identidad.** Ligar la identidad de Clerk de Asav a `jstaff_admin` (global). **Se agrega, no se reemplaza** — las cadenas del seed son lo que hoy sostiene el acceso; reemplazarlas deja las pantallas en blanco sin error. Tres piezas: `vincular()` en `MembershipRepository` · archivo de mapeo versionado con `user_...`, sin correos · ejecutor en seco por omisión | **Primero.** Destraba la ficha de permisos entera |
+| **1.b** | ✅ **Hecha (#214).** `lib/guardia-pagina.ts`, hermana de `guardia-api.ts`, **reutilizando `decidir`, no duplicándola**. Hace `redirect()`, no HTTP. Falla cerrado | |
+| **1.c** | ✅ **Hecha (#215 · #220 · #222 · #226).** Aplicarla en las **65 páginas** (`jstaff` 9 · `cliente` 41 · `carrier` 15), empezando por `/jstaff` — es donde vive el razonamiento del árbitro | |
 | **1.d** | ✅ **Hecha (#227).** El filtro de unidades por membresía, con las dos advertencias del #138 y una tercera medida al construirlo: **hoy no le cambia la pantalla a nadie**, porque un usuario de planta no pasa de `resolveAccountByType` —que pregunta por cuenta— y nunca llega al filtro. Lo que entra es la estructura para 1.h. Y la mitad que no era obvia: recortar la lista sin recortar las cifras habría sido §D con el eje del lugar | |
-| **1.e** | 🔵 **En PR #230, lo mergea Asav.** Sin señal no hay identidad: `userId` pasa a `string \| null` y el origen `default-heredado` se llama `anonimo`. **En producción no cambia nada hoy** —`JTEL_DEV_USER=jstaff_admin` está puesto—; cierra local, CI y cualquier despliegue al que le falte esa variable | |
-| **1.f** | **La portada.** Una ruta con dos caras: **sin sesión → landing público; con sesión → portada**, y la portada **enseña solo lo tuyo** (de las membresías, no de `listByType`). **Sin nombres de clientes.** El bloque «Estado del sistema» **se quita, no se protege** — ya vive en `/jstaff` y en `/api/salud`. Aquí entra también sacar `j-tel.io` del landing y su CSS | |
-| **1.g** | ✅ **Hecha.** `CRON_SECRET` fuera de los documentos. Resultó ser más chica de lo escrito: el valor salió del `README.md` y de `DESPUES.md` el 2 de agosto, en el mismo commit que quitó el respaldo de las siete rutas. Lo que quedaba era la redacción — `DESPUES.md` seguía diciendo en tres lugares que **faltaba rotarlo**, y ya estaba rotado. **Del historial NO se quita:** ahí se queda, rotado y sin efecto, como registro y no como llave | |
+| **1.e** | ✅ **Hecha (#230).** Sin señal no hay identidad: `userId` pasa a `string \| null` y el origen `default-heredado` se llama `anonimo`. **En producción no cambia nada hoy** —`JTEL_DEV_USER=jstaff_admin` está puesto—; cierra local, CI y cualquier despliegue al que le falte esa variable | |
+| **1.f** | ✅ **Hecha (#216 · #218).** **La portada.** Una ruta con dos caras: **sin sesión → landing público; con sesión → portada**, y la portada **enseña solo lo tuyo** (de las membresías, no de `listByType`). **Sin nombres de clientes.** El bloque «Estado del sistema» **se quita, no se protege** — ya vive en `/jstaff` y en `/api/salud`. Aquí entra también sacar `j-tel.io` del landing y su CSS | |
+| **1.g** | ✅ **Hecha (#231).** `CRON_SECRET` fuera de los documentos. Resultó ser más chica de lo escrito: el valor salió del `README.md` y de `DESPUES.md` el 2 de agosto, en el mismo commit que quitó el respaldo de las siete rutas. Lo que quedaba era la redacción — `DESPUES.md` seguía diciendo en tres lugares que **faltaba rotarlo**, y ya estaba rotado. **Del historial NO se quita:** ahí se queda, rotado y sin efecto, como registro y no como llave | |
 | **1.i** | ✅ **Hecha (#228).** **`/entrar` como puerta limpia.** Hoy el botón de iniciar sesión vive en `/quien-soy`, que es **pantalla de diagnóstico**: enseña el origen de la identidad, las membresías y si el encabezado fue rechazado. Pedirle a alguien que entre por ahí es hacerle leer el tablero del taller para abrir la puerta | **Después de cerrar `/cliente` y `/carrier`.** Antes no urge: hoy el único que entra sabe qué es `/quien-soy` |
-| **1.j** | 🔵 **En PR #229** — la validación de `?volver=` la revisa Asav antes del merge. **Volver al destino después de entrar.** Quien llega por un enlace profundo —el correo de una alerta, un expediente compartido— hoy termina en `/quien-soy` y tiene que volver a navegar a mano. La guardia ya sabe a dónde iba: falta llevarlo de vuelta al entrar. **Ojo al diseñarlo:** el destino viaja en la URL, así que hay que validarlo como ruta propia y relativa — un `?volver=` sin comprobar es un redirector abierto | **Con 1.i**, que es su puerta |
-| **1.h** | **La guardia por alcance, no por cuenta.** 1.c cierra a nivel **cuenta**: pregunta «¿es tu cuenta?», que es lo que sabe `canAccessClientAccount`. Falta la pregunta fina — «¿tu alcance cubre **esta planta**?» — y con ella **la regla del campus de `Ficha-Diseno-Permisos.md` §2.2, que no está implementada**: `canAccessPlant` resuelve alcance `plant` y `account`, pero **no tiene rama para `plant_group`**. **Sin diseñar todavía** | **Después de 1.c.** Hoy no protege a nadie —la única identidad real es global— y mezclarlo con 1.c serían dos cambios de comportamiento en un PR |
+| **1.j** | ✅ **Hecha (#229),** con la validación de `?volver=` revisada por Asav antes del merge. **Volver al destino después de entrar.** Quien llega por un enlace profundo —el correo de una alerta, un expediente compartido— hoy termina en `/quien-soy` y tiene que volver a navegar a mano. La guardia ya sabe a dónde iba: falta llevarlo de vuelta al entrar. **Ojo al diseñarlo:** el destino viaja en la URL, así que hay que validarlo como ruta propia y relativa — un `?volver=` sin comprobar es un redirector abierto | **Con 1.i**, que es su puerta |
+| **1.h** | 🔶 **NO entra en este tramo — sale abierta y es lo único que queda.** **La guardia por alcance, no por cuenta.** 1.c cierra a nivel **cuenta**: pregunta «¿es tu cuenta?», que es lo que sabe `canAccessClientAccount`. Falta la pregunta fina — «¿tu alcance cubre **esta planta**?» — y con ella **la regla del campus de `Ficha-Diseno-Permisos.md` §2.2, que no está implementada**: `canAccessPlant` resuelve alcance `plant` y `account`, pero **no tiene rama para `plant_group`**. **Sin diseñar todavía** | **Después de 1.c.** Hoy no protege a nadie —la única identidad real es global— y mezclarlo con 1.c serían dos cambios de comportamiento en un PR |
 
 **Regla de oro mientras dure este tramo:** **no iniciar sesión en Clerk hasta que
 1.a esté hecho.** La sesión de Clerk gana sobre el bypass de desarrollo; entrar
@@ -453,13 +467,77 @@ que lo posee.** Fuera de ella, no existe.
 > tiempo constante) y hoy no compite con lo que sí está abierto. Si alguien
 > decide que importa, entra como pieza propia, no como parche.
 
-**Compuerta:** ventana anónima contra `/jstaff/*` → redirección, nunca contenido ·
-un usuario con membresía solo de carrier no abre ninguna pantalla de cliente ·
-**la portada pública no nombra a ningún cliente.**
+### La compuerta, corrida el 4 de agosto de 2026
+
+No se da por buena de memoria. Se levantó producción en local contra la base
+desechable —nunca la de producción— y **se midió el cuerpo de cada respuesta, no
+el código de estado**, que es la regla 7.
+
+**1 · Ventana anónima contra `/jstaff/*` → redirección, nunca contenido.** ✅
+Las cinco pantallas probadas contestan **307 a `/entrar?motivo=sin-sesion`**, con
+cuerpos de 8 099 a 8 696 bytes que traen el armazón de la redirección y nada
+más: **cero nombres de cliente y cero contenido propio de J-Staff** —ni cuentas,
+ni ledger, ni autopsia, ni resync—.
+
+> **Y una del oficio, porque casi se cuela:** la primera corrida de esta
+> comprobación dio **cero en todo** con el servidor **caído**. `curl` devolvía
+> `000` y cuerpo vacío, y contar ocurrencias sobre nada da cero — que se lee
+> idéntico a una pantalla limpia. Por eso la comprobación cuenta también algo
+> que **tiene** que estar: el marcador de la redirección. Un verde que no
+> distingue «limpio» de «no hubo respuesta» es la regla 8 aplicada al medidor en
+> vez de al código.
+
+**2 · Un usuario con membresía solo de carrier no abre ninguna pantalla de
+cliente.** ✅ **en el dato, y hay que decir cómo.** `jb_admin` no obtiene **ni un
+nombre de cliente** en ninguna pantalla de `/cliente`, y en una pantalla de
+recurso —`/cliente/planta/<id>` con un id real— recibe **404** mientras
+`tecma_admin` recibe 200. Ésa es la pared, y la sostiene `exigirRecurso`.
+
+> **El matiz, que es de la familia del `[0]` del #222 y por eso se escribe:** en
+> el índice `/cliente` la respuesta es **200 con «No hay cuentas cliente»**, no
+> una negativa. Lo que lo vacía es que `resolveAccountByType` no resuelve
+> ninguna cuenta para él, no una guardia diciendo que no. **El dato no se fuga
+> —medido— pero el mecanismo es ausencia de cuenta, no denegación.** Entra como
+> insumo de 1.h.
+
+**3 · La portada pública no nombra a ningún cliente.** ✅ `/` contesta 200 con
+**cero ocurrencias** de Tecma, Juárez Bus, Honeywell, Planta 47, Santos Dumont y
+PRUEBA REAL.
+
+### Qué queda abierto al cerrar el tramo
+
+**Una sola pieza: 1.h, la guardia por alcance.** Y no es un pendiente
+administrativo — es la pregunta fina que este tramo no supo hacer:
+
+- **`canAccessPlant` no la llama nadie.** Comprobado sobre `main`: cero
+  llamadores fuera de sus propias pruebas.
+- **Y no tiene rama para `plant_group`**, así que **la regla del campus de
+  `Ficha-Diseno-Permisos.md` §2.2 y §2.3 —confirmada por Asav el 31 de julio—
+  sigue sin implementarse en la guardia.** Vive implementada en el filtro de
+  presentación de 1.d (`alcance-cliente.ts`), que **enseña** el campus a quien
+  alcanza una de sus plantas; lo que falta es que la guardia **abra** por esa
+  misma regla.
+- **Consecuencia hoy, dicha sin adorno:** el candado cierra a nivel **cuenta**.
+  Un usuario de planta no ve de más — ve **de menos**: `canAccessClientAccount`
+  lo rechaza y `/cliente` le dice «No hay cuentas cliente». Nadie está expuesto
+  por esto, y nadie de planta puede trabajar todavía.
+
+**Dos límites conocidos que el tramo deja escritos y no cierra:** el canal de
+tiempo entre los dos 404 (arriba), y que `/carrier` está cerrado por disciplina
+repetida y no por construcción (§2).
+
+**Lo que este tramo NO era:** el login real. `JTEL_DEV_USER=jstaff_admin` sigue
+puesto en Vercel y es lo que sostiene el acceso. El candado exige sesión de
+Clerk en producción; lo que falta para que eso sea la puerta de todos es el
+Tramo 7.
 
 ---
 
 ### Tramo 2 — Ordenar el árbitro (no arreglarlo)
+
+> **Hereda 1.h del Tramo 1.** No se mete dentro de este tramo —que no toca
+> guardias— pero tampoco se pierde: es lo único que quedó abierto del candado y
+> se diseña antes de que exista el primer usuario de planta real.
 
 **No toca el motor.** Es leer, medir y ordenar. Ver §5, que es esta ficha viviendo
 dentro del plan.
@@ -644,8 +722,13 @@ Paquetes: `db` · `domain` · `verification` · `services` · `gps-umbrella` ·
 
 **Construido y en producción:** las dos caras completas (13 pantallas, datos
 reales, dos temas — **el frente visual está cerrado**) · cinco expedientes ·
-26 de 26 rutas de API guardadas · identidad sin enforcement · historia de la
-política · plomería de alertas · el árbitro con sus cuatro arreglos de ventana.
+26 de 26 rutas de API guardadas · **las 65 páginas guardadas y el Tramo 1
+cerrado** —`/entrar` como puerta, vuelta al destino validada, sin identidad por
+omisión— · historia de la política · plomería de alertas · el árbitro con sus
+cuatro arreglos de ventana.
+
+**El candado ya no es «identidad sin enforcement».** Lo que falta de él es una
+pieza nombrada, 1.h, y el login real del Tramo 7.
 
 **La foto de referencia del 3 de agosto** de los documentos viejos vive en
 `docs/corte-2026-08-03/`. Es foto, no ley. No se edita.
@@ -789,6 +872,28 @@ bloqueante.
 - **Del historial no se quita, y queda escrito por qué.** Estando rotado, ese
   valor no abre nada: es un registro de lo que pasó, no una llave. No se
   reescribe historia por esto.
+
+- **TRAMO 1 CERRADO.** Diez piezas, 1.a a 1.j. Nueve hechas; **1.h sale
+  abierta** y se hereda al Tramo 2. La compuerta se corrió y se midió el 4 de
+  agosto —el cuerpo de cada respuesta, no el código de estado— y quedó escrita
+  arriba con sus tres resultados.
+- **Nota de conteo, para que el registro sea exacto:** este cierre se pidió con
+  «once piezas». Son **diez** — de `1.a` a `1.j`, sin hueco. La numeración salta
+  a la vista porque `1.h` está escrita al final de la tabla, después de `1.i` y
+  `1.j`, por el orden en que se abrió.
+- **Lo que queda abierto del candado tiene nombre y una consecuencia medida.**
+  `canAccessPlant` no la llama nadie y no tiene rama para `plant_group`, así que
+  **la regla del campus de la ficha §2.2 y §2.3 no está implementada en la
+  guardia** — vive solo en el filtro de presentación de 1.d. Hoy eso no expone a
+  nadie: un usuario de planta ve **de menos**, no de más.
+- **Regla 8 de «las ganadas por las malas», salida del #229:** una defensa que
+  ninguna prueba distingue de su ausencia no cuenta como defensa. Es el mismo
+  criterio que ya aplicábamos a la pared entre carriers —por construcción, no
+  por disciplina repetida— dicho ahora del lado de las pruebas.
+- **Y el caso que la produjo, porque es de los que se ven correctos y no lo
+  son:** `new URL("/..//evil.com", centinela)` **conserva el origen** y devuelve
+  un `pathname` que el navegador lee como externo. La comprobación razonable
+  pasa y el resultado es un redirector abierto.
 
 - **El carrier queda encuadrado como producto, no como anexo.** Entra a §2 «De
   producto» y gana fila propia en el Tramo 7. Las dos caras no son simétricas:
