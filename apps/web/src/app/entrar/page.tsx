@@ -3,6 +3,7 @@ import { SignInButton } from "@clerk/nextjs";
 import { getIdentidad } from "@/lib/auth";
 import { sesionUtilizable } from "@/lib/guardia-pagina";
 import { CLERK_CONFIGURADO } from "@/lib/clerk-estado";
+import { destinoDeVuelta, PARAM_VOLVER } from "@/lib/destino-de-vuelta";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,21 @@ export default async function EntrarPage({
   const identidad = await getIdentidad();
   const yaEntraste = sesionUtilizable(identidad);
 
+  /*
+   * Pieza 1.j. Se valida AQUÍ aunque la guardia ya lo haya validado al
+   * escribirlo: este parámetro lo puede teclear cualquiera en la barra de
+   * direcciones, así que el único lugar donde la comprobación cuenta es el
+   * que lo consume. Ver `destino-de-vuelta.ts` — un `?volver=` sin comprobar
+   * es un redirector abierto, y el momento en que dispararía es el peor
+   * posible: justo después de que la persona tecleó su contraseña.
+   *
+   * Rechazado significa `null`, y `null` significa la portada. No se avisa de
+   * que se rechazó: un mensaje explicando por qué le enseña a quien lo está
+   * probando cuál es la siguiente forma que sí pasa.
+   */
+  const volver = destinoDeVuelta(sp?.[PARAM_VOLVER]);
+  const seguir = volver ?? "/";
+
   return (
     <main className="mx-auto flex min-h-dvh max-w-[560px] flex-col justify-center px-5 py-16">
       <p className="mb-4 font-mono text-[10.5px] font-medium tracking-[0.17em] text-[var(--tenue)] uppercase">
@@ -88,7 +104,9 @@ export default async function EntrarPage({
         {motivo
           ? motivo.lectura
           : yaEntraste
-            ? "Tu sesión está viva. Sigue a la portada y verás lo que te corresponde."
+            ? volver
+              ? "Tu sesión está viva. Sigue y te dejamos donde ibas."
+              : "Tu sesión está viva. Sigue a la portada y verás lo que te corresponde."
             : "Una sola cuenta para tu operación. Entra y verás solo lo tuyo."}
       </p>
 
@@ -100,13 +118,18 @@ export default async function EntrarPage({
         */}
         {yaEntraste ? (
           <Link
-            href="/"
+            href={seguir}
             className="cursor-pointer rounded-sm border border-[var(--azul)] px-4 py-2.5 font-mono text-[11px] font-medium tracking-[0.11em] text-[var(--azul)] uppercase transition-colors hover:bg-[var(--hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--azul)]"
           >
-            Ir a la portada
+            {volver ? "Continuar" : "Ir a la portada"}
           </Link>
         ) : CLERK_CONFIGURADO ? (
-          <SignInButton>
+          /*
+           * `forceRedirectUrl` y no `fallbackRedirectUrl`: el segundo cede ante
+           * lo que Clerk tenga guardado de una vuelta anterior, y entonces el
+           * destino que la guardia apuntó se pierde justo cuando sirve.
+           */
+          <SignInButton forceRedirectUrl={seguir}>
             <button className="cursor-pointer rounded-sm border border-[var(--azul)] px-4 py-2.5 font-mono text-[11px] font-medium tracking-[0.11em] text-[var(--azul)] uppercase transition-colors hover:bg-[var(--hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--azul)]">
               Iniciar sesión
             </button>
