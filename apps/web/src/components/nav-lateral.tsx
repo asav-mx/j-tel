@@ -23,7 +23,7 @@ import { ENCABEZADO_RUTA } from "@/middleware";
 export type RenglonNav = { href: string; label: string };
 export type GrupoNav = { titulo: string; renglones: RenglonNav[] };
 
-type Identidad = { userId: string; roles: string[] };
+type Identidad = { userId: string | null; roles: string[] };
 
 /** El renglón activo: coincidencia exacta, o un ancestro del camino actual. */
 function esActivo(href: string, rutaActual: string, raiz: string): boolean {
@@ -44,7 +44,7 @@ function Usuario({ id, compacta = false }: { id: Identidad; compacta?: boolean }
   return (
     <Link
       href="/quien-soy"
-      title={`${id.userId} · ${rol}`}
+      title={`${id.userId ?? "Sin identidad"} · ${rol}`}
       className={`flex cursor-pointer items-center gap-2.5 transition-colors hover:bg-[var(--hover)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--azul)] ${
         compacta ? "rounded-sm px-1.5 py-1" : "px-3.5 py-3"
       }`}
@@ -53,12 +53,12 @@ function Usuario({ id, compacta = false }: { id: Identidad; compacta?: boolean }
         aria-hidden="true"
         className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[var(--t-acero)] font-mono text-[11px] text-[var(--acero)]"
       >
-        {id.userId.slice(0, 2).toUpperCase()}
+        {(id.userId ?? "--").slice(0, 2).toUpperCase()}
       </span>
       {compacta ? null : (
         <span className="min-w-0 leading-tight">
           <span className="block truncate font-mono text-[11px] text-[var(--texto)]">
-            {id.userId}
+            {id.userId ?? "Sin identidad"}
           </span>
           <span className="block truncate text-[11px] text-[var(--tenue)]">{rol}</span>
         </span>

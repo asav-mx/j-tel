@@ -14,7 +14,7 @@ export const ORIGEN_CORTO: Record<OrigenDeIdentidad, string> = {
   clerk: "sesión",
   "encabezado-dev": "encabezado",
   "variable-dev": "variable",
-  "default-heredado": "por defecto",
+  anonimo: "sin identidad",
 };
 
 /**
@@ -60,7 +60,7 @@ async function distintivo() {
         className="h-[5px] w-[5px] flex-none rounded-full"
         style={{ background: id.sesionActiva ? "var(--acero)" : "var(--tenue)" }}
       />
-      <span className="text-[var(--acero)]">{id.userId}</span>
+      <span className="text-[var(--acero)]">{id.userId ?? "nadie"}</span>
       <span>· {ORIGEN_CORTO[id.origen]}</span>
       {id.memberships.length === 0 ? <span>· sin membresías</span> : null}
     </Link>
