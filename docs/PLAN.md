@@ -925,9 +925,9 @@ lo suyo, y el ≥90% de capacidad de mostrar se sostiene.
 
 **Esta es la ficha de consolidación.** Vive aquí, no en un documento aparte.
 
-**Son dieciocho, no once.** El plan viejo decía seis en una línea y listaba ocho en
+**Son diecinueve, no once.** El plan viejo decía seis en una línea y listaba ocho en
 su propia tabla; el 3 de agosto se sumaron tres, y entre el 4 y el 5 de agosto
-**C12 a C18** salieron de investigar C11. Quien compare contra esta lista **dice contra cuántas
+**C12 a C19** salieron de investigar C11. Quien compare contra esta lista **dice contra cuántas
 y cuáles**, nunca «es la séptima».
 
 | # | Causa | Qué se sabe | Estado |
@@ -942,9 +942,10 @@ y cuáles**, nunca «es la séptima».
 | **C8** | **Identificación en vivo** | La sala no sabe qué unidad cubre qué ruta antes del cierre | Se piensa junto con C1 y C4 |
 | **C9** | **Nombre del chofer sin congelar** | Falta congelarlo en `complianceFacts` al sellar | Toca el camino del árbitro |
 | **C10** | **Planta 47 sella 8.8% vs Campus 54.0%** | **Causa identificada** (C11): el Campus **no tiene ni un solo** `llegada_sin_atribucion`; los 57 son todos de Planta 47 · Turno A. Los dos sitios fallan por razones distintas. Los porcentajes se remidieron el 4 ago —el 6.7 % / 55.2 % era del 3 ago— y la brecha sigue igual | **Explicada.** Deja de ser causa propia: es la sombra de C11 |
-| **C11** | **Servicios con evidencia y sin atribución** | **Investigada y cerrada** — `Ficha-Diagnostico-Pendientes-Sin-Atribucion.md`. Son **100**, no 71; los 71 eran la ventana vieja. La dominante es `llegada_sin_atribucion` (57), **toda de Planta 47 · Turno A**, y lo que la produce es que **ninguna candidata cumple A (cobertura ≥ 60 %) y B (corredor ≥ 60 %) a la vez** — 27 cumplen A, 26 cumplen B, **cero las dos** | **Medida.** Falta decidir el arreglo |
+| **C11** | **Servicios con evidencia y sin atribución** | **Investigación CERRADA — ver `Reporte-Final-Investigacion-71.md`.** La causa raíz es **C19**. Lo medido: — `Ficha-Diagnostico-Pendientes-Sin-Atribucion.md`. Son **100**, no 71; los 71 eran la ventana vieja. La dominante es `llegada_sin_atribucion` (57), **toda de Planta 47 · Turno A**, y lo que la produce es que **ninguna candidata cumple A (cobertura ≥ 60 %) y B (corredor ≥ 60 %) a la vez** — 27 cumplen A, 26 cumplen B, **cero las dos** | **Medida.** Falta decidir el arreglo |
 | **C12** | **`frechetMaxKm` horneado fuera de la política** | Es el **único** umbral de KML que no vive en `contractPolicySchema`: el motor lo resuelve con `?? 0.8` y quien lo llama en producción le pasa seis umbrales de política y **no éste**. Repetido literal además en `monitoreo-data.ts`. **NO causa C11** —solo ordena candidatas, no las rechaza— y aun así incumple la **Ley 6** | **Sin construir.** Entra porque está mal, no porque convenga. C7 es su gemelo |
 | **C13** | **El veredicto del mismo fallo lo decide `routeStrictness`, y el cambio no deja rastro** | Con `destino_only` + llegada → `pendiente_evidencia`; con `kml_full` → `no_cumplido`. Planta 47 cambió **dos veces en tres semanas**. Medido: **330 hechos de Tecma sellados `no_cumplido` con una unidad que sí llegó**. **Nadie los ha visto** — el único usuario del sistema es Asav y ningún cliente ni carrier ha recibido un resultado, así que **no hay acusación emitida contra nadie**. Y `contract_policy_history` existe, tiene la forma correcta —`policy_before`, `policy_after`, `actor_kind`, `note`— y está **vacía en toda la base: cero filas, y ningún código escribe en ella** | **Sin construir.** Urgencia baja hoy; **el día que esto sea vinculante ese campo es una cláusula**, y una cláusula que cambia sin rastro no se puede sostener ante nadie |
+| **C19** | **La cobertura depende de la DENSIDAD del muestreo, no de la conducta** | 🟢 Mismos aparatos —53 en los dos periodos, 50–53 por día—, mismas unidades, mismas rutas, mismo trazado. Lo único que cambió el **29 de julio** es **~1.5× más puntos por aparato** en Planta 47, y la cobertura del trazado saltó de **5–7 a 9.9 de 10**. El Campus no se movió. **La calificación de un transportista puede subir o bajar sin que él haga nada distinto: si el proveedor cambia su cadencia, el árbitro cambia de opinión.** Y 🟢 **no fue un cambio nuestro** — ningún commit toca archivador, ingestor, `gps-umbrella` ni la cadencia de los crons entre el 24 de julio y el 3 de agosto | **Sin construir. ARRIBA DE LA LISTA.** Rompe la promesa del producto: el veredicto tiene que depender de la conducta, no del aparato |
 | **C17** | **La cobertura de ruta se guarda ponderada y se lee llana** | ✅ **Arreglado en el motor.** Ahora se guardan **las dos**: `routeMatchPct` —la que decide, ponderada— y `routeMatchPlainPct` —la llana, «qué fracción del trazado cubrió»—. **No cambia un solo veredicto** y los hechos ya sellados no se tocan: los viejos traen solo la ponderada y quien los lea debe decirlo así. Lo medido que lo motivó: `routeMatchPct` va **ponderada por TF-IDF** —`weightedIdf: true` en las 3 054 candidatas medidas— y se guarda con un nombre que se lee como porcentaje llano. Medido: **168 candidatas acreditan ≥ 60 % de cobertura teniendo una cobertura real con mediana de 3.9 %**, y la correlación con la precisión pasa de **0.373 ponderada a 0.672 sin ponderar** | **Hecho.** Falta que las pantallas del expediente lean la llana |
 | **C18** | **El empalme: una unidad sirve dos rutas y el sistema no puede saberlo** | 🟢 **Medido el 29 de julio:** tres unidades cubren dos trazados cada una, y una de ellas los cubre al **79 % y 76 %**. Es práctica real del transporte de personal —consolidar rutas cuando falta unidad o falta gente— y **cada servicio la evalúa contra su propia ruta**, viendo una unidad que «solo» cubre parte. **Hunde las dos condiciones a la vez**, que es el síntoma de C11. **No explica los tres días partidos** —ahí ninguna unidad toca ninguna ruta— pero sí es un modo de falla propio. **Y la consecuencia, que no es de umbral sino de planteamiento:** si consolidar rutas es práctica normal del transporte de personal, **el árbitro tiene que poder evaluar una unidad contra el CONJUNTO de rutas que sirvió en el turno, no contra una sola.** Preguntar «¿cubriste la ruta A?» a un camión que sirvió A y B **está mal hecha la pregunta**, y ningún umbral la arregla | **Sin construir.** Hipótesis de Asav, medida y confirmada |
 | **C15** | **El expediente etiqueta mal su propia evidencia** | El ledger escribe cada candidata con el campo **`imei:`** y adentro guarda un **id de UNIDAD** — comprobado: casa con `units.id` y no con `evidence_points.imei`, que son números de 15 dígitos. **Quien lea un expediente creerá que está viendo el aparato y está viendo el vehículo.** No cambia ningún veredicto y **sí cambia lo que el expediente dice**, que es el activo del producto | **Sin construir.** Es evidencia mal etiquetada en el documento que sostiene una acusación |
@@ -1193,6 +1194,28 @@ bloqueante.
 - **El guion de `kmlOriginToleranceFraction` ya no copia el valor a mano:** lo lee
   de `packages/verification/src/index.ts` y **se niega a correr si no puede
   leerlo**. Regla 10 aplicada al propio guion.
+
+**5 de agosto de 2026 (cierre de la investigación).**
+- **C19, y va arriba de la lista: la cobertura depende de la densidad del
+  muestreo, no de la conducta.** Mismos aparatos, mismas unidades, mismas rutas
+  — **1.5× más puntos por aparato** y la cobertura salta de 5–7 a 9.9 de 10.
+  **La calificación de un transportista puede subir o bajar sin que él haga nada
+  distinto.**
+- 🟢 **Y no fue nuestro:** ningún commit toca el archivador, el ingestor,
+  `gps-umbrella` ni la cadencia de los crons entre el 24 de julio y el 3 de
+  agosto. Lo último antes del 29 es del **16 de julio**. 🟡 Fue del proveedor o de
+  los dispositivos, **y puede repetirse sin avisarnos.**
+- **El cabo suelto del sesgo direccional queda cerrado, y era mío.** Adelgazando
+  un día bueno hasta la densidad de un día partido, **el sesgo reaparece con el
+  mismo rumbo** (0.19 a 119° ESE con 1 de cada 60; 0.28 a 114° con 1 de cada
+  120). **Es artefacto de pocos puntos**, no corrimiento de coordenadas. Mi
+  lectura de «apunta al trazado» estaba mal.
+- **Reporte final escrito:** causas por cuánto explican, doce hipótesis
+  descartadas con su medición, cuatro cosas sin explicar, y las cinco reglas que
+  dejó. **No propone orden de arreglo.**
+- 🟢 **Tres conclusiones de esta investigación fueron falsas y las atrapó el grupo
+  de control, no una prueba.** Ninguna se habría atrapado leyendo el código con
+  más cuidado.
 
 **5 de agosto de 2026 (el vector).**
 - **Hay sesgo direccional, y solo en Planta 47 y solo en los tres días
