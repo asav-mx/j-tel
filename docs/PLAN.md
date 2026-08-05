@@ -691,6 +691,43 @@ el bypass.
 
 ---
 
+### Frente — La reconciliación del expediente
+
+**Sale del Tramo 7 y se coloca al cerrar el Tramo 2, junto al frente del alcance
+fino.** No es un tramo y **no se diseña hoy**.
+
+**Por qué existe.** Hoy un `no_cumplido` dice que no se cumplió **y nada más**.
+Eso no tiene valor ni para la planta ni para el carrier: la planta no puede
+explicar qué pasó y el carrier no tiene dónde poner su versión. Un veredicto que
+no se puede reconciliar no es un árbitro — es un marcador.
+
+| Pieza | Qué | Estado |
+|---|---|---|
+| **Mostrar qué sí hizo** | El **trazo real junto al contratado**, siempre, en **todo** `no_cumplido`. No es discusión: es evidencia, y **los puntos ya están guardados** | Sin diseñar |
+| **La planta aprueba una variante hacia adelante** | Ya decidido y ya anotado. La política cambia hacia adelante y nunca reescribe el pasado | Decidido, sin diseñar |
+| **El carrier aporta al expediente** | Su versión de qué pasó, **apoyada en los motivos excusables que la política ya define** | Sin diseñar |
+
+**La ley, intacta, y es la que gobierna la tercera pieza:**
+
+> **El carrier no cambia el veredicto.** Agrega contexto; **la planta decide si
+> mueve algo**. Es la Ley 5 del Marco —«el auditado no edita el veredicto»— y no
+> se negocia: **si el carrier pudiera cambiar su propio resultado, J-Tel deja de
+> ser árbitro.**
+
+**El vocabulario ya existe, y eso acorta el trabajo.** 🟢 `excusableReasons` es
+**configurable por contrato** y ya vive en la política. **Lo que falta no es el
+vocabulario: es quién los invoca y quién los aprueba.**
+
+**Por qué las tres van juntas:** enseñar el trazo real sin dónde responder deja a
+la planta con una pregunta y a nadie a quien hacérsela; dejar que el carrier
+aporte sin enseñar el trazo convierte el expediente en dos relatos sin evidencia
+en medio; y aprobar variantes sin ninguna de las dos es decidir a ciegas.
+
+**Lo que este frente NO es:** re-verificar el pasado. La política cambia hacia
+adelante.
+
+---
+
 ### Tramo 3 — Arreglar el árbitro
 
 En el orden que el Tramo 2 determine, **no en el orden en que están listadas**.
@@ -785,7 +822,7 @@ y cuáles**, nunca «es la séptima».
 |---|---|---|---|
 | **C1** | **Cuentas demo con veredictos vinculantes** | 84 hechos sellados sobre cuentas no declaradas (52 de ellos `no_cumplido`). Crecía ~11/semana | **Llave cerrada** (#206). Falta limpiar los 84 — con firma y motivo |
 | **C2** | **La cadena de auditoría rota** | 374 de 580 filas de historial (64.5%) perdieron la referencia a qué las reemplazó. El borrado en cada reintento deja `replaced_by_fact_id` en nulo | Sin construir. **Toca la promesa comercial**: sin cadena, un veredicto no puede probar de dónde vino |
-| **C3** | **Se juzga antes de que llegue el expediente** | ~175 intentos por servicio. El archivador va ~7 h detrás (p95: 30 h) y nada retrasa el primer intento | Sin construir. **Arreglar esto probablemente elimina la mayor parte de C2** |
+| **C3** | **Se juzga antes de que llegue el expediente** | ~175 intentos por servicio. El archivador va ~7 h detrás (p95: 30 h) y nada retrasa el primer intento. **Observado directamente el 5 de agosto:** los 28 servicios que fallaron cobertura son del **27 y 28 de julio**, se sellaron viendo **13–46 puntos**, y hoy esos mismos viajes tienen **370–1 992** del mismo día — **28 de 28 con más del doble**. El 28 de julio la base guardó la mitad de puntos que un día normal y el 29 el doble: el archivador se puso al día **después** de sellar | Sin construir. **Arreglar esto probablemente elimina la mayor parte de C2** — y ahora se sabe que también produce pendientes |
 | **C4** | **La geocerca congelada no es la que se usa** | El hecho guarda `expectedGeofenceId`; el motor juzga contra `profile.geofence`. **546 ocurrencias divergen** | Sin construir. Requiere D-decisión: congelar el polígono, qué pasa con el campo huérfano, cómo se re-verifica un hecho viejo |
 | **C5** | **Ventana derivada vs. match observable** | No afinados entre sí: +50 se enderezan por uno, −2 se caen por el otro | Espera historia en `route_traversal_measurements`. **No es trabajo, es tiempo** |
 | **C6** | **Trazado KML que no corresponde** | Huertas-B, Centro-A, Parajes del Sur-A · ~43 servicios | **Trabajo humano** (H1), no código |
@@ -1023,6 +1060,25 @@ bloqueante.
   reescribe historia por esto.
 
 **5 de agosto de 2026.**
+- **Frente nuevo: la reconciliación del expediente.** Tres piezas —enseñar el
+  trazo real en todo `no_cumplido`, la planta aprueba variante hacia adelante, el
+  carrier aporta al expediente— con la Ley 5 intacta: **el carrier no cambia el
+  veredicto**. `excusableReasons` ya existe y es configurable por contrato; lo
+  que falta es **quién los invoca y quién los aprueba**. Se coloca al cerrar el
+  Tramo 2, junto al frente del alcance fino. **Sin diseñar.**
+- **Los 28 de cobertura son C3, observado.** Sellados con 13–46 puntos; hoy esos
+  viajes tienen 370–1 992 del mismo día. **28 de 28.** La evidencia no faltaba:
+  no había llegado.
+- **La política del Campus rescataría 17 de 61 (28 %).** Explica un cuarto del
+  problema, no el problema — con los umbrales más flojos que existen hoy, 44
+  seguirían pendientes.
+- **Y el recálculo pasó su propio control antes de contar:** 3 054 de 3 054
+  candidatas reproducidas a 120 m con desviación 0.0. **El primer intento falló
+  el control y por eso no se reportó** — destapó que el ledger escribe `imei:` y
+  guarda un **id de unidad**.
+- **Los 330 ya son 335**, y el Campus sigue produciéndolos: 5 el 5 de agosto.
+  Planta 47 aparece solo del 14 al 30 de julio, la ventana exacta de `kml_full`.
+
 - **Regla 9 de «las ganadas por las malas»:** una causa no se acredita contra los
   que fallan; se acredita contra los que pasan.
 - **C14 — `routeStrictness` no gobierna lo que su nombre promete.** Se lee en un
