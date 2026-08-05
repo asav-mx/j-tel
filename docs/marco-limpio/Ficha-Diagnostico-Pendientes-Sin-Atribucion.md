@@ -948,6 +948,94 @@ rutas no aparecen recorriéndolas.** No está medido.
 
 ---
 
+## 4-octodecies. Cinco viajes, contados uno por uno
+
+**Tres hipótesis descartadas con estadística. Asav pidió ver los viajes.** Cinco
+servicios del Turno A del 9 de julio, con la unidad que más se acerca en cada
+uno. Todo 🟢 medido de la evidencia guardada.
+
+### 1 · Centro - A · unidad 9199 · hora límite 05:45
+
+Trazado contratado: **17.7 km**. La unidad recorrió **40.5 km en 104 minutos**,
+de 04:45 a 06:29. **Arrancó a 19.9 km del origen de la ruta** —o sea, ni cerca— y
+durante los primeros 40 minutos se mantuvo a **13 km del trazado**. A las 05:26
+empieza a acercarse; **a las 05:41 está encima del destino**, a 40 metros. Llegó
+a la geocerca **05:36, nueve minutos antes de la hora límite**. Después siguió, y
+a las 06:29 terminó **13.7 km lejos**. Cobertura real 13.7 %, precisión 29.5 %.
+
+### 2 · Colinas - A · unidad 9183 · hora límite 05:45
+
+Trazado **26.0 km**; recorrió **35.6 km en 104 minutos**. **Arrancó a 630 m del
+origen** —esta sí salió de donde debía— y fue pegada: a las 04:59 estaba a 190 m
+del trazado, a las 05:17 a 40 m y **ya en el destino**. Llegó **05:17, veintiocho
+minutos antes**. Se quedó ahí hasta las 06:05 y después se fue: terminó a 9.8 km.
+Cobertura real 22.9 %, precisión 50.4 %.
+
+### 3 · Finca - A · unidad 9377 · hora límite 05:45 — **el caso que lo dice todo**
+
+Trazado **27.9 km**; recorrió **38.4 km en 100 minutos**. **Nunca se alejó más de
+700 metros del trazado.** Ni una vez. **El 61 % de sus puntos cayó dentro del
+corredor de 120 m y su precisión de corredor fue 87.6 %.** Llegó a la geocerca
+**05:19, veintiséis minutos antes de la hora límite**.
+
+> **Este servicio está en `pendiente_evidencia`.** El camión salió a tiempo, fue
+> pegado al trazado todo el camino y llegó temprano — y el árbitro no puede
+> decirlo, porque su **cobertura de ruta es 27 %**.
+
+### 4 · Finca Auxiliar - A · unidad 9385 · hora límite 05:45
+
+Trazado **28.6 km**; recorrió **41.7 km en 103 minutos**. Máximo alejamiento
+**840 metros**. Llegó **05:41**. Cobertura real 31.5 %, precisión 55.5 %.
+
+### 5 · Juarez Nuevo - A · unidad 9183 · hora límite 05:45
+
+**La misma unidad que el caso 2**, evaluada contra otra ruta el mismo día — señal
+de que un servicio evalúa a todos los autobuses del turno. Trazado **19.3 km**;
+recorrió 35.6 km. Llegó **05:17**. Cobertura real 23.2 %, precisión 49.6 %.
+
+---
+
+### Lo que las cinco tienen en común
+
+🟢 **Los cinco llegaron antes de la hora límite.** 05:17, 05:17, 05:19, 05:36,
+05:41 — contra un límite de 05:45. **Ninguno llegó tarde.**
+
+🟢 **Los cinco recorrieron más kilómetros que el trazado contratado**: 35–42 km
+contra 17–29 km.
+
+🟢 **Los cinco siguieron manejando después de llegar**, y terminaron entre 9.8 y
+13.7 km del destino. La ventana de evidencia se cierra a las 06:29 — **unos 45
+minutos después de la llegada**.
+
+🟢 **Y los cinco tienen cobertura de ruta entre 13.7 % y 31.5 %**, aunque tres de
+ellos nunca se alejaron más de 850 m del trazado.
+
+### Lo que eso dice, y lo que no
+
+🟡 **La vuelta está dentro de la evidencia.** El trayecto de regreso —que no está
+en el trazado contratado— aporta puntos que hunden la precisión de corredor. Eso
+explica los casos 1, 2 y 5.
+
+🟡 **Pero no explica el caso 3, y ése es el que importa.** Finca - A **nunca se
+alejó 700 metros** y aun así cubre el 27 % del trazado. Si la unidad estuvo
+siempre encima de la ruta y solo tocó un cuarto de sus waypoints, entonces **el
+trazado contratado es bastante más largo que el camino que el camión hace**: la
+unidad entra y sale de la ruta por un tramo, no la recorre entera.
+
+🟢 **Dato que lo apoya:** en el caso 3 la unidad va del kilómetro 2 al 16 del
+trazado —según su distancia al origen y al destino en los seis instantes— y ahí
+termina. El trazado mide 27.9 km. **Faltan doce kilómetros de ruta contratada que
+esa unidad no recorrió y que, según el §4-duodecies, alguien sí recorre** —porque
+el agregado los cubre.
+
+**La pregunta que queda, y es la primera del frente de C14:** ¿el trazado
+contratado describe **un** viaje, o describe **el recorrido completo de una ruta
+que se sirve en varios tramos o con varias unidades**? Esto **no está medido**, y
+es lo que hay que medir después. Se prueba comparando, para una misma ruta y un
+mismo día, qué tramo del trazado cubre cada unidad.
+
+---
+
 ## 5. Contra qué lista se comparó — las once de `PLAN.md` §5
 
 El handoff pide decirlo explícitamente, no decir «es la séptima».

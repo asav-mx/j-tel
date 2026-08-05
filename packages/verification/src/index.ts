@@ -470,6 +470,11 @@ export type RouteMatchParams = {
 export type RouteMatchEvaluation = {
   arrivalAt: Date | null;
   routeMatchPct: number;
+  /**
+   * Cobertura de ruta **sin ponderar**: qué fracción del trazado cubrió, a
+   * secas. Igual a `routeMatchPct` cuando no hay corpus de rutas.
+   */
+  routeMatchPlainPct: number;
   corridorPrecisionPct: number;
   frechetKm: number | null;
   directionSimilarity: number | null;
@@ -515,6 +520,29 @@ export function evaluateUnitRouteMatch(
     : arrivalAt
       ? 100
       : 0;
+  /*
+   * La misma cobertura, SIN ponderar — «qué fracción del trazado quedó
+   * cubierta», a secas.
+   *
+   * Existe porque `routeMatchPct` va ponderado por TF-IDF cuando hay corpus de
+   * rutas, y eso **no es lo que su nombre dice**. Medido el 5 de agosto de 2026
+   * sobre las 3 054 candidatas de los pendientes de Planta 47: **168 acreditaban
+   * ≥ 60 % teniendo una cobertura real con mediana de 3.9 %**. El expediente
+   * decía que el camión había hecho más de media ruta cuando había hecho menos
+   * de una vigésima parte.
+   *
+   * La ponderación se queda —pesar los waypoints que distinguen esta ruta de
+   * las demás es deliberado y es lo que evita que dos rutas que comparten
+   * avenida se confundan— y **la que decide sigue siendo `routeMatchPct`**.
+   * Lo que cambia es que el expediente ya no tiene que elegir entre creerle a un
+   * nombre o no saber: **se guardan las dos, y cada una dice cuál es.**
+   *
+   * No toca ningún hecho ya sellado. Los expedientes viejos traen solo la
+   * ponderada, y quien los lea debe decirlo así.
+   */
+  const routeMatchPlainPct = hasKml
+    ? computeRouteMatchPct(sortedPoints, scoredWaypoints, params.corridorKm)
+    : routeMatchPct;
   // B mide qué fracción de los PUNTOS GPS cae en el corredor; el prefijo no
   // observado no aporta puntos, así que va contra el KML completo sin sesgo.
   const corridorPrecisionPct = hasKml
@@ -554,6 +582,7 @@ export function evaluateUnitRouteMatch(
   return {
     arrivalAt,
     routeMatchPct,
+    routeMatchPlainPct,
     corridorPrecisionPct,
     frechetKm,
     directionSimilarity: dirSim,
@@ -899,6 +928,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
     const {
       arrivalAt,
       routeMatchPct,
+      routeMatchPlainPct,
       corridorPrecisionPct,
       frechetKm,
       directionSimilarity: dirSim,
@@ -921,6 +951,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
       servedRoute,
       arrivalAt,
       routeMatchPct,
+      routeMatchPlainPct,
       corridorPrecisionPct,
       frechetKm,
       directionSimilarity: dirSim,
@@ -933,7 +964,14 @@ export function verifyService(input: VerificationInput): VerificationResult {
       details: {
         imei,
         arrivalAt: arrivalAt?.toISOString(),
+        /*
+         * `routeMatchPct` es la que DECIDE, y va ponderada cuando `weightedIdf`
+         * es true. `routeMatchPlainPct` es la que se puede leer como
+         * porcentaje llano. Van las dos porque una sola miente: o miente el
+         * nombre, o falta el dato.
+         */
         routeMatchPct,
+        routeMatchPlainPct,
         corridorPrecisionPct,
         frechetKm: frechetKm == null ? null : Number(frechetKm.toFixed(3)),
         directionSimilarity: dirSim == null ? null : Number(dirSim.toFixed(3)),

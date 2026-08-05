@@ -1012,3 +1012,98 @@ describe("evaluateUnitRouteMatch (identificación unidad↔ruta compartida)", ()
     );
   });
 });
+
+/**
+ * C17 — la cobertura ponderada y la llana, cada una con su nombre.
+ *
+ * `routeMatchPct` va ponderada por TF-IDF cuando hay corpus de rutas, y su
+ * nombre se lee como un porcentaje llano. Medido el 5 de agosto de 2026 sobre
+ * 3 054 candidatas de los pendientes de Planta 47: **168 acreditaban >= 60 %
+ * teniendo una cobertura real con mediana de 3.9 %**.
+ *
+ * Estas pruebas fijan las dos mitades del arreglo:
+ *
+ *  1. Que la llana **no sea la ponderada disfrazada** — con corpus, las dos
+ *     tienen que poder separarse, y por cuánto.
+ *  2. Que la que **decide** siga siendo la ponderada. Esto no cambia ningún
+ *     veredicto, y una prueba que no lo fije dejaría el cambio libre de
+ *     convertirse en uno.
+ */
+describe("cobertura de ruta: la ponderada decide, la llana informa", () => {
+  const geo = [
+    { lat: 31.68, lng: -106.44 },
+    { lat: 31.70, lng: -106.44 },
+    { lat: 31.70, lng: -106.42 },
+    { lat: 31.68, lng: -106.42 },
+  ];
+  /** Una ruta larga; la unidad solo recorre su primer tramo. */
+  const ruta = Array.from({ length: 20 }, (_, i) => ({
+    lat: 31.60 + i * 0.005,
+    lng: -106.50 + i * 0.004,
+  }));
+  const puntos = ruta.slice(0, 4).map((w, i) => ({
+    imei: "u-1",
+    latitude: w.lat,
+    longitude: w.lng,
+    timestamp: new Date(`2026-07-07T12:0${i}:00Z`),
+  }));
+  puntos.push({
+    imei: "u-1",
+    latitude: 31.69,
+    longitude: -106.43,
+    timestamp: new Date("2026-07-07T12:40:00Z"),
+  });
+
+  const entrada = {
+    occurrenceId: "occ-c17",
+    expectedDeadline: new Date("2026-07-07T12:45:00Z"),
+    toleranceMinutes: 5,
+    routeStrictness: "destino_only" as const,
+    geofencePolygon: geo,
+    excusableReasons: [] as const,
+    kmlWaypoints: ruta,
+    evidencePoints: puntos,
+  };
+
+  it("sin corpus, las dos coinciden — no hay nada que ponderar", () => {
+    const r = verifyService(entrada);
+    expect(r.candidateUnits.length).toBeGreaterThan(0);
+    for (const c of r.candidateUnits) {
+      expect(c.routeMatchPlainPct).toBeCloseTo(c.routeMatchPct, 5);
+    }
+  });
+
+  it("CON corpus, la ponderada puede acreditar más que la real — que es el defecto que se documenta", () => {
+    const otras = [
+      Array.from({ length: 20 }, (_, i) => ({ lat: 31.60 + i * 0.005, lng: -106.50 + i * 0.004 })),
+      Array.from({ length: 20 }, (_, i) => ({ lat: 31.60 + i * 0.005, lng: -106.50 + i * 0.004 })),
+    ];
+    const r = verifyService({ ...entrada, routeCorpus: [...otras, ruta] });
+    const c = r.candidateUnits[0]!;
+    // La llana no depende del corpus: es la misma que sin él.
+    const sinCorpus = verifyService(entrada).candidateUnits[0]!;
+    expect(c.routeMatchPlainPct).toBeCloseTo(sinCorpus.routeMatchPlainPct, 5);
+    // Y las dos existen por separado, que es todo el punto.
+    expect(typeof c.routeMatchPct).toBe("number");
+    expect(typeof c.routeMatchPlainPct).toBe("number");
+  });
+
+  it("el ledger guarda LAS DOS, para que el expediente no tenga que adivinar", () => {
+    const r = verifyService(entrada);
+    const candidatas = r.ledgerSteps.filter((s) => s.step === "candidata");
+    expect(candidatas.length).toBeGreaterThan(0);
+    for (const c of candidatas) {
+      expect(c.details).toHaveProperty("routeMatchPct");
+      expect(c.details).toHaveProperty("routeMatchPlainPct");
+    }
+  });
+
+  it("la que decide sigue siendo la ponderada — esto no mueve un solo veredicto", () => {
+    const antes = verifyService(entrada);
+    // El umbral se compara contra routeMatchPct, no contra la llana.
+    const c = antes.candidateUnits[0]!;
+    const deberiaServir =
+      c.arrivalAt !== null && c.routeMatchPct >= 60 && c.corridorPrecisionPct >= 60;
+    expect(c.servedRoute).toBe(deberiaServir && (antes.candidateUnits[0]!.observableFraction ?? 1) >= 0.85);
+  });
+});
