@@ -1211,6 +1211,93 @@ sellaron sus hechos. **No se midió aquí.**
 
 ---
 
+## 4-unvicies. La versión de trazado NO cierra la investigación
+
+**La pista:** ¿la versión de trazado de las ocurrencias del 13, 20 y 27 es la
+misma contra la que se selló su hecho? Si difiere, es C4.
+
+🟢 **Medido, y no cierra.**
+
+- **Existe UNA sola versión por ruta**, en las 15, todas con `valid_from`
+  **2026-07-14** y `valid_to` abierta.
+- **Cada ocurrencia apunta a la versión de SU PROPIA ruta.** Cero cruces.
+- Los servicios del **9, 10 y 13 de julio** usan una versión cuyo `valid_from`
+  es **posterior a su fecha de servicio** — 45 servicios con versión «no
+  vigente». **Pero eso no explica nada:** el 9 y el 10 tuvieron cobertura de 7.1
+  y 6.0 de 10, normales.
+- **El 20 y el 27 de julio usan la versión vigente y correcta**, y aun así
+  quedaron en 0.3.
+
+> 🟢 **La hipótesis de C4 por versión de trazado queda descartada para estos tres
+> días.**
+
+---
+
+## 4-duovicies. El empalme — existe, y NO es lo que pasa esos días
+
+**La hipótesis de Asav**, que viene de conocer la operación y no se deduce del
+código: *un camión que atiende dos o tres rutas seguidas en el mismo turno. Su
+recorrido es una mezcla, así que contra el trazado de A cubre poco y trae puntos
+fuera de su corredor — hunde las dos condiciones a la vez.*
+
+🟢 **Se midió: unidades que cubren ≥ 30 % de dos o más trazados el mismo día.**
+
+| Día | Unidades con ≥ 30 % en 2+ rutas | Con ≥ 60 % en 2+ | Rutas que toca la unidad típica |
+|---|---|---|---|
+| 13 jul | **0** de 44 | 0 | **0** |
+| 20 jul | **0** de 39 | 0 | **0** |
+| 27 jul | **0** de 44 | 0 | **0** |
+| **29 jul** | **3** de 49 | **1** | 1 |
+
+🟢 **El empalme existe y está medido**, el 29 de julio:
+
+```
+unidad …8ecf08   Km 20 - A 79 %  ·  Juarez Nuevo - A 76 %
+unidad …7b14f0   Riveras 9 - A 74 %  ·  Riveras 7 - A 54 %
+unidad …fedf9b   Colinas - A 87 %  ·  Safari - A 36 %
+```
+
+**La primera cubre dos rutas completas al 79 % y 76 %.** Es exactamente la firma
+que Asav describió, y **el sistema no tiene forma de saberlo**: cada servicio la
+evalúa contra su propia ruta y ve una unidad que «solo» cubre parte.
+
+> 🟡 **La hipótesis se confirma como fenómeno real y se descarta como causa de
+> los tres días partidos.** En el 13, 20 y 27 **la unidad típica no toca NINGUNA
+> ruta al 30 %** — no es que sirva dos, es que no aparece sirviendo ninguna.
+
+---
+
+## 4-tervicies. Los tres días: evidencia de sobra, a 160 metros de distancia
+
+🟢 Lo mejor que logra **cualquier** unidad contra **cualquier** ruta, y qué tan
+cerca llegó el punto más próximo:
+
+| Día | Puntos | Mejor cobertura | Punto más cercano al trazado |
+|---|---|---|---|
+| 13 jul | 41 460 | **2.8 %** | **0.17 km** |
+| 20 jul | 25 980 | **2.8 %** | **0.16 km** |
+| 27 jul | 77 490 | **2.2 %** | **0.16 km** |
+| **29 jul** | 218 448 | **88.6 %** | **0.00 km** |
+
+**Los tres días partidos tienen evidencia de sobra** —hasta 77 mil puntos— y
+**ninguno de esos puntos se acerca a menos de ~160 metros del trazado**. El día
+bueno, los puntos caen **encima**.
+
+🟡 **Inferencia, y va marcada porque es lo más fuerte que se puede decir sin otra
+medición:** un piso consistente de **0.16–0.17 km en tres días distintos y sobre
+decenas de miles de puntos** no se parece a «el camión tomó otra calle» —eso daría
+distancias dispersas, a veces de kilómetros—. Se parece a **un desplazamiento
+sistemático**: los puntos y el trazado describiendo las mismas calles, corridos
+entre sí. **Y 160 m cae justo afuera del corredor de 150 m del Campus y del de
+120 m de Planta 47.**
+
+**Lo que NO se midió, y es la siguiente pregunta:** si ese desplazamiento tiene
+dirección constante —lo que apuntaría a un cambio de referencia de coordenadas o
+de precisión en el proveedor esos días— o si es ruido. Se prueba midiendo el
+vector medio punto→trazado más cercano y viendo si apunta siempre al mismo lado.
+
+---
+
 ## 5. Contra qué lista se comparó — las once de `PLAN.md` §5
 
 El handoff pide decirlo explícitamente, no decir «es la séptima».
