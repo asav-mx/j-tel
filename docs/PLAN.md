@@ -220,6 +220,22 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
     medir ahí. Es la hermana de §D del Marco: aquélla es sobre el alcance
     temporal de una cifra, ésta sobre el nivel al que se agregó.
 
+    **Tercer caso, y el más barato de repetir — el promedio que mezcla un
+    periodo roto con periodos sanos.** 🟢 Medido el 6 de agosto: este plan decía
+    que el archivador iba **«~7 h detrás, p95 30 h»** (C3). Por semana de
+    `recorded_at`: **22.13 h** la del 6 de julio, y **0.10 h** de la del 13 en
+    adelante — hoy va a **seis minutos**. El «~7 h» no era falso: era el
+    promedio de las dos cosas, y **no describía ningún momento que haya
+    existido**. Un lector razonable lo entiende como «así va el archivador», y
+    así no fue nunca.
+
+    Lo que distingue este caso de los otros dos: ahí el eje era el **nivel de
+    agregación** —día contra periodo—; aquí es que **el periodo abarcaba un
+    cambio de régimen**. Promediar a través de un antes y un después borra
+    justo el hecho de que hubo un antes y un después. **La pregunta que lo
+    atrapa: ¿este número describe un estado, o el promedio de dos estados
+    distintos?** Si es lo segundo, la serie va en vez del promedio.
+
 **De producto:**
 
 > *"¿Esto tendría sentido para una planta en Bogotá cuyas rutas nunca hemos
@@ -339,20 +355,51 @@ en silencio.
 
 ---
 
-**D2 · Turno B de Planta 47 — declarado 18:00, operado ~14:00**
+**D2 · Turno B de Planta 47 — la hora declarada no cuadra con la hora límite**
 
-*Qué pasa:* falla 6 de 6 días, 36 de 86 fallos. **No es código: es una
-conversación con la Planta** para confirmar la hora real y a qué turno pertenecen
-esas rutas.
+*Qué pasa:* **No es código: es una conversación con la Planta** para confirmar la
+hora real y a qué turno pertenecen esas rutas.
 
-*Recomendación:* **tener esa conversación antes de tocar el árbitro.** Es
-probablemente parte de lo que Planta 47 no sella sin causa identificada —🟢 al 6 de
-agosto sella **11.0 %** contra **53.9 %** del Campus— y arreglar el motor sin
-resolver esto mete ruido en la medición.
+### 🟢 Cuál de los dos «Turno B» es — medido el 6 de agosto
 
-🟢 **Y hay que precisar cuál «Turno B», medido el 6 de agosto:** existen **dos
-turnos distintos con ese nombre**, uno que arranca a las **15:30** y otro a las
-**18:00**. La conversación tiene que decir de cuál habla.
+**No están mezclados: cada uno cuelga de un contrato distinto**, así que la
+pregunta tiene respuesta limpia.
+
+| | **Planta 47 · Turno B** | **Campus · Turno B** |
+|---|---|---|
+| Declarado | **15:30** | **18:00** |
+| Hora límite real | **11:45** | 17:40 |
+| Ruta-turnos | 6 (Huertas-B, Juárez Nuevo-B, Km 30-B, Riveras 9-B, San José-B, San José Auxiliar-B) | 5 |
+| Evidencia observada | **10:45 → 18:00** | 16:40 → 17:49 |
+| Hechos | **120: cero cumplidos, 119 `no_cumplido`, 1 pendiente** | 100: 57 cumplidos, 38 `no_cumplido`, 5 pendientes |
+
+> 🟢 **El de D2 es el de las 15:30, el de Planta 47.** Y con eso **la premisa de
+> esta decisión estaba equivocada: nunca estuvo declarado a las 18:00.** Las 18:00
+> son del **Campus**, que es el sano de los dos — 57 % cumplido, con su hora límite
+> a las 17:40, veinte minutos antes de su turno, que es coherente.
+>
+> 🟢 **La anomalía real de Planta 47 es otra y es mayor: turno declarado 15:30 y
+> hora límite 11:45.** No son veinte minutos antes: son **tres horas cuarenta y
+> cinco**. Y la evidencia de esas unidades va de **10:45 a 18:00**, así que
+> tampoco es que no se muevan.
+>
+> 🟢 **Y el tamaño creció:** este plan decía «6 de 6 días, 36 de 86 fallos». Al 6
+> de agosto son **119 de 120 sin cumplir, y cero cumplidos en toda la serie**
+> (9 jul → 5 ago). Un turno que nunca ha acreditado un solo servicio.
+
+**La pregunta para la Planta cambia de forma, y por eso importaba medirlo antes de
+sentarse:** no es «¿es a las 18:00 o a las 14:00?». Es **«el Turno B de Planta 47
+está declarado a las 15:30 y su hora límite es 11:45 — ¿cuál de las dos es la
+real, y a qué turno pertenecen estas seis rutas?»**
+
+🟡 **Lo que no se puede decidir desde aquí:** si el 11:45 es un turno distinto mal
+etiquetado, un viaje de regreso, o un dato mal capturado. Las tres explican lo
+medido y **ninguna se distingue sin preguntarle a la Planta.**
+
+*Recomendación:* **tener esa conversación antes de tocar el árbitro.** Es parte de
+lo que Planta 47 no sella sin causa identificada —🟢 al 6 de agosto sella **11.0 %**
+contra **53.9 %** del Campus— y arreglar el motor sin resolver esto mete ruido en
+la medición.
 
 *Ojo:* `PLAN-v1.md` lo declaraba ✅ resuelto. **Estaba equivocado.** Ver §7, F1.
 
@@ -1021,6 +1068,38 @@ En el orden que el Tramo 2 determine, **no en el orden en que están listadas**.
 - Una causa por PR. No se mezclan dos cambios de comportamiento del motor.
 - Cada arreglo trae su medición de antes y después.
 
+#### La regla del nudo — nunca dos términos de `servedRoute` en el mismo PR
+
+**Sale del Tramo 2, y es la única regla de este tramo que nombra líneas de
+código.** 🟢 Medido el 6 de agosto: **siete causas se cruzan en una sola expresión
+booleana**, `servedRoute` en `packages/verification/src/index.ts:575-580`. Sus
+cinco términos son:
+
+| Término | Causas que lo mueven |
+|---|---|
+| `arrivalAt !== null` | **C4** (contra qué polígono) · **C8** |
+| `!hasKml` | **C14** · **C6** |
+| `observableEnough` | **C16** (`kmlOriginToleranceFraction`) |
+| `routeMatchPct >= minKmlPct` | **C17** (decide la ponderada) · **C19** · **C16** |
+| `corridorPrecisionPct >= minCorridorPct` | **C16** (Campus al 50 %) · **C19** |
+
+> **Los cinco producen el mismo número: cuántas candidatas acreditan.** No son
+> cinco mediciones que se puedan comparar entre sí — son cinco entradas de un
+> mismo resultado. **Tocar dos en el mismo PR hace inatribuible el efecto de las
+> dos**, y ninguna medición de antes y después lo recupera después: el número se
+> movió y no hay forma de repartir cuánto puso cada una.
+>
+> **Por eso «una causa por PR» aquí es más estricto de lo que suena.** No basta
+> con que el PR nombre una sola causa: **tiene que tocar un solo término.** C16 y
+> C19 pueden aparecer las dos en un mismo término, y ésos son los casos donde hay
+> que parar y partir el trabajo, no acelerarlo.
+
+**Y el corolario que da holgura, porque no todo está en el nudo:** 🟢 `shapeOk`
+**no entra en `servedRoute`** — solo ordena candidatas. Ésa es la razón exacta de
+que **C12 no cause C11**, y de que arreglar C12 sea seguro de medir por separado
+aunque toque el mismo archivo. **Compartir archivo no es compartir el nudo; lo que
+importa es si el término entra en la expresión.**
+
 **Aquí vive la identificación por capas** — seis señales que acumulan confianza y
 ninguna condena sola: llegada a geocerca (la más robusta, ya existe) · corredor ·
 match fino (solo con densidad suficiente) · huella histórica · patrón de paradas ·
@@ -1124,8 +1203,8 @@ ruta y qué comparte código, y separa lo que se puede medir sin sellar de lo qu
 | **C19** | **La cobertura depende de la DENSIDAD del muestreo, no de la conducta** | 🟢 **6 ago:** el salto **se sostuvo**. Puntos de evidencia por día de servicio de Planta 47: **61–68 k** del 9 al 24 de julio → **93 k · 97 k · 99 k · 108 k · 110 k** del 29 de julio al 5 de agosto. El Campus, plano (**113–142 k**) todo el periodo. Mismos aparatos —51–54 por día, estable de punta a punta—, mismas unidades, mismas rutas, mismo trazado. 🔵 **5 ago:** la cobertura del trazado saltó de **5–7 a 9.9 de 10**. 🟢 **No fue un cambio nuestro:** ningún commit toca archivador, ingestor, `gps-umbrella` ni la cadencia de los crons entre el 24 de julio y el 3 de agosto. **La calificación de un transportista puede subir o bajar sin que él haga nada distinto** | **Sin construir.** Rompe la promesa del producto: el veredicto tiene que depender de la conducta, no del aparato |
 | **C11** | **Servicios con evidencia y sin atribución** | **Investigación CERRADA** — `Reporte-Final-Investigacion-71.md`; el detalle, en `Ficha-Diagnostico-Pendientes-Sin-Atribucion.md`. La causa raíz es **C19**. 🟢 **6 ago, por causa × sitio × turno:** **106** pendientes (eran 100 el 4 ago y 104 el 5) — `llegada_sin_atribucion` **61**, *todos* de **Planta 47 · Turno A**; cobertura insuficiente **28**; observación insuficiente **12**; sin evidencia **5**. Lo que la produce: **ninguna candidata cumple A (cobertura ≥ 60 %) y B (corredor ≥ 60 %) a la vez** | **Medida.** Falta decidir el arreglo |
 | **C14** | **`routeStrictness` no gobierna lo que su nombre promete** | Se lee en **un solo punto** (`packages/verification/src/index.ts:1018`) y solo elige entre `pendiente_evidencia` y `no_cumplido` **después** de que la atribución falló. La comprobación A∧B vive en `servedRoute` (`index.ts:575`) y **lo único que la apaga es `!hasKml`**. 🟢 **6 ago, y esto cierra el argumento: los 48 ruta-turnos de los dos contratos reales tienen KML activo con waypoints.** O sea `!hasKml` **no se dispara nunca hoy**, así que A∧B corre siempre y `destino_only` está **inerte para todos los servicios reales**. Con `destino_only`, una unidad que llegó **no puede salir `cumplido` jamás** | **Sin construir.** Es la causa de que los 61 no se puedan cerrar solos. **Tiene frente propio** — «La puerta sin salida» |
-| **C13** | **El veredicto del mismo fallo lo decide `routeStrictness`, y el cambio no deja rastro** | Con `destino_only` + llegada → `pendiente_evidencia`; con `kml_full` → `no_cumplido`. 🟢 **6 ago: 341** `no_cumplido` con una unidad que **sí llegó** — **208 del Campus** (`kml_full`, 9 jul → 5 ago, **sigue creciendo**) y **133 de Planta 47** (`kml_full`, 14 → 30 jul, **congelado**: salió de esa estrictez el 31). Eran 330 el 4 de agosto y 335 el 5: **lo que crece es el Campus, y solo el Campus.** 🟢 **El mismo día visto por el otro lado:** los 61 `llegada_sin_atribucion` de Planta 47 caen el 9, 10, 31 de julio y el 3, 4 y 5 de agosto — **cero entre el 13 y el 30**, que es exactamente su ventana de `kml_full`. El mismo fallo, dos nombres. 🟢 `contract_policy_history` **existe y sigue en cero filas al 6 de agosto** — y el contrato del Campus **se editó ese mismo día a las 09:14 sin dejar una** | **Sin construir.** 🔵 Nadie los ha visto: ningún cliente ni carrier ha recibido un resultado, así que **no hay acusación emitida**. Eso baja la urgencia y no cierra la pregunta |
-| **C18** | **El empalme: una unidad sirve dos rutas y el sistema no puede saberlo** | 🔵 **29 jul:** tres unidades cubren dos trazados cada una, una al **79 % y 76 %**. 🟢 **6 ago — medido sobre toda la ventana, que es lo que faltaba:** contando cuántas unidades **acreditan** (`sirvio_ruta`) más de un ruta-turno el mismo día, el empalme aparece en **18 de 28 días del Campus**, con hasta **3 rutas** por unidad. **Es rutinario, no ocasional.** ⚠ **Y el eje manda:** en Planta 47 sale **0 de 7 días**, pero eso **no dice que ahí no pase** — dice que ahí casi nada acredita (es C11), así que el empalme no es observable por esta vía. **La consecuencia, que no es de umbral sino de planteamiento:** preguntar «¿cubriste la ruta A?» a un camión que sirvió A y B **está mal hecha la pregunta**, y ningún umbral la arregla | **Sin construir.** Hipótesis de Asav, medida y confirmada |
+| **C13** | **El veredicto del mismo fallo lo decide `routeStrictness`, y el cambio no deja rastro** | Con `destino_only` + llegada → `pendiente_evidencia`; con `kml_full` → `no_cumplido`. 🟢 **6 ago: 341** `no_cumplido` con una unidad que **sí llegó** — **208 del Campus** (`kml_full`, 9 jul → 5 ago, **sigue creciendo**) y **133 de Planta 47** (`kml_full`, 14 → 30 jul, **congelado**: salió de esa estrictez el 31). Eran 330 el 4 de agosto y 335 el 5: **lo que crece es el Campus, y solo el Campus.** 🟢 **El mismo día visto por el otro lado:** los 61 `llegada_sin_atribucion` de Planta 47 caen el 9, 10, 31 de julio y el 3, 4 y 5 de agosto — **cero entre el 13 y el 30**, que es exactamente su ventana de `kml_full`. El mismo fallo, dos nombres. 🟢 **El caso de esta causa, con fecha, y es nuestro:** `contract_policy_history` **existe y sigue en cero filas al 6 de agosto**, y el contrato del Campus **se editó ese mismo día a las 09:14 sin dejar una sola fila**. Lo editamos **nosotros**, con el guion de `kmlOriginToleranceFraction`, **sabiendo que C13 existe y que esa tabla es su arreglo.** **Ni siquiera quien conoce el problema deja historia**, porque dejarla no es obligatorio: es la regla 14 —una regla escrita no es una regla aplicada— aplicada a la auditoría. Mientras escribir la fila dependa de que alguien se acuerde, la tabla seguirá vacía | **Sin construir.** 🔵 Nadie los ha visto: ningún cliente ni carrier ha recibido un resultado, así que **no hay acusación emitida**. Eso baja la urgencia y no cierra la pregunta |
+| **C18** | **El empalme: una unidad sirve dos rutas y el sistema no puede saberlo** | 🔵 **29 jul:** tres unidades cubren dos trazados cada una, una al **79 % y 76 %**. 🟢 **6 ago — medido sobre toda la ventana, que es lo que faltaba:** contando cuántas unidades **acreditan** (`sirvio_ruta`) más de un ruta-turno el mismo día, el empalme aparece en **18 de 28 días del Campus**, con hasta **3 rutas** por unidad. **Es rutinario, no ocasional.** ⚠ **Y el eje manda:** en Planta 47 sale **0 de 7 días**, pero eso **no dice que ahí no pase** — dice que ahí casi nada acredita (es C11), así que el empalme no es observable por esta vía. **La consecuencia, que no es de umbral sino de planteamiento:** preguntar «¿cubriste la ruta A?» a un camión que sirvió A y B **está mal hecha la pregunta**, y ningún umbral la arregla. ⚠ **Y una perilla que se va a confundir con el arreglo, dicho antes de que llegue el momento:** `permitirConsolidacion` **ya existe** en la política y los dos contratos la tienen en `false`. 🟢 Lo único que hace es **apagar el pase de exclusividad** (`packages/services/src/verification.ts:334`), que es el que hoy *quita* una unidad de todas las rutas menos la de mejor match. **Ponerla en `true` no arregla C18: solo deja de castigar el empalme.** El árbitro seguiría evaluando cada servicio contra una sola ruta — que es exactamente la pregunta mal hecha | **Sin construir.** Hipótesis de Asav, medida y confirmada |
 | **C16** | **La configuración del contrato no coincide con lo acordado, y no hay contra qué comparar** | 🟢 **6 ago: difieren dieciséis de 24 campos** entre los dos contratos — **no seis**, como decía este plan. Los que deciden un veredicto: `routeStrictness` · `kmlCorridorMinPct` (**60 vs 50**) · `kmlCorridorMeters` (120 vs 150) · `evidenceMarginMinutesAfter` · `verificationGraceMinutes` · `excusableReasons` (Planta 47 admite `falla_mecanica`, el Campus no) · `enforcementRules` (el Campus está **vacío**). 🟢 **Y siete existen solo en Planta 47**, así que el Campus corre con el valor de fábrica sin que nadie lo decidiera: `maxWindowBeforeMinutes` · `routeAvgSpeedKmh` · `routeDurationMinSamples` · `routeDurationPercentile` · `windowDerivationEnabled` · `windowSlackPct` · y **`timeZone`**, que es el campo del que salió D1. 🔵 Asav recordaba el corredor del Campus **acordado en 60 %**. 🟢 **Ya no difiere `kmlOriginToleranceFraction`**: se escribió en el Campus el 6 de agosto con `0.15`, el mismo de fábrica — **cambió quién manda, no el comportamiento**. Con `contract_policy_history` vacía (C13), **no hay forma de leer del sistema qué se pactó** | **Sin construir.** Más grave que un umbral flojo: el árbitro puede estar aplicando una regla que las partes no pactaron |
 | **C4** | **La geocerca congelada no es la que se usa** | El hecho guarda `expectedGeofenceId`; el motor juzga contra `profile.geofence` (`packages/services/src/verification.ts:1055`). 🟢 **6 ago: 546 ocurrencias divergen** —la cifra no se movió— **y todas son de Planta 47**. 🟢 **Y lo que este plan no decía: 420 de esas ocurrencias ya tienen hecho sellado**, o sea 420 de los 973 hechos reales (**43 %**) cargan una geocerca que no es contra la que se les juzgó | **Sin construir.** Requiere D-decisión: congelar el polígono, qué pasa con el campo huérfano, cómo se re-verifica un hecho viejo |
 | **C2** | **La cadena de auditoría rota** | 🟢 **6 ago: 374 de 581 filas** (**64.4 %**) sin referencia a qué las reemplazó. La cifra es la misma de siempre **porque dejó de crecer**: 🟢 **las 374 son todas de la semana del 27 de julio**, y la semana del 3 de agosto agregó **una fila, con** su referencia. 🟢 **371 de las 374 son de `actor_kind: human`.** El mecanismo: `archiveAndDeleteFact` escribe la fila con `replacedByFactId` en nulo y un segundo paso, `updateHistorySuccessor`, es el que la cierra; en esas 374 el segundo paso no ocurrió. 🟡 **Por qué no ocurrió no se puede leer desde aquí** | **Sin construir. Toca la promesa comercial**: sin cadena, un veredicto no puede probar de dónde vino. 🟡 **Y la urgencia cambió:** es una cicatriz de una tanda, no una hemorragia |
@@ -1207,7 +1286,8 @@ const servedRoute =
 - **El Campus** aparece en C13 (208 y creciendo), C16 (el corredor al 50 %) y C18 (18 de 28 días con empalme).
 - **Huertas-B** aparece en C5 y en C6 — 🔵 **y NO aparece entre los pendientes de C11**, medido el 4 de agosto.
 - **Ya no aparece en D2:** los pendientes de C11 son del **Turno A**, y D2 habla del **Turno B**, así que resolver D2 no los mueve.
-- 🟢 **Y una trampa de nombres, medida el 6 de agosto:** hay **dos turnos distintos llamados «Turno B»** —uno que arranca 15:30 con 6 ruta-turnos y otro 18:00 con 5—. Cualquier conteo «por Turno B» que no diga cuál, suma dos cosas.
+- 🟢 **Y el Turno B de Planta 47 es un agujero propio, medido el 6 de agosto: 120 hechos, cero cumplidos.** No entra en C11 —solo 1 de sus 120 es pendiente— sino en D2. Es el turno que nunca ha acreditado un servicio.
+- 🟢 **Y una trampa de nombres, medida el 6 de agosto:** hay **dos turnos distintos llamados «Turno B»** —el de **Planta 47 arranca 15:30** con 6 ruta-turnos; el del **Campus, 18:00** con 5—. Cualquier conteo «por Turno B» que no diga cuál, suma dos cosas. **Ya le costó una premisa a D2**, que describía el turno del Campus creyendo hablar del de Planta 47.
 
 ---
 
@@ -1234,7 +1314,7 @@ decisión es cada una.
 | Qué | Clase | La decisión concreta que hace falta | Causas que destraba |
 |---|---|---|---|
 | **D1** · los 294 hechos con el deadline mal calculado | Negocio | Corregirlos con firma y motivo, o dejarlos | — |
-| **D2** · Turno B de Planta 47, declarado 18:00 y operado ~14:00 | **Conversación con la Planta** | Cuál es la hora real y a qué turno pertenecen esas rutas. 🟢 **Y ahora también: cuál de los dos «Turno B» es** | No mueve C11 (Turno A) |
+| **D2** · Turno B de Planta 47 | **Conversación con la Planta** | 🟢 **Ya está resuelto cuál de los dos es: el de las 15:30.** La premisa vieja («declarado 18:00») era del **Campus**. Lo que falta preguntar: **turno declarado 15:30 contra hora límite 11:45 — ¿cuál es la real?** 🟢 Y el tamaño creció: **119 de 120 sin cumplir, cero cumplidos** | No mueve C11 (Turno A) |
 | **D3** · regla de cierre del pendiente por evidencia | **Negocio + legal** | Cuánto puede un servicio quedarse en pendiente y qué pasa después. 🟢 **El dato se movió: son 106 pendientes y 89 llevan más de 48 h** al 6 de agosto, contra los 71 con que se abrió esta decisión — y sigue creciendo | C11 |
 | **D4** · re-verificar las 300 congeladas | Negocio | Cuándo, sabiendo que cada re-verificación mete una versión más en la historia del hecho | C5 |
 | **D5** · cómo se le cuenta a Tecma que su número cambia | Negocio | El mensaje, **antes** de que el número se mueva. 🟢 Ya se movió solo: 6.7 % → 8.8 % → **11.0 %** en tres días | Precede a D4 |
@@ -1600,6 +1680,51 @@ bloqueante.
   distintos llamados «Turno B»**, uno a las 15:30 y otro a las 18:00.
 - **§5.6 nuevo:** qué coloca cerrar este tramo — los cinco frentes que hoy están
   escritos y sin lugar, y qué dato de la ficha alimenta a cada uno.
+
+**6 de agosto de 2026 (lo que el tramo dejó fuera de §5).**
+Cuatro cosas salieron de la ficha y se colocaron donde mandan, porque como nota de
+§5 no obligan a nadie:
+- **Regla del nudo, en el Tramo 3.** El solapamiento de `servedRoute` deja de ser
+  un hallazgo y pasa a ser ley del tramo que arregla: **nunca dos términos de esa
+  expresión en el mismo PR.** «Una causa por PR» era más flojo de lo necesario —
+  no basta con nombrar una causa, hay que **tocar un solo término**, y C16 y C19
+  pueden caer las dos en el mismo. Con su corolario: `shapeOk` está fuera de la
+  expresión, así que **compartir archivo no es compartir el nudo**.
+- **Tercer caso de la regla del eje (la 15).** El «~7 h» del archivador era el
+  **promedio de un periodo roto con periodos sanos** —22.13 h una semana, 0.10 h
+  las demás— y **no describía ningún momento que haya existido**. Se distingue de
+  los dos casos anteriores: ahí el eje era el nivel de agregación; aquí es que el
+  periodo abarcaba **un cambio de régimen**. La pregunta que lo atrapa: *¿esto
+  describe un estado, o el promedio de dos?*
+- **El caso de C13, y es nuestro.** El contrato del Campus se editó el 6 de agosto
+  a las 09:14 **sin dejar una fila** en `contract_policy_history` — y lo editamos
+  nosotros, con el guion de `kmlOriginToleranceFraction`, **sabiendo que C13
+  existe y que esa tabla es su arreglo**. Es la regla 14 aplicada a la auditoría:
+  **ni quien conoce el problema deja historia mientras dejarla sea opcional.**
+- **C18 gana su advertencia antes de tiempo:** `permitirConsolidacion` ya existe y
+  **ponerla en `true` no arregla C18** — solo apaga el pase de exclusividad, o sea
+  **deja de castigar el empalme** sin hacer que el árbitro evalúe contra el
+  conjunto de rutas. Queda escrito ahora para que no se confunda cuando llegue.
+
+**6 de agosto de 2026 (D2 — cuál de los dos «Turno B»).**
+- 🟢 **Resuelto, y no estaban mezclados:** cada uno cuelga de un contrato distinto.
+  **El de D2 es el de Planta 47, que arranca a las 15:30.** Las 18:00 son del
+  **Campus**.
+- 🟢 **Y con eso la premisa de D2 estaba equivocada: el Turno B de Planta 47 nunca
+  estuvo declarado a las 18:00.** La descripción vieja retrataba el turno del
+  Campus — que además es el sano de los dos: 57 % cumplido, con hora límite 17:40
+  para un turno de 18:00, que es coherente.
+- 🟢 **La anomalía real es mayor que la que se buscaba:** Planta 47 · Turno B está
+  **declarado 15:30 con hora límite 11:45** —tres horas cuarenta y cinco, no
+  veinte minutos— y su evidencia va de **10:45 a 18:00**.
+- 🟢 **El tamaño creció:** de «36 de 86 fallos» a **119 de 120 sin cumplir, cero
+  cumplidos** en toda la serie del 9 de julio al 5 de agosto. **Un turno que no ha
+  acreditado un solo servicio.**
+- **La pregunta para la Planta cambia de forma**, y por eso se midió antes de la
+  conversación: no es «¿18:00 o 14:00?», es «**15:30 declarado contra 11:45 de
+  hora límite — ¿cuál es la real, y a qué turno pertenecen estas seis rutas?**».
+- 🟡 **Lo que no se decide desde aquí:** si el 11:45 es otro turno mal etiquetado,
+  un viaje de regreso o un dato mal capturado. Las tres explican lo medido.
 
 **5 de agosto de 2026 (los sensores).**
 - **Frente nuevo: los sensores.** Dos piezas que van juntas — un **tablero en
