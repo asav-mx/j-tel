@@ -362,39 +362,70 @@ hora real y a qué turno pertenecen esas rutas.
 
 ### 🟢 Cuál de los dos «Turno B» es — medido el 6 de agosto
 
-**No están mezclados: cada uno cuelga de un contrato distinto**, así que la
-pregunta tiene respuesta limpia.
+**No están mezclados: cada uno cuelga de un contrato distinto de la misma cuenta**,
+así que la pregunta tiene respuesta limpia.
 
 | | **Planta 47 · Turno B** | **Campus · Turno B** |
 |---|---|---|
-| Declarado | **15:30** | **18:00** |
-| Hora límite real | **11:45** | 17:40 |
+| Cuenta cliente | Tecma | Tecma |
+| Contrato | `Tecma 47 - Transporte Personal` | `TECMA Campus Santos Dumont - Juarez Bus` |
+| Alcance | planta **Tecma Planta 47** | grupo **Campus Santos Dumont** |
+| Arranca (hoy) | **15:30** | **18:00** |
 | Ruta-turnos | 6 (Huertas-B, Juárez Nuevo-B, Km 30-B, Riveras 9-B, San José-B, San José Auxiliar-B) | 5 |
-| Evidencia observada | **10:45 → 18:00** | 16:40 → 17:49 |
-| Hechos | **120: cero cumplidos, 119 `no_cumplido`, 1 pendiente** | 100: 57 cumplidos, 38 `no_cumplido`, 5 pendientes |
 
-> 🟢 **El de D2 es el de las 15:30, el de Planta 47.** Y con eso **la premisa de
-> esta decisión estaba equivocada: nunca estuvo declarado a las 18:00.** Las 18:00
-> son del **Campus**, que es el sano de los dos — 57 % cumplido, con su hora límite
-> a las 17:40, veinte minutos antes de su turno, que es coherente.
+> 🟢 **El de D2 es el de Planta 47.** No cruza cuentas —los dos son de Tecma con
+> Juárez Bus— pero **sí cruza contratos dentro de la misma cuenta**, que es
+> exactamente donde un conteo «por Turno B» suma dos cosas sin avisar. Ver **C20**.
+
+**🟢 Y los 36 son 100 % de Planta 47.** Medido sobre la ventana original (servicios
+hasta el 28 de julio):
+
+| | Planta 47 · Turno B | Campus · Turno B |
+|---|---|---|
+| Hechos | 84 | 70 |
+| Fallos | **84 — el 100 %** | 32 |
+| Cumplidos | **0** | **38** |
+
+Las seis rutas `- B` dan **14 hechos y 14 fallos cada una, sin excepción**. El «36»
+original era 6 rutas × 6 días; la serie completa hasta el 28 de julio da 6 × 14 =
+**84**, con la misma tasa. **El Turno B del Campus nunca estuvo en ese conteo**, y
+en esa misma ventana iba 54 % cumplido.
+
+### 🟢 La hora límite tuvo TRES regímenes, no uno
+
+**Corrección de método, y va escrita porque casi cuesta la conversación:** la
+primera lectura de esta sección tomó la hora límite con `min()` —o sea **la más
+vieja de la serie**— y la presentó como el estado de hoy. Son tres:
+
+| Hora límite | Fechas de servicio | Ventana vigilada | Ocurrencias | Selladas | Cumplidas |
+|---|---|---|---|---|---|
+| **11:45** | 9 → 28 jul | 10:45–12:30 | 84 | 84 | **0** |
+| **17:45** | 29 jul → 28 ago | **16:45–18:30** | 138 | 36 | **0** |
+| **15:15** | 31 ago → 4 sep | **12:59–16:00** | 30 | 0 (aún futuras) | — |
+
+> 🟢 **La premisa de D2 era correcta para julio:** el régimen de 17:45 con ventana
+> 16:45–18:30 es exactamente «declarado 18:00», y así lo describió `DESPUES.md` el
+> 28 de julio. **Lo que pasó después es que alguien ya movió el turno a 15:30**, y
+> las ocurrencias generadas desde el 1 de agosto derivan bien: 15:15.
 >
-> 🟢 **La anomalía real de Planta 47 es otra y es mayor: turno declarado 15:30 y
-> hora límite 11:45.** No son veinte minutos antes: son **tres horas cuarenta y
-> cinco**. Y la evidencia de esas unidades va de **10:45 a 18:00**, así que
-> tampoco es que no se muevan.
+> 🔵 **Y aquí está lo que cambia de qué se trata.** `DESPUES.md` midió que estas
+> rutas se recorren **alrededor de las 14:00**. Las 14:00 **no caen ni en
+> 10:45–12:30 ni en 16:45–18:30** — caen justo dentro de **12:59–16:00**, que es la
+> ventana del régimen nuevo. **Es la primera que contiene la operación.**
 >
-> 🟢 **Y el tamaño creció:** este plan decía «6 de 6 días, 36 de 86 fallos». Al 6
-> de agosto son **119 de 120 sin cumplir, y cero cumplidos en toda la serie**
-> (9 jul → 5 ago). Un turno que nunca ha acreditado un solo servicio.
+> 🟢 **Pero ese régimen empieza el 31 de agosto.** Entre hoy y el 28 quedan **102
+> ocurrencias** que se juzgarán con la ventana que no contiene la operación. Y en
+> los dos regímenes ya sellados van **cero cumplidos de 120**.
 
 **La pregunta para la Planta cambia de forma, y por eso importaba medirlo antes de
-sentarse:** no es «¿es a las 18:00 o a las 14:00?». Es **«el Turno B de Planta 47
-está declarado a las 15:30 y su hora límite es 11:45 — ¿cuál de las dos es la
-real, y a qué turno pertenecen estas seis rutas?»**
+sentarse:** ya no es «¿es a las 18:00 o a las 14:00?». Es **confirmar que 15:30 es
+la hora real** — y entonces la decisión de negocio es qué pasa con las tres semanas
+que todavía se van a juzgar con la ventana vieja.
 
-🟡 **Lo que no se puede decidir desde aquí:** si el 11:45 es un turno distinto mal
-etiquetado, un viaje de regreso, o un dato mal capturado. Las tres explican lo
-medido y **ninguna se distingue sin preguntarle a la Planta.**
+🟡 **Lo que no se decide desde aquí:** si el 11:45 salió de la zona horaria (D1) —el
+hueco contra 17:45 es de seis horas exactas, que es la forma de ese defecto— o de
+otra cosa. **No está probado**, y no hace falta probarlo para tener la
+conversación.
 
 *Recomendación:* **tener esa conversación antes de tocar el árbitro.** Es parte de
 lo que Planta 47 no sella sin causa identificada —🟢 al 6 de agosto sella **11.0 %**
@@ -1178,10 +1209,10 @@ lo suyo, y el ≥90% de capacidad de mostrar se sostiene.
 
 **Esta es la ficha de consolidación.** Vive aquí, no en un documento aparte.
 
-**Son diecinueve, no once.** El plan viejo decía seis en una línea y listaba ocho en
-su propia tabla; el 3 de agosto se sumaron tres, y entre el 4 y el 5 de agosto
-**C12 a C19** salieron de investigar C11. Quien compare contra esta lista **dice contra cuántas
-y cuáles**, nunca «es la séptima».
+**Son veinte, no once.** El plan viejo decía seis en una línea y listaba ocho en
+su propia tabla; el 3 de agosto se sumaron tres, entre el 4 y el 5 de agosto
+**C12 a C19** salieron de investigar C11, y el 6 de agosto **C20** salió de medir D2.
+Quien compare contra esta lista **dice contra cuántas y cuáles**, nunca «es la séptima».
 
 **Qué hace esta sección, y qué no.** Ordena por **dependencia**, dice qué comparte
 ruta y qué comparte código, y separa lo que se puede medir sin sellar de lo que no.
@@ -1219,6 +1250,7 @@ ruta y qué comparte código, y separa lo que se puede medir sin sellar de lo qu
 | **C8** | **Identificación en vivo** | La sala no sabe qué unidad cubre qué ruta antes del cierre | Se piensa junto con C1 y C4 |
 | **C1** | **Cuentas demo con veredictos vinculantes** | 🟢 **6 ago: la llave sigue cerrada.** Son **84** hechos exactos —54 de PRUEBA REAL, 30 de Honeywell, 52 `no_cumplido` entre los dos— y **el último se selló el 3 de agosto**: ni uno después | **Llave cerrada** (#206). Falta limpiar los 84 — con firma y motivo |
 | **C10** | **Planta 47 sella menos que el Campus** | **Explicada por C11.** 🟢 **6 ago: 11.0 % de Planta 47 contra 53.9 % del Campus** (era 6.7/55.2 el 3 ago y 8.8/54.0 el 4). **La brecha se cierra despacio y por arriba**, y sigue siendo la sombra de C11, no una causa | **Explicada.** Deja de ser causa propia |
+| **C20** | **Dos cosas distintas con el mismo nombre, y el conteo las suma sin avisar** | 🟢 **6 ago: existen dos turnos llamados «Turno B»** —uno de `Tecma 47` que arranca 15:30, otro de `TECMA Campus Santos Dumont` que arranca 18:00—, **en la misma cuenta cliente y con el mismo carrier**. Es el único nombre de turno repetido en toda la base. 🟢 **Ya costó una premisa:** D2 se abrió como «Turno B declarado 18:00» describiendo el turno del Campus mientras hablaba del de Planta 47, y el del Campus es el sano de los dos (54 % cumplido en esa ventana contra 0 %). 🟢 **Y no es solo turnos:** dentro del contrato del Campus hay **ocho nombres de ruta repetidos** —`Km 30` y `Oasis` tres veces cada uno, `Finca`, `Haciendas`, `Juarez Nuevo`, `Riveras`, `Sanders` y `Sierra Vista` dos—, que es el **caso 6 de §D del Marco** («Rutas del alcance: 27») visto desde el otro lado: allá el lector no podía reconstruir el número; aquí quien agrupa suma dos cosas | **Sin construir.** **Es causa de NOMBRE, no de dato**: cada fila es correcta y el conteo también; lo falso lo pone la etiqueta que las junta. Misma familia que **C15** —el campo `imei:` que guarda un id de unidad— y por eso van juntas: **ninguna mueve un veredicto y las dos cambian lo que el documento dice** |
 
 ---
 
@@ -1243,7 +1275,8 @@ depende de otra va después de la que la desbloquea, **aunque duela**.
 | **C5** | **C7** | 🟢 Las dos comen de `route_traversal_measurements`, y **ya tiene historia suficiente** (48 de 48 ruta-turnos con ≥ 3 muestras) |
 | **C6** | **C14** | 🟢 `!hasKml` es el interruptor real de A∧B, así que qué rutas tienen trazado —y si el suyo es el correcto— decide más que el contrato |
 | **C1 · C4** | **C8** | 🔵 Comparten la pregunta «qué se congela dentro del hecho», que es el Tramo 4 |
-| **—** | **C12 · C15 · C9** | 🟢 No dependen de nada ni desbloquean nada: **no mueven un veredicto**, mueven lo que el expediente dice y lo que la ley exige |
+| **—** | **C12 · C15 · C9 · C20** | 🟢 No dependen de nada ni desbloquean nada: **no mueven un veredicto**, mueven lo que el expediente dice y lo que la ley exige |
+| **C20** | **D2** | 🟢 No es dependencia de motor sino de lectura: **ya le costó una premisa a D2**, y cualquier corte «por Turno B» que no diga cuál seguirá sumando dos contratos |
 | **—** | **C10** | 🟢 No es causa: es la sombra de C11 medida por contrato |
 
 ---
@@ -1287,7 +1320,7 @@ const servedRoute =
 - **Huertas-B** aparece en C5 y en C6 — 🔵 **y NO aparece entre los pendientes de C11**, medido el 4 de agosto.
 - **Ya no aparece en D2:** los pendientes de C11 son del **Turno A**, y D2 habla del **Turno B**, así que resolver D2 no los mueve.
 - 🟢 **Y el Turno B de Planta 47 es un agujero propio, medido el 6 de agosto: 120 hechos, cero cumplidos.** No entra en C11 —solo 1 de sus 120 es pendiente— sino en D2. Es el turno que nunca ha acreditado un servicio.
-- 🟢 **Y una trampa de nombres, medida el 6 de agosto:** hay **dos turnos distintos llamados «Turno B»** —el de **Planta 47 arranca 15:30** con 6 ruta-turnos; el del **Campus, 18:00** con 5—. Cualquier conteo «por Turno B» que no diga cuál, suma dos cosas. **Ya le costó una premisa a D2**, que describía el turno del Campus creyendo hablar del de Planta 47.
+- 🟢 **Y la trampa de nombres tiene causa propia — C20:** hay **dos turnos distintos llamados «Turno B»**, el de **Planta 47 a las 15:30** y el del **Campus a las 18:00**, en la misma cuenta. Cualquier conteo «por Turno B» que no diga cuál, suma dos contratos. **Ya le costó una premisa a D2.** Y dentro del Campus hay ocho nombres de ruta repetidos.
 
 ---
 
@@ -1298,7 +1331,7 @@ es decisión de Asav y no se toma aquí.
 
 | | Causas | Notas |
 |---|---|---|
-| ✅ **Medido hoy, solo lectura** | C1 · C2 · C3 · C4 · C5 · C7 · C9 · C10 · C11 · C12 · C13 · C14 · C15 · C16 · C17 · C18 · C19 | Toda la tabla de 5.1. Se leyó producción con `jtel_readonly`; **ninguna escribió, selló ni re-verificó nada** |
+| ✅ **Medido hoy, solo lectura** | C1 · C2 · C3 · C4 · C5 · C7 · C9 · C10 · C11 · C12 · C13 · C14 · C15 · C16 · C17 · C18 · C19 · C20 | Toda la tabla de 5.1. Se leyó producción con `jtel_readonly`; **ninguna escribió, selló ni re-verificó nada** |
 | 🔎 **Medible hoy, sin medir aún** | **C18** en Planta 47 por geometría (cubrir dos trazados ≠ acreditar dos rutas; la de hoy usa la segunda definición) · **C6**: qué rutas tienen versión de trazado y de cuándo · **C7**: derivar la duración con las 192 filas de C5 · **C2**: qué corrida dejó las 374 sin cerrar | Nada de esto exige sellar. Es trabajo de lectura que aún no se hizo |
 | ⚙ **Requiere tocar el motor** | Si mover un umbral **rescata** servicios · si el arreglo de C14 cierra los 61 · si C18 evaluado contra el conjunto de rutas cambia veredictos | Eso es **simulación** y vive en D4 / Tramo 6, no aquí |
 | 🚫 **No es leíble desde aquí** | **Por qué cambió la densidad el 29 de julio** (C19) · **por qué el archivador se atrasó el 25–26 de julio** (C3) · **por qué esos tres lunes y no los otros**. 🟢 Lo verificado es que **no fue nuestro código**; 🟡 la causa se infiere del proveedor o de los dispositivos | Son tres de las cuatro cosas que el reporte final dejó sin explicar. **La cuarta —si el empalme es rutinario— ya se midió** (C18). **Y puede repetirse sin avisarnos** |
@@ -1314,7 +1347,7 @@ decisión es cada una.
 | Qué | Clase | La decisión concreta que hace falta | Causas que destraba |
 |---|---|---|---|
 | **D1** · los 294 hechos con el deadline mal calculado | Negocio | Corregirlos con firma y motivo, o dejarlos | — |
-| **D2** · Turno B de Planta 47 | **Conversación con la Planta** | 🟢 **Ya está resuelto cuál de los dos es: el de las 15:30.** La premisa vieja («declarado 18:00») era del **Campus**. Lo que falta preguntar: **turno declarado 15:30 contra hora límite 11:45 — ¿cuál es la real?** 🟢 Y el tamaño creció: **119 de 120 sin cumplir, cero cumplidos** | No mueve C11 (Turno A) |
+| **D2** · Turno B de Planta 47 | **Conversación con la Planta** | 🟢 **Resuelto cuál de los dos es: el de Planta 47**, y **los 36 son 100 % suyos**. El turno **ya se movió a 15:30** y su ventana nueva (12:59–16:00) es la primera que contiene la operación de ~14:00 — **pero arranca el 31 de agosto**. Falta: **confirmar que 15:30 es la real**, y decidir **qué pasa con las 102 ocurrencias** que hasta el 28 de agosto se juzgan con la ventana vieja | No mueve C11 (Turno A) |
 | **D3** · regla de cierre del pendiente por evidencia | **Negocio + legal** | Cuánto puede un servicio quedarse en pendiente y qué pasa después. 🟢 **El dato se movió: son 106 pendientes y 89 llevan más de 48 h** al 6 de agosto, contra los 71 con que se abrió esta decisión — y sigue creciendo | C11 |
 | **D4** · re-verificar las 300 congeladas | Negocio | Cuándo, sabiendo que cada re-verificación mete una versión más en la historia del hecho | C5 |
 | **D5** · cómo se le cuenta a Tecma que su número cambia | Negocio | El mensaje, **antes** de que el número se mueva. 🟢 Ya se movió solo: 6.7 % → 8.8 % → **11.0 %** en tres días | Precede a D4 |
@@ -1706,25 +1739,51 @@ Cuatro cosas salieron de la ficha y se colocaron donde mandan, porque como nota 
   **deja de castigar el empalme** sin hacer que el árbitro evalúe contra el
   conjunto de rutas. Queda escrito ahora para que no se confunda cuando llegue.
 
-**6 de agosto de 2026 (D2 — cuál de los dos «Turno B»).**
-- 🟢 **Resuelto, y no estaban mezclados:** cada uno cuelga de un contrato distinto.
-  **El de D2 es el de Planta 47, que arranca a las 15:30.** Las 18:00 son del
-  **Campus**.
-- 🟢 **Y con eso la premisa de D2 estaba equivocada: el Turno B de Planta 47 nunca
-  estuvo declarado a las 18:00.** La descripción vieja retrataba el turno del
-  Campus — que además es el sano de los dos: 57 % cumplido, con hora límite 17:40
-  para un turno de 18:00, que es coherente.
-- 🟢 **La anomalía real es mayor que la que se buscaba:** Planta 47 · Turno B está
-  **declarado 15:30 con hora límite 11:45** —tres horas cuarenta y cinco, no
-  veinte minutos— y su evidencia va de **10:45 a 18:00**.
-- 🟢 **El tamaño creció:** de «36 de 86 fallos» a **119 de 120 sin cumplir, cero
-  cumplidos** en toda la serie del 9 de julio al 5 de agosto. **Un turno que no ha
-  acreditado un solo servicio.**
-- **La pregunta para la Planta cambia de forma**, y por eso se midió antes de la
-  conversación: no es «¿18:00 o 14:00?», es «**15:30 declarado contra 11:45 de
-  hora límite — ¿cuál es la real, y a qué turno pertenecen estas seis rutas?**».
-- 🟡 **Lo que no se decide desde aquí:** si el 11:45 es otro turno mal etiquetado,
-  un viaje de regreso o un dato mal capturado. Las tres explican lo medido.
+**6 de agosto de 2026 (D2 — cuál de los dos «Turno B», y C20).**
+- 🟢 **Los dos son de Tecma**, mismo carrier, **contratos distintos**: el de las
+  **15:30** es de `Tecma 47` (planta Planta 47); el de las **18:00**, del
+  `Campus Santos Dumont` (grupo de plantas). **No cruza cuentas — cruza contratos
+  dentro de una.**
+- 🟢 **Los 36 son 100 % de Planta 47**, y no están mezclados. En la ventana original
+  (hasta el 28 jul): Planta 47 · Turno B va **84 de 84 fallos, cero cumplidos**, con
+  las seis rutas `- B` en **14 y 14** cada una; el Campus · Turno B va 32 fallos de
+  70 y **38 cumplidos**. El «36» era 6 rutas × 6 días; la serie completa da 6 × 14.
+- ⚠ **Corrección de método, y queda escrita porque casi cuesta la conversación:** la
+  primera lectura tomó la hora límite con `min()` —**la más vieja de la serie**— y la
+  presentó como el estado de hoy. **Son tres regímenes:** 11:45 (9–28 jul, ventana
+  10:45–12:30) · 17:45 (29 jul–28 ago, **16:45–18:30**) · 15:15 (31 ago–4 sep,
+  **12:59–16:00**). La «brecha de 3 h 45» que se reportó **no existe como estado
+  simultáneo**: era comparar el turno de hoy contra la hora límite de julio. Es la
+  regla del eje otra vez, ahora en la forma más tonta — **un agregado que elige un
+  extremo y se lee como el valor vigente.**
+- 🟢 **La premisa de D2 era correcta para julio:** 17:45 con ventana 16:45–18:30 es
+  «declarado 18:00». **Lo que pasó es que alguien ya movió el turno a 15:30**, y lo
+  generado desde el 1 de agosto deriva bien.
+- 🔵🟢 **Y eso cambia de qué se trata la conversación.** `DESPUES.md` midió que estas
+  rutas se recorren **~14:00**, que **no cae en 10:45–12:30 ni en 16:45–18:30** y sí
+  cae en **12:59–16:00**. Es la primera ventana que contiene la operación — **pero
+  arranca el 31 de agosto**, así que **102 ocurrencias** se juzgarán antes con la
+  ventana vieja. En lo ya sellado van **cero cumplidos de 120**.
+- 🟡 **Sin probar:** si el 11:45 salió de la zona horaria (D1). El hueco contra 17:45
+  es de **seis horas exactas**, que es la forma de ese defecto, y no hace falta
+  probarlo para tener la conversación.
+
+**6 de agosto de 2026 (C20 — la causa de nombre).**
+- **Causa nueva, y son veinte.** **Dos cosas distintas con el mismo nombre, y el
+  conteo las suma sin avisar.** 🟢 «Turno B» es el **único** nombre de turno repetido
+  en toda la base, y los dos viven en la misma cuenta cliente. 🟢 Dentro del contrato
+  del Campus hay además **ocho nombres de ruta repetidos** — `Km 30` y `Oasis` tres
+  veces, otros seis dos veces.
+- **Es causa de NOMBRE, no de dato**, y por eso entra aparte: cada fila es correcta y
+  el conteo también; **lo falso lo pone la etiqueta que las junta.** Misma familia
+  que **C15** —el campo `imei:` que guarda un id de unidad—: ninguna mueve un
+  veredicto y las dos cambian lo que el documento dice.
+- **Y no es hipotética: ya cobró.** D2 se abrió describiendo el Turno B del Campus
+  mientras hablaba del de Planta 47 — y el del Campus es el **sano** de los dos.
+- 🔵 **Es el caso 6 de §D del Marco visto desde el otro lado.** Allá («Rutas del
+  alcance: 27») el lector no podía reconstruir el número con lo que tenía debajo;
+  aquí el problema es anterior: **quien agrupa por el nombre ya sumó dos cosas antes
+  de que nadie lea nada.**
 
 **5 de agosto de 2026 (los sensores).**
 - **Frente nuevo: los sensores.** Dos piezas que van juntas — un **tablero en
