@@ -1,5 +1,25 @@
 import { describe, it, expect } from "vitest";
-import { generarSql, type Fila } from "./corregir-deadlines.js";
+import { generarSql, ventanaCorregida, type Fila } from "./corregir-deadlines.js";
+import { windowForOccurrence } from "./ventana-ocurrencia.js";
+import type { ContractPolicy, EvidenceWindowRoute } from "@jtel/domain";
+
+/** Política mínima que el esquema acepta; cada prueba le pone lo suyo encima. */
+const POLITICA_BASE = {
+  toleranceMinutes: 5,
+  arrivalAnticipationMinutes: 15,
+  routeStrictness: "kml_full",
+  timeZone: "America/Ciudad_Juarez",
+  excusableReasons: [],
+  enforcementRules: [],
+  permitirConsolidacion: false,
+  evidenceMinCoveragePct: 80,
+  evidenceMaxGapMinutes: 10,
+  kmlMatchMinPct: 60,
+  kmlCorridorMeters: 120,
+  kmlCorridorMinPct: 60,
+  kmlOriginToleranceFraction: 0.15,
+  maxRouteDurationMinutes: 60,
+} as unknown as ContractPolicy;
 
 const fila = (over: Partial<Fila> = {}): Fila => ({
   occurrenceId: "11111111-1111-1111-1111-111111111111",
@@ -75,5 +95,102 @@ describe("el SQL que se pega en la consola", () => {
 
   it("sin nada que corregir no emite una transacción vacía", () => {
     expect(generarSql([], false)).not.toContain("BEGIN;");
+  });
+});
+
+/*
+ * La ventana corregida — el defecto del #258.
+ *
+ * El guion llamaba a `computeEvidenceWindow` SIN su tercer argumento y con una
+ * política de tres campos armada a mano. Eso produce una ventana `basis:
+ * "politica"` —un fijo antes del deadline— mientras el generador escribe una
+ * DERIVADA por ruta. Corregir así movía el deadline bien y dejaba la ventana
+ * corta por delante.
+ *
+ * Estas pruebas fallan contra el código roto: se comprobó por mutación,
+ * volviendo a la llamada vieja.
+ */
+describe("la ventana corregida es la misma que escribe el generador", () => {
+  const politica = {
+    ...POLITICA_BASE,
+    evidenceMarginMinutesBefore: 60,
+    verificationGraceMinutes: 15,
+    evidenceMarginMinutesAfter: 30,
+    maxWindowBeforeMinutes: 360,
+    windowSlackPct: 25,
+    routeAvgSpeedKmh: 20,
+    windowDerivationEnabled: true,
+    routeDurationPercentile: 90,
+    routeDurationMinSamples: 3,
+  } as ContractPolicy;
+
+  const deadline = new Date("2026-08-31T21:15:00.000Z");
+
+  it("con historia medida, la ventana se DERIVA y no se queda en el piso", () => {
+    // 100 min de recorrido + 25 % de holgura = 125 min antes, no los 60 del piso.
+    const sizing: EvidenceWindowRoute = {
+      measuredDurationMinutes: 100,
+      routeLengthKm: null,
+    };
+    const v = ventanaCorregida(deadline, politica, sizing);
+
+    expect(v.basis).toBe("medida");
+    expect(v.beforeMinutes).toBe(125);
+    // Lo que el código roto devolvía, y que ninguna otra prueba distinguía:
+    expect(v.beforeMinutes).toBeGreaterThan(politica.evidenceMarginMinutesBefore);
+    expect(v.windowStart.toISOString()).toBe("2026-08-31T19:10:00.000Z");
+  });
+
+  it("sin historia, se estima con la geometría del trazado", () => {
+    const sizing: EvidenceWindowRoute = {
+      measuredDurationMinutes: null,
+      routeLengthKm: 27.9,
+    };
+    const v = ventanaCorregida(deadline, politica, sizing);
+
+    expect(v.basis).toBe("estimada_geometria");
+    expect(v.beforeMinutes).toBeGreaterThan(politica.evidenceMarginMinutesBefore);
+  });
+
+  it("sin ruta ni historia cae al piso de la política — y lo DICE", () => {
+    // Este es el único caso en que el fijo es correcto, y se distingue por
+    // `basis`. El defecto era que TODAS las correcciones salían así.
+    const v = ventanaCorregida(deadline, politica, {
+      measuredDurationMinutes: null,
+      routeLengthKm: null,
+    });
+    expect(v.basis).toBe("politica");
+    expect(v.beforeMinutes).toBe(60);
+  });
+
+  it("es exactamente lo que el generador escribe, no algo parecido", () => {
+    const sizing: EvidenceWindowRoute = {
+      measuredDurationMinutes: 100,
+      routeLengthKm: 27.9,
+    };
+    expect(ventanaCorregida(deadline, politica, sizing)).toEqual(
+      windowForOccurrence(deadline, politica, sizing),
+    );
+  });
+
+  it("una política incompleta NO compila — la valla es el compilador", () => {
+    const sizing: EvidenceWindowRoute = {
+      measuredDurationMinutes: 100,
+      routeLengthKm: null,
+    };
+    // Exactamente la llamada que tenía el defecto: tres campos sueltos.
+    // Si alguien vuelve a aflojar el tipo a `Partial<ContractPolicy>`, este
+    // `@ts-expect-error` deja de tener error y **`tsc` falla**. Vitest no
+    // typechequea (regla 12), así que la que atrapa esto es `pnpm build`.
+    // @ts-expect-error política incompleta: faltan las perillas de derivación
+    ventanaCorregida(deadline, {
+      evidenceMarginMinutesBefore: 60,
+      verificationGraceMinutes: 15,
+      evidenceMarginMinutesAfter: 30,
+    }, sizing);
+
+    // Y el tercer argumento no es opcional: omitirlo era la otra mitad.
+    // @ts-expect-error falta el dimensionado de la ruta
+    ventanaCorregida(deadline, politica);
   });
 });

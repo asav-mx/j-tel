@@ -26,12 +26,19 @@
  */
 
 import { and, eq, gt, sql } from "drizzle-orm";
-import { computeEvidenceWindow, JTTEL_TZ, type ContractPolicy } from "@jtel/domain";
+import {
+  JTTEL_TZ,
+  type ContractPolicy,
+  type DerivedObservationWindow,
+  type EvidenceWindowRoute,
+} from "@jtel/domain";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import * as schema from "./schema/index.js";
 import type { Database } from "./index.js";
 import { clasificarDiferencia, type CausaDeDiferencia } from "./deadline-diff.js";
+import { routeWindowSizing, windowForOccurrence } from "./ventana-ocurrencia.js";
+import { RouteTraversalRepository } from "./repositories/index.js";
 import { serviceOccurrences, complianceFacts, trips } from "./schema/index.js";
 
 export type Fila = {
@@ -47,10 +54,37 @@ export type Fila = {
   bloqueo: string | null;
 };
 
+/**
+ * La ventana de la ocurrencia corregida — **la misma que escribiría el
+ * generador**, no una aproximación.
+ *
+ * Existe como función propia, exportada y tipada, por el defecto que corrigió
+ * el #258: esto llamaba a `computeEvidenceWindow` **sin su tercer argumento** y
+ * con una política armada a mano de tres campos. El resultado era una ventana
+ * `basis: "politica"` —un fijo de `evidenceMarginMinutesBefore` antes del
+ * deadline— mientras el generador escribe una **derivada por ruta**, más ancha
+ * por delante. Corregir con la versión vieja movía el deadline bien y dejaba la
+ * ventana quince minutos tarde: dos cosas movidas y ninguna medida.
+ *
+ * **La valla es el compilador, no una prueba.** El parámetro pide
+ * `ContractPolicy` completa —no `Partial`— y `EvidenceWindowRoute` obligatorio,
+ * así que volver a pasarle tres campos sueltos **deja de compilar**. Es la
+ * regla 12: hay defectos que solo el compilador ve, y éste vivía en el sitio de
+ * llamada, no dentro de ninguna función.
+ */
+export function ventanaCorregida(
+  deadline: Date,
+  policy: ContractPolicy,
+  sizing: EvidenceWindowRoute,
+): DerivedObservationWindow {
+  return windowForOccurrence(deadline, policy, sizing);
+}
+
 async function planear(db: Database): Promise<Fila[]> {
   const filas = await db.execute(sql`
     SELECT o.id, o.service_date::text AS service_date, o.expected_deadline,
            ct.name AS contrato, ct.policy AS policy, sh.start_time::text AS start_time,
+           p.route_shift_id, o.kml_version_id, kv.waypoints AS waypoints,
            t.id AS trip_id, t.evidence_status,
            f.id AS fact_id,
            (SELECT count(*)::int FROM evidence_points ep WHERE ep.trip_id = t.id) AS eps
@@ -59,15 +93,39 @@ async function planear(db: Database): Promise<Fila[]> {
       JOIN service_contracts ct ON ct.id = p.contract_id
       JOIN route_shifts rs ON rs.id = p.route_shift_id
       JOIN shifts sh ON sh.id = rs.shift_id
+      LEFT JOIN route_kml_versions kv ON kv.id = o.kml_version_id
       LEFT JOIN trips t ON t.service_occurrence_id = o.id
       LEFT JOIN compliance_facts f ON f.service_occurrence_id = o.id
      WHERE o.expected_deadline > now()
      ORDER BY ct.name, o.expected_deadline
   `);
 
+  const crudas = filas as unknown as Array<Record<string, unknown>>;
+
+  /*
+   * La historia de recorridos se pide UNA vez para todas las rutas×turno del
+   * plan, igual que el generador la resuelve una vez por perfil. De a una serían
+   * decenas de viajes a la base para dimensionar ventanas que no cambian entre
+   * fechas.
+   */
+  const rutaTurnos = [...new Set(crudas.map((r) => String(r.route_shift_id)))];
+  const muestras = await new RouteTraversalRepository(db).recentSamplesForRouteShifts(
+    rutaTurnos,
+  );
+
+  // El dimensionado depende de la ruta y de su trazado, no de la fecha.
+  const sizingCache = new Map<string, EvidenceWindowRoute>();
+
   const plan: Fila[] = [];
-  for (const r of filas as unknown as Array<Record<string, unknown>>) {
-    const policy = (r.policy ?? {}) as Partial<ContractPolicy>;
+  for (const r of crudas) {
+    /*
+     * Se lee como `ContractPolicy` completa a propósito, igual que el
+     * generador: los campos que un contrato no declara llegan `undefined` y es
+     * el dominio quien aplica su default. Degradarlo a `Partial` aquí fue lo
+     * que dejó pasar el defecto — con `Partial`, armar un objeto de tres campos
+     * compilaba.
+     */
+    const policy = (r.policy ?? {}) as ContractPolicy;
     const guardado = new Date(r.expected_deadline as string);
     const { causa, correcto, difMinutos } = clasificarDiferencia({
       serviceDate: String(r.service_date),
@@ -86,11 +144,17 @@ async function planear(db: Database): Promise<Fila[]> {
     else if (Number(r.eps ?? 0) > 0) bloqueo = `tiene ${r.eps} puntos de evidencia anclados`;
     else if (r.evidence_status !== "en_espera") bloqueo = `viaje en '${r.evidence_status}'`;
 
-    const { windowStart, windowEnd } = computeEvidenceWindow(correcto, {
-      evidenceMarginMinutesBefore: policy.evidenceMarginMinutesBefore ?? 60,
-      verificationGraceMinutes: policy.verificationGraceMinutes ?? 15,
-      evidenceMarginMinutesAfter: policy.evidenceMarginMinutesAfter ?? 30,
-    });
+    const claveSizing = `${String(r.route_shift_id)}|${String(r.kml_version_id ?? "sin")}`;
+    let sizing = sizingCache.get(claveSizing);
+    if (!sizing) {
+      sizing = routeWindowSizing(
+        r.waypoints as Array<{ lat: number; lng: number }> | null,
+        muestras.get(String(r.route_shift_id)) ?? [],
+        policy,
+      );
+      sizingCache.set(claveSizing, sizing);
+    }
+    const { windowStart, windowEnd } = ventanaCorregida(correcto, policy, sizing);
 
     plan.push({
       occurrenceId: String(r.id),

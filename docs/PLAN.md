@@ -370,6 +370,14 @@ clasificador que usa el guion `corregir-deadlines`— pero **sin su filtro
 | Planta 47 · **Turno B** | 11:45 (contra las 17:45 que su turno implicaba entonces) | **seis horas** | **84**, todas selladas |
 | | | | **294** |
 
+> 🟢 **Y el código lo dice por su cuenta, que es lo que la cierra desde dos lados.**
+> El comentario de `packages/db/src/repositories/index.ts:2168` —escrito al arreglar
+> el defecto, sin haber contado esta población— dice que esas seis horas
+> *«produjeron **294 hechos sellados** a la hora equivocada, **con un solo cumplido**
+> entre todos»*. 🟢 **La base dice lo mismo por camino independiente:** 210 del Turno
+> A —que tiene exactamente **1** cumplido— más 84 del Turno B con **cero**.
+> **El número y el reparto coinciden sin que ninguno se derive del otro.**
+
 > 🟢 **Las dos están exactamente seis horas corridas**, que es la forma del defecto
 > que el propio guion documenta: *«`computeExpectedDeadline` construía la fecha sin
 > marca de zona… las ocurrencias generadas por el cron de Vercel (UTC) quedaron
@@ -517,6 +525,12 @@ juzgar con una ventana que ya se sabe que no contiene la operación. **Sellar 96
 acusaciones que se saben falsas es peor que corregir 96 ocurrencias que nadie ha
 visto.** La política cambia hacia adelante, y esto es hacia adelante.
 
+**La razón de dejar correr las 6 de hoy — decidido el 6 de agosto:** se van a
+sellar mal y **se asume**. Son **6 contra 96**, y el guion no sabe separarlas sin
+editar el SQL a mano. **Correr una herramienta que se sabe rota para ganarle al
+reloj es peor que perder seis**: dejaría dos cosas movidas y ninguna medida. El
+reloj venció a las 17:45 locales de ese día.
+
 **La razón de NO tocar las 5 del Campus:** ahí **no hubo defecto** — hubo una
 política que cambió cinco minutos. **Corregir eso sería reescribir una decisión, no
 un error.** Por eso el guion las clasifica como `deriva` y las deja fuera sin
@@ -557,6 +571,56 @@ llegan vacíos.
 >
 > ⚠ **Queda abierto**, y es lo que hay que resolver antes de aplicar: corregir con
 > el guion mueve la hora límite bien y **deja la ventana quince minutos tarde**.
+
+### ✅ Resuelto el 6 de agosto — el guion arreglado, y una corrección mía
+
+**El guion se arregló primero** (#258): `ventanaCorregida` llama a
+`windowForOccurrence` con la **política completa y el dimensionado por ruta**, así
+que escribe **la misma ventana que el generador**. 🟢 **La valla es el compilador:**
+el parámetro pide `ContractPolicy` completa —no `Partial`— y el dimensionado es
+obligatorio, así que volver a pasarle tres campos sueltos **deja de compilar**.
+Comprobado por mutación en los dos sentidos: aflojar el tipo a `Partial` rompe
+`tsc`, y volver a la llamada vieja **mata 3 de las 14 pruebas**.
+
+**⚠ Y una corrección a lo que se advirtió antes, porque frenó una ejecución.** La
+alarma de «quince minutos tarde» descansaba en que la operación pica a las **14:00**
+— dato de `DESPUES.md`, medido **un día** (27 de julio) y con otro método.
+
+🟢 **Remedido del 23 de julio al 6 de agosto, días hábiles, las seis rutas contra la
+telemetría cruda (~155 000 puntos sobre el trazado):**
+
+| Ruta | Hora pico | Actividad 13–16 h | Actividad 16–19 h |
+|---|---|---|---|
+| Huertas - B | **15:00** (23 %) | 32 % | 14 % |
+| Juarez Nuevo - B | **15:00** (36 %) | 44 % | 10 % |
+| Km 30 - B | **15:00** (29 %) | 37 % | 13 % |
+| Riveras 9 - B | **15:00** (33 %) | 42 % | 10 % |
+| San Jose - B | **15:00** (24 %) | 35 % | 14 % |
+| San Jose Auxiliar - B | **15:00** (22 %) | 34 % | 15 % |
+
+> 🟢 **Las seis pican a las 15:00, no a las 14:00.** Las 14:00 son un pico
+> secundario en cuatro de ellas. **La ventana vieja —16:45–18:30— se queda con el
+> 10–15 % de la actividad; la nueva se lleva el 32–44 %.**
+
+**La respuesta a la pregunta que condicionaba la corrección:**
+
+| | |
+|---|---|
+| Ventanas corregidas que contienen las **15:00** (el pico real) | 🟢 **126 de 126** |
+| Que contienen las 14:00 (el secundario) | 42 de 126 |
+
+*(126 = las 96 del régimen 17:45 más las 30 que ya estaban bien; a las 30 la
+corrección no les cambia nada.)*
+
+🟢 **Y el detalle honesto del arreglo: cambia la ventana de dos rutas, no de las
+seis.** Con la historia de hoy, cuatro rutas derivan un ancho menor al piso de la
+política —60 min— así que quedan igual en **14:15–16:00**; *Juarez Nuevo* y *San
+José Auxiliar* se abren a **13:47** y **13:56**. El arreglo importa porque el guion
+**deja de inventar su propia ventana**, no porque mueva las seis.
+
+> **Conclusión medida: la corrección sí resuelve el problema que la motivó.** Y la
+> advertencia que la frenó era mía y estaba mal — no por el dato, que era correcto,
+> sino por **apoyarla en una medición de un día cuando había catorce disponibles**.
 
 **La pregunta para la Planta cambia de forma, y por eso importaba medirlo antes de
 sentarse:** ya no es «¿es a las 18:00 o a las 14:00?». Es **confirmar que 15:30 es
@@ -1971,6 +2035,37 @@ Cuatro cosas salieron de la ficha y se colocaron donde mandan, porque como nota 
   cumplido— más 84 del Turno B con cero. **El código y la base dicen lo mismo.**
 - ⚠ **Queda abierto antes de aplicar:** corregir con el guion mueve la hora límite
   bien y **deja la ventana quince minutos tarde**.
+
+**6 de agosto de 2026 (el guion arreglado, y la corrección que lo desbloquea).**
+- **No se ejecutó nada.** Asav paró la corrección al ver que el guion escribía su
+  propia ventana en vez de la del generador. **Se arregló el guion primero** (#258).
+- 🟢 **`ventanaCorregida` llama a `windowForOccurrence` con la política completa y el
+  dimensionado por ruta.** **La valla es el compilador**, no una prueba: el
+  parámetro pide `ContractPolicy` completa —no `Partial`— y el dimensionado es
+  obligatorio. **Comprobado por mutación en los dos sentidos:** aflojar el tipo a
+  `Partial` rompe `tsc`; volver a la llamada vieja **mata 3 de las 14 pruebas**.
+- ⚠ **Y una corrección mía que frenó una ejecución, dicha completa.** La alarma de
+  «quince minutos tarde» se apoyaba en que la operación pica a las **14:00** — dato
+  de `DESPUES.md`, medido **un solo día**. 🟢 Remedido del 23 de julio al 6 de agosto,
+  días hábiles, las seis rutas contra la telemetría cruda: **las seis pican a las
+  15:00**, y las 14:00 son secundarias en cuatro. **La ventana vieja se queda con el
+  10–15 % de la actividad; la nueva con el 32–44 %.**
+- 🟢 **La respuesta a lo que condicionaba la corrección: 126 de 126 ventanas
+  corregidas contienen las 15:00.** La corrección **sí** resuelve el problema que la
+  motivó.
+- 🟢 **Y el detalle honesto del arreglo:** cambia la ventana de **dos** rutas, no de
+  las seis — en cuatro, la derivación queda por debajo del piso de 60 min de la
+  política. Importa porque el guion **deja de inventar su ventana**, no porque mueva
+  las seis.
+- **El error no fue el dato: fue apoyar una alarma en una medición de un día
+  teniendo catorce.** Es la regla 15 otra vez, con el eje del tiempo.
+- ✅ **Decidido: las 6 de hoy se dejan correr y se van a sellar mal.** Son 6 contra
+  96, y **correr una herramienta que se sabe rota para ganarle al reloj es peor que
+  perder seis.**
+- 🟢 **D1 queda cerrada desde dos lados.** El comentario de
+  `repositories/index.ts:2168` dice «294 hechos sellados a la hora equivocada, con un
+  solo cumplido entre todos»; la base da 210 del Turno A —con exactamente 1
+  cumplido— más 84 del Turno B con cero. **Ninguno se deriva del otro.**
 
 **6 de agosto de 2026 (dos errores de método propios).**
 - **La resta que no cruza medianoche.** Se midió el desfase con `::time`, que no
