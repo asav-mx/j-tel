@@ -735,6 +735,38 @@ alcance se escribe en otro sistema y después.
 > que resolvieron juntas: dar `admin_corporativo` porque es el único admin que
 > existe rompe la regla 2 de D9 **sin que nada lo señale**.
 
+### Qué ve exactamente un usuario de planta — medido el 6 de agosto
+
+🟢 Con la identidad del seed `tecma_planta47` (alcance `plant`, rol
+`usuario_planta`), que es **la misma membresía** que tendrá la tercera identidad
+de prueba:
+
+| Ruta | Qué pasa |
+|---|---|
+| `/` | **307 → `/cliente?account=tecma`** — la puerta única **sí** lo manda |
+| `/cliente?account=tecma` | **«No hay cuentas cliente. Crea una en J-Staff → Cuentas.»** |
+| `/cliente` | Lo mismo |
+| `/cliente/planta/<su planta>` | **404** |
+
+**No es una pantalla vacía: es una contradicción entre dos partes del producto.**
+
+> 🟢 **La portada cuenta su membresía y ve una puerta, así que lo empuja adentro.
+> La guardia pregunta por alcance de CUENTA, no la tiene, y le dice que no hay
+> cuentas.** El mismo usuario, en la misma petición, es «tienes exactamente una
+> cuenta» para una mitad y «no hay ninguna» para la otra.
+
+🟢 **Y el remate: 404 en su propia planta.** `exigirRecurso` pregunta
+`canAccessClientAccount`, que exige alcance `account`. **La planta que sí es suya
+le contesta como si no existiera.**
+
+🟡 **Es exactamente el mismo 307 que recibe `tecma_admin`** —medido, los dos van
+a `/cliente?account=tecma`— **y a partir de ahí uno ve su operación y el otro un
+mensaje de error de configuración.** La diferencia no está en la puerta: está en
+la pregunta que hace la guardia al otro lado.
+
+**Eso es 1.h dejando de ser teoría**, y con la forma más incómoda posible: no
+falla cerrado ni falla abierto — **se contradice**.
+
 ### La prueba viva de por qué hace falta, y por qué esto deja de ser teórico
 
 🟢 **`tecma_planta47` no puede ver su propia cara.** Tiene alcance `plant`,
@@ -1287,6 +1319,18 @@ bloqueante.
 - **El guion de `kmlOriginToleranceFraction` ya no copia el valor a mano:** lo lee
   de `packages/verification/src/index.ts` y **se niega a correr si no puede
   leerlo**. Regla 10 aplicada al propio guion.
+
+**6 de agosto de 2026 (lo que ve la planta).**
+- **Medido qué ve exactamente un usuario de alcance `plant`**, con la identidad
+  del seed que tiene la misma membresía que tendrá la tercera de prueba.
+- **No es una pantalla vacía: es una contradicción.** La portada cuenta su
+  membresía, ve **una** puerta y lo empuja adentro con un **307 idéntico al de
+  `tecma_admin`**; la guardia pregunta por alcance de **cuenta**, no la tiene, y
+  le contesta **«No hay cuentas cliente»**. Y su propia planta por id le da
+  **404**.
+- 🟡 **1.h no falla cerrado ni falla abierto: se contradice.** El mismo usuario,
+  en la misma petición, es «tienes exactamente una cuenta» para una mitad del
+  producto y «no hay ninguna» para la otra.
 
 **6 de agosto de 2026 (la tarde).**
 - **Las dos caras probadas con identidades reales, y la pared aguanta:** Tecma
