@@ -31,6 +31,14 @@ export type Vinculo = {
   hacia: string;
   /** Quién es, en una línea, para que la fila se lea sin adivinar. */
   nota: string;
+  /**
+   * Identidad **de prueba**, creada para poder abrir varias caras a la vez.
+   *
+   * No cambia nada del vínculo: cambia que **la lista de limpieza existe**. Sin
+   * esta marca, saber cuáles borrar el día que se retiren depende de que alguien
+   * se acuerde, y acordarse no es una propiedad del sistema.
+   */
+  prueba?: boolean;
 };
 
 /**
@@ -48,6 +56,36 @@ export const MAPEO: Vinculo[] = [
     desde: "jstaff_admin",
     hacia: "user_3HQuURm3OmMaJXub9RMpRMYHVkN",
     nota: "Asav — J-Staff, admin_plataforma, alcance global",
+  },
+  /*
+   * Identidades de prueba — instancia de Development de Clerk, 6 de agosto de
+   * 2026. Existen para poder abrir las tres caras a la vez en navegadores
+   * distintos, que hoy no se puede.
+   *
+   * **No se creó ninguna cuenta ni ninguna membresía nueva:** las tres del seed
+   * ya existían con su alcance. Esto solo les liga una identidad de Clerk, y
+   * `vincular()` **agrega, no reemplaza** — la fila del seed sigue sosteniendo
+   * el bypass.
+   *
+   * **No llevan la convención `+clerk_test`** por decisión de Asav; van marcadas
+   * con `prueba: true`, que es lo que las hace localizables para limpiarlas.
+   *
+   * Falta la de Planta 47. Y cuando llegue **no va a poder ver su cara**:
+   * `canAccessClientAccount` exige alcance `account` y ella tiene `plant`, así
+   * que `/cliente` le contesta «No hay cuentas cliente». **Eso no es un defecto
+   * de esta lista: es la pieza 1.h, y esa identidad es su prueba viva.**
+   */
+  {
+    desde: "tecma_admin",
+    hacia: "user_3HVjXhUyY22DuXslNMxTqQS2udL",
+    nota: "Prueba — admin corporativo de Tecma, alcance de cuenta",
+    prueba: true,
+  },
+  {
+    desde: "jb_admin",
+    hacia: "user_3HViswLh8JErshGkisshWsocqCA",
+    nota: "Prueba — admin de Juárez Bus, alcance de cuenta de carrier",
+    prueba: true,
   },
 ];
 

@@ -91,12 +91,48 @@ if (!ejecutar) {
   process.exit(0);
 }
 
+/*
+ * INCIDENTE del 6 de agosto de 2026, y por qué esta parte cambió.
+ *
+ * La primera versión hacía `policy || ${JSON.stringify(...)}::jsonb`. El driver
+ * manda ese objeto como CADENA, Postgres la castea a un jsonb *string*, y
+ * `objeto || string` **no fusiona: produce un ARREGLO de los dos**. La política
+ * del Campus quedó como `[ {…original…}, "{\"kml…\":0.15}" ]` — el original
+ * intacto en el elemento 0, pero la columna dejó de ser un objeto y
+ * `contractPolicySchema` no la puede validar.
+ *
+ * Se restauró con `policy = policy->0`. Aquí van las tres correcciones:
+ *
+ *  1. **`jsonb_build_object`**, construido por la base. No hay cadena que
+ *     castear ni forma que adivinar.
+ *  2. **Guarda de forma**: si la política no es un objeto, no se toca.
+ *  3. **Se comprueba DESPUÉS de escribir.** La versión anterior imprimía
+ *     «✓ escrito» sin leer nada — un `UPDATE` cuyo resultado no se comprueba no
+ *     es distinto de uno que no corrió. Regla 10, del lado de la escritura.
+ */
 for (const f of faltan) {
+  const [antes] = await db`select jsonb_typeof(policy) tipo from service_contracts where id = ${f.id as string}`;
+  if (antes?.tipo !== "object") {
+    console.error(`  ✗ ${f.name}: la política es ${antes?.tipo}, no un objeto. No se toca.`);
+    continue;
+  }
+
   await db`update service_contracts
-    set policy = policy || ${JSON.stringify({ [CAMPO]: VALOR_DE_FABRICA })}::jsonb,
+    set policy = policy || jsonb_build_object(${CAMPO}::text, ${VALOR_DE_FABRICA}::numeric),
         updated_at = now()
-    where id = ${f.id as string}`;
-  console.log(`  ✓ escrito en ${f.name}`);
+    where id = ${f.id as string} and jsonb_typeof(policy) = 'object'`;
+
+  const [d] = await db`select jsonb_typeof(policy) tipo,
+      (policy->>${CAMPO})::numeric v,
+      (select count(*) from jsonb_object_keys(policy))::int llaves
+    from service_contracts where id = ${f.id as string}`;
+  const ok = d?.tipo === "object" && Number(d.v) === VALOR_DE_FABRICA;
+  console.log(`  ${ok ? "✓" : "✗"} ${f.name}: sigue siendo ${d?.tipo} · ${CAMPO}=${d?.v} · ${d?.llaves} llaves`);
+  if (!ok) {
+    console.error("\n  La comprobación posterior falló. Revisa antes de seguir.\n");
+    await db.end();
+    process.exit(1);
+  }
 }
 console.log("");
 await db.end();
