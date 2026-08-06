@@ -164,6 +164,19 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
    ocurrencias sobre nada da cero—. La corrección es la misma de los dos lados:
    **contar también algo que TIENE que estar**, no solo lo que no debe estar.
 
+   **Segundo caso del instrumento, y éste devolvió cero con una hipótesis viva.**
+   🟢 El 6 de agosto se midió si las ocurrencias con la hora límite corrida
+   estaban **seis horas** fuera. La consulta restó las dos horas con `::time` —y
+   `::time` **no cruza medianoche**, así que `23:45 → 05:45` salió como **18
+   horas** en vez de 6. El resultado fue **«0 hechos con desfase de 6 h»**, que se
+   lee como *hipótesis refutada* cuando lo que estaba roto era la resta. El dato
+   era correcto de los dos lados; **lo falso lo puso el operador**. Lo atrapó que
+   el cero no cuadraba con las horas que ya estaban a la vista — **no una
+   prueba**.
+   La forma general: **un cero es una afirmación, y hay que poder distinguir
+   «medí y no hay» de «mi medidor no puede verlo».** Cuando una resta puede
+   envolver —horas, ángulos, módulos—, el cero es sospechoso por construcción.
+
 9. **Una causa no se acredita contra los que fallan; se acredita contra los que
    pasan.** Medir que el 100 % de los reprobados incumple una condición no
    prueba que esa condición los reprobó — solo prueba que la incumplen. La
@@ -345,6 +358,36 @@ Cada una lleva **la recomendación del chat** y el porqué. Asav decide.
 de código; la pregunta es qué se hace con los **294 hechos ya sellados** bajo la
 regla vieja.
 
+### 🟢 Los 294 dejan de ser un número: tienen población identificada (6 ago)
+
+Comparado **ocurrencia por ocurrencia** con `clasificarDiferencia` —el mismo
+clasificador que usa el guion `corregir-deadlines`— pero **sin su filtro
+`expected_deadline > now()`**, que es justo lo que le impide ver las selladas:
+
+| Población | Hora guardada | Corrimiento | Ocurrencias |
+|---|---|---|---|
+| Planta 47 · **Turno A** | 23:45 (contra 05:45) | **+360 min** | **210**, todas selladas |
+| Planta 47 · **Turno B** | 11:45 (contra las 17:45 que su turno implicaba entonces) | **seis horas** | **84**, todas selladas |
+| | | | **294** |
+
+> 🟢 **Las dos están exactamente seis horas corridas**, que es la forma del defecto
+> que el propio guion documenta: *«`computeExpectedDeadline` construía la fecha sin
+> marca de zona… las ocurrencias generadas por el cron de Vercel (UTC) quedaron
+> seis horas corridas»*. **210 + 84 = 294**, el número exacto de esta decisión.
+
+⚠ **Y hay que decir qué NO son, porque el clasificador de hoy los mezcla.** Corrido
+sobre toda la base, `causa: zona` + sellada da **330**, no 294. Los **36** de
+diferencia son ocurrencias del Turno B a las **17:45**, que **eran correctas al
+generarse** —el turno era 18:00— y quedaron viejas cuando el turno se movió a
+15:30. **Ésas son C21, no D1**: no hay defecto de cálculo, hay un cambio que no
+alcanzó a lo ya generado. El clasificador no las distingue porque compara contra el
+turno de **hoy**.
+
+⚠ **Y un aviso de lectura, porque este documento ya tiene dos:** este **330** no es
+el **330** de C13 —aquél era `no_cumplido` con una unidad que sí llegó, y hoy son
+341—. **Mismo número, dos poblaciones sin relación.** Es la familia de C20 aplicada
+a las cifras en vez de a los nombres.
+
 *Recomendación:* **corregirlos, con firma y motivo canónico.** Un hecho sellado
 contra un deadline equivocado es una acusación mal medida, y la ley dice que la
 política cambia hacia adelante pero un **error** de cálculo no es un cambio de
@@ -416,6 +459,52 @@ vieja de la serie**— y la presentó como el estado de hoy. Son tres:
 > 🟢 **Pero ese régimen empieza el 31 de agosto.** Entre hoy y el 28 quedan **102
 > ocurrencias** que se juzgarán con la ventana que no contiene la operación. Y en
 > los dos regímenes ya sellados van **cero cumplidos de 120**.
+
+### 🟢 Qué es posible con esas 102 — capacidad, no recomendación (6 ago)
+
+**El 31 no lo eligió nadie.** `renewRollingWindow(30)` genera desde
+`max(service_date) + 1` hasta hoy + 30 días. Medido corrida por corrida: **todas**
+aterrizan a 30 días exactos. La última que produjo 17:45 fue la del **29 de julio**
+(llegó al 28 de agosto); la primera con 15:15, la del **1 de agosto** (llegó al 31).
+El 29 y 30 de agosto son fin de semana. **El 31 es la primera fecha que no estaba
+generada cuando cambió el turno.**
+
+🟡 El turno cambió **entre esas dos corridas**. No se puede precisar más: **`shifts`
+no tiene `updated_at`**, así que cuándo se cambió la hora **no se lee de la base**.
+Es C13 en otra tabla.
+
+**Reparto de las 138 del régimen 17:45, al 6 de agosto:**
+
+| | Ocurrencias | Fechas |
+|---|---|---|
+| Selladas | **36** | 29 jul → 5 ago, todas pasadas |
+| Sin sellar — hoy | **6** | 6 de agosto |
+| Sin sellar — por venir | **96** | 7 → 28 de agosto |
+
+**Cero sin sellar en el pasado.**
+
+**La hora límite NO es inmutable.** El guion `corregir-deadlines` la corrige **en
+sitio** —`UPDATE` sobre `expected_deadline` y la ventana del viaje, sin borrar ni
+recrear, porque el índice único es `(service_profile_id, service_date)` y el
+deadline no participa en ninguna restricción—. Sus cuatro guardas:
+
+| Guarda | Las 102 |
+|---|---|
+| Sin hecho sellado | ✅ las 102 |
+| Con viaje | ✅ las 102 |
+| Cero puntos de evidencia anclados | ✅ las 102 |
+| Viaje en `en_espera` | ✅ las 102 |
+
+> 🟢 **Las 102 cumplen las cuatro.** Por las guardas del guion son **corregibles en
+> sitio**. Las 5 del Campus también, con la diferencia de que el guion las clasifica
+> como `deriva` y **no las toca sin `--con-deriva`**, mientras que las 102 salen
+> como `zona` y entran por omisión.
+>
+> ⚠ **Dos límites que van dichos:** el guion **solo mira `expected_deadline > now()`**,
+> así que las 6 de hoy salen o no de su alcance según a qué hora corra; y **es
+> simulacro por omisión** — sin `--aplicar` no escribe nada.
+
+**Esto es lo que el sistema permite hoy. Qué hacer con ellas no se decide aquí.**
 
 **La pregunta para la Planta cambia de forma, y por eso importaba medirlo antes de
 sentarse:** ya no es «¿es a las 18:00 o a las 14:00?». Es **confirmar que 15:30 es
@@ -1209,10 +1298,11 @@ lo suyo, y el ≥90% de capacidad de mostrar se sostiene.
 
 **Esta es la ficha de consolidación.** Vive aquí, no en un documento aparte.
 
-**Son veinte, no once.** El plan viejo decía seis en una línea y listaba ocho en
+**Son veintiuna, no once.** El plan viejo decía seis en una línea y listaba ocho en
 su propia tabla; el 3 de agosto se sumaron tres, entre el 4 y el 5 de agosto
-**C12 a C19** salieron de investigar C11, y el 6 de agosto **C20** salió de medir D2.
-Quien compare contra esta lista **dice contra cuántas y cuáles**, nunca «es la séptima».
+**C12 a C19** salieron de investigar C11, y el 6 de agosto **C20 y C21** salieron de
+medir D2. Quien compare contra esta lista **dice contra cuántas y cuáles**, nunca
+«es la séptima».
 
 **Qué hace esta sección, y qué no.** Ordena por **dependencia**, dice qué comparte
 ruta y qué comparte código, y separa lo que se puede medir sin sellar de lo que no.
@@ -1250,7 +1340,8 @@ ruta y qué comparte código, y separa lo que se puede medir sin sellar de lo qu
 | **C8** | **Identificación en vivo** | La sala no sabe qué unidad cubre qué ruta antes del cierre | Se piensa junto con C1 y C4 |
 | **C1** | **Cuentas demo con veredictos vinculantes** | 🟢 **6 ago: la llave sigue cerrada.** Son **84** hechos exactos —54 de PRUEBA REAL, 30 de Honeywell, 52 `no_cumplido` entre los dos— y **el último se selló el 3 de agosto**: ni uno después | **Llave cerrada** (#206). Falta limpiar los 84 — con firma y motivo |
 | **C10** | **Planta 47 sella menos que el Campus** | **Explicada por C11.** 🟢 **6 ago: 11.0 % de Planta 47 contra 53.9 % del Campus** (era 6.7/55.2 el 3 ago y 8.8/54.0 el 4). **La brecha se cierra despacio y por arriba**, y sigue siendo la sombra de C11, no una causa | **Explicada.** Deja de ser causa propia |
-| **C20** | **Dos cosas distintas con el mismo nombre, y el conteo las suma sin avisar** | 🟢 **6 ago: existen dos turnos llamados «Turno B»** —uno de `Tecma 47` que arranca 15:30, otro de `TECMA Campus Santos Dumont` que arranca 18:00—, **en la misma cuenta cliente y con el mismo carrier**. Es el único nombre de turno repetido en toda la base. 🟢 **Ya costó una premisa:** D2 se abrió como «Turno B declarado 18:00» describiendo el turno del Campus mientras hablaba del de Planta 47, y el del Campus es el sano de los dos (54 % cumplido en esa ventana contra 0 %). 🟢 **Y no es solo turnos:** dentro del contrato del Campus hay **ocho nombres de ruta repetidos** —`Km 30` y `Oasis` tres veces cada uno, `Finca`, `Haciendas`, `Juarez Nuevo`, `Riveras`, `Sanders` y `Sierra Vista` dos—, que es el **caso 6 de §D del Marco** («Rutas del alcance: 27») visto desde el otro lado: allá el lector no podía reconstruir el número; aquí quien agrupa suma dos cosas | **Sin construir.** **Es causa de NOMBRE, no de dato**: cada fila es correcta y el conteo también; lo falso lo pone la etiqueta que las junta. Misma familia que **C15** —el campo `imei:` que guarda un id de unidad— y por eso van juntas: **ninguna mueve un veredicto y las dos cambian lo que el documento dice** |
+| **C20** | **Dos cosas distintas con el mismo nombre, y el conteo las suma sin avisar** | 🟢 **6 ago: existen dos turnos llamados «Turno B»** —uno de `Tecma 47` que arranca 15:30, otro de `TECMA Campus Santos Dumont` que arranca 18:00—, **en la misma cuenta cliente y con el mismo carrier**. Es el único nombre de turno repetido en toda la base. 🟢 **Ya costó una premisa:** D2 se abrió como «Turno B declarado 18:00» describiendo el turno del Campus mientras hablaba del de Planta 47, y el del Campus es el sano de los dos (54 % cumplido en esa ventana contra 0 %). 🟢 **Y no es solo turnos:** dentro del contrato del Campus hay **ocho nombres de ruta repetidos** —`Km 30` y `Oasis` tres veces cada uno, `Finca`, `Haciendas`, `Juarez Nuevo`, `Riveras`, `Sanders` y `Sierra Vista` dos—, que es el **caso 6 de §D del Marco** («Rutas del alcance: 27») visto desde el otro lado: allá el lector no podía reconstruir el número; aquí quien agrupa suma dos cosas | **Sin construir.** **Es causa de NOMBRE, no de dato**: cada fila es correcta y el conteo también; lo falso lo pone la etiqueta que las junta. Misma familia que **C15** —el campo `imei:` que guarda un id de unidad— y por eso van juntas: **ninguna mueve un veredicto y las dos cambian lo que el documento dice**. 🟢 **Y el caso que la prueba mejor que el argumento: mordió a la medición que la descubrió.** Tres horas después de escribir esta causa, el conteo de perfiles de C21 dio **48 por id y 47 por nombre** — hay dos perfiles distintos que comparten nombre, y agrupar por nombre los colapsó en uno. **Quien escribió la causa cayó en ella el mismo día**, que es la regla 14 otra vez: una regla escrita no es una regla aplicada |
+| **C21** | **Un cambio de turno no alcanza a lo ya generado — la hora límite se congela al crear la ocurrencia** | 🟢 **Mecanismo, leído en el código:** `renewRollingWindow(30)` (cron `/api/cron/renew-occurrences`) genera desde `max(service_date) + 1` hasta hoy + 30 días, calcula la hora límite **en ese momento** y la congela en la fila. **Nunca toca una ocurrencia que ya existe**, y **nada la revisa cuando el turno o la política cambian.** 🟢 **6 ago: 555 de 2 029 ocurrencias (27 %) llevan una hora límite que su perfil ya no produce, en 26 de 48 perfiles.** Cuatro poblaciones, y **no son el mismo defecto**: **(1)** Planta 47 · Turno A, **210 selladas** a las 23:45 contra 05:45 — **+360 min, seis horas**; **(2)** Planta 47 · Turno B, **84 selladas** a las 11:45 — **seis horas** bajo las 17:45 que su turno implicaba entonces; **(3)** Planta 47 · Turno B, **36 selladas + 102 sin sellar** a las 17:45 contra 15:15 — **eran correctas al generarse** y quedaron viejas porque el turno se movió a 15:30 después; **(4)** Campus · Primer Turno, **118 selladas + 5 sin sellar** a las 05:45 contra 05:40 — **cinco minutos**, forma de un cambio de `arrivalAnticipationMinutes`. 🟢 **Las poblaciones 1 y 2 son D1** (ver §3.2); **la 3 y la 4 no lo son**, y ésa es la razón de que esto sea causa aparte | **Sin construir.** **D1 es una población de este mecanismo, no el mecanismo.** El guion `corregir-deadlines` arregla el defecto de zona, pero **solo mira `expected_deadline > now()`** y corrige en sitio: no existe forma de que un cambio de turno alcance a lo ya generado, ni de saber que quedó desalineado |
 
 ---
 
@@ -1277,6 +1368,8 @@ depende de otra va después de la que la desbloquea, **aunque duela**.
 | **C1 · C4** | **C8** | 🔵 Comparten la pregunta «qué se congela dentro del hecho», que es el Tramo 4 |
 | **—** | **C12 · C15 · C9 · C20** | 🟢 No dependen de nada ni desbloquean nada: **no mueven un veredicto**, mueven lo que el expediente dice y lo que la ley exige |
 | **C20** | **D2** | 🟢 No es dependencia de motor sino de lectura: **ya le costó una premisa a D2**, y cualquier corte «por Turno B» que no diga cuál seguirá sumando dos contratos |
+| **C21** | **D1 · D2** | 🟢 D1 es **una población** de C21 —las 294 con seis horas de corrimiento—, y lo que D2 va a acordar con la Planta **no alcanza a las 138 ocurrencias ya generadas** de ese turno mientras C21 exista |
+| **C21** | **C4** | 🟡 Misma forma en otro campo: el hecho congela `expectedGeofenceId` y el motor usa `profile.geofence`. **Congelar sin forma de revisar** es el patrón, no el campo |
 | **—** | **C10** | 🟢 No es causa: es la sombra de C11 medida por contrato |
 
 ---
@@ -1331,7 +1424,7 @@ es decisión de Asav y no se toma aquí.
 
 | | Causas | Notas |
 |---|---|---|
-| ✅ **Medido hoy, solo lectura** | C1 · C2 · C3 · C4 · C5 · C7 · C9 · C10 · C11 · C12 · C13 · C14 · C15 · C16 · C17 · C18 · C19 · C20 | Toda la tabla de 5.1. Se leyó producción con `jtel_readonly`; **ninguna escribió, selló ni re-verificó nada** |
+| ✅ **Medido hoy, solo lectura** | C1 · C2 · C3 · C4 · C5 · C7 · C9 · C10 · C11 · C12 · C13 · C14 · C15 · C16 · C17 · C18 · C19 · C20 · C21 | Toda la tabla de 5.1. Se leyó producción con `jtel_readonly`; **ninguna escribió, selló ni re-verificó nada** |
 | 🔎 **Medible hoy, sin medir aún** | **C18** en Planta 47 por geometría (cubrir dos trazados ≠ acreditar dos rutas; la de hoy usa la segunda definición) · **C6**: qué rutas tienen versión de trazado y de cuándo · **C7**: derivar la duración con las 192 filas de C5 · **C2**: qué corrida dejó las 374 sin cerrar | Nada de esto exige sellar. Es trabajo de lectura que aún no se hizo |
 | ⚙ **Requiere tocar el motor** | Si mover un umbral **rescata** servicios · si el arreglo de C14 cierra los 61 · si C18 evaluado contra el conjunto de rutas cambia veredictos | Eso es **simulación** y vive en D4 / Tramo 6, no aquí |
 | 🚫 **No es leíble desde aquí** | **Por qué cambió la densidad el 29 de julio** (C19) · **por qué el archivador se atrasó el 25–26 de julio** (C3) · **por qué esos tres lunes y no los otros**. 🟢 Lo verificado es que **no fue nuestro código**; 🟡 la causa se infiere del proveedor o de los dispositivos | Son tres de las cuatro cosas que el reporte final dejó sin explicar. **La cuarta —si el empalme es rutinario— ya se midió** (C18). **Y puede repetirse sin avisarnos** |
@@ -1767,6 +1860,49 @@ Cuatro cosas salieron de la ficha y se colocaron donde mandan, porque como nota 
 - 🟡 **Sin probar:** si el 11:45 salió de la zona horaria (D1). El hueco contra 17:45
   es de **seis horas exactas**, que es la forma de ese defecto, y no hace falta
   probarlo para tener la conversación.
+
+**6 de agosto de 2026 (C21 — el régimen congelado, y los 294 con nombre).**
+- **Causa nueva, y son veintiuna. C21: un cambio de turno no alcanza a lo ya
+  generado.** El cron congela la hora límite al crear la ocurrencia y **nada la
+  revisa** cuando el turno o la política cambian. 🟢 **555 de 2 029 ocurrencias
+  (27 %) llevan una hora límite que su perfil ya no produce, en 26 de 48 perfiles.**
+- **Cuatro poblaciones, y no son el mismo defecto** — que es la razón de que esto
+  sea causa y no una nota de D1: 210 selladas del Turno A a **+6 h** · 84 selladas
+  del Turno B a **+6 h** · 36 selladas y 102 sin sellar del Turno B que **eran
+  correctas al generarse** y quedaron viejas cuando el turno se movió · 118 selladas
+  y 5 sin sellar del Campus a **5 minutos**, forma de un cambio de política.
+- 🟢 **D1 deja de ser un número: las 294 tienen población identificada.** Comparadas
+  ocurrencia por ocurrencia con `clasificarDiferencia` —el clasificador del guion de
+  corrección— **sin su filtro `expected_deadline > now()`**, que es lo que le impide
+  ver las selladas: **210 del Turno A + 84 del Turno B = 294**, las dos poblaciones
+  exactamente **seis horas** corridas.
+- ⚠ **Y queda escrito qué NO son.** El clasificador corrido entero da **330**
+  selladas con causa `zona`; los **36** de más son del Turno B a las 17:45, que eran
+  correctas cuando se generaron. **Ésas son C21, no D1**, y el clasificador no las
+  distingue porque compara contra el turno de **hoy**.
+- ⚠ **Aviso de lectura: este 330 no es el 330 de C13.** Aquél era `no_cumplido` con
+  una unidad que sí llegó, y hoy son 341. **Mismo número, dos poblaciones sin
+  relación** — C20 aplicada a las cifras en vez de a los nombres.
+- 🟢 **El 31 de agosto no lo eligió nadie.** `renewRollingWindow(30)` genera desde
+  `max(service_date) + 1` a 30 días; la última corrida con 17:45 fue la del 29 de
+  julio (llegó al 28 de agosto), la primera con 15:15 la del 1 de agosto (llegó al
+  31), y el 29–30 es fin de semana. 🟡 El turno cambió entre esas dos corridas y **no
+  se puede precisar más: `shifts` no tiene `updated_at`.**
+- 🟢 **Las 102 son 6 de hoy y 96 futuras; cero sin sellar en el pasado.** Y **la hora
+  límite no es inmutable**: el guion la corrige **en sitio**, y las 102 cumplen sus
+  cuatro guardas. Queda escrito como **capacidad, no como recomendación**.
+
+**6 de agosto de 2026 (dos errores de método propios).**
+- **La resta que no cruza medianoche.** Se midió el desfase con `::time`, que no
+  envuelve, así que `23:45 → 05:45` dio **18 h** y la consulta contestó **«0 hechos
+  con desfase de 6 h»** — que se lee como hipótesis refutada cuando lo roto era la
+  resta. Queda como segundo caso del instrumento en la **regla 8**: **un cero es una
+  afirmación**, y hay que poder distinguir «medí y no hay» de «mi medidor no puede
+  verlo».
+- **C20 mordió a la medición que la descubrió.** Tres horas después de escribirla, el
+  conteo de perfiles dio **48 por id y 47 por nombre**: dos perfiles distintos
+  comparten nombre y agrupar por nombre los colapsó. **Quien escribió la causa cayó
+  en ella el mismo día.** Queda dentro de C20, porque el caso vale más que la regla.
 
 **6 de agosto de 2026 (C20 — la causa de nombre).**
 - **Causa nueva, y son veinte.** **Dos cosas distintas con el mismo nombre, y el
