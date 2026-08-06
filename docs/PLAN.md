@@ -506,6 +506,58 @@ deadline no participa en ninguna restricción—. Sus cuatro guardas:
 
 **Esto es lo que el sistema permite hoy. Qué hacer con ellas no se decide aquí.**
 
+### ✅ Decidido por Asav el 6 de agosto de 2026
+
+> **Se corrigen las 96 futuras del Turno B de Planta 47. Las 5 del Campus no se
+> tocan.**
+
+**La razón de corregir las 96, escrita para dentro de tres meses:** ninguna está
+sellada, así que **no se reescribe ningún hecho**; y si no se corrigen, se van a
+juzgar con una ventana que ya se sabe que no contiene la operación. **Sellar 96
+acusaciones que se saben falsas es peor que corregir 96 ocurrencias que nadie ha
+visto.** La política cambia hacia adelante, y esto es hacia adelante.
+
+**La razón de NO tocar las 5 del Campus:** ahí **no hubo defecto** — hubo una
+política que cambió cinco minutos. **Corregir eso sería reescribir una decisión, no
+un error.** Por eso el guion las clasifica como `deriva` y las deja fuera sin
+necesidad de bandera.
+
+### ⚠ Lo que la corrida en seco destapó DESPUÉS de la decisión
+
+🟢 **Simulacro corrido el 6 de agosto** con la credencial de solo lectura en
+`DATABASE_URL` —para que no pudiera escribir ni por error—: **102 por `zona`, 5 por
+`deriva` (no se tocan sin `--con-deriva`), cero bloqueadas.** Dos cosas que la
+decisión no tenía enfrente:
+
+**1 · El guion no sabe elegir 96 en vez de 102.** Su único filtro es
+`expected_deadline > now()`. Al 6 de agosto a las 06:13 locales, las 6 de hoy
+todavía **no** han pasado su hora límite —vence a las **17:45 local / 23:45 UTC**—
+así que **el guion las ve y las incluiría**. Después de esa hora salen solas. Las
+tres formas que existen: correr ahora y tocar **102** · correr después de las 17:45
+y tocar **96**, con las 6 ya camino de sellarse con la ventana vieja · o usar
+`--sql` y **quitar a mano las 6 del `VALUES`**, que es la única que elige por
+decisión y no por reloj — el SQL lleva las mismas guardas dentro del `WHERE`.
+
+**2 · La ventana que escribe el guion NO es la que escribe el generador.** 🟢
+`computeEvidenceWindow(deadline, policy, route?)` deriva la ventana por ruta cuando
+recibe su tercer argumento. **El generador se lo pasa** (`repositories/index.ts:2176`);
+**el guion no** (`corregir-deadlines.ts:89`), y además le arma una política de tres
+campos, así que `maxWindowBeforeMinutes`, `windowSlackPct` y `routeAvgSpeedKmh`
+llegan vacíos.
+
+| | Arranque de la ventana |
+|---|---|
+| Lo que escribiría el guion | **14:15** local, fijo (deadline − 60 min) |
+| Lo que el generador produjo para el régimen 15:15 | **12:59 a 13:59**, distinto por ruta |
+
+> 🟢 **Y eso importa para lo que la corrección busca:** de las 30 ocurrencias que el
+> generador creó bajo el régimen nuevo, **25 contienen las 14:00**. De las 102 de
+> hoy, **cero** las contienen — arrancan todas a las 16:45. **Pero corregidas por el
+> guion arrancarían a las 14:15, que también queda después de las 14:00.**
+>
+> ⚠ **Queda abierto**, y es lo que hay que resolver antes de aplicar: corregir con
+> el guion mueve la hora límite bien y **deja la ventana quince minutos tarde**.
+
 **La pregunta para la Planta cambia de forma, y por eso importaba medirlo antes de
 sentarse:** ya no es «¿es a las 18:00 o a las 14:00?». Es **confirmar que 15:30 es
 la hora real** — y entonces la decisión de negocio es qué pasa con las tres semanas
@@ -1891,6 +1943,34 @@ Cuatro cosas salieron de la ficha y se colocaron donde mandan, porque como nota 
 - 🟢 **Las 102 son 6 de hoy y 96 futuras; cero sin sellar en el pasado.** Y **la hora
   límite no es inmutable**: el guion la corrige **en sitio**, y las 102 cumplen sus
   cuatro guardas. Queda escrito como **capacidad, no como recomendación**.
+
+**6 de agosto de 2026 (decisión sobre las 102, y lo que el simulacro destapó).**
+- ✅ **Asav decide: se corrigen las 96 futuras del Turno B de Planta 47; las 5 del
+  Campus no se tocan.** Las razones quedan escritas en §3.2, D2: ninguna de las 96
+  está sellada, así que no se reescribe ningún hecho, y **sellar 96 acusaciones que
+  se saben falsas es peor que corregir 96 ocurrencias que nadie ha visto**. Las 5
+  del Campus son una política que cambió cinco minutos: **corregirlas sería
+  reescribir una decisión, no un error.**
+- 🟢 **Simulacro corrido con la credencial de solo lectura en `DATABASE_URL`**, para
+  que no pudiera escribir ni por error: **102 por `zona`, 5 por `deriva` fuera sin
+  bandera, cero bloqueadas.**
+- ⚠ **Y destapó dos cosas que la decisión no tenía enfrente.** **(1)** El guion no
+  sabe elegir 96 en vez de 102: su único filtro es `expected_deadline > now()`, y a
+  las 06:13 locales las 6 de hoy **todavía no vencen** —lo hacen a las 17:45— así
+  que las incluiría. Elegir por decisión y no por reloj solo es posible con `--sql`
+  quitando esas seis del `VALUES`. **(2)** **La ventana que escribe el guion no es
+  la que escribe el generador:** `computeEvidenceWindow` deriva por ruta cuando
+  recibe su tercer argumento, el generador se lo pasa y el guion no. El guion
+  escribiría **14:15 fijo**; el generador produjo **12:59–13:59** según la ruta. De
+  las 30 del régimen nuevo, **25 contienen las 14:00**; corregidas por el guion,
+  **ninguna las contendría** — arrancarían quince minutos tarde.
+- 🟢 **Y una confirmación independiente de D1 que apareció leyendo ese código:** el
+  comentario de `repositories/index.ts:2168` dice que esas seis horas *«produjeron
+  **294 hechos sellados** a la hora equivocada, **con un solo cumplido** entre
+  todos»*. Coincide con lo medido: 210 del Turno A —que tiene exactamente **1**
+  cumplido— más 84 del Turno B con cero. **El código y la base dicen lo mismo.**
+- ⚠ **Queda abierto antes de aplicar:** corregir con el guion mueve la hora límite
+  bien y **deja la ventana quince minutos tarde**.
 
 **6 de agosto de 2026 (dos errores de método propios).**
 - **La resta que no cruza medianoche.** Se midió el desfase con `::time`, que no
