@@ -1,8 +1,8 @@
 # J-Telemetry — El Plan
 
 **Corte: 3 de agosto de 2026.**
-**Última edición: 3 de agosto de 2026, tarde** (Clerk resuelto · dominio
-resuelto · hallazgo del landing público).
+**Última edición: 6 de agosto de 2026** (Tramo 2 · la ficha de consolidación de §5
+reescrita contra producción, y la regla de la fecha de medición en §0).
 
 Este es el único plan. Reemplaza a `PLAN-v1.md`, a `Plan-Camino-a-v1.md`, a
 `docs/marco-limpio/Despues.md` y a la parte de orden de `DESPUES.md`.
@@ -32,6 +32,35 @@ con once contradicciones medidas entre dos de ellos.
 
 **Corolario:** una ficha de handoff describe *cómo* se construye una pieza, no
 *cuándo*. Las fichas pueden multiplicarse; el orden vive solo aquí.
+
+### La segunda regla: toda cifra lleva su fecha de medición
+
+> **Un número sin fecha no entra a este documento.** No como cortesía: como
+> formato.
+
+Salió de encontrar el mismo dato en cuatro lugares del repo diciendo dos cosas.
+§5 afirmaba **330** acusaciones con una unidad que sí llegó; la bitácora de este
+mismo documento, el reporte final y la tabla de los sensores decían **335**; y al
+remedirlo el 6 de agosto eran **341**. **Ninguna de las tres estaba mal cuando se
+escribió.** Lo que estaba mal es que ninguna decía cuándo.
+
+Es la familia de la regla 15 de «las ganadas por las malas» — *el eje es parte del
+resultado*— aplicada al eje que más barato se olvida, que es el tiempo. Una cifra
+de un sistema vivo no es un hecho: es **una foto**, y una foto sin fecha envejece
+sin avisar. Quien la lee seis días después no tiene forma de saber si sigue
+siendo cierta, y **no puede distinguir un número estable de uno que nadie ha
+vuelto a mirar** — que es la regla 8 aplicada a los documentos.
+
+Lo que exige al escribir:
+
+- **La fecha va pegada al número**, no en el encabezado de la sección. Una sección
+  fechada con cifras de tres días distintos miente sobre las otras dos.
+- **Si el número se mueve solo, se dice.** «341 al 6 de agosto, y el Campus sigue
+  produciéndolos» vale más que «341», porque avisa de que caducará.
+- **Si no se puede fechar, no se afirma:** va como 🔵 reportado o 🟡 inferencia,
+  con quién lo dijo y cuándo.
+- **Y el eje junto a la fecha**, cuando la cifra agrega: por día · por servicio ·
+  por unidad · por contrato. Los dos ejes o ninguno.
 
 ---
 
@@ -317,8 +346,13 @@ conversación con la Planta** para confirmar la hora real y a qué turno pertene
 esas rutas.
 
 *Recomendación:* **tener esa conversación antes de tocar el árbitro.** Es
-probablemente parte del 6.7% de Planta 47 que no tiene causa identificada, y
-arreglar el motor sin resolver esto mete ruido en la medición.
+probablemente parte de lo que Planta 47 no sella sin causa identificada —🟢 al 6 de
+agosto sella **11.0 %** contra **53.9 %** del Campus— y arreglar el motor sin
+resolver esto mete ruido en la medición.
+
+🟢 **Y hay que precisar cuál «Turno B», medido el 6 de agosto:** existen **dos
+turnos distintos con ese nombre**, uno que arranca a las **15:30** y otro a las
+**18:00**. La conversación tiene que decir de cuál habla.
 
 *Ojo:* `PLAN-v1.md` lo declaraba ✅ resuelto. **Estaba equivocado.** Ver §7, F1.
 
@@ -326,10 +360,14 @@ arreglar el motor sin resolver esto mete ruido en la medición.
 
 **D3 · Regla de cierre del pendiente por evidencia**
 
-*Qué pasa:* hay **71 servicios de Tecma** atorados en `pendiente_evidencia` desde
-hace más de 48 h (54 de Planta 47, 17 del Campus, del 9 al 31 de julio). **Los 71
-tienen evidencia guardada.** No están pendientes por falta de datos: el motor,
-teniendo los puntos, no logró atribuir unidad.
+*Qué pasa:* hay servicios de Tecma atorados en `pendiente_evidencia`, **con
+evidencia guardada**. No están pendientes por falta de datos: el motor, teniendo
+los puntos, no logró atribuir unidad.
+
+🟢 **Al 6 de agosto son 106 pendientes en total, y 89 llevan más de 48 h** — no los
+71 con que se abrió esta decisión. El corte por causa vive en §5.1: 61
+`llegada_sin_atribucion` (todos de Planta 47 · Turno A), 28 por cobertura, 12 por
+observación, 5 sin evidencia. **Sigue creciendo**, así que este número caduca.
 
 *Qué hay que decidir, con la Planta y con legal:* cuánto tiempo puede un servicio
 quedarse en pendiente, y qué pasa después.
@@ -686,6 +724,16 @@ saber cuál movió el número reproduce el problema.
 **Compuerta:** cada causa de §5 tiene medición, dependencia y ruta compartida
 declarada.
 
+**Corrida el 6 de agosto de 2026.** ✅ Las **19** causas tienen las tres cosas:
+§5.1 la medición con su fecha · §5.2 la dependencia, una línea por par · §5.3 el
+solapamiento, y **por código además de por ruta**. Y §5.4 separa lo medible hoy
+sin sellar de lo que exige motor, de lo que no se puede leer desde aquí y de lo
+que necesita una persona.
+
+> 🟢 **Todo se remidió contra producción con `jtel_readonly`** —comprobado de solo
+> lectura ese día— **sin sellar, sin re-verificar y sin que ningún hecho cambiara
+> de versión.** Lo que el tramo tocó fue este documento.
+
 ---
 
 ### Frente — El alcance fino y quién administra dentro de él
@@ -808,9 +856,10 @@ alcance `plant` y `plant_group` de verdad. Sin eso, cualquier verde que salga es
 del tipo que la regla 8 nombra: no distingue una guardia que funciona de una que
 no está.
 
-**El lugar exacto se decide al cerrar el Tramo 2**, con el dato de los **71
-pendientes de Tecma** (D3) en mano — porque ese dato puede mover el orden de lo
-que sigue, y ordenar este frente antes de tenerlo sería elegir a ciegas.
+**El lugar exacto se decide al cerrar el Tramo 2**, con el dato de los pendientes
+de Tecma (D3) en mano — porque ese dato puede mover el orden de lo que sigue, y
+ordenar este frente antes de tenerlo sería elegir a ciegas. 🟢 **Ese dato ya está:
+106 pendientes al 6 de agosto, 89 de más de 48 h** (§5.1 y §5.5).
 
 **Lo que este frente NO es:** el login real. Eso sigue en el Tramo 7, con retirar
 el bypass.
@@ -894,8 +943,8 @@ enteró**. Lo supimos investigando otra cosa, once días después.
 | **Aparatos vivos** | Cuántos de los declarados reportan hoy, contra los declarados | 🟢 Hoy se sabe que fueron 50–53 de punta a punta **solo porque se midió a mano** |
 | **Retraso del archivador** | Cuánto tarda la evidencia en llegar | 🟢 **Ya costó 28 servicios** juzgados con el expediente a medias — sellados viendo 13–46 puntos cuando hoy hay 370–1 992 (C3) |
 | **Salud del trazado** | Qué rutas tienen KML y **de cuándo es cada versión** | 🟢 **Tener KML o no decide más que el contrato**: `!hasKml` es lo único que apaga A∧B, y `routeStrictness` se lee después (C14) |
-| **Divergencias de política** | Qué campos difieren entre contratos y **cuáles corren con valor de fábrica** | 🟢 Seis campos difieren entre los dos contratos de Tecma, y `kmlOriginToleranceFraction` **existe en uno y no en el otro** (C16) |
-| **Observación contra conducta** | Un contador que separe **«no cumplió»** de **«no pudimos ver»** | 🟢 335 hechos `no_cumplido` con una unidad que **sí llegó** (C13), y 100 pendientes que no son falta de datos |
+| **Divergencias de política** | Qué campos difieren entre contratos y **cuáles corren con valor de fábrica** | 🟢 **6 ago: dieciséis de 24 campos difieren** entre los dos contratos de Tecma, y **siete existen solo en Planta 47** — el Campus corre esos siete con el valor de fábrica sin que nadie lo decidiera (C16) |
+| **Observación contra conducta** | Un contador que separe **«no cumplió»** de **«no pudimos ver»** | 🟢 **6 ago: 341** hechos `no_cumplido` con una unidad que **sí llegó** (C13) y **106** pendientes que no son falta de datos. **Las dos cifras se mueven solas** — eran 335 y 100 hace dos días —, que es justo por qué el contador tiene que existir |
 
 #### Pieza 2 — Que el hecho sellado cargue su densidad de evidencia
 
@@ -1055,36 +1104,160 @@ su propia tabla; el 3 de agosto se sumaron tres, y entre el 4 y el 5 de agosto
 **C12 a C19** salieron de investigar C11. Quien compare contra esta lista **dice contra cuántas
 y cuáles**, nunca «es la séptima».
 
-| # | Causa | Qué se sabe | Estado |
+**Qué hace esta sección, y qué no.** Ordena por **dependencia**, dice qué comparte
+ruta y qué comparte código, y separa lo que se puede medir sin sellar de lo que no.
+**No propone por dónde empezar.** Ese orden lo decide Asav con esto enfrente.
+
+> **Corte de medición: 6 de agosto de 2026**, contra producción con `jtel_readonly`
+> —comprobado de solo lectura ese día: 41 tablas, lee todas, no escribe ninguna—.
+> **No se selló nada, no se re-verificó nada, ningún hecho cambió de versión.**
+> Todos los conteos excluyen `is_demo`: solo **Tecma**.
+
+**Marcas:** 🟢 verificado · 🔵 reportado por otro documento · 🟡 inferencia.
+
+---
+
+### 5.1 La lista, con el estado real
+
+| # | Causa | Qué se sabe, con la fecha de cada cifra | Estado |
 |---|---|---|---|
-| **C1** | **Cuentas demo con veredictos vinculantes** | 84 hechos sellados sobre cuentas no declaradas (52 de ellos `no_cumplido`). Crecía ~11/semana | **Llave cerrada** (#206). Falta limpiar los 84 — con firma y motivo |
-| **C2** | **La cadena de auditoría rota** | 374 de 580 filas de historial (64.5%) perdieron la referencia a qué las reemplazó. El borrado en cada reintento deja `replaced_by_fact_id` en nulo | Sin construir. **Toca la promesa comercial**: sin cadena, un veredicto no puede probar de dónde vino |
-| **C3** | **Se juzga antes de que llegue el expediente** | ~175 intentos por servicio. El archivador va ~7 h detrás (p95: 30 h) y nada retrasa el primer intento. **Observado directamente el 5 de agosto:** los 28 servicios que fallaron cobertura son del **27 y 28 de julio**, se sellaron viendo **13–46 puntos**, y hoy esos mismos viajes tienen **370–1 992** del mismo día — **28 de 28 con más del doble**. El 28 de julio la base guardó la mitad de puntos que un día normal y el 29 el doble: el archivador se puso al día **después** de sellar | Sin construir. **Arreglar esto probablemente elimina la mayor parte de C2** — y ahora se sabe que también produce pendientes |
-| **C4** | **La geocerca congelada no es la que se usa** | El hecho guarda `expectedGeofenceId`; el motor juzga contra `profile.geofence`. **546 ocurrencias divergen** | Sin construir. Requiere D-decisión: congelar el polígono, qué pasa con el campo huérfano, cómo se re-verifica un hecho viejo |
-| **C5** | **Ventana derivada vs. match observable** | No afinados entre sí: +50 se enderezan por uno, −2 se caen por el otro | Espera historia en `route_traversal_measurements`. **No es trabajo, es tiempo** |
-| **C6** | **Trazado KML que no corresponde** | Huertas-B, Centro-A, Parajes del Sur-A · ~43 servicios | **Trabajo humano** (H1), no código |
-| **C7** | **`maxRouteDurationMinutes` fijo en 60** | Segundo "cuánto dura una ruta" sin derivar. Hoy no causa falsos negativos | **Tarea propia, no se mezcla.** Dos derivaciones cambiando juntas hacen inatribuible el resultado |
+| **C19** | **La cobertura depende de la DENSIDAD del muestreo, no de la conducta** | 🟢 **6 ago:** el salto **se sostuvo**. Puntos de evidencia por día de servicio de Planta 47: **61–68 k** del 9 al 24 de julio → **93 k · 97 k · 99 k · 108 k · 110 k** del 29 de julio al 5 de agosto. El Campus, plano (**113–142 k**) todo el periodo. Mismos aparatos —51–54 por día, estable de punta a punta—, mismas unidades, mismas rutas, mismo trazado. 🔵 **5 ago:** la cobertura del trazado saltó de **5–7 a 9.9 de 10**. 🟢 **No fue un cambio nuestro:** ningún commit toca archivador, ingestor, `gps-umbrella` ni la cadencia de los crons entre el 24 de julio y el 3 de agosto. **La calificación de un transportista puede subir o bajar sin que él haga nada distinto** | **Sin construir.** Rompe la promesa del producto: el veredicto tiene que depender de la conducta, no del aparato |
+| **C11** | **Servicios con evidencia y sin atribución** | **Investigación CERRADA** — `Reporte-Final-Investigacion-71.md`; el detalle, en `Ficha-Diagnostico-Pendientes-Sin-Atribucion.md`. La causa raíz es **C19**. 🟢 **6 ago, por causa × sitio × turno:** **106** pendientes (eran 100 el 4 ago y 104 el 5) — `llegada_sin_atribucion` **61**, *todos* de **Planta 47 · Turno A**; cobertura insuficiente **28**; observación insuficiente **12**; sin evidencia **5**. Lo que la produce: **ninguna candidata cumple A (cobertura ≥ 60 %) y B (corredor ≥ 60 %) a la vez** | **Medida.** Falta decidir el arreglo |
+| **C14** | **`routeStrictness` no gobierna lo que su nombre promete** | Se lee en **un solo punto** (`packages/verification/src/index.ts:1018`) y solo elige entre `pendiente_evidencia` y `no_cumplido` **después** de que la atribución falló. La comprobación A∧B vive en `servedRoute` (`index.ts:575`) y **lo único que la apaga es `!hasKml`**. 🟢 **6 ago, y esto cierra el argumento: los 48 ruta-turnos de los dos contratos reales tienen KML activo con waypoints.** O sea `!hasKml` **no se dispara nunca hoy**, así que A∧B corre siempre y `destino_only` está **inerte para todos los servicios reales**. Con `destino_only`, una unidad que llegó **no puede salir `cumplido` jamás** | **Sin construir.** Es la causa de que los 61 no se puedan cerrar solos. **Tiene frente propio** — «La puerta sin salida» |
+| **C13** | **El veredicto del mismo fallo lo decide `routeStrictness`, y el cambio no deja rastro** | Con `destino_only` + llegada → `pendiente_evidencia`; con `kml_full` → `no_cumplido`. 🟢 **6 ago: 341** `no_cumplido` con una unidad que **sí llegó** — **208 del Campus** (`kml_full`, 9 jul → 5 ago, **sigue creciendo**) y **133 de Planta 47** (`kml_full`, 14 → 30 jul, **congelado**: salió de esa estrictez el 31). Eran 330 el 4 de agosto y 335 el 5: **lo que crece es el Campus, y solo el Campus.** 🟢 **El mismo día visto por el otro lado:** los 61 `llegada_sin_atribucion` de Planta 47 caen el 9, 10, 31 de julio y el 3, 4 y 5 de agosto — **cero entre el 13 y el 30**, que es exactamente su ventana de `kml_full`. El mismo fallo, dos nombres. 🟢 `contract_policy_history` **existe y sigue en cero filas al 6 de agosto** — y el contrato del Campus **se editó ese mismo día a las 09:14 sin dejar una** | **Sin construir.** 🔵 Nadie los ha visto: ningún cliente ni carrier ha recibido un resultado, así que **no hay acusación emitida**. Eso baja la urgencia y no cierra la pregunta |
+| **C18** | **El empalme: una unidad sirve dos rutas y el sistema no puede saberlo** | 🔵 **29 jul:** tres unidades cubren dos trazados cada una, una al **79 % y 76 %**. 🟢 **6 ago — medido sobre toda la ventana, que es lo que faltaba:** contando cuántas unidades **acreditan** (`sirvio_ruta`) más de un ruta-turno el mismo día, el empalme aparece en **18 de 28 días del Campus**, con hasta **3 rutas** por unidad. **Es rutinario, no ocasional.** ⚠ **Y el eje manda:** en Planta 47 sale **0 de 7 días**, pero eso **no dice que ahí no pase** — dice que ahí casi nada acredita (es C11), así que el empalme no es observable por esta vía. **La consecuencia, que no es de umbral sino de planteamiento:** preguntar «¿cubriste la ruta A?» a un camión que sirvió A y B **está mal hecha la pregunta**, y ningún umbral la arregla | **Sin construir.** Hipótesis de Asav, medida y confirmada |
+| **C16** | **La configuración del contrato no coincide con lo acordado, y no hay contra qué comparar** | 🟢 **6 ago: difieren dieciséis de 24 campos** entre los dos contratos — **no seis**, como decía este plan. Los que deciden un veredicto: `routeStrictness` · `kmlCorridorMinPct` (**60 vs 50**) · `kmlCorridorMeters` (120 vs 150) · `evidenceMarginMinutesAfter` · `verificationGraceMinutes` · `excusableReasons` (Planta 47 admite `falla_mecanica`, el Campus no) · `enforcementRules` (el Campus está **vacío**). 🟢 **Y siete existen solo en Planta 47**, así que el Campus corre con el valor de fábrica sin que nadie lo decidiera: `maxWindowBeforeMinutes` · `routeAvgSpeedKmh` · `routeDurationMinSamples` · `routeDurationPercentile` · `windowDerivationEnabled` · `windowSlackPct` · y **`timeZone`**, que es el campo del que salió D1. 🔵 Asav recordaba el corredor del Campus **acordado en 60 %**. 🟢 **Ya no difiere `kmlOriginToleranceFraction`**: se escribió en el Campus el 6 de agosto con `0.15`, el mismo de fábrica — **cambió quién manda, no el comportamiento**. Con `contract_policy_history` vacía (C13), **no hay forma de leer del sistema qué se pactó** | **Sin construir.** Más grave que un umbral flojo: el árbitro puede estar aplicando una regla que las partes no pactaron |
+| **C4** | **La geocerca congelada no es la que se usa** | El hecho guarda `expectedGeofenceId`; el motor juzga contra `profile.geofence` (`packages/services/src/verification.ts:1055`). 🟢 **6 ago: 546 ocurrencias divergen** —la cifra no se movió— **y todas son de Planta 47**. 🟢 **Y lo que este plan no decía: 420 de esas ocurrencias ya tienen hecho sellado**, o sea 420 de los 973 hechos reales (**43 %**) cargan una geocerca que no es contra la que se les juzgó | **Sin construir.** Requiere D-decisión: congelar el polígono, qué pasa con el campo huérfano, cómo se re-verifica un hecho viejo |
+| **C2** | **La cadena de auditoría rota** | 🟢 **6 ago: 374 de 581 filas** (**64.4 %**) sin referencia a qué las reemplazó. La cifra es la misma de siempre **porque dejó de crecer**: 🟢 **las 374 son todas de la semana del 27 de julio**, y la semana del 3 de agosto agregó **una fila, con** su referencia. 🟢 **371 de las 374 son de `actor_kind: human`.** El mecanismo: `archiveAndDeleteFact` escribe la fila con `replacedByFactId` en nulo y un segundo paso, `updateHistorySuccessor`, es el que la cierra; en esas 374 el segundo paso no ocurrió. 🟡 **Por qué no ocurrió no se puede leer desde aquí** | **Sin construir. Toca la promesa comercial**: sin cadena, un veredicto no puede probar de dónde vino. 🟡 **Y la urgencia cambió:** es una cicatriz de una tanda, no una hemorragia |
+| **C3** | **Se juzga antes de que llegue el expediente** | 🟢 **6 ago, y hay que decirlo con el eje o miente:** el archivador **hoy va a 6 minutos**, no a 7 horas — mediana **0.10 h**, p95 **0.18 h** en los últimos 7 días. Por semana de `recorded_at`: **22.13 h** la del 6 de julio · **0.10 h** de la del 13 en adelante · con un pico de **p95 5.31 h** la del 27 de julio. **El «~7 h, p95 30 h» de este plan era el promedio de un periodo roto con periodos sanos.** 🟢 Los intentos por servicio bajaron de **206 → 157 → 117 → 101 → 38.7** por semana, con el tope de cola del Tramo 0. 🟢 **Lo que no cambió es el mecanismo: nada retrasa el primer intento.** Y su cicatriz sigue medida: los **28** pendientes por cobertura son exactamente el **27 de julio (13, Campus)** y el **28 de julio (15, Planta 47)** — el fin de semana en que el archivador se atrasó | **Sin construir.** 🟡 Arreglar esto probablemente elimina la mayor parte de C2 — pero al 6 de agosto **ninguno de los dos está sangrando** |
+| **C17** | **La cobertura de ruta se guarda ponderada y se lee llana** | ✅ **Arreglado en el motor.** Ahora se guardan las dos: `routeMatchPct` —la que decide, ponderada por TF-IDF— y `routeMatchPlainPct` —la llana—. 🔵 **5 ago:** 168 de 3 054 candidatas acreditaban ≥ 60 % teniendo una cobertura real con mediana de **3.9 %**; la correlación con la precisión pasa de **0.373 ponderada a 0.672 sin ponderar**. **No movió un solo veredicto.** 🟢 **6 ago, y esto acota quién lo puede leer: la primera entrada de ledger con `routeMatchPlainPct` es del 5 de agosto.** Todo lo sellado antes trae **solo la ponderada**, y quien lo lea debe decirlo así | **Hecho en el motor.** **Falta que las pantallas del expediente lean la llana** — que es justo donde la cifra miente |
+| **C5** | **Ventana derivada vs. match observable** | No afinados entre sí: +50 se enderezan por uno, −2 se caen por el otro. 🟢 **6 ago — y esto cambia su estado: los datos ya llegaron.** `route_traversal_measurements` tiene **192 filas sobre 48 ruta-turnos**, del 31 de julio al 5 de agosto, y **48 de 48 llegan a las 3 muestras** que pide `routeDurationMinSamples`. ⚠ **102 de las 192 topan con el borde de la ventana** (`lower_bound`), así que el percentil sale sesgado hacia abajo | **Deja de estar bloqueado por datos.** Este plan decía «no es trabajo, es tiempo»; el tiempo ya pasó |
+| **C15** | **El expediente etiqueta mal su propia evidencia** | El ledger escribe cada candidata con el campo **`imei:`** y adentro guarda un **id de UNIDAD**. 🟢 **Comprobado otra vez el 6 de agosto** sobre la entrada más reciente: el valor casa con `units.id` (1 fila) y con `evidence_points.imei` (**0 filas**). 🟢 **Y tiene origen exacto:** `verification.ts:1104` sustituye el imei por el id de unidad antes de entrar al motor, y el motor agrupa y etiqueta con lo que recibe. **Quien lea un expediente creerá que ve el aparato y está viendo el vehículo.** No cambia ningún veredicto y **sí cambia lo que el expediente dice**, que es el activo | **Sin construir.** Es evidencia mal etiquetada en el documento que sostiene una acusación |
+| **C12** | **`frechetMaxKm` horneado fuera de la política** | 🟢 **6 ago: ninguno de los dos contratos reales lo declara** — el motor lo resuelve con `?? 0.8` (`index.ts:905`). Es el **único** umbral de KML que no vive en `contractPolicySchema`. **NO causa C11**, y ahora se puede decir por qué en una línea: alimenta `shapeOk`, y `shapeOk` **no entra en la expresión `servedRoute`** — solo ordena candidatas. Aun así incumple la **Ley 6** | **Sin construir.** Entra porque está mal, no porque convenga. C7 es su gemelo |
+| **C7** | **`maxRouteDurationMinutes` fijo en 60** | Segundo «cuánto dura una ruta» sin derivar. Hoy no causa falsos negativos. 🟢 **6 ago:** los dos contratos lo tienen en **60**, y la historia que haría falta para derivarlo **ya existe** (ver C5) | **Tarea propia, no se mezcla.** Dos derivaciones cambiando juntas hacen inatribuible el resultado |
+| **C6** | **Trazado KML que no corresponde** | Huertas-B, Centro-A, Parajes del Sur-A · ~43 servicios. 🔵 **5 ago:** el trazado **sí corresponde** en general — 1 461 waypoints con traza real a < 500 m, mediana 20 m —, así que esto es de rutas concretas, no del catálogo | **Trabajo humano** (H1), no código |
+| **C9** | **Nombre del chofer sin congelar** | 🟢 **6 ago: 0 de 973 hechos reales** traen `declared_driver_name`. El campo existe en el hecho y **nunca se ha escrito** | Toca el camino del árbitro |
 | **C8** | **Identificación en vivo** | La sala no sabe qué unidad cubre qué ruta antes del cierre | Se piensa junto con C1 y C4 |
-| **C9** | **Nombre del chofer sin congelar** | Falta congelarlo en `complianceFacts` al sellar | Toca el camino del árbitro |
-| **C10** | **Planta 47 sella 8.8% vs Campus 54.0%** | **Causa identificada** (C11): el Campus **no tiene ni un solo** `llegada_sin_atribucion`; los 57 son todos de Planta 47 · Turno A. Los dos sitios fallan por razones distintas. Los porcentajes se remidieron el 4 ago —el 6.7 % / 55.2 % era del 3 ago— y la brecha sigue igual | **Explicada.** Deja de ser causa propia: es la sombra de C11 |
-| **C11** | **Servicios con evidencia y sin atribución** | **Investigación CERRADA — ver `Reporte-Final-Investigacion-71.md`.** La causa raíz es **C19**. Lo medido: — `Ficha-Diagnostico-Pendientes-Sin-Atribucion.md`. Son **100**, no 71; los 71 eran la ventana vieja. La dominante es `llegada_sin_atribucion` (57), **toda de Planta 47 · Turno A**, y lo que la produce es que **ninguna candidata cumple A (cobertura ≥ 60 %) y B (corredor ≥ 60 %) a la vez** — 27 cumplen A, 26 cumplen B, **cero las dos** | **Medida.** Falta decidir el arreglo |
-| **C12** | **`frechetMaxKm` horneado fuera de la política** | Es el **único** umbral de KML que no vive en `contractPolicySchema`: el motor lo resuelve con `?? 0.8` y quien lo llama en producción le pasa seis umbrales de política y **no éste**. Repetido literal además en `monitoreo-data.ts`. **NO causa C11** —solo ordena candidatas, no las rechaza— y aun así incumple la **Ley 6** | **Sin construir.** Entra porque está mal, no porque convenga. C7 es su gemelo |
-| **C13** | **El veredicto del mismo fallo lo decide `routeStrictness`, y el cambio no deja rastro** | Con `destino_only` + llegada → `pendiente_evidencia`; con `kml_full` → `no_cumplido`. Planta 47 cambió **dos veces en tres semanas**. Medido: **330 hechos de Tecma sellados `no_cumplido` con una unidad que sí llegó**. **Nadie los ha visto** — el único usuario del sistema es Asav y ningún cliente ni carrier ha recibido un resultado, así que **no hay acusación emitida contra nadie**. Y `contract_policy_history` existe, tiene la forma correcta —`policy_before`, `policy_after`, `actor_kind`, `note`— y está **vacía en toda la base: cero filas, y ningún código escribe en ella** | **Sin construir.** Urgencia baja hoy; **el día que esto sea vinculante ese campo es una cláusula**, y una cláusula que cambia sin rastro no se puede sostener ante nadie |
-| **C19** | **La cobertura depende de la DENSIDAD del muestreo, no de la conducta** | 🟢 Mismos aparatos —53 en los dos periodos, 50–53 por día—, mismas unidades, mismas rutas, mismo trazado. Lo único que cambió el **29 de julio** es **~1.5× más puntos por aparato** en Planta 47, y la cobertura del trazado saltó de **5–7 a 9.9 de 10**. El Campus no se movió. **La calificación de un transportista puede subir o bajar sin que él haga nada distinto: si el proveedor cambia su cadencia, el árbitro cambia de opinión.** Y 🟢 **no fue un cambio nuestro** — ningún commit toca archivador, ingestor, `gps-umbrella` ni la cadencia de los crons entre el 24 de julio y el 3 de agosto | **Sin construir. ARRIBA DE LA LISTA.** Rompe la promesa del producto: el veredicto tiene que depender de la conducta, no del aparato |
-| **C17** | **La cobertura de ruta se guarda ponderada y se lee llana** | ✅ **Arreglado en el motor.** Ahora se guardan **las dos**: `routeMatchPct` —la que decide, ponderada— y `routeMatchPlainPct` —la llana, «qué fracción del trazado cubrió»—. **No cambia un solo veredicto** y los hechos ya sellados no se tocan: los viejos traen solo la ponderada y quien los lea debe decirlo así. Lo medido que lo motivó: `routeMatchPct` va **ponderada por TF-IDF** —`weightedIdf: true` en las 3 054 candidatas medidas— y se guarda con un nombre que se lee como porcentaje llano. Medido: **168 candidatas acreditan ≥ 60 % de cobertura teniendo una cobertura real con mediana de 3.9 %**, y la correlación con la precisión pasa de **0.373 ponderada a 0.672 sin ponderar** | **Hecho.** Falta que las pantallas del expediente lean la llana |
-| **C18** | **El empalme: una unidad sirve dos rutas y el sistema no puede saberlo** | 🟢 **Medido el 29 de julio:** tres unidades cubren dos trazados cada una, y una de ellas los cubre al **79 % y 76 %**. Es práctica real del transporte de personal —consolidar rutas cuando falta unidad o falta gente— y **cada servicio la evalúa contra su propia ruta**, viendo una unidad que «solo» cubre parte. **Hunde las dos condiciones a la vez**, que es el síntoma de C11. **No explica los tres días partidos** —ahí ninguna unidad toca ninguna ruta— pero sí es un modo de falla propio. **Y la consecuencia, que no es de umbral sino de planteamiento:** si consolidar rutas es práctica normal del transporte de personal, **el árbitro tiene que poder evaluar una unidad contra el CONJUNTO de rutas que sirvió en el turno, no contra una sola.** Preguntar «¿cubriste la ruta A?» a un camión que sirvió A y B **está mal hecha la pregunta**, y ningún umbral la arregla | **Sin construir.** Hipótesis de Asav, medida y confirmada |
-| **C15** | **El expediente etiqueta mal su propia evidencia** | El ledger escribe cada candidata con el campo **`imei:`** y adentro guarda un **id de UNIDAD** — comprobado: casa con `units.id` y no con `evidence_points.imei`, que son números de 15 dígitos. **Quien lea un expediente creerá que está viendo el aparato y está viendo el vehículo.** No cambia ningún veredicto y **sí cambia lo que el expediente dice**, que es el activo del producto | **Sin construir.** Es evidencia mal etiquetada en el documento que sostiene una acusación |
-| **C16** | **La configuración del contrato no coincide con lo acordado, y no hay contra qué comparar** | Medido el 5 de agosto: el corredor del Campus está en **50 % / 150 m** y Asav lo recordaba acordado en **60 %**. Seis campos difieren entre los dos contratos y `kmlOriginToleranceFraction` **existe en uno y no en el otro**, así que el Campus corre con el valor por omisión sin que nadie lo decidiera. Con `contract_policy_history` vacía (C13), **no hay forma de leer del sistema qué se pactó** | **Sin construir.** Más grave que un umbral flojo: el árbitro puede estar aplicando una regla que las partes no pactaron |
-| **C14** | **`routeStrictness` no gobierna lo que su nombre promete** | Se lee en **un solo punto** del motor (`index.ts:980`) y **solo elige entre `pendiente_evidencia` y `no_cumplido` DESPUÉS de que la atribución ya falló**. La comprobación A∧B de KML corre **siempre que la ruta tenga trazado**, sin mirar la estrictez. Consecuencia: con `destino_only` un servicio cuya unidad llegó pero no pasa A∧B **no puede ser `cumplido` jamás** — queda pendiente para siempre. Lo que de verdad decide «¿basta con llegar?» **no es el contrato: es si la ruta tiene KML cargado** | **Sin construir.** Es la causa de que los 61 no se puedan cerrar solos |
+| **C1** | **Cuentas demo con veredictos vinculantes** | 🟢 **6 ago: la llave sigue cerrada.** Son **84** hechos exactos —54 de PRUEBA REAL, 30 de Honeywell, 52 `no_cumplido` entre los dos— y **el último se selló el 3 de agosto**: ni uno después | **Llave cerrada** (#206). Falta limpiar los 84 — con firma y motivo |
+| **C10** | **Planta 47 sella menos que el Campus** | **Explicada por C11.** 🟢 **6 ago: 11.0 % de Planta 47 contra 53.9 % del Campus** (era 6.7/55.2 el 3 ago y 8.8/54.0 el 4). **La brecha se cierra despacio y por arriba**, y sigue siendo la sombra de C11, no una causa | **Explicada.** Deja de ser causa propia |
 
-**Rutas compartidas:** Huertas-B aparece en C5 y en C6 — 🟢 **y NO aparece entre
-los 57 de C11**, medido el 4 de agosto. Planta 47 aparece en C10, C11 y C13.
-**Ya no aparece en D2:** los 57 son del **Turno A**, y D2 habla del **Turno B**,
-así que resolver D2 no los mueve.
+---
 
-**Dependencias conocidas:** C3 → C2 (arreglar cuándo se juzga reduce el borrado) ·
-C5 espera datos, no trabajo · C4 y C1 comparten la pregunta "qué se congela dentro
-del hecho", que es el Tramo 4.
+### 5.2 El grafo de dependencias — cuál desbloquea a cuál
+
+**Una línea por par.** Ordena por dependencia, no por gravedad: una causa grave que
+depende de otra va después de la que la desbloquea, **aunque duela**.
+
+| Depende de | La que espera | Por qué, en una línea |
+|---|---|---|
+| **C19** | **C11** | 🟢 La densidad decide la cobertura, y la cobertura es la entrada de A: medir cualquier umbral con la densidad moviéndose mide el aparato, no la regla |
+| **C19** | **C17** | 🟢 La ponderación se calcula sobre los puntos que hay; con 1.5× puntos, la misma unidad da otro número sin cambiar de conducta |
+| **C19** | **C5 · C7** | 🟢 Las dos derivan una duración de la traza observada, y la traza cambió de densidad a media serie |
+| **C19** | **C18** | 🟡 Detectar que una unidad cubrió dos trazados exige puntos suficientes en los dos; con traza rala el empalme es invisible |
+| **C14** | **C11** | 🟢 Mientras `!hasKml` sea lo único que apaga A∧B, ningún servicio `destino_only` cuya unidad llegó puede cerrar solo — los 61 no tienen salida |
+| **C13** | **C11** | 🟢 El mismo fallo cuenta como pendiente o como acusación según la perilla: los 61 desaparecen del conteo durante la ventana `kml_full` de Planta 47 y reaparecen el 31 de julio |
+| **C13** | **C16** | 🟢 Sin `contract_policy_history` no hay contra qué comparar la configuración: la divergencia se puede ver, pero no se puede fechar ni atribuir |
+| **C16** | **C11 · C13 · C14** | 🟢 A y B salen del contrato; si el contrato no dice lo que se pactó, toda medición de umbral se hace contra una regla sin acreditar |
+| **C3** | **C11** | 🟢 Los 28 pendientes por cobertura son exactamente el 27 y 28 de julio, el fin de semana en que el archivador se atrasó |
+| **C3** | **C2** | 🟡 Menos reintentos, menos borrado — pero al 6 de agosto **los dos dejaron de crecer solos**, así que la dependencia es de mecanismo y ya no de presión |
+| **C4** | **C11 · C13** | 🟢 `arrivalAt` sale del polígono, y el motor usa uno distinto del que el hecho guarda: cualquier remedición de «llegó» se mueve con esto |
+| **C5** | **C7** | 🟢 Las dos comen de `route_traversal_measurements`, y **ya tiene historia suficiente** (48 de 48 ruta-turnos con ≥ 3 muestras) |
+| **C6** | **C14** | 🟢 `!hasKml` es el interruptor real de A∧B, así que qué rutas tienen trazado —y si el suyo es el correcto— decide más que el contrato |
+| **C1 · C4** | **C8** | 🔵 Comparten la pregunta «qué se congela dentro del hecho», que es el Tramo 4 |
+| **—** | **C12 · C15 · C9** | 🟢 No dependen de nada ni desbloquean nada: **no mueven un veredicto**, mueven lo que el expediente dice y lo que la ley exige |
+| **—** | **C10** | 🟢 No es causa: es la sombra de C11 medida por contrato |
+
+---
+
+### 5.3 Los solapamientos — qué comparte ruta, y qué comparte código
+
+**Compartir ruta ya se sabía. Lo que faltaba es esto:** siete causas se cruzan en
+**una sola expresión booleana**, y por eso mover una mueve la medición de la otra.
+
+#### El nudo: `servedRoute` — `packages/verification/src/index.ts:575-580`
+
+```
+const servedRoute =
+  arrivalAt !== null &&                          ← C4 (qué polígono) · C8
+  (!hasKml ||                                    ← C14 · C6
+    (observableEnough &&                         ← C16 (kmlOriginToleranceFraction)
+     routeMatchPct >= params.minKmlPct &&        ← C17 (decide la ponderada) · C19 · C16
+     corridorPrecisionPct >= params.minCorridorPct));  ← C16 (Campus al 50 %) · C19
+```
+
+> 🟢 **Los cinco términos producen el mismo número: cuántas candidatas acreditan.**
+> Dos de ellos tocados en el mismo PR hacen **inatribuible** el resultado. Es la
+> regla «una causa por PR» del Tramo 3 dicha a nivel de línea.
+>
+> 🟢 **Y `shapeOk` no está en esa expresión** — vive fuera, solo ordena candidatas.
+> Ésa es la razón exacta de que **C12 no cause C11**, y de que arreglarlo sea seguro
+> de medir por separado.
+
+#### Los otros tres racimos
+
+| Racimo | Dónde | Quiénes caen ahí |
+|---|---|---|
+| **El camino del sello** | `services/src/verification.ts` · `db/src/repositories/index.ts:3375` | **C2** (`archiveAndDeleteFact` → `updateHistorySuccessor`, dos pasos) · **C3** (nada retrasa el primer intento) · **C4** (`expectedGeofenceId` se escribe aquí) · **C9** (el nombre del chofer se congelaría aquí) |
+| **La política del contrato** | `service_contracts.policy` · `contractPolicySchema` | **C16** (dieciséis de 24 campos divergen) · **C13** (sin historia) · **C12** (el único umbral fuera del esquema) · **C7** · **D6** (quién puede cambiarla) |
+| **El ledger y el expediente** | `ledger_entries.steps` | **C15** (`imei:` con id de unidad) · **C17** (la llana solo desde el 5 ago) · **C11** (la causa del pendiente se lee de aquí) |
+
+#### Y lo que comparte ruta o sitio
+
+- **Planta 47** aparece en C4 (las 546 son *todas* suyas), C10, C11 (los 61), C13 (133 congelados) y C19 (el salto de densidad es suyo).
+- **El Campus** aparece en C13 (208 y creciendo), C16 (el corredor al 50 %) y C18 (18 de 28 días con empalme).
+- **Huertas-B** aparece en C5 y en C6 — 🔵 **y NO aparece entre los pendientes de C11**, medido el 4 de agosto.
+- **Ya no aparece en D2:** los pendientes de C11 son del **Turno A**, y D2 habla del **Turno B**, así que resolver D2 no los mueve.
+- 🟢 **Y una trampa de nombres, medida el 6 de agosto:** hay **dos turnos distintos llamados «Turno B»** —uno que arranca 15:30 con 6 ruta-turnos y otro 18:00 con 5—. Cualquier conteo «por Turno B» que no diga cuál, suma dos cosas.
+
+---
+
+### 5.4 Qué se puede medir hoy sin sellar, y qué no
+
+**Va primero por regla:** si una causa necesita re-verificar para dimensionarse, eso
+es decisión de Asav y no se toma aquí.
+
+| | Causas | Notas |
+|---|---|---|
+| ✅ **Medido hoy, solo lectura** | C1 · C2 · C3 · C4 · C5 · C7 · C9 · C10 · C11 · C12 · C13 · C14 · C15 · C16 · C17 · C18 · C19 | Toda la tabla de 5.1. Se leyó producción con `jtel_readonly`; **ninguna escribió, selló ni re-verificó nada** |
+| 🔎 **Medible hoy, sin medir aún** | **C18** en Planta 47 por geometría (cubrir dos trazados ≠ acreditar dos rutas; la de hoy usa la segunda definición) · **C6**: qué rutas tienen versión de trazado y de cuándo · **C7**: derivar la duración con las 192 filas de C5 · **C2**: qué corrida dejó las 374 sin cerrar | Nada de esto exige sellar. Es trabajo de lectura que aún no se hizo |
+| ⚙ **Requiere tocar el motor** | Si mover un umbral **rescata** servicios · si el arreglo de C14 cierra los 61 · si C18 evaluado contra el conjunto de rutas cambia veredictos | Eso es **simulación** y vive en D4 / Tramo 6, no aquí |
+| 🚫 **No es leíble desde aquí** | **Por qué cambió la densidad el 29 de julio** (C19) · **por qué el archivador se atrasó el 25–26 de julio** (C3) · **por qué esos tres lunes y no los otros**. 🟢 Lo verificado es que **no fue nuestro código**; 🟡 la causa se infiere del proveedor o de los dispositivos | Son tres de las cuatro cosas que el reporte final dejó sin explicar. **La cuarta —si el empalme es rutinario— ya se midió** (C18). **Y puede repetirse sin avisarnos** |
+| 👤 **Necesita una persona** | **C6 / H1**: abrir el KML de Huertas-B, Centro-A y Parajes del Sur-A en un visor y compararlo a ojo | No lo puede hacer el motor ni Devin |
+
+---
+
+### 5.5 Qué espera decisión de Asav
+
+**Separado de lo que es solo código**, y dentro de eso, distinguiendo qué clase de
+decisión es cada una.
+
+| Qué | Clase | La decisión concreta que hace falta | Causas que destraba |
+|---|---|---|---|
+| **D1** · los 294 hechos con el deadline mal calculado | Negocio | Corregirlos con firma y motivo, o dejarlos | — |
+| **D2** · Turno B de Planta 47, declarado 18:00 y operado ~14:00 | **Conversación con la Planta** | Cuál es la hora real y a qué turno pertenecen esas rutas. 🟢 **Y ahora también: cuál de los dos «Turno B» es** | No mueve C11 (Turno A) |
+| **D3** · regla de cierre del pendiente por evidencia | **Negocio + legal** | Cuánto puede un servicio quedarse en pendiente y qué pasa después. 🟢 **El dato se movió: son 106 pendientes y 89 llevan más de 48 h** al 6 de agosto, contra los 71 con que se abrió esta decisión — y sigue creciendo | C11 |
+| **D4** · re-verificar las 300 congeladas | Negocio | Cuándo, sabiendo que cada re-verificación mete una versión más en la historia del hecho | C5 |
+| **D5** · cómo se le cuenta a Tecma que su número cambia | Negocio | El mensaje, **antes** de que el número se mueva. 🟢 Ya se movió solo: 6.7 % → 8.8 % → **11.0 %** en tres días | Precede a D4 |
+| **D6** · quién puede modificar la política sin acuerdo del carrier | Negocio | Configurable con piso no negociable: **que el carrier se entere siempre** | C13 · C16 |
+| **D7** · dirección visual del producto | Negocio | Tres respuestas que este plan no puede suplir | Bloquea pantallas |
+| **H1** · las tres rutas con falla real de trazado | **Trabajo humano** | Abrir el KML en un visor y compararlo | C6 |
+| 🆕 **Qué se pactó de verdad en el Campus** | **Conversación con la Planta** | 🟢 El corredor está en **50 %** y Asav lo recordaba en **60 %**; **dieciséis de 24 campos difieren** entre los dos contratos y **siete corren con valor de fábrica** en el Campus. **Sin esto, C16 no se puede cerrar: no hay contra qué comparar** | C16 · C13 |
+| 🆕 **Qué se hace con los 84 hechos demo** | Negocio | 🟢 La llave está cerrada y los 84 siguen ahí. Limpiarlos **con firma y motivo** es la misma pregunta de D1 aplicada a otro conjunto | C1 |
+
+---
+
+### 5.6 Lo que cerrar este tramo coloca
+
+**No es solo el orden de las causas.** Cinco frentes están escritos y sin lugar, y
+se colocan al cerrar el Tramo 2 — tres de ellos salen directo de esta tabla:
+
+| Frente | De qué causa sale | Qué de esta ficha lo alimenta |
+|---|---|---|
+| **La puerta sin salida de `destino_only`** | **C14** | 🟢 Los 48 ruta-turnos tienen KML, así que la perilla está inerte para todos |
+| **Los sensores** | **C19 · C3 · C13 · C16 · C14** | 🟢 Cada sensor ya tiene su cifra del 6 de agosto en 5.1 |
+| **La app del coordinador de planta** | **C11 · C18** | 🟢 El empalme es rutinario (18 de 28 días del Campus), así que una declaración previa desempata más de lo que se creía |
+| **El alcance fino** (1.h · `admin_planta` · el alta completa) | — | 🟢 El dato que este plan pedía tener en mano para colocarlo: **106 pendientes, 89 de más de 48 h** (D3) |
+| **La reconciliación del expediente** | **C15 · C17** | 🟢 El expediente hoy etiqueta mal la evidencia y, en todo lo sellado antes del 5 de agosto, solo tiene la cobertura ponderada |
 
 ---
 
@@ -1374,6 +1547,59 @@ bloqueante.
 - **La carencia de la pantalla de altas pasa de teórica a observable**, y queda
   con su requisito: **crear la identidad en Clerk y la membresía en la base en un
   solo paso**.
+
+**6 de agosto de 2026 (Tramo 2 — la ficha de consolidación).**
+- **§5 reescrita entera**, con las cinco cosas que le faltaban: la lista con el
+  estado real y **la fecha pegada a cada cifra** · el grafo de dependencias, una
+  línea por par · los solapamientos **por código además de por ruta** · qué se
+  puede medir hoy sin sellar · y qué espera decisión de Asav, con la decisión
+  concreta. **No propone por dónde empezar**, a propósito.
+- **Regla nueva en §0: toda cifra lleva su fecha de medición.** Salió de que §5
+  decía **330** y la bitácora de este mismo documento, el reporte final y la tabla
+  de sensores decían **335**. Ninguna estaba mal cuando se escribió; ninguna decía
+  cuándo. Es la regla 15 —el eje es parte del resultado— aplicada al eje que más
+  barato se olvida.
+- **Todo remedido contra producción con `jtel_readonly`**, comprobado de solo
+  lectura ese día. **Cero escrituras, cero sellos, cero re-verificaciones.**
+- 🟢 **C14 queda cerrado como argumento:** los **48 ruta-turnos** de los dos
+  contratos reales **tienen KML activo**, así que `!hasKml` —lo único que apaga
+  A∧B— **no se dispara nunca**, y `destino_only` está **inerte para todos**.
+- 🟢 **C18 deja de ser «medido en un día»:** el empalme aparece en **18 de 28 días
+  del Campus**, con hasta 3 rutas por unidad. **Es rutinario.** ⚠ En Planta 47 sale
+  0 de 7 días, y eso **no dice que ahí no pase**: dice que ahí casi nada acredita,
+  que es C11. Era una de las cuatro cosas sin explicar del reporte final.
+- 🟢 **C3 cambió de tamaño y el número viejo era un promedio mentiroso.** El
+  archivador va hoy a **6 minutos** (mediana 0.10 h, p95 0.18 h), no a 7 horas: por
+  semana fue **22.13 h** la del 6 de julio y **0.10 h** de la del 13 en adelante.
+  El mecanismo sigue intacto —nada retrasa el primer intento— pero **la presión se
+  fue**. Los intentos por servicio bajaron de 206 a **38.7**.
+- 🟢 **C2 dejó de crecer:** las 374 filas sin referencia son **todas** de la semana
+  del 27 de julio, y la del 3 de agosto agregó una **con** su referencia. Es una
+  cicatriz de una tanda, no una hemorragia. 371 de las 374 son de `actor_kind:
+  human`.
+- 🟢 **C5 deja de estar bloqueado por datos.** `route_traversal_measurements` tiene
+  192 filas y **48 de 48 ruta-turnos llegan a las 3 muestras**. Este plan decía «no
+  es trabajo, es tiempo»; el tiempo ya pasó. ⚠ 102 de las 192 topan con el borde de
+  la ventana, así que el percentil sale sesgado hacia abajo.
+- 🟢 **C16 era más grande de lo escrito: difieren dieciséis de 24 campos**, no seis
+  — y **siete existen solo en Planta 47**, incluido **`timeZone`**, que es el campo
+  del que salió D1. `kmlOriginToleranceFraction` ya no difiere.
+- 🟢 **C13 tiene la prueba limpia de su propio mecanismo:** los 61
+  `llegada_sin_atribucion` de Planta 47 caen el 9, 10 y 31 de julio y el 3, 4 y 5
+  de agosto, y **cero entre el 13 y el 30** — exactamente su ventana de `kml_full`.
+  El mismo fallo, dos nombres, según una perilla. Y `contract_policy_history` sigue
+  en **cero filas** aunque el contrato del Campus **se editó ese mismo día**.
+- 🟢 **C4 gana la mitad que importaba:** las 546 divergencias son **todas** de
+  Planta 47, y **420 ya tienen hecho sellado** — 43 % de los hechos reales cargan
+  una geocerca que no es contra la que se les juzgó.
+- **Cifras que se movieron y quedan fechadas:** pendientes **106** (89 de más de
+  48 h, contra los 71 que citaba D3) · C13 **341** · C10 **11.0 % contra 53.9 %** ·
+  C1 **84**, último sellado el 3 de agosto, llave cerrada · C9 **0 de 973** hechos
+  con nombre de chofer congelado.
+- **Y una trampa de nombres, para que nadie sume dos cosas:** hay **dos turnos
+  distintos llamados «Turno B»**, uno a las 15:30 y otro a las 18:00.
+- **§5.6 nuevo:** qué coloca cerrar este tramo — los cinco frentes que hoy están
+  escritos y sin lugar, y qué dato de la ficha alimenta a cada uno.
 
 **5 de agosto de 2026 (los sensores).**
 - **Frente nuevo: los sensores.** Dos piezas que van juntas — un **tablero en
