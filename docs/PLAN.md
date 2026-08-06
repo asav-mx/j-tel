@@ -177,6 +177,22 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
    «medí y no hay» de «mi medidor no puede verlo».** Cuando una resta puede
    envolver —horas, ángulos, módulos—, el cero es sospechoso por construcción.
 
+   **Y un cuarto caso del eje, del 6 de agosto, que costó una ejecución
+   detenida.** Se levantó una alarma —«la ventana corregida arranca quince
+   minutos tarde»— apoyada en que la operación pica a las **14:00**. Ese dato
+   salía de `DESPUES.md`, era **correcto**, y estaba **medido un solo día**: el
+   27 de julio. 🟢 Remedido sobre **catorce días** hábiles contra la telemetría
+   cruda, las seis rutas pican a las **15:00**, que las ventanas sí contienen.
+   **La alarma era falsa y frenó una corrección que sí servía.**
+
+   Lo que hay que sacar de aquí, porque es lo que no era obvio: **una medición
+   vieja del propio repo es tan peligrosa como una mal hecha, y más — porque
+   viene con sello de casa.** Un número de `DESPUES.md` se lee como verificado
+   y no dice sobre cuántos días se agregó ni cuándo. **Antes de apoyar una
+   decisión en una cifra del repo, se comprueba su eje y su fecha**, igual que
+   si la hubiera traído un extraño. Es la regla de §0 —toda cifra lleva su fecha
+   de medición— dicha desde el lado de quien la consume.
+
 9. **Una causa no se acredita contra los que fallan; se acredita contra los que
    pasan.** Medir que el 100 % de los reprobados incumple una condición no
    prueba que esa condición los reprobó — solo prueba que la incumplen. La
@@ -1259,6 +1275,39 @@ incumplimiento»— convertida en algo que se ve.
 
 ---
 
+### Frente — Independencia del proveedor de GPS
+
+**Se coloca al cerrar el Tramo 2, con los otros frentes.** **Sin diseñar, y no se
+diseña hoy.**
+
+**Qué pasa.** 🟢 **El código conoce el nombre de un proveedor concreto.** Está en
+todas las capas a la vez: un paquete **`gps-umbrella`** · las columnas
+**`umbrella_user_id`** y **`umbrella_password_encrypted`** · las variables
+**`UMBRELLA_GPS_URL` · `UMBRELLA_GPS_USERID` · `UMBRELLA_GPS_PASSWORD`** · y el
+nombre **impreso en una pantalla de la cara del carrier**.
+
+**Por qué es del plan y no de higiene.** Rompe la regla de producto de §2 —*«¿esto
+tendría sentido para una planta en Bogotá cuyas rutas nunca hemos visto?»*—
+aplicada al otro lado: **un carrier con otro proveedor no cabe en este código sin
+obra.** Y está exactamente donde se va a construir, porque sustituir a los
+proveedores de GPS actuales es parte del piso propio de la suite del carrier
+(§2, «las dos caras no son simétricas»).
+
+**El orden, que es lo único que este frente fija hoy:**
+
+> **Abstraer primero, conectar después.**
+>
+> Si el puente al segundo proveedor se construye sobre esta base, **quedan dos
+> casos especiales cosidos** —uno por proveedor, repartidos por paquete, esquema,
+> variables y pantalla— **y el tercero vuelve a ser obra.** El costo de abstraer
+> no baja por esperar: sube, porque cada proveedor nuevo multiplica los sitios
+> donde el nombre está escrito.
+
+**Lo que este frente NO es:** conectar un proveedor nuevo. Es que el sistema deje
+de saber cómo se llama el que tiene.
+
+---
+
 ### Frente — La reconciliación del expediente
 
 **Sale del Tramo 7 y se coloca al cerrar el Tramo 2, junto al frente del alcance
@@ -1579,6 +1628,7 @@ se colocan al cerrar el Tramo 2 — tres de ellos salen directo de esta tabla:
 | **Los sensores** | **C19 · C3 · C13 · C16 · C14** | 🟢 Cada sensor ya tiene su cifra del 6 de agosto en 5.1 |
 | **La app del coordinador de planta** | **C11 · C18** | 🟢 El empalme es rutinario (18 de 28 días del Campus), así que una declaración previa desempata más de lo que se creía |
 | **El alcance fino** (1.h · `admin_planta` · el alta completa) | — | 🟢 El dato que este plan pedía tener en mano para colocarlo: **106 pendientes, 89 de más de 48 h** (D3) |
+| **Independencia del proveedor de GPS** | — | 🟢 El código nombra a un proveedor concreto en paquete, esquema, variables y pantalla. **Abstraer antes de conectar el segundo**, o quedan dos casos especiales cosidos |
 | **La reconciliación del expediente** | **C15 · C17** | 🟢 El expediente hoy etiqueta mal la evidencia y, en todo lo sellado antes del 5 de agosto, solo tiene la cobertura ponderada |
 
 ---
@@ -2035,6 +2085,31 @@ Cuatro cosas salieron de la ficha y se colocaron donde mandan, porque como nota 
   cumplido— más 84 del Turno B con cero. **El código y la base dicen lo mismo.**
 - ⚠ **Queda abierto antes de aplicar:** corregir con el guion mueve la hora límite
   bien y **deja la ventana quince minutos tarde**.
+
+**6 de agosto de 2026 (el vigilante mudo y el frente del proveedor).**
+- 🟢 **El vigilante de salud nunca ha funcionado: 117 corridas desde el 28 de julio,
+  cero éxitos.** No es una regresión — nació roto.
+- **Son dos fallos apilados. (1)** `/api/salud` responde **503** de verdad: cuatro
+  chequeos sanos y **`verificacion` enfermo** — «6 servicios vencidos hace más de
+  2 h SIN veredicto, el más viejo hace **49.8 h**». **(2)** El paso que abre el aviso
+  revienta con `fatal: not a git repository`: el workflow **no hace `checkout`** y
+  `gh` no puede deducir el repositorio. **Cero issues creados en nueve días**, y como
+  ese paso sale con código 1, **el `::error::` final tampoco se emite**.
+- **Lo que queda es una corrida roja en una pestaña que nadie mira.** Y el detalle
+  que lo vuelve exacto: este vigilante existe porque un heartbeat que vivía dentro
+  de Vercel cayó con lo que vigilaba y **nadie se enteró en 13 horas**. El reemplazo
+  lleva **nueve días** mudo. **Se probó que detecta; no que avisa.** Regla 8 sobre el
+  instrumento, tercera vez.
+- **Frente nuevo: independencia del proveedor de GPS.** 🟢 El código nombra a uno
+  concreto en cuatro capas —paquete `gps-umbrella`, columnas `umbrella_*`, variables
+  `UMBRELLA_GPS_*` y el nombre impreso en una pantalla del carrier—. **Sin diseñar.**
+  Lo único que fija hoy es el orden: **abstraer primero, conectar después**, porque
+  construir el puente sobre esta base deja **dos casos especiales cosidos** y hace
+  que el tercer proveedor vuelva a ser obra.
+- **Cuarto caso de la regla del eje, y costó una ejecución detenida:** una alarma
+  apoyada en una cifra de `DESPUES.md` medida **un solo día**. **Una medición vieja
+  del propio repo es tan peligrosa como una mal hecha, y más — viene con sello de
+  casa.**
 
 **6 de agosto de 2026 (el guion arreglado, y la corrección que lo desbloquea).**
 - **No se ejecutó nada.** Asav paró la corrección al ver que el guion escribía su
