@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { entraDirecto } from "@/lib/puerta-unica";
 import { LandingView } from "./landing/landing-view";
 import { getIdentidad, type Identidad } from "@/lib/auth";
 import { sesionUtilizable } from "@/lib/guardia-pagina";
@@ -122,6 +124,26 @@ export default async function HomePage() {
   }
 
   const sinNada = clientes.length === 0 && carriers.length === 0 && !hayJStaff;
+
+  /*
+   * Una sola puerta: se entra directo, sin portada.
+   *
+   * Con una sola cuenta, la portada pide elegir entre una opción — un clic que
+   * no decide nada. Es la misma regla que `Ficha-Diseno-Permisos.md` ya aplica un
+   * nivel más adentro («una sola planta o campus → entra directo ahí»), traída
+   * al nivel de la cuenta.
+   *
+   * **Se cuenta lo que se puede abrir, no las membresías.** J-Staff cuenta como
+   * puerta: quien tiene consola Y una cuenta tiene dos destinos reales y debe
+   * poder elegir. Y quien tiene alcance global ve todas las cuentas, así que
+   * nunca cae aquí.
+   *
+   * `replace` y no `redirect` normal: la portada no debe quedar en el historial
+   * del navegador. Volver atrás desde /cliente tiene que salir del producto, no
+   * rebotar a una pantalla que redirige otra vez.
+   */
+  const puertas = [...clientes, ...carriers];
+  if (entraDirecto(puertas.length, hayJStaff)) redirect(puertas[0]!.href);
 
   return (
     <main className="min-h-screen p-8">

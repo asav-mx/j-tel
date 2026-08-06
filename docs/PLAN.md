@@ -167,7 +167,21 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
     tiempo de ejecución— y **ninguna podía ver la otra**. No fue un problema de
     orden ni de escribir la prueba primero: **fue no correr el compilador.**
 
-13. **Una medición agregada puede confirmar lo que la medición por caso
+14. **Una regla escrita no es una regla aplicada.** 🟢 El 6 de agosto de 2026,
+    **la primera escritura de esta historia que rompe producción**: un guion
+    dejó la política de un contrato real como un **arreglo** en vez de un
+    objeto, y el motor no la podía validar. Detectada y revertida **en
+    minutos**, sin pérdida —el original íntegro en el elemento 0— y con los
+    1 057 hechos sellados intactos.
+    **Lo que hay que registrar no es el error: es que las dos causas ya estaban
+    escritas.** La **regla 10** —un resultado que no se comprueba no es un
+    check— y la disciplina de **ensayar en la base desechable**. Las dos
+    existían, las dos se saltaron, y ninguna de las dos avisó de que se estaba
+    saltando. **Una regla vive en la cabeza de quien la recuerda hasta que algo
+    la hace obligatoria**: por eso el guion ahora **lee de vuelta antes de decir
+    que sí** y **sale con código 1** si no cuadra. La regla que no se puede
+    saltar es la única que se aplica sola.
+15. **Una medición agregada puede confirmar lo que la medición por caso
     desmiente. El eje es parte del resultado.** Sobre veinte días, el 100 % del
     trazado tenía traza real a menos de 500 m — «el trazado sí corresponde». En
     **un** día, un tercio no lo pisaba nadie. Las dos mediciones eran correctas
@@ -684,15 +698,31 @@ estaban repartidas y se ponen juntas.
 |---|---|---|
 | **1.h — el alcance fino** | La guardia deja de preguntar «¿es tu cuenta?» y pregunta «¿tu alcance cubre **esta planta**?». Arrastra **la regla del campus** de `Ficha-Diseno-Permisos.md` §2.2 y §2.3: `canAccessPlant` resuelve `plant` y `account` y **no tiene rama para `plant_group`** | Lo único que quedó abierto del Tramo 1 |
 | **El admin de planta** | `admin_planta` con **permisos de verdad**. Hoy está declarado y parqueado con lista vacía (D10) | D10, y la regla 2 de D9 que lo presupone |
-| **La administración de usuarios** | La pantalla donde un admin da de alta a su gente. **No existe** — hoy dar de alta a alguien es trabajo manual de J-Staff. 🟢 **Y desde el 6 de agosto la carencia es observable, no teórica:** hay un admin corporativo de Tecma con identidad real que **no tiene cómo dar de alta a nadie** | Tramo 7, y `Ficha-Diseno-Permisos.md` §6 |
+| **El alta completa** | **No es «administración de usuarios»: es dar de alta un cliente.** 🟢 Medido el 6 de agosto — hoy hacen falta **tres pasos manuales en tres sistemas distintos**: la cuenta en la base, el usuario en el panel de Clerk, y ligarlos con un guion. **Nada de eso está en la interfaz.** Su alcance real: **cuenta · contrato · primer admin · identidad en Clerk · membresía con su alcance, en un solo flujo desde J-Staff** | Tramo 7 y `Ficha-Diseno-Permisos.md` §6. **BLOQUEANTE PARA VENDER:** un cliente nuevo hoy **no se puede dar de alta sin tocar código** |
 
-**Requisito de la pantalla de altas, que sale de haberla necesitado:** 🟢 hoy la
-única forma de crear un usuario es **el panel de Clerk**, y la membresía se
-escribe aparte con un guion. **Dos pasos, en dos sistemas, hechos por dos
-manos.** Cuando se construya, **el flujo tiene que crear la identidad en Clerk y
-la membresía en la base en un solo paso, sin que nadie toque el panel** — o la
-regla 2 de D9 no se puede sostener: nadie garantiza «no crear a alguien con más
-alcance del que tienes» si el alcance se escribe en otro lado y después.
+### El alta completa — y por qué deja de ser comodidad
+
+**Se llamaba «administración de usuarios» y se quedaba corto.** 🟢 Medido el 6 de
+agosto, dar de alta **un cliente nuevo** cuesta **tres pasos manuales en tres
+sistemas distintos**:
+
+| Paso | Dónde | En la interfaz |
+|---|---|---|
+| La cuenta | La base | ❌ |
+| El usuario | **El panel de Clerk** | ❌ |
+| Ligarlos | Un guion (`vincular-identidades`) | ❌ |
+
+**Su alcance real, y así queda nombrado:** **cuenta · contrato · primer admin ·
+identidad en Clerk · membresía con su alcance — en un solo flujo desde J-Staff.**
+
+> 🟢 **Eso lo mueve de comodidad a BLOQUEANTE PARA VENDER: un cliente nuevo hoy
+> no se puede dar de alta sin tocar código.**
+
+**Y el requisito de forma, que sale de haberlo hecho a mano:** el flujo tiene que
+crear la identidad en Clerk y la membresía en la base **en un solo paso, sin que
+nadie toque el panel** — o la **regla 2 de D9** no la puede garantizar nadie:
+«no crear a alguien con más alcance del que tienes» es incomprobable si el
+alcance se escribe en otro sistema y después.
 
 **Por qué las tres juntas, y no en tres momentos distintos:**
 
@@ -1258,6 +1288,22 @@ bloqueante.
   de `packages/verification/src/index.ts` y **se niega a correr si no puede
   leerlo**. Regla 10 aplicada al propio guion.
 
+**6 de agosto de 2026 (la tarde).**
+- **Las dos caras probadas con identidades reales, y la pared aguanta:** Tecma
+  solo ve Tecma, Juárez Bus solo ve Juárez Bus. **Primera vez que se prueba con
+  personas y no con el bypass.**
+- **La portada se salta cuando hay una sola puerta.** Con una cuenta pedía elegir
+  entre una opción. Medido en las tres identidades: `tecma_admin` → 307 a
+  `/cliente?account=tecma` · `jb_admin` → 307 a `/carrier?account=juarez-bus` ·
+  `jstaff_admin` (alcance global) → **200, portada**, que es lo correcto.
+- **J-Staff cuenta como puerta:** quien tiene consola **y** una cuenta tiene dos
+  destinos reales y debe poder elegir.
+- **El frente de altas se renombra a «el alta completa»** y gana su alcance real
+  —cuenta, contrato, primer admin, identidad en Clerk y membresía— porque
+  «administración de usuarios» se quedaba corto. **Pasa a bloqueante para
+  vender.**
+- **Regla 14, y la ruptura del Campus queda como caso y no como nota.**
+
 **6 de agosto de 2026.**
 - **`kmlOriginToleranceFraction` escrito en el contrato del Campus.** Valor
   `0.15`, el mismo de fábrica: **cambia quién manda, no el comportamiento**.
@@ -1372,7 +1418,7 @@ bloqueante.
   desplazamiento tiene dirección constante.
 
 **5 de agosto de 2026 (el patrón).**
-- **Regla 13:** una medición agregada puede confirmar lo que la medición por caso
+- **Regla 15 (antes 13):** una medición agregada puede confirmar lo que la medición por caso
   desmiente. El eje es parte del resultado.
 - **La hipótesis de la variante diaria queda descartada.** 300 servicios-día: **0
   tramos siempre recorridos, 0 nunca, 150 de 150 a veces**. No hay ramal
