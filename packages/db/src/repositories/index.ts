@@ -1,4 +1,5 @@
 import { eq, and, or, not, gte, lte, isNull, inArray, sql, ne, desc, count } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   computeExpectedDeadline,
   computeEvidenceWindow,
@@ -68,6 +69,34 @@ import { localDateIso, JTTEL_TZ, civilDatesInRange, addDaysIso } from "@jtel/dom
 
 function suggestProfileCodeFromName(name: string): string {
   return suggestProfileCode(name);
+}
+
+/**
+ * «Esta fila pertenece a una cuenta real, no a una de ejemplo.»
+ *
+ * **El filtro de cuentas demo vive AQUÍ y en ningún otro lugar.** Antes estaba
+ * repartido —un `includeDemo: false` en `listByType`, un filtro a mano sobre las
+ * marcas de agua dentro de `/api/salud`, y **nada** en los otros dos contadores—,
+ * y el resultado fue el que se esperaría: **el chequeo más nuevo no heredó el
+ * filtro que ya vivía dos líneas más arriba en el mismo archivo.**
+ *
+ * Lo que costó: `/api/salud` reportó «6 servicios vencidos SIN veredicto, el más
+ * viejo hace 49.8 h» durante días. El número era **correcto** —esas ocurrencias
+ * existen— y la afirmación era **falsa**: todas eran de Honeywell y PRUEBA REAL,
+ * que desde que la llave demo se cerró (#206) **no se juzgan nunca**. Ninguna era
+ * de una cuenta real. Es §D del Marco aplicado a un instrumento: lo falso lo puso
+ * el ALCANCE, no el dato.
+ *
+ * **Un filtro que no está en un solo lugar es un filtro que alguien va a
+ * olvidar** — y el que lo olvide no va a ser quien lo escribió, sino quien añada
+ * el chequeo siguiente.
+ *
+ * Una fila sin cuenta (`NULL`) cuenta como real: es de plataforma, no de nadie.
+ */
+function deCuentaReal(columnaCuenta: AnyPgColumn) {
+  return sql`(${columnaCuenta} IS NULL OR EXISTS (
+    SELECT 1 FROM ${accounts} cta
+     WHERE cta.id = ${columnaCuenta} AND cta.is_demo = false))`;
 }
 
 export class AccountRepository {
@@ -2685,6 +2714,11 @@ export class OccurrenceRepository {
       .where(
         and(
           isNull(complianceFacts.id),
+          // Las cuentas de ejemplo NO se vigilan. Sin esto, este contador leía
+          // las ocurrencias de Honeywell y PRUEBA REAL —que desde que la llave
+          // demo se cerró (#206) no se juzgan nunca— y las reportaba como
+          // «servicios sin veredicto»: crecían 3 al día, para siempre.
+          deCuentaReal(serviceContracts.clientAccountId),
           sql`${serviceOccurrences.expectedDeadline}
               + COALESCE((${serviceContracts.policy}->>'verificationGraceMinutes')::int, 0) * interval '1 minute'
               <= now() - make_interval(hours => ${horas})`,
@@ -3898,6 +3932,7 @@ export class TelemetryRepository {
 
   async listWatermarks() {
     return this.db.query.telemetryWatermarks.findMany({
+      where: deCuentaReal(telemetryWatermarks.carrierAccountId),
       orderBy: (w, { asc }) => [asc(w.lastRecordedAt)],
     });
   }
@@ -4654,7 +4689,7 @@ export class IngestAlertRepository {
 
   async listUnresolved(limit = 40) {
     return this.db.query.ingestAlerts.findMany({
-      where: isNull(ingestAlerts.resolvedAt),
+      where: and(isNull(ingestAlerts.resolvedAt), deCuentaReal(ingestAlerts.carrierAccountId)),
       orderBy: (a, { desc }) => [desc(a.createdAt)],
       limit,
     });
