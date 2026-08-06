@@ -684,7 +684,15 @@ estaban repartidas y se ponen juntas.
 |---|---|---|
 | **1.h — el alcance fino** | La guardia deja de preguntar «¿es tu cuenta?» y pregunta «¿tu alcance cubre **esta planta**?». Arrastra **la regla del campus** de `Ficha-Diseno-Permisos.md` §2.2 y §2.3: `canAccessPlant` resuelve `plant` y `account` y **no tiene rama para `plant_group`** | Lo único que quedó abierto del Tramo 1 |
 | **El admin de planta** | `admin_planta` con **permisos de verdad**. Hoy está declarado y parqueado con lista vacía (D10) | D10, y la regla 2 de D9 que lo presupone |
-| **La administración de usuarios** | La pantalla donde un admin da de alta a su gente. **No existe** — hoy dar de alta a alguien es trabajo manual de J-Staff | Tramo 7, y `Ficha-Diseno-Permisos.md` §6 |
+| **La administración de usuarios** | La pantalla donde un admin da de alta a su gente. **No existe** — hoy dar de alta a alguien es trabajo manual de J-Staff. 🟢 **Y desde el 6 de agosto la carencia es observable, no teórica:** hay un admin corporativo de Tecma con identidad real que **no tiene cómo dar de alta a nadie** | Tramo 7, y `Ficha-Diseno-Permisos.md` §6 |
+
+**Requisito de la pantalla de altas, que sale de haberla necesitado:** 🟢 hoy la
+única forma de crear un usuario es **el panel de Clerk**, y la membresía se
+escribe aparte con un guion. **Dos pasos, en dos sistemas, hechos por dos
+manos.** Cuando se construya, **el flujo tiene que crear la identidad en Clerk y
+la membresía en la base en un solo paso, sin que nadie toque el panel** — o la
+regla 2 de D9 no se puede sostener: nadie garantiza «no crear a alguien con más
+alcance del que tienes» si el alcance se escribe en otro lado y después.
 
 **Por qué las tres juntas, y no en tres momentos distintos:**
 
@@ -1249,6 +1257,33 @@ bloqueante.
 - **El guion de `kmlOriginToleranceFraction` ya no copia el valor a mano:** lo lee
   de `packages/verification/src/index.ts` y **se niega a correr si no puede
   leerlo**. Regla 10 aplicada al propio guion.
+
+**6 de agosto de 2026.**
+- **`kmlOriginToleranceFraction` escrito en el contrato del Campus.** Valor
+  `0.15`, el mismo de fábrica: **cambia quién manda, no el comportamiento**.
+- **Y hubo un incidente en el primer intento, que queda escrito.** El guion hacía
+  `policy || <objeto>::jsonb`; el driver manda el objeto como **cadena**,
+  Postgres la castea a un jsonb *string*, y `objeto || string` **no fusiona:
+  produce un ARREGLO**. La política del Campus quedó como `[ {original}, "{…}" ]`
+  — **nada se perdió** (el original íntegro en el elemento 0) pero la columna
+  dejó de ser un objeto y el motor no la podía validar. **Restaurado con
+  `policy = policy->0`**, comprobado con el usuario de solo lectura, y **los
+  1 057 hechos sellados intactos**.
+- **Lo que lo dejó pasar fue no comprobar después de escribir.** El guion
+  imprimía «✓ escrito» sin leer nada — **un `UPDATE` cuyo resultado no se
+  comprueba no se distingue de uno que no corrió**. Es la regla 10 del lado de la
+  escritura. Ahora construye con `jsonb_build_object`, se niega si la política no
+  es un objeto, y **lee de vuelta antes de decir que sí**.
+- **Y lo que lo habría evitado fue ensayar en la desechable, que es justo lo que
+  no hice.** La segunda corrida ensayó primero ahí —4 contratos, los 4
+  correctos— y solo entonces tocó producción.
+- **Dos identidades de prueba ligadas:** admin corporativo de Tecma y admin de
+  Juárez Bus, marcadas `prueba: true`. **2 filas insertadas, ninguna modificada
+  ni borrada**, 1 057 hechos sin cambio. Falta la de Planta 47, que **no va a
+  poder ver su cara** — y ése es el punto.
+- **La carencia de la pantalla de altas pasa de teórica a observable**, y queda
+  con su requisito: **crear la identidad en Clerk y la membresía en la base en un
+  solo paso**.
 
 **5 de agosto de 2026 (los sensores).**
 - **Frente nuevo: los sensores.** Dos piezas que van juntas — un **tablero en
