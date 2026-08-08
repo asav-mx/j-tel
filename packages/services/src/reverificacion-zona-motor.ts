@@ -16,7 +16,7 @@
  */
 import { sql } from "drizzle-orm";
 import { clasificarDiferencia, type Database, type Repositories } from "@jtel/db";
-import { JTTEL_TZ, computeEvidenceWindow, type ContractPolicy } from "@jtel/domain";
+import { JTTEL_TZ, computeEvidenceWindow, type ContractPolicy, DEFAULT_FRECHET_MAX_KM } from "@jtel/domain";
 import { verifyService } from "@jtel/verification";
 import { computeExclusiveContentionWindow } from "./verification.js";
 
@@ -140,6 +140,8 @@ export async function reverificarConEvidenciaCorregida(
     kmlMatchMinPct: policy.kmlMatchMinPct ?? 60,
     kmlCorridorMeters: policy.kmlCorridorMeters ?? 120,
     kmlCorridorMinPct: policy.kmlCorridorMinPct ?? 60,
+    // C12 · sale de la política del contrato, no de un default del motor.
+    frechetMaxKm: policy.frechetMaxKm ?? DEFAULT_FRECHET_MAX_KM,
     geofencePolygon: geofence.polygon,
     kmlWaypoints: kml?.waypoints,
     evidencePoints: memoryPoints.map((p) => ({

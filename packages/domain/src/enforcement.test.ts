@@ -11,6 +11,7 @@ describe("enforcement", () => {
     kmlCorridorMeters: 120,
     kmlCorridorMinPct: 60,
     kmlOriginToleranceFraction: 0.15,
+    frechetMaxKm: 0.8,
     excusableReasons: [],
     permitirConsolidacion: false,
     enforcementRules: [

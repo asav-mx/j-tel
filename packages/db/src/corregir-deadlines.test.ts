@@ -18,6 +18,7 @@ const POLITICA_BASE = {
   kmlCorridorMeters: 120,
   kmlCorridorMinPct: 60,
   kmlOriginToleranceFraction: 0.15,
+  frechetMaxKm: 0.8,
   maxRouteDurationMinutes: 60,
 } as unknown as ContractPolicy;
 

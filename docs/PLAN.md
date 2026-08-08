@@ -316,6 +316,25 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
     atrapa: ¿este número describe un estado, o el promedio de dos estados
     distintos?** Si es lo segundo, la serie va en vez del promedio.
 
+19. **Un comentario que miente sobre el código es peor que ninguno.** Uno
+    ausente deja al lector leyendo el código; uno falso lo convence de que no
+    hace falta leerlo. 🟢 El caso, del 8 de agosto de 2026 y es de C12:
+    `monitoreo-data.ts` pasaba `frechetMaxKm: 0.8` **dos líneas debajo de un
+    comentario que decía «umbrales de la política del contrato»**. Los otros
+    tres umbrales de esa llamada sí salían de la política, así que el
+    comentario era cierto para la mayoría y falso para el que importaba — que
+    es la forma más difícil de detectar, porque no se contradice de lejos.
+
+    Es §D del Marco aplicado al código en vez de a la pantalla: el dato era
+    correcto, lo falso lo puso **lo que estaba escrito junto a él**. Y ninguna
+    prueba lo ve: un comentario no compila, no corre, y no falla.
+
+    Lo que exige: cuando un comentario afirma de dónde sale un valor —«de la
+    política», «del contrato», «del esquema»— esa afirmación se comprueba
+    contra la línea, no contra la intención de quien la escribió. Y cuando un
+    comentario cubre varias líneas, vale para **todas**: si una se sale, o se
+    cambia la línea o se acota el comentario.
+
 **De producto:**
 
 > *"¿Esto tendría sentido para una planta en Bogotá cuyas rutas nunca hemos

@@ -7,7 +7,7 @@ import type {
   TimingStatus,
 } from "@jtel/domain";
 
-import { haversineKm } from "@jtel/domain";
+import { haversineKm, DEFAULT_FRECHET_MAX_KM } from "@jtel/domain";
 
 /**
  * La geometría base y la matemática de la ventana viven en `@jtel/domain`:
@@ -902,7 +902,9 @@ export function verifyService(input: VerificationInput): VerificationResult {
   const minCorridorPct = hasKml
     ? Math.min(100, Math.max(0, input.kmlCorridorMinPct ?? 60))
     : 0;
-  const frechetMaxKm = input.frechetMaxKm ?? 0.8;
+  // C12 · El default viene del esquema de la política, no de aquí. Era el
+  // único umbral de KML que el motor resolvía por su cuenta (Ley 6).
+  const frechetMaxKm = input.frechetMaxKm ?? DEFAULT_FRECHET_MAX_KM;
   // Una sola perilla gobierna las dos mitades del arreglo: cuánto arranque de
   // ruta se tolera perder. De ahí sale tanto el piso del tramo observable como
   // el gate que manda a pendiente_evidencia más abajo.

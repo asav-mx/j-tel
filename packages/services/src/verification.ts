@@ -16,7 +16,7 @@ import {
 import { motivoCuentaDemo } from "./cuenta-demo.js";
 import type { ComplianceFact, Repositories } from "@jtel/db";
 import type { ContractPolicy, VerificationResult } from "@jtel/domain";
-import { localDateIso, JTTEL_TZ } from "@jtel/domain";
+import { localDateIso, JTTEL_TZ, DEFAULT_FRECHET_MAX_KM } from "@jtel/domain";
 
 /**
  * El motor ya no recibe configuración del proveedor de GPS: no habla con él.
@@ -1120,6 +1120,8 @@ export class VerificationService {
       kmlCorridorMeters: policy.kmlCorridorMeters ?? 120,
       kmlCorridorMinPct: policy.kmlCorridorMinPct ?? 60,
       kmlOriginToleranceFraction: policy.kmlOriginToleranceFraction ?? 0.15,
+      // C12 · sale de la política del contrato, no de un default del motor.
+      frechetMaxKm: policy.frechetMaxKm ?? DEFAULT_FRECHET_MAX_KM,
       geofencePolygon: geofence.polygon,
       routeCorpus: routeCorpus.length > 0 ? routeCorpus : undefined,
       evidencePoints: enrichedPoints,
