@@ -718,6 +718,7 @@ export interface VerificationResult {
 }
 
 export * from "./enforcement.js";
+export * from "./identidad.js";
 export * from "./operational-scope.js";
 export * from "./senal.js";
 export * from "./ventana-observacion.js";
