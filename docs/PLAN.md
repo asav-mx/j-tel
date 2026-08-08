@@ -1782,7 +1782,7 @@ decisión es cada una.
 | Qué | Clase | La decisión concreta que hace falta | Causas que destraba |
 |---|---|---|---|
 | **D1** · los 294 hechos con el deadline mal calculado | Negocio | Corregirlos con firma y motivo, o dejarlos | — |
-| **D2** · Turno B de Planta 47 | **Conversación con la Planta** | 🟢 **Resuelto cuál de los dos es: el de Planta 47**, y **los 36 son 100 % suyos**. El turno **ya se movió a 15:30** y su ventana nueva (12:59–16:00) es la primera que contiene la operación de ~14:00 — **pero arranca el 31 de agosto**. Falta: **confirmar que 15:30 es la real**, y decidir **qué pasa con las 102 ocurrencias** que hasta el 28 de agosto se juzgan con la ventana vieja | No mueve C11 (Turno A) |
+| **D2** · Turno B de Planta 47 | **Conversación con la Planta** | 🟢 **Resuelto cuál de los dos es: el de Planta 47**, y **los 36 son 100 % suyos**. El turno **ya se movió a 15:30** y su ventana nueva (12:59–16:00) es la primera que contiene la operación de ~14:00 — **pero arranca el 31 de agosto**. Falta: **confirmar que 15:30 es la real**. 🟢 **7 ago: lo de las 102 ya se resolvió** — se corrigieron **90** (las otras 12 se sellaron antes) y **ninguna sin sellar corre ya con la ventana vieja** | No mueve C11 (Turno A) |
 | **D3** · regla de cierre del pendiente por evidencia | **Negocio + legal** | Cuánto puede un servicio quedarse en pendiente y qué pasa después. 🟢 **El dato se movió: son 106 pendientes y 89 llevan más de 48 h** al 6 de agosto, contra los 71 con que se abrió esta decisión — y sigue creciendo | C11 |
 | **D4** · re-verificar las 300 congeladas | Negocio | Cuándo, sabiendo que cada re-verificación mete una versión más en la historia del hecho | C5 |
 | **D5** · cómo se le cuenta a Tecma que su número cambia | Negocio | El mensaje, **antes** de que el número se mueva. 🟢 Ya se movió solo: 6.7 % → 8.8 % → **11.0 %** en tres días | Precede a D4 |
@@ -1796,8 +1796,10 @@ decisión es cada una.
 
 ### 5.6 Lo que cerrar este tramo coloca
 
-**No es solo el orden de las causas.** Cinco frentes están escritos y sin lugar, y
-se colocan al cerrar el Tramo 2 — tres de ellos salen directo de esta tabla:
+**No es solo el orden de las causas.** **Ocho** frentes están escritos y sin lugar,
+y se colocan al cerrar el Tramo 2 — cuatro salen directo de esta tabla. Eran cinco
+al abrir el tramo; los tres que se sumaron —el diseño, las pruebas en CI y el
+proveedor de GPS— salieron de medir, no de planear.
 
 | Frente | De qué causa sale | Qué de esta ficha lo alimenta |
 |---|---|---|
