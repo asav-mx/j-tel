@@ -30,7 +30,45 @@ export const REQUERIDAS = [
   "UMBRELLA_GPS_URL",
   "UMBRELLA_GPS_USERID",
   "UMBRELLA_GPS_PASSWORD",
+  /*
+   * El canal de alertas. Pasan a requeridas el 8 de agosto de 2026, el día que
+   * un aviso de este sistema llegó por primera vez a una bandeja — dos
+   * generaciones del vigilante no lo habían logrado. El comentario que estaba
+   * aquí decía «cuando la clave viva en Vercel, mover las tres a REQUERIDAS es
+   * una línea»; ese momento llegó.
+   *
+   * Son dos y no tres: `RESEND_API_KEY` está aparte, abajo, y la razón no es de
+   * estilo.
+   */
+  "ALERTAS_REMITENTE",
+  "ALERTAS_DESTINATARIOS",
 ];
+
+/**
+ * Requeridas EN EL DESPLIEGUE, y que un `.env` local legítimamente no puede
+ * tener.
+ *
+ * La categoría nace de un caso concreto: `RESEND_API_KEY` está marcada
+ * *sensitive* en Vercel, y una variable sensitive **no se puede volver a
+ * leer** — ni siquiera con `vercel env pull`. Meterla en `REQUERIDAS` dejaría
+ * `pnpm env:check` en rojo para siempre en toda máquina local, y **un check que
+ * siempre está rojo enseña a ignorarlo**: es la lección del vigilante otra vez,
+ * ahora del lado del que mira.
+ *
+ * Qué se exige, entonces, y qué no:
+ *
+ *  · **Sí** que esté declarada en `.env.example`. El contrato es la lista de
+ *    nombres autorizados, y una variable que la app necesita tiene que estar
+ *    en él aunque su valor no viaje.
+ *  · **No** que tenga valor en el `.env` local. No lo puede tener.
+ *
+ * Y lo que **no** hace este script, dicho para que nadie lo suponga: **no puede
+ * comprobar que exista en producción.** Eso lo comprueba quien sí lo ve —
+ * `resolverCanal` contesta 503 nombrando la que falta, y Vercel marca la
+ * corrida del cron como fallida—. La comprobación vive donde el dato existe, no
+ * donde se desea que exista.
+ */
+export const REQUERIDAS_EN_DESPLIEGUE = ["RESEND_API_KEY"];
 
 /**
  * Con que una del grupo tenga valor basta. `apps/web/src/lib/db.ts` cae por
@@ -62,17 +100,6 @@ export const OPCIONALES = [
    */
   "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
   "CLERK_SECRET_KEY",
-  /*
-   * El canal de alertas. Van como opcionales y no como requeridas mientras la
-   * clave de Resend no esté puesta en Vercel: exigirlas hoy rompería el
-   * `env:check` de todo el mundo por una integración que todavía no existe.
-   * Su ausencia no pasa desapercibida —las dos rutas de cron contestan 503 y
-   * Vercel marca la corrida fallida—, así que el fallo se ve donde importa.
-   * Cuando la clave viva en Vercel, mover las tres a REQUERIDAS es una línea.
-   */
-  "RESEND_API_KEY",
-  "ALERTAS_REMITENTE",
-  "ALERTAS_DESTINATARIOS",
 ];
 
 /**
@@ -123,6 +150,24 @@ export function revisar({ contrato, local }) {
     if (!conValor(n)) errores.push(`falta ${n} (requerida, y está vacía o ausente en .env)`);
   }
 
+  /*
+   * De las de despliegue se exige que estén EN EL CONTRATO, no que tengan valor
+   * local: no lo pueden tener. Y su ausencia de valor se dice como aviso en vez
+   * de callarse — un silencio aquí se lee igual que «está puesta».
+   */
+  for (const n of REQUERIDAS_EN_DESPLIEGUE) {
+    if (!contrato.has(n)) {
+      errores.push(
+        `falta ${n} en .env.example (requerida en el despliegue: el contrato tiene que nombrarla aunque su valor no baje)`,
+      );
+    } else if (!conValor(n)) {
+      avisos.push(
+        `${n} no tiene valor local, y así es correcto: es sensitive en Vercel y no se puede bajar. ` +
+          `Que esté puesta en el despliegue NO lo comprueba este script — lo comprueba el 503 de las rutas que la usan`,
+      );
+    }
+  }
+
   for (const grupo of GRUPOS) {
     if (!grupo.some(conValor)) {
       errores.push(`falta la conexión a la base: ninguna de ${grupo.join(" / ")} tiene valor`);
@@ -155,7 +200,12 @@ export function revisar({ contrato, local }) {
   }
 
   // Contrato contra realidad, en los dos sentidos.
-  const declaradas = new Set([...REQUERIDAS, ...OPCIONALES, ...GRUPOS.flat()]);
+  const declaradas = new Set([
+    ...REQUERIDAS,
+    ...REQUERIDAS_EN_DESPLIEGUE,
+    ...OPCIONALES,
+    ...GRUPOS.flat(),
+  ]);
   for (const n of contrato.keys()) {
     if (!declaradas.has(n)) {
       avisos.push(`${n} está en .env.example pero este script no la clasifica`);
@@ -202,6 +252,7 @@ function main() {
 
   console.log(
     `\n  ✓ .env cumple el contrato — ${REQUERIDAS.length + GRUPOS.length} requeridas presentes` +
+      `, ${REQUERIDAS_EN_DESPLIEGUE.length} requerida(s) solo en el despliegue (no verificable desde aquí)` +
       `${avisos.length > 0 ? `, con ${avisos.length} aviso(s)` : ""}\n`,
   );
 }
