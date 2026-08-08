@@ -54,6 +54,7 @@ const TECMA_POLICY: ContractPolicy = {
   kmlCorridorMeters: 120,
   kmlCorridorMinPct: 60,
   kmlOriginToleranceFraction: 0.15,
+  frechetMaxKm: 0.8,
   excusableReasons: [
     "lluvia_nieve",
     "marchas",
@@ -87,6 +88,7 @@ const HONEYWELL_POLICY: ContractPolicy = {
   kmlCorridorMeters: 120,
   kmlCorridorMinPct: 60,
   kmlOriginToleranceFraction: 0.15,
+  frechetMaxKm: 0.8,
   excusableReasons: [
     "lluvia_nieve",
     "marchas",

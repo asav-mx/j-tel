@@ -12,6 +12,7 @@ import {
   haversineKm,
   localTimeHHMM,
   JTTEL_TZ,
+  DEFAULT_FRECHET_MAX_KM,
 } from "@jtel/domain";
 import { edadSenalMinutos } from "@/lib/monitoreo-umbrales";
 import { estimarLlegada } from "@/lib/monitoreo-eta";
@@ -316,6 +317,7 @@ export async function loadMonitoreo(opts: {
     windowEndFull: Date;
     /** Umbral A de la política (kmlMatchMinPct) — mismo default del motor. */
     matchMinPct: number;
+    frechetMaxKm: number;
     /** Umbral B de la política (kmlCorridorMinPct) — mismo default del motor. */
     corridorMinPct: number;
     /** Holgura de la política, en minutos — el umbral que la tira dibuja. */
@@ -368,6 +370,7 @@ export async function loadMonitoreo(opts: {
       windowEnd,
       windowEndFull,
       matchMinPct: policy.kmlMatchMinPct ?? 60,
+      frechetMaxKm: policy.frechetMaxKm ?? DEFAULT_FRECHET_MAX_KM,
       corridorMinPct: policy.kmlCorridorMinPct ?? 60,
       graceMinutes: policy.verificationGraceMinutes ?? 15,
       // El mismo default del motor: 20 km/h, ruta de recolección de personal
@@ -499,7 +502,9 @@ export async function loadMonitoreo(opts: {
         corridorKm: d.corridorKm,
         minKmlPct: d.matchMinPct,
         minCorridorPct: d.corridorMinPct,
-        frechetMaxKm: 0.8,
+        // C12 · el comentario de arriba decía «umbrales de la política del
+        // contrato» sobre un 0.8 horneado. Ahora es verdad también para éste.
+        frechetMaxKm: d.frechetMaxKm,
         idf: null,
       });
       const a = evalRes.routeMatchPct;

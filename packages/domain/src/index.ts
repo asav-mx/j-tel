@@ -309,6 +309,20 @@ export const enforcementRulesSchema = z.discriminatedUnion("type", [
 
 export type EnforcementRules = z.infer<typeof enforcementRulesSchema>;
 
+/**
+ * Tope de distancia de Fréchet entre la traza y el trazado, en km.
+ *
+ * Vive aquí y no en el motor porque **el esquema es quien tiene que poder
+ * declararlo** (Ley 6 del Marco: todo umbral es configurable por contrato). El
+ * motor lo importa; antes lo resolvía con un `?? 0.8` propio, que era el único
+ * umbral de KML fuera de `contractPolicySchema` — eso es C12.
+ *
+ * 0.8 es exactamente el valor que el motor venía aplicando, así que meterlo a
+ * la política **no mueve nada**: cambia quién manda, no el comportamiento. Es
+ * la misma forma del arreglo de `kmlOriginToleranceFraction`.
+ */
+export const DEFAULT_FRECHET_MAX_KM = 0.8;
+
 export const contractPolicySchema = z.object({
   toleranceMinutes: z.number().int().nonnegative(),
   /** Minutos antes del inicio del turno en que debe estar en geocerca (deadline). */
@@ -356,6 +370,20 @@ export const contractPolicySchema = z.object({
    * convierte en veredicto. Default 0.15 (15% inicial de la ruta).
    */
   kmlOriginToleranceFraction: z.number().min(0).max(1).default(0.15),
+  /**
+   * Tope de distancia de Fréchet entre la traza observada y el trazado, en km.
+   *
+   * Desambigua el RANKING de candidatas — alimenta `shapeOk`, que ordena—, y
+   * **no entra en la expresión `servedRoute`**, que es la que decide cuántas
+   * acreditan. Por eso mover este umbral no puede cambiar un veredicto por sí
+   * solo, y por eso C12 se pudo arreglar sin contaminar la medición de las
+   * demás causas del nudo.
+   *
+   * Medido el 5 de agosto: **300 de los 319 servicios cumplidos también exceden
+   * este tope** y cumplieron igual. Quien lo mueva pensando que rescata
+   * servicios está mirando el umbral equivocado.
+   */
+  frechetMaxKm: z.number().min(0).default(DEFAULT_FRECHET_MAX_KM),
   excusableReasons: z.array(ExcusableReason).default([]),
   enforcementRules: z.array(enforcementRulesSchema).default([]),
   /**

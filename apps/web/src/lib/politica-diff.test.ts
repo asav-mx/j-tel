@@ -17,6 +17,7 @@ const base = {
   kmlMatchMinPct: 60,
   kmlCorridorMinPct: 60,
   kmlOriginToleranceFraction: 0.15,
+  frechetMaxKm: 0.8,
   permitirConsolidacion: false,
   excusableReasons: ["lluvia_nieve", "obstruccion"],
 } as unknown as ContractPolicy;
