@@ -1,5 +1,33 @@
 # Qué falta para que la UI quede como la definimos
 
+> # ⛔ SUPERADO — 7 de agosto de 2026
+>
+> **Las cifras de este documento ya no son ciertas.** Se midieron contra
+> `7c5a471`, del **1 de agosto**, y `main` llevaba **140 commits** de ventaja al
+> revisarlas. El universo pasó de **48 rutas a 56** (cliente + carrier) en seis
+> días, y el total real es **69** contando J-Staff y las públicas, que este
+> documento nunca contó.
+>
+> **El conteo vigente vive en `PLAN.md` §8:** 36 rutas con ficha de diseño y 33
+> sin ella. **No se copia aquí a propósito** — dos lugares con el mismo número es
+> exactamente cómo nació esta contradicción.
+>
+> **Qué de este documento sigue en pie, y es lo que valía:** que **el hueco es de
+> diseño y no de construcción**. Se confirmó — J-Staff entero, nueve rutas, no
+> tiene una sola ficha.
+>
+> **Y por qué envejeció sin avisar, que es la lección:** traía su commit de
+> medición en la segunda línea, pero **el número alarmante viajaba solo** en los
+> encabezados y en las conversaciones. Una cifra con fecha en el documento y sin
+> fecha en la boca de quien la repite **envejece igual**. Ver la regla de `PLAN.md`
+> §0.
+>
+> **No se borra.** Su §4 —el desglose de lo que nunca se diseñó— sigue siendo el
+> mejor mapa del trabajo de diseño que falta, aunque sus totales estén vencidos.
+
+---
+
+
 **Medido contra `main` (7c5a471), no de memoria.**
 **Total de pantallas existentes: 48** — 37 de cliente, 11 de carrier. Diseñamos 9.
 

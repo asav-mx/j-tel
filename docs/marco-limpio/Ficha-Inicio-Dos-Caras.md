@@ -6,6 +6,13 @@
 
 **El diagnóstico corto:** la ficha anterior especificó *qué no debe llevar* el inicio y acertó. No especificó *cómo debe verse*, y por eso salió un directorio de texto. Las dos cosas eran ciertas a la vez.
 
+**Reviste:** `cliente/planta/[plantId]` · `cliente/campus/[groupId]` · `carrier` (inicio).
+
+> **Por qué esta línea existe:** sin ella, contar cuántas pantallas tienen
+> diseño obliga a leer las trece fichas y a interpretar. Con ella el conteo se
+> rehace solo. La ruta va **en el encabezado y con acentos graves**, para que
+> un `grep` la encuentre. Ver `PLAN.md` §8.
+
 ---
 
 ## 1. La regla que concilia ambas

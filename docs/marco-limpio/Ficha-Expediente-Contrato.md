@@ -4,6 +4,13 @@
 **Cara:** cliente y carrier — **las dos partes lo ven, con el mismo contenido.**
 **Ola:** el grueso hoy; el bloque de cumplimiento espera Ola 2.
 
+**Reviste:** `cliente/contrato/[contractId]` · `cliente/contrato/[contractId]/expediente` · `carrier/contrato/[contractId]`.
+
+> **Por qué esta línea existe:** sin ella, contar cuántas pantallas tienen
+> diseño obliga a leer las trece fichas y a interpretar. Con ella el conteo se
+> rehace solo. La ruta va **en el encabezado y con acentos graves**, para que
+> un `grep` la encuentre. Ver `PLAN.md` §8.
+
 ---
 
 ## 1. Qué es, y por qué NO es la Oficina

@@ -2,6 +2,12 @@
 
 **Gobierna:** el skill `j-telemetry-ui` y el `Marco-Limpio-J-Telemetry-MAESTRO.md`.
 **Reemplaza la piel de** `cliente/*/configuracion` y sus cinco subrutas, que ya existen (PR #116).
+**Reviste:** `cliente/configuracion` · `cliente/planta/[plantId]/configuracion` · `cliente/campus/[groupId]/configuracion` y sus subrutas.
+
+> **Los tres alcances, escritos uno por uno y no con comodín.** `cliente/*/configuracion`
+> se lee como si cubriera los tres y **deja fuera el corporativo**, que no tiene segmento
+> intermedio. Al contarlo mecánicamente salían cinco rutas sin ficha que sí la tienen.
+
 
 ---
 
