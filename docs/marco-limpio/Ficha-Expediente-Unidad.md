@@ -3,6 +3,13 @@
 **Gobierna:** el skill `j-telemetry-ui` y el `Marco-Limpio-J-Telemetry-MAESTRO.md`.
 **Cara:** carrier únicamente. **Ola:** el grueso hoy; dos bloques esperan.
 
+**Reviste:** `carrier/flota/[unitId]`.
+
+> **Por qué esta línea existe:** sin ella, contar cuántas pantallas tienen
+> diseño obliga a leer las trece fichas y a interpretar. Con ella el conteo se
+> rehace solo. La ruta va **en el encabezado y con acentos graves**, para que
+> un `grep` la encuentre. Ver `PLAN.md` §8.
+
 ---
 
 ## 1. Qué es, y la ley que lo ordena

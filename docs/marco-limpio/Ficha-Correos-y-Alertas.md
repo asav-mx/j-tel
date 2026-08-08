@@ -5,6 +5,13 @@ Esa pieza resuelve la **plomería**; esta ficha define el **contenido**, que hoy
 
 **Gobierna:** el skill `j-telemetry-ui` y el `Marco-Limpio-J-Telemetry-MAESTRO.md`.
 
+**Reviste:** ninguna ruta — son plantillas de correo, no pantalla.
+
+> **Por qué esta línea existe:** sin ella, contar cuántas pantallas tienen
+> diseño obliga a leer las trece fichas y a interpretar. Con ella el conteo se
+> rehace solo. La ruta va **en el encabezado y con acentos graves**, para que
+> un `grep` la encuentre. Ver `PLAN.md` §8.
+
 ---
 
 ## 1. Por qué esto importa más de lo que parece

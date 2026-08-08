@@ -1326,6 +1326,38 @@ incumplimiento»— convertida en algo que se ve.
 
 ---
 
+### Frente — El diseño no alcanza a la construcción
+
+**Se coloca al cerrar el Tramo 2.** **Sin construir hoy.**
+
+**El dato, medido el 7 de agosto:** entre el 1 y el 7 de agosto el universo de
+pantallas de cliente y carrier pasó de **48 a 56 rutas** — ocho nuevas en seis
+días — y en el mismo periodo aparecieron **cuatro fichas de diseño**. 🟢 **Se
+construyen pantallas al doble de velocidad de la que se diseñan.**
+
+**Por qué es frente y no una nota.** El saldo no es estático, es una **tasa**: cada
+semana que pasa, la deuda de diseño crece aunque nadie deje de trabajar. Hoy son
+**33 rutas sin ficha de 69**, con **J-Staff entero —nueve— sin una sola**. Un
+frente que se mide en pantallas pendientes se cierra construyendo; uno que se mide
+en **velocidad relativa** no se cierra hasta que se invierte el orden.
+
+> **Y es la explicación más simple de la retroalimentación de fuera** —*«la
+> información se siente dispersa y no es obvia de navegar»*—: **una pantalla sin
+> ficha no es una pantalla fea, es una pantalla sin decisión de navegación
+> tomada.** Trece de cliente y siete de carrier están en ese estado, y ahí es donde
+> alguien se pierde.
+
+**Lo que este frente NO es:** revestir. Es **decidir qué va en cada pantalla y cómo
+se llega a ella** — que es lo que la ficha fija y lo que hoy falta. El Tramo 5
+supone que ese trabajo está hecho.
+
+⚠ **Y lo que hay que decir del Tramo 5, porque el plan lo daba por resuelto:**
+mientras este plan afirmaba que «el frente visual está cerrado», **33 rutas no
+tenían decisión de diseño**. El Tramo 5 está dimensionado como trabajo de piel
+sobre pantallas diseñadas. **No lo es para la mitad del producto.**
+
+---
+
 ### Frente — Que las pruebas de integración corran en CI
 
 **Se coloca al cerrar el Tramo 2.** **Sin construir hoy.**
@@ -1734,6 +1766,7 @@ se colocan al cerrar el Tramo 2 — tres de ellos salen directo de esta tabla:
 | **Los sensores** | **C19 · C3 · C13 · C16 · C14** | 🟢 Cada sensor ya tiene su cifra del 6 de agosto en 5.1 |
 | **La app del coordinador de planta** | **C11 · C18** | 🟢 El empalme es rutinario (18 de 28 días del Campus), así que una declaración previa desempata más de lo que se creía |
 | **El alcance fino** (1.h · `admin_planta` · el alta completa) | — | 🟢 El dato que este plan pedía tener en mano para colocarlo: **106 pendientes, 89 de más de 48 h** (D3) |
+| **El diseño no alcanza a la construcción** | — | 🟢 8 rutas nuevas contra 4 fichas nuevas en seis días; **33 de 69 sin ficha**, J-Staff entero |
 | **Las pruebas de integración en CI** | — | 🟢 41 pruebas existen y ningún check las ejecuta; el verde dice «las pruebas pasan» y midió «las unitarias pasan» |
 | **Independencia del proveedor de GPS** | — | 🟢 El código nombra a un proveedor concreto en paquete, esquema, variables y pantalla. **Abstraer antes de conectar el segundo**, o quedan dos casos especiales cosidos |
 | **La reconciliación del expediente** | **C15 · C17** | 🟢 El expediente hoy etiqueta mal la evidencia y, en todo lo sellado antes del 5 de agosto, solo tiene la cobertura ponderada |
@@ -1799,8 +1832,8 @@ mientras la llave estaba abierta.
 Paquetes: `db` · `domain` · `verification` · `services` · `gps-umbrella` ·
 `auth-rbac` · `reports`.
 
-**Construido y en producción:** las dos caras completas (13 pantallas, datos
-reales, dos temas — **el frente visual está cerrado**) · cinco expedientes ·
+**Construido y en producción:** las dos caras con datos reales y dos temas ·
+cinco expedientes ·
 26 de 26 rutas de API guardadas · **las 65 páginas guardadas y el Tramo 1
 cerrado** —`/entrar` como puerta, vuelta al destino validada, sin identidad por
 omisión— · historia de la política · plomería de alertas · el árbitro con sus
@@ -1809,6 +1842,38 @@ cuatro arreglos de ventana.
 **El candado ya no es «identidad sin enforcement».** Lo que falta de él es una
 pieza nombrada —1.h, que vive en el **Frente del alcance fino**— y el login real
 del Tramo 7.
+
+### La UI, medida el 7 de agosto de 2026 — y una contradicción resuelta
+
+⚠ **Este plan decía «el frente visual está cerrado» y era falso.** Al mismo tiempo,
+`docs/Analisis-Que-Falta-UI.md` decía «36 pantallas nunca se diseñaron». **Las dos
+vivas, opuestas, y ninguna medible sin volver a contar.** Gana el número medido:
+
+| Cara | Rutas | Con ficha | Sin ficha |
+|---|---|---|---|
+| Cliente | 41 | **28** | 13 |
+| Carrier | 15 | **8** | 7 |
+| J-Staff | 9 | **0** | **9** |
+| Públicas / raíz | 4 | 0 | 4 |
+| **Total** | **69** | **36** | **33** |
+
+🟢 **Ni «cerrado» ni «36 sin diseñar»: son 36 CON ficha y 33 sin.** El análisis viejo
+contaba un universo de 48 —solo cliente y carrier— contra `7c5a471`, del 1 de
+agosto; `main` iba **140 commits** por delante cuando se remidió. Queda **superado,
+no borrado**: su lectura de fondo —*el hueco es de diseño, no de construcción*—
+sigue siendo cierta, y J-Staff entero sin ficha lo demuestra.
+
+**Y el número se puede rehacer solo.** Cada ficha de pantalla declara su ruta en el
+encabezado, entre acentos graves, con `**Reviste:**` o `**Reemplaza la piel de**`.
+Contar es leer esas líneas y cruzarlas con los `page.tsx` — **no hace falta
+interpretar ninguna ficha.** Antes sí hacía falta, y por eso el conteo envejeció
+sin que nadie lo notara.
+
+> ⚠ **Dos trampas que salieron al hacerlo mecánico, y quedan escritas:**
+> `Ficha-Oficina-Contrato` declaraba `cliente/*/configuracion`, que **se lee como si
+> cubriera los tres alcances y deja fuera el corporativo** — cinco rutas aparecían
+> sin ficha teniéndola. Y `Ficha-Choferes` declara `carrier/choferes`, **una ruta
+> que todavía no existe**: una ficha sin pantalla, que es el hueco al revés.
 
 **La foto de referencia del 3 de agosto** de los documentos viejos vive en
 `docs/corte-2026-08-03/`. Es foto, no ley. No se edita.
@@ -2192,6 +2257,35 @@ Cuatro cosas salieron de la ficha y se colocaron donde mandan, porque como nota 
   cumplido— más 84 del Turno B con cero. **El código y la base dicen lo mismo.**
 - ⚠ **Queda abierto antes de aplicar:** corregir con el guion mueve la hora límite
   bien y **deja la ventana quince minutos tarde**.
+
+**7 de agosto de 2026 (la UI medida, y una contradicción del propio plan).**
+- ⚠ **Este plan decía «el frente visual está cerrado». Era falso**, y al mismo
+  tiempo `Analisis-Que-Falta-UI.md` decía «36 pantallas nunca se diseñaron». Dos
+  documentos vivos, opuestos, y ninguno medible sin volver a contar.
+- 🟢 **El número medido: 69 rutas, 36 con ficha de diseño, 33 sin.** Por cara —
+  cliente 41 (28/13) · carrier 15 (8/7) · **J-Staff 9, ninguna con ficha** ·
+  públicas 4, ninguna. §8 corregida con esto.
+- **El análisis viejo queda SUPERADO, no borrado.** Medía 48 rutas contra
+  `7c5a471` del 1 de agosto, con `main` 140 commits adelante, y **nunca contó
+  J-Staff ni las públicas**. Su §4 sigue siendo el mejor mapa del diseño que falta.
+- 🟢 **Y ahora el conteo se rehace solo:** las trece fichas de pantalla declaran su
+  ruta en el encabezado, entre acentos graves. Antes había que leerlas e
+  interpretar — por eso el número envejeció sin que nadie lo notara.
+- ⚠ **Dos trampas del mapeo, escritas donde se ven:** `Ficha-Oficina-Contrato`
+  declaraba `cliente/*/configuracion`, que **deja fuera el alcance corporativo** —
+  cinco rutas parecían sin ficha teniéndola. Y `Ficha-Choferes` declara una ruta
+  **que todavía no existe**: una ficha sin pantalla, el hueco al revés.
+- **Frente nuevo: el diseño no alcanza a la construcción.** 🟢 Ocho rutas nuevas
+  contra cuatro fichas nuevas en seis días. **No es un saldo, es una tasa** — la
+  deuda crece sola. Y es la explicación más simple de la retroalimentación de
+  fuera: **una pantalla sin ficha no es fea, es una pantalla sin decisión de
+  navegación tomada.**
+- ⚠ **Consecuencia para el Tramo 5, que el plan daba por resuelta:** está
+  dimensionado como trabajo de piel sobre pantallas ya diseñadas, y **no lo es para
+  la mitad del producto**.
+- **Por qué el documento viejo envejeció aunque traía su commit:** la fecha estaba
+  en la segunda línea y **el número alarmante viajaba solo**. Una cifra fechada en
+  el documento y sin fecha en la boca de quien la repite envejece igual.
 
 **6 de agosto de 2026 (las dos rojas, y lo que una de ellas escondía).**
 - ⚠ **La del calendario no estaba roja: se rompió corriéndola mal.** `npx vitest`

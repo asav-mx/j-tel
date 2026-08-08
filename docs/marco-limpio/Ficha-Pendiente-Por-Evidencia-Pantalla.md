@@ -3,6 +3,13 @@
 **Gobierna:** el skill `j-telemetry-ui` y el `Marco-Limpio-J-Telemetry-MAESTRO.md`.
 **Continúa** la `Ficha-Pendiente-Por-Evidencia` anterior (PR #104), que definió el estado y su lógica. Esta define **la pantalla con la piel nueva**.
 
+**Reviste:** `cliente/planta/[plantId]/pendiente-por-evidencia` · `cliente/campus/[groupId]/pendiente-por-evidencia`.
+
+> **Por qué esta línea existe:** sin ella, contar cuántas pantallas tienen
+> diseño obliga a leer las trece fichas y a interpretar. Con ella el conteo se
+> rehace solo. La ruta va **en el encabezado y con acentos graves**, para que
+> un `grep` la encuentre. Ver `PLAN.md` §8.
+
 ---
 
 ## 1. La pantalla más delicada del producto

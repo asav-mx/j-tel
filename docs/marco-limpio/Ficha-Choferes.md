@@ -4,6 +4,13 @@
 **Rutas nuevas:** `carrier/choferes` y `carrier/choferes/[id]`. **Cara:** transportista.
 **BLOQUEADA POR EL MODELO DE DATOS — ver §5.**
 
+**Reviste:** `carrier/choferes` · `carrier/choferes/[id]` — ⚠ **rutas que todavía NO existen** en `apps/web/src/app`.
+
+> **Por qué esta línea existe:** sin ella, contar cuántas pantallas tienen
+> diseño obliga a leer las trece fichas y a interpretar. Con ella el conteo se
+> rehace solo. La ruta va **en el encabezado y con acentos graves**, para que
+> un `grep` la encuentre. Ver `PLAN.md` §8.
+
 ---
 
 ## 1. La ley que ordena el módulo
