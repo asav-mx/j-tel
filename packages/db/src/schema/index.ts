@@ -248,7 +248,57 @@ export const shifts = pgTable("shifts", {
   /** Hora nominal de inicio del turno (cuándo entra el personal / pasa lista). */
   startTime: time("start_time").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  /**
+   * Cuándo se editó por última vez. La escribe el TRIGGER, no quien actualiza.
+   *
+   * Nullable y sin default a propósito: un turno que nunca se ha editado no
+   * tiene fecha de edición, y rellenarla con la de la migración afirmaría un
+   * cambio que no ocurrió. NULL dice lo que de verdad se sabe.
+   */
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }),
 });
+
+/**
+ * La historia del turno — una fila por edición, con las dos fotos.
+ *
+ * Existe por C21: cuando el Turno B de Planta 47 se movió, el cambio no se pudo
+ * FECHAR —solo acotar entre dos corridas del cron— porque `shifts` no guardaba
+ * nada. Con esto, la divergencia entre una ocurrencia y el turno que la produjo
+ * pasa de inferible a legible.
+ *
+ * **La escribe un trigger de Postgres, no el código de la aplicación**, y ésa
+ * es la lección de C13: ahí el registro vive dentro de `updatePolicy` desde el
+ * 31 de julio y la tabla sigue vacía, porque la edición real la hizo un guion
+ * con `UPDATE` crudo. Un trigger alcanza también a los guiones y a la consola.
+ *
+ * La aplicación declara al actor con `set_config('jtel.actor_kind', …, true)`
+ * en su transacción; lo que no lo declare queda firmado `sql_directo`.
+ *
+ * Nada del motor lee esta tabla. Cada ocurrencia sigue congelando su propia
+ * hora límite; esto es registro hacia adelante, no ley.
+ */
+export const shiftHistory = pgTable(
+  "shift_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shiftId: uuid("shift_id")
+      .notNull()
+      .references(() => shifts.id, { onDelete: "cascade" }),
+    nameBefore: text("name_before").notNull(),
+    nameAfter: text("name_after").notNull(),
+    startTimeBefore: time("start_time_before").notNull(),
+    startTimeAfter: time("start_time_after").notNull(),
+    /** Quién editó. `sql_directo` cuando la escritura no declaró actor. */
+    actorKind: text("actor_kind").notNull(),
+    actorId: text("actor_id"),
+    /** Por qué. Opcional: no bloquea guardar, pero cuando está vale más que el qué. */
+    note: text("note"),
+    changedAt: timestamp("changed_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("sh_shift_idx").on(table.shiftId, table.changedAt)],
+);
 
 export const routeShifts = pgTable("route_shifts", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -1095,12 +1145,17 @@ export const routesRelations = relations(routes, ({ one, many }) => ({
   kmlVersions: many(routeKmlVersions),
 }));
 
-export const shiftsRelations = relations(shifts, ({ one }) => ({
+export const shiftsRelations = relations(shifts, ({ one, many }) => ({
   plant: one(plants, { fields: [shifts.plantId], references: [plants.id] }),
   plantGroup: one(plantGroups, {
     fields: [shifts.plantGroupId],
     references: [plantGroups.id],
   }),
+  history: many(shiftHistory),
+}));
+
+export const shiftHistoryRelations = relations(shiftHistory, ({ one }) => ({
+  shift: one(shifts, { fields: [shiftHistory.shiftId], references: [shifts.id] }),
 }));
 
 export const routeKmlVariantsRelations = relations(routeKmlVariants, ({ one, many }) => ({

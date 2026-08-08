@@ -12,10 +12,11 @@ import {
   serviceContracts,
   shifts,
   serviceProfiles,
+  shiftHistory,
   revisarHorasLimite,
 } from "../src/index.js";
-import { eq, inArray } from "drizzle-orm";
-import type { ContractPolicy } from "@jtel/domain";
+import { eq, inArray, sql } from "drizzle-orm";
+import type { ContractPolicy, OperationalScope } from "@jtel/domain";
 
 // Candado: falla antes de correr cualquier test si apunta a producción
 const PROD_URL = process.env.DATABASE_URL;
@@ -1634,6 +1635,18 @@ describe("C21 · la revisión de horas límite", () => {
         .update(shifts)
         .set({ startTime: objetivo.shiftStartTime })
         .where(eq(shifts.id, objetivo.shiftId));
+
+      /*
+       * Y se borra la historia que estos dos movimientos acaban de generar.
+       *
+       * Hace falta desde la migración 0019 y no antes: hasta entonces mover un
+       * turno no dejaba nada, y ahora el trigger escribe dos filas por corrida
+       * —el movimiento y la restauración—. Sin esto, `shift_history` crece sin
+       * tope en la desechable con ediciones que nadie hizo. Es la misma lección
+       * que la primera versión de esta suite ya cobró una vez: lo que una
+       * prueba deja vive hasta que otra tropieza con ello.
+       */
+      await db.delete(shiftHistory).where(eq(shiftHistory.shiftId, objetivo.shiftId));
     }
 
     // Y el detector sigue vivo después de devolver el turno a su sitio.
@@ -1685,5 +1698,175 @@ describe("C21 · la revisión de horas límite", () => {
     } finally {
       await db.delete(complianceFacts).where(eq(complianceFacts.id, hecho!.id));
     }
+  });
+});
+
+/**
+ * C21 · La historia del turno, y el trigger que la hace obligatoria.
+ *
+ * La opción 4 de la decisión del 7 de agosto: `shifts` no tenía `updated_at`,
+ * así que el cambio del Turno B no se pudo fechar — solo acotar entre dos
+ * corridas del cron.
+ *
+ * **La prueba que importa aquí es la del `UPDATE` crudo**, y es la que
+ * distingue este arreglo del de C13. Allá el registro vive dentro de
+ * `updatePolicy` desde el 31 de julio, y al 7 de agosto la tabla seguía en cero
+ * filas porque la única edición real la hizo un guion con SQL crudo. Cerrar el
+ * camino bueno no cierra la puerta de atrás; un trigger sí. Si esa prueba se
+ * pudiera quitar sin que nada se ponga en rojo, este arreglo sería el de C13
+ * otra vez.
+ */
+describe("C21 · la historia del turno", () => {
+  const creados: string[] = [];
+
+  /** Un turno propio: mover uno de los sembrados movería lo que otras miden. */
+  async function turnoDePrueba(nombre: string) {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+    const [plantilla] = await db.select().from(shifts).limit(1);
+    expect(plantilla).toBeTruthy();
+
+    const creado = await repos.routes.createShift({
+      clientAccountId: plantilla!.clientAccountId,
+      plantId: plantilla!.plantId,
+      plantGroupId: plantilla!.plantGroupId,
+      name: nombre,
+      startTime: "04:00:00",
+    });
+    creados.push(creado.id);
+
+    const scope: OperationalScope = plantilla!.plantId
+      ? { kind: "plant", plantId: plantilla!.plantId }
+      : { kind: "plant_group", plantGroupId: plantilla!.plantGroupId! };
+
+    return { db, repos, turno: creado, scope, cuenta: plantilla!.clientAccountId };
+  }
+
+  afterAll(async () => {
+    if (creados.length === 0) return;
+    const db = createDb(DATABASE_URL);
+    // La historia cae en cascada con el turno.
+    await db.delete(shifts).where(inArray(shifts.id, creados));
+  });
+
+  it("un turno nuevo no trae historia ni fecha de edición inventada", async () => {
+    const { repos, turno } = await turnoDePrueba("C21 · recién creado");
+
+    expect(turno.updatedAt).toBeNull();
+    expect(await repos.routes.getShiftHistory(turno.id)).toHaveLength(0);
+  });
+
+  it("mover el turno por el camino de la aplicación deja fila firmada, con su motivo", async () => {
+    const { repos, turno, scope, cuenta } = await turnoDePrueba("C21 · por la app");
+
+    const r = await repos.routes.updateShift(
+      turno.id,
+      cuenta,
+      scope,
+      { name: "C21 · por la app", startTime: "05:30:00" },
+      { actorKind: "human", actorId: null, note: "la planta confirmó la hora" },
+    );
+    expect(r.ok).toBe(true);
+
+    const historia = await repos.routes.getShiftHistory(turno.id);
+    expect(historia).toHaveLength(1);
+    expect(historia[0]!.actorKind).toBe("human");
+    expect(historia[0]!.note).toBe("la planta confirmó la hora");
+    expect(historia[0]!.startTimeBefore).toBe("04:00:00");
+    expect(historia[0]!.startTimeAfter).toBe("05:30:00");
+  });
+
+  it("un UPDATE CRUDO también deja fila — firmada sql_directo", async () => {
+    // ESTA es la prueba del trigger. C13 tiene el camino de la aplicación
+    // cerrado desde el 31 de julio y la tabla en cero, porque la edición real
+    // vino por aquí. Quitar esta prueba y nada se pone en rojo significaría
+    // que el arreglo volvió a ser el de C13.
+    const { db, repos, turno } = await turnoDePrueba("C21 · por SQL crudo");
+
+    await db.execute(
+      sql`update shifts set start_time = '06:45:00' where id = ${turno.id}`,
+    );
+
+    const historia = await repos.routes.getShiftHistory(turno.id);
+    expect(historia).toHaveLength(1);
+    expect(historia[0]!.actorKind).toBe("sql_directo");
+    expect(historia[0]!.actorId).toBeNull();
+    expect(historia[0]!.startTimeBefore).toBe("04:00:00");
+    expect(historia[0]!.startTimeAfter).toBe("06:45:00");
+  });
+
+  it("la firma no se filtra de una transacción a la siguiente", async () => {
+    // `set_config(..., true)` es transaccional. Si se hubiera escrito sin ese
+    // tercer argumento, la firma de la última edición por la app quedaría
+    // pegada a la conexión y el siguiente UPDATE crudo saldría firmado como
+    // persona — una historia que miente sobre quién, que es peor que no
+    // tenerla.
+    const { db, repos, turno, scope, cuenta } = await turnoDePrueba("C21 · fuga de firma");
+
+    await repos.routes.updateShift(
+      turno.id,
+      cuenta,
+      scope,
+      { name: "C21 · fuga de firma", startTime: "05:00:00" },
+      { actorKind: "human", actorId: null, note: "primera" },
+    );
+    await db.execute(sql`update shifts set start_time = '06:00:00' where id = ${turno.id}`);
+
+    const historia = await repos.routes.getShiftHistory(turno.id);
+    expect(historia.map((h) => h.actorKind)).toEqual(["sql_directo", "human"]);
+  });
+
+  it("guardar sin cambiar nada NO genera fila", async () => {
+    const { repos, turno, scope, cuenta } = await turnoDePrueba("C21 · sin cambios");
+
+    await repos.routes.updateShift(
+      turno.id,
+      cuenta,
+      scope,
+      { name: "C21 · sin cambios", startTime: "04:00:00" },
+      { actorKind: "human", actorId: null, note: null },
+    );
+
+    // Abrir el formulario y guardar sin tocar nada es común; registrarlo
+    // escondería las ediciones de verdad entre entradas vacías.
+    expect(await repos.routes.getShiftHistory(turno.id)).toHaveLength(0);
+  });
+
+  it("la cadena no tiene huecos: el después de una fila es el antes de la siguiente", async () => {
+    const { repos, turno, scope, cuenta } = await turnoDePrueba("C21 · cadena");
+
+    for (const hora of ["05:00:00", "06:00:00", "07:00:00"]) {
+      await repos.routes.updateShift(
+        turno.id,
+        cuenta,
+        scope,
+        { name: "C21 · cadena", startTime: hora },
+        { actorKind: "human", actorId: null, note: null },
+      );
+    }
+
+    // De la más reciente hacia atrás; se recorre en orden cronológico.
+    const historia = (await repos.routes.getShiftHistory(turno.id)).reverse();
+    expect(historia).toHaveLength(3);
+    for (let i = 1; i < historia.length; i++) {
+      expect(historia[i]!.startTimeBefore).toBe(historia[i - 1]!.startTimeAfter);
+    }
+  });
+
+  it("el trigger fecha la edición — updated_at deja de estar vacío", async () => {
+    const { db, repos, turno, scope, cuenta } = await turnoDePrueba("C21 · fechado");
+
+    await repos.routes.updateShift(
+      turno.id,
+      cuenta,
+      scope,
+      { name: "C21 · fechado", startTime: "05:15:00" },
+      { actorKind: "human", actorId: null, note: null },
+    );
+
+    const [despues] = await db.select().from(shifts).where(eq(shifts.id, turno.id));
+    // Es lo que no se pudo hacer cuando se movió el Turno B: fechar el cambio
+    // en vez de acotarlo entre dos corridas del cron.
+    expect(despues!.updatedAt).toBeInstanceOf(Date);
   });
 });
