@@ -1351,6 +1351,29 @@ en **velocidad relativa** no se cierra hasta que se invierte el orden.
 se llega a ella** — que es lo que la ficha fija y lo que hoy falta. El Tramo 5
 supone que ese trabajo está hecho.
 
+> 🟢 **Y el hallazgo que más pesa del conteo: J-Staff son nueve rutas y ninguna
+> tiene ficha.** **Es la cara desde la que Asav opera el producto, la que usa todos
+> los días, y es la única sin una sola decisión de diseño tomada.** Las otras dos
+> caras tienen 36 rutas con ficha entre ambas; ésta, cero.
+
+### La lección del mapeo: una declaración que nadie comprueba se degrada en las dos direcciones
+
+🟢 Al hacer el conteo mecánico salieron **dos trampas, y son la misma familia**:
+
+| Trampa | Qué pasó |
+|---|---|
+| **Ruta parcial** | `Ficha-Oficina-Contrato` declaraba `cliente/*/configuracion`. El comodín **no cubre el alcance corporativo**, que no tiene segmento intermedio: **cinco rutas aparecían sin ficha teniéndola** |
+| **Ruta inexistente** | `Ficha-Choferes` declara `carrier/choferes`, y **esa ruta no existe** en `apps/web/src/app`. Una ficha sin pantalla |
+
+> **Una declaración que nadie comprueba contra la realidad se degrada en las dos
+> direcciones:** de menos —cubre más de lo que dice— y de más —dice cubrir algo que
+> no está—. **Las dos producen un conteo falso y ninguna se ve mal al leerla.**
+>
+> Por eso el mapeo mecánico vale más que las trece líneas que lo hacen posible: no
+> es que ahorre leer, es que **cruza lo declarado contra lo que existe**, y ése es
+> el único paso que ninguna ficha puede hacer sobre sí misma. Es la regla 8
+> —una defensa que nadie distingue de su ausencia— aplicada a la documentación.
+
 ⚠ **Y lo que hay que decir del Tramo 5, porque el plan lo daba por resuelto:**
 mientras este plan afirmaba que «el frente visual está cerrado», **33 rutas no
 tenían decisión de diseño**. El Tramo 5 está dimensionado como trabajo de piel
@@ -1644,7 +1667,7 @@ ruta y qué comparte código, y separa lo que se puede medir sin sellar de lo qu
 | **C1** | **Cuentas demo con veredictos vinculantes** | 🟢 **6 ago: la llave sigue cerrada.** Son **84** hechos exactos —54 de PRUEBA REAL, 30 de Honeywell, 52 `no_cumplido` entre los dos— y **el último se selló el 3 de agosto**: ni uno después | **Llave cerrada** (#206). Falta limpiar los 84 — con firma y motivo |
 | **C10** | **Planta 47 sella menos que el Campus** | **Explicada por C11.** 🟢 **6 ago: 11.0 % de Planta 47 contra 53.9 % del Campus** (era 6.7/55.2 el 3 ago y 8.8/54.0 el 4). **La brecha se cierra despacio y por arriba**, y sigue siendo la sombra de C11, no una causa | **Explicada.** Deja de ser causa propia |
 | **C20** | **Dos cosas distintas con el mismo nombre, y el conteo las suma sin avisar** | 🟢 **6 ago: existen dos turnos llamados «Turno B»** —uno de `Tecma 47` que arranca 15:30, otro de `TECMA Campus Santos Dumont` que arranca 18:00—, **en la misma cuenta cliente y con el mismo carrier**. Es el único nombre de turno repetido en toda la base. 🟢 **Ya costó una premisa:** D2 se abrió como «Turno B declarado 18:00» describiendo el turno del Campus mientras hablaba del de Planta 47, y el del Campus es el sano de los dos (54 % cumplido en esa ventana contra 0 %). 🟢 **Y no es solo turnos:** dentro del contrato del Campus hay **ocho nombres de ruta repetidos** —`Km 30` y `Oasis` tres veces cada uno, `Finca`, `Haciendas`, `Juarez Nuevo`, `Riveras`, `Sanders` y `Sierra Vista` dos—, que es el **caso 6 de §D del Marco** («Rutas del alcance: 27») visto desde el otro lado: allá el lector no podía reconstruir el número; aquí quien agrupa suma dos cosas | **Sin construir.** **Es causa de NOMBRE, no de dato**: cada fila es correcta y el conteo también; lo falso lo pone la etiqueta que las junta. Misma familia que **C15** —el campo `imei:` que guarda un id de unidad— y por eso van juntas: **ninguna mueve un veredicto y las dos cambian lo que el documento dice**. 🟢 **Y el caso que la prueba mejor que el argumento: mordió a la medición que la descubrió.** Tres horas después de escribir esta causa, el conteo de perfiles de C21 dio **48 por id y 47 por nombre** — hay dos perfiles distintos que comparten nombre, y agrupar por nombre los colapsó en uno. **Quien escribió la causa cayó en ella el mismo día**, que es la regla 14 otra vez: una regla escrita no es una regla aplicada |
-| **C21** | **Un cambio de turno no alcanza a lo ya generado — la hora límite se congela al crear la ocurrencia** | 🟢 **Mecanismo, leído en el código:** `renewRollingWindow(30)` (cron `/api/cron/renew-occurrences`) genera desde `max(service_date) + 1` hasta hoy + 30 días, calcula la hora límite **en ese momento** y la congela en la fila. **Nunca toca una ocurrencia que ya existe**, y **nada la revisa cuando el turno o la política cambian.** 🟢 **6 ago: 555 de 2 029 ocurrencias (27 %) llevan una hora límite que su perfil ya no produce, en 26 de 48 perfiles.** Cuatro poblaciones, y **no son el mismo defecto**: **(1)** Planta 47 · Turno A, **210 selladas** a las 23:45 contra 05:45 — **+360 min, seis horas**; **(2)** Planta 47 · Turno B, **84 selladas** a las 11:45 — **seis horas** bajo las 17:45 que su turno implicaba entonces; **(3)** Planta 47 · Turno B, **36 selladas + 102 sin sellar** a las 17:45 contra 15:15 — **eran correctas al generarse** y quedaron viejas porque el turno se movió a 15:30 después; **(4)** Campus · Primer Turno, **118 selladas + 5 sin sellar** a las 05:45 contra 05:40 — **cinco minutos**, forma de un cambio de `arrivalAnticipationMinutes`. 🟢 **Las poblaciones 1 y 2 son D1** (ver §3.2); **la 3 y la 4 no lo son**, y ésa es la razón de que esto sea causa aparte | **Sin construir.** **D1 es una población de este mecanismo, no el mecanismo.** El guion `corregir-deadlines` arregla el defecto de zona, pero **solo mira `expected_deadline > now()`** y corrige en sitio: no existe forma de que un cambio de turno alcance a lo ya generado, ni de saber que quedó desalineado |
+| **C21** | **Un cambio de turno no alcanza a lo ya generado — la hora límite se congela al crear la ocurrencia** | 🟢 **Mecanismo, leído en el código:** `renewRollingWindow(30)` (cron `/api/cron/renew-occurrences`) genera desde `max(service_date) + 1` hasta hoy + 30 días, calcula la hora límite **en ese momento** y la congela en la fila. **Nunca toca una ocurrencia que ya existe**, y **nada la revisa cuando el turno o la política cambian.** 🟢 **6 ago: 555 de 2 029 ocurrencias (27 %) llevan una hora límite que su perfil ya no produce, en 26 de 48 perfiles.** Cuatro poblaciones, y **no son el mismo defecto**: **(1)** Planta 47 · Turno A, **210 selladas** a las 23:45 contra 05:45 — **+360 min, seis horas**; **(2)** Planta 47 · Turno B, **84 selladas** a las 11:45 — **seis horas** bajo las 17:45 que su turno implicaba entonces; **(3)** Planta 47 · Turno B, **36 selladas + 102 sin sellar** a las 17:45 contra 15:15 — **eran correctas al generarse** y quedaron viejas porque el turno se movió a 15:30 después; **(4)** Campus · Primer Turno, **118 selladas + 5 sin sellar** a las 05:45 contra 05:40 — **cinco minutos**, forma de un cambio de `arrivalAnticipationMinutes`. 🟢 **Las poblaciones 1 y 2 son D1** (ver §3.2); **la 3 y la 4 no lo son**, y ésa es la razón de que esto sea causa aparte | **Sin construir.** **D1 es una población de este mecanismo, no el mecanismo.** El guion `corregir-deadlines` arregla el defecto de zona, pero **solo mira `expected_deadline > now()`** y corrige en sitio: no existe forma de que un cambio de turno alcance a lo ya generado, ni de saber que quedó desalineado | 🟢 **7 ago — se corrigió el caso, NO la razón.** Se arreglaron **90** ocurrencias del Turno B (90 viajes, cero hechos movidos) y hoy **no queda ninguna sin sellar corriendo con hora límite vieja**. **Pero el mecanismo sigue intacto:** si mañana alguien mueve otro turno, vuelve a pasar igual y **nadie se entera hasta que alguien investigue**. 🟢 **Quedan 465 con hora límite que su perfil ya no produce — las 465 selladas**: 210 del Turno A y 84 del Turno B (que son D1), 123 del Campus (política que cambió 5 min) y 48 del Turno B que **eran correctas al generarse**. Moverlas ya no es corregir: es re-verificar, y eso es D1/D4. 🟢 **Y este episodio le puso precio, que antes no tenía:** de las 96 que se iban a corregir, **doce se sellaron mal esperando** — seis por decisión de Asav y **seis porque GitHub estuvo caído dos días**. **Entre descubrir un defecto y arreglarlo, el sistema sigue sellando.** El costo de C21 no es el defecto: es su latencia, y se paga en acusaciones que ya no se pueden deshacer sin re-verificar.
 
 ---
 
@@ -2258,6 +2281,29 @@ Cuatro cosas salieron de la ficha y se colocaron donde mandan, porque como nota 
 - ⚠ **Queda abierto antes de aplicar:** corregir con el guion mueve la hora límite
   bien y **deja la ventana quince minutos tarde**.
 
+**7 de agosto de 2026 (las 90 corregidas — el caso, no la razón).**
+- ✅ **Aplicado contra producción:** **90 ocurrencias y 90 viajes** del Turno B de
+  Planta 47. 🟢 **Cero hechos sellados movidos** —1 153 antes y después— y **cero
+  hechos con `expected_deadline` distinto al de su ocurrencia**. Ninguna bloqueada.
+- 🟢 **Las 90 quedaron con ventana que contiene las 15:00**, el pico medido sobre
+  catorce días. Y **derivada por ruta**, que es lo que el arreglo del guion
+  perseguía: *Juarez Nuevo* abre 13:47, *Huertas* 13:48, *San José Auxiliar* 13:56;
+  las otras tres quedan en el piso de 60 min de la política.
+- 🟢 **El régimen bueno ya no arranca el 31 de agosto: arranca el 10.**
+- ⚠ **Eran 96 y se corrigieron 90.** **Doce se sellaron mal esperando**: seis por
+  decisión de Asav —asumidas— y **seis porque GitHub Actions estuvo caído dos días**
+  y no se pudo mergear el arreglo. **Entre descubrir un defecto y arreglarlo, el
+  sistema sigue sellando.**
+- ⚠ **Y esto arregló el caso, no la razón. C21 sigue viva:** nada revisa la hora
+  límite de lo ya generado cuando el turno cambia. Si mañana se mueve otro turno,
+  **vuelve a pasar igual y nadie se entera hasta que alguien investigue.**
+- 🟢 **Quedan 465 con hora límite que su perfil ya no produce, y las 465 están
+  selladas** — cero sin sellar. 210 del Turno A y 84 del Turno B son **D1**; 123 del
+  Campus son una política que cambió cinco minutos; 48 del Turno B **eran correctas
+  al generarse**. Moverlas ya no es corregir: es re-verificar, y eso es D1/D4.
+- **El precio de C21, que antes no tenía:** no es el defecto, **es su latencia** —
+  y se paga en acusaciones que ya no se pueden deshacer sin re-verificar.
+
 **7 de agosto de 2026 (la UI medida, y una contradicción del propio plan).**
 - ⚠ **Este plan decía «el frente visual está cerrado». Era falso**, y al mismo
   tiempo `Analisis-Que-Falta-UI.md` decía «36 pantallas nunca se diseñaron». Dos
@@ -2275,6 +2321,14 @@ Cuatro cosas salieron de la ficha y se colocaron donde mandan, porque como nota 
   declaraba `cliente/*/configuracion`, que **deja fuera el alcance corporativo** —
   cinco rutas parecían sin ficha teniéndola. Y `Ficha-Choferes` declara una ruta
   **que todavía no existe**: una ficha sin pantalla, el hueco al revés.
+- 🟢 **El hallazgo del conteo: J-Staff son nueve rutas y ninguna tiene ficha.** Es
+  **la cara desde la que Asav opera el producto, la que usa todos los días, y es la
+  única sin una sola decisión de diseño tomada.**
+- **Y la lección del mapeo, con sus dos trampas:** una ficha declaraba una ruta
+  **parcial** —el comodín dejaba fuera el alcance corporativo, cinco rutas parecían
+  sin ficha— y otra declara una ruta **que no existe**. **Una declaración que nadie
+  comprueba contra la realidad se degrada en las dos direcciones**, y ninguna de
+  las dos se ve mal al leerla.
 - **Frente nuevo: el diseño no alcanza a la construcción.** 🟢 Ocho rutas nuevas
   contra cuatro fichas nuevas en seis días. **No es un saldo, es una tasa** — la
   deuda crece sola. Y es la explicación más simple de la retroalimentación de
