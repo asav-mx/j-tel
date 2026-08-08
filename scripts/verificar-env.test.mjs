@@ -14,11 +14,20 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { GRUPOS, OPCIONALES, REQUERIDAS, parsear, revisar } from "./verificar-env.mjs";
+import {
+  GRUPOS,
+  OPCIONALES,
+  REQUERIDAS,
+  REQUERIDAS_EN_DESPLIEGUE,
+  parsear,
+  revisar,
+} from "./verificar-env.mjs";
 
 /** Contrato con todos los nombres declarados: así ningún aviso ensucia. */
 const CONTRATO = parsear(
-  [...REQUERIDAS, ...OPCIONALES, ...GRUPOS.flat()].map((n) => `${n}=`).join("\n"),
+  [...REQUERIDAS, ...REQUERIDAS_EN_DESPLIEGUE, ...OPCIONALES, ...GRUPOS.flat()]
+    .map((n) => `${n}=`)
+    .join("\n"),
 );
 
 const HOST = "ep-fancy.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require";
@@ -33,6 +42,13 @@ function envDe({ passwordLectura = "pass_lectura", extra = "" } = {}) {
     'UMBRELLA_GPS_URL="http://gps2.umbrellasoluciones.com/openapi"',
     'UMBRELLA_GPS_USERID="A1339"',
     'UMBRELLA_GPS_PASSWORD="admin1"',
+    // El canal de alertas. Requeridas desde el 8 de agosto de 2026, el día que
+    // un aviso de este sistema llegó por primera vez a una bandeja.
+    // `RESEND_API_KEY` NO va aquí a propósito: es sensitive en Vercel y no
+    // baja: vive en REQUERIDAS_EN_DESPLIEGUE, y su ausencia de este fixture es
+    // parte de lo que las pruebas de abajo comprueban.
+    'ALERTAS_REMITENTE="J-Telemetry <alertas@j-telemetry.com>"',
+    'ALERTAS_DESTINATARIOS="staff@j-telemetry.com"',
     extra,
   ].join("\n");
 }
@@ -116,4 +132,76 @@ test("parsear no toca las comillas de en medio ni los signos del password", () =
   const p = parsear('CLAVE="npg_a@b/c#d"\nOTRA=npg_x"y');
   assert.equal(p.get("CLAVE"), "npg_a@b/c#d");
   assert.equal(p.get("OTRA"), 'npg_x"y');
+});
+
+/*
+ * La categoría que nació el 8 de agosto de 2026: requerida en el despliegue y
+ * ausente en local a propósito.
+ *
+ * Existe por `RESEND_API_KEY`, que está marcada sensitive en Vercel y no se
+ * puede volver a leer ni con `env pull`. Ponerla en REQUERIDAS habría dejado
+ * `env:check` en rojo permanente en toda máquina local — y un check que siempre
+ * está rojo enseña a ignorarlo, que es la lección del vigilante del lado del
+ * que mira.
+ */
+test("una requerida de despliegue sin valor local NO es error", () => {
+  const local = parsear(envDe());
+  for (const n of REQUERIDAS_EN_DESPLIEGUE) {
+    assert.ok(!local.get(n), `${n} no debería tener valor en el .env de prueba`);
+  }
+
+  const { errores } = revisar({ contrato: CONTRATO, local });
+
+  for (const n of REQUERIDAS_EN_DESPLIEGUE) {
+    assert.ok(
+      !errores.some((e) => e.includes(n)),
+      `${n} no debe salir como error por no tener valor local`,
+    );
+  }
+});
+
+test("pero su ausencia de valor se DICE, no se calla", () => {
+  const { avisos } = revisar({ contrato: CONTRATO, local: parsear(envDe()) });
+
+  // Un silencio aquí se lee igual que «está puesta». La diferencia entre «no
+  // la verifiqué» y «la verifiqué y está bien» tiene que ser visible.
+  for (const n of REQUERIDAS_EN_DESPLIEGUE) {
+    const aviso = avisos.find((a) => a.includes(n));
+    assert.ok(aviso, `${n} debería producir un aviso`);
+    assert.match(aviso, /NO lo comprueba este script/);
+  }
+});
+
+test("si sale del contrato SÍ es error: el nombre tiene que estar declarado", () => {
+  const [primera] = REQUERIDAS_EN_DESPLIEGUE;
+  const contratoIncompleto = parsear(
+    [...REQUERIDAS, ...OPCIONALES, ...GRUPOS.flat()].map((n) => `${n}=`).join("\n"),
+  );
+
+  const { errores } = revisar({ contrato: contratoIncompleto, local: parsear(envDe()) });
+
+  assert.ok(
+    errores.some((e) => e.includes(primera) && e.includes(".env.example")),
+    "quitarla del contrato tiene que ponerse en rojo",
+  );
+});
+
+test("las dos del canal que SÍ se bajan siguen siendo requeridas de verdad", () => {
+  // El control de la categoría nueva: si todo el canal se hubiera mudado a
+  // "requerida en despliegue", quitarles el valor no pondría nada en rojo y
+  // nadie notaría que faltan las que sí bajan.
+  for (const n of ["ALERTAS_REMITENTE", "ALERTAS_DESTINATARIOS"]) {
+    assert.ok(REQUERIDAS.includes(n), `${n} debe estar en REQUERIDAS`);
+  }
+
+  const sinCanal = parsear(
+    envDe()
+      .split("\n")
+      .filter((l) => !l.startsWith("ALERTAS_"))
+      .join("\n"),
+  );
+  const { errores } = revisar({ contrato: CONTRATO, local: sinCanal });
+
+  assert.ok(errores.some((e) => e.includes("ALERTAS_REMITENTE")));
+  assert.ok(errores.some((e) => e.includes("ALERTAS_DESTINATARIOS")));
 });
