@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { getRepos, isDatabaseConfigured } from "@/lib/db";
 import { exigirCron } from "@/lib/guardia-cron";
 import { revisarHorasLimite } from "@jtel/db";
-import { agruparDesalineadas, avisoHoraLimiteVieja } from "@/lib/alertas/decision";
+import {
+  agruparDesalineadas,
+  avisoDeSimulacro,
+  avisoHoraLimiteVieja,
+} from "@/lib/alertas/decision";
 import { renderAvisos, PIE_HORAS_LIMITE } from "@/lib/alertas/correo";
 import { ErrorDeCanal, resolverCanal } from "@/lib/alertas/canal";
 
@@ -57,7 +61,25 @@ export async function GET(request: Request) {
     );
   }
 
-  const ensayo = new URL(request.url).searchParams.get("dryRun") === "1";
+  const params = new URL(request.url).searchParams;
+  const ensayo = params.get("dryRun") === "1";
+  /*
+   * El simulacro — regla 16, y el mismo mecanismo que `simular_codigo` en
+   * `salud.yml`. Manda un aviso POR EL CANAL DE VERDAD para comprobar que
+   * llega a una bandeja.
+   *
+   * Hace falta aquí en particular porque el detector encuentra cero: al 7 de
+   * agosto de 2026 no queda ninguna ocurrencia sin sellar con la hora límite
+   * vieja, así que una corrida limpia no distingue un canal sano de uno mudo.
+   * Provocarlo moviendo un turno real está descartado — eso ensucia datos de un
+   * cliente vivo para probar una plomería.
+   *
+   * No lee la base y no escribe nada. Se anuncia como simulacro en el asunto,
+   * en el título y en la acción: un correo de prueba que se lee como hallazgo
+   * real es §D del Marco, y mandaría a alguien a buscar servicios que no
+   * existen.
+   */
+  const simulacro = params.get("simular") === "1";
   const ahora = new Date();
 
   // El canal se resuelve ANTES de tocar la base: detectar sin poder avisar solo
@@ -77,6 +99,34 @@ export async function GET(request: Request) {
       { error: "el canal de alertas no está configurado", faltantes },
       { status: 503 },
     );
+  }
+
+  if (simulacro) {
+    if (!canal) {
+      return NextResponse.json(
+        { error: "no se puede simular sin canal", faltantes },
+        { status: 503 },
+      );
+    }
+    const mensaje = renderAvisos([avisoDeSimulacro(ahora)], ahora, PIE_HORAS_LIMITE);
+    try {
+      const envio = await canal.mandar(mensaje);
+      return NextResponse.json({
+        simulacro: true,
+        enviado: true,
+        canal: envio.canal,
+        destinatarios: envio.destinatarios.length,
+        // La referencia del proveedor: es con lo que se rastrea la ENTREGA.
+        // «Se mandó» y «llegó» son dos cosas, y esta es la que permite ir a
+        // preguntar por la segunda.
+        referencia: envio.referencia,
+        asunto: mensaje.asunto,
+      });
+    } catch (err) {
+      const motivo = err instanceof ErrorDeCanal ? err.message : String(err);
+      console.error("[api/cron/revisar-horas-limite] simulacro no entregado:", motivo);
+      return NextResponse.json({ simulacro: true, enviado: false, error: motivo }, { status: 503 });
+    }
   }
 
   const repos = getRepos();

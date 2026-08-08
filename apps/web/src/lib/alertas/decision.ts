@@ -151,7 +151,14 @@ export type Aviso = {
     | "archivador-callado"
     | "archivador-restablecido"
     | "sin-veredicto"
-    | "hora-limite-vieja";
+    | "hora-limite-vieja"
+    /**
+     * Un correo provocado a mano para comprobar que el canal llega. Tiene clase
+     * propia y no reusa la de un hallazgo: si compartiera clase, el asunto
+     * diría «Hora límite desalineada» y la notificación del teléfono se leería
+     * como un hallazgo real antes de que nadie abriera el correo.
+     */
+    | "simulacro";
   /** La afirmación: qué pasa, en una frase, como hecho. */
   titulo: string;
   /** La evidencia: cada número con su umbral al lado. */
@@ -588,6 +595,58 @@ export function avisoHoraLimiteVieja(
 }
 
 /**
+ * Un aviso de SIMULACRO: se manda a propósito, por el canal de verdad, para
+ * comprobar que el camino completo llega hasta una bandeja.
+ *
+ * Existe por la regla 16, y no es celo: **un instrumento no está probado hasta
+ * que se comprueba que su aviso llega a un humano.** Dos generaciones del
+ * vigilante pasaron por sanas estando mudas — la primera vivía dentro de lo que
+ * vigilaba, la segunda detectaba perfecto y no podía hablar: 117 corridas, cero
+ * avisos, nueve días. La independencia era necesaria y no suficiente.
+ *
+ * Y hace falta aquí en particular porque **hoy el detector encuentra cero**: al
+ * 7 de agosto de 2026 no queda ninguna ocurrencia sin sellar con la hora límite
+ * vieja. Una corrida limpia no distingue un canal sano de uno roto.
+ *
+ * Provocar el aviso moviendo un turno real está descartado: eso ensucia datos
+ * de un cliente vivo para probar una plomería. El simulacro dice la verdad
+ * sobre sí mismo y no toca nada.
+ *
+ * **Se anuncia como simulacro en el asunto, en el título y en la acción.** Un
+ * correo de prueba que se lee como hallazgo real es un dato correcto en el
+ * lugar equivocado —§D del Marco— y haría que alguien fuera a buscar 47
+ * servicios que no existen.
+ */
+export function avisoDeSimulacro(ahora: Date): Aviso {
+  return {
+    clase: "simulacro",
+    titulo:
+      "SIMULACRO · Esto no es un hallazgo: es la prueba de que este canal llega a una persona.",
+    mediciones: [
+      {
+        etiqueta: "Qué se está probando",
+        valor: "el camino del aviso",
+        lectura: "detectar y avisar son dos cosas, y la segunda casi nunca se prueba",
+      },
+      {
+        etiqueta: "Provocado",
+        valor: instanteSellado(ahora),
+        lectura: "a mano, con ?simular=1 · ninguna corrida programada manda esto",
+      },
+      {
+        etiqueta: "Servicios afectados",
+        valor: "0",
+        lectura: "ninguno · el simulacro no lee la base ni toca un hecho",
+      },
+    ],
+    consecuencia:
+      "Ninguna. Este correo no describe ningún servicio ni ninguna ocurrencia: existe solo para que quien lo recibe confirme que lo recibió. Si llegó, el instrumento cuenta como probado; si no llegó, el detector podría estar funcionando perfecto y nadie se enteraría igual.",
+    accion: "Confirmar que este correo llegó · J-Staff. No hay nada más que hacer",
+    instante: ahora,
+  };
+}
+
+/**
  * El asunto del correo. Lleva el conteo adelante para que se lea completo en
  * la notificación del teléfono, sin abrirlo.
  */
@@ -605,5 +664,7 @@ export function asuntoDe(aviso: Aviso): string {
       return `J-Telemetry · Servicios sin veredicto`;
     case "hora-limite-vieja":
       return `J-Telemetry · Hora límite desalineada`;
+    case "simulacro":
+      return `J-Telemetry · SIMULACRO · prueba del canal de avisos`;
   }
 }

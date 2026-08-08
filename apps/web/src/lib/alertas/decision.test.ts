@@ -3,6 +3,7 @@ import {
   agruparDesalineadas,
   agruparSinVeredicto,
   asuntoDe,
+  avisoDeSimulacro,
   avisoHoraLimiteVieja,
   avisoIngestaDetenida,
   avisoSinVeredicto,
@@ -413,5 +414,44 @@ describe("el aviso de hora límite vieja", () => {
     expect(asuntoDe(avisoHoraLimiteVieja(unGrupo([desalineada()]), ahora, 500))).toBe(
       "J-Telemetry · Hora límite desalineada",
     );
+  });
+});
+
+describe("el simulacro se anuncia como simulacro", () => {
+  const ahora = T("2026-08-08T18:00:00Z");
+
+  it("el asunto lo dice, para que la notificación del teléfono no engañe", () => {
+    // Si compartiera clase con un hallazgo, el asunto diría «Hora límite
+    // desalineada» y se leería como real antes de que nadie abra el correo.
+    expect(asuntoDe(avisoDeSimulacro(ahora))).toContain("SIMULACRO");
+    expect(asuntoDe(avisoDeSimulacro(ahora))).not.toContain("desalineada");
+  });
+
+  it("el título y la acción también, no solo el asunto", () => {
+    const aviso = avisoDeSimulacro(ahora);
+
+    expect(aviso.titulo).toContain("SIMULACRO");
+    expect(aviso.titulo).toContain("no es un hallazgo");
+    expect(aviso.accion).toContain("Confirmar que este correo llegó");
+  });
+
+  it("no afirma ningún servicio: cero, con su lectura", () => {
+    const aviso = avisoDeSimulacro(ahora);
+    const servicios = aviso.mediciones.find((m) => m.etiqueta === "Servicios afectados");
+
+    expect(servicios?.valor).toBe("0");
+    expect(servicios?.lectura).toContain("no lee la base");
+    // Un simulacro que nombrara servicios sería §D: un correo correcto como
+    // prueba y falso como afirmación sobre la operación.
+    expect(aviso.detalle).toBeUndefined();
+  });
+
+  it("dice que fue provocado a mano y no por una corrida programada", () => {
+    const provocado = avisoDeSimulacro(ahora).mediciones.find(
+      (m) => m.etiqueta === "Provocado",
+    );
+
+    expect(provocado?.lectura).toContain("?simular=1");
+    expect(provocado?.lectura).toContain("ninguna corrida programada");
   });
 });
