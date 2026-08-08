@@ -94,8 +94,12 @@ export async function GET(request: Request) {
 
     // Las cuentas demo no se vigilan: archivarlas fue sacarlas de la vista, y
     // una demo sin telemetría no es una falla de plataforma.
+    //
+    // El filtro ya NO se aplica aquí a mano: vive en `deCuentaReal`, dentro del
+    // paquete `db`, y lo heredan las TRES consultas de abajo. Filtrarlo en la
+    // ruta era lo que dejaba que un chequeo nuevo se olvidara de hacerlo — y eso
+    // fue exactamente lo que pasó con `contarFallosMudos`.
     const carriers = await repos.accounts.listByType("carrier", { includeDemo: false });
-    const reales = new Set(carriers.map((c) => c.id));
 
     const [marcasTodas, abiertas, fallosMudos] = await Promise.all([
       repos.telemetry.listWatermarks(),
@@ -106,9 +110,10 @@ export async function GET(request: Request) {
       repos.occurrences.contarFallosMudos(HORAS_FALLO_MUDO),
     ]);
 
-    const marcas = marcasTodas
-      .filter((m) => reales.has(m.carrierAccountId))
-      .map((m) => ({ lastRecordedAt: m.lastRecordedAt, updatedAt: m.updatedAt }));
+    const marcas = marcasTodas.map((m) => ({
+      lastRecordedAt: m.lastRecordedAt,
+      updatedAt: m.updatedAt,
+    }));
 
     const criticas = abiertas.filter((a) => a.severity === "critical");
 

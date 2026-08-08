@@ -5,6 +5,17 @@ name: Vigilante de salud
 # durante 13 horas y nadie se enteró, porque el heartbeat que vigilaba era
 # también un cron de Vercel y cayó con lo demás.
 #
+# LA REGLA QUE ESTE ARCHIVO APRENDIÓ POR LAS MALAS, Y SON DOS GENERACIONES:
+# un instrumento no está probado hasta que se comprueba que su AVISO LLEGA a un
+# humano. Detectar y avisar son dos cosas, y la segunda casi nunca se prueba.
+#   · 1ª generación — el heartbeat vivía dentro de Vercel y cayó con lo que
+#     vigilaba: 13 horas sin que nadie se enterara.
+#   · 2ª generación — este vigilante, fuera de Vercel: detectaba el 503 y NO
+#     podía avisar. `gh` sin repositorio y la etiqueta `salud` inexistente.
+#     117 corridas, cero avisos, NUEVE DÍAS mudo.
+# Por eso existe `simular_codigo`: se provoca un aviso a propósito y se
+# comprueba que llega, antes de darlo por bueno.
+#
 # Requisito único: la variable de repositorio SALUD_URL con la URL pública de
 # /api/salud (Settings -> Secrets and variables -> Actions -> Variables).
 # Si además defines el secreto SALUD_TOKEN, se manda como Bearer.
@@ -15,6 +26,13 @@ on:
     # buscamos dura horas, no minutos.
     - cron: "*/15 * * * *"
   workflow_dispatch:
+    inputs:
+      simular_codigo:
+        description: >-
+          Forzar un código en vez de sondear, para COMPROBAR QUE EL AVISO LLEGA.
+          Vacío = sondeo real. Ej: 503 abre el aviso; 200 lo cierra.
+        required: false
+        default: ""
 
 permissions:
   issues: write
@@ -26,6 +44,13 @@ concurrency:
 jobs:
   sondear:
     runs-on: ubuntu-latest
+    # `gh` deduce el repositorio del git local, y aquí NO hay checkout: sin esto
+    # toda llamada a `gh` muere con «fatal: not a git repository». Ese fue el
+    # defecto que dejó este vigilante MUDO nueve días: detectaba el 503, fallaba
+    # al abrir el aviso, y lo único que quedaba era una corrida roja que nadie
+    # mira. Detectar y avisar son dos cosas distintas.
+    env:
+      GH_REPO: ${{ github.repository }}
     steps:
       - name: Comprobar que SALUD_URL está configurada
         if: vars.SALUD_URL == ''
@@ -36,6 +61,20 @@ jobs:
       - name: Sondear /api/salud
         id: sondeo
         run: |
+          # Provocación deliberada: la única forma de comprobar que el aviso
+          # LLEGA sin esperar a que producción se caiga. Un instrumento no está
+          # probado hasta que su aviso se vio llegar.
+          if [ -n "$SIMULAR" ]; then
+            echo "::notice::SIMULACRO: se fuerza el código $SIMULAR sin sondear."
+            echo "codigo=$SIMULAR" >> "$GITHUB_OUTPUT"
+            {
+              echo 'cuerpo<<FIN'
+              echo "{\"simulacro\": true, \"codigo_forzado\": \"$SIMULAR\"}"
+              echo 'FIN'
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           set +e
           RESP=$(curl -sS --max-time 30 -w '\n%{http_code}' \
             ${SALUD_TOKEN:+-H "Authorization: Bearer $SALUD_TOKEN"} \
@@ -66,6 +105,7 @@ jobs:
         env:
           SALUD_URL: ${{ vars.SALUD_URL }}
           SALUD_TOKEN: ${{ secrets.SALUD_TOKEN }}
+          SIMULAR: ${{ inputs.simular_codigo }}
 
       - name: Abrir o actualizar el aviso
         if: steps.sondeo.outputs.codigo != '200'
@@ -75,6 +115,17 @@ jobs:
           CUERPO: ${{ steps.sondeo.outputs.cuerpo }}
           CORRIDA: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          # Segundo defecto que mantenía esto mudo: la etiqueta `salud` NO
+          # existía en el repositorio, así que `gh issue create --label salud`
+          # habría fallado igual aunque `gh` sí supiera el repo. Se crea aquí
+          # —idempotente— en vez de depender de que alguien la haya creado a
+          # mano: una precondición que el propio guion garantiza no se puede
+          # saltar.
+          gh label create salud \
+            --color B60205 \
+            --description "Vigilante de salud: la ingesta o la verificación están en riesgo" \
+            2>/dev/null || true
+
           TITULO="Ingesta en riesgo — /api/salud responde $CODIGO"
           EXISTENTE=$(gh issue list --label salud --state open --limit 1 --json number --jq '.[0].number // empty')
 
