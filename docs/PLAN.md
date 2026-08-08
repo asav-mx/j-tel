@@ -44,7 +44,7 @@ mismo documento, el reporte final y la tabla de los sensores decían **335**; y 
 remedirlo el 6 de agosto eran **341**. **Ninguna de las tres estaba mal cuando se
 escribió.** Lo que estaba mal es que ninguna decía cuándo.
 
-Es la familia de la regla 15 de «las ganadas por las malas» — *el eje es parte del
+Es la familia de la regla 18 de «las ganadas por las malas» — *el eje es parte del
 resultado*— aplicada al eje que más barato se olvida, que es el tiempo. Una cifra
 de un sistema vivo no es un hecho: es **una foto**, y una foto sin fecha envejece
 sin avisar. Quien la lee seis días después no tiene forma de saber si sigue
@@ -177,6 +177,22 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
    «medí y no hay» de «mi medidor no puede verlo».** Cuando una resta puede
    envolver —horas, ángulos, módulos—, el cero es sospechoso por construcción.
 
+   **Y un cuarto caso del eje, del 6 de agosto, que costó una ejecución
+   detenida.** Se levantó una alarma —«la ventana corregida arranca quince
+   minutos tarde»— apoyada en que la operación pica a las **14:00**. Ese dato
+   salía de `DESPUES.md`, era **correcto**, y estaba **medido un solo día**: el
+   27 de julio. 🟢 Remedido sobre **catorce días** hábiles contra la telemetría
+   cruda, las seis rutas pican a las **15:00**, que las ventanas sí contienen.
+   **La alarma era falsa y frenó una corrección que sí servía.**
+
+   Lo que hay que sacar de aquí, porque es lo que no era obvio: **una medición
+   vieja del propio repo es tan peligrosa como una mal hecha, y más — porque
+   viene con sello de casa.** Un número de `DESPUES.md` se lee como verificado
+   y no dice sobre cuántos días se agregó ni cuándo. **Antes de apoyar una
+   decisión en una cifra del repo, se comprueba su eje y su fecha**, igual que
+   si la hubiera traído un extraño. Es la regla de §0 —toda cifra lleva su fecha
+   de medición— dicha desde el lado de quien la consume.
+
 9. **Una causa no se acredita contra los que fallan; se acredita contra los que
    pasan.** Medir que el 100 % de los reprobados incumple una condición no
    prueba que esa condición los reprobó — solo prueba que la incumplen. La
@@ -223,7 +239,58 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
     la hace obligatoria**: por eso el guion ahora **lee de vuelta antes de decir
     que sí** y **sale con código 1** si no cuadra. La regla que no se puede
     saltar es la única que se aplica sola.
-15. **Una medición agregada puede confirmar lo que la medición por caso
+16. **Un instrumento no está probado hasta que se comprueba que su AVISO LLEGA
+    a un humano. Detectar y avisar son dos cosas, y la segunda casi nunca se
+    prueba.** Dos generaciones del mismo vigilante, las dos fallando del mismo
+    lado:
+
+    - **1ª** — el heartbeat vivía **dentro de Vercel** y cayó con lo que
+      vigilaba: 🔵 **13 horas** a ciegas (2026-07-28). La lección que se sacó fue
+      *«el vigía tiene que vivir fuera»*, y se construyó uno en GitHub.
+    - **2ª** — ese vigilante nuevo. 🟢 **117 corridas, cero éxitos, NUEVE DÍAS
+      mudo.** Detectaba el 503 perfectamente y **no podía avisar**: `gh` sin
+      `GH_REPO` moría con «fatal: not a git repository», y **la etiqueta `salud`
+      ni existía**. Dos defectos, los dos en el camino del aviso.
+
+    **Lo que corrige del aprendizaje anterior:** sacar al vigía de la
+    infraestructura que vigila resolvió **dónde vive** y no tocó **si habla**. La
+    independencia era necesaria y no suficiente. **Un vigilante mudo es peor que
+    ninguno: con ninguno, alguien mira; con uno roto, nadie.**
+
+    **Cómo se prueba, y es lo único que cuenta:** se **provoca un aviso a
+    propósito** y se comprueba que llegó. Por eso `salud.yml` tiene
+    `simular_codigo`. **Hasta que ese aviso se vio llegar, el instrumento no
+    cuenta.** Es la regla 8 llevada al final: ahí el que no se distinguía de su
+    ausencia era la defensa; aquí es **el canal**.
+
+17. **Una verificación que usa el mismo instrumento mal configurado no
+    verifica: confirma el error.** Repetir no es contrastar.
+
+    🟢 **Cuarta vez en una sola sesión, 6 de agosto.** La prueba
+    `generateForProfile — alineación de calendario` salió roja porque se corrió
+    con `npx vitest` en vez del comando sancionado, que fija **`TZ=UTC`**. La
+    máquina está en `America/Ciudad_Juarez`, así que `2026-08-22T00:00:00Z` cae a
+    las 18:00 del 21 y el generador produjo el viernes. **La prueba existe justo
+    para atrapar ese error de zona, y se le provocó desde fuera.**
+
+    **Lo grave vino después:** para saber si el rojo era preexistente se revirtió
+    a `origin/main` y se corrió otra vez — **con el mismo comando mal
+    configurado**. Salió rojo igual, y eso se leyó como «es preexistente». **No
+    probó nada sobre `main`: repitió el error.** Con el comando sancionado, 25 de
+    25 pasan.
+
+    **La diferencia entre repetir y contrastar:** repetir es correr lo mismo y
+    ver lo mismo — que es lo que un instrumento mal puesto garantiza. Contrastar
+    es **cambiar algo que debería cambiar el resultado**: otro comando, otro eje,
+    otro grupo. Es la regla 9 —una causa se acredita contra los que pasan—
+    aplicada al medidor: **el control no es correrlo de nuevo, es correrlo
+    distinto.**
+
+    Y la señal barata que lo delata: **un resultado idéntico en dos condiciones
+    que deberían diferir** es sospecha de instrumento, no confirmación de
+    hallazgo.
+
+18. **Una medición agregada puede confirmar lo que la medición por caso
     desmiente. El eje es parte del resultado.** Sobre veinte días, el 100 % del
     trazado tenía traza real a menos de 500 m — «el trazado sí corresponde». En
     **un** día, un tercio no lo pisaba nadie. Las dos mediciones eran correctas
@@ -369,6 +436,14 @@ clasificador que usa el guion `corregir-deadlines`— pero **sin su filtro
 | Planta 47 · **Turno A** | 23:45 (contra 05:45) | **+360 min** | **210**, todas selladas |
 | Planta 47 · **Turno B** | 11:45 (contra las 17:45 que su turno implicaba entonces) | **seis horas** | **84**, todas selladas |
 | | | | **294** |
+
+> 🟢 **Y el código lo dice por su cuenta, que es lo que la cierra desde dos lados.**
+> El comentario de `packages/db/src/repositories/index.ts:2168` —escrito al arreglar
+> el defecto, sin haber contado esta población— dice que esas seis horas
+> *«produjeron **294 hechos sellados** a la hora equivocada, **con un solo cumplido**
+> entre todos»*. 🟢 **La base dice lo mismo por camino independiente:** 210 del Turno
+> A —que tiene exactamente **1** cumplido— más 84 del Turno B con **cero**.
+> **El número y el reparto coinciden sin que ninguno se derive del otro.**
 
 > 🟢 **Las dos están exactamente seis horas corridas**, que es la forma del defecto
 > que el propio guion documenta: *«`computeExpectedDeadline` construía la fecha sin
@@ -517,6 +592,12 @@ juzgar con una ventana que ya se sabe que no contiene la operación. **Sellar 96
 acusaciones que se saben falsas es peor que corregir 96 ocurrencias que nadie ha
 visto.** La política cambia hacia adelante, y esto es hacia adelante.
 
+**La razón de dejar correr las 6 de hoy — decidido el 6 de agosto:** se van a
+sellar mal y **se asume**. Son **6 contra 96**, y el guion no sabe separarlas sin
+editar el SQL a mano. **Correr una herramienta que se sabe rota para ganarle al
+reloj es peor que perder seis**: dejaría dos cosas movidas y ninguna medida. El
+reloj venció a las 17:45 locales de ese día.
+
 **La razón de NO tocar las 5 del Campus:** ahí **no hubo defecto** — hubo una
 política que cambió cinco minutos. **Corregir eso sería reescribir una decisión, no
 un error.** Por eso el guion las clasifica como `deriva` y las deja fuera sin
@@ -557,6 +638,56 @@ llegan vacíos.
 >
 > ⚠ **Queda abierto**, y es lo que hay que resolver antes de aplicar: corregir con
 > el guion mueve la hora límite bien y **deja la ventana quince minutos tarde**.
+
+### ✅ Resuelto el 6 de agosto — el guion arreglado, y una corrección mía
+
+**El guion se arregló primero** (#258): `ventanaCorregida` llama a
+`windowForOccurrence` con la **política completa y el dimensionado por ruta**, así
+que escribe **la misma ventana que el generador**. 🟢 **La valla es el compilador:**
+el parámetro pide `ContractPolicy` completa —no `Partial`— y el dimensionado es
+obligatorio, así que volver a pasarle tres campos sueltos **deja de compilar**.
+Comprobado por mutación en los dos sentidos: aflojar el tipo a `Partial` rompe
+`tsc`, y volver a la llamada vieja **mata 3 de las 14 pruebas**.
+
+**⚠ Y una corrección a lo que se advirtió antes, porque frenó una ejecución.** La
+alarma de «quince minutos tarde» descansaba en que la operación pica a las **14:00**
+— dato de `DESPUES.md`, medido **un día** (27 de julio) y con otro método.
+
+🟢 **Remedido del 23 de julio al 6 de agosto, días hábiles, las seis rutas contra la
+telemetría cruda (~155 000 puntos sobre el trazado):**
+
+| Ruta | Hora pico | Actividad 13–16 h | Actividad 16–19 h |
+|---|---|---|---|
+| Huertas - B | **15:00** (23 %) | 32 % | 14 % |
+| Juarez Nuevo - B | **15:00** (36 %) | 44 % | 10 % |
+| Km 30 - B | **15:00** (29 %) | 37 % | 13 % |
+| Riveras 9 - B | **15:00** (33 %) | 42 % | 10 % |
+| San Jose - B | **15:00** (24 %) | 35 % | 14 % |
+| San Jose Auxiliar - B | **15:00** (22 %) | 34 % | 15 % |
+
+> 🟢 **Las seis pican a las 15:00, no a las 14:00.** Las 14:00 son un pico
+> secundario en cuatro de ellas. **La ventana vieja —16:45–18:30— se queda con el
+> 10–15 % de la actividad; la nueva se lleva el 32–44 %.**
+
+**La respuesta a la pregunta que condicionaba la corrección:**
+
+| | |
+|---|---|
+| Ventanas corregidas que contienen las **15:00** (el pico real) | 🟢 **126 de 126** |
+| Que contienen las 14:00 (el secundario) | 42 de 126 |
+
+*(126 = las 96 del régimen 17:45 más las 30 que ya estaban bien; a las 30 la
+corrección no les cambia nada.)*
+
+🟢 **Y el detalle honesto del arreglo: cambia la ventana de dos rutas, no de las
+seis.** Con la historia de hoy, cuatro rutas derivan un ancho menor al piso de la
+política —60 min— así que quedan igual en **14:15–16:00**; *Juarez Nuevo* y *San
+José Auxiliar* se abren a **13:47** y **13:56**. El arreglo importa porque el guion
+**deja de inventar su propia ventana**, no porque mueva las seis.
+
+> **Conclusión medida: la corrección sí resuelve el problema que la motivó.** Y la
+> advertencia que la frenó era mía y estaba mal — no por el dato, que era correcto,
+> sino por **apoyarla en una medición de un día cuando había catorce disponibles**.
 
 **La pregunta para la Planta cambia de forma, y por eso importaba medirlo antes de
 sentarse:** ya no es «¿es a las 18:00 o a las 14:00?». Es **confirmar que 15:30 es
@@ -1195,6 +1326,94 @@ incumplimiento»— convertida en algo que se ve.
 
 ---
 
+### Frente — Que las pruebas de integración corran en CI
+
+**Se coloca al cerrar el Tramo 2.** **Sin construir hoy.**
+
+**Qué pasa.** 🟢 **41 pruebas existen y ningún check las ejecuta.** Tres archivos,
+dos paquetes, y todas escriben contra la rama desechable de Neon:
+
+| Suite | Pruebas | Tiempo |
+|---|---|---|
+| `packages/db` | 25 | **51 s** |
+| `apps/web` (alcance y guardia de carrier) | 16 | **12 s** |
+
+**Por qué es frente y no un arreglo suelto.** El secreto es media hora; lo caro es
+lo que sigue después. En orden:
+
+1. **Un secreto, y nada de infraestructura.** `DATABASE_URL_TEST` como secret de
+   Actions. **No hay que levantar nada** — Neon es hospedado. Los dos
+   `vitest.integration.config.ts` cargan `.env` con `try/catch`, así que en CI las
+   variables entran por entorno. Y conviene que `DATABASE_URL` **no exista** ahí:
+   el candado que se niega a correr contra producción queda satisfecho por
+   ausencia.
+2. **Concurrencia entre PRs — el costo real.** Las suites escriben **en la misma
+   rama desechable**. `fileParallelism: false` ya las serializa *dentro* de una
+   corrida, pero **dos PRs a la vez se pisan**. O un `concurrency` que las encole
+   —y cada PR espera al anterior— o una rama de Neon por corrida vía su API, que
+   es bastante más obra. **Es trabajo recurrente, no de una vez.**
+3. **Estado sembrado, que es lo que no se ve de fuera.** No son autosuficientes:
+   el escenario de dos carriers lo crea un guion aparte. CI tendría que sembrarlo
+   **y mantener esa siembra al día** cuando el esquema o los datos cambien.
+4. **La desechable tiene que estar migrada.** Si el esquema avanza y esa rama no,
+   las pruebas revientan por columnas que faltan — el incidente exacto que motivó
+   `esquema.yml`.
+5. **Y el rename del check**, que va de la mano: hoy se llama `pruebas` y corre
+   solo las unitarias. Pasa a **`pruebas unitarias`**. ⚠ **No es libre:** el
+   ruleset «main protegida» exige por nombre `pruebas`, `esquema` y `Vercel
+   Preview Comments` con rama al día, así que renombrar sin tocar el ruleset deja
+   `main` **immergeable**. El orden que no deja hueco: **agregar el nombre nuevo
+   al ruleset, luego renombrar el job, luego quitar el viejo.**
+
+> ⚠ **Bloqueo previo, y no se negocia: no se enciende con pruebas rojas dentro.**
+> Un check que nace en rojo **enseña a ignorar el canal desde el día uno** — la
+> misma lección del vigilante (regla 16). Al 6 de agosto las 41 están en verde,
+> pero eso se comprobó a mano y **hay que volver a comprobarlo el día que se
+> encienda**.
+
+**Y el caso que lo hace urgente, que es §D del Marco aplicado al control
+automático:** 🟢 el verde de GitHub afirma **«las pruebas pasan»** y lo que midió
+es **«las unitarias pasan»**. La consulta es correcta —esas sí pasan— y la
+afirmación es falsa, porque el nombre habla de un universo mayor que el medido.
+**Correcto como consulta, falso como afirmación**, con el agravante de que aquí el
+lector es quien decide mergear. Lo falso lo puso el **alcance**, igual que en el
+caso 3 de §D — y el nombre del check es el rótulo que lo dice.
+
+---
+
+### Frente — Independencia del proveedor de GPS
+
+**Se coloca al cerrar el Tramo 2, con los otros frentes.** **Sin diseñar, y no se
+diseña hoy.**
+
+**Qué pasa.** 🟢 **El código conoce el nombre de un proveedor concreto.** Está en
+todas las capas a la vez: un paquete **`gps-umbrella`** · las columnas
+**`umbrella_user_id`** y **`umbrella_password_encrypted`** · las variables
+**`UMBRELLA_GPS_URL` · `UMBRELLA_GPS_USERID` · `UMBRELLA_GPS_PASSWORD`** · y el
+nombre **impreso en una pantalla de la cara del carrier**.
+
+**Por qué es del plan y no de higiene.** Rompe la regla de producto de §2 —*«¿esto
+tendría sentido para una planta en Bogotá cuyas rutas nunca hemos visto?»*—
+aplicada al otro lado: **un carrier con otro proveedor no cabe en este código sin
+obra.** Y está exactamente donde se va a construir, porque sustituir a los
+proveedores de GPS actuales es parte del piso propio de la suite del carrier
+(§2, «las dos caras no son simétricas»).
+
+**El orden, que es lo único que este frente fija hoy:**
+
+> **Abstraer primero, conectar después.**
+>
+> Si el puente al segundo proveedor se construye sobre esta base, **quedan dos
+> casos especiales cosidos** —uno por proveedor, repartidos por paquete, esquema,
+> variables y pantalla— **y el tercero vuelve a ser obra.** El costo de abstraer
+> no baja por esperar: sube, porque cada proveedor nuevo multiplica los sitios
+> donde el nombre está escrito.
+
+**Lo que este frente NO es:** conectar un proveedor nuevo. Es que el sistema deje
+de saber cómo se llama el que tiene.
+
+---
+
 ### Frente — La reconciliación del expediente
 
 **Sale del Tramo 7 y se coloca al cerrar el Tramo 2, junto al frente del alcance
@@ -1515,6 +1734,8 @@ se colocan al cerrar el Tramo 2 — tres de ellos salen directo de esta tabla:
 | **Los sensores** | **C19 · C3 · C13 · C16 · C14** | 🟢 Cada sensor ya tiene su cifra del 6 de agosto en 5.1 |
 | **La app del coordinador de planta** | **C11 · C18** | 🟢 El empalme es rutinario (18 de 28 días del Campus), así que una declaración previa desempata más de lo que se creía |
 | **El alcance fino** (1.h · `admin_planta` · el alta completa) | — | 🟢 El dato que este plan pedía tener en mano para colocarlo: **106 pendientes, 89 de más de 48 h** (D3) |
+| **Las pruebas de integración en CI** | — | 🟢 41 pruebas existen y ningún check las ejecuta; el verde dice «las pruebas pasan» y midió «las unitarias pasan» |
+| **Independencia del proveedor de GPS** | — | 🟢 El código nombra a un proveedor concreto en paquete, esquema, variables y pantalla. **Abstraer antes de conectar el segundo**, o quedan dos casos especiales cosidos |
 | **La reconciliación del expediente** | **C15 · C17** | 🟢 El expediente hoy etiqueta mal la evidencia y, en todo lo sellado antes del 5 de agosto, solo tiene la cobertura ponderada |
 
 ---
@@ -1815,7 +2036,7 @@ bloqueante.
 - **Regla nueva en §0: toda cifra lleva su fecha de medición.** Salió de que §5
   decía **330** y la bitácora de este mismo documento, el reporte final y la tabla
   de sensores decían **335**. Ninguna estaba mal cuando se escribió; ninguna decía
-  cuándo. Es la regla 15 —el eje es parte del resultado— aplicada al eje que más
+  cuándo. Es la regla 18 —el eje es parte del resultado— aplicada al eje que más
   barato se olvida.
 - **Todo remedido contra producción con `jtel_readonly`**, comprobado de solo
   lectura ese día. **Cero escrituras, cero sellos, cero re-verificaciones.**
@@ -1971,6 +2192,91 @@ Cuatro cosas salieron de la ficha y se colocaron donde mandan, porque como nota 
   cumplido— más 84 del Turno B con cero. **El código y la base dicen lo mismo.**
 - ⚠ **Queda abierto antes de aplicar:** corregir con el guion mueve la hora límite
   bien y **deja la ventana quince minutos tarde**.
+
+**6 de agosto de 2026 (las dos rojas, y lo que una de ellas escondía).**
+- ⚠ **La del calendario no estaba roja: se rompió corriéndola mal.** `npx vitest`
+  en vez del comando sancionado, que fija `TZ=UTC`; la máquina está en
+  `America/Ciudad_Juarez`. Con el comando correcto, **25 de 25 pasan**. Y la
+  «verificación contra `main`» repitió el mismo error, así que **no verificó
+  nada**. → **Regla 17.**
+- 🟢 **La de `apps/web` sí era real, y tapaba un defecto que importa.** El
+  sembrador del escenario elegía el contrato de A con **`LIMIT 1` sin `ORDER
+  BY`** —el mismo patrón que el `[0]` de `resolveAccountByType` del #222— y
+  escribía el de B con **`onConflictDoNothing` sobre un id fijo**, así que B
+  quedaba clavado al cliente de la primera corrida. **Los dos carriers dejaban de
+  compartir cliente.**
+- **Por qué pesaba más que el frente entero:** el plan cita ese escenario como la
+  evidencia de que `/carrier` no filtra («los seis caminos niegan», #225). Con
+  clientes distintos, esas seis pruebas pasan por una razón más débil — **la pared
+  que se mide es la del cliente, no la del carrier**. Lo único que lo notaba era
+  la auto-comprobación del propio archivo, y se queda como está.
+- ✅ **Arreglado:** orden explícito para elegir el contrato de A, y
+  `onConflictDoUpdate` para que el contrato y el perfil de B **converjan**.
+  **Sembrar tiene que dejar la base en el estado pedido, no «en el estado pedido
+  si estaba vacía».** Comprobado con dos corridas seguidas: 16/16 las dos veces.
+- **Frente nuevo: las pruebas de integración en CI.** Las cinco cosas que cuesta,
+  en orden, con el bloqueo previo escrito —**no se enciende con pruebas rojas
+  dentro**— y con el caso §D: el verde afirma «las pruebas pasan» y midió «las
+  unitarias pasan».
+- **El check pasa a llamarse `pruebas unitarias`**, y el cambio **no es libre**:
+  el ruleset lo exige por nombre. El orden que no deja hueco es agregar el nombre
+  nuevo al ruleset, renombrar el job, y quitar el viejo.
+
+**6 de agosto de 2026 (el vigilante mudo y el frente del proveedor).**
+- 🟢 **El vigilante de salud nunca ha funcionado: 117 corridas desde el 28 de julio,
+  cero éxitos.** No es una regresión — nació roto.
+- **Son dos fallos apilados. (1)** `/api/salud` responde **503** de verdad: cuatro
+  chequeos sanos y **`verificacion` enfermo** — «6 servicios vencidos hace más de
+  2 h SIN veredicto, el más viejo hace **49.8 h**». **(2)** El paso que abre el aviso
+  revienta con `fatal: not a git repository`: el workflow **no hace `checkout`** y
+  `gh` no puede deducir el repositorio. **Cero issues creados en nueve días**, y como
+  ese paso sale con código 1, **el `::error::` final tampoco se emite**.
+- **Lo que queda es una corrida roja en una pestaña que nadie mira.** Y el detalle
+  que lo vuelve exacto: este vigilante existe porque un heartbeat que vivía dentro
+  de Vercel cayó con lo que vigilaba y **nadie se enteró en 13 horas**. El reemplazo
+  lleva **nueve días** mudo. **Se probó que detecta; no que avisa.** Regla 8 sobre el
+  instrumento, tercera vez.
+- **Frente nuevo: independencia del proveedor de GPS.** 🟢 El código nombra a uno
+  concreto en cuatro capas —paquete `gps-umbrella`, columnas `umbrella_*`, variables
+  `UMBRELLA_GPS_*` y el nombre impreso en una pantalla del carrier—. **Sin diseñar.**
+  Lo único que fija hoy es el orden: **abstraer primero, conectar después**, porque
+  construir el puente sobre esta base deja **dos casos especiales cosidos** y hace
+  que el tercer proveedor vuelva a ser obra.
+- **Cuarto caso de la regla del eje, y costó una ejecución detenida:** una alarma
+  apoyada en una cifra de `DESPUES.md` medida **un solo día**. **Una medición vieja
+  del propio repo es tan peligrosa como una mal hecha, y más — viene con sello de
+  casa.**
+
+**6 de agosto de 2026 (el guion arreglado, y la corrección que lo desbloquea).**
+- **No se ejecutó nada.** Asav paró la corrección al ver que el guion escribía su
+  propia ventana en vez de la del generador. **Se arregló el guion primero** (#258).
+- 🟢 **`ventanaCorregida` llama a `windowForOccurrence` con la política completa y el
+  dimensionado por ruta.** **La valla es el compilador**, no una prueba: el
+  parámetro pide `ContractPolicy` completa —no `Partial`— y el dimensionado es
+  obligatorio. **Comprobado por mutación en los dos sentidos:** aflojar el tipo a
+  `Partial` rompe `tsc`; volver a la llamada vieja **mata 3 de las 14 pruebas**.
+- ⚠ **Y una corrección mía que frenó una ejecución, dicha completa.** La alarma de
+  «quince minutos tarde» se apoyaba en que la operación pica a las **14:00** — dato
+  de `DESPUES.md`, medido **un solo día**. 🟢 Remedido del 23 de julio al 6 de agosto,
+  días hábiles, las seis rutas contra la telemetría cruda: **las seis pican a las
+  15:00**, y las 14:00 son secundarias en cuatro. **La ventana vieja se queda con el
+  10–15 % de la actividad; la nueva con el 32–44 %.**
+- 🟢 **La respuesta a lo que condicionaba la corrección: 126 de 126 ventanas
+  corregidas contienen las 15:00.** La corrección **sí** resuelve el problema que la
+  motivó.
+- 🟢 **Y el detalle honesto del arreglo:** cambia la ventana de **dos** rutas, no de
+  las seis — en cuatro, la derivación queda por debajo del piso de 60 min de la
+  política. Importa porque el guion **deja de inventar su ventana**, no porque mueva
+  las seis.
+- **El error no fue el dato: fue apoyar una alarma en una medición de un día
+  teniendo catorce.** Es la regla 18 otra vez, con el eje del tiempo.
+- ✅ **Decidido: las 6 de hoy se dejan correr y se van a sellar mal.** Son 6 contra
+  96, y **correr una herramienta que se sabe rota para ganarle al reloj es peor que
+  perder seis.**
+- 🟢 **D1 queda cerrada desde dos lados.** El comentario de
+  `repositories/index.ts:2168` dice «294 hechos sellados a la hora equivocada, con un
+  solo cumplido entre todos»; la base da 210 del Turno A —con exactamente 1
+  cumplido— más 84 del Turno B con cero. **Ninguno se deriva del otro.**
 
 **6 de agosto de 2026 (dos errores de método propios).**
 - **La resta que no cruza medianoche.** Se midió el desfase con `::time`, que no
