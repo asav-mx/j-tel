@@ -610,7 +610,23 @@ export interface GpsPoint {
   longitude: number;
   timestamp: Date;
   speed?: number;
+  /** El APARATO que emitió el punto. Nunca la unidad — ver `unitId`. */
   imei: string;
+  /**
+   * La UNIDAD a la que se resolvió ese aparato por la asignación vigente en el
+   * instante observado. Opcional: un aparato sin asignación no tiene unidad, y
+   * decir cuál sería inventarla.
+   *
+   * Existe por C15. Antes no había campo: quien preparaba la evidencia
+   * **sobrescribía `imei` con el id de la unidad** y el aparato se perdía ahí
+   * mismo. El motor agrupaba y etiquetaba con lo que recibía, así que el
+   * expediente terminaba diciendo `imei:` sobre un id de vehículo — evidencia
+   * mal etiquetada en el documento que sostiene una acusación.
+   *
+   * Ley 5 del Marco: el GPS es un dispositivo, no la unidad. Son dos campos
+   * porque son dos cosas, y el expediente tiene que poder enseñar las dos.
+   */
+  unitId?: string;
 }
 
 export interface VerificationInput {

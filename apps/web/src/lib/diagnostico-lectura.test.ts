@@ -10,7 +10,11 @@ import {
   umbralesDeLosPasos,
 } from "./diagnostico-lectura";
 
-/** Un paso `candidata` como el que sella el motor. */
+/**
+ * Un paso `candidata` con la forma VIEJA — la que sella el motor antes de C15,
+ * con la unidad escondida bajo `imei:`. Se conserva a propósito: es la forma de
+ * todo lo ya sellado, y la lectura tiene que seguir entendiéndola.
+ */
 function candidata(
   imei: string,
   vals: {
@@ -369,5 +373,84 @@ describe("la lectura completa", () => {
     expect(cobertura.pasa).toBe(true);
     expect(match.pasa).toBe(false);
     expect(lectura.decisiva!.fraccionObservable).toBeCloseTo(0.557, 3);
+  });
+});
+
+/**
+ * C15 · La lectura entiende las dos épocas del expediente, y las distingue.
+ *
+ * No es compatibilidad por cortesía: hay 973 hechos reales sellados con la
+ * forma vieja, y una lectura que solo entendiera la nueva los dejaría a todos
+ * sin nombre de candidata. Lo que NO se puede hacer es rellenar el hueco — en
+ * las entradas viejas el aparato no se guardó, y decir cuál era sería
+ * inventarlo (Marco §E).
+ */
+describe("C15 · las dos épocas del ledger", () => {
+  const pasoNuevo: LedgerStep = {
+    step: "candidata",
+    result: "sirvio_ruta",
+    details: {
+      unidadId: "UNIT-7",
+      imeis: ["860000000000001", "860000000000009"],
+      routeMatchPct: 74.2,
+      corridorPrecisionPct: 96.1,
+      hasKml: true,
+    },
+  };
+
+  const pasoViejo: LedgerStep = {
+    step: "candidata",
+    result: "sirvio_ruta",
+    details: { imei: "UNIT-7", routeMatchPct: 74.2, corridorPrecisionPct: 96.1, hasKml: true },
+  };
+
+  it("una entrada nueva nombra la unidad y enseña sus aparatos", () => {
+    const [c] = candidatasDeLosPasos([pasoNuevo]);
+
+    expect(c!.clave).toBe("UNIT-7");
+    expect(c!.imeis).toEqual(["860000000000001", "860000000000009"]);
+  });
+
+  it("una entrada vieja sigue nombrando su candidata — 973 hechos dependen de esto", () => {
+    const [c] = candidatasDeLosPasos([pasoViejo]);
+
+    expect(c!.clave).toBe("UNIT-7");
+  });
+
+  it("una entrada vieja NO inventa aparatos: la lista sale vacía", () => {
+    const [c] = candidatasDeLosPasos([pasoViejo]);
+
+    // Vacío significa «no se guardó», no «no hubo aparato». Rellenarlo con la
+    // clave —que es una unidad— repetiría C15 en la pantalla.
+    expect(c!.imeis).toEqual([]);
+    expect(c!.imeis).not.toContain("UNIT-7");
+  });
+
+  it("las dos épocas leen la MISMA clave, así que ninguna cifra se mueve", () => {
+    const [nueva] = candidatasDeLosPasos([pasoNuevo]);
+    const [vieja] = candidatasDeLosPasos([pasoViejo]);
+
+    expect(nueva!.clave).toBe(vieja!.clave);
+    expect(nueva!.matchRutaPct).toBe(vieja!.matchRutaPct);
+  });
+
+  it("la cobertura prefiere unidadId y cae a bestImei en lo ya sellado", () => {
+    const nueva = coberturaDeLosPasos([
+      {
+        step: "cobertura_evidencia",
+        result: "suficiente",
+        details: { coveragePct: 91.2, unidadId: "UNIT-7", bestImei: "UNIT-7" },
+      },
+    ]);
+    const vieja = coberturaDeLosPasos([
+      {
+        step: "cobertura_evidencia",
+        result: "suficiente",
+        details: { coveragePct: 91.2, bestImei: "UNIT-7" },
+      },
+    ]);
+
+    expect(nueva!.clave).toBe("UNIT-7");
+    expect(vieja!.clave).toBe("UNIT-7");
   });
 });

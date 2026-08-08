@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   verifyService,
   evaluateUnitRouteMatch,
+  groupPointsByUnit,
+  unitKeyOf,
   pointInPolygon,
   determineTiming,
   computeRouteMatchPct,
@@ -122,10 +124,13 @@ describe("verifyService", () => {
     expect(result.ledgerSteps.some((s) => s.step === "cobertura_evidencia")).toBe(true);
   });
 
-  it("no mezcla cobertura entre IMEIs de la flota (pendiente si ninguno cubre solo)", () => {
+  it("no mezcla cobertura entre UNIDADES de la flota (pendiente si ninguna cubre sola)", () => {
     const windowStart = new Date("2026-07-07T11:45:00Z");
     const windowEnd = new Date("2026-07-07T12:50:00Z");
-    // Dos IMEIs con un punto cada uno en extremos: juntos “cubren”, por IMEI no.
+    // Dos unidades con un punto cada una en los extremos: juntas “cubren”, por
+    // unidad no. El fixture nombra las dos cosas por separado a propósito —
+    // antes de C15 decía `imei: "unit-a"`, que es la confusión que este arreglo
+    // quita, escrita dentro de la prueba que debía atraparla.
     const result = verifyService({
       ...baseInput,
       coverageWindowStart: windowStart,
@@ -134,13 +139,15 @@ describe("verifyService", () => {
       evidenceMaxGapMinutes: 10,
       evidencePoints: [
         {
-          imei: "unit-a",
+          imei: "860000000000001",
+          unitId: "unit-a",
           latitude: 31.8,
           longitude: -106.5,
           timestamp: new Date("2026-07-07T11:45:00Z"),
         },
         {
-          imei: "unit-b",
+          imei: "860000000000002",
+          unitId: "unit-b",
           latitude: 31.8,
           longitude: -106.5,
           timestamp: new Date("2026-07-07T12:50:00Z"),
@@ -149,7 +156,86 @@ describe("verifyService", () => {
     });
     expect(result.status).toBe("pendiente_evidencia");
     const cov = result.ledgerSteps.find((s) => s.step === "cobertura_evidencia");
-    expect(cov?.details).toMatchObject({ perImei: true });
+    expect(cov?.details).toMatchObject({ perUnidad: true });
+  });
+
+  /* ─── C15 · el expediente nombra el aparato y el vehículo por separado ─── */
+
+  it("el ledger escribe la unidad como unidad y el aparato como aparato", () => {
+    const result = verifyService({
+      ...baseInput,
+      evidencePoints: [
+        {
+          imei: "860000000000001",
+          unitId: "unit-a",
+          latitude: 31.6909,
+          longitude: -106.4234,
+          timestamp: new Date("2026-07-07T12:40:00Z"),
+        },
+      ],
+    });
+
+    const candidata = result.ledgerSteps.find((s) => s.step === "candidata");
+    expect(candidata?.details).toMatchObject({
+      unidadId: "unit-a",
+      imeis: ["860000000000001"],
+    });
+    // Y el aparato NO se pierde: era lo que la sustitución borraba.
+    expect((candidata?.details as Record<string, unknown>).imeis).not.toContain("unit-a");
+  });
+
+  it("una unidad que cambió de aparato a media ventana es UNA candidata, con sus dos aparatos", () => {
+    // Ley 5 del Marco: la unidad tiene identidad estable y puede cambiar de
+    // dispositivo. Agrupando por aparato saldrían dos candidatas y ninguna
+    // tendría la traza completa.
+    const result = verifyService({
+      ...baseInput,
+      evidencePoints: [
+        {
+          imei: "860000000000001",
+          unitId: "unit-a",
+          latitude: 31.6909,
+          longitude: -106.4234,
+          timestamp: new Date("2026-07-07T12:30:00Z"),
+        },
+        {
+          imei: "860000000000009",
+          unitId: "unit-a",
+          latitude: 31.6909,
+          longitude: -106.4234,
+          timestamp: new Date("2026-07-07T12:40:00Z"),
+        },
+      ],
+    });
+
+    const candidatas = result.ledgerSteps.filter((s) => s.step === "candidata");
+    expect(candidatas).toHaveLength(1);
+    expect(candidatas[0]!.details).toMatchObject({
+      unidadId: "unit-a",
+      imeis: ["860000000000001", "860000000000009"],
+    });
+  });
+
+  it("un aparato sin unidad resuelta se agrupa por sí mismo, y el ledger lo dice", () => {
+    // No se inventa una unidad: la candidata sale nombrada por el aparato, que
+    // es lo único que se sabe de ella.
+    const result = verifyService({
+      ...baseInput,
+      evidencePoints: [
+        {
+          imei: "860000000000003",
+          latitude: 31.6909,
+          longitude: -106.4234,
+          timestamp: new Date("2026-07-07T12:40:00Z"),
+        },
+      ],
+    });
+
+    const candidata = result.ledgerSteps.find((s) => s.step === "candidata");
+    expect(candidata?.details).toMatchObject({
+      unidadId: "860000000000003",
+      imeis: ["860000000000003"],
+    });
   });
 
   it("never returns no_cumplido without evidence", () => {
@@ -1105,5 +1191,67 @@ describe("cobertura de ruta: la ponderada decide, la llana informa", () => {
     const deberiaServir =
       c.arrivalAt !== null && c.routeMatchPct >= 60 && c.corridorPrecisionPct >= 60;
     expect(c.servedRoute).toBe(deberiaServir && (antes.candidateUnits[0]!.observableFraction ?? 1) >= 0.85);
+  });
+});
+
+/**
+ * C15 · La prueba que sostiene «esto no mueve un veredicto».
+ *
+ * El arreglo cambia DÓNDE viaja la unidad, no cuál es. Antes, quien preparaba
+ * la evidencia hacía `imei = unidad ?? imei` y el motor agrupaba por ese campo.
+ * Ahora la unidad viaja aparte y el motor agrupa por `unitId ?? imei`.
+ *
+ * Las dos expresiones tienen que dar la MISMA clave para toda entrada posible,
+ * porque de la clave salen las candidatas, y de las candidatas el veredicto. Si
+ * esta prueba se cae, el arreglo dejó de ser de etiqueta y pasó a ser de motor
+ * — que es justo lo que el Bloque B no puede hacer.
+ */
+describe("C15 · la clave de agrupación no cambió", () => {
+  /** Lo que hacía el llamador antes del arreglo. */
+  const claveVieja = (imei: string, unidad?: string) => unidad ?? imei;
+
+  const casos: Array<[string, string, string | undefined]> = [
+    ["aparato con unidad resuelta", "860000000000001", "unit-a"],
+    ["aparato sin unidad resuelta", "860000000000002", undefined],
+    ["dos aparatos, misma unidad · 1", "860000000000003", "unit-b"],
+    ["dos aparatos, misma unidad · 2", "860000000000004", "unit-b"],
+  ];
+
+  for (const [nombre, imei, unitId] of casos) {
+    it(`${nombre}: misma clave por los dos caminos`, () => {
+      const punto = {
+        imei,
+        unitId,
+        latitude: 31.69,
+        longitude: -106.42,
+        timestamp: new Date("2026-07-07T12:00:00Z"),
+      };
+      expect(unitKeyOf(punto)).toBe(claveVieja(imei, unitId));
+    });
+  }
+
+  it("agrupar produce los mismos grupos que la sustitución producía", () => {
+    const puntos = casos.map(([, imei, unitId], i) => ({
+      imei,
+      unitId,
+      latitude: 31.69,
+      longitude: -106.42,
+      timestamp: new Date(`2026-07-07T12:0${i}:00Z`),
+    }));
+
+    const nuevos = groupPointsByUnit(puntos);
+
+    // El camino viejo, reconstruido: sustituir y agrupar por `imei`.
+    const viejos = new Map<string, unknown[]>();
+    for (const p of puntos) {
+      const k = claveVieja(p.imei, p.unitId);
+      viejos.set(k, [...(viejos.get(k) ?? []), p]);
+    }
+
+    expect([...nuevos.keys()].sort()).toEqual([...viejos.keys()].sort());
+    for (const [k, v] of nuevos) expect(v).toHaveLength(viejos.get(k)!.length);
+    // El control: si todo cayera en un solo grupo, la igualdad de arriba sería
+    // trivial y no probaría nada.
+    expect(nuevos.size).toBe(3);
   });
 });

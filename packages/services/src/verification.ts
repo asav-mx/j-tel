@@ -1044,8 +1044,15 @@ export class VerificationService {
       if (assignment) imeiToUnitId.set(imei, assignment.unitId);
     }
 
+    /*
+     * El punto guardado ya puede traer su unidad resuelta (C15). Se conserva:
+     * la asignación que valía en el instante observado es más fiable que
+     * volver a resolverla ahora, porque un cambio de dispositivo posterior no
+     * debe reescribir el historial (Ley 5 del Marco).
+     */
     const evidencePoints = storedPoints.map((p) => ({
       imei: p.imei,
+      unitId: p.unitId ?? undefined,
       latitude: p.latitude,
       longitude: p.longitude,
       speed: p.speed ?? undefined,
@@ -1096,6 +1103,21 @@ export class VerificationService {
     }
 
     const excluded = new Set(opts.excludeUnitIds ?? []);
+    /*
+     * C15 · El origen exacto de la etiqueta falsa del expediente.
+     *
+     * Esto hacía `imei: imeiToUnitId.get(p.imei) ?? p.imei` — sobrescribía el
+     * aparato con el id de la unidad. El motor agrupaba y etiquetaba con lo que
+     * recibía, así que el ledger terminaba escribiendo `imei:` sobre un id de
+     * vehículo **y el aparato no quedaba en ninguna parte**: no era solo una
+     * etiqueta mal puesta, era un dato perdido.
+     *
+     * Ahora la unidad viaja en su propio campo. **La clave de agrupación no
+     * cambia** —el motor agrupa por `unitId ?? imei`, que es exactamente el
+     * valor que antes quedaba en `imei`—, así que las candidatas son las
+     * mismas y ningún veredicto se mueve. Lo único que cambia es lo que el
+     * expediente puede decir.
+     */
     const enrichedPoints = evidencePoints
       .filter((p) => {
         const unitId = imeiToUnitId.get(p.imei);
@@ -1103,7 +1125,7 @@ export class VerificationService {
       })
       .map((p) => ({
         ...p,
-        imei: imeiToUnitId.get(p.imei) ?? p.imei,
+        unitId: imeiToUnitId.get(p.imei) ?? p.unitId,
       }));
 
     const coverageWindow = computeExclusiveContentionWindow(
