@@ -27,8 +27,19 @@ const malos = rotos.filter(r => r.tipo0 !== "object" || Number(r.largo) !== 2);
 if (malos.length) { console.error("\n  ALTO: algún caso no tiene la forma esperada. No se toca nada.\n"); await db.end(); process.exit(1); }
 
 if (!ejecutar) { console.log("\n  Restauraría policy = policy->0 en los de arriba. Agrega --ejecutar\n"); await db.end(); process.exit(0); }
+/*
+ * FIRMA — C13. Una restauración es una edición de la política, y desde la
+ * migración 0020 el trigger la registra pase por donde pase. Declarar el actor
+ * es lo que la separa de un `sql_directo` anónimo: si algún día alguien lee la
+ * historia de este contrato, la fila del incidente tiene que decir que fue un
+ * arreglo y no una decisión de negocio.
+ */
 for (const r of rotos) {
-  await db`update service_contracts set policy = policy->0 where id = ${r.id as string} and jsonb_typeof(policy)='array'`;
+  await db.begin(async (tx) => {
+    await tx`select set_config('jtel.actor_kind', 'guion:restaurar-politica', true),
+                    set_config('jtel.note', 'restauración del incidente: la política había quedado como arreglo', true)`;
+    await tx`update service_contracts set policy = policy->0 where id = ${r.id as string} and jsonb_typeof(policy)='array'`;
+  });
   console.log(`  ✓ restaurado ${r.name}`);
 }
 console.log("");
