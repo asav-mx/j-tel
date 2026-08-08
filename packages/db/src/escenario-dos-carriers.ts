@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { createDb } from "./index.js";
 import {
   accounts,
@@ -94,10 +94,25 @@ export async function sembrarEscenarioDosCarriers(
   const [a] = await db.select().from(accounts).where(eq(accounts.slug, slugA));
   if (!a) throw new Error(`[escenario] No existe el carrier A (${slugA}) en la base de pruebas`);
 
+  /*
+   * `ORDER BY` explícito, y no es cosmético.
+   *
+   * Esto era `LIMIT 1` a secas. Postgres no garantiza qué fila devuelve sin
+   * orden, así que el contrato de A podía cambiar entre corridas — y como el
+   * contrato de B se escribía con `onConflictDoNothing`, B se quedaba clavado
+   * al cliente de la PRIMERA corrida. Los dos carriers dejaban de compartir
+   * cliente y **la pared que se medía pasaba a ser la del cliente, no la del
+   * carrier**, sin que nada lo dijera.
+   *
+   * Es el mismo patrón que el `[0]` de `resolveAccountByType` que cerró el
+   * #222, y la hermana de la regla 2 de «las ganadas por las malas»: ordenar
+   * sin techo devuelve el futuro; **no ordenar devuelve cualquiera.**
+   */
   const [contratoDeA] = await db
     .select()
     .from(serviceContracts)
     .where(eq(serviceContracts.carrierAccountId, a.id))
+    .orderBy(asc(serviceContracts.createdAt), asc(serviceContracts.id))
     .limit(1);
   if (!contratoDeA) throw new Error("[escenario] El carrier A no tiene contratos");
 
@@ -180,7 +195,24 @@ export async function sembrarEscenarioDosCarriers(
       validFrom: contratoDeA.validFrom,
       validTo: contratoDeA.validTo,
     })
-    .onConflictDoNothing();
+    /*
+     * CONVERGE, no omite. Con `onConflictDoNothing` una fila vieja sobrevivía
+     * intacta y el escenario dejaba de ser el escenario: B seguía colgado del
+     * cliente de una corrida anterior. Sembrar tiene que dejar la base en el
+     * estado pedido, no «en el estado pedido si estaba vacía».
+     */
+    .onConflictDoUpdate({
+      target: serviceContracts.id,
+      set: {
+        clientAccountId: contratoDeA.clientAccountId,
+        carrierAccountId: ESCENARIO_B.cuentaId,
+        plantId: contratoDeA.plantId,
+        plantGroupId: contratoDeA.plantGroupId,
+        policy: contratoDeA.policy,
+        validFrom: contratoDeA.validFrom,
+        validTo: contratoDeA.validTo,
+      },
+    });
 
   await db
     .insert(serviceProfiles)
@@ -195,7 +227,17 @@ export async function sembrarEscenarioDosCarriers(
       activeDays: [1, 2, 3, 4, 5],
       active: true,
     })
-    .onConflictDoNothing();
+    // Mismo motivo: el perfil hereda ruta y geocerca de A, así que si A cambia
+    // el perfil viejo queda apuntando a otra parte.
+    .onConflictDoUpdate({
+      target: serviceProfiles.id,
+      set: {
+        routeShiftId: perfilDeA.routeShiftId,
+        geofenceId: perfilDeA.geofenceId,
+        referenceUnitId: ESCENARIO_B.unidadId,
+        active: true,
+      },
+    });
 
   await db
     .insert(serviceOccurrences)

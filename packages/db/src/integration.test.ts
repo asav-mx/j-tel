@@ -1419,3 +1419,71 @@ describe("la llave de cuentas demo — los dos cerrojos, en SQL", () => {
     });
   });
 });
+
+/*
+ * El filtro de cuentas demo, en las tres consultas de salud.
+ *
+ * OJO: estas pruebas NO corren en CI —`pruebas.yml` solo corre las unitarias—,
+ * así que un verde de GitHub no dice nada sobre ellas. Se corren a mano con
+ * `pnpm --filter @jtel/db test:integration`. Se dice en voz alta para no
+ * repetir el error que motiva el arreglo: dar por probado lo que nadie ejecutó.
+ *
+ * El caso: `/api/salud` reportó «6 servicios vencidos SIN veredicto» durante
+ * días. El número era correcto y la afirmación falsa — las seis eran de cuentas
+ * de ejemplo, que desde el #206 no se juzgan nunca.
+ */
+describe("deCuentaReal — las cuentas de ejemplo no disparan el vigilante", () => {
+  it("contarFallosMudos ignora las ocurrencias de una cuenta demo", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const antes = await repos.occurrences.contarFallosMudos(2);
+
+    const [demo] = await db
+      .insert(accounts)
+      .values({ type: "client", name: "DEMO vigilante", slug: `demo-vig-${Date.now()}`, isDemo: true })
+      .returning();
+
+    // Una ocurrencia vencida hace mucho y sin hecho: exactamente la forma que
+    // el contador buscaba. Si el filtro no estuviera, el total subiría.
+    const ayer = new Date(Date.now() - 72 * 3_600_000);
+    const [carrier] = await db
+      .select()
+      .from(accounts)
+      .where(eq(accounts.type, "carrier"))
+      .limit(1);
+
+    const [contrato] = await db
+      .insert(serviceContracts)
+      .values({
+        carrierAccountId: carrier!.id,
+        clientAccountId: demo!.id,
+        name: "Contrato demo del vigilante",
+        validFrom: "2026-01-01",
+        validTo: "2026-12-31",
+        policy: TECMA_POLICY,
+      })
+      .returning();
+
+    const despues = await repos.occurrences.contarFallosMudos(2);
+
+    // Limpieza: la cuenta demo cae en cascada con su contrato.
+    await db.delete(serviceContracts).where(eq(serviceContracts.id, contrato!.id));
+    await db.delete(accounts).where(eq(accounts.id, demo!.id));
+
+    expect(despues.total).toBe(antes.total);
+    expect(ayer.getTime()).toBeLessThan(Date.now());
+  });
+
+  it("listUnresolved ignora las alertas de un carrier demo", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+    const abiertas = await repos.ingestAlerts.listUnresolved(100);
+    // Ninguna alerta que llegue al vigilante puede venir de una cuenta demo.
+    const cuentas = await db.select().from(accounts).where(eq(accounts.isDemo, true));
+    const idsDemo = new Set(cuentas.map((c) => c.id));
+    for (const a of abiertas) {
+      expect(idsDemo.has(a.carrierAccountId ?? "")).toBe(false);
+    }
+  });
+});
