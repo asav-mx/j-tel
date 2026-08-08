@@ -415,7 +415,7 @@ dominio se resolvieron el mismo día.
 | **T1** | **Clerk** | Todo el candado, el login real y el tramo vendible | ✅ **Hecho.** Aplicación `J-Telemetry` creada · **sin organizaciones** (verificado contra el código) · **solo Email** · llaves de test en Vercel: la pública en los 3 entornos sin sensitive, la secreta en Production y Preview con sensitive. Las llaves de producción se generan al conectar el dominio |
 | **T2** | **Correo — y son dos cosas, no una.** (a) **Resend**: verificar dominio, API key, tres variables. (b) **Que exista `hola@j-telemetry.com`** | (a) Que las alertas salgan de verdad. Hoy `/api/cron/alertas` responde 503 cada 5 min: el sistema detecta y no puede avisar. (b) Que un cliente pueda escribir. **(b) es de negocio, no de sistema** | **Pendiente.** Alta. El instrumento existe y no tiene bocina — y el landing no tiene buzón |
 | **T3** | **Dominio** | Los subdominios del producto | ✅ **Resuelto: `j-telemetry.com`.** `j-tel.io` queda descartado — pero ver la deuda que deja, abajo |
-| **T4** | **Rotar la contraseña del readonly** | `jtel_readonly` y `neondb_owner` comparten contraseña | **Pendiente.** Media. Con redespliegue en el mismo movimiento |
+| **T4** | **Rotar la contraseña del readonly** | `jtel_readonly` y `neondb_owner` comparten contraseña | **Pendiente.** Media. Con redespliegue en el mismo movimiento. 🟢 **Sigue siendo cierto al 8 de agosto de 2026**, comprobado comparando las huellas SHA-256 de los dos passwords del `.env` vigente: **idénticas**, mismo largo. 🟢 **Lo atrapó `verificar-env.mjs` solo**, sin que nadie fuera a buscarlo — es la comprobación que su propio comentario llama «la trampa que nos mordió», y hoy está disparando. ⚠ **Lo que cambia es la GARANTÍA, no lo que pasó.** Ninguna medición hecha con `jtel_readonly` fue insegura: `verificar-solo-lectura` confirma cada vez que ese usuario no puede escribir en su host —41 tablas, cero escribibles—. Lo que descansa sobre esto es la **frontera**: todo el trabajo de diagnóstico de este proyecto se apoya en «solo lectura» como límite, y ese límite hoy es un password compartido, no un secreto distinto. 🟡 **Y no está comprobado que el ataque funcione:** las dos URL apuntan a **hosts distintos**, así que si el de solo lectura es una réplica de lectura de Neon, escribir ahí fallaría por construcción. Comprobarlo exigiría conectarse como `neondb_owner` a ese host, y **eso no se hace para confirmar una sospecha** — se rota y se acabó |
 | **T6** | **Tres identidades de prueba en Clerk** | Que Asav pueda abrir **las tres caras a la vez** en navegadores distintos, que hoy no puede | **Pendiente.** Alta. Tres usuarios en la instancia de prueba con la convención `+clerk_test` —sin buzón real, marcados por construcción—, con nombre y apellido, y sus tres `user_...`. Deja **3 filas** en `user_memberships` y nada más: ni cuentas, ni hechos, ni veredictos. Ver `Ficha-Identidades-De-Prueba.md`. **La cara de planta no se podrá ver hasta 1.h** |
 | **T5** | **`CRON_SECRET`** | — | ✅ **Cerrado.** Rotado en Vercel · el valor viejo fuera de los documentos desde el 2 de agosto (comprobado sobre `main` el 4: cero archivos versionados) · **permanece en el historial de git, rotado y sin efecto** — no se reescribe historia por esto (decisión de Asav, 4 de agosto) |
 
@@ -2956,3 +2956,37 @@ exactamente donde murieron las dos generaciones del vigilante.
   tienen que existir **antes** de tocar C19. Si la cobertura mejora sin ellos,
   no habrá forma de saber si fue el arreglo o el proveedor moviendo la densidad
   otra vez.
+
+**8 de agosto de 2026 (T4 sigue vivo — y el error de método de quien lo «encontró»).**
+
+- 🟢 **`jtel_readonly` y `neondb_owner` siguen compartiendo contraseña**,
+  comprobado el 8 de agosto sobre el `.env` vigente comparando las huellas
+  SHA-256 de los dos passwords: **idénticas**, mismo largo. Lo detectó
+  `verificar-env.mjs` **solo**, al correrlo por otra cosa.
+- **Lo que cambia es la garantía, no lo que pasó.** Ninguna medición hecha con
+  `jtel_readonly` fue insegura —`verificar-solo-lectura` lo confirma cada vez:
+  41 tablas, cero escribibles—. Lo que descansa sobre esto es la **frontera**:
+  todo el diagnóstico de este proyecto se apoya en «solo lectura» como límite,
+  y ese límite hoy es un password compartido y no un secreto distinto.
+- 🟡 **No está comprobado que el ataque funcione.** Las dos URL apuntan a
+  **hosts distintos**: si el de lectura es una réplica, escribir ahí fallaría
+  por construcción. Comprobarlo exigiría conectarse como dueño a ese host, y
+  eso no se hace para confirmar una sospecha — **se rota y se acabó.**
+
+**Y el error de método, que es lo que de verdad hay que registrar.** Esto se
+reportó como un *hallazgo nuevo*, y **ya estaba escrito en §3.1 como el trámite
+T4**. Quien lo reportó midió con cuidado, verificó sin filtrar secretos y no
+tocó nada — e igual se saltó el paso barato: **preguntarle al plan si ya lo
+sabía.**
+
+Es la regla de §0 —*antes de apoyar una decisión en una cifra del repo, se
+comprueba su eje y su fecha*— vista desde el otro lado: **antes de anunciar algo
+como nuevo, se comprueba si el repo ya lo tenía.** El costo de no hacerlo no es
+el ridículo: es que un hallazgo repetido **infla la lista de lo pendiente** y
+hace parecer que apareció un riesgo cuando lo que hay es uno viejo sin atender.
+Lo primero se atiende con urgencia; lo segundo, con una decisión de prioridad
+que ya estaba tomada.
+
+Lo que sí aporta esta pasada, y por eso T4 se edita en vez de solo repetirse:
+que **sigue siendo cierto hoy**, que **lo atrapó el instrumento solo**, y la
+distinción entre la garantía y los hechos.
