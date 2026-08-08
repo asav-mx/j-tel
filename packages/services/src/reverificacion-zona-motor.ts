@@ -144,8 +144,15 @@ export async function reverificarConEvidenciaCorregida(
     frechetMaxKm: policy.frechetMaxKm ?? DEFAULT_FRECHET_MAX_KM,
     geofencePolygon: geofence.polygon,
     kmlWaypoints: kml?.waypoints,
+    /*
+     * C15 · La unidad va en su campo, y el aparato se conserva. Sustituir el
+     * imei aquí era lo que hacía que el ledger dijera `imei:` sobre un id de
+     * vehículo. La clave de agrupación del motor —`unitId ?? imei`— es la
+     * misma que producía la sustitución, así que las candidatas no cambian.
+     */
     evidencePoints: memoryPoints.map((p) => ({
-      imei: imeiToUnit.get(p.imei) ?? p.imei,
+      imei: p.imei,
+      unitId: imeiToUnit.get(p.imei),
       latitude: p.latitude,
       longitude: p.longitude,
       speed: p.speed ?? undefined,

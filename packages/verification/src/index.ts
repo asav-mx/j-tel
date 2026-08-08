@@ -592,14 +592,47 @@ export function evaluateUnitRouteMatch(
   };
 }
 
-export function groupPointsByImei(points: GpsPoint[]): Map<string, GpsPoint[]> {
+/**
+ * La clave con la que se agrupa la evidencia: la UNIDAD si se pudo resolver, y
+ * el aparato si no.
+ *
+ * El orden no es preferencia: el servicio lo ejecuta un vehículo, y un vehículo
+ * puede cambiar de aparato a media ventana (Ley 5 del Marco). Agrupando por
+ * aparato, un cambio de dispositivo partiría a la misma unidad en dos
+ * candidatas y ninguna de las dos tendría la traza completa.
+ *
+ * Cuando el aparato no resuelve a ninguna unidad se agrupa por él, que es lo
+ * único que se sabe. Ese caso queda visible en el ledger porque la candidata
+ * sale sin `unidadId`.
+ */
+export function unitKeyOf(point: GpsPoint): string {
+  return point.unitId ?? point.imei;
+}
+
+/**
+ * Agrupa la evidencia por unidad.
+ *
+ * Se llamaba `groupPointsByImei` y agrupaba por `point.imei` — pero quien
+ * preparaba la evidencia venía sobrescribiendo ese campo con el id de la
+ * unidad, así que el nombre decía una cosa y el valor era otra (C15). Ahora la
+ * unidad viaja en su propio campo y el nombre corresponde. **La clave que sale
+ * es la misma que antes**, así que ninguna candidata cambia y ningún veredicto
+ * se mueve.
+ */
+export function groupPointsByUnit(points: GpsPoint[]): Map<string, GpsPoint[]> {
   const groups = new Map<string, GpsPoint[]>();
   for (const point of points) {
-    const existing = groups.get(point.imei) ?? [];
+    const clave = unitKeyOf(point);
+    const existing = groups.get(clave) ?? [];
     existing.push(point);
-    groups.set(point.imei, existing);
+    groups.set(clave, existing);
   }
   return groups;
+}
+
+/** Los aparatos distintos que emitieron esta traza, en orden estable. */
+export function devicesOf(points: readonly GpsPoint[]): string[] {
+  return [...new Set(points.map((p) => p.imei))].sort();
 }
 
 export function determineTiming(
@@ -827,16 +860,17 @@ export function verifyService(input: VerificationInput): VerificationResult {
     };
   }
 
-  const byImei = groupPointsByImei(input.evidencePoints);
+  const byUnit = groupPointsByUnit(input.evidencePoints);
 
-  // Precondición (Fase 1): cobertura por IMEI (no flota mezclada).
+  // Precondición (Fase 1): cobertura por UNIDAD (no flota mezclada).
   // Mezclar toda la flota rellena huecos con unidades ajenas y produce no_cumplido falso.
   if (input.coverageWindowStart && input.coverageWindowEnd) {
     let best: {
-      imei: string;
+      clave: string;
+      points: GpsPoint[];
       coverage: ReturnType<typeof assessEvidenceCoverage>;
     } | null = null;
-    for (const [imei, points] of byImei) {
+    for (const [clave, points] of byUnit) {
       const coverage = assessEvidenceCoverage(
         points.map((p) => p.timestamp),
         input.coverageWindowStart,
@@ -847,7 +881,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
         },
       );
       if (!best || coverage.coveragePct > best.coverage.coveragePct) {
-        best = { imei, coverage };
+        best = { clave, points, coverage };
       }
     }
     const coverage =
@@ -872,8 +906,25 @@ export function verifyService(input: VerificationInput): VerificationResult {
         // ventana de expectedDeadline + la política congelada cuando falten.
         windowMs: coverage.windowMs,
         coveredMs: coverage.coveredMs,
-        bestImei: best?.imei ?? null,
-        perImei: true,
+        /*
+         * C15 · El nombre corresponde al valor, y el aparato deja de perderse.
+         *
+         * `bestImei` decía aparato y guardaba un id de UNIDAD — el campo que se
+         * sustituía aguas arriba. Ahora la unidad va en `unidadId` y los
+         * aparatos que emitieron esa traza van aparte, que pueden ser más de
+         * uno si la unidad cambió de dispositivo a media ventana.
+         *
+         * `bestImei` se sigue escribiendo con el MISMO valor de siempre para
+         * que las lecturas viejas no se queden ciegas, y **queda marcado como
+         * heredado**: quien lea una entrada sellada antes de este cambio no
+         * tiene `unidadId` con qué desambiguarla, y ésa es justo la señal de
+         * que ahí `bestImei` es una unidad disfrazada de aparato.
+         */
+        unidadId: best?.clave ?? null,
+        imeis: best ? devicesOf(best.points) : [],
+        /** @deprecated Es una UNIDAD, no un imei. Se conserva por lo ya sellado. */
+        bestImei: best?.clave ?? null,
+        perUnidad: true,
       },
     });
     if (!coverage.sufficient) {
@@ -922,7 +973,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
         )
       : null;
 
-  for (const [imei, points] of byImei) {
+  for (const [clave, points] of byUnit) {
     const sorted = [...points].sort(
       (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
     );
@@ -949,7 +1000,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
     });
 
     candidateUnits.push({
-      unitId: imei,
+      unitId: clave,
       servedRoute,
       arrivalAt,
       routeMatchPct,
@@ -964,7 +1015,25 @@ export function verifyService(input: VerificationInput): VerificationResult {
       step: "candidata",
       result: servedRoute ? "sirvio_ruta" : "no_sirvio",
       details: {
-        imei,
+        /*
+         * C15 · Dos campos porque son dos cosas.
+         *
+         * Este `details` escribía `imei:` y adentro guardaba un id de UNIDAD, y
+         * el aparato no aparecía por ningún lado — se perdía aguas arriba, al
+         * sustituirlo. Quien leía el expediente creía estar viendo el aparato y
+         * estaba viendo el vehículo, en el documento que sostiene una
+         * acusación. Ley 5 del Marco: el GPS es un dispositivo, no la unidad.
+         *
+         * `imeis` va en plural porque una unidad puede cambiar de aparato a
+         * media ventana, y colapsarlos a uno sería elegir cuál mostrar.
+         *
+         * Lo sellado antes de este cambio trae `imei` con una unidad adentro y
+         * **no trae `unidadId`**. Esa ausencia es la única forma de distinguir
+         * una entrada vieja de una nueva, así que quien lea entradas de las dos
+         * épocas tiene que decirlo — igual que con `routeMatchPlainPct`.
+         */
+        unidadId: clave,
+        imeis: devicesOf(points),
         arrivalAt: arrivalAt?.toISOString(),
         /*
          * `routeMatchPct` es la que DECIDE, y va ponderada cuando `weightedIdf`

@@ -21,10 +21,20 @@ import type { LedgerStep } from "@jtel/domain";
 export type Candidata = {
   /**
    * Identificador con el que el motor agrupó los puntos. Es el `unitId` cuando
-   * la evidencia traía la unidad resuelta, y el IMEI crudo cuando no: el motor
-   * sustituye uno por otro antes de agrupar. No se adivina cuál es.
+   * la evidencia traía la unidad resuelta, y el IMEI crudo cuando no. No se
+   * adivina cuál es — por eso se llama `clave` y no `unidad`.
    */
   clave: string;
+  /**
+   * Los aparatos que emitieron la traza de esta candidata. Puede ser más de uno
+   * si la unidad cambió de dispositivo a media ventana.
+   *
+   * **Vacío en todo lo sellado antes de C15**, y esa ausencia significa «no se
+   * guardó», no «no hubo aparato»: hasta ese arreglo el imei se sobrescribía
+   * con el id de la unidad y el aparato no llegaba al expediente. Quien lo
+   * muestre tiene que distinguir las dos cosas.
+   */
+  imeis: string[];
   sirvioRuta: boolean;
   llegadaIso: string | null;
   matchRutaPct: number | null;
@@ -158,7 +168,24 @@ export function candidatasDeLosPasos(pasos: readonly LedgerStep[]): Candidata[] 
     .map((p) => {
       const d = p.details as Record<string, unknown> | undefined;
       return {
-        clave: txt(d, "imei") ?? "—",
+        /*
+         * C15 · `unidadId` primero; `imei` es el nombre viejo del MISMO valor.
+         *
+         * Las entradas selladas antes del arreglo escriben la unidad bajo
+         * `imei:`, así que el respaldo no es cortesía: sin él, todo el
+         * histórico se queda sin nombre de candidata. Y no se puede invertir el
+         * orden — en las entradas nuevas `imei` ya no existe: existe `imeis`,
+         * que son los aparatos y son otra cosa.
+         */
+        clave: txt(d, "unidadId") ?? txt(d, "imei") ?? "—",
+        /**
+         * Los aparatos que emitieron esa traza. Vacío en lo sellado antes del
+         * arreglo, porque entonces el aparato se perdía al preparar la
+         * evidencia — y eso hay que decirlo, no rellenarlo.
+         */
+        imeis: Array.isArray(d?.imeis)
+          ? (d.imeis as unknown[]).filter((x): x is string => typeof x === "string")
+          : [],
         sirvioRuta: p.result === "sirvio_ruta",
         llegadaIso: txt(d, "arrivalAt"),
         matchRutaPct: num(d, "routeMatchPct"),
@@ -202,7 +229,18 @@ export function coberturaDeLosPasos(pasos: readonly LedgerStep[]): Cobertura | n
     huecoMaxMinutos: num(d, "maxGapMinutes"),
     puntosEnVentana: num(d, "pointCountInWindow"),
     suficiente: paso.result === "suficiente",
-    clave: txt(d, "bestImei"),
+    /*
+     * C15 · `unidadId` primero, `bestImei` como respaldo de lo ya sellado.
+     *
+     * Los dos campos guardan el MISMO valor —un id de unidad—, así que esto no
+     * cambia lo que se lee de ninguna entrada. Lo que cambia es de dónde: las
+     * entradas nuevas traen el campo con su nombre verdadero, y `bestImei`
+     * queda solo para las viejas, que son las que lo llamaban aparato.
+     *
+     * El respaldo no se puede quitar: lo sellado antes de este cambio no tiene
+     * `unidadId`, y quitarlo dejaría ciega la lectura de todo el histórico.
+     */
+    clave: txt(d, "unidadId") ?? txt(d, "bestImei"),
   };
 }
 
