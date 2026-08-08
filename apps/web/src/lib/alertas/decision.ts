@@ -42,6 +42,7 @@
  *    por cubeta.
  */
 
+import type { CausaDeDiferencia, HoraLimiteDesalineada } from "@jtel/db";
 import { duracion, instanteSellado } from "@/lib/formato-tiempo";
 
 /** Cada cuánto corre `/api/cron/alertas`. Es también el ancho de la cubeta. */
@@ -149,7 +150,8 @@ export type Aviso = {
     | "ingesta-restablecida"
     | "archivador-callado"
     | "archivador-restablecido"
-    | "sin-veredicto";
+    | "sin-veredicto"
+    | "hora-limite-vieja";
   /** La afirmación: qué pasa, en una frase, como hecho. */
   titulo: string;
   /** La evidencia: cada número con su umbral al lado. */
@@ -409,6 +411,182 @@ export function avisoSinVeredicto(grupo: GrupoSinVeredicto, ahora: Date): Aviso 
   };
 }
 
+/* ───────────────────────────────────────────────────────────────────────────
+ * C21 · La hora límite que su turno ya no produce
+ *
+ * `renewRollingWindow` calcula la hora límite al crear la ocurrencia y la
+ * congela en la fila. Nunca vuelve a tocarla, y nada la revisa cuando el turno
+ * o la política cambian. El 7 de agosto de 2026 eso ya había costado doce
+ * ocurrencias selladas contra una ventana vieja entre que se descubrió el
+ * defecto y se corrigió — el precio de C21 no es el defecto, es su latencia.
+ *
+ * Esto no corrige: avisa. Corregir la ventana con la que se va a juzgar es
+ * decisión de Asav, y un cron que corrige en silencio no se distingue de uno
+ * que no corre.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Cuántos servicios se enumeran en el correo antes de resumir el resto.
+ *
+ * Un turno movido puede arrastrar cientos de ocurrencias, y un correo con
+ * trescientas líneas no se lee. El recorte se DICE en el cuerpo: una lista
+ * truncada en silencio se lee como la lista completa.
+ */
+export const TOPE_DETALLE_DESALINEADAS = 15;
+
+/**
+ * La lectura viene de `@jtel/db`, donde vive junto a la consulta que la
+ * produce y a `clasificarDiferencia`. Aquí solo se le da forma de aviso: este
+ * archivo decide QUÉ se dice, no cómo se mide.
+ */
+export type OcurrenciaDesalineada = HoraLimiteDesalineada;
+
+export type GrupoDesalineado = {
+  clave: string;
+  contratoNombre: string;
+  clienteNombre: string;
+  turnoNombre: string;
+  turnoInicio: string;
+  anticipacionMinutos: number;
+  causa: Exclude<CausaDeDiferencia, "ninguna">;
+  difMinutos: number;
+  ocurrencias: OcurrenciaDesalineada[];
+  /** La primera del grupo en cruzar su hora límite: el reloj de la decisión. */
+  primeraEnSellarse: Date;
+  ultimaEnSellarse: Date;
+};
+
+/**
+ * Agrupa por contrato × turno × corrimiento, que es la unidad en la que se
+ * avisa porque es la unidad en la que se causa: alguien movió UN turno, y
+ * todas sus ocurrencias se corrieron LO MISMO.
+ *
+ * El corrimiento entra en la clave y no es un detalle. Dos corrimientos
+ * distintos dentro del mismo turno no son un cambio con dos caras: son dos
+ * historias, y sumarlas en un solo aviso es la causa C20 —la etiqueta que
+ * junta dos cosas distintas— cometida en el correo que avisa de otra.
+ */
+export function agruparDesalineadas(
+  ocurrencias: OcurrenciaDesalineada[],
+): GrupoDesalineado[] {
+  const grupos = new Map<string, GrupoDesalineado>();
+
+  for (const o of ocurrencias) {
+    const clave = `${o.contratoId}|${o.turnoId}|${o.difMinutos}`;
+    const grupo = grupos.get(clave);
+    if (!grupo) {
+      grupos.set(clave, {
+        clave,
+        contratoNombre: o.contratoNombre,
+        clienteNombre: o.clienteNombre,
+        turnoNombre: o.turnoNombre,
+        turnoInicio: o.turnoInicio,
+        anticipacionMinutos: o.anticipacionMinutos,
+        causa: o.causa,
+        difMinutos: o.difMinutos,
+        ocurrencias: [o],
+        primeraEnSellarse: o.guardada,
+        ultimaEnSellarse: o.guardada,
+      });
+      continue;
+    }
+    grupo.ocurrencias.push(o);
+    if (o.guardada < grupo.primeraEnSellarse) grupo.primeraEnSellarse = o.guardada;
+    if (o.guardada > grupo.ultimaEnSellarse) grupo.ultimaEnSellarse = o.guardada;
+  }
+
+  // Por el reloj, no por tamaño: lo que primero se vuelve irreversible va
+  // arriba. Es la regla del horizonte del skill — ordena por cuándo revienta.
+  return [...grupos.values()].sort(
+    (a, b) => a.primeraEnSellarse.getTime() - b.primeraEnSellarse.getTime(),
+  );
+}
+
+/**
+ * Qué dice el corrimiento sobre su origen, sin adivinar quién lo hizo.
+ *
+ * `clasificarDiferencia` ya separa las dos formas y la distinción vale porque
+ * la acción es distinta: un marco temporal equivocado es un defecto nuestro,
+ * y un ajuste de minutos es una política que se movió y todavía no alcanzó a
+ * lo generado.
+ */
+function lecturaDeCausa(causa: Exclude<CausaDeDiferencia, "ninguna">): string {
+  return causa === "zona"
+    ? "el marco temporal no es el de la medianoche civil del contrato"
+    : "el turno o la anticipación de la política cambiaron después de generarse";
+}
+
+export function avisoHoraLimiteVieja(
+  grupo: GrupoDesalineado,
+  ahora: Date,
+  revisadas: number,
+): Aviso {
+  const n = grupo.ocurrencias.length;
+  /*
+   * `difMinutos` es `derivada − guardada`, así que POSITIVO significa que la
+   * derivada cae después: la guardada va ADELANTADA. Se escribe así, con el
+   * signo dicho una sola vez, porque la primera redacción decía «tarde» junto
+   * a «va antes» en la misma línea — el valor contradiciendo a su lectura.
+   * No lo atrapó ninguna prueba: lo atrapó leer el correo.
+   */
+  const guardadaVaAntes = grupo.difMinutos > 0;
+
+  const mediciones: Medicion[] = [
+    {
+      etiqueta: "Servicios sin sellar",
+      valor: String(n),
+      lectura: `de ${revisadas} revisados · turno «${grupo.turnoNombre}» de ${grupo.contratoNombre}`,
+    },
+    {
+      etiqueta: "Corrimiento",
+      valor: `${duracion(Math.abs(grupo.difMinutos))} ${guardadaVaAntes ? "temprano" : "tarde"}`,
+      lectura: `la hora límite guardada va ${guardadaVaAntes ? "antes" : "después"} de la que hoy se derivaría · ${lecturaDeCausa(grupo.causa)}`,
+    },
+    {
+      etiqueta: "El turno declara",
+      valor: grupo.turnoInicio,
+      lectura: `anticipación ${grupo.anticipacionMinutos} min de la política del contrato`,
+    },
+    {
+      etiqueta: "El primero se juzga",
+      valor: instanteSellado(grupo.primeraEnSellarse),
+      lectura: `dentro de ${duracion(minutosEntre(grupo.primeraEnSellarse, ahora))} · desde ahí ya no se corrige, se re-verifica`,
+    },
+    {
+      etiqueta: "El último se juzga",
+      valor: instanteSellado(grupo.ultimaEnSellarse),
+      lectura: "hasta ahí llega la ventana en la que la decisión todavía sirve",
+    },
+  ];
+
+  const listadas = grupo.ocurrencias
+    .slice()
+    .sort((a, b) => a.guardada.getTime() - b.guardada.getTime());
+  const detalle = listadas
+    .slice(0, TOPE_DETALLE_DESALINEADAS)
+    .map(
+      (o) =>
+        `${o.rutaNombre} · ${o.serviceDate} · guardada ${instanteSellado(o.guardada)} · hoy se derivaría ${instanteSellado(o.derivada)}`,
+    );
+  if (listadas.length > TOPE_DETALLE_DESALINEADAS) {
+    detalle.push(
+      `y ${listadas.length - TOPE_DETALLE_DESALINEADAS} más, no listadas aquí — el conteo de arriba sí las incluye`,
+    );
+  }
+
+  return {
+    clase: "hora-limite-vieja",
+    titulo: `${n} servicio${n === 1 ? "" : "s"} de ${grupo.clienteNombre} van a juzgarse con una hora límite que su turno ya no produce.`,
+    mediciones,
+    consecuencia:
+      "La hora límite se congela al generar la ocurrencia y nada la revisa cuando el turno cambia, así que estos servicios se van a sellar contra una ventana que ya no es la del turno. Un resultado sellado así no se corrige después: se re-verifica, y cada re-verificación mete una versión más en la historia del hecho.",
+    accion:
+      "Decidir si se corrigen antes de que se sellen o si se dejan, y correr `corregir-deadlines` si se corrigen · Asav",
+    detalle,
+    instante: grupo.primeraEnSellarse,
+  };
+}
+
 /**
  * El asunto del correo. Lleva el conteo adelante para que se lea completo en
  * la notificación del teléfono, sin abrirlo.
@@ -425,5 +603,7 @@ export function asuntoDe(aviso: Aviso): string {
       return `J-Telemetry · Archivador restablecido`;
     case "sin-veredicto":
       return `J-Telemetry · Servicios sin veredicto`;
+    case "hora-limite-vieja":
+      return `J-Telemetry · Hora límite desalineada`;
   }
 }

@@ -157,23 +157,57 @@ function avisoTexto(aviso: Aviso): string {
  * Tres correos a la vez por la misma caída no informan tres veces más: son la
  * primera lección de que este remitente se puede archivar sin leer.
  */
-export function renderAvisos(avisos: Aviso[], ahora: Date): Mensaje {
+/**
+ * Quién mandó este correo y qué alcance tiene lo que dice.
+ *
+ * Es parámetro y no constante desde que un segundo cron empezó a usar este
+ * renderizador. El pie que sirve para uno **miente** en el otro: firmado
+ * «corrida de /api/cron/alertas» y prometiendo que solo avisan tres clases, un
+ * correo de la revisión de horas límite le dice a quien lo lee que viene de un
+ * cron que no lo mandó y que su clase no existe. Es §D del Marco en el pie de
+ * un correo — el texto era correcto donde nació y falso donde se reusó.
+ */
+export type PieDeCorreo = {
+  /** La ruta del cron que hizo esta corrida. */
+  origen: string;
+  /** Qué avisa este canal, y qué deja fuera. Una línea por afirmación. */
+  alcance: string[];
+};
+
+export const PIE_ALERTAS: PieDeCorreo = {
+  origen: "/api/cron/alertas",
+  alcance: [
+    "Avisan solo la ingesta detenida, el archivador callado y los servicios sin veredicto.",
+    "Los transitorios —rate limit, error suelto de archivo— y los servicios no cumplidos viajan en el resumen diario.",
+  ],
+};
+
+export const PIE_HORAS_LIMITE: PieDeCorreo = {
+  origen: "/api/cron/revisar-horas-limite",
+  alcance: [
+    "Revisa una vez al día las ocurrencias sin sellar con hora límite en el futuro, y compara la congelada contra la que hoy se derivaría.",
+    "Avisa; no corrige. Corregir la ventana con la que se juzga es decisión de Asav.",
+    "Lo ya sellado no entra: eso no se corrige, se re-verifica.",
+  ],
+};
+
+export function renderAvisos(
+  avisos: Aviso[],
+  ahora: Date,
+  pieDe: PieDeCorreo = PIE_ALERTAS,
+): Mensaje {
   const asunto =
     avisos.length === 1
       ? asuntoDe(avisos[0]!)
       : `J-Telemetry · ${avisos.length} avisos de plataforma`;
 
-  const pie = [
-    `Corrida de /api/cron/alertas · ${instanteSellado(ahora)} (hora de Ciudad Juárez)`,
-    `Avisan solo la ingesta detenida, el archivador callado y los servicios sin veredicto.`,
-    `Los transitorios —rate limit, error suelto de archivo— y los servicios no cumplidos viajan en el resumen diario.`,
-  ].join("<br>");
+  const lineas = [
+    `Corrida de ${pieDe.origen} · ${instanteSellado(ahora)} (hora de Ciudad Juárez)`,
+    ...pieDe.alcance,
+  ];
 
-  const pieTexto = [
-    `Corrida de /api/cron/alertas · ${instanteSellado(ahora)} (hora de Ciudad Juárez)`,
-    `Avisan solo la ingesta detenida, el archivador callado y los servicios sin veredicto.`,
-    `Los transitorios y los servicios no cumplidos viajan en el resumen diario.`,
-  ].join("\n");
+  const pie = lineas.join("<br>");
+  const pieTexto = lineas.join("\n");
 
   return {
     asunto,

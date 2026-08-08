@@ -1,4 +1,4 @@
-import { eq, and, or, not, gte, lte, isNull, inArray, sql, ne, desc, count } from "drizzle-orm";
+import { eq, and, or, not, gt, gte, lte, isNull, inArray, sql, ne, desc, count } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   computeExpectedDeadline,
@@ -2336,6 +2336,67 @@ export class OccurrenceRepository {
       profiles: summary,
       totalCreated: summary.reduce((n, s) => n + s.created, 0),
     };
+  }
+
+  /**
+   * Las ocurrencias que todavía se pueden juzgar, con lo necesario para
+   * comparar su hora límite congelada contra la que hoy se derivaría.
+   *
+   * Es la contraparte de lectura de `renewRollingWindow`: aquél congela la hora
+   * límite al crear la fila y no vuelve a mirarla nunca; esto la vuelve a
+   * mirar. Ninguna de las dos escribe la corrección — eso es decisión de Asav,
+   * no de un programa.
+   *
+   * Tres recortes, y ninguno es de rendimiento:
+   *
+   *  - **Sin hecho sellado.** Una ocurrencia ya sellada no se corrige: se
+   *    re-verifica, y eso es otra decisión con otra firma. Avisar de ella sería
+   *    pedir algo que este aviso no puede sostener.
+   *  - **Hora límite en el futuro.** Una ocurrencia cuya hora límite ya pasó
+   *    está en la cola de verificación o se quedó fuera de ella; lo segundo ya
+   *    lo avisa `sin-veredicto`. Aquí interesa lo que todavía se puede evitar.
+   *  - **Contratos vivos y cuentas reales.** Un contrato suspendido dejó de
+   *    esperarse a propósito, y una cuenta de ejemplo no entra en ningún
+   *    conteo.
+   *
+   * Devuelve columnas sueltas y no el árbol de nueve relaciones: quien llama
+   * necesita seis campos por fila, y traer el árbol para descartarlo es el
+   * costo que `verificar-conteos` ya midió una vez.
+   */
+  async futurasSinSellarParaRevision() {
+    return this.db
+      .select({
+        id: serviceOccurrences.id,
+        serviceDate: serviceOccurrences.serviceDate,
+        expectedDeadline: serviceOccurrences.expectedDeadline,
+        contractId: serviceContracts.id,
+        contractName: serviceContracts.name,
+        policy: serviceContracts.policy,
+        clientName: accounts.name,
+        routeName: routes.name,
+        shiftId: shifts.id,
+        shiftName: shifts.name,
+        shiftStartTime: shifts.startTime,
+      })
+      .from(serviceOccurrences)
+      .innerJoin(serviceProfiles, eq(serviceProfiles.id, serviceOccurrences.serviceProfileId))
+      .innerJoin(serviceContracts, eq(serviceContracts.id, serviceOccurrences.contractId))
+      .innerJoin(accounts, eq(accounts.id, serviceContracts.clientAccountId))
+      .innerJoin(routeShifts, eq(routeShifts.id, serviceProfiles.routeShiftId))
+      .innerJoin(routes, eq(routes.id, routeShifts.routeId))
+      .innerJoin(shifts, eq(shifts.id, routeShifts.shiftId))
+      .leftJoin(
+        complianceFacts,
+        eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id),
+      )
+      .where(
+        and(
+          isNull(complianceFacts.id),
+          gt(serviceOccurrences.expectedDeadline, new Date()),
+          eq(serviceContracts.status, "active"),
+          eq(accounts.isDemo, false),
+        ),
+      );
   }
 
   /**

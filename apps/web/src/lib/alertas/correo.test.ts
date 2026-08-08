@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { renderAvisos, renderResumen, type ResumenDiario } from "./correo";
+import {
+  renderAvisos,
+  renderResumen,
+  PIE_HORAS_LIMITE,
+  type ResumenDiario,
+} from "./correo";
 import type { Aviso } from "./decision";
 
 const T = (iso: string) => new Date(iso);
@@ -160,5 +165,38 @@ describe("el resumen diario", () => {
 
     expect(texto).toContain("7 servicios sin veredicto");
     expect(texto).toContain("3 sin fila de viaje");
+  });
+});
+
+describe("el pie dice de qué corrida viene", () => {
+  const deHoraLimite: Aviso = {
+    clase: "hora-limite-vieja",
+    titulo: "Un servicio va a juzgarse con una hora límite vieja.",
+    mediciones: [{ etiqueta: "Servicios sin sellar", valor: "1", lectura: "de 500 revisados" }],
+    consecuencia: "Se sella contra una ventana que ya no es la del turno.",
+    accion: "Decidir si se corrigen · Asav",
+    instante: new Date("2026-08-09T17:45:00Z"),
+  };
+  const ahora = new Date("2026-08-07T18:00:00Z");
+
+  it("firma la ruta que hizo la corrida, no otra", () => {
+    // El pie de un cron es falso en el correo de otro: dice quién lo mandó y
+    // qué avisa, y las dos cosas cambian. Es §D del Marco en el pie.
+    const propio = renderAvisos([deHoraLimite], ahora, PIE_HORAS_LIMITE);
+
+    expect(propio.texto).toContain("/api/cron/revisar-horas-limite");
+    expect(propio.texto).not.toContain("/api/cron/alertas");
+    expect(propio.html).toContain("/api/cron/revisar-horas-limite");
+  });
+
+  it("no promete el alcance del otro canal", () => {
+    const propio = renderAvisos([deHoraLimite], ahora, PIE_HORAS_LIMITE);
+
+    expect(propio.texto).not.toContain("archivador callado");
+    expect(propio.texto).toContain("Avisa; no corrige");
+  });
+
+  it("sin pie explícito sigue firmando el canal de alertas — nadie lo tiene que recordar", () => {
+    expect(renderAvisos([deHoraLimite], ahora).texto).toContain("/api/cron/alertas");
   });
 });
