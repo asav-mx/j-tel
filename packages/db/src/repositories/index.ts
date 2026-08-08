@@ -1600,6 +1600,20 @@ export class ContractRepository {
    * llamador, tarde o temprano alguien agrega un camino de edición y se olvida.
    * Así editar sin registrar deja de ser posible.
    *
+   * ## Y aun así no bastaba — lo que este método aprendió el 7 de agosto
+   *
+   * Todo lo de arriba lleva cierto desde el 31 de julio, y al 7 de agosto
+   * `contract_policy_history` seguía en CERO filas. No porque nadie editara:
+   * porque la única edición real de una política en ese periodo la hizo un
+   * guion con `UPDATE` crudo, que no pasa por aquí. **Cerrar el camino bueno no
+   * cierra la puerta de atrás.**
+   *
+   * Desde la migración 0020 la red es un trigger de Postgres, que alcanza
+   * también a los guiones y a la consola. Este método sigue siendo el camino
+   * bueno y le CEDE el paso al trigger declarando `jtel.registrado`: aquí la
+   * comparación es la de la política EFECTIVA —con los defaults del esquema
+   * aplicados—, y un trigger solo puede comparar bytes. Ver la migración.
+   *
    * La política nueva aplica solo hacia adelante. Ningún hecho ya sellado se
    * toca: cada uno congeló su propia foto al verificarse.
    */
@@ -1609,6 +1623,23 @@ export class ContractRepository {
     edicion: { actorKind: string; actorId?: string | null; note?: string | null },
   ) {
     return this.db.transaction(async (tx) => {
+      /*
+       * Va ANTES del UPDATE porque el trigger dispara con él. Declara dos
+       * cosas: que este camino se hace cargo del registro, y quién edita —lo
+       * segundo por si el trigger llegara a escribir de todas formas, para que
+       * nunca firme como `sql_directo` algo que sí vino de una persona.
+       *
+       * `set_config(..., true)` es transaccional: se limpia al terminar, así
+       * que la firma no se pega a la conexión ni se filtra a la escritura
+       * siguiente.
+       */
+      await tx.execute(
+        sql`select set_config('jtel.registrado', '1', true),
+                   set_config('jtel.actor_kind', ${edicion.actorKind}, true),
+                   set_config('jtel.actor_id', ${edicion.actorId ?? ""}, true),
+                   set_config('jtel.note', ${edicion.note?.trim() ?? ""}, true)`,
+      );
+
       const actual = await tx.query.serviceContracts.findFirst({
         where: eq(serviceContracts.id, id),
         columns: { policy: true },

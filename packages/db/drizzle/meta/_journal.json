@@ -141,6 +141,13 @@
       "when": 1785200000000,
       "tag": "0019_shift_history",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1785300000000,
+      "tag": "0020_policy_history_trigger",
+      "breakpoints": true
     }
   ]
 }

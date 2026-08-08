@@ -13,10 +13,15 @@ import {
   shifts,
   serviceProfiles,
   shiftHistory,
+  contractPolicyHistory,
   revisarHorasLimite,
 } from "../src/index.js";
 import { eq, inArray, sql } from "drizzle-orm";
-import type { ContractPolicy, OperationalScope } from "@jtel/domain";
+import {
+  contractPolicySchema,
+  type ContractPolicy,
+  type OperationalScope,
+} from "@jtel/domain";
 
 // Candado: falla antes de correr cualquier test si apunta a producción
 const PROD_URL = process.env.DATABASE_URL;
@@ -1868,5 +1873,188 @@ describe("C21 · la historia del turno", () => {
     // Es lo que no se pudo hacer cuando se movió el Turno B: fechar el cambio
     // en vez de acotarlo entre dos corridas del cron.
     expect(despues!.updatedAt).toBeInstanceOf(Date);
+  });
+});
+
+/**
+ * C13 · La historia de la política, y la puerta de atrás que la dejaba vacía.
+ *
+ * El caso, medido el 7 de agosto de 2026: `contract_policy_history` existe
+ * desde el 31 de julio, `updatePolicy` escribe su fila en la misma transacción
+ * desde entonces, y la tabla seguía en CERO filas. No porque nadie editara — la
+ * única edición real de una política en ese periodo la hizo un guion con
+ * `UPDATE` crudo, que no pasa por ese camino.
+ *
+ * **La prueba que sostiene este arreglo es la del UPDATE crudo.** Sin ella,
+ * todo lo demás pasa en verde exactamente igual que pasaba el 6 de agosto,
+ * mientras la tabla se quedaba vacía.
+ *
+ * Y la del contrato viejo es la otra mitad: el trigger no puede reemplazar al
+ * camino bueno, solo cubrirlo. Comparar bytes convertiría el primer guardado de
+ * un contrato sin todas las llaves en un puñado de "cambios" que nadie hizo, y
+ * una historia que arranca con cambios falsos no se vuelve a creer.
+ */
+describe("C13 · la historia de la política", () => {
+  const creados: string[] = [];
+
+  async function contratoDePrueba(nombre: string, policy: unknown) {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+    const [plantilla] = await db.select().from(serviceContracts).limit(1);
+    expect(plantilla).toBeTruthy();
+
+    const [contrato] = await db
+      .insert(serviceContracts)
+      .values({
+        carrierAccountId: plantilla!.carrierAccountId,
+        clientAccountId: plantilla!.clientAccountId,
+        plantId: plantilla!.plantId,
+        plantGroupId: plantilla!.plantGroupId,
+        name: nombre,
+        validFrom: "2026-01-01",
+        validTo: "2026-12-31",
+        policy: policy as ContractPolicy,
+      })
+      .returning();
+    creados.push(contrato!.id);
+    return { db, repos, contrato: contrato! };
+  }
+
+  const historiaDe = async (db: ReturnType<typeof createDb>, id: string) =>
+    db.select().from(contractPolicyHistory).where(eq(contractPolicyHistory.contractId, id));
+
+  afterAll(async () => {
+    if (creados.length === 0) return;
+    const db = createDb(DATABASE_URL);
+    // La historia cae en cascada con el contrato.
+    await db.delete(serviceContracts).where(inArray(serviceContracts.id, creados));
+  });
+
+  it("editar por el camino de la aplicación deja UNA fila, firmada y con su motivo", async () => {
+    const { db, repos, contrato } = await contratoDePrueba("C13 · por la app", TECMA_POLICY);
+
+    await repos.contracts.updatePolicy(
+      contrato.id,
+      { ...TECMA_POLICY, toleranceMinutes: 9 },
+      { actorKind: "human", actorId: null, note: "lo acordado con la planta" },
+    );
+
+    const historia = await historiaDe(db, contrato.id);
+    // UNA, no dos: el trigger cede el paso cuando el camino bueno ya registró.
+    expect(historia).toHaveLength(1);
+    expect(historia[0]!.actorKind).toBe("human");
+    expect(historia[0]!.note).toBe("lo acordado con la planta");
+    expect((historia[0]!.policyBefore as ContractPolicy).toleranceMinutes).toBe(5);
+    expect((historia[0]!.policyAfter as ContractPolicy).toleranceMinutes).toBe(9);
+  });
+
+  it("un UPDATE CRUDO también deja fila — firmada sql_directo", async () => {
+    // ESTA es la prueba de C13. El 6 de agosto una escritura así movió la
+    // política de un contrato real y no dejó rastro. Si esta prueba se pudiera
+    // quitar sin que nada se ponga rojo, el arreglo no arregló nada.
+    const { db, contrato } = await contratoDePrueba("C13 · por SQL crudo", TECMA_POLICY);
+
+    await db.execute(
+      sql`update service_contracts
+             set policy = policy || jsonb_build_object('toleranceMinutes', 12)
+           where id = ${contrato.id}`,
+    );
+
+    const historia = await historiaDe(db, contrato.id);
+    expect(historia).toHaveLength(1);
+    expect(historia[0]!.actorKind).toBe("sql_directo");
+    expect(historia[0]!.actorId).toBeNull();
+    expect((historia[0]!.policyBefore as ContractPolicy).toleranceMinutes).toBe(5);
+    expect((historia[0]!.policyAfter as ContractPolicy).toleranceMinutes).toBe(12);
+  });
+
+  it("un guion que declara su actor queda firmado con su nombre, no como sql_directo", async () => {
+    // Es lo que se le agregó a `escribir-tolerancia-origen` y a
+    // `restaurar-politica`: el trigger es la red, pero una corrida que sabe
+    // quién es no tiene por qué firmar como anónima.
+    const { db, contrato } = await contratoDePrueba("C13 · por guion firmado", TECMA_POLICY);
+
+    await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select set_config('jtel.actor_kind', 'guion:escribir-tolerancia-origen', true),
+                   set_config('jtel.note', 'valor de fábrica, sin cambio de comportamiento', true)`,
+      );
+      await tx.execute(
+        sql`update service_contracts
+               set policy = policy || jsonb_build_object('kmlOriginToleranceFraction', 0.15)
+             where id = ${contrato.id}`,
+      );
+    });
+
+    const historia = await historiaDe(db, contrato.id);
+    expect(historia).toHaveLength(1);
+    expect(historia[0]!.actorKind).toBe("guion:escribir-tolerancia-origen");
+    expect(historia[0]!.note).toContain("sin cambio de comportamiento");
+  });
+
+  it("la firma de un guion no se filtra a la escritura siguiente", async () => {
+    const { db, contrato } = await contratoDePrueba("C13 · fuga de firma", TECMA_POLICY);
+
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`select set_config('jtel.actor_kind', 'guion:algo', true)`);
+      await tx.execute(
+        sql`update service_contracts set policy = policy || jsonb_build_object('toleranceMinutes', 7) where id = ${contrato.id}`,
+      );
+    });
+    await db.execute(
+      sql`update service_contracts set policy = policy || jsonb_build_object('toleranceMinutes', 8) where id = ${contrato.id}`,
+    );
+
+    const historia = await historiaDe(db, contrato.id);
+    expect(historia).toHaveLength(2);
+    expect(new Set(historia.map((h) => h.actorKind))).toEqual(
+      new Set(["guion:algo", "sql_directo"]),
+    );
+  });
+
+  it("guardar sin cambiar nada NO genera fila, ni por la app ni por el trigger", async () => {
+    const { db, repos, contrato } = await contratoDePrueba("C13 · sin cambios", TECMA_POLICY);
+
+    // Igual que la ruta: lo que llega a `updatePolicy` es `parsed.data`, o sea
+    // la política ya pasada por el esquema con sus defaults aplicados.
+    await repos.contracts.updatePolicy(
+      contrato.id,
+      contractPolicySchema.parse(TECMA_POLICY),
+      { actorKind: "human", actorId: null, note: null },
+    );
+
+    expect(await historiaDe(db, contrato.id)).toHaveLength(0);
+  });
+
+  it("un contrato viejo al que le faltan llaves NO registra cambios que nadie hizo", async () => {
+    // El camino bueno compara la política EFECTIVA —con los defaults del
+    // esquema aplicados—; el trigger solo puede comparar bytes. Por eso el
+    // trigger cede el paso: si comparara él, este guardado registraría un
+    // "cambio" por cada llave que el contrato no traía, y una historia que
+    // arranca con cambios falsos no se vuelve a creer.
+    // Tres llaves que el esquema resuelve con default: el contrato no las trae
+    // en su jsonb, pero el motor ya las aplicaba al leerlo.
+    const { windowSlackPct: _w, routeAvgSpeedKmh: _r, kmlCorridorMeters: _k, ...incompleta } =
+      TECMA_POLICY;
+    const { db, repos, contrato } = await contratoDePrueba("C13 · contrato viejo", incompleta);
+
+    await repos.contracts.updatePolicy(
+      contrato.id,
+      contractPolicySchema.parse(incompleta),
+      { actorKind: "human", actorId: null, note: null },
+    );
+
+    // Las tres se escribieron con el valor que ya estaba vigente: la ley no
+    // cambió, así que no hay nada que registrar. Comparando bytes habría tres
+    // filas de cambios que nadie hizo.
+    const [conLasLlaves] = await db
+      .select()
+      .from(serviceContracts)
+      .where(eq(serviceContracts.id, contrato.id));
+    expect((conLasLlaves!.policy as ContractPolicy).windowSlackPct).toBe(
+      TECMA_POLICY.windowSlackPct,
+    );
+    expect(await historiaDe(db, contrato.id)).toHaveLength(0);
+
   });
 });

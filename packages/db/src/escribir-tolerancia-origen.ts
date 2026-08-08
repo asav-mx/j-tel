@@ -117,10 +117,33 @@ for (const f of faltan) {
     continue;
   }
 
-  await db`update service_contracts
-    set policy = policy || jsonb_build_object(${CAMPO}::text, ${VALOR_DE_FABRICA}::numeric),
-        updated_at = now()
-    where id = ${f.id as string} and jsonb_typeof(policy) = 'object'`;
+  /*
+   * FIRMA — C13, y es la corrección de este guion.
+   *
+   * La corrida del 6 de agosto de 2026 escribió la política del Campus a las
+   * 09:14 y **no dejó una sola fila** en `contract_policy_history`. La tabla
+   * existía desde el 31 de julio y `updatePolicy` ya la escribía; este guion
+   * simplemente no pasa por ahí. Ése es el caso entero de C13: la historia
+   * quedó vacía no porque nadie editara, sino porque quien editó entró por
+   * otra puerta.
+   *
+   * Desde la migración 0020 el trigger escribe la fila pase por donde pase la
+   * escritura. Lo que se agrega aquí es la FIRMA: sin declarar actor, esta
+   * corrida quedaría registrada como `sql_directo`, que es verdad pero es
+   * menos de lo que se sabe. Con esto queda claro qué guion fue.
+   *
+   * Va en la misma transacción que el UPDATE porque `set_config(..., true)` es
+   * transaccional: fuera de una, no hay garantía de que la declaración y la
+   * escritura viajen por la misma conexión.
+   */
+  await db.begin(async (tx) => {
+    await tx`select set_config('jtel.actor_kind', 'guion:escribir-tolerancia-origen', true),
+                    set_config('jtel.note', ${`${CAMPO} = ${VALOR_DE_FABRICA}, el mismo valor de fábrica que ya se aplicaba`}, true)`;
+    await tx`update service_contracts
+      set policy = policy || jsonb_build_object(${CAMPO}::text, ${VALOR_DE_FABRICA}::numeric),
+          updated_at = now()
+      where id = ${f.id as string} and jsonb_typeof(policy) = 'object'`;
+  });
 
   const [d] = await db`select jsonb_typeof(policy) tipo,
       (policy->>${CAMPO})::numeric v,
