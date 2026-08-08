@@ -1,0 +1,167 @@
+# El botón que prueba que el canal de correo LLEGA a una persona.
+#
+# ## Por qué existe, y por qué no basta con el vigilante
+#
+# `salud.yml` ya tiene su `simular_codigo`, y prueba **otro camino**: sondea
+# `/api/salud` y avisa **abriendo un issue de GitHub**. Nunca toca Resend.
+# Probar aquél confirma que el vigilante sabe abrir issues —que ya se sabe— y
+# **no dice nada del correo**.
+#
+# Es exactamente la lección que costó nueve días: sacar al vigía de la
+# infraestructura que vigilaba resolvió DÓNDE VIVE y no tocó SI HABLA. Cada
+# canal de entrega es un camino distinto y se prueba por separado, o no se
+# prueba. Dos generaciones del vigilante pasaron por sanas estando mudas.
+#
+# ## Por qué hace falta un simulacro y no basta con esperar
+#
+# El cron `revisar-horas-limite` corre a diario y hoy **no encuentra nada**: no
+# queda ninguna ocurrencia sin sellar con la hora límite vieja. Una corrida
+# limpia no distingue un canal sano de uno mudo — un detector que devuelve cero
+# se ve idéntico a uno que no corre.
+#
+# Y provocarlo de verdad —moviendo un turno real— está descartado: eso ensucia
+# datos de un cliente vivo para probar una plomería. El simulacro dice la
+# verdad sobre sí mismo, no lee la base y no toca ningún hecho.
+#
+# ## Requisitos
+#
+#  · `CRON_SECRET` como **secreto** del repositorio. Es el mismo valor que vive
+#    en Vercel; sin él la ruta contesta 401 y este workflow falla en rojo.
+#  · `SALUD_URL` como variable de repositorio — **ya existe**, y de ella se
+#    deriva la base de la aplicación. Se reusa a propósito para que agregar
+#    este botón cueste UNA cosa nueva y no dos.
+#
+# ## Cómo se lee el resultado
+#
+# Verde no significa «llegó»: significa que Resend lo aceptó y devolvió una
+# referencia. **Llegó lo confirma una persona mirando su bandeja**, y esa es la
+# mitad que esta casa ya aprendió a no dar por supuesta. La referencia queda en
+# el resumen de la corrida para poder rastrear la entrega en el panel de Resend.
+
+name: Simulacro del aviso
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmo:
+        description: >-
+          Escribe SIMULACRO para confirmar. Esto MANDA UN CORREO REAL a
+          ALERTAS_DESTINATARIOS. No lee la base ni toca ningún hecho.
+        required: true
+        default: ""
+
+concurrency:
+  group: simulacro-aviso
+  cancel-in-progress: false
+
+jobs:
+  provocar:
+    runs-on: ubuntu-latest
+    steps:
+      # La confirmación escrita existe porque este botón manda correo de verdad
+      # a una persona. Un `workflow_dispatch` se dispara de un clic y desde el
+      # teléfono; sin esta guarda, un toque sin querer es un correo sin querer,
+      # y un canal que grita sin motivo enseña a ignorarlo.
+      - name: Exigir la confirmación escrita
+        if: inputs.confirmo != 'SIMULACRO'
+        run: |
+          echo "::error::Escribe SIMULACRO en el campo de confirmación. Recibido: '${{ inputs.confirmo }}'"
+          exit 1
+
+      - name: Comprobar la configuración
+        env:
+          SALUD_URL: ${{ vars.SALUD_URL }}
+          TIENE_SECRETO: ${{ secrets.CRON_SECRET != '' }}
+        run: |
+          FALTA=0
+          if [ -z "$SALUD_URL" ]; then
+            echo "::error::Falta la variable de repositorio SALUD_URL."
+            FALTA=1
+          fi
+          if [ "$TIENE_SECRETO" != "true" ]; then
+            echo "::error::Falta el secreto de repositorio CRON_SECRET."
+            FALTA=1
+          fi
+          [ "$FALTA" -eq 0 ] || exit 1
+
+      - name: Provocar el aviso
+        id: simulacro
+        env:
+          SALUD_URL: ${{ vars.SALUD_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          # La base sale de SALUD_URL, que ya existe. Si no termina como se
+          # espera, esto GRITA en vez de adivinar una URL: una sustitución que
+          # no encuentra su patrón tiene que gritar (regla 11).
+          BASE="${SALUD_URL%/api/salud}"
+          if [ "$BASE" = "$SALUD_URL" ]; then
+            echo "::error::SALUD_URL no termina en /api/salud, así que no se puede derivar la base de la app. Valor: $SALUD_URL"
+            exit 1
+          fi
+          echo "Base de la aplicación: $BASE"
+
+          # `-w` separa el cuerpo del código para poder juzgar los dos. Sin
+          # `-f`, para que un 4xx/5xx traiga su cuerpo en vez de morir mudo.
+          set +e
+          RESP=$(curl -sS --max-time 60 -w '\n%{http_code}' \
+            -H "authorization: Bearer $CRON_SECRET" \
+            "$BASE/api/cron/revisar-horas-limite?simular=1")
+          RC=$?
+          set -e
+
+          if [ $RC -ne 0 ]; then
+            echo "::error::No hubo respuesta de $BASE (curl salió con $RC)."
+            exit 1
+          fi
+
+          CODIGO=$(echo "$RESP" | tail -n1)
+          CUERPO=$(echo "$RESP" | sed '$d')
+          echo "Código: $CODIGO"
+          echo "$CUERPO"
+
+          if [ "$CODIGO" != "200" ]; then
+            echo "::error::La ruta contestó $CODIGO. 401 = el secreto no coincide con el de Vercel; 503 = el canal no está configurado."
+            exit 1
+          fi
+
+          # Verde de la ruta no basta: se comprueba que DIJO que envió. Un 200
+          # con `enviado: false` es la forma exacta del fallo silencioso que
+          # esta plomería existe para romper.
+          ENVIADO=$(echo "$CUERPO" | jq -r '.enviado // false')
+          if [ "$ENVIADO" != "true" ]; then
+            echo "::error::La ruta respondió 200 pero no envió. Cuerpo arriba."
+            exit 1
+          fi
+
+          REFERENCIA=$(echo "$CUERPO" | jq -r '.referencia // "sin referencia"')
+          DESTINATARIOS=$(echo "$CUERPO" | jq -r '.destinatarios // 0')
+          echo "referencia=$REFERENCIA" >> "$GITHUB_OUTPUT"
+          echo "destinatarios=$DESTINATARIOS" >> "$GITHUB_OUTPUT"
+
+      - name: Decir qué falta comprobar, que es lo que no puede comprobar esto
+        env:
+          REFERENCIA: ${{ steps.simulacro.outputs.referencia }}
+          DESTINATARIOS: ${{ steps.simulacro.outputs.destinatarios }}
+        run: |
+          {
+            echo "## Resend aceptó el correo"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Referencia | \`$REFERENCIA\` |"
+            echo "| Destinatarios | $DESTINATARIOS |"
+            echo "| Asunto | J-Telemetry · SIMULACRO · prueba del canal de avisos |"
+            echo ""
+            echo "### Esto NO prueba que llegó"
+            echo ""
+            echo "Verde aquí significa que Resend **aceptó** el envío y devolvió"
+            echo "una referencia. **Que llegue a una bandeja lo confirma una"
+            echo "persona**, y ésa es justo la mitad que dos generaciones del"
+            echo "vigilante nunca comprobaron."
+            echo ""
+            echo "Falta: abrir la bandeja de \`ALERTAS_DESTINATARIOS\` y ver el"
+            echo "correo. Con la referencia de arriba también se puede ver su"
+            echo "estado de entrega en el panel de Resend."
+          } >> "$GITHUB_STEP_SUMMARY"
