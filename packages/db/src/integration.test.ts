@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import {
   createDb,
   createRepositories,
@@ -10,6 +10,9 @@ import {
   driverCredentials,
   accounts,
   serviceContracts,
+  shifts,
+  serviceProfiles,
+  revisarHorasLimite,
 } from "../src/index.js";
 import { eq, inArray } from "drizzle-orm";
 import type { ContractPolicy } from "@jtel/domain";
@@ -1484,6 +1487,203 @@ describe("deCuentaReal — las cuentas de ejemplo no disparan el vigilante", () 
     const idsDemo = new Set(cuentas.map((c) => c.id));
     for (const a of abiertas) {
       expect(idsDemo.has(a.carrierAccountId ?? "")).toBe(false);
+    }
+  });
+});
+
+
+/**
+ * C21 · La compuerta del arreglo: **se provoca el aviso a propósito.**
+ *
+ * Un detector que devuelve cero se ve idéntico a uno que no corre, y hoy el
+ * mundo real devuelve cero — al 7 de agosto de 2026 no queda ninguna
+ * ocurrencia sin sellar con la hora límite vieja. O sea que una corrida limpia
+ * de este cron en producción **no prueba nada por sí sola**: es exactamente la
+ * forma en que dos generaciones del vigilante pasaron por sanas estando mudas.
+ *
+ * Lo que estas pruebas hacen es lo único que cuenta: **mueven un turno de
+ * verdad** en la rama desechable y comprueban que el detector lo ve, con el
+ * corrimiento exacto. Y comprueban el otro lado —que con el turno en su sitio
+ * no encuentra nada—, porque una prueba que solo mira que algo salga pasa
+ * igual de verde cuando sale por el motivo equivocado. Es la regla 17 aplicada
+ * al medidor: contrastar no es correrlo otra vez, es **cambiar algo que
+ * debería cambiar el resultado**.
+ *
+ * El terreno lo prepara **el generador de verdad**, `renewRollingWindow`, y no
+ * un `insert` a mano: la hora límite que esto revisa es exactamente la que ese
+ * generador congela, y sembrarla de otra forma probaría contra una fila que el
+ * sistema nunca habría escrito así.
+ *
+ * ## Lo que estas pruebas NO cubren, y hay que decirlo
+ *
+ * Aquí termina la mitad de la detección. **La otra mitad es que el correo
+ * llegue a una persona**, y ésa no se puede probar desde aquí: necesita
+ * `RESEND_API_KEY` y `ALERTAS_DESTINATARIOS`. Hasta que ese aviso se haya
+ * visto llegar a una bandeja, el instrumento no cuenta como probado. Detectar
+ * y avisar son dos cosas, y la segunda casi nunca se prueba.
+ */
+describe("C21 · la revisión de horas límite", () => {
+  const CORRIMIENTO_MINUTOS = 90;
+
+  /**
+   * Lo que esta suite creó, para poder deshacerlo.
+   *
+   * La primera versión llamaba a `renewRollingWindow(30)` y no borraba nada.
+   * Funcionó, y **rompió la prueba del calendario en la corrida siguiente**:
+   * las 89 ocurrencias que dejó incluían el lunes 24 de agosto que aquella
+   * prueba genera ella misma, así que se lo encontró ya creado y contó cero.
+   * La rama es desechable, pero desechable no es "sin estado": lo que una
+   * prueba deja vive hasta que otra tropieza con ello, y el fallo aparece
+   * lejos de su causa.
+   */
+  const creadas: string[] = [];
+
+  beforeAll(async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    // Un solo perfil y una ventana estrecha por delante, en vez de renovar la
+    // ventana rodante entera: el terreno que hace falta es "hay ocurrencias
+    // futuras sin sellar", no "la base entera al día".
+    const [perfil] = await db.select().from(serviceProfiles).where(eq(serviceProfiles.active, true));
+    expect(perfil).toBeTruthy();
+
+    const desde = new Date();
+    desde.setUTCDate(desde.getUTCDate() + 20);
+    const hasta = new Date(desde);
+    hasta.setUTCDate(hasta.getUTCDate() + 5);
+
+    const generado = await repos.occurrences.generateForProfile(perfil!.id, desde, hasta);
+    creadas.push(...generado.createdIds);
+    // El generador de verdad tiene que haber producido algo, o todo lo de
+    // abajo mide sobre vacío.
+    expect(creadas.length).toBeGreaterThan(0);
+  });
+
+  afterAll(async () => {
+    if (creadas.length === 0) return;
+    const db = createDb(DATABASE_URL);
+    // Los viajes caen en cascada con la ocurrencia.
+    await db.delete(serviceOccurrences).where(inArray(serviceOccurrences.id, creadas));
+  });
+
+  it("hay terreno que revisar — el control que hace legible al cero", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const candidatas = await repos.occurrences.futurasSinSellarParaRevision();
+
+    // Sin esto, todo lo de abajo pasaría en vacío: cero desalineadas sobre cero
+    // ocurrencias no dice "todo alineado", dice "no vi nada".
+    expect(candidatas.length).toBeGreaterThan(0);
+  });
+
+  it("con los turnos en su sitio no inventa desalineadas", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const revision = await revisarHorasLimite(repos);
+
+    expect(revision.revisadas).toBeGreaterThan(0);
+    expect(revision.desalineadas).toHaveLength(0);
+  });
+
+  it("mover un turno hace aparecer sus ocurrencias, con el corrimiento exacto", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const antes = await revisarHorasLimite(repos);
+    const candidatas = await repos.occurrences.futurasSinSellarParaRevision();
+    const objetivo = candidatas[0]!;
+    const cuantas = candidatas.filter((c) => c.shiftId === objetivo.shiftId).length;
+    expect(cuantas).toBeGreaterThan(0);
+
+    const [h, m, s] = objetivo.shiftStartTime.split(":").map(Number);
+    const movida = new Date(0);
+    movida.setUTCHours(h ?? 0, (m ?? 0) + CORRIMIENTO_MINUTOS, s ?? 0);
+    const horaNueva = movida.toISOString().slice(11, 19);
+
+    try {
+      // La provocación: alguien mueve el turno, y nada revisa lo ya generado.
+      await db
+        .update(shifts)
+        .set({ startTime: horaNueva })
+        .where(eq(shifts.id, objetivo.shiftId));
+
+      const despues = await revisarHorasLimite(repos);
+
+      // Mismo universo revisado: lo que cambió es el turno, no la lectura.
+      expect(despues.revisadas).toBe(antes.revisadas);
+
+      const delTurno = despues.desalineadas.filter((d) => d.turnoId === objetivo.shiftId);
+      expect(delTurno).toHaveLength(cuantas);
+      for (const d of delTurno) {
+        expect(d.difMinutos).toBe(CORRIMIENTO_MINUTOS);
+        expect(d.turnoInicio).toBe(horaNueva);
+        // Lo guardado sigue siendo lo viejo: eso es el defecto, no un efecto
+        // de la prueba. El generador congeló y nadie volvió a mirar.
+        expect(d.derivada.getTime() - d.guardada.getTime()).toBe(
+          CORRIMIENTO_MINUTOS * 60_000,
+        );
+      }
+    } finally {
+      // Se devuelve a su hora aunque la prueba falle a media corrida: la rama
+      // es desechable, pero dejarla mintiendo hace que la siguiente prueba
+      // mida otra cosa sin avisar.
+      await db
+        .update(shifts)
+        .set({ startTime: objetivo.shiftStartTime })
+        .where(eq(shifts.id, objetivo.shiftId));
+    }
+
+    // Y el detector sigue vivo después de devolver el turno a su sitio.
+    const restaurado = await revisarHorasLimite(repos);
+    expect(restaurado.revisadas).toBeGreaterThan(0);
+    expect(restaurado.desalineadas.filter((d) => d.turnoId === objetivo.shiftId)).toHaveLength(
+      0,
+    );
+  });
+
+  it("una ocurrencia ya sellada sale de la lista: eso no se corrige, se re-verifica", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const antes = await repos.occurrences.futurasSinSellarParaRevision();
+    const objetivo = antes[0]!;
+
+    const [fila] = await db
+      .select({
+        tripId: trips.id,
+        geofenceId: serviceProfiles.geofenceId,
+        policy: serviceContracts.policy,
+      })
+      .from(serviceOccurrences)
+      .innerJoin(trips, eq(trips.serviceOccurrenceId, serviceOccurrences.id))
+      .innerJoin(serviceProfiles, eq(serviceProfiles.id, serviceOccurrences.serviceProfileId))
+      .innerJoin(serviceContracts, eq(serviceContracts.id, serviceOccurrences.contractId))
+      .where(eq(serviceOccurrences.id, objetivo.id));
+    expect(fila).toBeTruthy();
+
+    const [hecho] = await db
+      .insert(complianceFacts)
+      .values({
+        serviceOccurrenceId: objetivo.id,
+        tripId: fila!.tripId,
+        expectedDeadline: objetivo.expectedDeadline,
+        expectedGeofenceId: fila!.geofenceId,
+        status: "pendiente_evidencia",
+        routeStrictnessApplied: "destino_only",
+        contractPolicySnapshot: fila!.policy as ContractPolicy,
+      })
+      .returning();
+
+    try {
+      const despues = await repos.occurrences.futurasSinSellarParaRevision();
+      expect(despues.some((d) => d.id === objetivo.id)).toBe(false);
+      // El control: el resto sigue ahí, así que la exclusión no vació la lista.
+      expect(despues.length).toBe(antes.length - 1);
+    } finally {
+      await db.delete(complianceFacts).where(eq(complianceFacts.id, hecho!.id));
     }
   });
 });

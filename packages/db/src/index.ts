@@ -31,6 +31,12 @@ export {
   escribirEnLotes,
 } from "./lote-de-escritura.js";
 export { routeWindowSizing, windowForOccurrence } from "./ventana-ocurrencia.js";
+export {
+  revisarHorasLimite,
+  ANTICIPACION_POR_DEFECTO,
+  type HoraLimiteDesalineada,
+  type RevisionDeHorasLimite,
+} from "./horas-limite.js";
 /**
  * Fixture de pruebas, no de producto. Se niega a sembrar fuera de
  * `DATABASE_URL_TEST`; ver el candado dentro del archivo.

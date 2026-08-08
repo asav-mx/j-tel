@@ -1,16 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 /**
- * Las siete rutas de cron, medidas donde de verdad importa: **en la ruta**, no
+ * Las ocho rutas de cron, medidas donde de verdad importa: **en la ruta**, no
  * en la guardia.
  *
  * `guardia-cron.test.ts` mide que la guardia decide bien. Esto mide otra cosa
- * —que las siete la llaman, y que la llaman antes de hacer nada—, que es
+ * —que las ocho la llaman, y que la llaman antes de hacer nada—, que es
  * justamente lo que falló la primera vez: la lógica estaba bien escrita en un
  * lado y copiada mal en siete.
  *
  * Una prueba que solo ejercitara la guardia pasaría en verde con una ruta que
  * se olvidó de llamarla.
+ *
+ * **Y este archivo solo cubre lo que su lista nombra.** Una ruta de cron nueva
+ * que no se agregue a `RUTAS` no rompe nada aquí: el verde sigue diciendo «las
+ * rutas están guardadas» y midiendo «las rutas de la lista están guardadas».
+ * Es la misma forma de la regla 8 que el resto del archivo cierra, aplicada al
+ * propio registro — y por eso se dice en vez de confiar en que nadie olvide.
  */
 
 const procesarPendientes = vi.fn();
@@ -18,6 +24,7 @@ const archivarTodo = vi.fn();
 const correrBackfill = vi.fn();
 const revisarLatido = vi.fn();
 const renovarVentana = vi.fn();
+const revisarHoras = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   getRepos: () => ({
@@ -52,6 +59,7 @@ vi.mock("@/lib/alertas/datos", () => ({
 vi.mock("@/lib/alertas/correo", () => ({
   renderAvisos: vi.fn(),
   renderResumen: vi.fn(),
+  PIE_HORAS_LIMITE: { origen: "x", alcance: [] },
 }));
 vi.mock("@/lib/alertas/canal", () => ({
   ErrorDeCanal: class extends Error {},
@@ -60,6 +68,18 @@ vi.mock("@/lib/alertas/canal", () => ({
 vi.mock("@/lib/alertas/decision", () => ({
   INTERVALO_ALERTAS_MINUTOS: 5,
   cubetaDeCorrida: () => "cubeta",
+  agruparDesalineadas: vi.fn(() => []),
+  avisoHoraLimiteVieja: vi.fn(),
+}));
+
+/*
+ * Solo se sustituye la lectura, no el paquete entero: `@jtel/db` trae también
+ * el esquema y los repositorios, y reemplazarlo completo dejaría de probar la
+ * ruta para probar el simulacro.
+ */
+vi.mock("@jtel/db", async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  revisarHorasLimite: (...args: unknown[]) => revisarHoras(...args),
 }));
 
 const RUTAS = [
@@ -70,6 +90,10 @@ const RUTAS = [
   { nombre: "cron/renew-occurrences", modulo: () => import("./renew-occurrences/route") },
   { nombre: "cron/alertas", modulo: () => import("./alertas/route") },
   { nombre: "cron/alertas-resumen", modulo: () => import("./alertas-resumen/route") },
+  {
+    nombre: "cron/revisar-horas-limite",
+    modulo: () => import("./revisar-horas-limite/route"),
+  },
 ] as const;
 
 /** El respaldo que se quitó — escrito en piezas para no volver a publicarlo. */
@@ -88,6 +112,7 @@ const TRABAJO = [
   correrBackfill,
   revisarLatido,
   renovarVentana,
+  revisarHoras,
 ];
 
 beforeEach(() => {
@@ -102,7 +127,7 @@ afterEach(() => {
   delete process.env.CRON_SECRET;
 });
 
-describe("sin CRON_SECRET, las siete responden 503", () => {
+describe("sin CRON_SECRET, las ocho responden 503", () => {
   for (const ruta of RUTAS) {
     it(`${ruta.nombre} → 503`, async () => {
       const { GET } = await ruta.modulo();
@@ -114,7 +139,7 @@ describe("sin CRON_SECRET, las siete responden 503", () => {
     });
   }
 
-  it("ninguna de las siete llegó a trabajar", async () => {
+  it("ninguna de las ocho llegó a trabajar", async () => {
     for (const ruta of RUTAS) {
       const { GET } = await ruta.modulo();
       await GET(peticion(`Bearer ${RESPALDO_RETIRADO}`));
@@ -123,7 +148,7 @@ describe("sin CRON_SECRET, las siete responden 503", () => {
     for (const f of TRABAJO) expect(f).not.toHaveBeenCalled();
   });
 
-  it("POST tampoco pasa — las siete lo delegan a GET", async () => {
+  it("POST tampoco pasa — las ocho lo delegan a GET", async () => {
     for (const ruta of RUTAS) {
       const { POST } = await ruta.modulo();
       const r = await POST(peticion(`Bearer ${RESPALDO_RETIRADO}`));
@@ -132,7 +157,7 @@ describe("sin CRON_SECRET, las siete responden 503", () => {
   });
 });
 
-describe("con CRON_SECRET, las siete siguen exigiendo el secreto correcto", () => {
+describe("con CRON_SECRET, las ocho siguen exigiendo el secreto correcto", () => {
   const SECRETO = "secreto-de-prueba-no-usado-en-ninguna-parte";
 
   beforeEach(() => {

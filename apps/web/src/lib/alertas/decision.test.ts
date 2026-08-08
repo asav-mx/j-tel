@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
+  agruparDesalineadas,
   agruparSinVeredicto,
   asuntoDe,
+  avisoDeSimulacro,
+  avisoHoraLimiteVieja,
   avisoIngestaDetenida,
   avisoSinVeredicto,
   CLASES_POR_CUBETA,
@@ -11,7 +14,9 @@ import {
   gruposQueAvisan,
   instanteSinVeredicto,
   MARGEN_SIN_VEREDICTO_MINUTOS,
+  TOPE_DETALLE_DESALINEADAS,
   type AlertaLeida,
+  type OcurrenciaDesalineada,
   type ServicioSinVeredicto,
 } from "./decision";
 
@@ -229,5 +234,224 @@ describe("el aviso de ingesta detenida", () => {
     expect(asuntoDe(avisoIngestaDetenida(alerta, T("2026-07-31T13:25:00Z")))).toBe(
       "J-Telemetry · Ingesta detenida",
     );
+  });
+});
+
+/* ─── C21 · la hora límite que su turno ya no produce ─────────────────────── */
+
+const desalineada = (
+  parcial: Partial<OcurrenciaDesalineada> = {},
+): OcurrenciaDesalineada => ({
+  ocurrenciaId: "o1",
+  contratoId: "c1",
+  contratoNombre: "Contrato A",
+  clienteNombre: "Cliente A",
+  turnoId: "t1",
+  turnoNombre: "Turno A",
+  turnoInicio: "06:00:00",
+  anticipacionMinutos: 15,
+  rutaNombre: "Ruta 1",
+  serviceDate: "2026-08-20",
+  guardada: T("2026-08-20T11:45:00Z"),
+  derivada: T("2026-08-20T05:45:00Z"),
+  causa: "zona",
+  difMinutos: -360,
+  ...parcial,
+});
+
+describe("las ocurrencias desalineadas se agrupan por contrato, turno y corrimiento", () => {
+  it("un turno movido es UN grupo, no un correo por ocurrencia", () => {
+    const grupos = agruparDesalineadas([
+      desalineada({ ocurrenciaId: "o1", serviceDate: "2026-08-20" }),
+      desalineada({ ocurrenciaId: "o2", serviceDate: "2026-08-21" }),
+      desalineada({ ocurrenciaId: "o3", serviceDate: "2026-08-22" }),
+    ]);
+
+    expect(grupos).toHaveLength(1);
+    expect(grupos[0]!.ocurrencias).toHaveLength(3);
+  });
+
+  it("NO junta dos corrimientos distintos del mismo turno — son dos historias", () => {
+    // Es la causa C20 cometida en el correo que avisa de otra: una etiqueta
+    // que suma dos cosas distintas porque comparten nombre.
+    const grupos = agruparDesalineadas([
+      desalineada({ ocurrenciaId: "o1", difMinutos: -360 }),
+      desalineada({ ocurrenciaId: "o2", difMinutos: -5 }),
+    ]);
+
+    expect(grupos).toHaveLength(2);
+    expect(grupos.map((g) => g.difMinutos).sort((a, b) => a - b)).toEqual([-360, -5]);
+  });
+
+  it("separa turnos distintos aunque compartan nombre — C20", () => {
+    // Dos turnos llamados «Turno B» en la misma cuenta cliente: el de la
+    // planta y el del campus. Agrupar por nombre los colapsaría en uno.
+    const grupos = agruparDesalineadas([
+      desalineada({ turnoId: "t-planta", turnoNombre: "Turno B", contratoId: "c1" }),
+      desalineada({ turnoId: "t-campus", turnoNombre: "Turno B", contratoId: "c2" }),
+    ]);
+
+    expect(grupos).toHaveLength(2);
+  });
+
+  it("ordena por cuándo se vuelve irreversible, no por tamaño del grupo", () => {
+    const grupos = agruparDesalineadas([
+      // El grupo grande se sella después.
+      desalineada({ ocurrenciaId: "a1", turnoId: "grande", guardada: T("2026-08-25T11:45:00Z") }),
+      desalineada({ ocurrenciaId: "a2", turnoId: "grande", guardada: T("2026-08-26T11:45:00Z") }),
+      // El chico se sella mañana.
+      desalineada({ ocurrenciaId: "b1", turnoId: "urgente", guardada: T("2026-08-09T11:45:00Z") }),
+    ]);
+
+    expect(grupos[0]!.ocurrencias).toHaveLength(1);
+    expect(grupos[0]!.primeraEnSellarse.toISOString()).toBe("2026-08-09T11:45:00.000Z");
+  });
+
+  it("el reloj del grupo es la ocurrencia que primero cruza su hora límite", () => {
+    const grupos = agruparDesalineadas([
+      desalineada({ ocurrenciaId: "o1", guardada: T("2026-08-22T11:45:00Z") }),
+      desalineada({ ocurrenciaId: "o2", guardada: T("2026-08-20T11:45:00Z") }),
+      desalineada({ ocurrenciaId: "o3", guardada: T("2026-08-21T11:45:00Z") }),
+    ]);
+
+    expect(grupos[0]!.primeraEnSellarse.toISOString()).toBe("2026-08-20T11:45:00.000Z");
+    expect(grupos[0]!.ultimaEnSellarse.toISOString()).toBe("2026-08-22T11:45:00.000Z");
+  });
+});
+
+describe("el aviso de hora límite vieja", () => {
+  const ahora = T("2026-08-08T12:00:00Z");
+  const unGrupo = (ocurrencias: OcurrenciaDesalineada[]) =>
+    agruparDesalineadas(ocurrencias)[0]!;
+
+  it("trae las cuatro partes de un hallazgo, no solo el número", () => {
+    const aviso = avisoHoraLimiteVieja(unGrupo([desalineada()]), ahora, 500);
+
+    expect(aviso.titulo).toContain("Cliente A");
+    expect(aviso.mediciones.length).toBeGreaterThan(0);
+    expect(aviso.consecuencia).not.toBe("");
+    expect(aviso.accion).toContain("Asav");
+  });
+
+  it("dice sobre cuántas se midió, para que el conteo no viaje sin su universo", () => {
+    const aviso = avisoHoraLimiteVieja(unGrupo([desalineada()]), ahora, 500);
+
+    const servicios = aviso.mediciones.find((m) => m.etiqueta === "Servicios sin sellar");
+    expect(servicios?.valor).toBe("1");
+    expect(servicios?.lectura).toContain("de 500 revisados");
+  });
+
+  it("escribe el corrimiento como duración, nunca con formato de hora", () => {
+    const aviso = avisoHoraLimiteVieja(
+      unGrupo([desalineada({ difMinutos: -360 })]),
+      ahora,
+      500,
+    );
+
+    const corrimiento = aviso.mediciones.find((m) => m.etiqueta === "Corrimiento");
+    expect(corrimiento?.valor).toContain("6 h");
+    expect(corrimiento?.valor).not.toMatch(/\d+:\d\d/);
+  });
+
+  it("el sentido del corrimiento no se contradice con su lectura", () => {
+    // `difMinutos` es derivada − guardada. La primera redacción decía «tarde»
+    // junto a «va antes» en la misma línea, y ninguna prueba lo veía: el valor
+    // era correcto y la lectura también, cada uno por su cuenta. Esta prueba
+    // existe porque lo atrapó leer el correo, no una aserción.
+    const corrimiento = (dif: number) =>
+      avisoHoraLimiteVieja(unGrupo([desalineada({ difMinutos: dif })]), ahora, 500)
+        .mediciones.find((m) => m.etiqueta === "Corrimiento")!;
+
+    // Derivada después de la guardada ⇒ la guardada va adelantada.
+    const adelantada = corrimiento(360);
+    expect(adelantada.valor).toBe("6 h temprano");
+    expect(adelantada.lectura).toContain("va antes");
+
+    // Derivada antes de la guardada ⇒ la guardada va atrasada.
+    const atrasada = corrimiento(-150);
+    expect(atrasada.valor).toBe("2 h 30 min tarde");
+    expect(atrasada.lectura).toContain("va después");
+  });
+
+  it("distingue el marco temporal equivocado del ajuste de política", () => {
+    const zona = avisoHoraLimiteVieja(
+      unGrupo([desalineada({ causa: "zona" })]),
+      ahora,
+      500,
+    );
+    const deriva = avisoHoraLimiteVieja(
+      unGrupo([desalineada({ causa: "deriva", difMinutos: -5 })]),
+      ahora,
+      500,
+    );
+
+    const lectura = (a: typeof zona) =>
+      a.mediciones.find((m) => m.etiqueta === "Corrimiento")!.lectura;
+    expect(lectura(zona)).toContain("medianoche civil");
+    expect(lectura(deriva)).toContain("cambiaron después de generarse");
+  });
+
+  it("cada instante de evidencia lleva su fecha completa", () => {
+    const aviso = avisoHoraLimiteVieja(unGrupo([desalineada()]), ahora, 500);
+
+    const primero = aviso.mediciones.find((m) => m.etiqueta === "El primero se juzga");
+    expect(primero?.valor).toMatch(/^\d{4}-\d{2}-\d{2} /);
+  });
+
+  it("recorta la lista larga y DICE que la recortó", () => {
+    const muchas = Array.from({ length: TOPE_DETALLE_DESALINEADAS + 8 }, (_, i) =>
+      desalineada({ ocurrenciaId: `o${i}`, serviceDate: `2026-08-${10 + i}` }),
+    );
+    const aviso = avisoHoraLimiteVieja(unGrupo(muchas), ahora, 500);
+
+    expect(aviso.detalle).toHaveLength(TOPE_DETALLE_DESALINEADAS + 1);
+    expect(aviso.detalle!.at(-1)).toContain("8 más");
+    // El conteo de arriba sigue siendo el completo: el recorte es de la lista.
+    expect(aviso.titulo).toContain(String(TOPE_DETALLE_DESALINEADAS + 8));
+  });
+
+  it("el asunto se entiende completo en la notificación del teléfono", () => {
+    expect(asuntoDe(avisoHoraLimiteVieja(unGrupo([desalineada()]), ahora, 500))).toBe(
+      "J-Telemetry · Hora límite desalineada",
+    );
+  });
+});
+
+describe("el simulacro se anuncia como simulacro", () => {
+  const ahora = T("2026-08-08T18:00:00Z");
+
+  it("el asunto lo dice, para que la notificación del teléfono no engañe", () => {
+    // Si compartiera clase con un hallazgo, el asunto diría «Hora límite
+    // desalineada» y se leería como real antes de que nadie abra el correo.
+    expect(asuntoDe(avisoDeSimulacro(ahora))).toContain("SIMULACRO");
+    expect(asuntoDe(avisoDeSimulacro(ahora))).not.toContain("desalineada");
+  });
+
+  it("el título y la acción también, no solo el asunto", () => {
+    const aviso = avisoDeSimulacro(ahora);
+
+    expect(aviso.titulo).toContain("SIMULACRO");
+    expect(aviso.titulo).toContain("no es un hallazgo");
+    expect(aviso.accion).toContain("Confirmar que este correo llegó");
+  });
+
+  it("no afirma ningún servicio: cero, con su lectura", () => {
+    const aviso = avisoDeSimulacro(ahora);
+    const servicios = aviso.mediciones.find((m) => m.etiqueta === "Servicios afectados");
+
+    expect(servicios?.valor).toBe("0");
+    expect(servicios?.lectura).toContain("no lee la base");
+    // Un simulacro que nombrara servicios sería §D: un correo correcto como
+    // prueba y falso como afirmación sobre la operación.
+    expect(aviso.detalle).toBeUndefined();
+  });
+
+  it("dice que fue provocado a mano y no por una corrida programada", () => {
+    const provocado = avisoDeSimulacro(ahora).mediciones.find(
+      (m) => m.etiqueta === "Provocado",
+    );
+
+    expect(provocado?.lectura).toContain("?simular=1");
+    expect(provocado?.lectura).toContain("ninguna corrida programada");
   });
 });
