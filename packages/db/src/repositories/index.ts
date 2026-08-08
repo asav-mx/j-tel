@@ -35,6 +35,7 @@ import {
   deviceAssignments,
   routes,
   shifts,
+  shiftHistory,
   routeShifts,
   routeKmlVariants,
   routeKmlVersions,
@@ -1195,11 +1196,37 @@ export class RouteRepository {
     return this.db.query.shifts.findFirst({ where });
   }
 
+  /**
+   * Mueve o renombra un turno, dejando quién lo hizo.
+   *
+   * ## Quién escribe la historia, y por qué no es este método
+   *
+   * La fila de `shift_history` la escribe un **trigger de Postgres**, no este
+   * código. La diferencia importa y la enseñó C13: ahí el registro sí vive en
+   * `updatePolicy`, en la misma transacción, desde el 31 de julio — y al 7 de
+   * agosto la tabla seguía en cero filas, porque la única edición real de una
+   * política la hizo un guion con `UPDATE` crudo que no pasa por ahí. Cerrar el
+   * camino bueno no cierra la puerta de atrás.
+   *
+   * Lo que este método hace es **declarar quién está editando**, con
+   * `set_config(..., true)` —transaccional, se limpia solo al terminar—, para
+   * que el trigger pueda firmar la fila. Una escritura que no lo declare queda
+   * firmada `sql_directo`, que es la verdad sobre ella.
+   *
+   * Va en transacción por eso: `set_config` con el tercer argumento en `true`
+   * vale solo dentro de una, y fuera de una no habría forma de garantizar que
+   * el `UPDATE` viaja por la misma conexión que la declaración.
+   *
+   * Mover un turno **no alcanza a las ocurrencias ya generadas** — su hora
+   * límite quedó congelada al crearse. Eso es C21 y no se arregla aquí: lo
+   * avisa `/api/cron/revisar-horas-limite`.
+   */
   async updateShift(
     id: string,
     clientAccountId: string,
     scope: OperationalScope,
     data: { name: string; startTime: string },
+    edicion: { actorKind: string; actorId?: string | null; note?: string | null },
   ): Promise<
     | { ok: true }
     | { ok: false; reason: "not_found" | "duplicate" }
@@ -1215,11 +1242,26 @@ export class RouteRepository {
     );
     if (duplicate) return { ok: false, reason: "duplicate" };
 
-    await this.db
-      .update(shifts)
-      .set({ name: data.name, startTime: data.startTime })
-      .where(eq(shifts.id, id));
+    await this.db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select set_config('jtel.actor_kind', ${edicion.actorKind}, true),
+                   set_config('jtel.actor_id', ${edicion.actorId ?? ""}, true),
+                   set_config('jtel.note', ${edicion.note?.trim() ?? ""}, true)`,
+      );
+      await tx
+        .update(shifts)
+        .set({ name: data.name, startTime: data.startTime })
+        .where(eq(shifts.id, id));
+    });
     return { ok: true };
+  }
+
+  /** La historia de un turno, de la edición más reciente hacia atrás. */
+  async getShiftHistory(shiftId: string) {
+    return this.db.query.shiftHistory.findMany({
+      where: eq(shiftHistory.shiftId, shiftId),
+      orderBy: (h, { desc }) => [desc(h.changedAt)],
+    });
   }
 
   private async routeShiftDeleteBlockReason(

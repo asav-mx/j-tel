@@ -134,6 +134,13 @@
       "when": 1785100000000,
       "tag": "0018_ledger_actor_user_id",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785200000000,
+      "tag": "0019_shift_history",
+      "breakpoints": true
     }
   ]
 }

@@ -88,10 +88,23 @@ export async function POST(request: Request) {
       });
     }
     const startTimeDb = `${startTime}:00`;
-    const result = await repos.routes.updateShift(shiftId, client.id, scope, {
-      name,
-      startTime: startTimeDb,
-    });
+    /*
+     * Mover un turno NO alcanza a las ocurrencias ya generadas: su hora límite
+     * quedó congelada al crearse (C21). El rastro lo deja el trigger de
+     * `shift_history`, no este endpoint — si dejarlo dependiera de quien llama,
+     * un camino de edición nuevo se olvidaría, que es exactamente lo que dejó
+     * `contract_policy_history` en cero.
+     *
+     * `actorId` va vacío a propósito. Hasta que exista auth-rbac el sistema
+     * sabe que fue una persona pero no cuál, y la firma honesta es el rol.
+     */
+    const result = await repos.routes.updateShift(
+      shiftId,
+      client.id,
+      scope,
+      { name, startTime: startTimeDb },
+      { actorKind: "human", actorId: null, note: String(formData.get("motivo") ?? "") },
+    );
     if (!result.ok) {
       if (result.reason === "not_found") {
         return back(request, client.slug, scope, { error: "Turno no encontrado." });
