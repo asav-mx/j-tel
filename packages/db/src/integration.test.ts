@@ -12,6 +12,7 @@ import {
   serviceContracts,
   shifts,
   serviceProfiles,
+  shiftHistory,
   revisarHorasLimite,
 } from "../src/index.js";
 import { eq, inArray, sql } from "drizzle-orm";
@@ -1634,6 +1635,18 @@ describe("C21 · la revisión de horas límite", () => {
         .update(shifts)
         .set({ startTime: objetivo.shiftStartTime })
         .where(eq(shifts.id, objetivo.shiftId));
+
+      /*
+       * Y se borra la historia que estos dos movimientos acaban de generar.
+       *
+       * Hace falta desde la migración 0019 y no antes: hasta entonces mover un
+       * turno no dejaba nada, y ahora el trigger escribe dos filas por corrida
+       * —el movimiento y la restauración—. Sin esto, `shift_history` crece sin
+       * tope en la desechable con ediciones que nadie hizo. Es la misma lección
+       * que la primera versión de esta suite ya cobró una vez: lo que una
+       * prueba deja vive hasta que otra tropieza con ello.
+       */
+      await db.delete(shiftHistory).where(eq(shiftHistory.shiftId, objetivo.shiftId));
     }
 
     // Y el detector sigue vivo después de devolver el turno a su sitio.
