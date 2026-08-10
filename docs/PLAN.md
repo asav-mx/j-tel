@@ -59,6 +59,13 @@ Lo que exige al escribir:
   produciéndolos» vale más que «341», porque avisa de que caducará.
 - **Si no se puede fechar, no se afirma:** va como 🔵 reportado o 🟡 inferencia,
   con quién lo dijo y cuándo.
+- **Y un 🟡 lleva pegado el costo de medirlo.** Si medir cuesta poco —leer un
+  archivo, comparar dos cadenas—, no se marca: **se mide**. El 🟡 es para lo
+  que hoy no se puede comprobar, y ahí se dice **qué haría falta** para pasarlo
+  a 🟢. Sin eso, la marca de duda deja de leerse como «falta comprobar» y pasa
+  a leerse como matiz que suaviza el hallazgo — le pasó a T4 el 8 de agosto de
+  2026, y le bajó la prioridad a un riesgo que era real (ver la entrada del 10
+  de agosto en §9).
 - **Y el eje junto a la fecha**, cuando la cifra agrega: por día · por servicio ·
   por unidad · por contrato. Los dos ejes o ninguno.
 
@@ -415,7 +422,7 @@ dominio se resolvieron el mismo día.
 | **T1** | **Clerk** | Todo el candado, el login real y el tramo vendible | ✅ **Hecho.** Aplicación `J-Telemetry` creada · **sin organizaciones** (verificado contra el código) · **solo Email** · llaves de test en Vercel: la pública en los 3 entornos sin sensitive, la secreta en Production y Preview con sensitive. Las llaves de producción se generan al conectar el dominio |
 | **T2** | **Correo — y son dos cosas, no una.** (a) **Resend**: verificar dominio, API key, tres variables. (b) **Que exista `hola@j-telemetry.com`** | (a) Que las alertas salgan de verdad. Hoy `/api/cron/alertas` responde 503 cada 5 min: el sistema detecta y no puede avisar. (b) Que un cliente pueda escribir. **(b) es de negocio, no de sistema** | **Pendiente.** Alta. El instrumento existe y no tiene bocina — y el landing no tiene buzón |
 | **T3** | **Dominio** | Los subdominios del producto | ✅ **Resuelto: `j-telemetry.com`.** `j-tel.io` queda descartado — pero ver la deuda que deja, abajo |
-| **T4** | **Rotar la contraseña del readonly** | `jtel_readonly` y `neondb_owner` comparten contraseña | **Pendiente.** Media. Con redespliegue en el mismo movimiento. 🟢 **Sigue siendo cierto al 8 de agosto de 2026**, comprobado comparando las huellas SHA-256 de los dos passwords del `.env` vigente: **idénticas**, mismo largo. 🟢 **Lo atrapó `verificar-env.mjs` solo**, sin que nadie fuera a buscarlo — es la comprobación que su propio comentario llama «la trampa que nos mordió», y hoy está disparando. ⚠ **Lo que cambia es la GARANTÍA, no lo que pasó.** Ninguna medición hecha con `jtel_readonly` fue insegura: `verificar-solo-lectura` confirma cada vez que ese usuario no puede escribir en su host —41 tablas, cero escribibles—. Lo que descansa sobre esto es la **frontera**: todo el trabajo de diagnóstico de este proyecto se apoya en «solo lectura» como límite, y ese límite hoy es un password compartido, no un secreto distinto. 🟡 **Y no está comprobado que el ataque funcione:** las dos URL apuntan a **hosts distintos**, así que si el de solo lectura es una réplica de lectura de Neon, escribir ahí fallaría por construcción. Comprobarlo exigiría conectarse como `neondb_owner` a ese host, y **eso no se hace para confirmar una sospecha** — se rota y se acabó |
+| **T4** | **Rotar la contraseña del readonly** | `jtel_readonly` y `neondb_owner` compartían contraseña | 🟢 **Mitad local cerrada el 10 de agosto de 2026.** Asav rotó `jtel_readonly` en Neon y actualizó `DATABASE_URL_READONLY`. Comprobado sobre el `.env` vigente: huellas SHA-256 **distintas** (dueño `c9e9b7f65e65`, lectura `61d0eada3d3b`), **y los dos passwords legibles** —lo que confirma que el detector *corrió* y no se saltó en silencio, que es su modo de falla conocido—. `verificar-solo-lectura` en verde el 10 de agosto: **42 tablas, 42 legibles, cero escribibles**. ❌ **Corrección del 10 de agosto: el matiz 🟡 «hosts distintos, quizá una réplica» era FALSO.** Medidos, son **el mismo endpoint** `ep-fancy-shape-ad8idz4g`; el de lectura es su variante `-pooler`. No había réplica que salvara nada: **el ataque sí habría funcionado**. ❌ **Y «con redespliegue en el mismo movimiento» también sobraba:** medido el 10 de agosto sobre `origin/main`, **nada en producción consume `DATABASE_URL_READONLY`** —sus únicos lectores son los guiones de `packages/db/src/`, que se corren a mano; la app y los 8 crons entran por `DATABASE_URL`—, así que no hay nada que redesplegar. ⏳ **Lo que falta:** (a) actualizar el valor en Vercel — no rompe producción, pero un `pnpm env:pull` con el valor viejo reparte una credencial muerta; (b) **rotar `neondb_owner`**, porque la contraseña que estuvo compartida **sigue viva en la cuenta dueña** — decidido por Asav el 10 de agosto, ver el procedimiento en `docs/Procedimiento-Credenciales.md` |
 | **T6** | **Tres identidades de prueba en Clerk** | Que Asav pueda abrir **las tres caras a la vez** en navegadores distintos, que hoy no puede | **Pendiente.** Alta. Tres usuarios en la instancia de prueba con la convención `+clerk_test` —sin buzón real, marcados por construcción—, con nombre y apellido, y sus tres `user_...`. Deja **3 filas** en `user_memberships` y nada más: ni cuentas, ni hechos, ni veredictos. Ver `Ficha-Identidades-De-Prueba.md`. **La cara de planta no se podrá ver hasta 1.h** |
 | **T5** | **`CRON_SECRET`** | — | ✅ **Cerrado.** Rotado en Vercel · el valor viejo fuera de los documentos desde el 2 de agosto (comprobado sobre `main` el 4: cero archivos versionados) · **permanece en el historial de git, rotado y sin efecto** — no se reescribe historia por esto (decisión de Asav, 4 de agosto) |
 
@@ -2968,10 +2975,15 @@ exactamente donde murieron las dos generaciones del vigilante.
   41 tablas, cero escribibles—. Lo que descansa sobre esto es la **frontera**:
   todo el diagnóstico de este proyecto se apoya en «solo lectura» como límite,
   y ese límite hoy es un password compartido y no un secreto distinto.
-- 🟡 **No está comprobado que el ataque funcione.** Las dos URL apuntan a
+- ~~🟡 **No está comprobado que el ataque funcione.** Las dos URL apuntan a
   **hosts distintos**: si el de lectura es una réplica, escribir ahí fallaría
-  por construcción. Comprobarlo exigiría conectarse como dueño a ese host, y
-  eso no se hace para confirmar una sospecha — **se rota y se acabó.**
+  por construcción.~~ ❌ **FALSO, medido el 10 de agosto de 2026.** Los dos
+  hosts son **el mismo endpoint de Neon** `ep-fancy-shape-ad8idz4g`, y el de
+  lectura es su variante `-pooler` — el pooler de PgBouncer del mismo endpoint,
+  **no una réplica**. La misma base, por otra puerta. El ataque **sí habría
+  funcionado**: cambiar el usuario en esa URL entraba como dueño a la base de
+  producción. Se deja tachado y no borrado porque el caso vale más que la
+  corrección — ver la entrada del 10 de agosto.
 
 **Y el error de método, que es lo que de verdad hay que registrar.** Esto se
 reportó como un *hallazgo nuevo*, y **ya estaba escrito en §3.1 como el trámite
@@ -2990,3 +3002,66 @@ que ya estaba tomada.
 Lo que sí aporta esta pasada, y por eso T4 se edita en vez de solo repetirse:
 que **sigue siendo cierto hoy**, que **lo atrapó el instrumento solo**, y la
 distinción entre la garantía y los hechos.
+
+**10 de agosto de 2026 (T4 — la mitad que cierra, la que no, y una inferencia
+marcada con duda que era falsa).**
+
+- 🟢 **El password de `jtel_readonly` ya no es el del dueño.** Asav lo rotó en
+  Neon y actualizó `DATABASE_URL_READONLY`. Comprobado el 10 de agosto sobre el
+  `.env` vigente: huellas SHA-256 **distintas** —dueño `c9e9b7f65e65`, lectura
+  `61d0eada3d3b`, ambos de largo 16—. `pnpm env:check` **ya no levanta la
+  bandera del password compartido**.
+- 🟢 **Y se comprobó que el detector CORRIÓ, no que calló.** La comprobación
+  solo dispara si los dos passwords se pudieron parsear (`pd && pl`); si
+  `new URL()` falla, se salta **en silencio** y el árbitro anuncia verde. Se
+  verificó aparte que ambos se leyeron. Sin ese paso, «la alarma no salió» y
+  «la alarma se apagó sola» se ven idénticas desde afuera — que es exactamente
+  la falla que `pnpm env:test` existe para vigilar.
+- 🟢 **Los permisos siguen bien:** `verificar-solo-lectura` el 10 de agosto,
+  **42 tablas, 42 legibles, cero escribibles**, sin `CREATE` en `public` y
+  heredando las futuras. (Eran 41 el 8 de agosto: la base creció, la cifra no
+  se copia sin fecha.)
+- ❌ **La otra mitad de T4 no cierra, y por dos razones distintas.** Falta
+  actualizar el valor **en Vercel** —no rompe producción, pero deja que el
+  próximo `pnpm env:pull` reparta una credencial muerta— y falta **rotar
+  `neondb_owner`**: la contraseña que estuvo compartida **sigue viva en la
+  cuenta dueña**, así que la cadena que estuvo sobre-distribuida sigue abriendo
+  la base con todos los permisos. Rotar solo el lado de lectura mueve el
+  candado, no el secreto.
+- 🟢 **Y «con redespliegue en el mismo movimiento» era de más.** Medido sobre
+  `origin/main`: **ningún archivo de `apps/` lee `DATABASE_URL_READONLY`**. Sus
+  únicos lectores son cinco guiones de `packages/db/src/` que se corren a mano;
+  la app y los ocho crons de `apps/web/vercel.json` entran por `DATABASE_URL`.
+  Rotar el de lectura **no puede romper producción**, ni antes ni después.
+- ⚠ **`pnpm env:check` sigue en rojo, y no es por T4.** Faltan
+  `ALERTAS_REMITENTE` y `ALERTAS_DESTINATARIOS`, que pasaron a `REQUERIDAS` el
+  8 de agosto (#272); el `.env` de la máquina es anterior a ese cambio. Se
+  arregla con `pnpm env:pull`. Se anota porque **un check rojo por dos motivos
+  distintos es un check que se lee mal**: el rojo de hoy no dice nada sobre el
+  password.
+
+**El caso de método: una inferencia razonable, marcada con duda, que era falsa
+— y que la marca de duda protegió en vez de exponer.**
+
+El 8 de agosto se escribió que las dos URL apuntaban a «hosts distintos» y que
+por eso quizá el de lectura fuera una réplica, donde escribir fallaría por
+construcción. Iba con 🟡 y con una justificación buena: comprobarlo exigía
+conectarse como dueño a esa base, y **eso no se hace para confirmar una
+sospecha**. Todo correcto salvo el hecho. Los hosts son **el mismo endpoint**;
+uno es la variante `-pooler` del otro. Distinguirlo no exigía conectarse a
+nada: era **leer las dos cadenas**, que ya estaban en el `.env`.
+
+Lo que hay que registrar no es el error, es lo que le pasó a la marca. §0 dice
+*si no se puede fechar, no se afirma: va como 🟡 inferencia*. Se cumplió. Pero
+un 🟡 **no caduca ni pide ser medido**, y en dos días dejó de leerse como «esto
+falta comprobar» y pasó a leerse como **matiz que suaviza el hallazgo** — «no
+está comprobado que el ataque funcione» terminó funcionando como «quizá no haya
+riesgo». La marca de duda, que existe para señalar un hueco, **se convirtió en
+el argumento para no taparlo.**
+
+De ahí la regla que falta, y es barata: **un 🟡 lleva pegado el costo de
+medirlo.** Si medir cuesta poco —leer un archivo, comparar dos cadenas—, no se
+marca: **se mide**. El 🟡 es para lo que de verdad no se puede comprobar hoy, y
+en esos casos se dice **qué haría falta** para pasarlo a 🟢. Un 🟡 sin costo
+anotado es una tarea que nadie va a hacer disfrazada de honestidad
+epistémica — y aquí, además, **le bajó la prioridad a un riesgo que era real**.
