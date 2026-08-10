@@ -102,6 +102,95 @@ quejarse.
 
 ---
 
+## El caso contrario: rotar el password del DUEÑO (`neondb_owner`)
+
+**No es el mismo procedimiento que el de solo lectura, y confundirlos tira
+producción.** `DATABASE_URL_READONLY` se guarda explícita en Vercel, así que se
+pega a mano. `DATABASE_URL` y las `POSTGRES_*` **las administra la integración**,
+y ahí el `ALTER ROLE` desde la consola SQL es exactamente lo que no se hace:
+Neon acepta el cambio, Vercel no se entera, y la app se queda con la contraseña
+vieja.
+
+**Lo que decide el procedimiento es cuál de las dos integraciones está
+instalada.** Se distingue mirando qué variables inyecta:
+
+| Si en Vercel aparecen… | Es la integración… | Rotación |
+|---|---|---|
+| `DATABASE_URL_UNPOOLED`, `PGHOST`, `PGUSER`, `PGPASSWORD` | **Neon-managed** (instalada desde Neon) | Neon sincroniza solo al resetear; si no, Neon Console → Integrations → Manage → Settings → **Save changes** fuerza el resync |
+| `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL_NON_POOLING`, bajo Vercel → Storage | **Vercel-managed** (Marketplace) | Las dos rutas de abajo |
+
+Al 10 de agosto de 2026 el `.env.example` de este repo declara **las tres
+`POSTGRES_*` y ninguna `PG*`**, lo que apunta a la **Vercel-managed** — pero
+**no está verificado contra el panel**, y es lo primero que hay que confirmar.
+
+### Las dos rutas, y por qué importa cuál
+
+**Ruta A — desde Vercel (la diseñada).** Integrations → el proveedor →
+Installed Products → el recurso → Settings → **Secure This Resource** →
+**Rotate Secrets** → redesplegar. Es la única que puede ofrecer **ventana de
+gracia**: la API de rotación del Marketplace admite
+`delayOldSecretsExpirationHours`, que deja la credencial vieja viva unas horas.
+**Si Neon lo implementa, se ve en ese diálogo** — y si lo ofrece, se usa.
+
+**Ruta B — desde el panel de Neon.** Integrations → el proveedor → **Log into
+provider** → resetear ahí. Vercel documenta que eso **sincroniza solo**, pero
+con una letra chica que es todo el asunto: los valores nuevos quedan
+**preparados para aplicarse cuando los proyectos se redesplieguen**. No entran
+a lo que ya está corriendo.
+
+### La respuesta a «¿cinco minutos o susto?»: ninguna de las dos. Es una ventana.
+
+La sincronización **sí es automática**. Lo que no es automático —y no hay forma
+de que lo sea— es que el despliegue vivo tome el valor nuevo. Y por el otro
+lado, el artículo de Vercel para Neon lo dice sin rodeos:
+
+> «Al resetear el secreto de la base de Neon, el actual **deja de funcionar de
+> inmediato**. Todos los proyectos que dependan de él **no podrán conectarse
+> hasta que se les vuelva a desplegar.**»
+
+Las dos cosas juntas dan **un hueco inevitable entre el reset y el fin del
+redespliegue**, que dura lo que dure un build. El consejo general de Vercel
+—*actualiza Vercel ANTES de invalidar la credencial vieja*— **no aplica aquí**:
+un password de rol no admite dos valores a la vez. Por eso la Ruta A, si ofrece
+la ventana de gracia, es la buena.
+
+Y como el hueco existe, se elige cuándo: `/api/cron/verify` corre **cada
+minuto**, así que va a fallar durante el build. Es aceptable si es a propósito,
+y es un incidente si te agarra desprevenido.
+
+### El orden
+
+1. **Confirmar cuál integración es** (la tabla de arriba) y elegir ventana.
+2. **Rotar** por la Ruta A si ofrece gracia; si no, por la que sea.
+3. **Confirmar en Vercel que las variables cambiaron.** No se asume: el artículo
+   de Vercel pide ir a verlas. No editarlas a mano — la integración las
+   sobrescribe.
+4. **Redesplegar producción.** Sin esto no pasa nada, con reset y todo.
+5. **Verificar con algo real:** los logs del siguiente tick de
+   `/api/cron/verify` y una página que pegue a la base. **No con `/api/salud`**,
+   que responde «sano» con servicios sin veredicto.
+6. **Local:** `pnpm env:pull && pnpm env:check`, y `verificar-solo-lectura` debe
+   seguir en verde — `ALTER ROLE ... PASSWORD` no toca los `GRANT`, y
+   `jtel_readonly` es otro rol.
+
+**Qué NO se toca.** `neondb_owner` no es una cuenta: es el rol por omisión de
+**cada** proyecto de Neon, con contraseña distinta en cada uno. Medido el 10 de
+agosto de 2026, `DATABASE_URL_TEST` (`ep-lucky-dust-ad7m4lqp`) y
+`JRZ_OLD_MEMORY_DATABASE_URL` (`ep-shiny-paper-ahsmhggg`) son **otras bases con
+otras contraseñas**. Rotar la de producción no las toca.
+
+**Si sale mal, hay vidrio que romper:** mientras el `.env` de alguien tenga la
+contraseña vieja, `ALTER ROLE neondb_owner WITH PASSWORD '<la vieja>'` devuelve
+el servicio. Deja todo como estaba y hay que re-rotar — es para salir del hueco,
+no para quedarse.
+
+**Fuentes:** [Rotating environment variables](https://vercel.com/docs/environment-variables/rotating-secrets)
+· [How to rotate the secrets of your Neon integration](https://vercel.com/kb/guide/how-to-reset-a-secret-for-a-neon-integration)
+· [Connecting with the Neon-Managed Integration](https://neon.com/docs/guides/neon-managed-vercel-integration)
+· [How do I rotate my Neon database connection string](https://neon.com/faqs/rotate-database-connection-string-security)
+
+---
+
 ## Deuda conocida
 
 **El worker lee otros nombres.** `apps/worker/src/run.ts` pide
