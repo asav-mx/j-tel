@@ -422,7 +422,7 @@ dominio se resolvieron el mismo día.
 | **T1** | **Clerk** | Todo el candado, el login real y el tramo vendible | ✅ **Hecho.** Aplicación `J-Telemetry` creada · **sin organizaciones** (verificado contra el código) · **solo Email** · llaves de test en Vercel: la pública en los 3 entornos sin sensitive, la secreta en Production y Preview con sensitive. Las llaves de producción se generan al conectar el dominio |
 | **T2** | **Correo — y son dos cosas, no una.** (a) **Resend**: verificar dominio, API key, tres variables. (b) **Que exista `hola@j-telemetry.com`** | (a) Que las alertas salgan de verdad. Hoy `/api/cron/alertas` responde 503 cada 5 min: el sistema detecta y no puede avisar. (b) Que un cliente pueda escribir. **(b) es de negocio, no de sistema** | **Pendiente.** Alta. El instrumento existe y no tiene bocina — y el landing no tiene buzón |
 | **T3** | **Dominio** | Los subdominios del producto | ✅ **Resuelto: `j-telemetry.com`.** `j-tel.io` queda descartado — pero ver la deuda que deja, abajo |
-| **T4** | **Rotar la contraseña del readonly** | `jtel_readonly` y `neondb_owner` compartían contraseña | 🟢 **Mitad local cerrada el 10 de agosto de 2026.** Asav rotó `jtel_readonly` en Neon y actualizó `DATABASE_URL_READONLY`. Comprobado sobre el `.env` vigente: huellas SHA-256 **distintas** (dueño `c9e9b7f65e65`, lectura `61d0eada3d3b`), **y los dos passwords legibles** —lo que confirma que el detector *corrió* y no se saltó en silencio, que es su modo de falla conocido—. `verificar-solo-lectura` en verde el 10 de agosto: **42 tablas, 42 legibles, cero escribibles**. ❌ **Corrección del 10 de agosto: el matiz 🟡 «hosts distintos, quizá una réplica» era FALSO.** Medidos, son **el mismo endpoint** `ep-fancy-shape-ad8idz4g`; el de lectura es su variante `-pooler`. No había réplica que salvara nada: **el ataque sí habría funcionado**. ❌ **Y «con redespliegue en el mismo movimiento» también sobraba:** medido el 10 de agosto sobre `origin/main`, **nada en producción consume `DATABASE_URL_READONLY`** —sus únicos lectores son los guiones de `packages/db/src/`, que se corren a mano; la app y los 8 crons entran por `DATABASE_URL`—, así que no hay nada que redesplegar. ⏳ **Lo que falta:** (a) actualizar el valor en Vercel — no rompe producción, pero un `pnpm env:pull` con el valor viejo reparte una credencial muerta; (b) **rotar `neondb_owner`**, porque la contraseña que estuvo compartida **sigue viva en la cuenta dueña** — decidido por Asav el 10 de agosto, ver el procedimiento en `docs/Procedimiento-Credenciales.md` |
+| **T4** | **Rotar la contraseña del readonly** | `jtel_readonly` y `neondb_owner` compartían contraseña | 🟨 **PARCIALMENTE CERRADA al 10 de agosto de 2026: la mitad de lectura rotada y verificada, la del dueño pendiente y con procedimiento escrito.** 🟢 **Mitad de lectura, cerrada.** Asav rotó `jtel_readonly` en Neon y actualizó `DATABASE_URL_READONLY`. Comprobado sobre el `.env` vigente: huellas SHA-256 **distintas** (dueño `c9e9b7f65e65`, lectura `61d0eada3d3b`), **y los dos passwords legibles** —lo que confirma que el detector *corrió* y no se saltó en silencio, que es su modo de falla conocido—. `verificar-solo-lectura` en verde el 10 de agosto: **42 tablas, 42 legibles, cero escribibles**. ❌ **Corrección del 10 de agosto: el matiz 🟡 «hosts distintos, quizá una réplica» era FALSO.** Medidos, son **el mismo endpoint** `ep-fancy-shape-ad8idz4g`; el de lectura es su variante `-pooler`. No había réplica que salvara nada: **el ataque sí habría funcionado**. ❌ **Y «con redespliegue en el mismo movimiento» también sobraba:** medido el 10 de agosto sobre `origin/main`, **nada en producción consume `DATABASE_URL_READONLY`** —sus únicos lectores son los guiones de `packages/db/src/`, que se corren a mano; la app y los 8 crons entran por `DATABASE_URL`—, así que no hay nada que redesplegar. ⏳ **Lo que falta:** (a) actualizar el valor en Vercel — no rompe producción, pero un `pnpm env:pull` con el valor viejo reparte una credencial muerta; (b) **rotar `neondb_owner`**, porque la contraseña que estuvo compartida **sigue viva en la cuenta dueña** — decidido por Asav el 10 de agosto, ver el procedimiento en `docs/Procedimiento-Credenciales.md` |
 | **T6** | **Tres identidades de prueba en Clerk** | Que Asav pueda abrir **las tres caras a la vez** en navegadores distintos, que hoy no puede | **Pendiente.** Alta. Tres usuarios en la instancia de prueba con la convención `+clerk_test` —sin buzón real, marcados por construcción—, con nombre y apellido, y sus tres `user_...`. Deja **3 filas** en `user_memberships` y nada más: ni cuentas, ni hechos, ni veredictos. Ver `Ficha-Identidades-De-Prueba.md`. **La cara de planta no se podrá ver hasta 1.h** |
 | **T5** | **`CRON_SECRET`** | — | ✅ **Cerrado.** Rotado en Vercel · el valor viejo fuera de los documentos desde el 2 de agosto (comprobado sobre `main` el 4: cero archivos versionados) · **permanece en el historial de git, rotado y sin efecto** — no se reescribe historia por esto (decisión de Asav, 4 de agosto) |
 
@@ -3065,3 +3065,37 @@ marca: **se mide**. El 🟡 es para lo que de verdad no se puede comprobar hoy, 
 en esos casos se dice **qué haría falta** para pasarlo a 🟢. Un 🟡 sin costo
 anotado es una tarea que nadie va a hacer disfrazada de honestidad
 epistémica — y aquí, además, **le bajó la prioridad a un riesgo que era real**.
+
+**10 de agosto de 2026 (T4 — la pregunta que quedaba abierta, contestada; y la
+rotación del dueño baja de urgente a higiene con ventana).**
+
+- 🟢 **T4 queda PARCIALMENTE CERRADA.** La mitad de lectura, rotada y
+  verificada. La del dueño, pendiente — pero ya no en el aire: con
+  procedimiento escrito en `docs/Procedimiento-Credenciales.md`.
+- 🟢 **Deja de ser urgente, y por una medición.** La contraseña del dueño **no
+  aparece en ningún archivo versionado de `main` ni en el historial completo de
+  git** (0 commits). Su única exposición fue vivir dentro de
+  `DATABASE_URL_READONLY`. No corre como corrió T5, que sí estaba escrita.
+  **Decisión de Asav el 10 de agosto: se hace con ventana, no entre dos cosas.**
+- 🟢 **Contestada la pregunta que decidía si el procedimiento era de cinco
+  minutos o de un susto: no es ninguna de las dos, es una ventana.** La
+  integración **sí** sincroniza sola las variables al resetear en Neon. Lo que
+  no puede hacer nadie es que un despliegue **ya corriendo** tome el valor
+  nuevo: las variables se ligan al despliegue. Y el artículo de Vercel para
+  Neon dice que la credencial vieja **deja de funcionar de inmediato**. Las dos
+  cosas juntas dan **un hueco inevitable entre el reset y el fin del
+  redespliegue**, del tamaño de un build, con `/api/cron/verify` fallando cada
+  minuto adentro.
+- ⚠ **Y por eso el consejo general de Vercel no sirve aquí.** «Actualiza Vercel
+  ANTES de invalidar la credencial vieja» supone que las dos pueden convivir; un
+  password de rol no admite dos valores. La única salida al hueco es la ventana
+  de gracia (`delayOldSecretsExpirationHours`) que la ruta de rotación **desde
+  Vercel** puede ofrecer — **si Neon la implementa, lo cual se ve en ese diálogo
+  y no está comprobado**. Va marcado 🟡 con su costo pegado, según la regla de
+  §0: comprobarlo cuesta abrir el diálogo el día que se rote.
+- 🔵 **Cuál integración está instalada, sin verificar.** El `.env.example`
+  declara las tres `POSTGRES_*` y ninguna `PG*`, lo que apunta a la
+  **Vercel-managed** del Marketplace. **No se confirmó contra el panel** —el
+  comando para leer las variables de Vercel quedó bloqueado por permisos— y es
+  el primer paso del procedimiento, porque las dos integraciones se rotan
+  distinto.
