@@ -17,6 +17,7 @@ import {
   type PasoMedicion,
   type RazonSinLedger,
 } from "@/lib/pasos-medicion";
+import { politicaDelSello } from "@/lib/politica-del-sello";
 
 export type MapPoint = { lat: number; lng: number; at: string };
 export type MapPolygon = Array<{ lat: number; lng: number }>;
@@ -40,13 +41,29 @@ export interface ServiceDetailData {
   observedArrivalAt: string | null;
   timing: string | null;
   evidenceStatus: string | null;
-  /** Ventana según política actual del contrato. */
+  /**
+   * Ventana que daría la política **con la que se juzgó este servicio** — el
+   * piso del contrato aplicado a su hora límite. C24: antes salía de la
+   * política viva, que describía el contrato de hoy y no este hecho.
+   */
   policyWindowStart: string | null;
   policyWindowEnd: string | null;
   /** Ventana congelada en el viaje (la que se usó al verificar). */
   tripWindowStart: string | null;
   tripWindowEnd: string | null;
   tripWindowDiffersFromPolicy: boolean;
+  /**
+   * De dónde salió la política que gobierna esta lectura: del sello del hecho
+   * o del contrato vivo. Se declara para que la pantalla pueda decirlo en vez
+   * de que el lector lo suponga.
+   */
+  politicaOrigen: "sello" | "contrato";
+  /**
+   * El contrato cambió alguna de las reglas que este expediente muestra desde
+   * que el hecho se selló. Lo que se enseña sigue siendo lo del sello; esto
+   * solo avisa de que hoy el contrato dice otra cosa.
+   */
+  contratoCambioDesdeElSello: boolean;
   evidenceMarginBeforeMinutes: number | null;
   verificationGraceMinutes: number | null;
   evidenceMarginAfterMinutes: number | null;
@@ -143,7 +160,21 @@ export async function loadServiceDetail(
   ]);
 
   const fact = occurrence.complianceFact;
-  const policy = contract.policy as ContractPolicy;
+  /*
+   * C24 · La política con la que se LEE este servicio sale del sello, no del
+   * contrato de hoy.
+   *
+   * `contract.policy` sigue existiendo y sigue siendo la correcta mientras no
+   * haya hecho — `politicaDelSello` decide cuál manda y lo declara en `origen`.
+   * Con hecho, todo lo que este archivo muestra —tolerancia, márgenes, gracia,
+   * zona horaria, consecuencias— describe **cómo se juzgó**, y eso no puede
+   * moverse porque alguien edite el contrato después.
+   *
+   * Es la regla que ya vivía escrita en `no-cumplido-motivo.ts` y que cumplían
+   * las otras tres pantallas; ésta era la que faltaba.
+   */
+  const lecturaDePolitica = politicaDelSello(fact, contract.policy as ContractPolicy);
+  const policy = lecturaDePolitica.politica;
   const trip = occurrence.trip;
 
   const evidencePoints = trip?.evidencePoints ?? [];
@@ -367,6 +398,8 @@ export async function loadServiceDetail(
     tripWindowStart: tripStart ? localDateTimeShort(tripStart, tz) : null,
     tripWindowEnd: tripEnd ? localDateTimeShort(tripEnd, tz) : null,
     tripWindowDiffersFromPolicy,
+    politicaOrigen: lecturaDePolitica.origen,
+    contratoCambioDesdeElSello: lecturaDePolitica.contratoCambioDesdeElSello,
     evidenceMarginBeforeMinutes: policy.evidenceMarginMinutesBefore ?? null,
     verificationGraceMinutes: policy.verificationGraceMinutes ?? null,
     evidenceMarginAfterMinutes: policy.evidenceMarginMinutesAfter ?? null,
