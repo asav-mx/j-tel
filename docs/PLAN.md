@@ -1828,7 +1828,7 @@ decisión es cada una.
 |---|---|---|---|
 | **D1** · los 294 hechos con el deadline mal calculado | Negocio | Corregirlos con firma y motivo, o dejarlos | — |
 | **D2** · Turno B de Planta 47 | **Conversación con la Planta** | 🟢 **Resuelto cuál de los dos es: el de Planta 47**, y **los 36 son 100 % suyos**. El turno **ya se movió a 15:30** y su ventana nueva (12:59–16:00) es la primera que contiene la operación de ~14:00 — **pero arranca el 31 de agosto**. Falta: **confirmar que 15:30 es la real**. 🟢 **7 ago: lo de las 102 ya se resolvió** — se corrigieron **90** (las otras 12 se sellaron antes) y **ninguna sin sellar corre ya con la ventana vieja** | No mueve C11 (Turno A) |
-| **D3** · regla de cierre del pendiente por evidencia | **Negocio + legal** | Cuánto puede un servicio quedarse en pendiente y qué pasa después. 🟢 **12 ago, con instrumento propio (`medir-pendientes`) para que la cifra deje de caducar: son 139 pendientes, 118 de más de 48 h (84.9 %) y 100 de más de 7 días.** Eran **106 y 89** el 6 de agosto, y **71** cuando se abrió esta decisión. Por causa: **87 `llegada_sin_atribucion`** (61 el 6 ago — es C14 y crece rápido) · **28 cobertura insuficiente** (**idéntico** al 6 ago: es la cicatriz congelada de C3, no sangra) · **19 observación insuficiente** (12) · **5 sin evidencia posible** (5, sin cambio; cero puntos y retirados de la cola). ⚠ **Y la antigüedad es lo que más se movió: el más viejo lleva 34 días.** La pila no solo crece — **envejece** | C11 |
+| **D3** · regla de cierre del pendiente por evidencia | **Negocio + legal** | Cuánto puede un servicio quedarse en pendiente y qué pasa después. 🟢 **12 ago, con instrumento propio (`medir-pendientes`) para que la cifra deje de caducar: son 139 pendientes, 118 de más de 48 h (84.9 %) y 100 de más de 7 días.** Eran **106 y 89** el 6 de agosto, y **71** cuando se abrió esta decisión. Por causa: **87 `llegada_sin_atribucion`** (61 el 6 ago — es C14 y crece rápido) · **28 cobertura insuficiente** (**idéntico** al 6 ago: es la cicatriz congelada de C3, no sangra) · **19 observación insuficiente** (12) · **5 sin evidencia posible** (5, sin cambio; cero puntos y retirados de la cola). ⚠ **Y la antigüedad es lo que más se movió: el más viejo lleva 34 días.** La pila no solo crece — **envejece**. 🟢 **12 ago — los 100 de más de 7 días, abiertos por causa: 57 `llegada_sin_atribucion` · 28 cobertura insuficiente · 10 observación insuficiente · 5 sin evidencia posible.** La mayoría es C14, sí. ⚠ **Pero eso NO permite que la regla espere a que C14 cierre, y ésta es la medición que lo impide: la cola solo re-verifica pendientes con la evidencia `indisponible`** (`repositories/index.ts`, `condicionesDeCola`), y 🟢 **de los 139, ciento treinta y cuatro tienen la evidencia `disponible` y cinco `sin_evidencia_posible` — CERO están en `indisponible`**. **Ningún pendiente vuelve a la cola por su cuenta.** Arreglar C14 cambia lo que se selle **de ahí en adelante** y **no toca uno solo de los 87 ya sellados**: moverlos es re-verificar, o sea **D4**. **La pila no está estancada por descuido: está congelada por construcción** | C11 · **D4** |
 | **D4** · re-verificar las 300 congeladas | Negocio | Cuándo, sabiendo que cada re-verificación mete una versión más en la historia del hecho | C5 |
 | **D5** · cómo se le cuenta a Tecma que su número cambia | Negocio | El mensaje, **antes** de que el número se mueva. 🟢 Ya se movió solo: 6.7 % → 8.8 % → **11.0 %** en tres días | Precede a D4 |
 | **D6** · quién puede modificar la política sin acuerdo del carrier | Negocio | Configurable con piso no negociable: **que el carrier se entere siempre** | C13 · C16 |
@@ -3382,6 +3382,44 @@ anterior, que salió de hacerlo).**
   contratos hayan omitido configurar algo que importa — es que **configurarlo
   tampoco haría nada**.
 - 🟢 **`servedRoute` sigue intacta.** Nada de esto toca el motor.
+
+**12 de agosto de 2026, cierre (tres preguntas contestadas — y el «costo» del piso
+resultó no existir).**
+
+- ✅ **El piso puede aplicar solo hacia adelante, y no hace falta inventar una
+  excepción: es la ley.** *Los hechos se calculan una vez y se congelan; la
+  política cambia hacia adelante* — la misma con la que se descartó la opción 3 de
+  C21. **Un piso encendido no reescribe un hecho sellado.**
+- ⚠ **Así que los 50 y los 6 son cifras de SIMULACIÓN, no costos**, y llamarlas
+  «costo» fue mío. Dicen qué habría atrapado el piso **aplicado al pasado** —que es
+  la forma correcta de dimensionar la regla— y **no lo que pasa al encenderlo**. El
+  número era correcto y **el rótulo lo volvió una afirmación falsa**: §D otra vez.
+- 🟢 **Y hacia adelante el piso hoy es gratis: de los 480 servicios del 29 de julio
+  en adelante, CERO cruzan 55 s y CERO cruzan 45 s**, con hueco máximo de **34–36
+  s**. **Encenderlo hoy no manda un solo servicio a pendiente.** Eso lo convierte
+  en **una póliza, no en un cambio de política operativa**: solo actúa si el
+  proveedor vuelve a ralear.
+- 🆕 **Y el hallazgo que sale de preguntarse si D3 puede esperar a C14: NO puede, y
+  no por prioridad sino por mecánica.** 🟢 **La cola solo re-verifica pendientes con
+  la evidencia `indisponible`**, y de los 139 **134 están en `disponible` y 5 en
+  `sin_evidencia_posible` — cero en `indisponible`**. **Ningún pendiente vuelve a la
+  cola por su cuenta.** Arreglar C14 cambia lo que se selle de ahí en adelante y
+  **no toca uno solo de los 87 ya sellados**. **La pila no está estancada por
+  descuido: está congelada por construcción**, y descongelarla es **D4**.
+- **Lo que eso le hace a D3, dicho sin rodeos:** la regla de cierre **no es una
+  formalidad que se pueda posponer hasta que el motor mejore**. Mientras no exista,
+  **139 servicios se quedan donde están para siempre**, mejore o no el árbitro.
+- 🟢 **Los 5 del Campus, y qué haría falta para cerrarlos.** Su ventana es del
+  **22–26 de junio** y la memoria propia del carrier **empieza el 28**: la razón es
+  `ventana_anterior_a_la_memoria` y **está registrada en el ledger**. No hay nada
+  que investigar y no hay dato que los pueda resolver — **son servicios anteriores
+  a que el producto pudiera observar a ese carrier**. ⚠ **Y cerrarlos no puede
+  significar darles veredicto:** los veredictos son tres, *sin evidencia no es
+  incumplimiento*, y `sin_evidencia_posible` **es estado de la evidencia, no un
+  cuarto veredicto**. **Lo único que falta es una decisión de Asav —con legal— sobre
+  qué es un servicio que el sistema no podía ver, y una forma de dejarla asentada
+  con firma y motivo.** Es la misma pregunta que los 84 hechos demo, aplicada al
+  conjunto más chico y más limpio que hay.
 
 **12 de agosto de 2026 (las dos lecturas que no dependían de Asav — y el piso
 resultó chico).**
