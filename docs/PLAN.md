@@ -3383,6 +3383,50 @@ anterior, que salió de hacerlo).**
   tampoco haría nada**.
 - 🟢 **`servedRoute` sigue intacta.** Nada de esto toca el motor.
 
+**12 de agosto de 2026 (la ventana congelada — y una afirmación falsa en la
+pantalla del contrato).**
+
+**Salió de que Asav abriera la pantalla del contrato y no le cuadraran dos cifras.
+Las tres mediciones son de solo lectura.**
+
+- 🟢 **La ventana que de verdad se aplicó: 1 159 de 1 165 servicios sellados abren
+  exactamente en el piso de 60 minutos.** Campus **661 de 661**; Planta 47 **498 de
+  504**.
+- 🟢 **Y la derivación NO está inerte: empezó a actuar el 31 de julio**, que es
+  cuando `route_traversal_measurements` empezó a tener datos. **Antes del 31: cero
+  viajes con ventana > 61 min. Del 31 en adelante: 182 en el Campus y 238 en Planta
+  47, hasta 120–136 minutos.** En las ocurrencias futuras, **411 de 1 056**.
+- 🆕 **De ahí el diagnóstico, y es un patrón que este plan ya nombró: la ventana se
+  congela al crear el viaje y nada la revisa.** Es **la forma de C21** —*congelar
+  sin forma de revisar es el patrón, no el campo*— **en un tercer campo**, después
+  de la hora límite (C21) y la geocerca (C4). **Todos los servicios anteriores al
+  31 de julio se juzgaron con el piso**, y ahí está la mayoría de los no cumplidos.
+- ✅ **Y eso resuelve la contradicción de la pantalla, que no es un defecto de la
+  pantalla:** la tabla dice **«115 min antes · MEDIDA»** —lo que la derivación
+  calcula **hoy**— y el aviso dice **«−60 a +45»** —lo que se aplicó **a ese
+  servicio**—. **Las dos son ciertas y hablan de momentos distintos.** ⚠ Lo que
+  falta es que **la pantalla diga cuál es cuál**: hoy quien lee no puede saber que
+  una es la regla de hoy y la otra la de entonces.
+- 🟢 **Y el efecto sobre las acusaciones, medido: de los 309 `no_cumplido` de
+  Planta 47, 85 son de rutas cuya duración MEDIANA ya excede los minutos que su
+  ventana abrió antes** — o sea que en la mitad de los días **el camión ya llevaba
+  rato andando cuando el árbitro abrió los ojos**, y aun así se le calificó el
+  trazado completo. **Con la duración máxima medida son 286 de 309.** En el Campus:
+  0 con la mediana, 83 con la máxima.
+- ⚠ **CORRECCIÓN a una afirmación de la pantalla del contrato, y es §D del Marco en
+  su forma clásica.** La pantalla dice que **412 de 504 servicios se resolvieron
+  «sin que el sistema viera una sola llegada»**. 🟢 **El dato es correcto y la
+  afirmación es falsa:** `observed_arrival_at` en nulo significa **«ninguna unidad
+  ACREDITÓ»**, no «no se vio llegar a nadie». 🟢 **Medido contra el ledger: en 133
+  de los 309 no cumplidos de Planta 47 y en 264 de los 282 del Campus (94 %) hay
+  una candidata con llegada registrada.** **397 servicios acusados en los que el
+  sistema sí vio llegar una unidad.** Es C13 remedido y más grande.
+- **Lo que esto cambia de prioridad:** el frente de la ventana deja de ser
+  «declarar siete campos» y pasa a ser **«la ventana se congela y nadie la
+  revisa»** — que ya tiene forma conocida y arreglo conocido (el cron que revisa y
+  avisa de C21), y **es anterior a elegir los valores**: elegirlos bien no alcanza
+  a un viaje ya creado.
+
 **12 de agosto de 2026, cierre del día (✅ decidido: se separan las dos preguntas —
 y los siete campos de Planta 47 no los eligió nadie).**
 
