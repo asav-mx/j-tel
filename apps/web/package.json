@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
+    "fuentes:traer": "node scripts/traer-fuentes.mjs",
     "typecheck": "tsc --noEmit",
     "start": "next start",
     "test": "TZ=UTC vitest run",
