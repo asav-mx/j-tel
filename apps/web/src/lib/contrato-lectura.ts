@@ -21,7 +21,16 @@ export type HechoParaLectura = {
   estado: "cumplido" | "no_cumplido" | "pendiente_evidencia";
   /** Cuándo se le exigió estar. */
   deadline: Date;
-  /** Cuándo llegó, si el árbitro llegó a observar una llegada. */
+  /**
+   * Cuándo llegó la unidad que ACREDITÓ el servicio; nulo si ninguna acreditó.
+   *
+   * ⚠ Nulo NO significa «no llegó nadie», y confundirlo ya produjo una
+   * afirmación falsa en pantalla: `observed_arrival_at` solo se llena cuando el
+   * árbitro pudo atribuirle la llegada a este servicio. Medido el 12 de agosto
+   * de 2026 contra el ledger: **397 servicios acusados tenían una candidata con
+   * llegada registrada** y este campo en nulo. Cualquier enunciado que se
+   * escriba sobre este campo tiene que decir «acreditó», no «se vio llegar».
+   */
   llegada: Date | null;
   /** Cobertura del trazado contratado, si se midió. */
   coberturaRutaPct: number | null;
@@ -137,11 +146,12 @@ export type SospechaDeVentana =
  *
  * Se buscan dos huellas distintas:
  *
- *   sin_llegadas    — casi ningún servicio llegó a tener una llegada
- *                     observada. O la operación pasa fuera de la ventana, o
- *                     las unidades no reportan.
- *   llegadas_lejos  — sí hay llegadas, pero su mediana cae fuera de la
- *                     ventana o pegada a un borde.
+ *   sin_llegadas    — en casi ningún servicio hubo una unidad que ACREDITARA
+ *                     su llegada. Puede ser que la operación pase fuera de la
+ *                     ventana, que las unidades no reporten, o que sí llegaran
+ *                     y el árbitro no pudiera atribuirlas.
+ *   llegadas_lejos  — sí hay llegadas acreditadas, pero su mediana cae fuera
+ *                     de la ventana o pegada a un borde.
  *
  * NO dictamina cuál de las dos causas es. Declara lo medido y lo que no
  * responde; decidir es del humano que conoce la operación.
@@ -168,8 +178,9 @@ export function sospechaDeVentana(
     ventanaCierraMin: ventana.cierraMinDespues,
   };
 
-  // Más de la mitad de los servicios resueltos sin ver una sola llegada es
-  // anómalo en una operación que de verdad ocurre dentro de la ventana.
+  // Más de la mitad de los servicios resueltos sin que ninguna unidad
+  // acreditara su llegada es anómalo en una operación que de verdad ocurre
+  // dentro de la ventana. El umbral mide atribución, no presencia.
   if (conLlegada.length / hechos.length < 0.5) {
     return { hay: true, clase: "sin_llegadas", medidos };
   }
