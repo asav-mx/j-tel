@@ -144,6 +144,46 @@ sino en **el ancho del corredor — 150 m contra 120 m**.
 > configuraciones distintas dan fragilidades distintas», es **un campo, aislado,
 > con su efecto medido.**
 
+### 3.5 ¿Aguanta alguna métrica el cambio de densidad? — medido el 12 de agosto
+
+**La pregunta que decide si el arreglo es solo el piso o el piso más una métrica
+nueva.** Mismo adelgazamiento, mismas candidatas, **tres formas de medir**. La
+columna que importa es **«conserva»**: de las que acreditan hoy con esa métrica,
+qué fracción sigue acreditando al quitarle puntos.
+
+**Planta 47** (umbral A 60 % · B 60 %) · **el Campus** entre paréntesis (A 60 % · B 50 %):
+
+| Peldaño | **A ponderada** *(decide hoy)* | **A llana** *(C17)* | **B corredor** |
+|---|---|---|---|
+| tal como está | 100 % | 100 % | 100 % |
+| 1 punto / 40 s | **94 %** (92 %) | 74 % (86 %) | **95 %** (94 %) |
+| 1 punto / 60 s | **86 %** (87 %) | 62 % (74 %) | **96 %** (94 %) |
+| 1 punto / 120 s | 36 % (47 %) | **0 %** (15 %) | **95 %** (93 %) |
+
+🟢 **B es casi inmune a la densidad: conserva 93–96 % incluso a 120 s**, donde A
+llana llega a **cero**. Y su mediana **sube** ligeramente al adelgazar (79.8 →
+82.4 %), que es justo lo que se espera de **una razón sobre los puntos**:
+numerador y denominador se van juntos.
+
+> 🟢 **Y un resultado que ninguna de las dos fichas anticipaba: A ponderada aguanta
+> mucho mejor que A llana** —86 % contra 62 % a 60 s, y 36 % contra 0 % a 120 s—.
+> **La ponderación que C17 señaló como engañosa para LEER resulta ser la más
+> robusta para DECIDIR.** No es contradicción: son dos preguntas distintas y cada
+> métrica gana una. **Confirma la decisión de C17 de dejar que la ponderada siga
+> decidiendo** — y avisa que «decidir con la llana, que es la honesta» sería una
+> tentación cara.
+
+**Lo que esto contesta, en dos líneas:**
+
+- **Con el piso solo, la dependencia se acota pero no se elimina.** Un piso a 55 s
+  **no actúa por debajo de 55**, y entre la densidad de hoy y 40 s **la métrica
+  que decide ya pierde 6–8 % de sus acreditaciones**. Ese resto queda sin
+  proteger.
+- **Con B, la dependencia se va casi entera** — pero B mide *precisión de
+  corredor*, y **dos rutas que comparten avenida comparten corredor**: es justo la
+  capacidad de decir **cuál** ruta se sirvió, que es lo que el frente de C14 dice
+  que no se puede perder.
+
 ---
 
 ## 4. Las opciones, con veredicto
@@ -156,7 +196,7 @@ no, y por qué.
 | 1 | **Interpolar entre puntos consecutivos** — un waypoint cuenta si el segmento entre dos muestras pasa por el corredor | ❌ **No.** Afirma que la unidad recorrió la recta entre dos muestras, y **eso es la recta cruzando la ciudad del Workbench** (§E del Marco) movida de un mapa a un veredicto. Un mapa que completa engaña a quien lo lee; **un árbitro que completa sella una acusación sobre un camino que nadie observó.** A 60 s y velocidad de calle el tramo inventado no es un detalle |
 | 2 | **Normalizar la cobertura contra su propio techo alcanzable** | ⚠ **Se intentó y la medición lo tumbó.** El techo parecía derivable del hueco entre muestras, pero 🟢 la distribución es **bimodal** —mediana del hueco espacial **0–63 m** porque la unidad pasa buena parte de la ventana detenida, p90 de 360–548 m—, así que ninguna media ni mediana da un techo. Y un techo calculado de los propios puntos es **circular**. **No queda descartada: queda sin definición que no se muerda la cola** |
 | **3** | **Piso de densidad: por debajo de X, no hay veredicto** | ✅ **Entra como candidata fuerte.** Es la **Ley 7 del Marco** —sin evidencia no hay incumplimiento— aplicada a la densidad en vez de a la ausencia. 🟢 Y la medición le da forma: a 120 s el instrumento **no ve**, así que juzgar ahí no es rigor, es ruido con autoridad. **No inventa un solo dato.** 🟢 **12 ago — dimensionado, y hacia adelante hoy es gratis: de los 480 servicios del 29 de julio en adelante, CERO cruzan 45 s o 55 s** (hueco máximo 34–36 s). **No es un cambio de política operativa: es una póliza** que solo actúa si el proveedor vuelve a ralear. 🟢 **Y no reescribe nada del pasado** — *la política cambia hacia adelante* —, así que los 50 `no_cumplido` y los 6 `cumplido` que cruzarían el piso **aplicado al pasado** son cifras de **simulación**, no costos de encenderlo |
-| 4 | **Mover el peso a B (`corridorPrecisionPct`), que es invariante a la densidad** | ⚠ **Atractiva y con un costo que hay que mirar de frente.** 🟢 B es una fracción de puntos, así que **escala numerador y denominador por igual** — quedó demostrado midiendo C22. Pero **A es lo que dice CUÁL ruta se sirvió** cuando hay varias candidatas llegando a la misma geocerca, y el frente de C14 ya escribió que la pregunta es *cómo atribuir cuando la ruta no acredita*, **no cómo saltarse la ruta** |
+| 4 | **Mover el peso a B (`corridorPrecisionPct`), que es invariante a la densidad** | ⚠ **Atractiva, y ahora medida: 🟢 B conserva 93–96 % de sus acreditaciones incluso a 120 s** (§3.5), contra 36–47 % de la métrica que decide hoy. **La invariancia no es teórica: está medida en los dos contratos.** Pero **A es lo que dice CUÁL ruta se sirvió** cuando hay varias candidatas llegando a la misma geocerca —y **dos rutas que comparten avenida comparten corredor**—, así que mover el peso a B **le quita al árbitro justo la capacidad que el frente de C14 dice que no se puede perder**. 🟢 **Y la medición sugiere una forma intermedia que nadie había planteado: B como piso ADICIONAL, no como reemplazo** — acreditar exige A (que atribuye) **y** B por encima de su umbral (que no se mueve con el aparato), que es casi lo que A∧B ya hace, salvo que hoy A y B fallan juntas por la misma causa |
 | **5** | **Exigir cadencia mínima al proveedor, y el sensor vigilándola** | ✅ **Entra, y no es código.** 🟢 La causa raíz no está de nuestro lado: el intervalo lo fija el aparato. Sin un mínimo pactado, **cualquier arreglo del motor queda a merced de que el proveedor vuelva a moverlo** — y ya lo movió una vez sin avisar |
 
 > **La combinación que la medición sostiene es 3 + 5:** un piso que convierte la
