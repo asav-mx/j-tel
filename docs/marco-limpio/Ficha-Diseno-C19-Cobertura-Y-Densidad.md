@@ -85,14 +85,24 @@ poblaciones distintas. Y va **contra las que pasan**, que es la regla 9.
 | **1 punto / 60 s** *(el régimen de julio)* | 57 | **58** | **−36** | **62.1 %** |
 | 1 punto / 120 s | 30 | **0** | **−94** | 37.3 % |
 
-🟢 **El Campus** · mismos días · corredor 150 m · umbral 50 % · 11 947 pares:
+🟢 **El Campus** · mismos días · corredor 150 m · umbral 60 % · 11 947 pares:
 
 | Peldaño | Puntos (med) | Acreditan | Pierde | Cobertura de las que acreditan hoy |
 |---|---|---|---|---|
-| **tal como está** | 96 | **235** | — | **69.6 %** |
-| 1 punto / 40 s | 60 | 213 | −22 | 62.7 % |
-| **1 punto / 60 s** | 52 | **194** | **−41** | **59.0 %** |
-| 1 punto / 120 s | 27 | **97** | −138 | 46.7 % |
+| **tal como está** | 96 | **155** | — | **79.5 %** |
+| 1 punto / 40 s | 60 | 134 | −21 | 73.6 % |
+| **1 punto / 60 s** | 52 | **115** | **−40** | **68.5 %** |
+| 1 punto / 120 s | 27 | **23** | −132 | 48.3 % |
+
+> ⚠ **Esta tabla se corrigió el 11 de agosto, después de medir C16, y el error
+> era mío.** La primera versión comparó la cobertura contra `kmlCorridorMinPct`
+> —el umbral de **B**— en vez de contra `kmlMatchMinPct`, que es el de **A**.
+> Planta 47 tiene los dos en 60, así que **su tabla no cambió ni un dígito**; el
+> Campus los tiene en 60 y 50, así que la suya estaba medida contra 50. **Un
+> umbral equivocado que coincide en un contrato no se ve mal en ningún lado:**
+> la corrida termina, imprime cifras plausibles y **solo el otro contrato lo
+> delata.** Lo atrapó enumerar los campos de la política para C16, no revisar el
+> guion.
 
 **Lo que esto cierra:** hasta hoy C19 era una **correlación con fecha** —cambiaron
 la densidad y la cobertura el mismo día—. Ahora es **atribución**: con todo lo
@@ -116,17 +126,23 @@ deja en **62.1 %** — **a 2.1 puntos del umbral**.
 
 ### 3.4 Un cruce que no se buscaba: C16 decide cuánta ceguera aguanta un sitio
 
-🟢 A 120 s, **Planta 47 se queda en cero acreditadas y el Campus conserva 97**.
-Misma flota, mismo carrier, mismo adelgazamiento. Lo que los separa es la
-configuración del contrato: **150 m / 50 % en el Campus contra 120 m / 60 % en
-Planta 47**.
+🟢 A 120 s, **Planta 47 se queda en cero acreditadas y el Campus conserva 23**.
+Misma flota, mismo carrier, mismo adelgazamiento. A 60 s, Planta 47 pierde el
+**38 %** de lo que acredita contra el **26 %** del Campus.
 
-> 🟢 **La configuración del contrato fija cuánta densidad necesita un sitio para
-> ser juzgable**, y a 60 s Planta 47 pierde el **38 %** de lo que acredita contra
-> el **17 %** del Campus: **el contrato más estricto es más del doble de frágil
-> ante el aparato.** Nadie eligió ese intercambio — y es exactamente lo que C16
-> dice que no se puede leer del sistema, porque no hay contra qué comparar lo
-> pactado.
+🟢 **Y con la corrección de arriba, lo que los separa se reduce a un solo campo:**
+`kmlMatchMinPct` es **60 en los dos**, así que la diferencia no está en el umbral
+sino en **el ancho del corredor — 150 m contra 120 m**.
+
+> 🟢 **Treinta metros de corredor compran la diferencia entre quedarse en cero y
+> conservar 23** cuando el aparato ralea. **La configuración del contrato fija
+> cuánta densidad necesita un sitio para ser juzgable**, y nadie eligió ese
+> intercambio — porque nadie lo tenía medido. Es exactamente lo que C16 dice que
+> no se puede leer del sistema.
+>
+> **El hallazgo se achicó al corregirlo y se volvió más limpio:** ya no es «dos
+> configuraciones distintas dan fragilidades distintas», es **un campo, aislado,
+> con su efecto medido.**
 
 ---
 
@@ -195,8 +211,9 @@ no, y por qué.
   cobertura, con su grupo de control.
 
 **La línea base queda fijada aquí**, con su fecha: **94 acreditadas y 73.1 % de
-cobertura mediana en Planta 47; 235 y 69.6 % en el Campus, al 11 de agosto de
-2026.** Cualquier arreglo se compara contra eso.
+cobertura mediana en Planta 47; 155 y 79.5 % en el Campus, al 11 de agosto de
+2026** (la del Campus, corregida — ver §3.2). Cualquier arreglo se compara contra
+eso.
 
 ---
 
