@@ -82,7 +82,11 @@ export function ServiceDetailView({
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-[var(--muted)]">Ventana (política)</dt>
+              <dt className="text-[var(--muted)]">
+                {data.politicaOrigen === "sello"
+                  ? "Ventana de la política del sello"
+                  : "Ventana (política vigente)"}
+              </dt>
               <dd className="text-right">
                 {data.policyWindowStart && data.policyWindowEnd
                   ? `${data.policyWindowStart} → ${data.policyWindowEnd}`
@@ -104,9 +108,40 @@ export function ServiceDetailView({
                 <dt className="text-[var(--muted)]">Ventana usada en este viaje</dt>
                 <dd className="text-right text-amber-200/90">
                   {data.tripWindowStart} → {data.tripWindowEnd}
+                  {/*
+                    Este renglón NO nombra la causa de la diferencia, y eso es
+                    deliberado — se intentó dos veces y las dos estaban mal.
+                    Decía «antes de tu cambio de política», que atribuía a una
+                    edición del contrato. Se cambió a «la dimensionó la duración
+                    medida de la ruta», y la primera captura de pantalla lo
+                    tumbó: en ese servicio la ventana del viaje es más ANGOSTA
+                    que la de su política —05:50 contra 06:20—, o sea que se
+                    congeló bajo una versión de la política anterior incluso a la
+                    del sello. Hay tres épocas en juego (crear el viaje, sellar
+                    el hecho, hoy) y desde esta pantalla no se distinguen.
+                    Declarar qué no se responde es la regla; adivinar es §D.
+                  */}
                   <span className="mt-0.5 block text-xs text-[var(--muted)]">
-                    Congelada al generar el servicio (antes de tu cambio de política).
+                    Congelada al crear el viaje, y no coincide con la de arriba.
+                    Desde aquí no se puede saber si la ensanchó la duración
+                    medida de la ruta o si la política cambió entre crearse el
+                    viaje y sellarse el hecho.
                   </span>
+                </dd>
+              </div>
+            ) : null}
+            {data.contratoCambioDesdeElSello ? (
+              /*
+                El expediente enseña lo del sello, y punto. Pero callar que el
+                contrato cambió deja al lector comparando este servicio con otro
+                más nuevo sin saber que las reglas no son las mismas — que es la
+                confusión que este arreglo existe para quitar, movida de sitio.
+              */
+              <div className="flex justify-between gap-4">
+                <dt className="text-[var(--muted)]">Contrato hoy</dt>
+                <dd className="text-right text-xs text-[var(--muted)]">
+                  Alguna de estas reglas cambió después de sellarse este
+                  servicio. Lo de arriba es con lo que se le juzgó.
                 </dd>
               </div>
             ) : null}
