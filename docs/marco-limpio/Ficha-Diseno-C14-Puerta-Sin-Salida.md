@@ -57,8 +57,18 @@ y A∧B corre siempre.
 | **Tecma 47** | **`destino_only`** | **92** | 309 | **103** |
 | TECMA Campus | `kml_full` | 343 | 282 | 36 |
 
-🟢 De los 103 pendientes de Planta 47, **64 son `llegada_sin_atribucion`** —eran
-61 el 6 de agosto, **sigue creciendo**— y 1 es `observacion_insuficiente`.
+🟢 De los 103 pendientes de Planta 47, **85 son `llegada_sin_atribucion`** (Turno
+A) más 2 del Turno B — **87 en total**, contra **61 el 6 de agosto**. Crece rápido.
+
+> ⚠ **Esta cifra se corrigió el 12 de agosto y la primera versión decía 64.** El
+> error era de clasificación, no de datos: se tomaba **el último asiento del
+> ledger** de cada ocurrencia, y hay asientos informativos —`llegada_fuera_ventana`
+> y el retiro de la cola— que se escriben **después** del que decidió y no traen
+> paso de decisión. Esas ocurrencias caían a un cajón de sobrantes que **parecía
+> plausible**: el total seguía cuadrando y solo el reparto por causa mentía. Se
+> arregla tomando el último asiento **que haya juzgado**. Es la §D del Marco —la
+> agrupación— aplicada a una consulta, y el instrumento que lo destapó fue contar
+> los pendientes para D3.
 
 ### 3.1 La prueba de que `destino_only` está inerte, y es la distribución
 
@@ -90,7 +100,7 @@ vía, **`destino_only` nunca ha acreditado a nadie por llegar.**
 | 1 | **`destino_only` apaga A∧B** — `servedRoute` = llegó | ❌ **No.** Las 21 rutas de Planta 47 llegan **a la misma geocerca de planta**, así que toda unidad que llegue acreditaría **todas** las rutas del turno. No afloja la atribución: **la destruye**. Y choca con la ley del Marco *«un servicio cumplido siempre tiene unidad observada»*: habría muchas, sin forma de elegir |
 | **2** | **A∧B deja de ser requisito y pasa a ser desempate** — llegar te hace elegible; el trazado decide **cuál** de las elegibles sirvió cuál ruta | ✅ **Es la forma que encaja, y usa maquinaria que ya existe.** 🟢 El **pase de exclusividad** ya está construido (`services/verification.ts:334`) y hoy quita una unidad de todas las rutas menos la de mejor match. Aquí haría exactamente el trabajo que hace falta. ⚠ **Necesita un piso**: sin él, una unidad que llegó y no manejó nada parecido a la ruta acredita por ser la menos mala del lote |
 | 3 | **Identificación por capas** — seis señales que acumulan confianza y ninguna condena sola | ✅ **Es hacia donde apunta el plan** (Tramo 3 lo tiene escrito: llegada · corredor · match fino solo con densidad suficiente · huella histórica · patrón de paradas · rol declarado **opcional siempre**). ⚠ **Es mucho más grande que C14**, y la opción 2 es su primer peldaño: llegada como señal de admisión, trazado como señal de desempate |
-| 4 | **No tocar el motor: pasar Planta 47 a `kml_full`** | ❌ **No, y va listada porque es la barata y por eso es la tentadora.** Hace que la configuración diga lo que el motor hace, en vez de al revés — pero **eso es decidir por el cliente qué contrató**, que es exactamente lo que C16 dice que no se puede hacer. 🟢 **Y tiene precio medido:** convertiría los **64 `llegada_sin_atribucion`** en `no_cumplido`, o sea **64 acusaciones nuevas** por un cambio de configuración que nadie pactó |
+| 4 | **No tocar el motor: pasar Planta 47 a `kml_full`** | ❌ **No, y va listada porque es la barata y por eso es la tentadora.** Hace que la configuración diga lo que el motor hace, en vez de al revés — pero **eso es decidir por el cliente qué contrató**, que es exactamente lo que C16 dice que no se puede hacer. 🟢 **Y tiene precio medido:** convertiría los **87 `llegada_sin_atribucion`** en `no_cumplido`, o sea **87 acusaciones nuevas** por un cambio de configuración que nadie pactó |
 
 ---
 
@@ -109,13 +119,13 @@ frontera en vez de a una expresión booleana.
   y el motor hace otra. Arreglar lo roto antes de agregar lo nuevo es el orden
   normal, y el único que deja el «después» comparable contra algo cierto.
 - 🟢 **C14 vacía la pila y el piso la llena.** C14 mueve servicios **hacia fuera**
-  de pendiente —los 64 `llegada_sin_atribucion` son su población, conocida y
+  de pendiente —los 87 `llegada_sin_atribucion` son su población, conocida y
   acotada—; el piso mueve servicios **hacia dentro**. **Si el piso va primero, el
   efecto de C14 queda enterrado bajo pendientes nuevos** y hay que medir un
   drenaje contra un tanque que se está llenando.
 - 🟢 **C14 no necesita D3 y el piso sí.** Un arreglo que reduce la pila no espera
-  a la regla de cierre; uno que la aumenta, sí — y D3 sigue abierta con **106
-  pendientes, 89 de más de 48 h**.
+  a la regla de cierre; uno que la aumenta, sí — y D3 sigue abierta con **139
+  pendientes, 118 de más de 48 h** (medido el 12 de agosto).
 
 ### A favor de que el piso vaya primero
 
@@ -123,23 +133,83 @@ frontera en vez de a una expresión booleana.
   una densidad que no alcanzaba a ver es **una acusación que la evidencia no
   sostiene** — Ley 7 rota ahora mismo. 🟢 Planta 47 tiene **309 `no_cumplido`**,
   sellados a caballo entre los dos regímenes de cadencia.
-- 🔵 **Los 64 de C14 no acusan a nadie:** están en `pendiente_evidencia`, que es un
+- 🔵 **Los 87 de C14 no acusan a nadie:** están en `pendiente_evidencia`, que es un
   estado honesto. **Nadie ha recibido un resultado**, así que por daño-ahora C14
   es la menos urgente de las dos.
 - **Y el piso protege el arreglo de C14 de nacer mal:** si C14 admite por llegada
   y el piso no existe, se admite también donde el muestreo no daba para ver nada.
 
+### ⚠ Y una medición del 12 de agosto afloja la tensión que esta sección plantea
+
+**Comparten la frontera, pero medido hoy no comparten la población.** Con el piso
+expresado como *hueco mediano del mejor candidato del servicio*:
+
+| A quién tocaría un piso | Planta 47 | Campus |
+|---|---|---|
+| `no_cumplido` **> 55 s** | **50** de 309 | 0 de 282 |
+| `cumplido` **> 55 s** | 0 de 92 | **6** de 343 |
+| `pendiente` **> 55 s** | **0** de 103 | 0 de 31 |
+| cualquiera **> 90 s** | **0** | **0** |
+
+> 🟢 **Cero pendientes cruzan el piso, y ésa es la mitad que importa.** C14 mueve
+> servicios **desde** `pendiente_evidencia`; el piso los mueve **hacia** ahí, desde
+> `no_cumplido`. **Medido hoy, los dos conjuntos son disjuntos: ningún servicio
+> está en los dos.**
+>
+> **Consecuencia para el orden: se pueden hacer en cualquier orden y cada una
+> sigue siendo medible**, siempre que **cada una reporte su propia población** —
+> C14 los 87 `llegada_sin_atribucion`, el piso los 50 `no_cumplido`—. La regla del
+> nudo no aplica igual aquí: **compartir frontera no es compartir población.**
+
+🟢 **Y el piso es más chico de lo que se temía:** no llena la pila, **la mueve en
+50 servicios**, y son 50 **acusaciones que la evidencia no sostiene** — que es
+exactamente el daño que existe para parar. 🟢 **Entre 45 s y 55 s la cifra no se
+mueve (50 en los dos)**: hay meseta, así que el umbral no es un filo.
+
+⚠ **Y su costo, que no es solo bueno:** los **6 cumplidos del Campus** que cruzan
+el piso **perderían una acreditación ya dada**. Quitarle un cumplido a un carrier
+que ya lo tenía es un daño distinto de no acusarlo, y va dicho aparte.
+
 ### Lo que decide entre las dos, y no está de este lado
 
-**Ninguno de los dos argumentos gana solo: la tensión se resuelve hacia arriba.**
+- Si **D3** existe, el piso deja de ser peligroso — aunque con 50 servicios y
+  ningún pendiente tocado, **el argumento de «llena una pila que nadie cierra» se
+  achicó mucho**.
+- Si **la Planta confirma `destino_only`**, C14 deja de depender de C16.
+- **Y la tercera salida sigue en pie y ahora tiene precio:** el piso puede entrar
+  **apagado** — ver §5.1.
 
-- Si **D3** existe, el piso deja de ser peligroso y puede ir primero.
-- Si **la Planta confirma `destino_only`**, C14 deja de depender de C16 y puede ir
-  primero.
-- **Y hay una tercera salida que conviene tener sobre la mesa:** las dos se pueden
-  hacer en el orden que sea **si el piso entra primero apagado** —construido,
-  medido en seco y sin efecto— y se enciende después de C14. Eso las separa en el
-  tiempo sin separarlas en el calendario, y **cada una conserva su medición.**
+---
+
+### 5.1 Qué costaría «el piso apagado» — medido, no estimado
+
+**La pregunta era el tamaño antes de decidir el orden. El tamaño es chico, y por
+una razón que no se había dicho: casi todo ya existe.**
+
+| Pieza | Estado |
+|---|---|
+| **La frontera** —un paso que manda a `pendiente_evidencia` en vez de acusar— | 🟢 **Ya existe.** `cobertura_evidencia` con `evidenceMinCoveragePct` (80) y `evidenceMaxGapMinutes` (10) hace exactamente eso hoy, y **es una compuerta de densidad en el eje TEMPORAL**: pregunta si hubo silencios. **Lo que le falta a C19 es el otro eje** — si hubo puntos suficientes para ver la ruta. Un muestreo regular cada 60 s **no tiene silencios y pasa esta compuerta**, y después falla la cobertura de trazado. Por eso es una compuerta nueva sobre una frontera vieja, no una frontera nueva |
+| **El modo «apagado»** —medir y registrar sin cambiar el veredicto— | 🟢 **Ya tiene precedente en el código.** El paso `llegada_fuera_ventana` se escribe con la nota explícita «Informativo; no cambia el veredicto». **No hay que inventar la forma** |
+| **La métrica** | 🟢 **Ya está medida y con instrumento propio**: el hueco entre puntos consecutivos, que es lo que vigila `medir-cadencia` |
+| **La medición en seco** | 🟢 **Ya está corrida** — es la tabla de arriba, hecha **sin tocar el motor**, en solo lectura |
+
+**Lo que de verdad falta**, y es lo único que cuesta:
+
+1. Calcular el hueco mediano del candidato **dentro del motor** y escribirlo como
+   paso informativo del ledger. 🟢 **No toca ningún término de `servedRoute`** —es
+   una propiedad del conjunto de puntos, no de la ruta—, así que **es seguro de
+   medir por separado**, igual que lo fue C12.
+2. Su prueba, y que la prueba distinga su ausencia.
+3. **Nada más.** Sin migración, sin perilla —el umbral puede quedar horneado
+   mientras esté apagado, y volverse perilla al encenderlo, que es cuando decide
+   algo—, sin cambio de pantalla.
+
+> **El piso apagado no es «construir el piso y no usarlo»: es dejar de medir por
+> fuera lo que el motor ya podría anotar al pasar.** Y su valor no es el arreglo
+> —apagado no arregla nada— sino que **cada hecho sellado cargue la densidad con
+> la que se le juzgó**, que es el Tramo 4 dicho en pequeño: *el hecho debe
+> bastarse a sí mismo*. 🟢 Hoy hay servicios de julio y de agosto que parecen
+> comparables y no lo son, y **sin ese dato adentro nadie lo puede saber después**.
 
 ---
 
