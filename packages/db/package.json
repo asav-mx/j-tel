@@ -25,6 +25,7 @@
     "vincular-identidades": "tsx src/vincular-identidades.ts",
     "verificar-resumen": "tsx src/verificar-resumen-telemetria.ts",
     "verificar-conteos": "tsx src/verificar-conteos.ts",
+    "medir-cadencia": "tsx src/medir-cadencia.ts",
     "verificar-solo-lectura": "tsx src/verificar-solo-lectura.ts"
   },
   "dependencies": {
