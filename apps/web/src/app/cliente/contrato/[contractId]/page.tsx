@@ -474,9 +474,27 @@ function SospechaDeVentanaAviso({
 
       <h3 className="mb-3 max-w-[52ch] text-[17px] leading-snug font-medium text-[var(--texto)]">
         {sospecha.clase === "llegadas_lejos"
-          ? `Las llegadas de este contrato ocurren ${formatoMargen(m.medianaMargenMin ?? 0)} de la hora límite — fuera de la ventana que está configurada.`
-          : `${m.sinLlegada} de ${m.total} servicios se resolvieron sin que el sistema viera una sola llegada.`}
+          ? `Las llegadas acreditadas de este contrato ocurren ${formatoMargen(m.medianaMargenMin ?? 0)} de la hora límite — fuera de la ventana que está configurada.`
+          : `En ${m.sinLlegada} de ${m.total} servicios ninguna unidad acreditó su llegada.`}
       </h3>
+
+      {sospecha.clase === "sin_llegadas" ? (
+        /*
+         * Sin esta línea, la cifra de arriba se lee como «no llegó nadie», que
+         * es lo que decía la versión anterior de este aviso y era falso: el
+         * campo dice que ninguna candidata ACREDITÓ, no que el sistema no
+         * viera llegar a nadie. Medido el 12 de agosto de 2026 contra el
+         * ledger: en 397 servicios acusados sí había una candidata con llegada
+         * registrada. La corrección es del enunciado; el número no cambió.
+         */
+        <p className="mb-3 max-w-[62ch] text-[13.5px] text-[var(--tenue)]">
+          Acreditar es que el árbitro haya podido atribuirle la llegada a este servicio.{" "}
+          <span className="text-[var(--texto)]">
+            Que ninguna unidad acreditara no significa que ninguna llegara:
+          </span>{" "}
+          puede haber llegadas registradas que no se pudieron atribuir aquí.
+        </p>
+      ) : null}
 
       <div
         className={`mb-3 flex flex-wrap gap-x-6 gap-y-1 border border-[var(--linea)] bg-black/20 px-4 py-2.5 text-[12px] ${mono} text-[var(--tenue)]`}
@@ -485,19 +503,27 @@ function SospechaDeVentanaAviso({
           servicios leídos <span className="text-[var(--texto)]">{m.total}</span>
         </span>
         <span>
-          con llegada observada <span className="text-[var(--texto)]">{m.conLlegada}</span>
+          con llegada acreditada <span className="text-[var(--texto)]">{m.conLlegada}</span>
         </span>
         <span>
-          sin llegada <span className="text-[var(--texto)]">{m.sinLlegada}</span>
+          sin llegada acreditada <span className="text-[var(--texto)]">{m.sinLlegada}</span>
         </span>
         {m.medianaMargenMin !== null ? (
           <span>
-            mediana de llegada{" "}
+            mediana de llegada acreditada{" "}
             <span className="text-[var(--texto)]">{formatoMargen(m.medianaMargenMin)}</span>
           </span>
         ) : null}
+        {/*
+         * «piso» y no «ventana»: este par sale de la política del contrato, y
+         * la ventana que se aplica a cada servicio se deriva de la duración de
+         * su ruta y solo puede ser MÁS ancha. Rotularlo «ventana» a secas hacía
+         * que este renglón contradijera la columna «min antes» de la tabla de
+         * abajo sin que ninguno de los dos estuviera mal.
+         */}
         <span>
-          ventana <span className="text-[var(--texto)]">−{m.ventanaAbreMin}</span> a{" "}
+          piso de ventana del contrato{" "}
+          <span className="text-[var(--texto)]">−{m.ventanaAbreMin}</span> a{" "}
           <span className="text-[var(--texto)]">+{m.ventanaCierraMin}</span> min
         </span>
       </div>
@@ -512,8 +538,9 @@ function SospechaDeVentanaAviso({
 
       <p className="mb-4 max-w-[62ch] text-[12.5px] text-[var(--tenue)]">
         <span className="text-[var(--texto)]">Lo que esta lectura no responde:</span> no puede
-        distinguir si la hora del turno está mal declarada, si la ventana es demasiado angosta, o
-        si las unidades no están reportando. Los tres se ven igual desde aquí.
+        distinguir si la hora del turno está mal declarada, si la ventana es demasiado angosta, si
+        las unidades no están reportando, o si sí llegaron y el árbitro no pudo atribuirlas a este
+        servicio. Los cuatro se ven igual desde aquí.
       </p>
 
       <p className={`text-[11px] text-[var(--tenue)] ${mono}`}>

@@ -3651,3 +3651,82 @@ resultó chico).**
   debe bastarse a sí mismo*—, y hoy hay servicios de julio y de agosto que parecen
   comparables y no lo son.
 - 🟢 **`servedRoute` sigue intacta.** Nada de esto toca el motor.
+
+**12 de agosto de 2026, cierre (el frente de la ventana congelada tiene ficha — y
+las tres preguntas contestadas, con una que no se puede contestar).**
+
+**El frente de la ventana pasa DELANTE de los pasos 1 y 2 del piso de densidad.**
+La razón es de mecánica, no de prioridad: **el paso 1 anota la densidad de una
+evidencia que se recolectó dentro de una ventana equivocada.** Anotar bien sobre
+una ventana mala es medir el «antes» con el instrumento torcido.
+
+**La ficha:** `docs/marco-limpio/Ficha-Ventana-Congelada.md`, con **dos frentes
+hermanos** — *(A)* el cron que revisa la ventana y avisa, y *(B)* el arranque real
+como alerta, **sin diseñar, con sus dos leyes ya escritas**.
+**El instrumento:** `packages/db/src/medir-ventana-congelada.ts`, solo lectura.
+
+- ⚠ **«¿Cuántos de los 286 cambiarían de veredicto con la ventana de hoy?» NO SE
+  PUEDE CONTESTAR LEYENDO, y contestarla de todos modos sería §D.** Otra ventana
+  es otra evidencia, otro emparejamiento y otro sello: eso es **simulación**, y
+  vive en **D4 / Tramo 6**. Lo que sí se midió es **cuántos se juzgarían sobre
+  evidencia distinta**, que es su cota superior.
+- 🟢 **581 de los 597 no cumplidos (97.3 %) tienen hoy una ventana derivada que
+  abre ANTES que la que se les congeló.** En los 286 de Planta 47 son **286 —el
+  100 %—, con p50 +34 min, p90 +47 y máx +55**; en los 85 del Campus, p50 +21.
+  ⚠ **El 100 % está contaminado por construcción** —la población se selecciona
+  por un criterio casi idéntico al que hace ensanchar la ventana—, **por eso la
+  cifra que compara algo es la de 581 de 597**, sin seleccionar a nadie.
+- 🟢 **Y en el tramo que se abriría de más YA HAY evidencia guardada de la misma
+  candidata: 344 de 359 medibles (95.8 %), y 179 (49.9 %) con puntos en
+  movimiento.** No hay que salir a buscar nada: está del otro lado de un recorte.
+- 🟢 **El solape con los 397: son 116.** Y **la respuesta a «si se solapan mucho es
+  una sola causa con dos nombres» es que NO son una sola.** De los 286, **170 no
+  tienen ninguna llegada registrada**; de los 397, **200 están fuera de la
+  población**. 🟢 **Y el reparto los parte en dos: el Campus solapa 81 de 85
+  (95 %) y Planta 47 116 de 286 (41 %).** Donde la ventana es el problema chico
+  casi todos tuvieron llegada; donde es grande, la mayoría ni eso.
+- 🟢 **De los 286, en los 286 hay puntos GPS antes del inicio de su ventana. El
+  dato ya está.** ⚠ Pero «hay puntos» es la pregunta floja: **la primera versión
+  del sensor preguntaba por los aparatos del viaje y daba 100 % en todo, porque un
+  `trip` guarda la flota entera —mediana de 52 aparatos distintos—.** Preguntando
+  por **una** candidata, la de más coincidencia de trazado: **114 de los 286
+  (39.9 %) YA VENÍAN RODANDO cuando su ventana abrió**, con p50 **27 min** de
+  anticipación, p90 63 y máx 179.
+- 🆕 **Y el hallazgo estructural, que es el que decide §4 de la ficha: la ventana
+  NO vive dentro del hecho.** `compliance_facts` congela la política byte a byte y
+  **no guarda la ventana** — vive en `trips`, editable y sin versionar. Entonces
+  un `UPDATE` a `trips` deja el hecho intacto **y cambia lo que su expediente
+  dice**, porque las pantallas leen `trips.evidenceWindowStart`
+  (`service-detail-data.ts`, `workbench-data.ts`, `diagnostico-data.ts`). **Eso no
+  es «no tocar el hecho»: es tocarlo por debajo, y es peor que re-verificar — la
+  re-verificación al menos deja una versión.** Va al **Tramo 4**, al lado de la
+  geocerca, por la misma razón.
+- ⚠ **Y aunque se vaya a D4, falta decidir CON CUÁL ventana:** la de hoy se deriva
+  de mediciones **posteriores** al servicio que se re-juzgaría. **D5 sigue yendo
+  antes.**
+- ⚠ **No se pudo reproducir el «85 con la mediana» del #288** (hoy da 73): la
+  consulta de aquella medición no se commiteó, solo su resultado. **Es el
+  argumento entero de por qué este sensor se commitea.** 🟢 Las mediciones crecen
+  ~48 filas al día, así que **la ventana derivada se aleja de la congelada un poco
+  más cada día.**
+- ✅ **Y la corrección del 412, aplicada en la pantalla — el texto, no el dato.**
+  La afirmación falsa era **mía**, y era §D en la cara del cliente: la pantalla
+  decía *«se resolvieron sin que el sistema viera una sola llegada»* sobre un
+  campo que significa **«ninguna unidad ACREDITÓ»**. Hoy dice *«En N de M
+  servicios ninguna unidad acreditó su llegada»*, con la línea que lo desarma
+  —*que ninguna acreditara no significa que ninguna llegara*—, y las etiquetas
+  pasan a **«con/sin llegada acreditada»**. 🟢 **Se vio en el navegador, en los dos
+  temas**, con la cifra viva: **418 de 519**. 🟢 De paso, el renglón que decía
+  «ventana −60 a +45» ahora dice **«piso de ventana del contrato»**: ese par sale
+  de la política y la ventana aplicada solo puede ser más ancha, así que
+  contradecía la columna «min antes» de la tabla de abajo **sin que ninguno de los
+  dos estuviera mal**. Y «lo que esta lectura no responde» pasó de tres causas a
+  **cuatro**: faltaba *«o si sí llegaron y el árbitro no pudo atribuirlas»*, que es
+  justo la que los 397 hacen probable.
+- ⚠ **Un defecto de piel que se vio al verificar y NO se tocó, para no mezclar dos
+  arreglos en un PR:** la tira de métricas de ese aviso usa `bg-black/20`, un color
+  escrito a mano. En tema oscuro se ve bien; **en tema claro sale una banda gris
+  sucia**. Es la regla del skill —ningún componente escribe un color a mano— y le
+  falta su token.
+- 🟢 **`servedRoute` sigue intacta.** Nada de esto toca el motor: una ficha, un
+  sensor de solo lectura y texto de pantalla.

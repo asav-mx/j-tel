@@ -28,6 +28,7 @@
     "medir-cadencia": "tsx src/medir-cadencia.ts",
     "medir-pendientes": "tsx src/medir-pendientes.ts",
     "medir-ventana": "tsx src/medir-ventana.ts",
+    "medir-ventana-congelada": "tsx src/medir-ventana-congelada.ts",
     "comparar-politicas": "tsx src/comparar-politicas.ts",
     "verificar-solo-lectura": "tsx src/verificar-solo-lectura.ts"
   },
