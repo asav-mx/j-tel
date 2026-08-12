@@ -312,6 +312,56 @@ async function main() {
         `    sale sin inventar nada: es el ledger del día cruzado consigo mismo.`,
     );
 
+    // ── 5b · El corte de dos criterios: llegó Y anduvo cerca del trazado ─────
+    /*
+     * Cuántas candidatas quedan si el expediente muestra solo las RELEVANTES.
+     *
+     * Criterio 1 — llegó a la geocerca: `arrivalAt` en el ledger.
+     * Criterio 2 — anduvo cerca del trazado: precisión de corredor sobre un
+     * piso. El piso NO es de política: no decide ningún veredicto, solo decide
+     * a quién vale la pena enseñar. Por eso se dan varios y la ficha elige uno
+     * declarándolo — elegirlo aquí lo escondería dentro de un guion.
+     *
+     * La ley que lo acompaña vive en la pantalla, no aquí: el expediente tiene
+     * que decir cuántas se evaluaron EN TOTAL, o el corte se vuelve
+     * ocultamiento y el transportista tiene razón al decir «sí fui y ni
+     * aparezco».
+     */
+    console.log(`\n  ── 5b · El corte de dos criterios ──────────────────────────────────`);
+    const bDe = (s: PasoLedger) => {
+      const v = (s.details ?? {}).corridorPrecisionPct;
+      return typeof v === "number" ? v : null;
+    };
+    const conLlegada = (f: Fila) => candsDe(f).filter((s) => "arrivalAt" in (s.details ?? {}));
+    console.log(
+      `  ${"criterio".padEnd(46)}${"p50".padStart(6)}${"p90".padStart(7)}${"máx".padStart(7)}${"= 0".padStart(8)}`,
+    );
+    const fila1 = filas.map((f) => candsDe(f).length);
+    console.log(
+      `  ${"evaluadas (la flota entera)".padEnd(46)}${num(percentil(fila1, 50)).padStart(6)}${num(percentil(fila1, 90)).padStart(7)}${num(Math.max(...fila1)).padStart(7)}${"—".padStart(8)}`,
+    );
+    const fila2 = filas.map((f) => conLlegada(f).length);
+    console.log(
+      `  ${"+ llegó a la geocerca".padEnd(46)}${num(percentil(fila2, 50)).padStart(6)}${num(percentil(fila2, 90)).padStart(7)}${num(Math.max(...fila2)).padStart(7)}${num(fila2.filter((n) => n === 0).length).padStart(8)}`,
+    );
+    for (const piso of [0, 5, 10, 25]) {
+      const conteo = filas.map(
+        (f) => conLlegada(f).filter((s) => (bDe(s) ?? -1) > piso).length,
+      );
+      const etiqueta =
+        piso === 0
+          ? "+ tocó el corredor del trazado (B > 0 %)"
+          : `+ anduvo cerca del trazado (B > ${piso} %)`;
+      console.log(
+        `  ${etiqueta.padEnd(46)}${num(percentil(conteo, 50)).padStart(6)}${num(percentil(conteo, 90)).padStart(7)}${num(Math.max(...conteo)).padStart(7)}${num(conteo.filter((n) => n === 0).length).padStart(8)}`,
+      );
+    }
+    console.log(
+      `\n    La columna «= 0» es la que decide el piso: son los servicios que se\n` +
+        `    quedarían SIN NINGUNA candidata que enseñar. Un corte que deja el\n` +
+        `    expediente vacío es peor que uno que deja de más.`,
+    );
+
     // ── 6 · Resumen ──────────────────────────────────────────────────────────
     console.log(`\n  ── 6 · Lo que habría que empezar a guardar ─────────────────────────`);
     console.log(

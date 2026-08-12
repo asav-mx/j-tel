@@ -372,6 +372,43 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
     documento es que **hay que volver a medirla entera para poder dudar de
     ella**.
 
+21. **Preguntar sobre «alguno de» una población que es el universo entero
+    contesta que sí siempre.** El resultado sale en 100 %, se ve como un
+    hallazgo fortísimo, y **no dice nada**: la pregunta se contestó sola por el
+    tamaño de la población, no por el fenómeno. La forma general —**una
+    afirmación existencial sobre un conjunto que ya contiene la respuesta**— no
+    la atrapa ningún compilador ni ninguna prueba, porque la consulta es
+    correcta.
+
+    🟢 **Y ya pasó dos veces, que es lo que la convierte en regla.**
+
+    **Primera, 12 de agosto:** el sensor de la ventana congelada preguntó «¿hay
+    puntos GPS antes de que abriera la ventana?» sobre **los aparatos del
+    viaje**, y dio **100 % en todo** — porque un `trip` guarda la flota entera,
+    con mediana de **52 aparatos**. Preguntado sobre **una** candidata, la de
+    más coincidencia de trazado, la respuesta real fue **39.9 %**.
+
+    **Segunda, 13 de agosto, y ésta es la que importa:** el inventario del
+    expediente preguntó «¿alguna candidata de este servicio acreditó otra ruta
+    ese día?» sobre **la lista de candidatas**, que también es la flota —mediana
+    de **50 por servicio**—, y dio otra vez **100 %**. Preguntado sobre **la
+    candidata que llegó**, la respuesta real fue **150 de 397 (37.8 %)**.
+
+    ⚠ **Lo que hace al segundo caso el que vale: quien lo cometió conocía el
+    primero.** Lo había leído ese mismo día, lo había citado en un commit, y aun
+    así volvió a escribir la misma pregunta con otro nombre de tabla. **La regla
+    existía, estaba escrita, era reciente, y no bastó** — que es la regla 14
+    aplicada a sí misma, y el argumento de por qué esta lista tiene que crecer
+    con casos y no con enunciados.
+
+    **Qué exige, y es una sola pregunta antes de escribir el `EXISTS`:** ¿sobre
+    cuántos elementos se está preguntando «alguno», y cuántos habría que tener
+    para que la respuesta fuera «no»? **Si la población es la flota, el universo
+    o «todo lo que se evaluó», la pregunta está mal dirigida** — hay que
+    apuntarla al sujeto del que habla la afirmación, casi siempre uno solo. Y si
+    el resultado sale en 100 % o en 0 %, **eso es la señal**: un extremo perfecto
+    sobre una población grande casi nunca es un hallazgo.
+
 **De producto:**
 
 > *"¿Esto tendría sentido para una planta en Bogotá cuyas rutas nunca hemos
@@ -3999,3 +4036,51 @@ estados que no se pueden colapsar: **GUARDADO** (sellado, se muestra tal cual),
   cero** — que es la segunda ley del frente aplicada a la piel.
 - 🟢 **`servedRoute` sigue intacta.** Tres instrumentos de solo lectura y una
   causa escrita. Nada toca el motor.
+
+**13 de agosto de 2026 (el frente del expediente sin atribución tiene ficha —
+Parte 1, la que no depende de ninguna decisión).**
+
+**La ficha:** `docs/marco-limpio/Ficha-Expediente-Sin-Atribucion.md`. **Sin
+código.** Reviste `carrier/servicio/[id]`.
+
+- **El frente va partido en dos, y la 1 va sola:** la Parte 1 enseña **lo que ya
+  está guardado**; la Parte 2 empieza a guardar lo que falta. **La 1 no espera a
+  nadie** — todo lo que muestra ya está en la base.
+- 🆕 **Y la primera decisión de la ficha no es de diseño, es de confidencialidad:
+  esto NO puede ir en la cara del cliente.** Lo que hay que enseñar —candidatas,
+  puntajes, recorridos— es exactamente lo que el skill llama **maquinaria de
+  identificación**, y revela la flota del transportista (Ley 3). **Vive en la
+  cara del transportista**, que es donde sirve: es su instrumento de defensa. El
+  cliente ve el conteo de llegadas no atribuidas y nada más. ⚠ **Cuánto más
+  merece ver el cliente no se puede contestar sin tocar la Ley 3 — decide Asav.**
+- 🟢 **El corte de dos criterios, medido (y la estimación se quedaba corta en el
+  costo):** de una flota de **50** evaluadas, «llegó a la geocerca» deja **4**;
+  **«+ anduvo cerca del trazado (B > 5 %)» deja 3** — que es un expediente que se
+  lee. ⚠ **Pero apretar el segundo criterio vacía expedientes: con B > 25 % son
+  110 de 397 (27.7 %) sin ninguna candidata que enseñar.** Por eso el piso queda
+  en 5 % **y la pantalla nunca se queda vacía**: si el criterio 2 no deja a
+  nadie, cae al 1 con su nota. 🟢 **Y `B > 0 %` se descartó por medición, no por
+  gusto: da lo mismo que llegar** — el destino está sobre el trazado, así que
+  entrar a la geocerca ya implica tocar el corredor.
+- **La ley que acompaña al corte, dicha por Asav:** *el expediente dice cuántas
+  se evaluaron en total* — «3 unidades relevantes de 52 evaluadas». **Sin eso el
+  filtro es ocultamiento**, y un transportista que hizo la ruta con GPS pobre
+  diría «sí fui y ni aparezco», con razón.
+- 🟢 **El empalme entra como explicación, no como dato suelto:** los tres hechos
+  en una línea dentro de la fila de la candidata — *llegó 05:41:07 · no acreditó
+  esta ruta · ese mismo turno acreditó `Sierra Vista 3`*. **150 de 397 (37.8 %)
+  pueden decirlo hoy.** ⚠ **Y no dice «por eso no acreditó aquí»**: esa
+  conclusión es C18, que sigue sin construir.
+- **Las tres leyes de la pantalla, escritas ANTES de construir**, que es cuando
+  todavía se pueden aplicar: nada de aquí es un veredicto ni lo cambia · nada se
+  inventa · **todo campo nuevo nace vacío hacia atrás**. De la tercera sale la
+  pieza que se construye primero: **las tres procedencias** —del sello ·
+  `lectura de hoy` · `no se preguntó`—, con tamaño medido (el tramo observable
+  está sellado en 121 de 397, la cobertura llana en 67, el aparato en 29, y
+  **cuál trazado se usó en 0**).
+- 🆕 **Regla nueva, la 21, y es mía:** preguntar «alguno de» sobre una población
+  que es el universo entero contesta que sí siempre. **Pasó dos veces en dos
+  días** —los aparatos del viaje el 12, las candidatas el 13— y **la segunda la
+  cometió quien había leído la primera esa misma mañana**. La regla existía, era
+  reciente, y no bastó.
+- 🟢 **`servedRoute` sigue intacta.** Una ficha y una regla. Nada toca el motor.
