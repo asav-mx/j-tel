@@ -562,6 +562,59 @@ export const evidencePoints = pgTable("evidence_points", {
   index("evidence_points_trip_idx").on(table.tripId, table.recordedAt),
 ]);
 
+/**
+ * La compuerta que rechazó a una candidata, **con la población a la que se le
+ * preguntó**.
+ *
+ * Las dos partes van juntas y no se pueden separar: `tramo_observable` medido
+ * sobre la CANDIDATA y medido sobre el VIAJE son la misma comprobación con dos
+ * respuestas distintas — es C25, y un motivo que no diga cuál se usó repite el
+ * defecto dentro del registro.
+ */
+export type MotivoDeCandidata = {
+  compuerta:
+    | "no_llego"
+    | "tramo_observable"
+    | "cobertura_de_trazado"
+    | "precision_de_corredor";
+  /** A quién se le preguntó: la unidad candidata, o la evidencia del viaje (la flota). */
+  poblacion: "candidata" | "viaje";
+  /** Lo medido y el umbral que se le aplicó, en la unidad de esa compuerta. */
+  medido: number | null;
+  umbral: number | null;
+};
+
+/**
+ * Lo que se congela dentro del hecho sobre las candidatas que se evaluaron.
+ *
+ * `evaluadas` es obligatorio y es **la ley del corte**: la lista guarda solo las
+ * relevantes —mediana de 3 contra una flota de 50—, y sin el total un filtro se
+ * vuelve ocultamiento. Un transportista que hizo la ruta con GPS pobre y quedó
+ * fuera del corte tiene que poder ver que hubo un corte.
+ */
+export type CandidatasSnapshot = {
+  /** CUÁNTAS se evaluaron en total, no cuántas se guardaron. */
+  evaluadas: number;
+  /** Con qué se recortó la lista, para que el corte sea auditable. */
+  criterio: string;
+  candidatas: Array<{
+    unidadId: string | null;
+    imeis: string[];
+    llegadaAt: string | null;
+    /** Todas las compuertas que fallaron, no la primera: colapsarlas inventa una prioridad. */
+    motivos: MotivoDeCandidata[];
+    /** Su señal, no la de la mejor unidad del viaje. */
+    senal: {
+      coberturaPct: number;
+      huecoMaximoMin: number;
+      cadenciaMedianaS: number | null;
+      puntos: number;
+    } | null;
+  }>;
+  /** Contra qué trazado se le calificó — no «cuál sirvió», que sigue en nulo. */
+  trazadoEvaluado: { variantId: string | null; kmlVersionId: string | null } | null;
+};
+
 export const complianceFacts = pgTable("compliance_facts", {
   id: uuid("id").primaryKey().defaultRandom(),
   serviceOccurrenceId: uuid("service_occurrence_id")
@@ -595,6 +648,36 @@ export const complianceFacts = pgTable("compliance_facts", {
   contractPolicySnapshot: jsonb("contract_policy_snapshot")
     .$type<import("@jtel/domain").ContractPolicy>()
     .notNull(),
+  /**
+   * Las candidatas relevantes con su motivo y su señal — Parte 2 del expediente
+   * sin atribución. Congelado dentro del hecho, como la política de arriba.
+   *
+   * **Vive aquí y no en una tabla hija a propósito.** Una tabla aparte son filas
+   * que alguien puede editar o borrar por separado del hecho, y eso es C24 con
+   * otro nombre. Aquí se escribe en el mismo INSERT que el veredicto, y como
+   * `compliance_fact_history` guarda `fact_snapshot` serializando la fila
+   * completa, **viaja sola a la historia** sin código extra.
+   *
+   * ⚠ **`null` NO es lista vacía, y la diferencia es la razón de existir de la
+   * columna:**
+   *
+   *   `null` — **no se preguntó.** El motor de esa época no registraba el
+   *            porqué. Son los 1 278 hechos anteriores a la Parte 2, los 397 de
+   *            julio entre ellos. **No se puede rellenar hacia atrás**: deducir
+   *            el motivo con los números que sí quedaron sería escribir un hecho
+   *            que nadie observó dentro de un expediente sellado (Marco §E).
+   *   `[]`   — **se preguntó y no hubo ninguna candidata.**
+   *
+   * Por eso la columna no lleva default. Un `DEFAULT '[]'` haría que todo lo ya
+   * sellado dijera «se evaluaron cero candidatas», que es falso —se evaluaron
+   * unas cincuenta por servicio— y **es irreversible**: escrito el `[]`, nadie
+   * puede volver a distinguir los dos casos.
+   *
+   * **Y la pantalla tiene que decirlo con palabras.** Si dibuja `—` o una lista
+   * vacía en los dos casos, un hueco se lee como un cero y esta columna no
+   * sirvió de nada.
+   */
+  candidatasSnapshot: jsonb("candidatas_snapshot").$type<CandidatasSnapshot>(),
   /**
    * El chofer declarado, CONGELADO dentro del hecho — Capa 1 del Plan-Choferes.
    *
