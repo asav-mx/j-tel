@@ -29,6 +29,7 @@
     "medir-pendientes": "tsx src/medir-pendientes.ts",
     "medir-ventana": "tsx src/medir-ventana.ts",
     "medir-ventana-congelada": "tsx src/medir-ventana-congelada.ts",
+    "separar-397": "tsx src/separar-397.ts",
     "medir-expediente-mutable": "tsx src/medir-expediente-mutable.ts",
     "comparar-politicas": "tsx src/comparar-politicas.ts",
     "verificar-solo-lectura": "tsx src/verificar-solo-lectura.ts"
