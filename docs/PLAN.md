@@ -342,6 +342,36 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
     comentario cubre varias líneas, vale para **todas**: si una se sale, o se
     cambia la línea o se acota el comentario.
 
+20. **Una consulta que no se commitea produce un número que nadie puede volver a
+    verificar.** El resultado se puede citar; la pregunta que lo produjo, no. Y
+    a los tres días ya no se distingue **si cambió el dato o cambió la
+    pregunta** — que son dos cosas con arreglos opuestos.
+
+    🟢 **El caso, del 12 de agosto de 2026.** El #288 registró «85 de los 309 no
+    cumplidos de Planta 47 son de rutas cuya duración **mediana** ya excede su
+    ventana». Al escribir el sensor de la ventana congelada, **veinticuatro
+    horas después**, la misma pregunta dio **73**. Las dos cifras hermanas de esa
+    misma medición —286 con la máxima, y los 397 con llegada— **se reprodujeron
+    exactas**, así que no era un error de método general. **Y no se pudo saber
+    cuál de las dos es la buena, porque la consulta del #288 no existe en ningún
+    lado.** Se descartó la agrupación (por ruta y por ruta×turno dan lo mismo) y
+    queda como candidata que `route_traversal_measurements` crece ~48 filas al
+    día — pero eso es una hipótesis, no una explicación, y no se puede cerrar.
+
+    **Lo que la distingue de la regla 8:** allá el instrumento no distinguía
+    «medí y no hay» de «no puedo ver»; aquí el instrumento **midió bien** y se
+    perdió. No es un defecto de la medición: es que **un número sin instrumento
+    no es un hallazgo, es un recuerdo.**
+
+    **Qué exige, y es barato:** toda cifra que entre a este plan o a una ficha
+    sale de un guion **commiteado y nombrado** —`medir-*`, `verificar-*`,
+    `comparar-*`—, y la ficha dice **con qué comando se reproduce**. Una consulta
+    de exploración puede vivir en un borrador; **en el momento en que su
+    resultado se cita, se commitea**. El costo de commitear un guion de solo
+    lectura es media hora; el de no poder reproducir una cifra que ya está en un
+    documento es que **hay que volver a medirla entera para poder dudar de
+    ella**.
+
 **De producto:**
 
 > *"¿Esto tendría sentido para una planta en Bogotá cuyas rutas nunca hemos
@@ -1602,20 +1632,37 @@ dejó de ser autónomo).
 referenciar de forma inmutable— todo lo que hizo falta para producirlo. Hoy sale a
 buscar cosas del catálogo que pudieron cambiar debajo de él.
 
-| Qué le falta cargar | Estado medido |
-|---|---|
-| Política del contrato | ✅ se congela byte a byte |
-| Unidad de cada punto de evidencia | ✅ anclada |
-| Asignación equipo ↔ unidad | ✅ temporal, resuelta por fecha |
-| Versión de trazado | 🟡 referenciada en 92.5% **pero el motor no la lee** — re-resuelve por fecha |
-| Conjunto de variantes evaluadas | ❌ no se congela |
-| Forma de la geocerca | ❌ no se versiona, y el campo guardado no es el que el motor usó (546 divergen) |
-| Versión del motor | ❌ |
-| **Densidad de la evidencia** | ❌ **— pieza 2 del Frente de los sensores.** Cuántos puntos, qué cadencia, qué huecos. 🟢 Sin esto, un servicio de julio y uno de agosto **parecen comparables y no lo son**: los mismos aparatos, las mismas rutas y ~1.5× más puntos por aparato movieron la cobertura de 5–7 a 9.9 de 10 (C19) |
+⚠ **12 de agosto: este tramo estaba MAL DIMENSIONADO, y el error era de eje.** La
+tabla listaba lo que le falta al hecho **para reproducir el veredicto**, y omitía
+lo que le falta **para sostener su expediente** — que es la otra mitad de la
+definición de v1, la de explicar. Son cosas distintas: la política **sí** se
+congela byte a byte, o sea que está ✅ para reproducir el juicio, **y la pantalla
+que lo explica no la lee** (C24). Un renglón verde tapaba un defecto vivo.
+
+| Qué le falta cargar | Para reproducir el veredicto | Para sostener el expediente |
+|---|---|---|
+| Política del contrato | ✅ se congela byte a byte | ❌ **el expediente lee la VIVA** — 197 hechos (16.5 %) ya muestran un margen que no es el suyo (C24) |
+| Unidad de cada punto de evidencia | ✅ anclada | ✅ |
+| Asignación equipo ↔ unidad | ✅ temporal, resuelta por fecha | ✅ |
+| Versión de trazado | 🟡 referenciada en 92.5 % **pero el motor no la lee** — re-resuelve por fecha | 🟡 **el expediente tampoco la lee**: re-resuelve igual. Hoy coinciden en las 1 180 que la traen |
+| Conjunto de variantes evaluadas | ❌ no se congela | ❌ |
+| Forma de la geocerca | ❌ no se versiona, y el campo guardado no es el que el motor usó (546 divergen) | ❌ **el mapa dibuja el polígono VIVO** — 519 hechos (43.5 %) con geocerca congelada distinta, y **polígonos distintos** |
+| **Ventana de evidencia** | 🟡 congelada en `trips`, **fuera del hecho** | ❌ **editable y sin versionar**: un `UPDATE` cambia lo que el expediente dice **sin dejar versión**, y el veredicto no se entera |
+| **Etiqueta y placas de la unidad** | n/a | ❌ **sin copia congelada**: se leen de `units` por id. La salida ya existe — `declaredDriverName` la resolvió con texto plano dentro del hecho |
+| **Nombres de perfil, contrato, planta** | n/a | ❌ **sin copia congelada** |
+| Versión del motor | ❌ | ❌ |
+| **Densidad de la evidencia** | ❌ **— pieza 2 del Frente de los sensores.** Cuántos puntos, qué cadencia, qué huecos. 🟢 Sin esto, un servicio de julio y uno de agosto **parecen comparables y no lo son**: los mismos aparatos, las mismas rutas y ~1.5× más puntos por aparato movieron la cobertura de 5–7 a 9.9 de 10 (C19) | ❌ |
 
 **Por qué es bloqueante y no deuda:** sin esto, explicar un no cumplido de julio
 leyendo el motor de agosto **miente sin querer**. Y explicar es la mitad de la
 definición de v1.
+
+⚠ **Y lo que la columna nueva agrega, que es peor que una fila más:** los tres
+renglones sin copia congelada **no se pueden medir**. Una divergencia solo es
+detectable si hay algo congelado contra qué compararla; donde no lo hay, un cambio
+**no deja rastro de ninguna clase**. Por eso este tramo no se puede cerrar con
+«medimos y no había»: en esa mitad, **cero no es una medición, es la ausencia de
+memoria**.
 
 ---
 
@@ -1666,13 +1713,15 @@ lo suyo, y el ≥90% de capacidad de mostrar se sostiene.
 
 **Esta es la ficha de consolidación.** Vive aquí, no en un documento aparte.
 
-**Son veintitrés, no once.** El plan viejo decía seis en una línea y listaba ocho en
-su propia tabla; el 3 de agosto se sumaron tres, entre el 4 y el 5 de agosto
+**Son veinticuatro, no once.** El plan viejo decía seis en una línea y listaba ocho
+en su propia tabla; el 3 de agosto se sumaron tres, entre el 4 y el 5 de agosto
 **C12 a C19** salieron de investigar C11, el 6 de agosto **C20 y C21** salieron de
 medir D2, y el 11 de agosto **C22 y C23** salieron de **encender instrumentos**:
 C22 del sensor de cadencia y C23 de enumerar los campos de la política para C16.
-**Ninguna de las dos se salió a buscar.** Quien compare contra esta lista **dice
-contra cuántas y cuáles**, nunca «es la séptima».
+**Ninguna de las dos se salió a buscar.** El 12 de agosto **C24** salió de tirar
+del hilo de la ventana congelada: preguntarse qué MÁS lee el expediente de filas
+editables. **Tampoco se salió a buscar — se cayó del arreglo anterior.** Quien
+compare contra esta lista **dice contra cuántas y cuáles**, nunca «es la séptima».
 
 **Qué hace esta sección, y qué no.** Ordena por **dependencia**, dice qué comparte
 ruta y qué comparte código, y separa lo que se puede medir sin sellar de lo que no.
@@ -1702,6 +1751,7 @@ ruta y qué comparte código, y separa lo que se puede medir sin sellar de lo qu
 | **C3** | **Se juzga antes de que llegue el expediente** | 🟢 **6 ago, y hay que decirlo con el eje o miente:** el archivador **hoy va a 6 minutos**, no a 7 horas — mediana **0.10 h**, p95 **0.18 h** en los últimos 7 días. Por semana de `recorded_at`: **22.13 h** la del 6 de julio · **0.10 h** de la del 13 en adelante · con un pico de **p95 5.31 h** la del 27 de julio. **El «~7 h, p95 30 h» de este plan era el promedio de un periodo roto con periodos sanos.** 🟢 Los intentos por servicio bajaron de **206 → 157 → 117 → 101 → 38.7** por semana, con el tope de cola del Tramo 0. 🟢 **Lo que no cambió es el mecanismo: nada retrasa el primer intento.** Y su cicatriz sigue medida: los **28** pendientes por cobertura son exactamente el **27 de julio (13, Campus)** y el **28 de julio (15, Planta 47)** — el fin de semana en que el archivador se atrasó | **Sin construir.** 🟡 Arreglar esto probablemente elimina la mayor parte de C2 — pero al 6 de agosto **ninguno de los dos está sangrando** |
 | **C22** | **La evidencia se copia sin candado: hay puntos repetidos en la tabla que el árbitro lee** | 🟢 **11 ago: 195 028 filas sobrantes de 5 013 844 (3.89 %)** entre el 1 de julio y el 11 de agosto, en **cinco días**: Campus 7 jul (50.0 %, x2) · 8 jul (50.0 %, x2) · 17 jul (2.5 %, x2) · **Planta 47 27 jul (54.0 %, hasta x4)** · **29 jul (53.7 %, hasta x3)**. 🟢 **Son copia exacta, no dos observaciones:** de **126 722** grupos repetidos (viaje + imei + instante), **126 722** con el mismo lugar y la misma unidad — **cero** con lugar distinto, **cero** con unidad distinta. 🟢 **Y la fuente está limpia:** `telemetry_points`, de donde se copia, tiene índice único `(imei, recorded_at)` con el comentario «Deduplica: un mismo equipo no puede tener dos puntos en el mismo instante», y **cero repetidos en la ventana**. 🟢 **`evidence_points` no tiene ese índice** —solo `(trip_id, recorded_at)`, no único— y el `insert` no lleva `onConflict` (`repositories/index.ts:3785`); el borrado que precede a la copia es **condicional** (`verification.ts:897`, `!reuseEvidence`). **La defensa está escrita en la tabla de la que se copia y no en la que el árbitro lee** — la forma de C13 otra vez: la puerta buena cerrada y el hueco donde nadie miró | **Sin construir.** ✅ **Entra a la ficha por decisión de Asav el 11 de agosto.** ⚠ **Y su gravedad hay que decirla medida, porque la versión intuitiva es más grave que la real y no se sostiene:** «la cobertura se calcula sobre puntos, así que duplicar infla la medición» **es falso para A∧B**, y esto es lo que lo mata — 🟢 **la duplicación es pareja dentro de cada candidata**: de **7 040** pares viaje×aparato de los cinco días, **7 027 tienen multiplicidad idéntica en todos sus instantes** y solo **13** —todos del 17 de julio, Campus— son desparejos. Con multiplicidad pareja, **A** (cobertura de waypoints) es invariante porque una copia exacta cubre el mismo waypoint, y **B** (`corridorPrecisionPct`, que es literalmente la fracción de puntos dentro del corredor) **escala numerador y denominador por igual**. 🟢 **Lo que SÍ mueve, leído en el código:** `directionSimilarity` promedia vectores de rumbo entre puntos consecutivos y un par duplicado aporta **`{0,0}`** —`bearingUnit` lo devuelve así por su guarda `|| 1`— **incrementando igual el denominador**: un día al 54 % le baja la similitud a cerca de la mitad. **`directionSimilarity` no entra en `servedRoute`: ordena candidatas.** Así que lo que esto puede mover no es **si** una candidata acredita sino **cuál gana** — o sea qué unidad queda como observada. Es la misma maquinaria del rumbo espurio de §4 del reporte de los 71. 🟡 **Cuánto, no se sabe:** exige correr el motor con y sin deduplicar, que es **simulación** (D4 / Tramo 6) |
 | **C23** | **Una perilla del contrato que se escribe, se explica y no la lee nadie** | 🟢 **11 ago, y salió de enumerar la política para C16, no de buscarla:** `shiftCloseMinutesAfterStart` —«a qué hora se sella el turno completo»— **no la declara ninguno de los dos contratos reales y no tiene valor de fábrica**, así que ningún contrato tiene hora de cierre de turno. 🟢 **Pero lo que importa no es que esté vacía: es que no tiene lector.** Sus únicas apariciones en `packages/*/src` y `apps/*/src` son **el esquema** (`domain/src/index.ts:344`), **la escritura** (`api/cliente/contratos/route.ts:201` y `:370`, las dos ramas del formulario) y **el catálogo de perillas** (`lib/perillas-contrato.ts:169`). **Ningún archivo la lee para decidir nada** — `cierre.ts` no la menciona. 🟢 **Y la escritura está cuidada**: hay un comentario explicando que vaciar el campo lo BORRA en vez de caer al valor anterior, «la única forma de que el contrato pueda volver a *sin hora de cierre*». **Alguien pensó el ciclo de vida de un dato que nadie consume.** ⚠ **Y el comentario del esquema miente sobre el código:** dice que «la pantalla trata la ausencia como *turno histórico sin hora de cierre* y lo dice», y **esa pantalla no existe** — no hay lector que pueda distinguir la ausencia de nada. Es la regla del comentario que miente, encontrada en el archivo que define la ley | **Sin construir.** **Propuesta el 11 de agosto — decide Asav si entra.** 🟢 **Hoy no ha engañado a nadie**, y por la misma razón que C13: **nadie la ha puesto**. El daño es potencial y está a un clic — la perilla es editable desde la pantalla del contrato y su texto promete un comportamiento concreto («07:00 con 120 minutos sella a las 09:00»). **Quien la configure va a creer que cambió algo.** Es la familia de **C9 al revés**: allá faltaba el último eslabón de una cadena sin principio; aquí **están el esquema, la escritura, la pantalla y hasta el texto que la explica — y falta el que la lea** |
+| **C24** | **El expediente de un hecho sellado no es inmutable: lo explica leyendo filas editables** | 🟢 **12 ago, y sale de tirar del hilo de la ventana:** `service-detail-data.ts` —la pantalla cuyo trabajo entero es explicar un hecho— **lee `contract.policy`, la política VIVA**, y no `fact.contractPolicySnapshot`, que el hecho congela byte a byte. De ahí salen la tolerancia, los cuatro números de la ventana, la zona horaria de **todos** los instantes y las consecuencias económicas (`computeEnforcement`). 🟢 **Y no es que nadie use el snapshot — es que lo usan las OTRAS pantallas:** `cierre-data.ts:208`, `diagnostico-data.ts:122`, `occurrence-table.tsx:99` e `historia-sello.ts` sí lo leen, y `no-cumplido-motivo.ts:58` **tiene la regla escrita**: «se lee del `contractPolicySnapshot` del hecho, no de la política de hoy». **La regla existe, está argumentada, y la incumple justo la pantalla del expediente** — regla 14 otra vez. 🟢 **Medido sobre 1 194 hechos sellados reales, y ya hay daño vivo: 197 (16.5 %) muestran hoy un «cierra la observación» que no es el suyo** — 124 congelados en **30 → 45** vivos (Campus, 13–17 jul) y 73 en **0 → 45** (Campus, 29 jun–13 jul). 🟢 **Y 519 (43.5 %) tienen la geocerca congelada distinta de la del perfil** —`VOID` contra `Tecma Planta 47`, **polígonos distintos**—, así que el mapa dibuja un destino y el campo del hecho nombra otro. 🟢 **Lo que NO divergió**: hora límite, unidad de referencia, versión de trazado y tolerancia, **cero** — pero cero por falta de ediciones, no por candado. ⚠ **Y lo peor no tiene cifra, que es el hallazgo: la ventana de evidencia, la etiqueta y placas de la unidad, los nombres de perfil/contrato/planta, el estado del viaje y los propios `evidence_points` se leen vivos y el hecho NO guarda copia**, así que un cambio ahí **es indetectable por construcción** | **Sin construir.** **Es la generalización de C4** —*lo que se congela no se usa y lo que se usa no se congela*— **de un campo a una pantalla**, y por eso es causa aparte y no una nota de aquélla: C4 es sobre el polígono, ésta es sobre **que el acta de un hecho sellado se pueda reescribir sin dejar versión**. 🟢 **El arreglo inmediato es barato y no toca el motor:** que el expediente lea `fact.contractPolicySnapshot` como ya hacen sus tres hermanas. **El arreglo de fondo es el Tramo 4**: que viaje dentro del hecho lo que hoy no viaja —empezando por la ventana—, y para lo que no se pueda congelar (los nombres), la salida ya la resolvió `Plan-Choferes` con `declaredDriverName`: **texto plano dentro del hecho, no una referencia a una fila que alguien puede editar**. ⚠ **Y la trampa de medirlo, porque el instrumento ya cayó en ella:** comparar los dos `jsonb` a secas dio **63 hechos con la zona horaria divergente**, y en pantalla son **CERO** — el par es `null` contra `America/Ciudad_Juarez` y el expediente aplica ese mismo default a los dos lados. **Correcto como consulta, falso como afirmación.** El sensor compara ahora lo que se ve, no lo que está guardado: `medir-expediente-mutable` |
 | **C17** | **La cobertura de ruta se guarda ponderada y se lee llana** | ✅ **Arreglado en el motor.** Ahora se guardan las dos: `routeMatchPct` —la que decide, ponderada por TF-IDF— y `routeMatchPlainPct` —la llana—. 🔵 **5 ago:** 168 de 3 054 candidatas acreditaban ≥ 60 % teniendo una cobertura real con mediana de **3.9 %**; la correlación con la precisión pasa de **0.373 ponderada a 0.672 sin ponderar**. **No movió un solo veredicto.** 🟢 **6 ago, y esto acota quién lo puede leer: la primera entrada de ledger con `routeMatchPlainPct` es del 5 de agosto.** Todo lo sellado antes trae **solo la ponderada**, y quien lo lea debe decirlo así | **Hecho en el motor.** **Falta que las pantallas del expediente lean la llana** — que es justo donde la cifra miente |
 | **C5** | **Ventana derivada vs. match observable** | No afinados entre sí: +50 se enderezan por uno, −2 se caen por el otro. 🟢 **6 ago — y esto cambia su estado: los datos ya llegaron.** `route_traversal_measurements` tiene **192 filas sobre 48 ruta-turnos**, del 31 de julio al 5 de agosto, y **48 de 48 llegan a las 3 muestras** que pide `routeDurationMinSamples`. ⚠ **102 de las 192 topan con el borde de la ventana** (`lower_bound`), así que el percentil sale sesgado hacia abajo | **Deja de estar bloqueado por datos.** Este plan decía «no es trabajo, es tiempo»; el tiempo ya pasó |
 | **C15** | **El expediente etiqueta mal su propia evidencia** | El ledger escribe cada candidata con el campo **`imei:`** y adentro guarda un **id de UNIDAD**. 🟢 **Comprobado otra vez el 6 de agosto** sobre la entrada más reciente: el valor casa con `units.id` (1 fila) y con `evidence_points.imei` (**0 filas**). 🟢 **Y tiene origen exacto:** `verification.ts:1104` sustituye el imei por el id de unidad antes de entrar al motor, y el motor agrupa y etiqueta con lo que recibe. **Quien lea un expediente creerá que ve el aparato y está viendo el vehículo.** No cambia ningún veredicto y **sí cambia lo que el expediente dice**, que es el activo | ✅ **Arreglado el 8 de agosto (#267), y era peor que la etiqueta.** 🟢 El origen no solo nombraba mal: **`imei: imeiToUnitId.get(p.imei) ?? p.imei` SOBRESCRIBÍA el aparato**, así que el dispositivo no llegaba al expediente — no estaba mal nombrado, **no estaba**. La Ley 5 rota en una línea. Ahora el punto lleva `unitId` aparte y el ledger escribe `unidadId` e `imeis` (en plural: una unidad puede cambiar de aparato a media ventana). 🟢 **No movió ningún veredicto**, y está acreditado: el motor agrupa por `unitId ?? imei`, que es exactamente el valor que dejaba la sustitución — con pruebas que comparan las dos claves caso por caso y grupo por grupo, y seis que mueren al volver a agrupar por aparato. ⚠ **La regla de lectura que esto deja, y hay que aplicarla:** lo sellado **antes del 8 de agosto** trae la unidad bajo `imei:` y **no trae `unidadId`**. Esa ausencia es la única forma de distinguir las dos épocas. En las entradas viejas **el aparato no se guardó**, así que `imeis` sale vacío y eso significa «no se guardó», no «no hubo aparato» — rellenarlo con la clave repetiría C15 dentro de la pantalla (§E del Marco). Mismo criterio que `routeMatchPlainPct` en C17 |
@@ -1736,6 +1786,7 @@ depende de otra va después de la que la desbloquea, **aunque duela**.
 | **C3** | **C11** | 🟢 Los 28 pendientes por cobertura son exactamente el 27 y 28 de julio, el fin de semana en que el archivador se atrasó |
 | **C22** | **C19** | 🟢 **No porque la explique —no la explica**: del 30 de julio al 11 de agosto hay **cero sobrantes**, y ahí vive el cambio sostenido de cadencia. Es dependencia porque **el 29 de julio, el día en que C19 está anclada, va al 53.7 %**: cualquier remedición de ese día arrastra esto, y su total de 237 114 puntos no son 237 114 observaciones |
 | **C22** | **C3** | 🟢 **El 27 y el 28 de julio —los dos días de C3— son los de más evidencia duplicada** (54.0 % en Planta 47, con hasta x4). Los mismos días, el mismo archivador atrasado, y dos huellas distintas encima. Remedir uno sin saber del otro atribuye mal |
+| **C24** | **C4 · C21** | 🟢 **Es su generalización, no su hermana:** C4 es el polígono que se congela y no se usa, C21 la hora límite que se congela y nadie revisa, y **C24 es que la PANTALLA que explica el hecho lee las dos vivas**. Arreglar C4 y C21 en la base no arregla lo que el expediente muestra mientras siga leyendo de la fila editable |
 | **C3** | **C2** | 🟡 Menos reintentos, menos borrado — pero al 6 de agosto **los dos dejaron de crecer solos**, así que la dependencia es de mecanismo y ya no de presión |
 | **C4** | **C11 · C13** | 🟢 `arrivalAt` sale del polígono, y el motor usa uno distinto del que el hecho guarda: cualquier remedición de «llegó» se mueve con esto |
 | **C5** | **C7** | 🟢 Las dos comen de `route_traversal_measurements`, y **ya tiene historia suficiente** (48 de 48 ruta-turnos con ≥ 3 muestras) |
@@ -3730,3 +3781,71 @@ como alerta, **sin diseñar, con sus dos leyes ya escritas**.
   falta su token.
 - 🟢 **`servedRoute` sigue intacta.** Nada de esto toca el motor: una ficha, un
   sensor de solo lectura y texto de pantalla.
+
+**12 de agosto de 2026, noche (C24: el expediente de un hecho sellado no es
+inmutable — y el Tramo 4 estaba mal dimensionado).**
+
+**Salió de tirar del hilo de la ventana congelada.** Si un `UPDATE` a `trips`
+deja el veredicto intacto y cambia lo que su expediente dice, la pregunta que
+sigue es **qué más lee el expediente de tablas editables**. Se midió, y la
+ventana no era la única ni la peor. **El instrumento:**
+`packages/db/src/medir-expediente-mutable.ts`, solo lectura.
+
+- 🆕 **Causa nueva, y son veinticuatro. C24: el expediente de un hecho sellado no
+  es inmutable — lo explica leyendo filas editables.** No es una nota de C4: **es
+  su generalización de un campo a una pantalla.** C4 dice que el polígono
+  congelado no es el que se usó; C24 dice que **el acta de un hecho sellado se
+  puede reescribir sin dejar versión**.
+- 🟢 **El hallazgo central, y duele porque la regla ya estaba escrita:**
+  `service-detail-data.ts` —la pantalla cuyo trabajo entero es explicar un
+  hecho— lee **`contract.policy`, la política VIVA**, y no
+  `fact.contractPolicySnapshot`. De ahí salen la tolerancia, los cuatro números
+  de la ventana, la zona horaria de **todos** los instantes y las consecuencias
+  económicas. **Y `no-cumplido-motivo.ts:58` tiene la regla contraria escrita y
+  argumentada** — *«se lee del `contractPolicySnapshot` del hecho, no de la
+  política de hoy»*—, que **sus tres pantallas hermanas sí cumplen**
+  (`cierre-data.ts:208`, `diagnostico-data.ts:122`, `occurrence-table.tsx:99`).
+  **Regla 14: una regla escrita no es una regla aplicada** — y aquí la incumple
+  justo la pantalla para la que se escribió.
+- 🟢 **Y el daño ya es vivo, no potencial. Sobre 1 194 hechos sellados reales:
+  197 (16.5 %) muestran hoy un «cierra la observación» que no es el suyo** — 124
+  congelados en **30 → 45** (Campus, 13–17 jul) y 73 en **0 → 45** (Campus,
+  29 jun–13 jul). **519 (43.5 %) tienen la geocerca congelada distinta de la del
+  perfil** —`VOID` contra `Tecma Planta 47`, y **los polígonos son distintos**—,
+  así que el mapa dibuja un destino y el campo del hecho nombra otro.
+- 🟢 **Lo que NO divergió: hora límite, unidad de referencia, versión de trazado
+  y tolerancia, cero.** ⚠ Pero **cero por falta de ediciones, no por candado**:
+  ninguno de los cuatro tiene nada que impida que diverja mañana.
+- ⚠ **Y lo peor no tiene cifra, que es el hallazgo de fondo:** la ventana de
+  evidencia, la etiqueta y placas de la unidad, los nombres de perfil, contrato y
+  planta, el estado del viaje y los propios `evidence_points` **se leen vivos y
+  el hecho NO guarda copia**. Sin algo congelado enfrente **no hay divergencia
+  detectable**: un cambio ahí no deja rastro de ninguna clase. **Cero
+  divergencias en esa mitad no es cero daño — es ausencia de memoria.**
+- ⚠ **El Tramo 4 estaba MAL DIMENSIONADO, y el error era de eje.** Su tabla
+  listaba lo que le falta al hecho **para reproducir el veredicto** y omitía lo
+  que le falta **para sostener su expediente**, que es la otra mitad de la
+  definición de v1. La política estaba en ✅ —y lo está, se congela byte a byte—
+  **mientras la pantalla que la explica leía la viva**. Un renglón verde tapaba
+  un defecto vivo. La tabla pasa a **dos columnas** y suma tres renglones:
+  ventana, etiquetas de unidad y nombres.
+- 🟢 **El arreglo inmediato es barato y no toca el motor:** que el expediente lea
+  `fact.contractPolicySnapshot`, como ya hacen sus tres hermanas. **El de fondo
+  es el Tramo 4**, y para lo que no se puede congelar —los nombres— la salida ya
+  está resuelta en el repo: `declaredDriverName` la guarda como **texto plano
+  dentro del hecho**, no como referencia a una fila que alguien puede editar.
+- ⚠ **Y la trampa de medirlo, que este instrumento se comió antes de reportar:**
+  comparar los dos `jsonb` a secas daba **63 hechos con la zona horaria
+  divergente**. En pantalla son **CERO** — el par es `null` congelado contra
+  `America/Ciudad_Juarez` vivo, y el expediente aplica ese mismo default a los
+  dos lados. **Correcto como consulta, falso como afirmación.** El sensor imprime
+  ahora las dos columnas, `jsonb` y `EN PANTALLA`, y solo la segunda afirma algo
+  sobre lo que un humano ve.
+- ✅ **Regla 20, y sale del #289:** *una consulta que no se commitea produce un
+  número que nadie puede volver a verificar.* El «85 con la mediana» del #288 dio
+  **73** veinticuatro horas después; sus dos cifras hermanas se reprodujeron
+  exactas, así que no era método. **No se pudo saber cuál es la buena porque la
+  consulta no existe.** En el momento en que un resultado se cita, su guion se
+  commitea.
+- 🟢 **`servedRoute` sigue intacta.** Nada de esto toca el motor: una causa, un
+  sensor de solo lectura y dos tablas del plan.

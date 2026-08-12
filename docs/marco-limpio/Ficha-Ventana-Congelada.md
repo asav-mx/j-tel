@@ -43,10 +43,10 @@ día**.
 
 > **Es la forma de C21 en un tercer campo.** *Congelar sin forma de revisar es el
 > patrón, no el campo* — ya pasó con la hora límite (C21) y con la geocerca (C4).
-> ⚠ **Queda a decisión de Asav si esto merece número propio (C24) o si es la
-> tercera población de C21.** A favor del número propio: el campo, el cron y el
-> aviso son distintos. En contra: el mecanismo es idéntico y partirlo repartiría
-> la misma causa en tres filas. **Esta ficha no lo decide.**
+> ✅ **Resuelto el 12 de agosto: la ventana congelada NO lleva número propio — es
+> la tercera población de C21**, porque el mecanismo es idéntico y partirlo
+> repartiría la misma causa en tres filas. **Lo que sí se llevó número propio es
+> otra cosa, y salió de tirar de este hilo: `C24`**, en §4.3.
 
 ---
 
@@ -259,6 +259,33 @@ campo: *la frontera de la evidencia vive en una fila editable que nadie
 versiona*. Va a la lista del **Tramo 4** —«que el hecho se baste a sí mismo»—,
 donde ya está la geocerca por la misma razón. **No arregla ninguna acusación
 pasada; hace imposible la trampa de §4.1 hacia adelante.**
+
+> ### 🆕 Y de aquí salió C24, que es más grande que este frente
+>
+> La pregunta obvia después de §4.1 —**¿qué MÁS lee el expediente de tablas
+> editables?**— se midió el 12 de agosto, y la respuesta redimensiona el Tramo 4:
+> **la ventana no era la única, ni la peor.**
+>
+> 🟢 **`service-detail-data.ts` lee `contract.policy` VIVA**, no
+> `fact.contractPolicySnapshot`. De ahí salen la tolerancia, los cuatro números
+> de la ventana, la zona horaria de todos los instantes y las consecuencias
+> económicas. **Y la regla contraria ya está escrita en el repo**, en
+> `no-cumplido-motivo.ts:58`: *«se lee del `contractPolicySnapshot` del hecho, no
+> de la política de hoy»*. Sus tres pantallas hermanas —cierre, diagnóstico,
+> tabla de ocurrencias— **sí la cumplen**. La incumple justo el expediente.
+>
+> 🟢 **Y ya hay daño vivo, no potencial: 197 de 1 194 hechos sellados (16.5 %)**
+> muestran hoy un «cierra la observación» que no es el suyo —124 congelados en
+> **30 → 45** y 73 en **0 → 45**—, y **519 (43.5 %)** tienen la geocerca
+> congelada distinta de la del perfil, con **polígonos distintos**.
+>
+> ⚠ **Lo peor no tiene cifra:** la ventana, la etiqueta y placas de la unidad,
+> los nombres y los propios `evidence_points` se leen vivos y **el hecho no
+> guarda copia**, así que un cambio ahí es **indetectable por construcción**.
+> **Cero divergencias ahí no es cero daño: es ausencia de memoria.**
+>
+> El detalle vive en la causa **C24** del plan. **El instrumento:**
+> `pnpm --filter @jtel/db medir-expediente-mutable`.
 
 ---
 
