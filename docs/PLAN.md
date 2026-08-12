@@ -1689,7 +1689,7 @@ ruta y qué comparte código, y separa lo que se puede medir sin sellar de lo qu
 
 | # | Causa | Qué se sabe, con la fecha de cada cifra | Estado |
 |---|---|---|---|
-| **C19** | **La cobertura depende de la DENSIDAD del muestreo, no de la conducta** | 🟢 **6 ago:** el salto **se sostuvo**. Puntos de evidencia por día de servicio de Planta 47: **61–68 k** del 9 al 24 de julio → **93 k · 97 k · 99 k · 108 k · 110 k** del 29 de julio al 5 de agosto. El Campus, plano (**113–142 k**) todo el periodo. Mismos aparatos —51–54 por día, estable de punta a punta—, mismas unidades, mismas rutas, mismo trazado. 🔵 **5 ago:** la cobertura del trazado saltó de **5–7 a 9.9 de 10**. 🟢 **No fue un cambio nuestro:** ningún commit toca archivador, ingestor, `gps-umbrella` ni la cadencia de los crons entre el 24 de julio y el 3 de agosto. **La calificación de un transportista puede subir o bajar sin que él haga nada distinto** | **Sin construir.** Rompe la promesa del producto: el veredicto tiene que depender de la conducta, no del aparato |
+| **C19** | **La cobertura depende de la DENSIDAD del muestreo, no de la conducta** | 🟢 **6 ago:** el salto **se sostuvo**. Puntos de evidencia por día de servicio de Planta 47: **61–68 k** del 9 al 24 de julio → **93 k · 97 k · 99 k · 108 k · 110 k** del 29 de julio al 5 de agosto. El Campus, plano (**113–142 k**) todo el periodo. Mismos aparatos —51–54 por día, estable de punta a punta—, mismas unidades, mismas rutas, mismo trazado. 🔵 **5 ago:** la cobertura del trazado saltó de **5–7 a 9.9 de 10**. 🟢 **No fue un cambio nuestro:** ningún commit toca archivador, ingestor, `gps-umbrella` ni la cadencia de los crons entre el 24 de julio y el 3 de agosto. **La calificación de un transportista puede subir o bajar sin que él haga nada distinto**. 🟢 **11 ago — remedido con el sensor de cadencia, y sale más nítida: no es «~1.5× más puntos».** Planta 47 emitía **un punto por minuto exacto** —mediana del hueco entre puntos consecutivos **60.0 s los trece días de servicio del 9 al 28 de julio**, con p90 de **120 s**, o sea uno de cada diez perdido— y pasó a **~40 s** (37–42) con p90 de **60 s** del 30 de julio en adelante. 🟢 **El Campus estuvo en 36–45 s todo el periodo**: Planta 47 **convergió a la cadencia que el Campus ya tenía**. 🟡 Un 60.0 exacto sostenido y un salto a otro valor estable tienen forma de **valor configurado**, no de deriva — lo que falta para pasarlo a 🟢 no está de nuestro lado: es el proveedor diciendo qué cambió. Ver `Ficha-Sensor-Cadencia.md` | **Sin construir.** Rompe la promesa del producto: el veredicto tiene que depender de la conducta, no del aparato. 🟢 **Su precondición está cubierta desde el 11 de agosto** por la mitad de medición del frente de sensores (`medir-cadencia`); el tablero que avisa sigue esperando al rediseño |
 | **C11** | **Servicios con evidencia y sin atribución** | **Investigación CERRADA** — `Reporte-Final-Investigacion-71.md`; el detalle, en `Ficha-Diagnostico-Pendientes-Sin-Atribucion.md`. La causa raíz es **C19**. 🟢 **6 ago, por causa × sitio × turno:** **106** pendientes (eran 100 el 4 ago y 104 el 5) — `llegada_sin_atribucion` **61**, *todos* de **Planta 47 · Turno A**; cobertura insuficiente **28**; observación insuficiente **12**; sin evidencia **5**. Lo que la produce: **ninguna candidata cumple A (cobertura ≥ 60 %) y B (corredor ≥ 60 %) a la vez** | **Medida.** Falta decidir el arreglo |
 | **C14** | **`routeStrictness` no gobierna lo que su nombre promete** | Se lee en **un solo punto** (`packages/verification/src/index.ts:1018`) y solo elige entre `pendiente_evidencia` y `no_cumplido` **después** de que la atribución falló. La comprobación A∧B vive en `servedRoute` (`index.ts:575`) y **lo único que la apaga es `!hasKml`**. 🟢 **6 ago, y esto cierra el argumento: los 48 ruta-turnos de los dos contratos reales tienen KML activo con waypoints.** O sea `!hasKml` **no se dispara nunca hoy**, así que A∧B corre siempre y `destino_only` está **inerte para todos los servicios reales**. Con `destino_only`, una unidad que llegó **no puede salir `cumplido` jamás** | **Sin construir.** Es la causa de que los 61 no se puedan cerrar solos. **Tiene frente propio** — «La puerta sin salida» |
 | **C13** | **El veredicto del mismo fallo lo decide `routeStrictness`, y el cambio no deja rastro** | Con `destino_only` + llegada → `pendiente_evidencia`; con `kml_full` → `no_cumplido`. 🟢 **6 ago: 341** `no_cumplido` con una unidad que **sí llegó** — **208 del Campus** (`kml_full`, 9 jul → 5 ago, **sigue creciendo**) y **133 de Planta 47** (`kml_full`, 14 → 30 jul, **congelado**: salió de esa estrictez el 31). Eran 330 el 4 de agosto y 335 el 5: **lo que crece es el Campus, y solo el Campus.** 🟢 **El mismo día visto por el otro lado:** los 61 `llegada_sin_atribucion` de Planta 47 caen el 9, 10, 31 de julio y el 3, 4 y 5 de agosto — **cero entre el 13 y el 30**, que es exactamente su ventana de `kml_full`. El mismo fallo, dos nombres. 🟢 **El caso de esta causa, con fecha, y es nuestro:** `contract_policy_history` **existe y sigue en cero filas al 6 de agosto**, y el contrato del Campus **se editó ese mismo día a las 09:14 sin dejar una sola fila**. Lo editamos **nosotros**, con el guion de `kmlOriginToleranceFraction`, **sabiendo que C13 existe y que esa tabla es su arreglo.** **Ni siquiera quien conoce el problema deja historia**, porque dejarla no es obligatorio: es la regla 14 —una regla escrita no es una regla aplicada— aplicada a la auditoría. Mientras escribir la fila dependa de que alguien se acuerde, la tabla seguirá vacía. ⚠ **7 ago — la lectura de arriba estaba incompleta, y la corrección es el hallazgo:** escribir la fila **NO dependía de que alguien se acordara**. `updatePolicy` la escribe dentro de la misma transacción que el `UPDATE` desde el **31 de julio** (`990be4f`), con el comentario explícito de que el registro va ahí y no en quien llama justamente para que un camino de edición nuevo no lo pueda olvidar. 🟢 **El camino de la aplicación llevaba cerrado más de una semana y la tabla seguía en cero.** Lo que falla es otra cosa: la edición del Campus del 6 de agosto la hizo un **guion con `UPDATE` crudo**, que no pasa por ahí, y la consola de Neon tampoco pasaría. **Cerrar el camino bueno no cierra la puerta de atrás**, y el hueco no se ve hasta que alguien va a leer la historia y no hay nada. Es la regla 8 —una defensa que ninguna prueba distingue de su ausencia— aplicada al registro: la defensa existía, funcionaba, y **ninguna escritura real la atravesaba** | **En construcción — el arreglo cambió de forma con la corrección de arriba.** No es «hacer que la aplicación registre», que ya estaba: es **un trigger de Postgres** (migración `0020`), que alcanza a la aplicación, a los guiones y a la consola. ✅ **Decidido por Asav el 7 de agosto**, con su costo aceptado por escrito: una escritura cruda no puede firmar quién fue y queda como `sql_directo` — menos malo que cero filas. 🔵 Nadie los ha visto: ningún cliente ni carrier ha recibido un resultado, así que **no hay acusación emitida**. Eso baja la urgencia y no cierra la pregunta |
@@ -3099,3 +3099,60 @@ rotación del dueño baja de urgente a higiene con ventana).**
   comando para leer las variables de Vercel quedó bloqueado por permisos— y es
   el primer paso del procedimiento, porque las dos integraciones se rotan
   distinto.
+
+**11 de agosto de 2026 (Bloque C arranca — la precondición de C19, partida; y lo
+que el sensor destapó al encenderlo).**
+
+Detalle completo en `docs/marco-limpio/Ficha-Sensor-Cadencia.md`. Aquí queda lo
+que cambia el plan.
+
+- ✅ **El frente de los sensores se parte en dos, decidido por Asav el 11 de
+  agosto.** La **medición** entra ahora —`packages/db/src/medir-cadencia.ts`,
+  solo lectura, sin pantalla, sin migración, sin escribir nada—. El **tablero**
+  de J-Staff espera al rediseño y a D7. La razón es la misma con la que se partió
+  C20: J-Staff son nueve rutas con cero fichas y hay un rediseño en curso, así
+  que construir la piel hoy es construirla dos veces.
+- **Y la precondición se cumple con la mitad que entró, no por rebajarla.** Lo
+  que C19 necesita es poder **atribuir** un cambio de cobertura, y eso lo da la
+  serie; el tablero da **aviso temprano**, que es el otro propósito del frente.
+  ⚠ **Costo aceptado por escrito:** mientras el tablero no exista **nadie recibe
+  aviso**, así que cada PR que toque la cobertura corre la medición **al abrir y
+  al cerrar**, y las dos corridas se guardan.
+- 🟢 **C19 sale más nítida, no repetida.** Ver su fila en §5.1: el hueco entre
+  puntos consecutivos pasó de **60.0 s exactos** (trece días de servicio del 9 al
+  28 de julio, p90 120 s) a **37–42 s** (p90 60 s) del 30 de julio en adelante, y
+  **el Campus ya estaba en 36–45 s**. No es «más puntos»: es **el intervalo de
+  emisión**, y Planta 47 convergió al del Campus.
+- 🟡 **Una medida se probó y se descartó, y el descarte va escrito porque el
+  número equivocado ya se veía bien:** medir cadencia como *puntos por hora de
+  ventana* está confundido — la ventana es **derivada** (C5) y se mueve sola. El
+  Campus del 10 de agosto lo destapó: puntos normales y «cadencia» 34 % abajo por
+  el denominador. **Una medida cuyo denominador es otra pieza en movimiento no
+  mide el aparato, mide la resta de las dos.**
+- 🆕 **Hallazgo nuevo, propuesto como C22 — decisión de Asav: hay puntos de
+  evidencia repetidos.** 🟢 **195 028 filas sobrantes de 5 013 844 (3.89 %)**
+  entre el 1 de julio y el 11 de agosto, en cinco días —el 27 y el 29 de julio de
+  Planta 47 al **54 %**, con hasta **x4**—. 🟢 **Son copia exacta:** de 126 722
+  grupos repetidos, **126 722 con el mismo lugar y la misma unidad**, cero
+  distintos. 🟢 **La fuente está limpia** —`telemetry_points` tiene índice único
+  `(imei, recorded_at)` y cero repetidos—; **`evidence_points` no lo tiene**, y
+  el borrado previo a la copia es **condicional** (`verification.ts:897`). **La
+  defensa está en la tabla de la que se copia y no en la que el árbitro lee**,
+  que es la forma de C13 otra vez.
+- 🟢 **Y lo que esto NO hace: no tumba C19.** Del 30 de julio al 11 de agosto hay
+  **cero sobrantes**, y ahí vive el cambio sostenido. Pero 🟢 **el 29 de julio —el
+  día en que C19 está anclada— es 53.7 % duplicado**; las cinco cifras de §5.1
+  (93·97·99·108·110 k) son del **30 de julio al 5 de agosto**, así que los valores
+  ya lo excluían y **lo que incluía ese día era el rótulo del rango**. El eje otra
+  vez. 🟢 **Y el 27 y 28 de julio, los dos días de C3, son los de más evidencia
+  duplicada.**
+- 🟡 **Si los duplicados movieron un veredicto, no se sabe, y medirlo no es
+  barato:** exige correr el motor con y sin deduplicar, o sea **simulación** —
+  D4 / Tramo 6. Lo que hace que la pregunta valga: `routeMatchPct` va **ponderada
+  por TF-IDF** (C17), y una ponderación sobre un conjunto con 54 % de
+  repeticiones exactas no es obviamente invariante.
+- **Se comprobó que era nuevo antes de anunciarlo**, que es la regla que costó el
+  episodio de T4: no está en §5.1, ni en el reporte de los 71, ni en las fichas.
+  Las vecinas son C3 y C17, y no es ninguna de las dos.
+- 🟢 **`servedRoute` sigue intacta**, releída contra el HEAD de este día. Nada de
+  este PR toca el motor.
