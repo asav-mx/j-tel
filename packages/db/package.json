@@ -30,12 +30,15 @@
     "medir-ventana": "tsx src/medir-ventana.ts",
     "medir-ventana-congelada": "tsx src/medir-ventana-congelada.ts",
     "separar-397": "tsx src/separar-397.ts",
+    "reparto-397": "tsx src/reparto-397.ts",
+    "inventario-expediente": "tsx src/inventario-expediente-sin-atribucion.ts",
     "medir-expediente-mutable": "tsx src/medir-expediente-mutable.ts",
     "comparar-politicas": "tsx src/comparar-politicas.ts",
     "verificar-solo-lectura": "tsx src/verificar-solo-lectura.ts"
   },
   "dependencies": {
     "@jtel/domain": "workspace:*",
+    "@jtel/verification": "workspace:*",
     "drizzle-orm": "^0.44.2",
     "postgres": "^3.4.7"
   },

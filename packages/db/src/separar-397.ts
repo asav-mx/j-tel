@@ -8,8 +8,10 @@
  * **Qué son los 397.** Servicios sellados `no_cumplido` de los dos contratos
  * reales en los que el ledger guarda **al menos una candidata con llegada
  * registrada**. Es decir: el sistema SÍ vio llegar una unidad y aun así acusó.
- * La cifra se midió el 12 de agosto de 2026 (133 de Planta 47 + 264 del Campus)
- * y aquí se vuelve a levantar de cero, no se hereda.
+ * La cifra se midió el 12 de agosto de 2026 y aquí se vuelve a levantar de
+ * cero, no se hereda. El desglose por contrato lo produce la corrida — este
+ * archivo no nombra a ningún cliente ni a ningún transportista, a propósito:
+ * un instrumento que conoce nombres deja de servir para el siguiente contrato.
  *
  * **Por qué separar.** El Marco dice dos cosas que esta población pone en
  * tensión: *sin evidencia no es incumplimiento* y *un servicio cumplido siempre
@@ -640,7 +642,7 @@ async function main() {
         `    de una población de no cumplidos: son poblaciones ajenas.`,
     );
 
-    // ── 5 · El número que se le puede decir a Juárez Bus ─────────────────────
+    // ── 5 · El número que se le puede decir al transportista ─────────────────
     const acreditada = poblacion.filter((p) => p.grupo === "acreditada");
     const ventana = poblacion.filter((p) => p.grupo === "ventana_corta");
     const atribucion = poblacion.filter((p) => p.grupo === "atribucion");
