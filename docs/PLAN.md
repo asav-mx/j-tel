@@ -4084,3 +4084,75 @@ código.** Reviste `carrier/servicio/[id]`.
   cometió quien había leído la primera esa misma mañana**. La regla existía, era
   reciente, y no bastó.
 - 🟢 **`servedRoute` sigue intacta.** Una ficha y una regla. Nada toca el motor.
+
+**13 de agosto de 2026, tarde (qué cabe en la cara del cliente — medido, y una
+afirmación floja mía corregida).**
+
+**La pregunta la abrió la ficha de la Parte 1 diciendo que no se podía contestar
+sin tocar la Ley 3. Se midió, y esa frase era floja: sí se podía, solo que nadie
+lo había medido.** **El instrumento:**
+`packages/db/src/medir-que-ve-el-cliente.ts`, solo lectura.
+
+- 🟢 **«Hubo llegadas, y cuántas» — CABE ACOTADO.** De 1 632 pares
+  servicio×unidad, **49 (3.0 %) son unidades que ese día acreditaron a OTRO
+  cliente**, repartidas en **49 de 397 servicios (12.3 %)**. El **conteo** habla
+  del servicio de quien mira; **la identidad no puede salir nunca**.
+- 🟢 **«A qué hora» — CABE.** Sellada en 397 de 397. ⚠ Pero **enseñar N horas ES
+  enseñar que hubo N unidades**: no agrega exposición sobre el conteo y tampoco
+  es independiente de él.
+- 🟢 **«El trazo real» — NO CABE, y la razón es peor que "revela flota".** Un
+  trazo es el recorrido de una unidad, y **el recorrido ES la ruta que servía**:
+  en **49 servicios (12.3 %)** sería la ruta de **otro cliente** dibujada en el
+  mapa de éste, y en **126 (31.7 %)** la de otro contrato. **La lectura de Asav
+  era correcta y el motivo es más grave que el supuesto.**
+- 🆕 **Y el hallazgo que cambia la prioridad del frente: «por qué no se pudo
+  acreditar» NO lo bloquea la Ley 3 — lo bloquea que el dato honesto no
+  existe.** 🟢 El único motivo guardado es `ninguna_unidad_coincidio_ruta` en
+  **397 de 397**, que **es una tautología**. 🟢 Y la familia derivada de lo
+  sellado **se equivoca de causa en 260 de 285 (91.2 %)**: dice *«ninguna
+  recorrió suficiente del trazado»* —que en la cara del cliente se lee como
+  **conducta del transportista**— cuando lo que hubo fue que **a la candidata ni
+  siquiera se le vio suficiente ruta**. Es C25.
+- ⚠ **Escribir hoy esa causa en la cara del cliente convertiría un fallo de
+  observación en una acusación de conducta, con el sello del árbitro encima.**
+  Es §D en su forma más cara: dato correcto, afirmación falsa, y del lado que
+  perjudica al auditado. **Por eso el porqué espera a la Parte 2, y no por
+  confidencialidad.**
+- **Lo que el cliente sí puede ver hoy:** *«Llegaron 4 unidades a su destino
+  entre las 05:38 y las 06:04. El sistema no pudo acreditar cuál de ellas cubrió
+  esta ruta.»* Honesto, explica más que un `no cumplido` pelón, y no expone a
+  nadie.
+
+**13 de agosto de 2026, tarde (la Parte 2 tiene ficha — y son tres cosas, no
+cinco).**
+
+**La ficha:** `docs/marco-limpio/Ficha-Expediente-Sin-Atribucion-Parte-2.md`.
+**Sin código, y toca el motor: parada obligatoria antes de construir.**
+
+- ⚠ **Verificado en el código, y reduce el frente: dos de los cinco campos que
+  la Parte 1 listó como faltantes YA FLUYEN.** `routeMatchPlainPct`
+  (`verification/src/index.ts:1045`) y `observableFraction` (`:1059`) se
+  escriben hoy en cada candidata. **Que aparezcan en 67 y 121 de los 397 no es
+  que fallen: es que esos 397 son viejos.** No hay nada que construir para
+  ellos.
+- **Quedan tres:** el **motivo por candidata** (no existe) · la **señal por
+  candidata** (la cobertura es de una sola unidad, la mejor) · y **cuál trazado
+  se usó**, que **no es construir sino dejar de tirar**: el motor lo calcula y
+  lo descarta en una línea —`servedVariantId: finalStatus === "cumplido" ? … :
+  null` (`services/src/verification.ts:1318`)—. La semántica es correcta —un no
+  cumplido no «sirvió» ninguna variante— y **como registro está mal: el
+  expediente necesita contra qué se le juzgó, que no es lo mismo que cuál
+  sirvió**.
+- 🆕 **El motivo por candidata tiene que declarar A QUÉ POBLACIÓN se le
+  preguntó**, o repite C25 dentro del registro. Y **se escribe aunque C25 no
+  esté arreglado**: registrar qué pasó no mueve ningún veredicto; arreglarlo sí.
+- ⚠ **Y una dependencia que decide dónde vive: C2.** Si el porqué vive solo en
+  el ledger, el expediente hereda un emparejamiento con **374 de 581 filas
+  (64.4 %) sin referencia**. Ledger es barato y hereda el problema; dentro del
+  hecho es Tramo 4 y es la respuesta correcta. **La ficha no elige — decide
+  Asav.**
+- **Y el plazo, que es lo que hace que no pueda esperar:** todo campo nuevo nace
+  vacío hacia atrás. **Los 397 de julio ya son irrecuperables**; lo que la
+  Parte 2 evita son los de octubre.
+- 🟢 **`servedRoute` sigue intacta.** Dos fichas y un instrumento de solo
+  lectura.
