@@ -3383,6 +3383,63 @@ anterior, que salió de hacerlo).**
   tampoco haría nada**.
 - 🟢 **`servedRoute` sigue intacta.** Nada de esto toca el motor.
 
+**12 de agosto de 2026, noche (cuatro respuestas de la Planta, y la tercera forma
+salió de tumbar mi propia propuesta).**
+
+- ✅ **C16 tiene su primera divergencia ACREDITADA: el corredor del Campus se pactó
+  en 60 % y corre en 50 %.** Confirmado por la Planta. 🟢 **Y tiene tamaño medido:
+  71 candidatas acreditan B solo por el umbral no pactado, y en la compuerta A∧B
+  la diferencia es de 163 a 139 — 24 candidatas.** **Es la primera vez que se puede
+  decir con número que el árbitro aplica una regla que las partes no pactaron.**
+  Falta decidir si se corrige y qué pasa con lo ya sellado (D4).
+- ✅ **`enforcementRules` vacío es a propósito** — deja de ser divergencia y pasa a
+  ser decisión tomada.
+- 🆕 **Frente nuevo, pedido por Asav: los motivos excusables se configuran desde la
+  interfaz, no se hornean en el contrato.** 🟢 **Y la diferencia medida entre los
+  dos contratos no era una decisión: era el catálogo sin definir.** ⚠ **La trampa
+  del frente, dicha antes de construirlo:** un excusable **es una eximente**, así
+  que es política — **cambia hacia adelante y deja historia**. Una lista editable
+  sin historia sería **C13 otra vez con otro nombre**.
+- ⏸ **`routeStrictness` sigue sin respuesta, y no urge**: la perilla está inerte
+  (C14), así que su valor no mueve un veredicto hoy.
+- 🟢 **Las dos preguntas replanteadas, contestadas en la ficha de C16:** los **seis
+  campos de la ventana** con qué decide cada uno en una línea —y **por qué no son
+  ajuste fino: la ventana es el borde de lo que el árbitro llega a ver**, y ya hay
+  19 pendientes por `observacion_insuficiente` que salen de ahí—; y **la hora de
+  cierre**, con qué haría y quién la leería — 🔵 **la pantalla de cierre y el
+  resumen del día, y nadie más: no toca el veredicto de ningún servicio.** **Si no
+  hay una hora que le sirva a la Planta, la perilla sobra y C23 se cierra
+  quitándola**, que es más barato que construirle un lector.
+
+**12 de agosto de 2026, noche (la tercera forma — y empieza tumbando lo que yo
+había propuesto).**
+
+- ⚠ **«B como piso adicional» no sirve, y lo tumbó medirlo: es exactamente lo que
+  `A∧B` ya hace.** 🟢 La conjunción **conserva 88 %** al adelgazar a 60 s y **53 %
+  a 120 s** — o sea **hereda la fragilidad de A**, que es lo que una conjunción
+  hace. **La idea era mía y murió en una corrida.**
+- 🆕 **Pero al medirlo apareció lo contrario de lo que se temía.** El argumento que
+  descartó «mover el peso a B» era que *dos rutas que comparten avenida comparten
+  corredor*. 🟢 **Medido: B identifica la ruta verdadera MEJOR que A** — **97 %
+  contra 91 %** en Planta 47 y **99 % contra 91 %** en el Campus, con **0.0–0.1
+  rutas empatando**. B castiga los puntos que caen fuera de SU corredor, y una
+  unidad que sirve otra ruta acumula muchos.
+- ⚠ **Con su sesgo declarado:** está medido **sobre las candidatas que ya
+  acreditan** — los casos fáciles. Dice que **B no pierde atribución donde hoy se
+  resuelve bien**; **no dice** que resuelva los 87 difíciles. Eso es simulación.
+- 🟢 **Y la objeción que sí queda en pie da la forma: B mide precisión, no
+  cobertura.** Una unidad que hace el 10 % de la ruta perfectamente tiene B alto y
+  A bajo. **Ninguna ponderación arregla eso, y es justo lo que A protege.**
+- ✅ **De ahí la tercera forma, y no es cambiar A por B: es repartir las dos
+  preguntas que hoy están mezcladas en un solo `∧`.** **B atribuye** (cuál ruta) ·
+  **A exige** (cuánto de ella) · **el piso decide cuándo A tiene derecho a
+  opinar**. Ficha: `Ficha-Diseno-C19-Tercera-Forma.md`.
+- **Y explica por qué el piso solo no alcanzaba:** el piso protege a A, pero
+  **mientras A también atribuya, su fragilidad se contagia a la atribución**.
+- ⚠ **Toca DOS términos del nudo** —`routeMatchPct` cambia de papel y
+  `corridorPrecisionPct` pasa a mandar—, así que **no cabe en un PR** y **no puede
+  compartir tramo con C14**.
+
 **12 de agosto de 2026, tarde (la métrica, medida — y la ponderada resultó ser la
 robusta).**
 

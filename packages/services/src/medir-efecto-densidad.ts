@@ -280,12 +280,27 @@ async function main() {
      *   kmlCorridorMinPct  → B, precisión de corredor
      */
     const umbral = politica?.kmlMatchMinPct ?? 60;
-    const umbralCorredor = politica?.kmlCorridorMinPct ?? 60;
+    /*
+     * El umbral de B se puede sobrescribir por argumento, y no es una comodidad:
+     * es C16. El Campus corre `kmlCorridorMinPct` en 50 y la Planta confirmó el
+     * 12 de agosto que lo pactado era **60**. Poder correr la misma medición
+     * contra **lo configurado** y contra **lo acordado** es la única forma de
+     * poner número a «el árbitro está aplicando una regla que nadie pactó».
+     */
+    const umbralArg = process.argv[5] === undefined ? null : Number(process.argv[5]);
+    if (umbralArg !== null && !Number.isFinite(umbralArg)) {
+      throw new Error(`El umbral de corredor debe ser un número; llegó «${process.argv[5]}».`);
+    }
+    const umbralConfigurado = politica?.kmlCorridorMinPct ?? 60;
+    const umbralCorredor = umbralArg ?? umbralConfigurado;
 
     console.log(`\n  Efecto de la densidad sobre la cobertura — grupo de control de C19`);
     console.log(`  Contrato: ${filtroContrato} · días de servicio ${desde} → ${hasta}`);
     console.log(
-      `  Corredor: ${num(corredorKm * 1000, 0)} m · umbral de la política: ${umbral} %`,
+      `  Corredor: ${num(corredorKm * 1000, 0)} m · umbral A: ${umbral} % · umbral B: ${umbralCorredor} %` +
+        (umbralArg !== null && umbralArg !== umbralConfigurado
+          ? `  ⚠ B FORZADO (lo configurado es ${umbralConfigurado} %)`
+          : ""),
     );
     console.log(`  ${candidatas.length} pares (ocurrencia × aparato) · solo lectura\n`);
 
@@ -319,6 +334,18 @@ async function main() {
       { nombre: "A ponderada (decide hoy)", leer: (m: Metricas) => m.ponderada, umbral },
       { nombre: "A llana (C17)", leer: (m: Metricas) => m.llana, umbral },
       { nombre: "B corredor", leer: (m: Metricas) => m.corredor, umbralB: true },
+      /*
+       * La compuerta de verdad, y va última porque es la que manda: acreditar
+       * exige A **y** B. Medir cada una por su lado dice cuál es frágil; medir
+       * la conjunción dice qué pasa en producción.
+       *
+       * ⚠ Es A∧B PARCIAL: le faltan los otros dos términos de `servedRoute`
+       * —`arrivalAt` y `observableEnough`—, que necesitan el polígono de la
+       * geocerca y el tramo observable. Va dicho porque una conjunción a la que
+       * le faltan términos **sobreestima** cuántas acreditan, y llamarla «A∧B» a
+       * secas sería el rótulo mintiendo otra vez.
+       */
+      { nombre: "A∧B parcial (la compuerta)", leer: null, conjuncion: true },
     ] as const;
 
     const adelgazadas = new Map<number, Map<string, Metricas>>();
@@ -334,14 +361,23 @@ async function main() {
     }
 
     for (const met of METRICAS) {
-      const u = "umbralB" in met ? umbralCorredor : met.umbral;
-      const acreditanHoy = base.filter((b) => met.leer(b.m) >= u);
-      console.log(`  ── ${met.nombre} · umbral ${u} % ${"─".repeat(Math.max(0, 34 - met.nombre.length))}`);
+      const conjuncion = "conjuncion" in met;
+      const u = "umbralB" in met ? umbralCorredor : umbral;
+      /** Pasa el corte: una métrica sola contra su umbral, o las dos a la vez. */
+      const pasa = (m: Metricas) =>
+        conjuncion
+          ? m.ponderada >= umbral && m.corredor >= umbralCorredor
+          : met.leer!(m) >= u;
+      const acreditanHoy = base.filter((b) => pasa(b.m));
+      const rotulo = conjuncion
+        ? `A ≥ ${umbral} % y B ≥ ${umbralCorredor} %`
+        : `umbral ${u} %`;
+      console.log(`  ── ${met.nombre} · ${rotulo} ${"─".repeat(Math.max(0, 30 - met.nombre.length))}`);
       console.log(
         `  ${"peldaño".padEnd(22)}${"acreditan".padStart(11)}${"pierde".padStart(9)}` +
           `${"conserva".padStart(11)}${"mediana de las que acreditan hoy".padStart(36)}`,
       );
-      const medBase = mediana(acreditanHoy.map((b) => met.leer(b.m)));
+      const medBase = conjuncion ? null : mediana(acreditanHoy.map((b) => met.leer!(b.m)));
       console.log(
         `  ${"tal como está".padEnd(22)}${`${acreditanHoy.length}`.padStart(11)}` +
           `${"—".padStart(9)}${"100 %".padStart(11)}` +
@@ -349,17 +385,11 @@ async function main() {
       );
       for (const seg of PELDANOS) {
         const mapa = adelgazadas.get(seg)!;
-        const pasan = candidatas.filter(
-          (c) => met.leer(mapa.get(`${c.ocurrencia}·${c.imei}`)!) >= u,
-        ).length;
-        const sobreviven = acreditanHoy.filter(
-          (b) => met.leer(mapa.get(`${b.c.ocurrencia}·${b.c.imei}`)!) >= u,
-        );
+        const pasan = candidatas.filter((c) => pasa(mapa.get(`${c.ocurrencia}·${c.imei}`)!)).length;
+        const sobreviven = acreditanHoy.filter((b) => pasa(mapa.get(`${b.c.ocurrencia}·${b.c.imei}`)!));
         const conserva =
           acreditanHoy.length > 0 ? (sobreviven.length / acreditanHoy.length) * 100 : 100;
-        const med = mediana(
-          acreditanHoy.map((b) => met.leer(mapa.get(`${b.c.ocurrencia}·${b.c.imei}`)!)),
-        );
+        const med = conjuncion ? null : mediana(acreditanHoy.map((b) => met.leer!(mapa.get(`${b.c.ocurrencia}·${b.c.imei}`)!)));
         console.log(
           `  ${`1 punto / ${seg} s`.padEnd(22)}${`${pasan}`.padStart(11)}` +
             `${`−${acreditanHoy.length - sobreviven.length}`.padStart(9)}` +

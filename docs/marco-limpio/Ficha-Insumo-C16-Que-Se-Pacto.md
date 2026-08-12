@@ -136,7 +136,82 @@ aplicando». Tiene frente propio y va por su cuenta.
 
 ---
 
-## 5. Las preguntas concretas para la Planta
+## 5. Las preguntas concretas para la Planta — **cuatro contestadas el 12 de agosto**
+
+| # | Respuesta de la Planta | Qué queda |
+|---|---|---|
+| **2 · el corredor** | ✅ **Era 60 %, no 50 %. Confirmado.** | 🟢 **Es la primera divergencia acreditada de C16: el árbitro corre una regla que las partes no pactaron.** Su tamaño, medido: **71 candidatas del Campus acreditan B solo por el umbral no pactado**, y en la compuerta A∧B la diferencia es de **163 a 139 — 24 candidatas**. **Falta decidir si se corrige la configuración y qué pasa con lo ya sellado** (eso es D4) |
+| **3 · las consecuencias** | ✅ **Vacías a propósito.** `enforcementRules` no está activado por ahora | 🟢 **Deja de ser una divergencia y pasa a ser una decisión tomada.** Sale de la lista de dudas |
+| **4 · los excusables** | ✅ **No hay catálogo definido todavía**, y Asav los quiere **configurables desde la interfaz, no fijos en el contrato** | 🆕 **Frente nuevo** — ver §5.1. **La diferencia medida (el Campus sin `falla_mecanica`) no era una decisión: era el catálogo sin definir** |
+| **1 · `routeStrictness`** | ⏸ **Sin respuesta clara todavía** | 🟢 **Y no urge, por una razón medida: la perilla está inerte** (C14). Mientras `!hasKml` sea lo único que apaga A∧B, **el valor que tenga no cambia un veredicto** |
+| **5 · la ventana** | 🔄 **Replanteada** — ver §5.2 | La pregunta no era «¿está mal?» sino **«¿hay que definirlos?»** |
+| **6 · la hora de cierre** | 🔄 **Replanteada** — ver §5.3 | La pregunta no era «¿la hay?» sino **«¿hace falta, y quién la leería?»** |
+
+### 5.1 🆕 Frente — los motivos excusables se configuran, no se hornean
+
+**Pedido por Asav el 12 de agosto.** Hoy `excusableReasons` es una lista dentro de
+la política del contrato, y el catálogo de valores posibles vive en el código
+(`ExcusableReason`). **Las dos cosas están mal para lo que se necesita:**
+
+- **No hay catálogo definido** — la diferencia entre los dos contratos (el Campus
+  sin `falla_mecanica`) **no era una decisión de nadie**, era el catálogo a medio
+  hacer.
+- **Y tiene que poder cambiar sin desplegar**, porque quién excusa qué es una
+  conversación comercial, no una constante.
+
+⚠ **Y lo que hay que cuidar al diseñarlo, porque es la trampa de este frente:**
+un motivo excusable **es una eximente** — cambiarlo cambia a quién se le imputa un
+retraso. **Así que es política, y la política cambia hacia adelante y deja
+historia** (C13). Una lista editable sin historia sería C13 otra vez, con otro
+nombre.
+
+### 5.2 Pregunta 5, replanteada — sí: son seis valores que **hay que definir**
+
+**Entendido bien.** No es que estén mal: **es que nadie los eligió**, y el motor
+corre con los de fábrica. Lo que decide cada uno, en una línea:
+
+| Campo | De fábrica | Qué decide |
+|---|---|---|
+| `windowDerivationEnabled` | `true` | **Si la ventana se dimensiona con la duración real de la ruta** o se queda con el margen fijo. Es el interruptor de todo lo de abajo |
+| `evidenceMarginMinutesBefore` | 60 *(el Campus sí lo declara)* | **El piso**: cuántos minutos antes de la hora límite se empieza a mirar, como mínimo |
+| `windowSlackPct` | 25 | **Cuánta holgura** se le suma a la duración estimada antes de cerrar la ventana |
+| `routeAvgSpeedKmh` | 20 | **A qué velocidad se supone que va una ruta sin historia medida** — ruta con paradas, no flujo libre |
+| `routeDurationPercentile` | 90 | **Qué día representa la ventana**: 90 = cubre el día lento, no el promedio |
+| `routeDurationMinSamples` | 3 | **Cuántas mediciones hacen falta** para creerle a la historia de una ruta en vez de a la velocidad supuesta |
+| `maxWindowBeforeMinutes` | 360 | **El techo**: una medición loca no puede abrir una ventana de seis horas |
+
+> **Por qué importa que se decidan y no se hereden:** la ventana **decide qué
+> evidencia se mira para juzgar**. 🔵 Ya hay un caso medido de lo que pasa cuando
+> queda corta: **`observacion_insuficiente` — 19 pendientes hoy**, servicios donde
+> la ventana no alcanzó a cubrir el origen de la ruta. **No es un ajuste fino: es
+> el borde de lo que el árbitro llega a ver.**
+
+### 5.3 Pregunta 6, replanteada — qué haría una hora de cierre, y quién la leería
+
+**Entendido bien, y la respuesta honesta empieza por lo que no hay:** 🟢 **hoy
+nadie la lee** (C23), así que **no hay comportamiento que prometer**.
+
+**Qué haría si existiera** —según su propio texto en la pantalla del contrato—:
+fijar **a qué hora el turno queda cerrado**, contando desde la hora de entrada.
+Una unidad que llega después **no retrasa el cierre**: el turno se sella igual y
+ese servicio carga su propio resultado.
+
+**Quién la leería, si se construyera:**
+
+1. **La pantalla de cierre del turno**, que hoy no tiene forma de decir «este
+   turno ya está completo» frente a «todavía puede cambiar».
+2. **El resumen del día y sus avisos** — cuándo un conteo diario deja de moverse.
+3. 🔵 **Y nadie más.** **No toca el veredicto de ningún servicio**: cada uno se
+   juzga contra su propia hora límite, que es otra cosa.
+
+> **Así que la pregunta para la Planta es operativa, no de cumplimiento:** *¿a qué
+> hora quieren poder decir «el turno de hoy ya está»?* Si no hay una hora que les
+> sirva, **la perilla sobra** — y entonces C23 se cierra quitándola, que es más
+> barato que construirle un lector.
+
+---
+
+## 5.4 Las seis preguntas, como se llevaron
 
 Ordenadas por lo que cuestan si la respuesta es «eso no fue lo que acordamos»:
 
