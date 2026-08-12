@@ -182,11 +182,56 @@ del rango. El eje otra vez.
 pendientes por cobertura—, que resultan ser también los de más evidencia
 duplicada y los del hueco más raro.
 
-🟡 **Si esto movió algún veredicto, no se sabe, y el costo de saberlo no es
-bajo:** exige correr el motor con y sin deduplicar, que es **simulación** y vive
-en D4 / Tramo 6, no aquí. Lo que hace que la pregunta valga: `routeMatchPct` va
-**ponderada por TF-IDF** (C17), y una ponderación sobre un conjunto con 54 % de
-repeticiones exactas no es obviamente invariante.
+### Por dónde puede hacer daño — medido el 11 de agosto, y no es por donde parecía
+
+⚠ **Esta ficha decía antes que la ponderación TF-IDF de `routeMatchPct` «no es
+obviamente invariante» sobre un conjunto con 54 % de repeticiones. Iba con 🟡, y
+la medición la contesta: sí es invariante.** Se corrige aquí en vez de dejarla,
+porque un 🟡 que ya se pudo medir y sigue escrito deja de ser honestidad y pasa a
+ser una tarea que nadie va a hacer.
+
+🟢 **La duplicación es pareja dentro de cada candidata.** De **7 040** pares
+viaje × aparato en los cinco días afectados, **7 027 tienen la misma
+multiplicidad en todos sus instantes**; solo **13** son desparejos, y los trece
+son del 17 de julio en el Campus.
+
+| Día | Pares | Duplicación pareja | Limpios | Desparejos |
+|---|---|---|---|---|
+| Campus 7 jul | 78 | **78** | 0 | 0 |
+| Campus 8 jul | 78 | **78** | 0 | 0 |
+| Campus 17 jul | 1 393 | 38 | 1 342 | **13** |
+| Planta 47 27 jul | 1 020 | **624** | 396 | 0 |
+| Planta 47 29 jul | 1 044 | **700** | 344 | 0 |
+
+**Con multiplicidad pareja, los dos términos de A∧B se lavan solos:**
+
+- 🟢 **A** —`routeMatchPct`, ponderada o llana— cuenta **waypoints cubiertos**, y
+  una copia exacta cubre el mismo waypoint. El peso TF-IDF es del waypoint, no
+  del punto. **Invariante.**
+- 🟢 **B** —`corridorPrecisionPct`— es literalmente *«qué fracción de los PUNTOS
+  GPS cae en el corredor»* (`index.ts:546-551`). Si cada punto se repite k veces,
+  **numerador y denominador escalan por k**. **Invariante.**
+
+> **Así que la versión intuitiva de la gravedad —«la cobertura se calcula sobre
+> puntos, así que duplicar infla la medición de un servicio»— no se sostiene**, y
+> conviene decirlo antes de que se apoye una decisión en ella. Era razonable, y
+> medirla costó una consulta.
+
+🟢 **Lo que sí mueve, leído en el código y no inferido:** `directionSimilarity`
+promedia vectores unitarios de rumbo entre puntos **consecutivos**
+(`index.ts:414-422`). Dos puntos idénticos dan `bearingUnit` = **`{0, 0}`** —por
+su guarda `|| 1`, que evita el NaN— **y el bucle incrementa el denominador
+igual**. Un día al 54 % de duplicación mete cerca de la mitad de sus incrementos
+como vector nulo y **le baja la similitud a cerca de la mitad**.
+
+> 🟢 **Y `directionSimilarity` no entra en `servedRoute`: ordena candidatas.**
+> Por eso C22 **no puede cambiar si una candidata acredita — puede cambiar cuál
+> gana**, o sea qué unidad queda como observada. Es la misma maquinaria del
+> **rumbo espurio de §4 del reporte de los 71**: un vector medio que deja de
+> cancelarse cuando cambia la composición del conjunto.
+
+🟡 **Cuánto, no se sabe, y el costo de saberlo no es bajo:** exige correr el motor
+con y sin deduplicar, que es **simulación** y vive en D4 / Tramo 6, no aquí.
 
 ### Contra las 21 causas de §5.1: no es ninguna
 

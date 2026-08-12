@@ -1666,11 +1666,12 @@ lo suyo, y el ≥90% de capacidad de mostrar se sostiene.
 
 **Esta es la ficha de consolidación.** Vive aquí, no en un documento aparte.
 
-**Son veintiuna, no once.** El plan viejo decía seis en una línea y listaba ocho en
+**Son veintidós, no once.** El plan viejo decía seis en una línea y listaba ocho en
 su propia tabla; el 3 de agosto se sumaron tres, entre el 4 y el 5 de agosto
-**C12 a C19** salieron de investigar C11, y el 6 de agosto **C20 y C21** salieron de
-medir D2. Quien compare contra esta lista **dice contra cuántas y cuáles**, nunca
-«es la séptima».
+**C12 a C19** salieron de investigar C11, el 6 de agosto **C20 y C21** salieron de
+medir D2, y el 11 de agosto **C22** salió de **encender el sensor de cadencia** —
+no de buscarla. Quien compare contra esta lista **dice contra cuántas y cuáles**,
+nunca «es la séptima».
 
 **Qué hace esta sección, y qué no.** Ordena por **dependencia**, dice qué comparte
 ruta y qué comparte código, y separa lo que se puede medir sin sellar de lo que no.
@@ -1698,6 +1699,7 @@ ruta y qué comparte código, y separa lo que se puede medir sin sellar de lo qu
 | **C4** | **La geocerca congelada no es la que se usa** | El hecho guarda `expectedGeofenceId`; el motor juzga contra `profile.geofence` (`packages/services/src/verification.ts:1055`). 🟢 **6 ago: 546 ocurrencias divergen** —la cifra no se movió— **y todas son de Planta 47**. 🟢 **Y lo que este plan no decía: 420 de esas ocurrencias ya tienen hecho sellado**, o sea 420 de los 973 hechos reales (**43 %**) cargan una geocerca que no es contra la que se les juzgó | **Sin construir.** Requiere D-decisión: congelar el polígono, qué pasa con el campo huérfano, cómo se re-verifica un hecho viejo |
 | **C2** | **La cadena de auditoría rota** | 🟢 **6 ago: 374 de 581 filas** (**64.4 %**) sin referencia a qué las reemplazó. La cifra es la misma de siempre **porque dejó de crecer**: 🟢 **las 374 son todas de la semana del 27 de julio**, y la semana del 3 de agosto agregó **una fila, con** su referencia. 🟢 **371 de las 374 son de `actor_kind: human`.** El mecanismo: `archiveAndDeleteFact` escribe la fila con `replacedByFactId` en nulo y un segundo paso, `updateHistorySuccessor`, es el que la cierra; en esas 374 el segundo paso no ocurrió. 🟡 **Por qué no ocurrió no se puede leer desde aquí** | **Sin construir. Toca la promesa comercial**: sin cadena, un veredicto no puede probar de dónde vino. 🟡 **Y la urgencia cambió:** es una cicatriz de una tanda, no una hemorragia |
 | **C3** | **Se juzga antes de que llegue el expediente** | 🟢 **6 ago, y hay que decirlo con el eje o miente:** el archivador **hoy va a 6 minutos**, no a 7 horas — mediana **0.10 h**, p95 **0.18 h** en los últimos 7 días. Por semana de `recorded_at`: **22.13 h** la del 6 de julio · **0.10 h** de la del 13 en adelante · con un pico de **p95 5.31 h** la del 27 de julio. **El «~7 h, p95 30 h» de este plan era el promedio de un periodo roto con periodos sanos.** 🟢 Los intentos por servicio bajaron de **206 → 157 → 117 → 101 → 38.7** por semana, con el tope de cola del Tramo 0. 🟢 **Lo que no cambió es el mecanismo: nada retrasa el primer intento.** Y su cicatriz sigue medida: los **28** pendientes por cobertura son exactamente el **27 de julio (13, Campus)** y el **28 de julio (15, Planta 47)** — el fin de semana en que el archivador se atrasó | **Sin construir.** 🟡 Arreglar esto probablemente elimina la mayor parte de C2 — pero al 6 de agosto **ninguno de los dos está sangrando** |
+| **C22** | **La evidencia se copia sin candado: hay puntos repetidos en la tabla que el árbitro lee** | 🟢 **11 ago: 195 028 filas sobrantes de 5 013 844 (3.89 %)** entre el 1 de julio y el 11 de agosto, en **cinco días**: Campus 7 jul (50.0 %, x2) · 8 jul (50.0 %, x2) · 17 jul (2.5 %, x2) · **Planta 47 27 jul (54.0 %, hasta x4)** · **29 jul (53.7 %, hasta x3)**. 🟢 **Son copia exacta, no dos observaciones:** de **126 722** grupos repetidos (viaje + imei + instante), **126 722** con el mismo lugar y la misma unidad — **cero** con lugar distinto, **cero** con unidad distinta. 🟢 **Y la fuente está limpia:** `telemetry_points`, de donde se copia, tiene índice único `(imei, recorded_at)` con el comentario «Deduplica: un mismo equipo no puede tener dos puntos en el mismo instante», y **cero repetidos en la ventana**. 🟢 **`evidence_points` no tiene ese índice** —solo `(trip_id, recorded_at)`, no único— y el `insert` no lleva `onConflict` (`repositories/index.ts:3785`); el borrado que precede a la copia es **condicional** (`verification.ts:897`, `!reuseEvidence`). **La defensa está escrita en la tabla de la que se copia y no en la que el árbitro lee** — la forma de C13 otra vez: la puerta buena cerrada y el hueco donde nadie miró | **Sin construir.** ✅ **Entra a la ficha por decisión de Asav el 11 de agosto.** ⚠ **Y su gravedad hay que decirla medida, porque la versión intuitiva es más grave que la real y no se sostiene:** «la cobertura se calcula sobre puntos, así que duplicar infla la medición» **es falso para A∧B**, y esto es lo que lo mata — 🟢 **la duplicación es pareja dentro de cada candidata**: de **7 040** pares viaje×aparato de los cinco días, **7 027 tienen multiplicidad idéntica en todos sus instantes** y solo **13** —todos del 17 de julio, Campus— son desparejos. Con multiplicidad pareja, **A** (cobertura de waypoints) es invariante porque una copia exacta cubre el mismo waypoint, y **B** (`corridorPrecisionPct`, que es literalmente la fracción de puntos dentro del corredor) **escala numerador y denominador por igual**. 🟢 **Lo que SÍ mueve, leído en el código:** `directionSimilarity` promedia vectores de rumbo entre puntos consecutivos y un par duplicado aporta **`{0,0}`** —`bearingUnit` lo devuelve así por su guarda `|| 1`— **incrementando igual el denominador**: un día al 54 % le baja la similitud a cerca de la mitad. **`directionSimilarity` no entra en `servedRoute`: ordena candidatas.** Así que lo que esto puede mover no es **si** una candidata acredita sino **cuál gana** — o sea qué unidad queda como observada. Es la misma maquinaria del rumbo espurio de §4 del reporte de los 71. 🟡 **Cuánto, no se sabe:** exige correr el motor con y sin deduplicar, que es **simulación** (D4 / Tramo 6) |
 | **C17** | **La cobertura de ruta se guarda ponderada y se lee llana** | ✅ **Arreglado en el motor.** Ahora se guardan las dos: `routeMatchPct` —la que decide, ponderada por TF-IDF— y `routeMatchPlainPct` —la llana—. 🔵 **5 ago:** 168 de 3 054 candidatas acreditaban ≥ 60 % teniendo una cobertura real con mediana de **3.9 %**; la correlación con la precisión pasa de **0.373 ponderada a 0.672 sin ponderar**. **No movió un solo veredicto.** 🟢 **6 ago, y esto acota quién lo puede leer: la primera entrada de ledger con `routeMatchPlainPct` es del 5 de agosto.** Todo lo sellado antes trae **solo la ponderada**, y quien lo lea debe decirlo así | **Hecho en el motor.** **Falta que las pantallas del expediente lean la llana** — que es justo donde la cifra miente |
 | **C5** | **Ventana derivada vs. match observable** | No afinados entre sí: +50 se enderezan por uno, −2 se caen por el otro. 🟢 **6 ago — y esto cambia su estado: los datos ya llegaron.** `route_traversal_measurements` tiene **192 filas sobre 48 ruta-turnos**, del 31 de julio al 5 de agosto, y **48 de 48 llegan a las 3 muestras** que pide `routeDurationMinSamples`. ⚠ **102 de las 192 topan con el borde de la ventana** (`lower_bound`), así que el percentil sale sesgado hacia abajo | **Deja de estar bloqueado por datos.** Este plan decía «no es trabajo, es tiempo»; el tiempo ya pasó |
 | **C15** | **El expediente etiqueta mal su propia evidencia** | El ledger escribe cada candidata con el campo **`imei:`** y adentro guarda un **id de UNIDAD**. 🟢 **Comprobado otra vez el 6 de agosto** sobre la entrada más reciente: el valor casa con `units.id` (1 fila) y con `evidence_points.imei` (**0 filas**). 🟢 **Y tiene origen exacto:** `verification.ts:1104` sustituye el imei por el id de unidad antes de entrar al motor, y el motor agrupa y etiqueta con lo que recibe. **Quien lea un expediente creerá que ve el aparato y está viendo el vehículo.** No cambia ningún veredicto y **sí cambia lo que el expediente dice**, que es el activo | ✅ **Arreglado el 8 de agosto (#267), y era peor que la etiqueta.** 🟢 El origen no solo nombraba mal: **`imei: imeiToUnitId.get(p.imei) ?? p.imei` SOBRESCRIBÍA el aparato**, así que el dispositivo no llegaba al expediente — no estaba mal nombrado, **no estaba**. La Ley 5 rota en una línea. Ahora el punto lleva `unitId` aparte y el ledger escribe `unidadId` e `imeis` (en plural: una unidad puede cambiar de aparato a media ventana). 🟢 **No movió ningún veredicto**, y está acreditado: el motor agrupa por `unitId ?? imei`, que es exactamente el valor que dejaba la sustitución — con pruebas que comparan las dos claves caso por caso y grupo por grupo, y seis que mueren al volver a agrupar por aparato. ⚠ **La regla de lectura que esto deja, y hay que aplicarla:** lo sellado **antes del 8 de agosto** trae la unidad bajo `imei:` y **no trae `unidadId`**. Esa ausencia es la única forma de distinguir las dos épocas. En las entradas viejas **el aparato no se guardó**, así que `imeis` sale vacío y eso significa «no se guardó», no «no hubo aparato» — rellenarlo con la clave repetiría C15 dentro de la pantalla (§E del Marco). Mismo criterio que `routeMatchPlainPct` en C17 |
@@ -1729,6 +1731,8 @@ depende de otra va después de la que la desbloquea, **aunque duela**.
 | **C13** | **C16** | 🟢 Sin `contract_policy_history` no hay contra qué comparar la configuración: la divergencia se puede ver, pero no se puede fechar ni atribuir |
 | **C16** | **C11 · C13 · C14** | 🟢 A y B salen del contrato; si el contrato no dice lo que se pactó, toda medición de umbral se hace contra una regla sin acreditar |
 | **C3** | **C11** | 🟢 Los 28 pendientes por cobertura son exactamente el 27 y 28 de julio, el fin de semana en que el archivador se atrasó |
+| **C22** | **C19** | 🟢 **No porque la explique —no la explica**: del 30 de julio al 11 de agosto hay **cero sobrantes**, y ahí vive el cambio sostenido de cadencia. Es dependencia porque **el 29 de julio, el día en que C19 está anclada, va al 53.7 %**: cualquier remedición de ese día arrastra esto, y su total de 237 114 puntos no son 237 114 observaciones |
+| **C22** | **C3** | 🟢 **El 27 y el 28 de julio —los dos días de C3— son los de más evidencia duplicada** (54.0 % en Planta 47, con hasta x4). Los mismos días, el mismo archivador atrasado, y dos huellas distintas encima. Remedir uno sin saber del otro atribuye mal |
 | **C3** | **C2** | 🟡 Menos reintentos, menos borrado — pero al 6 de agosto **los dos dejaron de crecer solos**, así que la dependencia es de mecanismo y ya no de presión |
 | **C4** | **C11 · C13** | 🟢 `arrivalAt` sale del polígono, y el motor usa uno distinto del que el hecho guarda: cualquier remedición de «llegó» se mueve con esto |
 | **C5** | **C7** | 🟢 Las dos comen de `route_traversal_measurements`, y **ya tiene historia suficiente** (48 de 48 ruta-turnos con ≥ 3 muestras) |
@@ -1765,12 +1769,23 @@ const servedRoute =
 > 🟢 **Y `shapeOk` no está en esa expresión** — vive fuera, solo ordena candidatas.
 > Ésa es la razón exacta de que **C12 no cause C11**, y de que arreglarlo sea seguro
 > de medir por separado.
+>
+> 🟢 **C22 tampoco entra, y por una razón distinta que conviene no confundir con
+> la de C12.** C12 queda fuera porque alimenta a `shapeOk`, que vive fuera de la
+> expresión. C22 queda fuera porque **la duplicación es pareja dentro de cada
+> candidata** —7 027 de 7 040 pares viaje×aparato— y los dos términos que podría
+> tocar son **razones**: la cobertura cuenta waypoints (una copia exacta cubre el
+> mismo) y el corredor es una fracción de puntos (numerador y denominador escalan
+> juntos). **Duplicar no mueve A∧B.** Lo que mueve es `directionSimilarity`, que
+> **ordena** candidatas — así que C22 puede cambiar **cuál** unidad queda como
+> observada, no **si** alguna acredita. **Compartir tabla no es compartir el
+> nudo, igual que compartir archivo no lo era.**
 
 #### Los otros tres racimos
 
 | Racimo | Dónde | Quiénes caen ahí |
 |---|---|---|
-| **El camino del sello** | `services/src/verification.ts` · `db/src/repositories/index.ts:3375` | **C2** (`archiveAndDeleteFact` → `updateHistorySuccessor`, dos pasos) · **C3** (nada retrasa el primer intento) · **C4** (`expectedGeofenceId` se escribe aquí) · **C9** (el nombre del chofer se congelaría aquí) |
+| **El camino del sello** | `services/src/verification.ts` · `db/src/repositories/index.ts:3375` | **C2** (`archiveAndDeleteFact` → `updateHistorySuccessor`, dos pasos) · **C3** (nada retrasa el primer intento) · **C4** (`expectedGeofenceId` se escribe aquí) · **C9** (el nombre del chofer se congelaría aquí) · **C22** (`savePoints` sin `onConflict` y un borrado previo condicional) |
 | **La política del contrato** | `service_contracts.policy` · `contractPolicySchema` | **C16** (dieciséis de 24 campos divergen) · **C13** (sin historia) · **C12** (el único umbral fuera del esquema) · **C7** · **D6** (quién puede cambiarla) |
 | **El ledger y el expediente** | `ledger_entries.steps` | **C15** (`imei:` con id de unidad) · **C17** (la llana solo desde el 5 ago) · **C11** (la causa del pendiente se lee de aquí) |
 
@@ -1792,7 +1807,7 @@ es decisión de Asav y no se toma aquí.
 
 | | Causas | Notas |
 |---|---|---|
-| ✅ **Medido hoy, solo lectura** | C1 · C2 · C3 · C4 · C5 · C7 · C9 · C10 · C11 · C12 · C13 · C14 · C15 · C16 · C17 · C18 · C19 · C20 · C21 | Toda la tabla de 5.1. Se leyó producción con `jtel_readonly`; **ninguna escribió, selló ni re-verificó nada** |
+| ✅ **Medido hoy, solo lectura** | C1 · C2 · C3 · C4 · C5 · C7 · C9 · C10 · C11 · C12 · C13 · C14 · C15 · C16 · C17 · C18 · C19 · C20 · C21 · **C22** | Toda la tabla de 5.1. Se leyó producción con `jtel_readonly`; **ninguna escribió, selló ni re-verificó nada**. 🟢 **C22 el 11 de agosto**, con la comprobación de solo lectura corrida antes: 42 tablas, 42 legibles, cero escribibles |
 | 🔎 **Medible hoy, sin medir aún** | **C18** en Planta 47 por geometría (cubrir dos trazados ≠ acreditar dos rutas; la de hoy usa la segunda definición) · **C6**: qué rutas tienen versión de trazado y de cuándo · **C7**: derivar la duración con las 192 filas de C5 · **C2**: qué corrida dejó las 374 sin cerrar | Nada de esto exige sellar. Es trabajo de lectura que aún no se hizo |
 | ⚙ **Requiere tocar el motor** | Si mover un umbral **rescata** servicios · si el arreglo de C14 cierra los 61 · si C18 evaluado contra el conjunto de rutas cambia veredictos | Eso es **simulación** y vive en D4 / Tramo 6, no aquí |
 | 🚫 **No es leíble desde aquí** | **Por qué cambió la densidad el 29 de julio** (C19) · **por qué el archivador se atrasó el 25–26 de julio** (C3) · **por qué esos tres lunes y no los otros**. 🟢 Lo verificado es que **no fue nuestro código**; 🟡 la causa se infiere del proveedor o de los dispositivos | Son tres de las cuatro cosas que el reporte final dejó sin explicar. **La cuarta —si el empalme es rutinario— ya se midió** (C18). **Y puede repetirse sin avisarnos** |
@@ -3156,3 +3171,44 @@ que cambia el plan.
   Las vecinas son C3 y C17, y no es ninguna de las dos.
 - 🟢 **`servedRoute` sigue intacta**, releída contra el HEAD de este día. Nada de
   este PR toca el motor.
+
+**11 de agosto de 2026, después del #276 (C22 entra a la ficha — y su gravedad
+sale distinta de como se enunció).**
+
+- ✅ **C22 entra, decidido por Asav.** La lista pasa a **veintidós**, y §5.1 dice
+  de dónde salió: **de encender el sensor de cadencia, no de buscarla**. Fila
+  nueva en §5.1, dos aristas nuevas en §5.2, y entra al racimo «el camino del
+  sello» en §5.3.
+- **Lo que la hace grave sí es la forma, y está dicha en una línea:** la tabla de
+  la que se copia tiene candado —`telemetry_points`, índice único
+  `(imei, recorded_at)`, cero repetidos— y **la que el árbitro lee no lo tiene**.
+  🟢 **La defensa existe y no está en el camino que importa**, que es la forma de
+  C13 y la regla 8 otra vez.
+- ⚠ **Pero la razón de gravedad que se enunció al decidirla no se sostiene, y va
+  corregida aquí porque es barata de comprobar y cara de arrastrar.** Se dijo:
+  *«la cobertura se calcula sobre puntos, así que evidencia duplicada infla la
+  medición de un servicio»*. 🟢 **Medido: la duplicación es pareja dentro de cada
+  candidata** —**7 027 de 7 040** pares viaje×aparato, y los **13** desparejos son
+  todos del 17 de julio en el Campus—. Con multiplicidad pareja **A** cuenta
+  waypoints (una copia exacta cubre el mismo, y el peso TF-IDF es del waypoint) y
+  **B** es una fracción de puntos que **escala numerador y denominador por
+  igual**. **Duplicar no infla A∧B.**
+- 🟢 **Lo que sí mueve, leído en el código:** `directionSimilarity` promedia
+  vectores de rumbo entre puntos consecutivos, y un par duplicado aporta
+  **`{0,0}`** —`bearingUnit` lo devuelve así por su guarda `|| 1`— **incrementando
+  el denominador igual**. Un día al 54 % le baja la similitud cerca de la mitad.
+  🟢 **Y `directionSimilarity` ordena candidatas: no entra en `servedRoute`.** Así
+  que **C22 puede cambiar cuál unidad queda como observada, no si alguna
+  acredita** — y por eso **queda fuera del nudo**, por una razón distinta de la de
+  C12 (§5.3). Es la maquinaria del rumbo espurio de §4 del reporte de los 71.
+- **Y lo que la acota, que Asav pidió que quedara escrito:** 🟢 **cero sobrantes
+  del 30 de julio al 11 de agosto**, que es donde vive el cambio sostenido de
+  cadencia. **C22 no explica C19.**
+- **Es dependencia de C19 y de C3 por los días, no por el mecanismo:** 🟢 el **29
+  de julio** —donde C19 está anclada— va al **53.7 %**, y el **27 y 28** —los dos
+  días de C3— son los de más duplicación. **Cualquier remedición de esos días
+  arrastra esto.**
+- ⚠ **Se corrigió un 🟡 de la ficha del sensor** que decía que la ponderación
+  TF-IDF «no es obviamente invariante». Sí lo es, y medirlo costó una consulta.
+  **Un 🟡 que ya se pudo medir y sigue escrito deja de ser honestidad y pasa a ser
+  una tarea que nadie va a hacer** — la regla del 10 de agosto, aplicada a mí.
