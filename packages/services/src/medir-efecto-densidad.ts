@@ -220,7 +220,19 @@ async function main() {
     }
 
     const corredorKm = (politica?.kmlCorridorMeters ?? 120) / 1000;
-    const umbral = politica?.kmlCorridorMinPct ?? 60;
+    /*
+     * El umbral de A es `kmlMatchMinPct`, NO `kmlCorridorMinPct`.
+     *
+     * Va comentado porque la primera versión de esto usó el segundo y la cifra
+     * salió bien de todos modos para Planta 47 —los tiene los dos en 60— y mal
+     * para el Campus, que tiene 60 y 50. **Un umbral equivocado que coincide en
+     * un contrato no se ve mal en ningún lado**: la corrida termina, imprime un
+     * número plausible y solo el otro contrato lo delata.
+     *
+     *   kmlMatchMinPct     → A, cobertura del trazado  ← el de aquí
+     *   kmlCorridorMinPct  → B, precisión de corredor
+     */
+    const umbral = politica?.kmlMatchMinPct ?? 60;
 
     console.log(`\n  Efecto de la densidad sobre la cobertura — grupo de control de C19`);
     console.log(`  Contrato: ${filtroContrato} · días de servicio ${desde} → ${hasta}`);
