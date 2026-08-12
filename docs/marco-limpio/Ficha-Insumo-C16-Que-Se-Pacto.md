@@ -230,10 +230,53 @@ decidirlos**, porque guardar sin decidir los fija igual. Lo que decide cada uno:
 | `maxWindowBeforeMinutes` | 360 | **El techo**: una medición loca no puede abrir una ventana de seis horas |
 
 > **Por qué importa que se decidan y no se hereden:** la ventana **decide qué
-> evidencia se mira para juzgar**. 🔵 Ya hay un caso medido de lo que pasa cuando
-> queda corta: **`observacion_insuficiente` — 19 pendientes hoy**, servicios donde
-> la ventana no alcanzó a cubrir el origen de la ruta. **No es un ajuste fino: es
-> el borde de lo que el árbitro llega a ver.**
+> evidencia se mira para juzgar**. **No es un ajuste fino: es el borde de lo que
+> el árbitro llega a ver.**
+
+### 5.2.1 🟢 Y ahora con evidencia — medido el 12 de agosto (`medir-ventana`)
+
+**Cuánto dura una ruta de verdad** (minutos, de la medición guardada por el propio
+motor):
+
+| | Mediciones | **Acotadas por la ventana** | p50 | p90 | máx | p50 *libres* | p90 *libres* |
+|---|---|---|---|---|---|---|---|
+| Campus | 216 | **115 (53 %)** | 49 | 60 | 69 | 41 | 52 |
+| Planta 47 | 168 | **86 (51 %)** | 58 | 74 | 92 | 51 | 62 |
+
+> 🟢 **Más de la mitad de las mediciones de duración topan con el borde de la
+> ventana.** En ésas la duración es **un piso, no un dato**: la ruta duró *al
+> menos* eso. **Toda cifra de arriba subestima.**
+>
+> 🟢 **Y contra eso, `maxRouteDurationMinutes` está en 60 en los dos contratos.**
+> Para Planta 47 el p90 medido es **74** —y subestima—, así que **el «máximo
+> esperado» está por debajo de lo que la ruta tarda uno de cada diez días.**
+
+✅ **Lo que NO es un defecto, comprobado antes de reportarlo:** el lazo obvio
+—ventana angosta → medición truncada → percentil bajo → ventana angosta— **ya está
+cortado en el código**. `deriveObservationWindow` usa la bandera: toma el máximo de
+las mediciones acotadas como **piso** (`ventana-observacion.ts:110-115`). **La
+defensa existe.** Lo que la medición dice es que **en algunos ruta-turnos no
+alcanza**, no que falte.
+
+**Los 19 pendientes por observación insuficiente, por cuánto sobrepasan la
+tolerancia del 15 %:**
+
+| Tramo | n | Lectura |
+|---|---|---|
+| **Roza la tolerancia** (≤ 22.5 %) | **9** | **Una ventana un poco más temprana los recupera** |
+| **La dobla** (22.5–37.5 %) | **8** | Harían falta bastantes minutos más |
+| **Muy adentro** (> 37.5 %) | **2** | **Ninguna ventana razonable los arregla** — es otra cosa |
+
+> 🟢 **17 de los 19 son de ventana.** Nueve con poco. **Los otros dos no**, y
+> confundirlos sería ensanchar la ventana para siempre por dos casos que no lo
+> son.
+
+⚠ **Lo que esta corrida NO establece:** cuántos minutos exactos hay que abrir
+antes. La reconstrucción del arranque real **mezcla dos épocas** —la duración se
+midió con la ventana de entonces y se compara contra la ventana guardada hoy, y la
+ventana se deriva—, así que sus cifras son **indicativas**. **La cifra limpia es
+«acotadas»**, que sale de una bandera del propio motor y no depende de ninguna
+resta.
 
 ### 5.3 Pregunta 6, replanteada — qué haría una hora de cierre, y quién la leería
 
