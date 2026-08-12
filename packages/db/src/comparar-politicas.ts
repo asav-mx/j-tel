@@ -85,6 +85,20 @@ export type Comparacion = {
   declarado: Array<unknown>;
   /** Lo que el motor termina aplicando (declarado, o el default del esquema). */
   efectivo: Array<unknown>;
+  /**
+   * Por contrato: el valor declarado es **idéntico al de fábrica**.
+   *
+   * Existe porque un valor declarado no prueba que alguien lo eligiera. El
+   * camino de escritura del contrato escribe varios campos en CADA guardado con
+   * `existingPolicy.x ?? fábrica`, así que **un guardado convierte el default en
+   * valor declarado** — y después la ausencia deja de distinguirse de la
+   * decisión. Marcarlo es lo único que conserva esa distinción.
+   *
+   * ⚠ **No es prueba de nada por sí solo**: alguien pudo elegir el valor de
+   * fábrica a propósito. Es una señal, y hay que leerla con cuántos campos la
+   * traen: uno es casualidad, siete es un guardado.
+   */
+  igualAFabrica: boolean[];
 };
 
 export function representar(v: unknown): string {
@@ -149,6 +163,9 @@ export function compararPoliticas(
       decide: DECIDEN_VEREDICTO.has(campo),
       declarado,
       efectivo,
+      igualAFabrica: declarado.map(
+        (d) => d !== undefined && fabrica !== undefined && JSON.stringify(d) === JSON.stringify(fabrica),
+      ),
     });
   }
   return salida;
@@ -205,7 +222,9 @@ async function main() {
       for (const c of delGrupo) {
         const marca = c.decide ? "⚖" : " ";
         const celdas = c.declarado.map((d, i) =>
-          d === undefined ? `— (fábrica: ${representar(c.efectivo[i])})` : representar(d),
+          d === undefined
+            ? `— (fábrica: ${representar(c.efectivo[i])})`
+            : `${representar(d)}${c.igualAFabrica[i] ? " =fábrica" : ""}`,
         );
         // Un valor largo —una lista de motivos excusables— no se recorta: se
         // baja de renglón. Recortarlo escondería justo la diferencia que esta
@@ -232,7 +251,21 @@ async function main() {
     );
     console.log(
       `  «— (fábrica: X)» = el contrato NO declara el campo y el motor aplica X\n` +
-        `  sin que nadie lo haya elegido. Son ${soloEnUno.length}.\n`,
+        `  sin que nadie lo haya elegido. Son ${soloEnUno.length}.`,
+    );
+    // El recuento que separa «lo configuraron» de «lo guardaron».
+    for (const [i, c] of contratos.entries()) {
+      const declarados = comp.filter((x) => x.declarado[i] !== undefined);
+      const comoFabrica = declarados.filter((x) => x.igualAFabrica[i]);
+      console.log(
+        `  (${i + 1}) declara ${declarados.length} campos · ${comoFabrica.length} con el valor de fábrica` +
+          ` · ${declarados.length - comoFabrica.length} con un valor elegido`,
+      );
+    }
+    console.log(
+      `\n  «=fábrica» = declarado, pero idéntico al valor de fábrica. **No prueba nada por sí\n` +
+        `  solo** —alguien pudo elegirlo—, pero un guardado escribe varios campos con su default\n` +
+        `  y después la ausencia deja de distinguirse de la decisión. Uno es casualidad; siete no.\n`,
     );
 
     await sql.end();
