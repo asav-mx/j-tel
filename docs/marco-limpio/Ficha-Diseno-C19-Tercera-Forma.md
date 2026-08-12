@@ -86,6 +86,86 @@ separarlas, el piso protege un término que ya no decide quién fue.
 
 ---
 
+## 3.1 La forma, término por término — ✅ decidida por Asav el 12 de agosto
+
+**Hoy** (`index.ts:575-580`), una sola expresión contesta dos preguntas:
+
+```
+servedRoute = arrivalAt !== null && (!hasKml || (observableEnough && A ≥ minA && B ≥ minB))
+```
+
+**Separadas**, cada pregunta con su término y su fragilidad declarada:
+
+```
+1 · ¿ES ESTA la ruta que sirvió?          ← atribución. Robusta al aparato.
+    atribuida = B_esta ≥ minB
+             && B_esta es la mayor de las rutas del turno, con margen m
+
+2 · ¿CUBRIÓ bastante de ella?             ← exigencia. Frágil. Protegida por el piso.
+    si densidad < piso  → INDETERMINADO   (Ley 7: no se puede ver, no se juzga)
+    si no               → A ≥ minA
+
+3 · El veredicto
+    cumplido      ← llegó · atribuida · cubrió = sí
+    no cumplido   ← llegó · atribuida · cubrió = NO   (y la densidad daba para verlo)
+    pendiente     ← llegó · atribuida · cubrió = INDETERMINADO
+```
+
+**Qué gana cada término al separarse:**
+
+| Término | Hoy | Separado |
+|---|---|---|
+| **B** | co-requisito, sin voz propia | **decide quién fue.** 🟢 Conserva 93–96 % al adelgazar y acierta la ruta en 97–99 % |
+| **A** | decide quién fue **y** cuánto hizo | **solo decide cuánto hizo.** Sigue siendo frágil — y ahora su fragilidad **no contamina la atribución** |
+| **el piso** | no existe | **decide cuándo A tiene derecho a opinar.** Protege exactamente el término frágil |
+| **`arrivalAt`** | igual | igual. **No se toca** |
+| **`observableEnough`** | igual | igual. **No se toca** |
+
+> **Y la frase que resume por qué el piso solo no alcanzaba:** el piso protege a A,
+> pero **mientras A también atribuya, su fragilidad se contagia a la atribución**.
+> Separarlas es lo que hace que el piso sirva de algo.
+
+## 3.2 La matriz de casos — qué sale en cada esquina
+
+| ¿Atribuye B? | ¿Densidad ≥ piso? | ¿A ≥ minA? | Veredicto | Comentario |
+|---|---|---|---|---|
+| sí | sí | sí | **cumplido** | El caso normal |
+| sí | sí | **no** | **no cumplido** | **La acusación honesta**: se vio bien y no hizo la ruta |
+| sí | **no** | — | **pendiente** | Ley 7. **Hoy esto sale `no_cumplido`** |
+| **no** | — | — | sin atribuir | Es la pregunta de **C14**, no de ésta |
+
+> 🟢 **La tercera fila es todo el arreglo de C19**: hoy un servicio con muestreo
+> insuficiente sale acusado; separado, sale pendiente **y dice por qué**.
+
+## 3.3 Lo que esta forma NO hace, y hay que decirlo antes de que se espere
+
+- ⚠ **No drena los 87.** Los pendientes de C11 son de la ventana de muestreo ralo:
+  con el piso, **seguirían siendo pendientes** — correctamente, porque la evidencia
+  no daba para juzgarlos. 🔵 Y de todos modos **están congelados**: moverlos es D4.
+  **Lo que esta forma arregla es que dejen de producirse por el motivo equivocado.**
+- ⚠ **No sustituye a C14.** C14 pregunta qué pasa cuando **nada** atribuye; ésta
+  cambia **con qué** se atribuye. 🟡 **Pero se rozan**: la opción 2 de C14 —A∧B de
+  requisito a desempate— y esta forma **mueven la misma pieza en la misma
+  dirección**, y **conviene decidir si son un cambio o dos antes de construir
+  ninguno**.
+- ⚠ **No cambia lo que ve el cliente.** Los tres veredictos siguen siendo tres.
+
+## 3.4 El margen de B, que es la única perilla nueva
+
+**Atribuir a la ruta con mayor B exige un margen**: sin él, dos rutas separadas por
+una décima se resuelven por ruido.
+
+🟢 **Medido: hoy los empates dentro de 5 puntos son 0.1 (Planta 47) y 0.0
+(Campus).** Así que un margen de esa escala **no rechazaría casi nada hoy** — pero
+⚠ **un margen sin medir es un umbral escondido**, y éste **no sale de esta ficha**:
+es valor, y va a la política con su historia (C13), no horneado (C12).
+
+**Y qué pasa cuando el margen no alcanza:** no se elige. **Dos rutas empatadas es
+una atribución que el sistema no puede hacer**, y eso es `pendiente`, no un volado.
+Es la misma ley que el piso, aplicada al empate.
+
+---
+
 ## 4. Qué toca del nudo, y por qué no cabe en un PR
 
 🟢 **`servedRoute` tiene cinco términos y esta forma toca dos**:
@@ -94,11 +174,31 @@ primero cambia de papel y el segundo pasa a mandar.
 
 > **Es el cambio más grande que se le puede hacer a esa expresión**, y la regla
 > del nudo dice que **dos términos en el mismo PR hacen inatribuible el
-> resultado**. **No cabe en uno.** Cómo se parte no se decide aquí, pero la
-> partición existe y hay que nombrarla al aprobarla.
+> resultado**. **No cabe en uno.**
 
 ⚠ **Y no puede compartir tramo con C14**, que también reescribe cuándo `serving`
 sale vacía.
+
+### 4.1 Cómo se parte — propuesto, no decidido
+
+Cada paso **deja el sistema en un estado consistente y medible**, y **ninguno
+cambia un veredicto hasta el último**:
+
+| # | Qué entra | ¿Cambia un veredicto? | Qué se mide |
+|---|---|---|---|
+| **1** | **La densidad se calcula y se anota** en el ledger como paso informativo, y **se congela dentro del hecho** | **No.** Es el «piso apagado» | Que la cifra del hecho case con la de `medir-cadencia`. 🟢 Y deja lo del Tramo 4: **el hecho carga la densidad con la que se le juzgó** |
+| **2** | **B se calcula contra TODAS las rutas del turno** y el ledger guarda el ranking | **No.** Solo escribe | Que el ranking case con la corrida de solo lectura de §2 |
+| **3** | **La atribución pasa a B** con su margen. A deja de decidir *cuál* | **Sí — toca `corridorPrecisionPct`** | Cuántas candidatas atribuyen antes y después, pareado |
+| **4** | **El piso se enciende**: sin densidad, A no opina y el servicio sale pendiente | **Sí — toca `routeMatchPct`** | Cuántos `no_cumplido` pasan a pendiente. 🟢 Hoy serían **cero hacia adelante** |
+
+> **Los pasos 1 y 2 se pueden construir hoy sin decidir nada más**, y **sin
+> esperar a la Planta**: no cambian un veredicto, y **dejan medido de antemano lo
+> que los pasos 3 y 4 van a mover**. Es la medición de «antes» construida dentro
+> del motor en vez de por fuera.
+>
+> **Los pasos 3 y 4 tocan un término cada uno**, en PRs distintos, en el orden que
+> se decida — **pero el 4 después del 3**, porque el piso protege a A y A solo
+> queda sola después del 3.
 
 ---
 

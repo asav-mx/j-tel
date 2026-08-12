@@ -168,7 +168,31 @@ nombre.
 ### 5.2 Pregunta 5, replanteada — sí: son seis valores que **hay que definir**
 
 **Entendido bien.** No es que estén mal: **es que nadie los eligió**, y el motor
-corre con los de fábrica. Lo que decide cada uno, en una línea:
+corre con los de fábrica.
+
+> ⚠ **Y al ir a contestarlo salió algo que corrige a esta misma ficha.** §2.2 leyó
+> los siete campos «solo en Planta 47» como *alguien los decidió allá y no acá*.
+> 🟢 **Es casi seguro que no los decidió nadie: los materializó un guardado.**
+>
+> El camino de escritura del contrato **escribe los seis campos de la ventana en
+> CADA guardado**, con `existingPolicy.x ?? valor de fábrica`
+> (`api/cliente/contratos/route.ts:266-273`). Así que **guardar el contrato una
+> vez, sin tocar nada, convierte los valores de fábrica en valores declarados.**
+>
+> 🟢 **Y la evidencia cuadra: los siete valores de Planta 47 son exactamente los de
+> fábrica** —360 · 20 · 3 · 90 · `true` · 25 · `America/Ciudad_Juarez`—. Que
+> alguien eligiera siete valores y acertara los siete defaults es menos probable
+> que un guardado.
+>
+> **La consecuencia es la que importa, y es la trampa de C16 en su forma más
+> pura:** hoy la ausencia en el Campus **todavía se puede leer como «nadie
+> eligió»**. **Un solo guardado la vuelve indistinguible de «alguien decidió».**
+> Después de eso, ninguna lectura del sistema puede separar las dos cosas — que es
+> literalmente lo que C16 dice que ya no se puede hacer con la política.
+
+**Sí se pueden definir desde la interfaz:** la pantalla del contrato es un
+formulario y postea a `/api/cliente/contratos`. **Lo que hay que hacer antes es
+decidirlos**, porque guardar sin decidir los fija igual. Lo que decide cada uno:
 
 | Campo | De fábrica | Qué decide |
 |---|---|---|
