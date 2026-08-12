@@ -3383,6 +3383,39 @@ anterior, que salió de hacerlo).**
   tampoco haría nada**.
 - 🟢 **`servedRoute` sigue intacta.** Nada de esto toca el motor.
 
+**12 de agosto de 2026, cierre del día (✅ decidido: se separan las dos preguntas —
+y los siete campos de Planta 47 no los eligió nadie).**
+
+- ✅ **Decidido por Asav: el árbitro deja de contestar «cuál ruta» y «cuánto de
+  ella» con una sola expresión.** La ficha completa —expresión término por término,
+  matriz de casos, partición en cuatro pasos y el margen de B— está en
+  `Ficha-Diseno-C19-Tercera-Forma.md`. **Sin código todavía.**
+- **La partición propuesta, y lo que la hace útil: los dos primeros pasos no
+  cambian ningún veredicto y se pueden construir sin esperar a nadie.** (1) la
+  densidad se calcula, se anota en el ledger y **se congela dentro del hecho** —que
+  es el Tramo 4 en pequeño—; (2) B se calcula contra **todas** las rutas del turno
+  y se guarda el ranking. **Los dos dejan medido de antemano lo que los pasos 3 y 4
+  van a mover**: es la medición de «antes» construida dentro del motor en vez de
+  por fuera. **Los pasos 3 y 4 tocan un término cada uno**, en PRs distintos, y el
+  **4 va después del 3** porque el piso protege a A y A solo queda sola después.
+- ⚠ **Lo que esta forma NO hace, dicho antes de que se espere:** **no drena los
+  87** —con el piso seguirían siendo pendientes, correctamente, y de todos modos
+  están congelados (D4)—; **lo que arregla es que dejen de producirse por el motivo
+  equivocado**. Y **no sustituye a C14**: 🟡 pero se rozan tanto que **hay que
+  decidir si son un cambio o dos antes de construir ninguno**.
+- 🆕 **Y una corrección a la ficha de C16 que salió de contestar la pregunta 5:
+  los siete campos que «solo existen en Planta 47» casi seguro no los eligió
+  nadie — los materializó un guardado.** 🟢 El camino de escritura del contrato
+  **escribe los seis campos de la ventana en cada guardado** con
+  `existingPolicy.x ?? fábrica` (`api/cliente/contratos/route.ts:266-273`), y 🟢
+  **los siete valores de Planta 47 son exactamente los de fábrica**. Que alguien
+  eligiera siete y acertara los siete defaults es menos probable que un guardado.
+- **Y ésa es la trampa de C16 en su forma más pura:** hoy la ausencia en el Campus
+  **todavía se lee como «nadie eligió»**; **un solo guardado la vuelve
+  indistinguible de «alguien decidió»**, y después ninguna lectura del sistema
+  puede separarlas. **Es exactamente lo que C16 dice que ya no se puede hacer con
+  la política, ocurriendo por segunda vez en otro campo.**
+
 **12 de agosto de 2026, noche (cuatro respuestas de la Planta, y la tercera forma
 salió de tumbar mi propia propuesta).**
 
