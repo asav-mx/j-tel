@@ -1828,7 +1828,7 @@ decisión es cada una.
 |---|---|---|---|
 | **D1** · los 294 hechos con el deadline mal calculado | Negocio | Corregirlos con firma y motivo, o dejarlos | — |
 | **D2** · Turno B de Planta 47 | **Conversación con la Planta** | 🟢 **Resuelto cuál de los dos es: el de Planta 47**, y **los 36 son 100 % suyos**. El turno **ya se movió a 15:30** y su ventana nueva (12:59–16:00) es la primera que contiene la operación de ~14:00 — **pero arranca el 31 de agosto**. Falta: **confirmar que 15:30 es la real**. 🟢 **7 ago: lo de las 102 ya se resolvió** — se corrigieron **90** (las otras 12 se sellaron antes) y **ninguna sin sellar corre ya con la ventana vieja** | No mueve C11 (Turno A) |
-| **D3** · regla de cierre del pendiente por evidencia | **Negocio + legal** | Cuánto puede un servicio quedarse en pendiente y qué pasa después. 🟢 **12 ago, con instrumento propio (`medir-pendientes`) para que la cifra deje de caducar: son 139 pendientes, 118 de más de 48 h (84.9 %) y 100 de más de 7 días.** Eran **106 y 89** el 6 de agosto, y **71** cuando se abrió esta decisión. Por causa: **87 `llegada_sin_atribucion`** (61 el 6 ago — es C14 y crece rápido) · **28 cobertura insuficiente** (**idéntico** al 6 ago: es la cicatriz congelada de C3, no sangra) · **19 observación insuficiente** (12) · **5 sin evidencia posible** (5, sin cambio; cero puntos y retirados de la cola). ⚠ **Y la antigüedad es lo que más se movió: el más viejo lleva 34 días.** La pila no solo crece — **envejece**. 🟢 **12 ago — los 100 de más de 7 días, abiertos por causa: 57 `llegada_sin_atribucion` · 28 cobertura insuficiente · 10 observación insuficiente · 5 sin evidencia posible.** La mayoría es C14, sí. ⚠ **Pero eso NO permite que la regla espere a que C14 cierre, y ésta es la medición que lo impide: la cola solo re-verifica pendientes con la evidencia `indisponible`** (`repositories/index.ts`, `condicionesDeCola`), y 🟢 **de los 139, ciento treinta y cuatro tienen la evidencia `disponible` y cinco `sin_evidencia_posible` — CERO están en `indisponible`**. **Ningún pendiente vuelve a la cola por su cuenta.** Arreglar C14 cambia lo que se selle **de ahí en adelante** y **no toca uno solo de los 87 ya sellados**: moverlos es re-verificar, o sea **D4**. **La pila no está estancada por descuido: está congelada por construcción** | C11 · **D4** |
+| **D3** · regla de cierre del pendiente por evidencia | **Negocio + legal** | Cuánto puede un servicio quedarse en pendiente y qué pasa después. 🟢 **12 ago, con instrumento propio (`medir-pendientes`) para que la cifra deje de caducar: son 139 pendientes, 118 de más de 48 h (84.9 %) y 100 de más de 7 días.** Eran **106 y 89** el 6 de agosto, y **71** cuando se abrió esta decisión. Por causa: **87 `llegada_sin_atribucion`** (61 el 6 ago — es C14 y crece rápido) · **28 cobertura insuficiente** (**idéntico** al 6 ago: es la cicatriz congelada de C3, no sangra) · **19 observación insuficiente** (12) · **5 sin evidencia posible** (5, sin cambio; cero puntos y retirados de la cola). ⚠ **Y la antigüedad es lo que más se movió: el más viejo lleva 34 días.** La pila no solo crece — **envejece**. 🟢 **12 ago — los 100 de más de 7 días, abiertos por causa: 57 `llegada_sin_atribucion` · 28 cobertura insuficiente · 10 observación insuficiente · 5 sin evidencia posible.** La mayoría es C14, sí. ⚠ **Pero eso NO permite que la regla espere a que C14 cierre, y ésta es la medición que lo impide: la cola solo re-verifica pendientes con la evidencia `indisponible`** (`repositories/index.ts`, `condicionesDeCola`), y 🟢 **de los 139, ciento treinta y cuatro tienen la evidencia `disponible` y cinco `sin_evidencia_posible` — CERO están en `indisponible`**. **Ningún pendiente vuelve a la cola por su cuenta.** Arreglar C14 cambia lo que se selle **de ahí en adelante** y **no toca uno solo de los 87 ya sellados**: moverlos es re-verificar, o sea **D4**. **La pila no está estancada por descuido: está congelada por construcción**. ✅ **Y de ahí la lectura que Asav fijó el 12 de agosto, que cambia el peso de esta decisión: la regla de cierre deja de ser «cuando lleguemos» y pasa a ser LO ÚNICO QUE PUEDE MOVER ESA PILA.** Ningún arreglo del motor la toca: C14 cambia lo que se selle de ahí en adelante, el piso de densidad también, y los 139 siguen donde están. **Mientras D3 no exista, esos 139 servicios se quedan ahí para siempre, mejore o no el árbitro** | C11 · **D4** |
 | **D4** · re-verificar las 300 congeladas | Negocio | Cuándo, sabiendo que cada re-verificación mete una versión más en la historia del hecho | C5 |
 | **D5** · cómo se le cuenta a Tecma que su número cambia | Negocio | El mensaje, **antes** de que el número se mueva. 🟢 Ya se movió solo: 6.7 % → 8.8 % → **11.0 %** en tres días | Precede a D4 |
 | **D6** · quién puede modificar la política sin acuerdo del carrier | Negocio | Configurable con piso no negociable: **que el carrier se entere siempre** | C13 · C16 |
@@ -3382,6 +3382,41 @@ anterior, que salió de hacerlo).**
   contratos hayan omitido configurar algo que importa — es que **configurarlo
   tampoco haría nada**.
 - 🟢 **`servedRoute` sigue intacta.** Nada de esto toca el motor.
+
+**12 de agosto de 2026, tarde (la métrica, medida — y la ponderada resultó ser la
+robusta).**
+
+- ✅ **Decidido por Asav: el piso entra ENCENDIDO.** Hoy no toca a nadie (0 de 480
+  desde el 29 de julio) y es **póliza** contra que el proveedor vuelva a ralear.
+- 🟢 **Las tres métricas, contra el mismo adelgazamiento** (`medir-efecto-densidad`
+  ahora las mide juntas). La columna que decide es **cuánto conserva** cada una:
+
+  | Peldaño | A ponderada *(decide hoy)* | A llana *(C17)* | **B corredor** |
+  |---|---|---|---|
+  | 1 punto / 60 s | **86 %** (Campus 87) | 62 % (74) | **96 %** (94) |
+  | 1 punto / 120 s | 36 % (47) | **0 %** (15) | **95 %** (93) |
+
+- 🟢 **B es casi inmune a la densidad** —conserva 93–96 % hasta a 120 s, donde A
+  llana llega a **cero**—, y su mediana **sube** al adelgazar, que es justo lo que
+  se espera de una razón sobre los puntos.
+- 🆕 **Y un resultado que ninguna ficha anticipaba: A ponderada aguanta mucho mejor
+  que A llana** (86 % contra 62 % a 60 s). **La ponderación que C17 señaló como
+  engañosa para LEER es la más robusta para DECIDIR.** No es contradicción —son dos
+  preguntas distintas y cada métrica gana una—, **confirma la decisión de C17** de
+  dejar que la ponderada decida, y **avisa de una tentación cara**: «decidamos con
+  la llana, que es la honesta» habría empeorado la dependencia del aparato.
+- **Lo que contesta a la pregunta del arreglo:** ⚠ **con el piso solo, la
+  dependencia se acota pero no se elimina** — un piso a 55 s no actúa por debajo de
+  55, y **entre la densidad de hoy y 40 s la métrica que decide ya pierde 6–8 %**.
+  ⚠ **Con B, la dependencia se va casi entera**, pero B mide precisión de corredor
+  y **dos rutas que comparten avenida comparten corredor**: le quita al árbitro
+  justo lo que C14 dice que no se puede perder.
+- 🆕 **Y la medición sugiere una forma intermedia que nadie había planteado: B como
+  piso ADICIONAL, no como reemplazo.**
+- ⚠ **Corrección de rótulo al #278 y al #281:** aquellas corridas midieron **la
+  cobertura llana**, no la ponderada, y las fichas la llamaron «cobertura» a secas.
+  **No invalida la conclusión** —el efecto de la densidad se ve en las dos— pero el
+  rótulo era impreciso **justo en el eje del que trata esta entrada**.
 
 **12 de agosto de 2026, cierre (tres preguntas contestadas — y el «costo» del piso
 resultó no existir).**

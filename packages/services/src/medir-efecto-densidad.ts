@@ -39,17 +39,40 @@
  * de julio.
  *
  * **Qué se mide, y contra qué waypoints — que es donde se decide si esto
- * atribuye o solo describe.** Se usa `computeRouteMatchPct` contra los
- * **waypoints crudos del KML**, no contra el tramo que `observableRouteSpan`
- * considera observable. Es a propósito: el tramo observable **se deriva de los
- * propios puntos**, así que al adelgazar cambiaría también él y la corrida
- * tendría **dos variables moviéndose**. Contra el KML crudo, la única
- * diferencia entre las dos corridas es la densidad.
+ * atribuye o solo describe.** Se mide contra los **waypoints crudos del KML**,
+ * no contra el tramo que `observableRouteSpan` considera observable. Es a
+ * propósito: el tramo observable **se deriva de los propios puntos**, así que al
+ * adelgazar cambiaría también él y la corrida tendría **dos variables
+ * moviéndose**. Contra el KML crudo, la única diferencia entre las dos corridas
+ * es la densidad.
  *
  * **La contra, dicha porque el eje es parte del resultado:** esta cifra **no es
  * la que el motor sella** —el motor sí aplica el tramo observable—, así que
  * sirve para **atribuir el efecto** y no para decir qué habría salido en
  * producción. Lo segundo es simulación.
+ *
+ * ---
+ *
+ * **Las TRES métricas, y por qué van juntas.** La pregunta que esto contesta no
+ * es solo «¿cuánto cae la cobertura?» sino **«¿alguna forma de medir aguanta el
+ * cambio de densidad?»** — de eso depende que el arreglo de C19 sea solo un piso
+ * o un piso más una métrica nueva. Así que cada peldaño se mide tres veces:
+ *
+ *   · **A ponderada** (`computeWeightedRouteMatchPct`) — **la que decide hoy**.
+ *     Pesa cada segmento por IDF sobre el corpus de rutas del contrato, para que
+ *     dos rutas que comparten avenida no se confundan.
+ *   · **A llana** (`computeRouteMatchPct`) — «qué fracción del trazado se
+ *     cubrió», a secas. Es la de C17, la que el expediente debe enseñar.
+ *   · **B** (`computeCorridorPrecisionPct`) — qué fracción de los PUNTOS cae en
+ *     el corredor. **Es una razón sobre los puntos**, así que se espera que
+ *     apenas se mueva al adelgazar; medirlo es lo que convierte esa expectativa
+ *     en dato.
+ *
+ * ⚠ **Y una corrección al primer uso de este guion, que hay que decir:** las
+ * corridas del 11 de agosto midieron **la llana**, no la ponderada. La ficha las
+ * llamó «cobertura» a secas. **No invalida su conclusión** —el efecto de la
+ * densidad se ve en las dos, y ahora se puede comparar— pero **el rótulo era
+ * impreciso justo en el eje que más importa aquí.**
  *
  * **Lo que este guion NO puede decir:** si la cobertura recuperada movería un
  * veredicto. Eso exige volver a correr el motor entero —atribución, empate
@@ -64,7 +87,12 @@ import { existsSync } from "node:fs";
 import { sql } from "drizzle-orm";
 import { createDb } from "@jtel/db";
 import type { ContractPolicy, GpsPoint } from "@jtel/domain";
-import { computeRouteMatchPct } from "@jtel/verification";
+import {
+  buildSegmentIdf,
+  computeCorridorPrecisionPct,
+  computeRouteMatchPct,
+  computeWeightedRouteMatchPct,
+} from "@jtel/verification";
 
 for (const p of ["../../.env", ".env"]) {
   if (existsSync(p)) {
@@ -81,6 +109,9 @@ for (const p of ["../../.env", ".env"]) {
 const PELDANOS = [40, 60, 120] as const;
 
 type Waypoint = { lat: number; lng: number };
+
+/** Las tres formas de medir lo mismo, que es de lo que trata esta corrida. */
+type Metricas = { ponderada: number; llana: number; corredor: number };
 
 type Candidata = {
   ocurrencia: string;
@@ -219,6 +250,22 @@ async function main() {
       return;
     }
 
+    /*
+     * El corpus de rutas del contrato, que es lo que da el peso IDF. El motor lo
+     * arma igual: sin corpus no hay ponderación y `routeMatchPct` cae a la
+     * llana, así que reproducirlo es lo único que permite medir **la métrica que
+     * de verdad decide** y no una parecida.
+     */
+    const corpus = [...waypointsPorOcurrencia.values()];
+    const vistos = new Set<string>();
+    const corpusUnico = corpus.filter((w) => {
+      const clave = `${w.length}:${w[0]?.lat},${w[0]?.lng}:${w[w.length - 1]?.lat}`;
+      if (vistos.has(clave)) return false;
+      vistos.add(clave);
+      return true;
+    });
+    const idf = buildSegmentIdf(corpusUnico);
+
     const corredorKm = (politica?.kmlCorridorMeters ?? 120) / 1000;
     /*
      * El umbral de A es `kmlMatchMinPct`, NO `kmlCorridorMinPct`.
@@ -233,6 +280,7 @@ async function main() {
      *   kmlCorridorMinPct  → B, precisión de corredor
      */
     const umbral = politica?.kmlMatchMinPct ?? 60;
+    const umbralCorredor = politica?.kmlCorridorMinPct ?? 60;
 
     console.log(`\n  Efecto de la densidad sobre la cobertura — grupo de control de C19`);
     console.log(`  Contrato: ${filtroContrato} · días de servicio ${desde} → ${hasta}`);
@@ -241,15 +289,18 @@ async function main() {
     );
     console.log(`  ${candidatas.length} pares (ocurrencia × aparato) · solo lectura\n`);
 
-    // Cobertura real, con todos los puntos guardados.
+    /** Las tres métricas de una candidata sobre un conjunto de puntos dado. */
+    const medir = (puntos: GpsPoint[], wps: Waypoint[]) => ({
+      ponderada: computeWeightedRouteMatchPct(puntos, wps, idf, corredorKm),
+      llana: computeRouteMatchPct(puntos, wps, corredorKm),
+      corredor: computeCorridorPrecisionPct(puntos, wps, corredorKm),
+    });
+
+    // Con todos los puntos guardados.
     const base = candidatas.map((c) => ({
       c,
       pts: c.puntos.length,
-      cob: computeRouteMatchPct(
-        c.puntos,
-        waypointsPorOcurrencia.get(c.ocurrencia)!,
-        corredorKm,
-      ),
+      m: medir(c.puntos, waypointsPorOcurrencia.get(c.ocurrencia)!),
     }));
 
     /*
@@ -261,59 +312,72 @@ async function main() {
      * población que importa, porque son las únicas a las que adelgazar les
      * puede quitar algo.
      */
-    const acreditanHoy = base.filter((b) => b.cob >= umbral);
+    // Cada métrica tiene su umbral: A por `kmlMatchMinPct`, B por
+    // `kmlCorridorMinPct`. Compararlas contra el mismo número sería el error de
+    // los umbrales parecidos otra vez.
+    const METRICAS = [
+      { nombre: "A ponderada (decide hoy)", leer: (m: Metricas) => m.ponderada, umbral },
+      { nombre: "A llana (C17)", leer: (m: Metricas) => m.llana, umbral },
+      { nombre: "B corredor", leer: (m: Metricas) => m.corredor, umbralB: true },
+    ] as const;
 
-    console.log(
-      `  ${"peldaño".padEnd(22)}${"pts (med)".padStart(11)}` +
-        `${"acreditan".padStart(12)}${"pierde".padStart(9)}` +
-        `${"cobertura de las que acreditan hoy (med)".padStart(43)}`,
-    );
-
-    const cobBase = mediana(acreditanHoy.map((b) => b.cob));
-    console.log(
-      `  ${"tal como está".padEnd(22)}` +
-        `${num(mediana(base.map((b) => b.pts))!, 0).padStart(11)}` +
-        `${`${acreditanHoy.length}`.padStart(12)}` +
-        `${"—".padStart(9)}` +
-        `${(cobBase === null ? "—" : num(cobBase) + " %").padStart(43)}`,
-    );
-
+    const adelgazadas = new Map<number, Map<string, Metricas>>();
     for (const seg of PELDANOS) {
-      const porCandidata = new Map<string, number>();
-      const r = candidatas.map((c) => {
-        const flacos = adelgazar(c.puntos, seg);
-        const cob = computeRouteMatchPct(
-          flacos,
-          waypointsPorOcurrencia.get(c.ocurrencia)!,
-          corredorKm,
+      const mapa = new Map<string, Metricas>();
+      for (const c of candidatas) {
+        mapa.set(
+          `${c.ocurrencia}·${c.imei}`,
+          medir(adelgazar(c.puntos, seg), waypointsPorOcurrencia.get(c.ocurrencia)!),
         );
-        porCandidata.set(`${c.ocurrencia}·${c.imei}`, cob);
-        return { pts: flacos.length, cob };
-      });
-      const pasan = r.filter((x) => x.cob >= umbral).length;
-      // Las mismas candidatas de antes, ahora adelgazadas: es la comparación
-      // pareada, no dos poblaciones distintas puestas una al lado de la otra.
-      const cobAntes = acreditanHoy.map(
-        (b) => porCandidata.get(`${b.c.ocurrencia}·${b.c.imei}`)!,
-      );
-      const perdidas = acreditanHoy.length - cobAntes.filter((c) => c >= umbral).length;
-      const cob = mediana(cobAntes);
+      }
+      adelgazadas.set(seg, mapa);
+    }
+
+    for (const met of METRICAS) {
+      const u = "umbralB" in met ? umbralCorredor : met.umbral;
+      const acreditanHoy = base.filter((b) => met.leer(b.m) >= u);
+      console.log(`  ── ${met.nombre} · umbral ${u} % ${"─".repeat(Math.max(0, 34 - met.nombre.length))}`);
       console.log(
-        `  ${`1 punto / ${seg} s`.padEnd(22)}` +
-          `${num(mediana(r.map((x) => x.pts))!, 0).padStart(11)}` +
-          `${`${pasan}`.padStart(12)}` +
-          `${`−${perdidas}`.padStart(9)}` +
-          `${(cob === null ? "—" : num(cob) + " %").padStart(43)}`,
+        `  ${"peldaño".padEnd(22)}${"acreditan".padStart(11)}${"pierde".padStart(9)}` +
+          `${"conserva".padStart(11)}${"mediana de las que acreditan hoy".padStart(36)}`,
       );
+      const medBase = mediana(acreditanHoy.map((b) => met.leer(b.m)));
+      console.log(
+        `  ${"tal como está".padEnd(22)}${`${acreditanHoy.length}`.padStart(11)}` +
+          `${"—".padStart(9)}${"100 %".padStart(11)}` +
+          `${(medBase === null ? "—" : num(medBase) + " %").padStart(36)}`,
+      );
+      for (const seg of PELDANOS) {
+        const mapa = adelgazadas.get(seg)!;
+        const pasan = candidatas.filter(
+          (c) => met.leer(mapa.get(`${c.ocurrencia}·${c.imei}`)!) >= u,
+        ).length;
+        const sobreviven = acreditanHoy.filter(
+          (b) => met.leer(mapa.get(`${b.c.ocurrencia}·${b.c.imei}`)!) >= u,
+        );
+        const conserva =
+          acreditanHoy.length > 0 ? (sobreviven.length / acreditanHoy.length) * 100 : 100;
+        const med = mediana(
+          acreditanHoy.map((b) => met.leer(mapa.get(`${b.c.ocurrencia}·${b.c.imei}`)!)),
+        );
+        console.log(
+          `  ${`1 punto / ${seg} s`.padEnd(22)}${`${pasan}`.padStart(11)}` +
+            `${`−${acreditanHoy.length - sobreviven.length}`.padStart(9)}` +
+            `${(num(conserva, 0) + " %").padStart(11)}` +
+            `${(med === null ? "—" : num(med) + " %").padStart(36)}`,
+        );
+      }
+      console.log("");
     }
 
     console.log(
-      `\n  Todo lo demás quedó fijo: la misma unidad, el mismo trazado, el mismo día,\n` +
+      `  Todo lo demás quedó fijo: la misma unidad, el mismo trazado, el mismo día,\n` +
         `  la misma geometría. Lo único que cambió es cuántos puntos hay.\n` +
-        `  «acreditan» son las candidatas que alcanzan el umbral de la política sobre\n` +
+        `  «acreditan» son las candidatas que alcanzan el umbral de esa métrica sobre\n` +
         `  ${base.length} pares (ocurrencia × aparato); la mayoría es flota corriendo otras rutas.\n` +
-        `  «pierde» es la comparación PAREADA: de las que acreditan hoy, cuántas dejan\n` +
-        `  de hacerlo al adelgazar — las mismas candidatas, no otra población.\n` +
+        `  «conserva» es la comparación PAREADA: de las que acreditan hoy con esa métrica,\n` +
+        `  qué fracción sigue acreditando al adelgazar. **Es la robustez de la métrica\n` +
+        `  frente a la densidad**, que es lo que decide si el arreglo necesita métrica nueva.\n` +
         `  NO dice cuántos servicios cambiarían de veredicto: eso exige simulación (D4).\n`,
     );
   }
