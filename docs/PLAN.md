@@ -1751,6 +1751,7 @@ ruta y qué comparte código, y separa lo que se puede medir sin sellar de lo qu
 | **C3** | **Se juzga antes de que llegue el expediente** | 🟢 **6 ago, y hay que decirlo con el eje o miente:** el archivador **hoy va a 6 minutos**, no a 7 horas — mediana **0.10 h**, p95 **0.18 h** en los últimos 7 días. Por semana de `recorded_at`: **22.13 h** la del 6 de julio · **0.10 h** de la del 13 en adelante · con un pico de **p95 5.31 h** la del 27 de julio. **El «~7 h, p95 30 h» de este plan era el promedio de un periodo roto con periodos sanos.** 🟢 Los intentos por servicio bajaron de **206 → 157 → 117 → 101 → 38.7** por semana, con el tope de cola del Tramo 0. 🟢 **Lo que no cambió es el mecanismo: nada retrasa el primer intento.** Y su cicatriz sigue medida: los **28** pendientes por cobertura son exactamente el **27 de julio (13, Campus)** y el **28 de julio (15, Planta 47)** — el fin de semana en que el archivador se atrasó | **Sin construir.** 🟡 Arreglar esto probablemente elimina la mayor parte de C2 — pero al 6 de agosto **ninguno de los dos está sangrando** |
 | **C22** | **La evidencia se copia sin candado: hay puntos repetidos en la tabla que el árbitro lee** | 🟢 **11 ago: 195 028 filas sobrantes de 5 013 844 (3.89 %)** entre el 1 de julio y el 11 de agosto, en **cinco días**: Campus 7 jul (50.0 %, x2) · 8 jul (50.0 %, x2) · 17 jul (2.5 %, x2) · **Planta 47 27 jul (54.0 %, hasta x4)** · **29 jul (53.7 %, hasta x3)**. 🟢 **Son copia exacta, no dos observaciones:** de **126 722** grupos repetidos (viaje + imei + instante), **126 722** con el mismo lugar y la misma unidad — **cero** con lugar distinto, **cero** con unidad distinta. 🟢 **Y la fuente está limpia:** `telemetry_points`, de donde se copia, tiene índice único `(imei, recorded_at)` con el comentario «Deduplica: un mismo equipo no puede tener dos puntos en el mismo instante», y **cero repetidos en la ventana**. 🟢 **`evidence_points` no tiene ese índice** —solo `(trip_id, recorded_at)`, no único— y el `insert` no lleva `onConflict` (`repositories/index.ts:3785`); el borrado que precede a la copia es **condicional** (`verification.ts:897`, `!reuseEvidence`). **La defensa está escrita en la tabla de la que se copia y no en la que el árbitro lee** — la forma de C13 otra vez: la puerta buena cerrada y el hueco donde nadie miró | **Sin construir.** ✅ **Entra a la ficha por decisión de Asav el 11 de agosto.** ⚠ **Y su gravedad hay que decirla medida, porque la versión intuitiva es más grave que la real y no se sostiene:** «la cobertura se calcula sobre puntos, así que duplicar infla la medición» **es falso para A∧B**, y esto es lo que lo mata — 🟢 **la duplicación es pareja dentro de cada candidata**: de **7 040** pares viaje×aparato de los cinco días, **7 027 tienen multiplicidad idéntica en todos sus instantes** y solo **13** —todos del 17 de julio, Campus— son desparejos. Con multiplicidad pareja, **A** (cobertura de waypoints) es invariante porque una copia exacta cubre el mismo waypoint, y **B** (`corridorPrecisionPct`, que es literalmente la fracción de puntos dentro del corredor) **escala numerador y denominador por igual**. 🟢 **Lo que SÍ mueve, leído en el código:** `directionSimilarity` promedia vectores de rumbo entre puntos consecutivos y un par duplicado aporta **`{0,0}`** —`bearingUnit` lo devuelve así por su guarda `|| 1`— **incrementando igual el denominador**: un día al 54 % le baja la similitud a cerca de la mitad. **`directionSimilarity` no entra en `servedRoute`: ordena candidatas.** Así que lo que esto puede mover no es **si** una candidata acredita sino **cuál gana** — o sea qué unidad queda como observada. Es la misma maquinaria del rumbo espurio de §4 del reporte de los 71. 🟡 **Cuánto, no se sabe:** exige correr el motor con y sin deduplicar, que es **simulación** (D4 / Tramo 6) |
 | **C23** | **Una perilla del contrato que se escribe, se explica y no la lee nadie** | 🟢 **11 ago, y salió de enumerar la política para C16, no de buscarla:** `shiftCloseMinutesAfterStart` —«a qué hora se sella el turno completo»— **no la declara ninguno de los dos contratos reales y no tiene valor de fábrica**, así que ningún contrato tiene hora de cierre de turno. 🟢 **Pero lo que importa no es que esté vacía: es que no tiene lector.** Sus únicas apariciones en `packages/*/src` y `apps/*/src` son **el esquema** (`domain/src/index.ts:344`), **la escritura** (`api/cliente/contratos/route.ts:201` y `:370`, las dos ramas del formulario) y **el catálogo de perillas** (`lib/perillas-contrato.ts:169`). **Ningún archivo la lee para decidir nada** — `cierre.ts` no la menciona. 🟢 **Y la escritura está cuidada**: hay un comentario explicando que vaciar el campo lo BORRA en vez de caer al valor anterior, «la única forma de que el contrato pueda volver a *sin hora de cierre*». **Alguien pensó el ciclo de vida de un dato que nadie consume.** ⚠ **Y el comentario del esquema miente sobre el código:** dice que «la pantalla trata la ausencia como *turno histórico sin hora de cierre* y lo dice», y **esa pantalla no existe** — no hay lector que pueda distinguir la ausencia de nada. Es la regla del comentario que miente, encontrada en el archivo que define la ley | **Sin construir.** **Propuesta el 11 de agosto — decide Asav si entra.** 🟢 **Hoy no ha engañado a nadie**, y por la misma razón que C13: **nadie la ha puesto**. El daño es potencial y está a un clic — la perilla es editable desde la pantalla del contrato y su texto promete un comportamiento concreto («07:00 con 120 minutos sella a las 09:00»). **Quien la configure va a creer que cambió algo.** Es la familia de **C9 al revés**: allá faltaba el último eslabón de una cadena sin principio; aquí **están el esquema, la escritura, la pantalla y hasta el texto que la explica — y falta el que la lea** |
+| **C25** | **La Ley 1 evadida por grano: una compuerta pregunta por la flota y la otra por la candidata** | 🟢 **13 ago, y sale de separar los 397.** El motor tiene una compuerta de Ley 1 —«la ventana no alcanzó a cubrir el origen de la ruta» → `pendiente_evidencia`— y **ningún** acusado con llegada sale por ahí: los 397 salen por `ninguna_unidad_coincidio_ruta`. **La razón no es el umbral: es a quién se le pregunta.** `servedRoute` calcula el tramo observable **de la candidata** (`observableRouteSpan(sortedPoints, …)`, `verification/src/index.ts:511`) y la tumba si no llega al piso; la compuerta que la salvaría calcula la fracción observada **sobre `input.evidencePoints` — la evidencia del viaje entero, que es la flota** (`index.ts:1119`). **Mismo umbral, dos poblaciones.** Basta con que CUALQUIER unidad de la flota haya pisado el origen para que la compuerta dé por observado un origen que la candidata nunca recorrió. 🟢 **Y la flota no es un detalle de tamaño: la mediana es de 50 candidatas evaluadas por servicio**, así que la pregunta de flota da «sí» casi siempre por construcción. 🟢 **Medido, recalculando el tramo observable con la MISMA función del motor sobre la MISMA evidencia y la MISMA ventana —sin simular nada—: 372 de los 397 (93.7 %) tienen a su candidata por debajo del piso que se le aplicó**, y la valla del recálculo cuadra: de los 121 expedientes que ya traían la fracción sellada, coincide en **121 de 121 (±0.02)**. 🟢 **No es C11 ni C14 con otro nombre:** aquéllas dicen que la atribución falla y que la perilla decide cómo se llama el fallo; **ésta dice que el motor YA TIENE la salida escrita para este caso y no la toma**, por preguntar a la población equivocada. **Instrumentos:** `separar-397.ts`, `reparto-397.ts` | **Sin construir, sin ficha.** 🟢 **Es la causa que sola quita más de las 397** —372, contra 0 del modo inerte (C14: los 397 se sellaron `kml_full`)—, y **su arreglo no mueve ningún umbral**: cambia el argumento de una función, no la regla. ⚠ **Lo que sí decide es cuántos servicios pasan a pendiente**, así que comparte la frontera de C19 y C14 y **cuál se toca primero lo decide Asav**. 🔵 **Y lo ya sellado no se mueve solo:** re-juzgar los 372 es D4 / Tramo 6 |
 | **C24** | **El expediente de un hecho sellado no es inmutable: lo explica leyendo filas editables** | 🟢 **12 ago, y sale de tirar del hilo de la ventana:** `service-detail-data.ts` —la pantalla cuyo trabajo entero es explicar un hecho— **lee `contract.policy`, la política VIVA**, y no `fact.contractPolicySnapshot`, que el hecho congela byte a byte. De ahí salen la tolerancia, los cuatro números de la ventana, la zona horaria de **todos** los instantes y las consecuencias económicas (`computeEnforcement`). 🟢 **Y no es que nadie use el snapshot — es que lo usan las OTRAS pantallas:** `cierre-data.ts:208`, `diagnostico-data.ts:122`, `occurrence-table.tsx:99` e `historia-sello.ts` sí lo leen, y `no-cumplido-motivo.ts:58` **tiene la regla escrita**: «se lee del `contractPolicySnapshot` del hecho, no de la política de hoy». **La regla existe, está argumentada, y la incumple justo la pantalla del expediente** — regla 14 otra vez. 🟢 **Medido sobre 1 194 hechos sellados reales, y ya hay daño vivo: 197 (16.5 %) muestran hoy un «cierra la observación» que no es el suyo** — 124 congelados en **30 → 45** vivos (Campus, 13–17 jul) y 73 en **0 → 45** (Campus, 29 jun–13 jul). 🟢 **Y 519 (43.5 %) tienen la geocerca congelada distinta de la del perfil** —`VOID` contra `Tecma Planta 47`, **polígonos distintos**—, así que el mapa dibuja un destino y el campo del hecho nombra otro. 🟢 **Lo que NO divergió**: hora límite, unidad de referencia, versión de trazado y tolerancia, **cero** — pero cero por falta de ediciones, no por candado. ⚠ **Y lo peor no tiene cifra, que es el hallazgo: la ventana de evidencia, la etiqueta y placas de la unidad, los nombres de perfil/contrato/planta, el estado del viaje y los propios `evidence_points` se leen vivos y el hecho NO guarda copia**, así que un cambio ahí **es indetectable por construcción** | **PARTIDA — la mitad barata está construida (13 ago).** ✅ **El expediente ya lee la política del sello**, como sus tres hermanas: `politica-del-sello.ts` decide cuál gobierna —del sello si hay hecho, del contrato vivo si no— y lo declara en `origen`. 🟢 **Con prueba propia, y se comprobó que se pone roja**: devolviendo la política viva para un hecho sellado, 6 de 7 casos mueren (regla 8). 🟢 **Visto en el navegador en los dos temas** sobre uno de los 197: el renglón «Márgenes» pasó de `después 45` a `después 30`, que es con lo que se juzgó. La pantalla ahora **dice cuál es cuál** —«Ventana de la política del sello»— y avisa cuando el contrato cambió después del sello, sin dejar que eso mueva lo que enseña. ⚠ **Lo que NO cierra, y es la mayor parte: la geocerca (519) no se arregla leyendo un snapshot** —dibujar el polígono que el hecho nombra sería dibujar uno que el motor nunca usó, que es C4—, y **los campos sin copia congelada siguen sin memoria**. **Es la generalización de C4** —*lo que se congela no se usa y lo que se usa no se congela*— **de un campo a una pantalla**, y por eso es causa aparte y no una nota de aquélla: C4 es sobre el polígono, ésta es sobre **que el acta de un hecho sellado se pueda reescribir sin dejar versión**. 🟢 **El arreglo inmediato es barato y no toca el motor:** que el expediente lea `fact.contractPolicySnapshot` como ya hacen sus tres hermanas. **El arreglo de fondo es el Tramo 4**: que viaje dentro del hecho lo que hoy no viaja —empezando por la ventana—, y para lo que no se pueda congelar (los nombres), la salida ya la resolvió `Plan-Choferes` con `declaredDriverName`: **texto plano dentro del hecho, no una referencia a una fila que alguien puede editar**. ⚠ **Y la trampa de medirlo, porque el instrumento ya cayó en ella:** comparar los dos `jsonb` a secas dio **63 hechos con la zona horaria divergente**, y en pantalla son **CERO** — el par es `null` contra `America/Ciudad_Juarez` y el expediente aplica ese mismo default a los dos lados. **Correcto como consulta, falso como afirmación.** El sensor compara ahora lo que se ve, no lo que está guardado: `medir-expediente-mutable` |
 | **C17** | **La cobertura de ruta se guarda ponderada y se lee llana** | ✅ **Arreglado en el motor.** Ahora se guardan las dos: `routeMatchPct` —la que decide, ponderada por TF-IDF— y `routeMatchPlainPct` —la llana—. 🔵 **5 ago:** 168 de 3 054 candidatas acreditaban ≥ 60 % teniendo una cobertura real con mediana de **3.9 %**; la correlación con la precisión pasa de **0.373 ponderada a 0.672 sin ponderar**. **No movió un solo veredicto.** 🟢 **6 ago, y esto acota quién lo puede leer: la primera entrada de ledger con `routeMatchPlainPct` es del 5 de agosto.** Todo lo sellado antes trae **solo la ponderada**, y quien lo lea debe decirlo así | **Hecho en el motor.** **Falta que las pantallas del expediente lean la llana** — que es justo donde la cifra miente |
 | **C5** | **Ventana derivada vs. match observable** | No afinados entre sí: +50 se enderezan por uno, −2 se caen por el otro. 🟢 **6 ago — y esto cambia su estado: los datos ya llegaron.** `route_traversal_measurements` tiene **192 filas sobre 48 ruta-turnos**, del 31 de julio al 5 de agosto, y **48 de 48 llegan a las 3 muestras** que pide `routeDurationMinSamples`. ⚠ **102 de las 192 topan con el borde de la ventana** (`lower_bound`), así que el percentil sale sesgado hacia abajo | **Deja de estar bloqueado por datos.** Este plan decía «no es trabajo, es tiempo»; el tiempo ya pasó |
@@ -3909,3 +3910,92 @@ nombrada sin medir.**
   verificación visual.
 
 - 🟢 **`servedRoute` sigue intacta.** Nada de esto toca el motor.
+
+**13 de agosto de 2026 (los 397, separados — y la causa que faltaba tiene forma
+de pregunta mal dirigida).**
+
+**Salió de una orden de Asav: separar antes de proponer.** Las tres mediciones
+son de solo lectura. **Instrumentos:** `packages/db/src/separar-397.ts`,
+`reparto-397.ts`, `inventario-expediente-sin-atribucion.ts` — ninguno nombra a
+un cliente ni a un transportista, a propósito.
+
+- 🟢 **Los 397 se levantaron de cero y cuadran:** 597 `no_cumplido` sellados de
+  los contratos reales − 200 sin ninguna candidata con llegada = **397**.
+- 🟢 **El grupo «llegó tarde de verdad» sale en CERO, y no por falta de datos:
+  el motor no lo puede producir.** Si alguna candidata acredita A∧B el veredicto
+  es `cumplido` y «tarde» vive en `timing` (`verification/src/index.ts:1177`).
+  **Los 36 tardes reales de los dos contratos son los 36 `cumplido`.** «Llegó
+  tarde» no podía estar dentro de una población de no cumplidos: son poblaciones
+  ajenas, y buscarlo ahí era la pregunta mal hecha.
+- 🟢 **El reparto de los otros dos grupos: 197 con la ventana corta** —la ruta
+  medida dura más que los minutos que su ventana abrió antes— **y 200 sin que la
+  ventana lo explique.** ⚠ **Y la frontera entre los dos es blanda por
+  construcción:** la duración de ruta se mide DENTRO de la ventana, así que el
+  instrumento solo puede decir «era corta», nunca «alcanzaba». **343 de los 397
+  tienen mediciones recortadas por el borde.** Los 200 no son «ventana sana»:
+  son **sin medir**.
+- ⚠ **Corrección a la entrada del 12 de agosto:** «el solape con los 397: son
+  116» es solo Planta 47. **El solape total es 197** (81 + 116), que es lo que
+  dice su propio renglón por contrato dos líneas abajo. §D en nuestra propia
+  bitácora.
+- 🆕 **Causa nueva: C25** — la Ley 1 evadida por grano. Ficha en la tabla de
+  causas. **Sola quita 372 de los 397**, contra **0** del modo inerte (C14: los
+  397 se sellaron `kml_full`, así que hacer que la perilla gobierne no alcanza a
+  ninguno). La ventana da **381 de 397 como TECHO** —no cuenta: otra ventana es
+  otra evidencia y saber el resultado exige re-verificar, D4— y la densidad
+  (C19) solo da **curva**: 203 con un piso de 45 s, 80 con uno de 60 s, cero a
+  90 s. **Elegir el piso aquí sería tomar por fuera una decisión de Asav.**
+- **Y la frase que tiene que viajar pegada al número, porque sin ella se lee al
+  revés:** 🟢 **397 de 397 no dice que el transportista cumplió — dice que la
+  acusación no se sostiene sobre lo que el sistema pudo observar.** Lo que el
+  Marco pide para éstas es **pendiente**, no cumplido.
+- 🟢 **`servedRoute` sigue intacta.** Nada de esto toca el motor.
+
+**13 de agosto de 2026 (frente nuevo, pedido por Asav: un servicio sin
+atribución tiene que poder enseñar lo que sí se observó).**
+
+**La definición de v1, dicha por Asav:** si algo sale no cumplido, se tiene que
+poder enseñar qué se hizo y decir por qué. **Hoy no se puede** — y no por falta
+de datos: el árbitro los mira para juzgar, falla, y los suelta. **Va ANTES de
+arreglar el árbitro**, porque aunque se arreglen las cuatro causas van a seguir
+existiendo servicios sin atribución, y hoy **enseñan nada y afirman todo**.
+
+**Las dos leyes del frente, dichas por Asav:** nada de esto es un veredicto ni
+lo cambia; y **nada se inventa** — solo se muestra lo observado, y donde no hay
+dato se dice que no hay.
+
+**Sin diseñar.** Lo que sigue es el inventario, medido sobre los 397, con tres
+estados que no se pueden colapsar: **GUARDADO** (sellado, se muestra tal cual),
+**DERIVABLE** (calculable hoy, y hay que declarar que es lectura de HOY — C24) y
+**NO ESTÁ** (ni guardado ni reconstruible; la pantalla tiene que decirlo).
+
+| Lo que tendría que enseñar | Estado | Medido |
+|---|---|---|
+| El trazo real de las candidatas | 🟢 **GUARDADO** | 397/397, con lat/lng/hora/velocidad. **La evidencia no se poda**: solo cae por cascada al borrar una ocurrencia, y eso solo alcanza a futuras |
+| La lista de candidatas evaluadas | 🟢 **GUARDADO** | 397/397 — ⚠ pero **la lista ES la flota: mediana de 50 por servicio**. El subconjunto que informa es «las que llegaron»: **p50 de 4** |
+| A ponderada · B · Fréchet · dirección · umbrales | 🟢 **GUARDADO** | 397 · 397 · 383 · 383 · 397 |
+| A llana (C17) | 🔴 **NO ESTÁ** | **67 de 397** — y es la única legible como porcentaje |
+| Sobre qué tramo se calificó A | 🟡 **DERIVABLE** | sellada en **121**; recalculada con la función del motor en **397**, y cuadra **121/121** |
+| Cuánta señal tuvo cada candidata | 🟡 **DERIVABLE** | **0 de 397** como campo: la cobertura sellada es **de una sola unidad, la mejor** |
+| Por qué no acreditó **cada** candidata | 🔴 **NO ESTÁ** | **0 de 397**. Hay un motivo **del servicio** (397/397, en agregado) y la compuerta se deduce de los números **solo en 121** |
+| Cuál trazado contratado se usó | 🔴 **NO ESTÁ** | **0 de 397**: `servedVariantId` solo se llena en `cumplido`, y el paso `multi_variante` **no aparece en ninguno** |
+| El trazado contratado, por fecha | 🟡 **DERIVABLE** | 397/397 de `route_kml_versions` — es lectura de hoy, no lo que se usó |
+| El destino dibujado = el sellado | ⚠ **GUARDADO a medias** | **133 de 397 divergen** del perfil: es **C4** dentro de esta pantalla |
+| El empalme con otra ruta del día | 🟡 **DERIVABLE** | **0** como campo; del ledger cruzado consigo mismo, **150 de 397 (37.8 %)** — la candidata que llegó acreditó otra ruta ese día |
+
+- ⚠ **El error que este inventario cometió y corrigió antes de publicarse, porque
+  ya estaba documentado y aun así se repitió:** preguntar el empalme sobre
+  *cualquier* candidata da **100 % en todo**, porque la lista es la flota entera.
+  Preguntado sobre **la que llegó**, son 150. **Es la misma corrección que ya se
+  había hecho con los aparatos del viaje** — regla 14: una regla escrita no es
+  una regla aplicada.
+- **Lo que habría que empezar a guardar**, y sale del inventario, no de una
+  idea: el **motivo por candidata**; la **señal por candidata**; **qué trazado
+  contratado se usó** también en los no cumplidos; el **aparato** en los asientos
+  que no lo guardaron; y **A llana** junto a la ponderada.
+- ⚠ **Y lo que no se arregla guardando de más:** lo ya sellado sigue sin traerlo.
+  **Todo campo nuevo nace vacío hacia atrás**, así que la pantalla tiene que
+  saber decir «esto no se preguntó entonces». Sin eso, **un hueco se lee como un
+  cero** — que es la segunda ley del frente aplicada a la piel.
+- 🟢 **`servedRoute` sigue intacta.** Tres instrumentos de solo lectura y una
+  causa escrita. Nada toca el motor.
