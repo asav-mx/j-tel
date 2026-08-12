@@ -26,6 +26,7 @@
     "simular-reverificacion-planta47": "tsx src/simular-reverificacion-planta47.ts",
     "analizar-kml-sospechoso-planta47": "tsx src/analizar-kml-sospechoso-planta47.ts",
     "medir-ventana-vs-ruta": "tsx src/medir-ventana-vs-ruta.ts",
+    "medir-efecto-densidad": "tsx src/medir-efecto-densidad.ts",
     "backfill-duraciones-ruta": "tsx src/backfill-duraciones-ruta.ts",
     "import-jrz-memory": "tsx src/import-jrz-memory.ts"
   },
