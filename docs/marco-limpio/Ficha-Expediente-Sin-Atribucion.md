@@ -82,7 +82,7 @@ Entonces la Parte 1 se reparte así:
 | Cara | Qué ve | Por qué |
 |---|---|---|
 | **Transportista** — `carrier/servicio/[id]` | **Todo lo de esta ficha.** Es su instrumento de defensa: su flota, sus unidades, sus números | Estructura-Cara-Carrier §6: *el Workbench es el instrumento con el que el transportista se defiende*. Esto es su hermano por servicio |
-| **Cliente** — `.../servicio/[occurrenceId]` | **Solo el hecho, sin identidades ni puntajes:** cuántas llegadas se observaron y no se pudieron atribuir, y qué no responde esta lectura | Ley 3. Un conteo no es una flota |
+| **Cliente** — `.../servicio/[occurrenceId]` | **Cuántas unidades llegaron y a qué hora**, sin identidades, sin puntajes y **sin trazo**. Y qué no responde esta lectura. Detalle medido en §3.b | Ley 3. Un conteo no es una flota; un trazo sí es una ruta |
 | **J-Staff** | Todo, más el ledger crudo | Ahí el usuario es experto y el razonamiento completo es su trabajo |
 
 **Y la garantía es estructural, no un filtro.** La proyección de la cara cliente
@@ -90,11 +90,60 @@ Entonces la Parte 1 se reparte así:
 `decision`. Esa línea no se toca. *La prueba de fuego del skill: ¿alguien podría
 borrar una línea y abrir la fuga? Si la línea no existe, ya es estructura.*
 
-⚠ **Lo que esto deja abierto y decide Asav:** el cliente sigue viendo un
-`no cumplido` que enseña poco. La corrección de texto del 12 de agosto ya le
-dice *«que ninguna acreditara no significa que ninguna llegara»*; **esta ficha
-no le da más**, y la pregunta de cuánto más merece ver **no se puede contestar
-sin tocar la Ley 3**.
+**Qué ve exactamente el cliente está medido y vive en §3.b.** La primera versión
+de esta ficha dejó la pregunta abierta diciendo que no se podía contestar sin
+tocar la Ley 3. **Se midió, y esa afirmación era floja:** tres de los cuatro
+datos caben, y el que no cabe no lo bloquea la Ley 3.
+
+### 3.b Qué cabe en la cara del cliente — medido, no razonado
+
+`pnpm --filter @jtel/db que-ve-el-cliente`
+
+| Dato | Veredicto | El número que lo decide |
+|---|---|---|
+| **Hubo llegadas a su geocerca, y cuántas** | 🟡 **CABE ACOTADO** | De 1 632 pares servicio×unidad, **49 (3.0 %) son unidades que ese día acreditaron a OTRO cliente** — en **49 de 397 servicios (12.3 %)**. El **conteo** cabe; la **identidad** no |
+| **A qué hora ocurrieron** | 🟢 **CABE** | Sellada en **397 de 397**. Una llegada a la geocerca propia es evidencia del servicio propio |
+| **Por qué no se pudo acreditar ninguna** | 🔴 **CABE, Y HOY MENTIRÍA** | Ver abajo — **260 de 285 (91.2 %)** |
+| **El trazo real** | 🔴 **NO CABE** | En **49 servicios (12.3 %)** alguna traza sería de una unidad que ese día servía a otro cliente. Y en **126 (31.7 %)**, de otro contrato |
+
+**1 · El conteo cabe; el detalle de las horas es el mismo dato.** Enseñar cuatro
+horas distintas **es** enseñar que hubo cuatro unidades — no agrega exposición
+sobre el conteo, pero tampoco es independiente de él. Y **la identidad no entra
+nunca**: ni etiqueta, ni placa, ni un identificador estable entre servicios que
+permita seguir a la misma unidad de un expediente a otro.
+
+**2 · El trazo real no cabe, y la razón es más grave que «revela flota».** Un
+trazo es el recorrido de una unidad, y **el recorrido ES la ruta que servía**.
+En 49 servicios esa ruta es de **otro cliente**: dibujarla pondría el trazado de
+un tercero en el mapa de éste. Tu instinto era correcto; el motivo es peor que el
+supuesto.
+
+⚠ **3 · Y el hallazgo que cambia la prioridad de todo el frente.** «Por qué no se
+pudo acreditar» **no lo bloquea la Ley 3** —una causa agregada no nombra unidad
+ni puntaje—. Lo bloquea que **el dato honesto no existe**:
+
+- El único motivo guardado es `ninguna_unidad_coincidio_ruta` en **397 de 397**,
+  que **es una tautología**: dice lo mismo que «no se pudo atribuir».
+- La familia derivada de lo sellado **se equivoca de causa en 260 de 285
+  (91.2 %)**: dice *«ninguna recorrió suficiente del trazado»* —que en la cara
+  del cliente se lee como **conducta del transportista**— cuando lo que hubo fue
+  que **a la candidata ni siquiera se le vio suficiente ruta**. Es C25.
+
+**Escribir hoy esa causa en la cara del cliente sería convertir un fallo de
+observación en una acusación de conducta, con el sello del árbitro encima.** Es
+§D del Marco en su forma más cara: el dato correcto, la afirmación falsa, y del
+lado que perjudica al auditado.
+
+**Entonces la cara del cliente pasa de dos bloques a tres, y el tercero espera:**
+
+> **Llegaron 4 unidades a su destino entre las 05:38 y las 06:04.**
+> El sistema no pudo acreditar cuál de ellas cubrió esta ruta.
+>
+> *Esta lectura no responde si el servicio se hizo, ni por qué no se pudo
+> acreditar.*
+
+Eso ya es honesto, ya explica más que un `no cumplido` pelón, y **no expone a
+nadie**. El *porqué* entra **cuando la Parte 2 lo haya guardado**, no antes.
 
 ---
 
@@ -404,8 +453,10 @@ cliente y confirmar que ni un identificador de unidad ni un puntaje aparece.**
 
 ## 9. Lo que esta ficha deja abierto
 
-- ⚠ **Cuánto más merece ver el cliente** — no se puede contestar sin tocar la
-  Ley 3. Decide Asav.
+- ✅ **Cuánto más merece ver el cliente — CONTESTADO y medido en §3.b.** Tres de
+  los cuatro datos caben; el trazo real no, y el porqué espera a la Parte 2. La
+  primera versión de esta ficha decía que no se podía contestar sin tocar la
+  Ley 3, **y era una afirmación floja: no se había medido**.
 - ⚠ **Si el trazado contratado reconstruido por fecha basta**, o si mostrarlo
   como `lectura de hoy` es demasiado frágil para una pantalla de defensa. Si no
   basta, la Parte 2 se vuelve requisito de la 1.
