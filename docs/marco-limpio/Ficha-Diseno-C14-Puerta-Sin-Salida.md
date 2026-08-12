@@ -166,9 +166,27 @@ expresado como *hueco mediano del mejor candidato del servicio*:
 exactamente el daño que existe para parar. 🟢 **Entre 45 s y 55 s la cifra no se
 mueve (50 en los dos)**: hay meseta, así que el umbral no es un filo.
 
-⚠ **Y su costo, que no es solo bueno:** los **6 cumplidos del Campus** que cruzan
-el piso **perderían una acreditación ya dada**. Quitarle un cumplido a un carrier
-que ya lo tenía es un daño distinto de no acusarlo, y va dicho aparte.
+⚠ **Y su costo — que resultó no existir, y la corrección es del 12 de agosto.**
+Esta ficha decía que los **6 cumplidos del Campus** «perderían una acreditación ya
+dada». **No la pierden**, y no hace falta inventar ninguna excepción para que no
+la pierdan: 🟢 **la ley ya está escrita** —*los hechos se calculan una vez y se
+congelan; la política cambia hacia adelante*—, y es la misma con la que se
+descartó la opción 3 de C21. **Un piso encendido no reescribe un hecho sellado.**
+
+> **Los 50 y los 6 son cifras de SIMULACIÓN, no costos.** Dicen qué habría
+> atrapado el piso aplicado al pasado —que es la forma correcta de dimensionar la
+> regla— y **no lo que pasa al encenderlo**. Confundir las dos cosas fue mío, y es
+> la §D del Marco otra vez: el número era correcto y el rótulo «costo» lo volvió
+> una afirmación falsa.
+
+🟢 **Y hacia adelante, hoy, el piso es gratis: de los 480 servicios del 29 de julio
+en adelante, CERO cruzan 55 s y CERO cruzan 45 s** — el hueco máximo del mejor
+candidato es **34–36 s**. **Encenderlo hoy no manda un solo servicio a pendiente.**
+
+> **Eso lo convierte en otra cosa de la que parecía: no es un cambio de política
+> operativa, es una póliza.** Solo actúa si el proveedor vuelve a ralear la
+> cadencia — que es exactamente para lo que existe. **El argumento «llena una pila
+> que nadie cierra» se cae con la medición.**
 
 ### Lo que decide entre las dos, y no está de este lado
 
