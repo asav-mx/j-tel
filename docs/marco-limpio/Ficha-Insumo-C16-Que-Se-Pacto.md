@@ -43,6 +43,31 @@ C12 metió `frechetMaxKm` (#269, 8 de agosto), y `kmlOriginToleranceFraction`
 **dejó de diferir** al escribirse en el Campus el 6 de agosto. **No es que se
 hayan arreglado divergencias: es que la lista se midió otra vez.**
 
+### 2.0 ⚠ La lectura de esta ficha cambió el 12 de agosto — y se invirtió
+
+`comparar-politicas` ahora distingue **declarado** de **elegido**: marca cuándo un
+valor declarado es **idéntico al de fábrica**, que es la firma de un guardado.
+
+| | Declara | **Con el valor de fábrica** | **Con un valor elegido** |
+|---|---|---|---|
+| **Campus** | 16 | 8 | **8** |
+| **Planta 47** | 23 | **19** | **4** |
+
+> 🟢 **El contrato configurado es el Campus. Planta 47 corre casi entero de
+> fábrica** — solo cuatro valores elegidos: `routeStrictness`, `enforcementRules`,
+> `excusableReasons` y `toleranceMinutes`.
+>
+> **Y eso invierte lo que §2.2 sugería.** «Siete campos solo en Planta 47» se leía
+> como *allá decidieron y acá no*. Es al revés: **allá guardaron**.
+>
+> ⚠ **La pregunta que esto abre, y que no estaba en la lista de seis: ¿alguien
+> eligió alguna vez la configuración de Planta 47?** Es el sitio con **87
+> pendientes, 309 no cumplidos y el corredor más estricto**, y **19 de sus 23
+> valores declarados son el default.**
+
+⚠ **La marca no prueba nada por sí sola** —alguien pudo elegir el valor de fábrica
+a propósito—. **Uno es casualidad; diecinueve es un guardado.**
+
 ### 2.1 Los ocho que difieren · ⚖ = decide un veredicto
 
 | Campo | Campus | Planta 47 | Qué decide, en una línea |
@@ -140,7 +165,7 @@ aplicando». Tiene frente propio y va por su cuenta.
 
 | # | Respuesta de la Planta | Qué queda |
 |---|---|---|
-| **2 · el corredor** | ✅ **Era 60 %, no 50 %. Confirmado.** | 🟢 **Es la primera divergencia acreditada de C16: el árbitro corre una regla que las partes no pactaron.** Su tamaño, medido: **71 candidatas del Campus acreditan B solo por el umbral no pactado**, y en la compuerta A∧B la diferencia es de **163 a 139 — 24 candidatas**. **Falta decidir si se corrige la configuración y qué pasa con lo ya sellado** (eso es D4) |
+| **2 · el corredor** | ✅ **Era 60 %, no 50 %. Confirmado.** | 🟢 **Primera divergencia acreditada de C16: el árbitro corre una regla que las partes no pactaron.** Tamaño medido: **71 candidatas del Campus acreditan B solo por el umbral no pactado**; en la compuerta A∧B, **163 → 139, o sea 24**. ⚠ **Y su causa NO es un guardado**, contra lo que se supuso al recibir la respuesta: 🟢 **el valor de fábrica es 60 y el seed también escribe 60**, así que un guardado habría dejado 60, no 50. **El 50 lo escribió alguien a propósito.** 🟢 **Y no se puede saber quién ni cuándo: `contract_policy_history` sigue en CERO filas** —el trigger de la 0020 vive desde el 8 de agosto y **ninguno de los dos contratos se ha editado desde entonces**, así que no ha tenido ocasión de disparar—. **Corregirlo a 60 es corrección, no negociación.** Lo que no se recupera es **por qué se puso en 50** |
 | **3 · las consecuencias** | ✅ **Vacías a propósito.** `enforcementRules` no está activado por ahora | 🟢 **Deja de ser una divergencia y pasa a ser una decisión tomada.** Sale de la lista de dudas |
 | **4 · los excusables** | ✅ **No hay catálogo definido todavía**, y Asav los quiere **configurables desde la interfaz, no fijos en el contrato** | 🆕 **Frente nuevo** — ver §5.1. **La diferencia medida (el Campus sin `falla_mecanica`) no era una decisión: era el catálogo sin definir** |
 | **1 · `routeStrictness`** | ⏸ **Sin respuesta clara todavía** | 🟢 **Y no urge, por una razón medida: la perilla está inerte** (C14). Mientras `!hasKml` sea lo único que apaga A∧B, **el valor que tenga no cambia un veredicto** |

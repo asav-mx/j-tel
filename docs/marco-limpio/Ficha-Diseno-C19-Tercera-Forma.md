@@ -202,6 +202,57 @@ cambia un veredicto hasta el último**:
 
 ---
 
+## 4.2 ¿C14 y esta forma son un cambio o dos? — el argumento de las dos, sin decidir
+
+### Lo que se pierde si van JUNTOS
+
+- **La atribución del efecto.** C14 cambia **quién entra cuando nada atribuye**;
+  esta forma cambia **con qué se atribuye**. Movidas a la vez, un servicio que pasa
+  de pendiente a cumplido **no dice cuál de las dos lo movió**.
+- **Y no hay medición que lo recupere después**: es la regla del nudo, con la misma
+  aritmética.
+
+### Lo que se pierde si van SEPARADOS
+
+- **Código de transición que existe solo para ser reemplazado.** Las dos reescriben
+  la misma región —cómo se llena `serving` y qué pasa cuando queda vacía—, así que
+  la primera tendría que dejar una lógica intermedia que la segunda tira.
+- ⚠ **Y algo peor: se puede construir C14 de más.** Si la atribución pasa a B —que
+  es **más permisiva que A∧B**—, parte de los `llegada_sin_atribucion`
+  **dejan de producirse sin tocar `routeStrictness`**. **Construir C14 primero
+  podría ser construir algo que después sobra.**
+
+### ⚠ ¿Se pueden medir por separado de verdad? — no, y la razón es estructural
+
+**Ésta es la pregunta que decide, y no hace falta medirla: se lee en el código.**
+
+> 🟢 **C14 solo se dispara cuando `serving` sale vacía** (`index.ts:1085`). **Y la
+> forma separada cambia exactamente qué llena `serving`.**
+>
+> **Así que la forma separada cambia la CONDICIÓN QUE DISPARA a C14.** No es que
+> compartan población por casualidad: **una está aguas arriba de la otra**.
+
+De ahí las dos consecuencias, y son simétricas:
+
+- **Medir C14 antes de la forma separada** es medirla contra una condición que está
+  a punto de cambiar. El «después» de C14 no sobrevive al cambio siguiente.
+- **Medir C14 después** es medir un remanente: **primero hay que ver cuánto queda
+  de `llegada_sin_atribucion` una vez que B atribuye.** 🔵 El dato que lo anticipa
+  existe: de las candidatas de los pendientes, **26 cumplen precisión de corredor y
+  27 cobertura, ninguna las dos** (6 de agosto). **Si B atribuye sola, esas 26
+  entran** — y C14 se queda sin la mayor parte de su población.
+
+> **La lectura honesta: no son dos cambios independientes con una frontera común —
+> son un cambio y su consecuencia.** Lo que sí se puede medir por separado son
+> **los cuatro pasos de §4.1**, porque están ordenados aguas abajo y cada uno mueve
+> un término. **C14 cabe como un quinto paso, medido contra lo que quede.**
+
+**Lo que esto NO dice:** que C14 sobre. Dice que **su tamaño no se puede conocer
+hasta que B atribuya**, y que decidir su arreglo hoy sería dimensionarlo contra
+una población que va a cambiar.
+
+---
+
 ## 5. Lo que decide Asav
 
 1. **Si se separan las dos preguntas** —atribución y cobertura— o el árbitro sigue
