@@ -9,6 +9,7 @@
     "test": "turbo test && pnpm env:test",
     "env:pull": "pnpm dlx vercel@latest env pull .env",
     "env:check": "node scripts/verificar-env.mjs",
+    "diff:check": "node scripts/verificar-diff-completo.mjs",
     "env:test": "node --test scripts/verificar-env.test.mjs",
     "db:generate": "pnpm --filter @jtel/db generate",
     "db:migrate": "pnpm --filter @jtel/db migrate",

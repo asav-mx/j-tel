@@ -30,6 +30,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # La valla del diff necesita historia: con el checkout superficial no
+          # existe `origin/main..HEAD` y la comprobación no puede correr.
+          fetch-depth: 0
+
+      # Va ANTES de compilar, y a propósito: comprueba que el PR todavía lleva
+      # lo que sus commits cambiaron. Compilar en verde sobre un árbol al que un
+      # merge le quitó el cambio no prueba nada — el #302 se mergeó así, con una
+      # descripción prometiendo código que no llevaba. Ver el guion.
+      - name: El PR lleva lo que cambió
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          RAMA_BASE="origin/${{ github.base_ref }}" node scripts/verificar-diff-completo.mjs
+        env:
+          DIFF_COMPLETO_ESPERADO: ${{ vars.DIFF_COMPLETO_ESPERADO }}
 
       - uses: pnpm/action-setup@v4
 
