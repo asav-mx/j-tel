@@ -60,6 +60,7 @@ import {
   telemetryImeiWatermarks,
   groundTruthDays,
   occurrenceGroundTruth,
+  carrierAportaciones,
   ingestAlerts,
   routeTraversalMeasurements,
   clientCarrierAuthorizations,
@@ -3504,6 +3505,82 @@ export class OccurrenceRepository {
   }
 }
 
+/**
+ * La versión del transportista sobre un servicio — el frente de reconciliación.
+ *
+ * ⚠ **Este repositorio NO puede tocar un hecho, y no por disciplina: por
+ * construcción.** No importa `complianceFacts`, no lo escribe y no lo
+ * referencia. La tabla tampoco (migración `0022`, comprobada con cero llaves
+ * foráneas hacia hechos). Si el auditado pudiera cambiar su calificación,
+ * J-Telemetry deja de ser árbitro.
+ */
+export class AportacionesRepository {
+  constructor(private db: Database) {}
+
+  /**
+   * Registra la versión del transportista.
+   *
+   * `actorKind`/`actorId` son la firma y van obligados: **sin firma no sirve
+   * para reconciliar nada** — una aportación anónima no la puede sostener nadie
+   * después.
+   */
+  async crear(data: {
+    serviceOccurrenceId: string;
+    carrierAccountId: string;
+    motivo?: string | null;
+    nota?: string | null;
+    declaredUnitId?: string | null;
+    adjuntos?: Array<{ nombre: string; url: string }>;
+    actorKind: string;
+    actorId?: string | null;
+  }) {
+    const [fila] = await this.db
+      .insert(carrierAportaciones)
+      .values({
+        serviceOccurrenceId: data.serviceOccurrenceId,
+        carrierAccountId: data.carrierAccountId,
+        motivo: data.motivo ?? null,
+        nota: data.nota ?? null,
+        declaredUnitId: data.declaredUnitId ?? null,
+        adjuntos: data.adjuntos ?? [],
+        actorKind: data.actorKind,
+        actorId: data.actorId ?? null,
+      })
+      .returning();
+    return fila!;
+  }
+
+  /** Las de un servicio, la más reciente primero. Incluye las retiradas. */
+  async listarPorOcurrencia(serviceOccurrenceId: string) {
+    return this.db
+      .select()
+      .from(carrierAportaciones)
+      .where(eq(carrierAportaciones.serviceOccurrenceId, serviceOccurrenceId))
+      .orderBy(desc(carrierAportaciones.createdAt));
+  }
+
+  /**
+   * Retirar es un ESTADO, no un borrado.
+   *
+   * Lo que se dijo se dijo: una reconciliación que se puede borrar no
+   * reconcilia nada, y el registro tiene que poder mostrar que hubo una versión
+   * y que su autor la retiró.
+   */
+  async retirar(id: string, carrierAccountId: string) {
+    const [fila] = await this.db
+      .update(carrierAportaciones)
+      .set({ estado: "retirada" })
+      .where(
+        and(
+          eq(carrierAportaciones.id, id),
+          eq(carrierAportaciones.carrierAccountId, carrierAccountId),
+        ),
+      )
+      .returning();
+    return fila ?? null;
+  }
+}
+
 export class ComplianceRepository {
   constructor(private db: Database) {}
 
@@ -5038,6 +5115,7 @@ export function createRepositories(db: Database) {
     routeTraversals: new RouteTraversalRepository(db),
     groundTruth: new GroundTruthRepository(db),
     occurrenceGroundTruth: new OccurrenceGroundTruthRepository(db),
+    aportaciones: new AportacionesRepository(db),
     ingestAlerts: new IngestAlertRepository(db),
   };
 }
