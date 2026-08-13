@@ -409,6 +409,39 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
     el resultado sale en 100 % o en 0 %, **eso es la señal**: un extremo perfecto
     sobre una población grande casi nunca es un hallazgo.
 
+22. **Una compilación que sale a internet puede caerse por algo que no es
+    tuyo — y hay defectos de tipografía que se ven casi bien.** Son dos
+    lecciones del mismo cambio, y van juntas porque la segunda solo apareció al
+    arreglar la primera.
+
+    🟢 **La primera, del 12 de agosto de 2026.** `next/font/google` **descarga**
+    las fuentes durante `next build`. Una falla de red de Google no degrada la
+    tipografía: **tumba el build**. Tumbó el PR #294 —que solo tocaba
+    documentos— con tres reintentos automáticos fallando, mientras las 14
+    corridas anteriores del día estaban en verde. **Esa forma intermitente es la
+    peor: no se distingue de un defecto propio hasta leer el log.** Lo que queda:
+    **ningún activo que la compilación necesite se baja durante la
+    compilación.** Se commitea, y el guion que lo regenera se commitea también
+    —pero **no corre en CI**, o el defecto vuelve por la puerta de atrás.
+
+    ⚠ **La segunda, y es la que de verdad enseña:** al bajar los archivos, los de
+    Archivo 600 y 700 salieron **byte por byte idénticos**, y el de 600–800
+    también. Son **fuentes variables**: Google sirve un archivo para todos los
+    pesos. Declararlos como dos pesos estáticos no revienta nada — **el navegador
+    sintetiza el 700 engrosando el 600**, y el titular queda *casi* bien.
+
+    **Un tipo sintetizado no da error, no rompe una prueba, no cambia el layout
+    y no se nota mirándolo.** Solo se nota comparando hashes, que es algo que
+    nadie hace por costumbre. La señal fue **dos archivos del mismo tamaño**, y
+    la comprobación que la cerró fue el `@font-face` servido: `font-weight:
+    600 700` es un rango declarado; `font-weight: 700` sobre el archivo del 600
+    es una síntesis disfrazada.
+
+    La forma general: **cuando dos artefactos que deberían diferir salen
+    idénticos, el sospechoso no es la casualidad — es que uno de los dos no es
+    lo que su nombre dice.** Y en tipografía el fallo es silencioso por
+    construcción, porque el navegador está diseñado para disimularlo.
+
 **De producto:**
 
 > *"¿Esto tendría sentido para una planta en Bogotá cuyas rutas nunca hemos
@@ -4156,3 +4189,47 @@ cinco).**
   Parte 2 evita son los de octubre.
 - 🟢 **`servedRoute` sigue intacta.** Dos fichas y un instrumento de solo
   lectura.
+
+**13 de agosto de 2026, noche (la Parte 2 arranca: el porqué entra al hecho —
+migración `0021`, sin aplicar todavía).**
+
+**Tres decisiones cerradas por Asav antes de escribir una línea:**
+
+- ✅ **El motivo por candidata va DENTRO del hecho, no en el ledger.** Más caro y
+  correcto: *«mi definición de v1 es que el expediente pueda explicarse solo, y
+  el ledger ya demostró que se rompe — 374 de 581 filas sin referencia. Un
+  expediente que depende de una cadena rota no explica nada dentro de seis
+  meses.»* 🟢 **Y hay un hallazgo que lo abarata:** `compliance_facts` se escribe
+  **una sola vez** —un único INSERT en todo el repositorio— y
+  `compliance_fact_history` guarda `fact_snapshot` **serializando la fila
+  completa**, así que la columna nueva **viaja sola a la historia** sin una línea
+  de código extra.
+- ✅ **La señal se guarda solo de las relevantes.** 50 por servicio es peso
+  muerto; el corte ya está medido. **Con la condición: queda registrado cuántas
+  se evaluaron en total**, o el corte esconde en vez de ordenar.
+- ✅ **Nulo por omisión, y es la más importante de las tres.** Es lo único que
+  distingue «no se preguntó» de «se preguntó y no hubo candidatas». ⚠ **Con un
+  `DEFAULT '[]'`, los 1 278 hechos ya sellados dirían «se evaluaron cero
+  candidatas»** —falso: se evaluaron unas cincuenta— **y sería irreversible**:
+  escrito el `[]`, nadie puede volver a separar los dos casos. Y la pantalla
+  **tiene que decirlo con palabras**: si dibuja `—` en los dos, la tercera ley se
+  rompe el primer día.
+
+**La migración:** `packages/db/drizzle/0021_candidatas_snapshot.sql` — **aditiva,
+una columna `jsonb` nullable sin default**, con su foto de antes y su
+verificación adentro. 🔵 **Sin aplicar: la aplica Asav con SQL directo antes de
+mergear**, como manda el procedimiento.
+
+- 🟢 **Foto de antes, tomada con `jtel_readonly` el 13 de agosto:** 1 278 hechos ·
+  649 no cumplidos · 2 465 ocurrencias · 582 versiones · 42 tablas · 19 columnas
+  en `compliance_facts` · la columna **no existe**.
+- **La verificación de después incluye la que prueba lo que la migración existe
+  para lograr:** que **los 1 278 queden en `NULL` y ninguno en `[]`**.
+- **Lo que NO entra en este PR:** el código que escribe el motivo. La migración
+  va primero y sola, que es el procedimiento — y ese código toca el motor, así
+  que tiene su propia parada.
+- 🆕 **Regla 22, de las fuentes:** ningún activo que la compilación necesite se
+  baja durante la compilación · y **un tipo sintetizado se ve casi bien**. La
+  señal fueron dos archivos del mismo tamaño. **Cuando dos artefactos que
+  deberían diferir salen idénticos, uno de los dos no es lo que su nombre dice.**
+- 🟢 **`servedRoute` sigue intacta.** Una columna, un esquema y una regla.

@@ -1,0 +1,121 @@
+-- Parte 2 · El porqué vive DENTRO del hecho — ADITIVA, va antes del deploy del código.
+--
+-- Se aplica DESPUÉS de la 0020. Una sola columna, nullable, sin default.
+-- Va en transacción; no lleva CONCURRENTLY ni índice.
+--
+-- ## Qué resuelve
+--
+-- Un servicio sin atribución no explica nada. Medido el 13 de agosto de 2026
+-- sobre los 397 acusados que SÍ tienen una llegada registrada:
+--
+--   · el motivo por candidata existe en                       0 de 397
+--   · la señal por candidata existe en                        0 de 397
+--   · cuál trazado contratado se usó existe en                0 de 397
+--   · el único motivo guardado es del SERVICIO, y es una tautología:
+--     `ninguna_unidad_coincidio_ruta` en 397 de 397 — dice lo mismo que
+--     "no se pudo atribuir".
+--
+-- ## Por qué una columna del hecho y no una tabla hija
+--
+-- Decidido por Asav el 13 de agosto de 2026. Dos razones, y la segunda es la
+-- que cierra:
+--
+-- 1. Una tabla hija son filas que alguien puede editar o borrar **por separado
+--    del hecho**. Eso es C24 otra vez con otro nombre: el acta de un hecho
+--    sellado reescribible sin dejar versión. Un expediente que depende de filas
+--    sueltas no se explica solo.
+--
+-- 2. `compliance_facts` se escribe UNA vez —hay un solo INSERT en todo el
+--    repositorio— y las versiones van a `compliance_fact_history`, que guarda
+--    `fact_snapshot` **serializando la fila completa**. Entonces esta columna
+--    **viaja sola a la historia**, sin una línea de código extra.
+--
+-- Es la misma forma que `contract_policy_snapshot`, y por eso el nombre es su
+-- hermano: quien lea el esquema debe ver de un golpe que las dos congelan algo
+-- dentro del hecho.
+--
+-- ## Por qué NULLABLE y SIN DEFAULT — la parte que no se puede aflojar
+--
+-- **Es lo único que distingue "no se preguntó" de "se preguntó y no hubo
+-- candidatas".**
+--
+-- Si la columna naciera con `DEFAULT '[]'::jsonb`, los 1 278 hechos ya sellados
+-- —los 397 de julio entre ellos— quedarían diciendo **"se evaluaron cero
+-- candidatas"**, que es falso: se evaluaron unas cincuenta por servicio y nadie
+-- registró el porqué. Un default aquí **fabrica un hecho que nadie observó**
+-- dentro de un expediente sellado, que es exactamente lo que el Marco §E
+-- prohíbe.
+--
+-- Y no se arregla después: una vez escrito el `[]`, no hay forma de distinguir
+-- los que nacieron vacíos de los que nunca se preguntaron.
+--
+--   NULL  = no se preguntó. La pantalla lo dice CON PALABRAS.
+--   '[]'  = se preguntó y no hubo ninguna candidata.
+--
+-- ⚠ Y la consecuencia para quien construya la pantalla: **un nulo no se dibuja
+-- igual que un cero.** Si el expediente pinta `—` o una lista vacía en los dos
+-- casos, la ley se rompe el primer día y esta columna no sirvió de nada.
+--
+-- ## La forma de lo que se guarda (contrato del código, no del esquema)
+--
+--   {
+--     "evaluadas": 52,              -- CUÁNTAS se evaluaron en total.
+--     "criterio": "llego_y_cerca",  -- Con qué se recortó la lista.
+--     "candidatas": [ … ]           -- Solo las relevantes (mediana: 3).
+--   }
+--
+-- `evaluadas` es obligatorio y es la ley del corte: sin el total, un filtro es
+-- ocultamiento — el transportista que hizo la ruta con GPS pobre diría "sí fui
+-- y ni aparezco", con razón.
+--
+-- Cada candidata lleva su motivo con la compuerta que falló Y **a qué población
+-- se le preguntó** (la candidata o el viaje entero). Eso último no es adorno:
+-- es C25, y un motivo que no lo diga repite el defecto dentro del registro.
+--
+-- El esquema no valida la forma a propósito: validarla en la base congelaría un
+-- contrato que todavía va a moverse, y quien la escribe es un solo camino.
+--
+-- ## Foto de ANTES — 2026-08-13, con jtel_readonly
+--
+--   hechos ................................ 1278
+--   no cumplidos .......................... 649
+--   ocurrencias ........................... 2465
+--   versiones (compliance_fact_history) ... 582
+--   tablas en public ...................... 42
+--   columnas de compliance_facts .......... 19
+--   candidatas_snapshot existe ............ false
+--
+-- ## Verificación DESPUÉS — con jtel_readonly, no con el dueño
+--
+--   -- 1. La columna quedó como se pidió: jsonb, NULLABLE, SIN default.
+--   SELECT column_name, data_type, is_nullable, column_default
+--     FROM information_schema.columns
+--    WHERE table_schema = 'public'
+--      AND table_name   = 'compliance_facts'
+--      AND column_name  = 'candidatas_snapshot';
+--   -- Espera exactamente:  jsonb | YES | NULL
+--   -- Si `column_default` trae algo, la migración se aplicó mal: hay que
+--   -- quitarlo antes de que se selle un solo hecho nuevo.
+--
+--   -- 2. Los conteos no se movieron. Una aditiva que mueve un conteo no lo es.
+--   SELECT (SELECT count(*) FROM compliance_facts)          AS hechos,          -- 1278
+--          (SELECT count(*) FROM service_occurrences)       AS ocurrencias,     -- 2465
+--          (SELECT count(*) FROM compliance_fact_history)   AS versiones,       -- 582
+--          (SELECT count(*) FROM information_schema.columns
+--            WHERE table_schema='public' AND table_name='compliance_facts')
+--                                                           AS columnas;        -- 20
+--
+--   -- 3. Y la que prueba lo que esta migración existe para lograr:
+--   --    TODO lo ya sellado tiene que quedar en NULL. Ni un '[]'.
+--   SELECT count(*) FILTER (WHERE candidatas_snapshot IS NULL)     AS sin_preguntar,  -- 1278
+--          count(*) FILTER (WHERE candidatas_snapshot IS NOT NULL) AS con_dato        -- 0
+--     FROM compliance_facts;
+--
+--   -- 4. Que el usuario de solo lectura la vea (hereda, pero se comprueba).
+--   SELECT has_column_privilege('jtel_readonly',
+--            'public.compliance_facts', 'candidatas_snapshot', 'SELECT') AS puede_leer;
+
+ALTER TABLE "compliance_facts" ADD COLUMN "candidatas_snapshot" jsonb;
+--> statement-breakpoint
+COMMENT ON COLUMN "compliance_facts"."candidatas_snapshot" IS
+  'Las candidatas relevantes con su motivo y su senal, congeladas dentro del hecho. NULL = no se pregunto (hechos anteriores a la Parte 2); [] = se pregunto y no hubo ninguna. Los dos casos NO se dibujan igual.';
