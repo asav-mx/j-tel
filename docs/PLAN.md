@@ -532,6 +532,43 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
     `DIFF_COMPLETO_ESPERADO` y se explican en el PR. Cuesta un renglón; lo otro
     cuesta un PR mergeado con una descripción falsa.
 
+25. **Compilar con el servidor de desarrollo vivo corrompe el resultado, y lo
+    que sale es un defecto que no existe.** `next build` y `next dev` escriben
+    en el mismo `.next`: el build sobrescribe los archivos que el servidor está
+    sirviendo, y la siguiente petición revienta con un
+    `Cannot find module './vendor-chunks/…'` que **no tiene nada que ver con el
+    código que se está revisando**.
+
+    ⚠ **Lo que la hace peligrosa no es perder tiempo: es la dirección del
+    error.** El síntoma aparece **en la pantalla que uno acaba de escribir**, y
+    la conclusión natural —«mi componente rompe la página»— es falsa y suena
+    razonable. **Se reporta un defecto inventado, se «arregla» algo que estaba
+    bien, y el arreglo entra al repo.**
+
+    🟢 **El caso, del 13 de agosto de 2026, y es mío.** Al ir a ver la caja de
+    aportación, la pantalla dio error de ejecución. Estuve a un paso de anotarlo
+    como defecto del componente. Lo que había pasado es que corrí `pnpm build`,
+    `typecheck` y las pruebas **con el servidor de desarrollo levantado**, y el
+    `.next` quedó a medias. Con `rm -rf apps/web/.next` y el servidor limpio, la
+    pantalla renderizó a la primera.
+
+    **Es hermana de la primera trampa del skill** —*medir sobre un entorno que
+    uno mismo pisó*— y esta vez el entorno pisado no era el de una medición: era
+    el de la verificación visual, que es la que el repo declara obligatoria para
+    la piel. **La verificación que más confianza da era la más fácil de
+    contaminar.**
+
+    **Qué exige, y es una línea:** antes de mirar en el navegador, `.next` tiene
+    que ser de esa corrida. Si en la sesión hubo un `build`, se limpia:
+
+    ```bash
+    pkill -f "next dev"; rm -rf apps/web/.next
+    ```
+
+    Y la señal para reconocerla de lejos: **un error que nombra `vendor-chunks`,
+    `webpack-runtime` o un módulo de `node_modules` no es tuyo.** Ningún cambio
+    de producto produce esos nombres.
+
 **De producto:**
 
 > *"¿Esto tendría sentido para una planta en Bogotá cuyas rutas nunca hemos
@@ -4433,4 +4470,33 @@ y no solo en una ficha.
   17 en su forma de herramienta.
 - 🔵 **Lo que sigue son decisiones de Asav**, no trabajo pendiente de medir: C19
   y su frontera con C25 y C14.
+- 🟢 **`servedRoute` sigue intacta.**
+
+**13 de agosto de 2026, cierre (el camino de escritura probado — y la rama
+desechable estaba dos migraciones atrás).**
+
+- ✅ **El hueco declarado en el #306 quedó cerrado:** la aportación se prueba
+  **contra la base**, no contra la pantalla. **Cuatro pruebas nuevas, 22 de 22
+  verdes** en integración. Que la caja se vea no decía que guardara, y eso es lo
+  que esta sesión lleva separando.
+- 🟢 **Lo que vigilan, y la segunda es la que importa:** que persista con su
+  firma y su hora · **que aportar NO mueva el veredicto —leído del hecho antes y
+  después, contra la base y no contra una promesa—** · que retirar deje la fila
+  ahí · y que un transportista no pueda retirar la de otro.
+- ⚠ **Y al correrlas se destapó algo que nadie estaba mirando: la rama
+  desechable estaba DOS migraciones atrás.** No tenía la `0021` ni la `0022`.
+  Las pruebas de integración reventaron con `column candidatas_snapshot does not
+  exist` — **el mismo error que tumbó producción el 2 de agosto**, esta vez del
+  lado de pruebas. **Un `.sql` commiteado no es una migración aplicada, y eso
+  vale para cada base, no solo para la de producción.** Se aplicaron las dos ahí,
+  leyendo el SQL del archivo y con candado contra producción.
+- 🔵 **Lo que esto deja abierto, y no se resuelve hoy:** nada vigila que la rama
+  desechable esté al día. El workflow `esquema` construye una base **desde cero**
+  con las migraciones, así que **no ve** que una base existente se quedó atrás.
+  Es la misma forma de C21 —congelar sin forma de revisar— aplicada al entorno de
+  pruebas.
+- 🆕 **Regla 25:** compilar con el servidor de desarrollo vivo corrompe el
+  resultado y produce **un defecto que no existe**, y aparece justo en la
+  pantalla que uno acaba de escribir. **Estuve a un paso de reportarlo.** La
+  señal: un error que nombra `vendor-chunks` o `webpack-runtime` no es tuyo.
 - 🟢 **`servedRoute` sigue intacta.**
