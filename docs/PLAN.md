@@ -442,6 +442,36 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
     lo que su nombre dice.** Y en tipografía el fallo es silencioso por
     construcción, porque el navegador está diseñado para disimularlo.
 
+23. **Un verde local que depende del `.env` no es un verde.** Una prueba que
+    lee credenciales del entorno pasa en la máquina de quien la escribió y
+    revienta —o peor, **pasa leyendo producción**— en cualquier otra. Las dos
+    cosas son fallas: la segunda no se ve porque el color es el correcto.
+
+    🟢 **El caso, del 13 de agosto de 2026.** El guion
+    `verificar-candidatas-nulas` ejecutaba `main()` **al importarse**, así que su
+    prueba abría una conexión. En local pasó —**leyendo la base de
+    producción**— y en CI reventó por no tener credenciales. El CI rojo no
+    destapó un fallo de CI: destapó que **el verde local era falso desde el
+    principio**.
+
+    ⚠ **Y lo que la vuelve grave, que es lo mismo de la regla 14 otra vez: la
+    guardia ya existía en la casa.** `corregir-deadlines` y `medir-cadencia`
+    traen las dos el mismo `if (process.argv[1] && import.meta.url.endsWith(…))`
+    con su comentario explicando por qué. **Estaba escrita, estaba en dos
+    lugares, y no se usó.** Un patrón que hay que acordarse de copiar no es una
+    defensa: es una costumbre, y las costumbres se saltan.
+
+    **Qué exige, y son dos cosas baratas:** todo guion con `main()` lleva la
+    guardia de invocación directa —**si el archivo se puede importar, no puede
+    conectarse al importarse**—; y toda prueba nueva se corre **una vez sin
+    credenciales**, como la corre CI:
+
+    ```bash
+    DATABASE_URL= DATABASE_URL_READONLY= pnpm --filter <paquete> test
+    ```
+
+    Si pasa igual, el verde es del código. Si cambia, el verde era del `.env`.
+
 **De producto:**
 
 > *"¿Esto tendría sentido para una planta en Bogotá cuyas rutas nunca hemos
@@ -4277,3 +4307,37 @@ ocurrencias sellados entre las dos lecturas**, no un movimiento de la migración
 - 🔵 **Lo que falta y NO entra aquí:** la pantalla que lo enseña (Parte 1) y el
   relleno hacia atrás, **que no va a existir nunca**: deducir el motivo de un
   servicio de julio sería escribir un hecho que nadie observó (Marco §E).
+
+**13 de agosto de 2026 (dónde queda el bloque — y el primer expediente todavía
+no existe).**
+
+**La Parte 2 está construida y desplegada; el primer hecho con expediente aún no
+se ha sellado.** No es un problema: es el reloj.
+
+- 🟢 **Medido a las 06:55 UTC del 13 de agosto:** **1 297 hechos, los 1 297 en
+  nulo, 0 con expediente**, sin default. El código quedó en `main` con el #297 y
+  **todavía no ha sellado nada**.
+- **Cuándo llega el primero:** las próximas ocurrencias sin hecho cierran su
+  ventana a las **12:30 UTC** (06:30 en Juárez). `/api/cron/verify` corre **cada
+  minuto**, así que el primer expediente aparece a los pocos minutos de ese
+  cierre. Se comprueba con un comando:
+
+  ```
+  pnpm --filter @jtel/db verificar-candidatas-nulas
+  ```
+
+  Cuando haya sellado, esa misma valla pasa de *«ninguno trae expediente
+  todavía»* a decir cuántos, y comprueba sola que **los 1 297 viejos siguen en
+  nulo** — que era la pregunta.
+- ⚠ **Y por qué no se enseñó uno «de ejemplo» mientras tanto.** Existe un camino
+  de reproducción (`compare-verify-dry`), pero **arma sus entradas por otra
+  vía**: no aplica variantes ni el pase de exclusividad, y lee con el usuario
+  dueño. Un expediente salido de ahí **no es el que se va a sellar**, y
+  presentarlo como uno real sería exactamente el patrón que este plan lleva
+  semanas nombrando — *correcto como consulta, falso como afirmación*, esta vez
+  con la firma del árbitro encima.
+- 🆕 **Regla 23:** un verde local que depende del `.env` no es un verde. ⚠ Y lo
+  que la vuelve grave: **la guardia ya existía en `corregir-deadlines` y
+  `medir-cadencia`, con su comentario, y no se usó.** Regla 14 otra vez — un
+  patrón que hay que acordarse de copiar no es una defensa, es una costumbre.
+- 🟢 **`servedRoute` sigue intacta.**
