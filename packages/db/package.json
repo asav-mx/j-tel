@@ -37,7 +37,8 @@
     "comparar-politicas": "tsx src/comparar-politicas.ts",
     "verificar-solo-lectura": "tsx src/verificar-solo-lectura.ts",
     "verificar-candidatas-nulas": "tsx src/verificar-candidatas-nulas.ts",
-    "tres-preguntas": "tsx src/medir-tres-preguntas.ts"
+    "tres-preguntas": "tsx src/medir-tres-preguntas.ts",
+    "alcance-paso3": "tsx src/medir-alcance-paso3.ts"
   },
   "dependencies": {
     "@jtel/domain": "workspace:*",

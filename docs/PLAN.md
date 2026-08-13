@@ -4712,3 +4712,38 @@ rutas del turno).**
 - 🔵 **Con el paso 2, los dos que no mueven un veredicto están construidos.** Los
   pasos 3 y 4 tocan un término cada uno y van en PRs distintos, el 4 después del
   3.
+
+**13 de agosto de 2026, cierre (el alcance del paso 3, medido ANTES de
+construirlo — y por qué no se construye hoy).**
+
+**Asav pidió el tamaño antes de que entre, no después.** Medido con
+`medir-alcance-paso3`, y el resultado **cambia cuándo se construye**.
+
+- 🟢 **La dirección que SUMA, por contrato** —candidatas que hoy pasan B y las
+  tumba A—:
+
+  | contrato | estado | servicios | pasa B, falla A | + tramo alcanza |
+  |---|---|---:|---:|---:|
+  | Campus | no cumplido | 303 | 42 | **38** |
+  | Campus | pendiente | 40 | 0 | 0 |
+  | Planta 47 | no cumplido | 309 | 46 | **46** |
+  | Planta 47 | pendiente | 118 | 30 | **29** |
+
+  **113 servicios** con el tramo observable también alcanzando. ⚠ **Y hay que
+  leerlo con el régimen al lado:** los 309 no cumplidos de Planta 47 son
+  **históricos** —hoy corre en `destino_only` y no produce acusaciones—, así que
+  su efecto **hacia adelante** está en los pendientes, no ahí.
+- 🔴 **La dirección que RESTA no se puede medir hoy: hay CERO rankings
+  sellados.** El paso 2 se mergeó hace minutos y el cron aún no ha escrito
+  ninguno. Sin ellos **no se sabe cuántos servicios PERDERÍAN la atribución**
+  porque su recorrido encaja mejor en otra ruta del turno — y ésa es **la mitad
+  que quita acreditaciones**, la cara cara de equivocarse.
+- ⏸ **Por eso el paso 3 NO se construye hoy.** El paso 2 existe exactamente para
+  producir ese dato; construir el 3 antes de que exista **tiraría la medición de
+  «antes» que se acaba de construir**. Se espera a que haya rankings sellados —
+  días, no semanas: el cron sella ~90 servicios al día.
+- **Sobre reversible, con la distinción que importa:** el **código** sí; **lo
+  sellado mientras esté encendido, no**. Nada de lo ya sellado se mueve solo —
+  eso es D4—, así que el riesgo no son los 113 de la tabla: **son los servicios
+  nuevos que se sellen con la regla nueva**. Y por la razón que Asav ya fijó,
+  **un `cumplido` de más es mucho más caro de deshacer que un pendiente de más**.
