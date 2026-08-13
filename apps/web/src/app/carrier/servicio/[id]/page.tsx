@@ -99,6 +99,13 @@ export default async function CarrierServicioPage({
   const isDudosoSinUnidad =
     data.status === "no_cumplido" && !fact?.observedUnitId;
   const showLabelForm = isDudosoSinUnidad;
+  /*
+   * El expediente entra en TODO hecho sellado sin unidad acreditada, no solo en
+   * los `no_cumplido`: un `pendiente_evidencia` también deja al transportista
+   * mirando una pantalla que no explica nada, y la pregunta —qué se observó— es
+   * la misma. Son 154 hechos más.
+   */
+  const sinUnidadAcreditada = Boolean(fact) && !fact?.observedUnitId;
 
   const evidencePoints = occurrence?.trip?.evidencePoints ?? [];
   const unitIdToImeis = new Map<string, string[]>();
@@ -236,7 +243,7 @@ export default async function CarrierServicioPage({
    * ahora.
    */
   const politicaDelSello = (fact?.contractPolicySnapshot ?? policy) as ContractPolicy;
-  const empalmesDelDia = isDudosoSinUnidad
+  const empalmesDelDia = sinUnidadAcreditada
     ? await repos.compliance.unidadesQueAcreditaronEnFecha(
         carrier.id,
         occurrence.serviceDate,
@@ -252,8 +259,9 @@ export default async function CarrierServicioPage({
     puntosPorClave.set(clave, lista);
   }
 
-  const expediente = isDudosoSinUnidad
+  const expediente = sinUnidadAcreditada
     ? armarExpediente({
+        puntosDeLaFlota: evidencePoints.length,
         // Cuando el hecho traiga expediente sellado, manda. Hoy es null en todo
         // lo anterior a la Parte 2, y ese null significa «no se preguntó».
         snapshot: fact?.candidatasSnapshot ?? null,

@@ -230,6 +230,7 @@ export function ExpedienteSinAtribucionView({
   const llegaron = expediente.llegaron;
   const mostradas = expediente.candidatas.length;
   const hayCorte = mostradas < llegaron;
+  const sinLlegadas = expediente.sinLlegadas;
 
   return (
     <section
@@ -243,7 +244,9 @@ export function ExpedienteSinAtribucionView({
       >
         <p className="text-[13.5px]" style={{ color: "var(--texto)" }}>
           <strong>
-            El sistema observó llegadas y no pudo atribuir ninguna a esta ruta.
+            {sinLlegadas
+              ? "Ninguna unidad entró a la geocerca del destino."
+              : "El sistema observó llegadas y no pudo atribuir ninguna a esta ruta."}
           </strong>{" "}
           Lo que sigue es lo que sí se observó: los recorridos guardados, sus
           medidas y sus umbrales.{" "}
@@ -261,25 +264,91 @@ export function ExpedienteSinAtribucionView({
           className="text-[19px] font-semibold tracking-[-.02em]"
           style={{ color: "var(--texto)" }}
         >
-          {llegaron === 1
-            ? "Una unidad llegó al destino."
-            : `${llegaron} unidades llegaron al destino.`}{" "}
-          Ninguna acreditó el trazado.
-        </h2>
-        <p className="mt-1 font-mono text-[11.5px]" style={{ color: "var(--tenue)" }}>
-          {mostradas} unidad{mostradas === 1 ? "" : "es"} relevante
-          {mostradas === 1 ? "" : "s"} de {expediente.evaluadas} evaluadas
-          {hayCorte ? (
+          {sinLlegadas ? (
+            <>Ninguna de las {expediente.evaluadas} unidades evaluadas llegó al destino.</>
+          ) : (
             <>
-              {" "}
-              · {llegaron - mostradas} llegaron y no se acercaron al trazado
+              {llegaron === 1
+                ? "Una unidad llegó al destino."
+                : `${llegaron} unidades llegaron al destino.`}{" "}
+              Ninguna acreditó el trazado.
             </>
-          ) : null}
-          {expediente.criterio === "solo_llegada" ? (
-            <> · ninguna se acercó al trazado contratado</>
-          ) : null}
-        </p>
+          )}
+        </h2>
+
+        {/*
+         * «Nadie llegó» es un hallazgo, no una ausencia. Antes esto dejaba la
+         * lista vacía bajo un titular de «0 unidades llegaron» — la pantalla que
+         * afirma un no cumplido y no enseña una sola cosa de lo que pasó.
+         * Estas tres cifras son lo que sí se puede decir, y separan las tres
+         * lecturas que un transportista necesita distinguir: no fue nadie · fue
+         * alguien y no se le vio · el GPS no reportó.
+         */}
+        {sinLlegadas ? (
+          <p className="mt-1 font-mono text-[11.5px]" style={{ color: "var(--tenue)" }}>
+            {sinLlegadas.conSenal} de {expediente.evaluadas} emitieron señal en la ventana ·{" "}
+            {sinLlegadas.tocaronElTrazado} pisaron el corredor del trazado ·{" "}
+            {sinLlegadas.puntosDeLaFlota.toLocaleString("es-MX")} puntos de la flota ese día
+          </p>
+        ) : (
+          <p className="mt-1 font-mono text-[11.5px]" style={{ color: "var(--tenue)" }}>
+            {mostradas} unidad{mostradas === 1 ? "" : "es"} relevante
+            {mostradas === 1 ? "" : "s"} de {expediente.evaluadas} evaluadas
+            {hayCorte ? (
+              <>
+                {" "}
+                · {llegaron - mostradas} llegaron y no se acercaron al trazado
+              </>
+            ) : null}
+            {expediente.criterio === "solo_llegada" ? (
+              <> · ninguna se acercó al trazado contratado</>
+            ) : null}
+          </p>
+        )}
+
+        {sinLlegadas ? (
+          <p className="mt-2 text-[12.5px]" style={{ color: "var(--texto)" }}>
+            {sinLlegadas.puntosDeLaFlota === 0
+              ? "No hubo un solo punto de GPS en la ventana: el instrumento no vio nada, ni de esta ruta ni de ninguna otra."
+              : mostradas === 0
+                ? /*
+                   * Hubo señal y nadie pisó el trazado. Antes esta rama decía
+                   * «abajo, las que más se acercaron» sobre una lista vacía:
+                   * prometía filas que no existen. El hecho es más fuerte dicho
+                   * derecho — hubo camiones andando y ninguno sobre esta ruta.
+                   */
+                  `Hubo ${sinLlegadas.puntosDeLaFlota.toLocaleString("es-MX")} puntos de GPS de la flota en la ventana y ninguna de las ${expediente.evaluadas} unidades pisó el corredor del trazado contratado. Se observó movimiento; no sobre esta ruta.`
+                : `Hubo unidades sobre el trazado y ninguna llegó al destino. Abajo, las ${mostradas} que más se acercaron.`}
+          </p>
+        ) : null}
       </div>
+
+      {/*
+       * El aviso de reconstruido, y va ANTES de los datos.
+       *
+       * Un dato calculado hoy y uno congelado al juzgar no pueden verse igual —
+       * es la misma ley que gobierna las marcas de cada renglón, dicha para el
+       * bloque entero. Aquí el hecho trae su expediente VACÍO, así que lo que se
+       * enseña no salió del sello: se calculó ahora del asiento que juzgó.
+       *
+       * Borde de acero y no ámbar: esto es MEDICIÓN, no un estado de veredicto.
+       */}
+      {expediente.origen === "reconstruido" ? (
+        <div
+          className="mt-4 rounded-[8px] border p-3"
+          style={{ borderColor: "var(--b-acero)", background: "var(--t-acero)" }}
+        >
+          <p className="text-[12.5px]" style={{ color: "var(--texto)" }}>
+            <strong>Esto no salió del sello: se calculó ahora.</strong> El expediente de
+            este servicio se congeló sin la lista de candidatas, y lo de abajo se
+            reconstruyó de la evidencia guardada.{" "}
+            <span style={{ color: "var(--tenue)" }}>
+              El hecho sellado no se tocó — si la evidencia cambia, estos números
+              cambian.
+            </span>
+          </p>
+        </div>
+      ) : null}
 
       {/* 3 · Qué no se preguntó en esta época — en palabras, arriba y una vez. */}
       {expediente.noSePregunto.length > 0 ? (
@@ -306,9 +375,28 @@ export function ExpedienteSinAtribucionView({
       </ul>
 
       <p className="mt-4 text-[11.5px]" style={{ color: "var(--tenue)" }}>
-        Se muestran las unidades que entraron a la geocerca del destino
-        {expediente.criterio === "llego_y_cerca" ? " y anduvieron cerca del trazado" : ""}.
-        Las demás se evaluaron y no alcanzaron ese corte.
+        {sinLlegadas ? (
+          mostradas === 0 ? (
+            <>
+              Ninguna de las {expediente.evaluadas} unidades evaluadas dejó rastro sobre
+              esta ruta, así que no hay recorridos que enseñar aquí.
+            </>
+          ) : (
+            <>
+              Ninguna entró a la geocerca, así que se muestran las que más se acercaron al
+              trazado contratado. Las demás de las {expediente.evaluadas} evaluadas no
+              dejaron rastro sobre esta ruta.
+            </>
+          )
+        ) : (
+          <>
+            Se muestran las unidades que entraron a la geocerca del destino
+            {expediente.criterio === "llego_y_cerca"
+              ? " y anduvieron cerca del trazado"
+              : ""}
+            . Las demás se evaluaron y no alcanzaron ese corte.
+          </>
+        )}
       </p>
     </section>
   );
