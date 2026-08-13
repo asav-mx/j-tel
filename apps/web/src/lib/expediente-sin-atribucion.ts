@@ -235,6 +235,27 @@ function umbralDe(
  * Cuando solo existe la ponderada —330 de 397—, se dice que la llana no se
  * guardó **en vez de recalcularla y presentarla como del sello**.
  */
+/**
+ * Qué dice la cobertura al lado del número, según sobre cuánta ruta se calculó.
+ *
+ * Sin el tramo sellado no se puede decir sobre qué se calculó — y **no se
+ * inventa**: se dice que la ponderación existe y ya.
+ */
+export function notaDeCobertura(
+  fraccion: number | null,
+  u: UmbralesSellados,
+): string {
+  if (fraccion === null) return "la que decide · ponderada";
+  const pct = fraccion * 100;
+  const piso =
+    u.originToleranceFraction === null ? 85 : (1 - u.originToleranceFraction) * 100;
+  if (pct + 1e-9 >= piso) {
+    return `la que decide · ponderada · sobre el ${pct.toFixed(1)}% de la ruta`;
+  }
+  // El tramo no alcanza el piso: el porcentaje NO se puede leer solo.
+  return `⚠ calculada SOLO sobre el ${pct.toFixed(1)}% de la ruta que se alcanzó a ver`;
+}
+
 export function medidasDe(c: CandidataCruda, u: UmbralesSellados): Medida[] {
   const medidas: Medida[] = [];
 
@@ -245,7 +266,25 @@ export function medidasDe(c: CandidataCruda, u: UmbralesSellados): Medida[] {
     sufijo: "%",
     decimales: 1,
     procedencia: n(c.routeMatchPct) === null ? "no_preguntado" : "sello",
-    nota: "la que decide · ponderada",
+    /*
+     * ⚠ La cobertura se calcula sobre EL TRAMO QUE SE ALCANZÓ A VER, no sobre la
+     * ruta. Cuando ese tramo es un pedacito, un «100 %» es cierto y no dice
+     * nada — y junto a un «no acreditó» hace pensar que el sistema está roto.
+     *
+     * Medido el 13 de agosto de 2026 sobre 24 404 candidatas con tramo
+     * observable sellado: **de las 2 823 con cobertura ≥ 60 %, 1 791 (63.4 %)
+     * la calcularon sobre ≤ 15 % de la ruta**, y **1 128 muestran 100 % sobre
+     * ≤ 5 %**. No es un caso raro: es la mayoría de las coberturas altas.
+     *
+     * El motor ya lo sabía —su propio comentario dice que «un 78 % sobre el
+     * 60 % de la ruta no es un 78 % de la ruta»— y las rechaza por el piso del
+     * tramo observable. Lo que fallaba era la LECTURA: los dos números vivían
+     * en renglones distintos y se podían leer por separado.
+     *
+     * Aquí se fusionan: donde el tramo es chico, el porcentaje **no se puede
+     * leer solo**.
+     */
+    nota: notaDeCobertura(n(c.observableFraction), u),
   });
 
   const llana = n(c.routeMatchPlainPct);

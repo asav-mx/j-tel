@@ -66,6 +66,39 @@ describe("un hueco no es un cero", () => {
     expect(m.find((x) => x.etiqueta === "Precisión de corredor")!.umbral).toBe(50);
   });
 
+  it("una cobertura alta sobre un tramo chico NO se puede leer sola", () => {
+    /*
+     * El caso que Asav vio en pantalla: candidatas con 100 % sobre un tramo
+     * observable de 0.3 %. Medido: de 2 823 candidatas con cobertura ≥ 60 %,
+     * 1 791 (63.4 %) la calcularon sobre ≤ 15 % de la ruta, y 1 128 muestran
+     * 100 % sobre ≤ 5 %. El número es cierto y no dice nada.
+     */
+    const m = medidasDe(
+      { ...VIEJA, routeMatchPct: 100, observableFraction: 0.003 },
+      UMBRALES,
+    ).find((x) => x.etiqueta === "Cobertura del trazado")!;
+    expect(m.valor).toBe(100);
+    // Lo que importa: el número viene con sobre qué se calculó, pegado.
+    expect(m.nota).toContain("0.3%");
+    expect(m.nota).toContain("SOLO");
+  });
+
+  it("y cuando el tramo sí alcanza, la nota lo dice sin alarma", () => {
+    const m = medidasDe(
+      { ...VIEJA, routeMatchPct: 91, observableFraction: 0.97 },
+      UMBRALES,
+    ).find((x) => x.etiqueta === "Cobertura del trazado")!;
+    expect(m.nota).toContain("97.0% de la ruta");
+    expect(m.nota).not.toContain("SOLO");
+  });
+
+  it("sin tramo sellado no se inventa sobre qué se calculó", () => {
+    const m = medidasDe(VIEJA, UMBRALES).find(
+      (x) => x.etiqueta === "Cobertura del trazado",
+    )!;
+    expect(m.nota).toBe("la que decide · ponderada");
+  });
+
   it("la ponderada se rotula como la que decide — C17", () => {
     const m = medidasDe(VIEJA, UMBRALES).find((x) => x.etiqueta === "Cobertura del trazado")!;
     expect(m.nota).toContain("ponderada");
