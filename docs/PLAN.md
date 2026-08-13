@@ -4500,3 +4500,51 @@ desechable estaba dos migraciones atrás).**
   pantalla que uno acaba de escribir. **Estuve a un paso de reportarlo.** La
   señal: un error que nombra `vendor-chunks` o `webpack-runtime` no es tuyo.
 - 🟢 **`servedRoute` sigue intacta.**
+
+**13 de agosto de 2026, noche (la cobertura sobre el tramo, medida — y la
+segunda mitad de reconciliación tiene ficha).**
+
+**Salió de que Asav abriera la pantalla y viera candidatas con «100 %» junto a
+«no acreditó».** Tenía razón y es más grande de lo que se ve en un servicio.
+
+- 🟢 **Medido sobre 24 404 candidatas con tramo observable sellado: de las 2 823
+  con cobertura ≥ 60 %, 1 791 (63.4 %) la calcularon sobre ≤ 15 % de la ruta.**
+  Y **1 128 muestran 100 % sobre ≤ 5 %.** No es un caso raro: **es la mayoría de
+  las coberturas altas**.
+- ⚠ **No es del motor: es de la lectura.** El motor ya las rechaza por el piso
+  del tramo observable, y su propio comentario dice desde hace semanas que «un
+  78 % sobre el 60 % de la ruta no es un 78 % de la ruta». **Lo que fallaba es
+  que los dos números vivían en renglones distintos y se podían leer por
+  separado** — y un transportista que ve «100 %» junto a «no acreditó» concluye
+  que el sistema está roto.
+- ✅ **Arreglado fusionándolos:** donde el tramo no alcanza el piso, la cobertura
+  sale como **«⚠ calculada SOLO sobre el 0.3% de la ruta que se alcanzó a ver»**.
+  Donde sí alcanza, lo dice sin alarma. **Sin tramo sellado no se inventa sobre
+  qué se calculó.** Tres pruebas nuevas.
+- **Es hermana de C17 y no la misma:** allá el nombre mentía sobre la
+  ponderación; aquí **el denominador no es la ruta**, y el número es correcto en
+  los dos casos.
+
+**La segunda mitad de reconciliación:**
+`docs/marco-limpio/Ficha-Reconciliacion-Parte-2.md`. **Sin código.**
+
+- **El diagnóstico es de Asav y es exacto:** hoy el transportista solo puede
+  escribir texto, y **su evidencia ya está en el sistema — los puntos son
+  suyos**. Lo que necesita no es un párrafo: es **poder señalar lo que ya
+  existe**. Un párrafo es su palabra contra el veredicto; un señalamiento apunta
+  a un dato que la planta puede mirar.
+- **Dos piezas.** *(1)* Al declarar una unidad, **el recorrido COMPLETO del día**
+  —no el recorte de la ventana—, que es donde se ve si hizo la ruta antes de que
+  el árbitro mirara. ⚠ Con su ley: **es evidencia para mirar, no entrada del
+  veredicto**, y el tramo de fuera va atenuado y rotulado o la pantalla afirma
+  que el árbitro miró lo que no miró. *(2)* **Señalar el empalme** — la pantalla
+  ya lo sabe en 150 de 397; que el transportista pueda invocarlo lo convierte de
+  observación del sistema en **afirmación suya, con su firma**.
+- ⚠ **Y el caso delicado de la Ley 3, ya medido: el empalme puede nombrar la
+  operación de otro cliente.** En **49 de 397 servicios (12.3 %)** alguna unidad
+  que llegó acreditó a otro cliente. **La salida sin romper nada:** cuando la
+  otra ruta es de otro cliente, se dice *«cubrió otro servicio en ese turno»*
+  **sin nombrarlo** — misma forma que `arrivalOutsideContractGeofence`.
+- 🟢 **Qué se puede construir sin decisiones: las tres primeras piezas**, y **la
+  cara del cliente no cambia ni un píxel**.
+- 🟢 **`servedRoute` sigue intacta.**
