@@ -17,6 +17,10 @@
       "schedule": "30 6 * * *"
     },
     {
+      "path": "/api/cron/revisar-ventanas",
+      "schedule": "45 6 * * *"
+    },
+    {
       "path": "/api/cron/ingest-heartbeat",
       "schedule": "*/5 * * * *"
     },
