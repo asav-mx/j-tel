@@ -5,6 +5,7 @@ import type {
   LedgerStep,
   ComplianceStatus,
   TimingStatus,
+  MotivoDeCandidata,
 } from "@jtel/domain";
 
 import { haversineKm, DEFAULT_FRECHET_MAX_KM } from "@jtel/domain";
@@ -487,6 +488,16 @@ export type RouteMatchEvaluation = {
    * porcentaje: un 78% sobre el 60% de la ruta no es un 78% de la ruta.
    */
   observableFraction: number;
+  /**
+   * Por qué NO acreditó. Vacío = acreditó.
+   *
+   * Sale de las MISMAS comparaciones que producen `servedRoute` —no de un
+   * segundo juego de reglas—, así que no puede divergir del veredicto: si
+   * `servedRoute` es true esto va vacío, y si es false trae al menos una.
+   * **Todas las que fallaron**, no la primera: colapsarlas inventaría una
+   * prioridad que el motor no tiene.
+   */
+  motivos: MotivoDeCandidata[];
 };
 
 /**
@@ -579,6 +590,53 @@ export function evaluateUnitRouteMatch(
         routeMatchPct >= params.minKmlPct &&
         corridorPrecisionPct >= params.minCorridorPct));
 
+  /*
+   * El porqué, escrito desde las MISMAS condiciones de arriba.
+   *
+   * Se arma leyendo los mismos operandos que ya decidieron `servedRoute` —no se
+   * recalcula nada—, así que el motivo no puede contradecir al veredicto. La
+   * población va en cada renglón porque el tramo observable de ESTA candidata y
+   * el de la evidencia del viaje son dos preguntas distintas (C25); aquí, y en
+   * toda esta función, siempre es la candidata.
+   */
+  const motivos: MotivoDeCandidata[] = [];
+  if (!servedRoute) {
+    if (arrivalAt === null) {
+      motivos.push({
+        compuerta: "no_llego",
+        poblacion: "candidata",
+        medido: null,
+        umbral: null,
+      });
+    }
+    if (hasKml) {
+      if (!observableEnough) {
+        motivos.push({
+          compuerta: "tramo_observable",
+          poblacion: "candidata",
+          medido: Number(span.observableFraction.toFixed(3)),
+          umbral: minObservableFraction,
+        });
+      }
+      if (routeMatchPct < params.minKmlPct) {
+        motivos.push({
+          compuerta: "cobertura_de_trazado",
+          poblacion: "candidata",
+          medido: routeMatchPct,
+          umbral: params.minKmlPct,
+        });
+      }
+      if (corridorPrecisionPct < params.minCorridorPct) {
+        motivos.push({
+          compuerta: "precision_de_corredor",
+          poblacion: "candidata",
+          medido: corridorPrecisionPct,
+          umbral: params.minCorridorPct,
+        });
+      }
+    }
+  }
+
   return {
     arrivalAt,
     routeMatchPct,
@@ -589,6 +647,7 @@ export function evaluateUnitRouteMatch(
     shapeOk,
     servedRoute,
     observableFraction: span.observableFraction,
+    motivos,
   };
 }
 
@@ -988,6 +1047,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
       shapeOk,
       servedRoute,
       observableFraction,
+      motivos,
     } = evaluateUnitRouteMatch(sorted, {
       kmlWaypoints: input.kmlWaypoints,
       geofencePolygon: input.geofencePolygon,
@@ -1009,6 +1069,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
       frechetKm,
       directionSimilarity: dirSim,
       observableFraction,
+      motivos,
     });
 
     steps.push({
@@ -1057,6 +1118,16 @@ export function verifyService(input: VerificationInput): VerificationResult {
         // del porcentaje a propósito: quien lea el expediente debe poder ver
         // sobre qué se calificó, no solo el número.
         observableFraction: hasKml ? Number(observableFraction.toFixed(3)) : undefined,
+        /*
+         * El porqué de ESTA candidata, con su población. Antes de la Parte 2 el
+         * ledger solo traía el motivo del servicio —una tautología— y quien leía
+         * tenía que deducir la compuerta comparando números con umbrales, cosa
+         * que solo funciona donde los números están.
+         *
+         * Aditivo: los asientos sellados antes de esto no lo traen, y su
+         * ausencia significa «no se preguntó», no «no falló nada».
+         */
+        motivos: motivos.length > 0 ? motivos : undefined,
       },
     });
   }
@@ -1131,6 +1202,17 @@ export function verifyService(input: VerificationInput): VerificationResult {
               "La ventana de observación no alcanzó a cubrir el origen de la ruta",
             earliestObservedFraction: Number(earliestFraction.toFixed(3)),
             originToleranceFraction,
+            /*
+             * C25 declarado donde ocurre: esta compuerta pregunta por
+             * `input.evidencePoints` —la evidencia del VIAJE, que trae la flota
+             * entera—, mientras la que tumba a cada candidata pregunta por SUS
+             * puntos. Es el mismo umbral sobre dos poblaciones, y quien lea el
+             * expediente tiene que poder saber cuál contestó.
+             *
+             * Escribirlo no cambia a quién se le pregunta: eso mueve veredictos
+             * y es otra decisión. Esto solo deja de esconderlo.
+             */
+            poblacion: "viaje",
           },
         });
         return {

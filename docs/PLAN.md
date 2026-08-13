@@ -4233,3 +4233,47 @@ mergear**, como manda el procedimiento.
   señal fueron dos archivos del mismo tamaño. **Cuando dos artefactos que
   deberían diferir salen idénticos, uno de los dos no es lo que su nombre dice.**
 - 🟢 **`servedRoute` sigue intacta.** Una columna, un esquema y una regla.
+
+**13 de agosto de 2026 (la Parte 2, construida: el motor escribe el porqué de
+cada candidata — y `servedRoute` sigue intacta).**
+
+**La 0021 aplicada por Asav y los tres cuadran:** 1 297 sin preguntar · 0 con
+dato · **default vacío**, que era el que decidía. ⚠ Los números salieron
+1297/2468 contra los 1278/2465 de la foto de antes: **son 19 hechos y 3
+ocurrencias sellados entre las dos lecturas**, no un movimiento de la migración.
+
+- 🟢 **El motivo sale de las MISMAS comparaciones que producen `servedRoute`**,
+  no de un segundo juego de reglas. Por eso no puede contradecir al veredicto, y
+  hay prueba que lo fija: si acreditó, motivos vacío; si no, al menos uno.
+- 🟢 **Guarda TODAS las compuertas que fallaron, no la primera** — colapsarlas
+  inventaría una prioridad que el motor no tiene.
+- 🟢 **Cada motivo declara a qué población se le preguntó**, que es C25 metido en
+  el registro. Y **la compuerta de Ley 1 ahora declara `poblacion: "viaje"`**
+  donde ocurre: sigue preguntando por la evidencia del viaje entero —eso no se
+  tocó, mueve veredictos— pero **deja de esconderlo**.
+- 🟢 **La señal es de cada candidata**, no la de la mejor unidad del viaje, que
+  es lo que impedía distinguir «no hizo la ruta» de «no se le vio hacerla» (C19).
+- 🟢 **`trazadoEvaluado` se llena siempre**, acredite o no. `servedVariantId`
+  sigue en nulo cuando ninguna sirvió, y está bien: son dos preguntas distintas
+  —*contra qué se le juzgó* y *cuál sirvió*— y el expediente necesitaba la
+  primera.
+- ⚠ **Y una prueba mía salió mal antes que el código.** El caso que escribí para
+  «dos compuertas» solo rompe UNA: A se calcula sobre el tramo observable, y esa
+  unidad lo cubría entero. **La prueba en rojo tenía razón; la premisa equivocada
+  era mía.** Se cambió por un caso que sí rompe dos —arranca en el origen, se
+  desvía, y vuelve a entrar— y se agregó su gemela: **cuando solo falla una,
+  reporta una**.
+- 🟢 **El nulo tiene valla, y se vio ponerse roja.**
+  `verificar-candidatas-nulas` comprueba que no haya default, que nadie traiga
+  `[]` pelón, y que **lo que trae expediente sea un sufijo por fecha de
+  sellado** — un hecho con dato más viejo que uno sin dato solo lo produce un
+  relleno hacia atrás. Su veredicto está separado de la consulta y **probado
+  contra cuatro formas de perder el nulo**, sin escribir en producción.
+- 🟢 **Confirmado por código: solo hay tres referencias a la columna** —el
+  esquema, el parámetro del INSERT y su única llamada— y **cero UPDATE sobre
+  `compliance_facts`**. No existe camino que toque un hecho sellado.
+- 🟢 **Y por dato, hoy: 1 297 de 1 297 en nulo**, sin default. El código todavía
+  no ha sellado nada.
+- 🔵 **Lo que falta y NO entra aquí:** la pantalla que lo enseña (Parte 1) y el
+  relleno hacia atrás, **que no va a existir nunca**: deducir el motivo de un
+  servicio de julio sería escribir un hecho que nadie observó (Marco §E).
