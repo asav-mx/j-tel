@@ -7,6 +7,11 @@ import {
   type MapPoint,
 } from "@/lib/service-detail-data";
 import { suggestionsFromLedger } from "@/lib/carrier-unit-suggestions";
+import {
+  armarExpediente,
+  candidatasDelLedger,
+} from "@/lib/expediente-sin-atribucion";
+import { ExpedienteSinAtribucionView } from "@/components/expediente-sin-atribucion";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { getRepos } from "@/lib/db";
 import {
@@ -222,6 +227,81 @@ export default async function CarrierServicioPage({
     };
   });
 
+  /*
+   * El expediente sin atribución — Parte 1.
+   *
+   * Se arma con lo que YA está sellado. Los umbrales salen de la política del
+   * HECHO, no de la del contrato de hoy: es la lección de C24 — la pantalla que
+   * explica un hecho tiene que leer con qué se le juzgó, no con lo que rige
+   * ahora.
+   */
+  const politicaDelSello = (fact?.contractPolicySnapshot ?? policy) as ContractPolicy;
+  const empalmesDelDia = isDudosoSinUnidad
+    ? await repos.compliance.unidadesQueAcreditaronEnFecha(
+        carrier.id,
+        occurrence.serviceDate,
+        id,
+      )
+    : new Map<string, { rutaNombre: string; fecha: string }>();
+
+  const puntosPorClave = new Map<string, Array<{ at: Date }>>();
+  for (const p of evidencePoints) {
+    const clave = p.unitId ?? imeiToUnitId.get(p.imei) ?? p.imei;
+    const lista = puntosPorClave.get(clave) ?? [];
+    lista.push({ at: p.recordedAt });
+    puntosPorClave.set(clave, lista);
+  }
+
+  const expediente = isDudosoSinUnidad
+    ? armarExpediente({
+        // Cuando el hecho traiga expediente sellado, manda. Hoy es null en todo
+        // lo anterior a la Parte 2, y ese null significa «no se preguntó».
+        snapshot: fact?.candidatasSnapshot ?? null,
+        ledgerCandidatas: candidatasDelLedger(data.ledger),
+        umbrales: {
+          minKmlPct: politicaDelSello.kmlMatchMinPct ?? null,
+          minCorridorPct: politicaDelSello.kmlCorridorMinPct ?? null,
+          originToleranceFraction: politicaDelSello.kmlOriginToleranceFraction ?? null,
+        },
+        etiquetaDe: (clave) =>
+          unitOptions.find((u) => u.id === clave)?.label ??
+          unitOptions.find((u) => u.id === imeiToUnitId.get(clave))?.label ??
+          null,
+        empalmeDe: (clave) => empalmesDelDia.get(clave) ?? null,
+        senalDe: (clave) => {
+          const pts = puntosPorClave.get(clave);
+          if (!pts || pts.length === 0) return null;
+          const inicio = tripStart.getTime();
+          const fin = (occurrence.trip?.evidenceWindowEnd ?? viewEnd).getTime();
+          const ms = Math.max(1, fin - inicio);
+          const dentro = pts
+            .map((p) => p.at.getTime())
+            .filter((t) => t >= inicio && t <= fin)
+            .sort((a, b) => a - b);
+          if (dentro.length === 0) return null;
+          const huecos: number[] = [];
+          for (let i = 1; i < dentro.length; i++) huecos.push(dentro[i]! - dentro[i - 1]!);
+          const mayor = huecos.length > 0 ? Math.max(...huecos) : 0;
+          const orden = [...huecos].sort((a, b) => a - b);
+          const mediana =
+            orden.length === 0
+              ? null
+              : orden.length % 2 === 1
+                ? orden[(orden.length - 1) / 2]! / 1000
+                : (orden[orden.length / 2 - 1]! + orden[orden.length / 2]!) / 2000;
+          return {
+            coberturaPct: Math.min(
+              100,
+              ((dentro[dentro.length - 1]! - dentro[0]!) / ms) * 100,
+            ),
+            huecoMaximoMin: mayor / 60_000,
+            cadenciaMedianaS: mediana,
+            puntos: dentro.length,
+          };
+        },
+      })
+    : null;
+
   const tz = policy.timeZone ?? JTTEL_TZ;
   const calibrationWindowLabel = `${formatShort(loadFrom.toISOString(), tz)} → ${formatShort(
     loadTo.toISOString(), tz,
@@ -245,6 +325,10 @@ export default async function CarrierServicioPage({
           backLabel="← Volver a cumplimiento"
           hideEvidenceMap={showLabelForm}
         />
+
+        {expediente ? (
+          <ExpedienteSinAtribucionView expediente={expediente} timeZone={tz} />
+        ) : null}
 
         {showLabelForm ? (
           <CarrierDudosoReview
