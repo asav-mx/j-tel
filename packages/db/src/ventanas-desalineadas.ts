@@ -64,6 +64,15 @@ export type VentanaDesalineada = {
   baseHoy: "medida" | "estimada_geometria" | "politica";
   /** Cuántas muestras de duración tiene hoy esa ruta×turno. */
   muestras: number;
+  /**
+   * La ventana que hoy se derivaría, completa.
+   *
+   * Se carga aquí para que **el corrector escriba exactamente lo que el
+   * detector midió**. Si el corrector volviera a derivarla por su cuenta,
+   * detectar y corregir serían dos cálculos que pueden separarse, y el aviso
+   * hablaría de un número que la escritura no usa.
+   */
+  ventanaHoy: { inicio: Date; fin: Date };
 };
 
 export type RevisionDeVentanas = {
@@ -84,9 +93,24 @@ export type GrupoDeVentanas = {
   rutaNombre: string;
   turnoNombre: string;
   ocurrencias: number;
-  congeladaMinutos: number;
+  /**
+   * La congelada es un RANGO, no un número.
+   *
+   * Cada ocurrencia se congeló en el momento en que se generó, y la historia
+   * seguía creciendo entre una y otra: dentro de un mismo ruta×turno conviven
+   * ventanas de 60 y de 120 minutos. La primera versión de esto guardaba la del
+   * primer servicio y la presentaba como la del grupo — **un dato correcto
+   * convertido en una afirmación falsa por la agrupación** (Marco §D). Con 38
+   * de 47 grupos mezclados, el aviso decía «congelada 60 min» de grupos donde
+   * casi ningún servicio tenía 60.
+   */
+  congeladaMin: number;
+  congeladaMax: number;
+  /** La de hoy sí es una sola por grupo: sale de la historia del ruta×turno. */
   derivadaMinutos: number;
-  difMinutos: number;
+  /** Cuántas se ENSANCHAN y cuántas se ANGOSTAN. No se suman: ver el aviso. */
+  ensanchan: number;
+  angostan: number;
   baseHoy: VentanaDesalineada["baseHoy"];
   muestras: number;
   /** La fecha de servicio más próxima del grupo — la que urge. */
@@ -101,6 +125,10 @@ export function agruparPorRutaTurno(
     const ya = grupos.get(d.routeShiftId);
     if (ya) {
       ya.ocurrencias++;
+      ya.congeladaMin = Math.min(ya.congeladaMin, d.congeladaMinutos);
+      ya.congeladaMax = Math.max(ya.congeladaMax, d.congeladaMinutos);
+      if (d.difMinutos > 0) ya.ensanchan++;
+      else if (d.difMinutos < 0) ya.angostan++;
       if (d.serviceDate < ya.proxima) ya.proxima = d.serviceDate;
       continue;
     }
@@ -110,16 +138,28 @@ export function agruparPorRutaTurno(
       rutaNombre: d.rutaNombre,
       turnoNombre: d.turnoNombre,
       ocurrencias: 1,
-      congeladaMinutos: d.congeladaMinutos,
+      congeladaMin: d.congeladaMinutos,
+      congeladaMax: d.congeladaMinutos,
       derivadaMinutos: d.derivadaMinutos,
-      difMinutos: d.difMinutos,
+      ensanchan: d.difMinutos > 0 ? 1 : 0,
+      angostan: d.difMinutos < 0 ? 1 : 0,
       baseHoy: d.baseHoy,
       muestras: d.muestras,
       proxima: d.serviceDate,
     });
   }
-  // El que más difiere primero: es el que más lejos está de lo que hoy se vería.
-  return [...grupos.values()].sort((a, b) => Math.abs(b.difMinutos) - Math.abs(a.difMinutos));
+  /*
+   * El que más lejos está de lo que hoy se vería, primero. Se mide contra la
+   * congelada MÁS LEJANA del grupo, no contra una representante: ordenar por la
+   * del primer servicio pondría arriba grupos tranquilos y abajo el que tiene
+   * una ventana de 120 minutos donde hoy se derivan 75.
+   */
+  const distancia = (g: GrupoDeVentanas) =>
+    Math.max(
+      Math.abs(g.derivadaMinutos - g.congeladaMin),
+      Math.abs(g.derivadaMinutos - g.congeladaMax),
+    );
+  return [...grupos.values()].sort((a, b) => distancia(b) - distancia(a));
 }
 
 export async function revisarVentanas(
@@ -179,6 +219,7 @@ export async function revisarVentanas(
       difMinutos: hoy.beforeMinutes - congeladaMinutos,
       baseHoy: hoy.basis,
       muestras: resumen.sampleCount,
+      ventanaHoy: { inicio: hoy.windowStart, fin: hoy.windowEnd },
     });
   }
 

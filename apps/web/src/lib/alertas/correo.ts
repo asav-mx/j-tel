@@ -78,7 +78,43 @@ function medicionHtml(m: Medicion): string {
 </tr>`;
 }
 
+/**
+ * El desglose largo, como tabla de verdad.
+ *
+ * Mono y `tabular-nums` para que las columnas de minutos se puedan comparar de
+ * un vistazo: una lista de viñetas con números adentro obliga a leer renglón
+ * por renglón, que es justo lo que 47 filas no admiten. Sin cortes ni «y N más»:
+ * un desglose que se trunca en silencio se lee como si estuvieran todos.
+ */
+function tablaHtml(t: NonNullable<Aviso["tabla"]>): string {
+  const th = t.columnas
+    .map(
+      (c) =>
+        `<th align="left" style="padding:0 12px 6px 0;font-family:${MONO};font-size:10.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:${C.tenue};border-bottom:1px solid ${C.linea};white-space:nowrap">${esc(c)}</th>`,
+    )
+    .join("");
+  const tr = t.filas
+    .map(
+      (f) =>
+        `<tr>${f
+          .map(
+            (v, i) =>
+              `<td style="padding:5px 12px 5px 0;font-family:${MONO};font-size:12px;font-variant-numeric:tabular-nums;color:${i === 0 ? C.texto : C.acero};white-space:nowrap">${esc(v)}</td>`,
+          )
+          .join("")}</tr>`,
+    )
+    .join("\n");
+  return `<div style="margin-top:18px">
+${seccion(t.titulo)}
+<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%">
+<tr>${th}</tr>
+${tr}
+</table>
+</div>`;
+}
+
 function avisoHtml(aviso: Aviso): string {
+  const tabla = aviso.tabla?.filas.length ? tablaHtml(aviso.tabla) : "";
   const detalle = aviso.detalle?.length
     ? `<div style="margin-top:18px">
 ${seccion("Servicios")}
@@ -104,6 +140,7 @@ ${seccion("Consecuencia")}
 ${seccion("Acción")}
 <p style="margin:0;font-family:${SANS};font-size:14px;line-height:1.6;color:${C.azul}">${esc(aviso.accion)}</p>
 
+${tabla}
 ${detalle}
 
 </td></tr>
@@ -145,6 +182,22 @@ function avisoTexto(aviso: Aviso): string {
     "ACCIÓN",
     `  ${aviso.accion}`,
   ];
+  if (aviso.tabla?.filas.length) {
+    // Ancho por columna, medido sobre el encabezado y todas las filas: en texto
+    // plano las columnas solo se pueden comparar si están alineadas.
+    const anchos = aviso.tabla.columnas.map((c, i) =>
+      Math.max(c.length, ...aviso.tabla!.filas.map((f) => (f[i] ?? "").length)),
+    );
+    const linea = (celdas: string[]) =>
+      "  " + celdas.map((v, i) => (v ?? "").padEnd(anchos[i]!)).join("  ").trimEnd();
+    partes.push(
+      "",
+      aviso.tabla.titulo.toUpperCase(),
+      linea(aviso.tabla.columnas),
+      "  " + "-".repeat(anchos.reduce((a, b) => a + b + 2, 0) - 2),
+      ...aviso.tabla.filas.map(linea),
+    );
+  }
   if (aviso.detalle?.length) {
     partes.push("", "SERVICIOS", ...aviso.detalle.map((d) => `  ${d}`));
   }

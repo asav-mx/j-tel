@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getRepos, isDatabaseConfigured } from "@/lib/db";
 import { exigirCron } from "@/lib/guardia-cron";
 import { revisarVentanas, agruparPorRutaTurno } from "@jtel/db";
-import { avisoDeSimulacro, avisoVentanaDesalineada } from "@/lib/alertas/decision";
+import { avisoDeSimulacro, avisoVentanasDesalineadas } from "@/lib/alertas/decision";
 import { renderAvisos, PIE_HORAS_LIMITE } from "@/lib/alertas/correo";
 import { ErrorDeCanal, resolverCanal } from "@/lib/alertas/canal";
 
@@ -135,8 +135,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ ...encabezado, enviado: false, motivo: "sin novedad" });
   }
 
-  const avisos = grupos.map((g) => avisoVentanaDesalineada(g, ahora, revisadas));
-  const mensaje = renderAvisos(avisos, ahora, PIE_HORAS_LIMITE);
+  // UN aviso con su tabla, no uno por grupo: 47 hallazgos en un correo se
+  // archivan igual que 47 correos. Ver `avisoVentanasDesalineadas`.
+  const mensaje = renderAvisos(
+    [avisoVentanasDesalineadas(grupos, ahora, revisadas)],
+    ahora,
+    PIE_HORAS_LIMITE,
+  );
 
   if (ensayo || !canal) {
     return NextResponse.json({
