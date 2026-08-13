@@ -499,6 +499,39 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
 
     Si pasa igual, el verde es del código. Si cambia, el verde era del `.env`.
 
+24. **Un verde no prueba que el cambio esté: prueba que lo que hay compila.**
+    Es la 23 del lado del merge, y **da más miedo**: allá el verde era de un
+    entorno, aquí el verde es de un árbitro al que le quitaron el cambio. **Un
+    cambio ausente no rompe nada — solo no está**, así que compilar, tipar y las
+    pruebas salen verdes exactamente igual.
+
+    🟢 **El caso, del 13 de agosto de 2026.** El PR **#302 se mergeó SIN su
+    arreglo.** Un merge de `main` a la rama resolvió el conflicto quedándose con
+    el lado de `main`; los checks corrieron sobre el árbol ya vacío y pasaron; y
+    **el PR entró con una descripción que prometía código que no llevaba**.
+    `main` quedó sin cuatro piezas —el arreglo de «nadie llegó» en la pantalla y
+    en el motor, la extensión a los `pendiente_evidencia`, y una ficha— y **nada
+    lo detectó**: se cachó porque Asav fue a mirar la pantalla y seguía muda.
+
+    ⚠ **Lo peor no es el código perdido: es la descripción.** Un PR mergeado
+    afirma en su cuerpo lo que hizo, y ese texto sobrevive en la historia como
+    registro. Un cuerpo que promete lo que el diff no lleva **es un hecho falso
+    dentro de la bitácora del repo**, y nadie lo va a contrastar después.
+
+    ✅ **Tiene valla, y se vio ponerse roja contra el caso real:**
+    `scripts/verificar-diff-completo.mjs`, en CI antes de compilar. Compara dos
+    listas que deberían coincidir — **los archivos que tocaron los commits de la
+    rama** (`origin/main..HEAD`, que excluye solo los commits ya en `main`, así
+    que un merge de `main` no ensucia la lista) contra **los archivos del diff
+    final** (`origin/main...HEAD`). Un archivo en la primera y no en la segunda
+    es un cambio que la rama hizo y ya no lleva. Corrida contra el merge de
+    #302: **5 archivos tocados, 0 en el diff.**
+
+    **Los falsos positivos se prefieren al silencio:** un archivo creado y
+    borrado en la misma rama, o un cambio revertido a propósito, se declaran con
+    `DIFF_COMPLETO_ESPERADO` y se explican en el PR. Cuesta un renglón; lo otro
+    cuesta un PR mergeado con una descripción falsa.
+
 **De producto:**
 
 > *"¿Esto tendría sentido para una planta en Bogotá cuyas rutas nunca hemos
