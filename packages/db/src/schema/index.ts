@@ -965,6 +965,86 @@ export const occurrenceGtVerdictEnum = pgEnum("occurrence_gt_verdict", [
   "no_hecho",
 ]);
 
+/** Estado de una aportación del transportista. `resuelta` = la planta contestó. */
+export const aportacionEstadoEnum = pgEnum("aportacion_estado", [
+  "enviada",
+  "vista",
+  "resuelta",
+  "retirada",
+]);
+
+/**
+ * La versión del transportista sobre un servicio — el frente de reconciliación.
+ *
+ * Hoy el árbitro dice «no pude» y ahí se acaba: el auditado mira una acusación
+ * que **el sistema mismo admite no poder sostener** y no puede aportar nada.
+ * Esto es donde la pone.
+ *
+ * ⚠ **Agrega CONTEXTO. Nunca cambia un veredicto**, y la forma de la tabla lo
+ * hace cumplir: **no referencia `complianceFacts`** ni guarda estado de
+ * cumplimiento. Cuelga de la OCURRENCIA —el servicio—, no del hecho. Si algún
+ * día alguien quiere que una aportación mueva el resultado, tiene que escribir
+ * una migración nueva, que es justo la fricción que se busca: si el auditado
+ * puede cambiar su calificación, J-Telemetry deja de ser árbitro.
+ *
+ * ⚠ **Y `resuelta` NO significa «aceptada»:** significa que la planta contestó.
+ * Qué consecuencia tiene es enforcement, y está sin decidir.
+ *
+ * **No se borra nada.** Retirar es un estado, no un `DELETE`: lo que se dijo se
+ * dijo, y una reconciliación que se puede borrar no reconcilia nada.
+ *
+ * **Es hermana de `occurrenceGroundTruth` y no la misma cosa:** aquélla guarda
+ * el veredicto del OPERADOR y ésta la versión del TRANSPORTISTA. Misma forma,
+ * otra voz — juntarlas sería C20 otra vez.
+ */
+export const carrierAportaciones = pgTable(
+  "carrier_aportaciones",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    serviceOccurrenceId: uuid("service_occurrence_id")
+      .notNull()
+      .references(() => serviceOccurrences.id, { onDelete: "cascade" }),
+    carrierAccountId: uuid("carrier_account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    /**
+     * Código del excusable que **la política del contrato ya define** — hoy 6 en
+     * un contrato y 5 en el otro. Se valida contra ella al escribir, no aquí: un
+     * catálogo en la base sería un segundo lugar donde vive la misma lista.
+     * Nullable a propósito: se puede aportar contexto sin que ninguno aplique.
+     */
+    motivo: text("motivo"),
+    nota: text("nota"),
+    /** La unidad que el transportista DICE que fue. No acredita nada: es su dicho. */
+    declaredUnitId: uuid("declared_unit_id").references(() => units.id, {
+      onDelete: "set null",
+    }),
+    /** Referencias a archivos. Dónde viven es otra decisión y otra migración. */
+    adjuntos: jsonb("adjuntos")
+      .$type<Array<{ nombre: string; url: string }>>()
+      .notNull()
+      .default([]),
+    estado: aportacionEstadoEnum("estado").notNull().default("enviada"),
+    /** Quién firma. Sin firma no sirve para reconciliar nada. */
+    actorKind: text("actor_kind").notNull(),
+    actorId: text("actor_id"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    resueltaPorKind: text("resuelta_por_kind"),
+    resueltaPorId: text("resuelta_por_id"),
+    resueltaAt: timestamp("resuelta_at", { withTimezone: true, mode: "date" }),
+    resolucionNota: text("resolucion_nota"),
+  },
+  (table) => [
+    index("carrier_aportaciones_occurrence_idx").on(
+      table.serviceOccurrenceId,
+      table.createdAt,
+    ),
+    index("carrier_aportaciones_carrier_idx").on(table.carrierAccountId, table.estado),
+  ],
+);
+
 export const occurrenceGroundTruth = pgTable(
   "occurrence_ground_truth",
   {
