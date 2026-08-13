@@ -4579,3 +4579,36 @@ pasa de narrar a **señalar lo que ya existe**.
   **el endpoint contra datos reales**, que es la mitad sustantiva; la otra mitad
   queda pendiente de una corrida con navegador de verdad.
 - 🟢 **`servedRoute` sigue intacta.** Una consulta de solo lectura y piel.
+
+**13 de agosto de 2026, noche (las tres preguntas de Asav, medidas — y C14 deja
+de ser argumento: se ve en producción).**
+
+**El instrumento:** `packages/db/src/medir-tres-preguntas.ts`, solo lectura.
+
+- ✅ **1 · La cadena pantalla→motor EXISTE y está comprobada, no inferida.** El
+  formulario arma la política, la valida con `contractPolicySchema` y la guarda
+  con `updatePolicy` en `service_contracts.policy`; el motor lee esa columna y la
+  congela en el hecho. 🟢 **Y contra los datos: los 8 campos que miden coinciden
+  8/8 entre la política viva y el último sello, en los DOS contratos.** La regla
+  de Asav queda en pie: **lo que vale es lo que está en la interfaz**.
+- ⚠ **Pero el porqué sigue perdiéndose: `contract_policy_history` está en CERO
+  filas — con el trigger de la 0020 ya instalado** (comprobado en `pg_trigger`).
+  O sea que **el cambio a `destino_only` de Planta 47 no dejó una sola fila**.
+  Es C13 otra vez: el valor es correcto y **nadie puede saber cuándo ni quién lo
+  puso**.
+- 🆕 **2 · Y aquí está el hallazgo del día: Planta 47 YA está en `destino_only`,
+  y se ve funcionando.** En los últimos tres días selló **41 cumplido · 22
+  pendiente · CERO no cumplido**, todos con llegada. **La perilla no está
+  inerte:** ya convierte acusaciones en pendientes, que es exactamente lo que C13
+  describía. Lo que NO hace es acreditar por llegar — los 22 pendientes son
+  `llegada_sin_atribucion`. **Es la corrección del 11 de agosto vista en
+  producción, no discutida.**
+- 🟢 **El Campus, en `kml_full`, el mismo periodo: 40 cumplido · 46 no cumplido ·
+  5 pendientes.** Los dos contratos, el mismo motor, tres días: **la diferencia
+  entera entre acusar y esperar la pone la perilla.**
+- 🟢 **3 · La forma «cambiar la métrica» sale en CERO.** De los 74 acusados con
+  cobertura llana sellada, **ninguno acreditaría** usando la llana en vez de la
+  ponderada — porque **también fallan B**. Cambiar la métrica sola no mueve a
+  nadie; el cuello no está donde parecía.
+- ⚠ **Y lo que ninguna de estas cifras dice:** que un veredicto cambiaría. Son
+  cotas de **a cuántos alcanza** cada forma. Mover uno es re-verificar: D4.
