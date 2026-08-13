@@ -4747,3 +4747,42 @@ construirlo — y por qué no se construye hoy).**
   eso es D4—, así que el riesgo no son los 113 de la tabla: **son los servicios
   nuevos que se sellen con la regla nueva**. Y por la razón que Asav ya fijó,
   **un `cumplido` de más es mucho más caro de deshacer que un pendiente de más**.
+
+**13 de agosto de 2026, cierre (la valla que faltaba: qué migraciones tiene de
+verdad cada base).**
+
+**Tomada de las tres pendientes por una razón: es la única que cierra una clase
+de fallo que ya mordió dos veces.** El 2 de agosto la cara cliente entera devolvió
+500 porque la `0016` estaba commiteada y nadie la había aplicado; el 13, las
+pruebas de integración reventaron porque **la rama desechable estaba dos
+migraciones atrás**. Nada vigilaba ninguna de las dos.
+
+- ⚠ **Y `esquema.yml` no lo cubre, aunque lo parezca.** Construye una base
+  **desde cero** con las migraciones: contesta «¿son coherentes?» y **no puede
+  ver** «¿esta base de aquí las tiene?». **Una base que existe y se quedó atrás
+  pasa ese workflow en verde todos los días.**
+- 🟢 **Cómo sabe si están aplicadas, sin bitácora del migrador** —producción no
+  tiene `__drizzle_migrations`—: **pregunta por el EFECTO**. De cada `.sql`
+  extrae los objetos que crea y los busca en el catálogo. **La huella se deriva
+  del propio SQL commiteado**, así que no se queda vieja: una migración nueva
+  trae su huella sola.
+- 🟢 **Estado al construirla: producción 23 al día, cero faltantes.** La
+  desechable acusó **la `0023`** — cierto: se le habían aplicado la 0021 y la
+  0022 y no la tercera. **Se aplicó ahí y la valla pasó a verde**, así que se vio
+  roja y verde con un cambio real.
+- ⚠ **Dos errores propios en su construcción, y los dos valen:** *(1)* los
+  identificadores calificados —`"public"."evidence_status"`— se leían como el
+  objeto **`public`**; ruidoso, y por eso se cachó. *(2)* **Los objetos que una
+  migración POSTERIOR borra**: la `0000` crea `route_shift_kml_versions` y la
+  `0003` la borra, así que la valla la reportaba faltante **en las dos bases**.
+  **Un falso positivo aquí enseña a ignorar la valla, y una valla que se ignora
+  ya no es una valla.**
+- **Lo que declara y no esconde:** detecta que los objetos EXISTEN, no que la
+  migración se haya ejecutado —para «¿esta base tiene lo que el código
+  necesita?» ésa es la respuesta correcta; para «¿quién y cuándo?» no sirve—; y
+  una migración que solo mueve datos sale como **«sin objetos que comprobar»**,
+  declarada, **no contada como aprobada**.
+- ⚠ **No corre en CI y hay que decirlo:** necesita credenciales de las dos bases,
+  y CI no las tiene. **Las pruebas del parser sí corren** —13 casos, sin tocar
+  ninguna base—, que es donde estuvieron los dos errores. La valla completa se
+  corre a mano **antes de desplegar**.
