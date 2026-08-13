@@ -1134,6 +1134,44 @@ export class VerificationService {
       policy,
     );
 
+    /*
+     * Paso 2 · la carga de datos que el motor no tenía.
+     *
+     * Hasta ahora se le entregaba el trazado de UNA ruta —la contratada—, que
+     * era la única contra la que medía. Para preguntar «¿contra cuál del turno
+     * encaja mejor este recorrido?» hacen falta todas.
+     *
+     * Envuelto en `catch` a propósito: es un paso que solo ANOTA, así que su
+     * fallo no puede tumbar una verificación. Si no hay rutas, el motor omite el
+     * paso y el veredicto sale idéntico.
+     */
+    let rutasDelTurno: Array<{
+      routeShiftId: string;
+      routeId: string;
+      nombre: string;
+      waypoints: Array<{ lat: number; lng: number }>;
+      esLaDelServicio: boolean;
+    }> = [];
+    try {
+      const shiftId = profile.routeShift?.shiftId;
+      const contratoId = profile.contractId;
+      if (shiftId && contratoId) {
+        const crudas = await this.repos.routes.rutasDelTurnoParaFecha(
+          contratoId,
+          shiftId,
+          occurrence.expectedDeadline,
+        );
+        rutasDelTurno = crudas.map((r) => ({
+          ...r,
+          esLaDelServicio: r.routeShiftId === profile.routeShiftId,
+        }));
+      }
+    } catch (err) {
+      console.error(
+        `[ranking-rutas] ${occurrenceId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
     const baseInput = {
       occurrenceId,
       expectedDeadline: occurrence.expectedDeadline,
@@ -1153,6 +1191,15 @@ export class VerificationService {
       coverageWindowEnd: new Date(coverageWindow.endMs),
       evidenceMinCoveragePct: policy.evidenceMinCoveragePct ?? 80,
       evidenceMaxGapMinutes: policy.evidenceMaxGapMinutes ?? 10,
+      /*
+       * Paso 2 · las rutas del turno, para rankear el corredor contra todas.
+       *
+       * **Informativo: no gobierna.** Si la carga falla o el turno no resuelve,
+       * el paso simplemente no se escribe y el veredicto sale idéntico — por eso
+       * va con `catch` y no revienta la verificación. Un paso que solo anota no
+       * puede tumbar un sello.
+       */
+      rutasDelTurno: rutasDelTurno.length > 0 ? rutasDelTurno : undefined,
     };
 
     // --- Evaluación multi-variante ---

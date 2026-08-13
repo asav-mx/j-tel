@@ -4678,3 +4678,37 @@ mía — y la construcción de las preguntas separadas tiene ficha).**
   vez, y el ahorro no vale el precedente.**
 - 🔵 **Falta el paso 2** —B contra todas las rutas del turno, con su ranking en el
   ledger—, que va en su propio PR.
+
+**13 de agosto de 2026, cierre (paso 2 construido — el corredor contra todas las
+rutas del turno).**
+
+- ✅ **Paso 2: el ranking se calcula, se ordena y se anota.** Para cada candidata
+  que llegó, la precisión de corredor contra **todas** las rutas del turno, con
+  su lugar en el ledger. **No gobierna**: la atribución sigue saliendo de A∧B
+  contra la ruta contratada hasta el paso 3.
+- 🟢 **Y la prueba que lo fija: el veredicto es idéntico con y sin las rutas del
+  turno.** Si se pone roja sin que nadie encienda el paso 3, el ranking empezó a
+  decidir sin que se decidiera. El paso del ledger declara `gobierna: false`,
+  igual que la densidad.
+- **Era carga de datos, no solo cálculo, como dijo Asav.** Hasta ahora al motor
+  se le entregaba el trazado de UNA ruta —la contratada—, porque era la única
+  contra la que medía. `rutasDelTurnoParaFecha` es la consulta que faltaba: las
+  rutas del mismo turno **acotadas también por contrato**, porque dos contratos
+  pueden compartir nombre de turno —eso es C20— y mezclarlos pondría rutas de
+  otro cliente en el ranking de éste.
+- ⚠ **Se rankea solo a las que LLEGARON, y el total se declara.** Un servicio
+  evalúa la flota entera —mediana de 50— y el turno tiene hasta 27 rutas:
+  rankear todo serían **~1 350 cálculos de corredor por servicio**, con el cron
+  cada minuto. Es la misma ley que el corte del expediente: **un recorte sin su
+  total esconde**, así que el paso escribe `candidatasEvaluadas` al lado de
+  `candidatasRankeadas`.
+- 🟢 **La carga va envuelta en `catch` a propósito:** un paso que solo ANOTA no
+  puede tumbar un sello. Si el turno no resuelve, el paso no se escribe y el
+  veredicto sale idéntico.
+- 🆕 **Y lo que este ranking hace visible por primera vez: C18.** Una unidad que
+  sirvió dos rutas del turno va a salir con corredor alto en dos, y hoy el motor
+  no tiene forma de verlo — le pregunta a cada servicio por su ruta y nada más.
+  **Esto no lo arregla; lo deja medido**, que es de lo que se trata el paso.
+- 🔵 **Con el paso 2, los dos que no mueven un veredicto están construidos.** Los
+  pasos 3 y 4 tocan un término cada uno y van en PRs distintos, el 4 después del
+  3.

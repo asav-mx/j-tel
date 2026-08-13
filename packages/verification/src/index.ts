@@ -772,6 +772,62 @@ export function medirDensidad(
   };
 }
 
+/** Una ruta del turno contra la que se puede medir el corredor. */
+export type RutaDelTurno = {
+  routeShiftId: string;
+  routeId: string;
+  nombre: string;
+  waypoints: Array<{ lat: number; lng: number }>;
+  /** `true` en la ruta que este servicio contrató — la que hoy decide. */
+  esLaDelServicio: boolean;
+};
+
+export type LugarEnElRanking = {
+  routeShiftId: string;
+  nombre: string;
+  esLaDelServicio: boolean;
+  /** Precisión de corredor de esta candidata contra ESA ruta. */
+  corridorPct: number;
+};
+
+/**
+ * Contra qué ruta del turno encaja mejor el recorrido de una candidata —
+ * Paso 2 de las preguntas separadas.
+ *
+ * **No decide nada.** Se calcula, se ordena y se anota; la atribución no pasa a
+ * B hasta el paso 3. Es la otra mitad de la medición de «antes».
+ *
+ * ---
+ *
+ * **Por qué B y no A para esta pregunta.** «Cuál ruta hizo» y «cuánto de ella
+ * cubrió» son dos preguntas, y hoy las contesta una sola expresión. B —qué
+ * fracción de los puntos de la unidad cae dentro del corredor— **es la que sabe
+ * de forma**: un camión que recorrió otra ruta tiene B alto en ESA y bajo en la
+ * contratada, aunque su A sea baja en las dos. A mide cuánto del trazado se
+ * cubrió, que es una pregunta que solo tiene sentido **después** de saber cuál
+ * trazado.
+ *
+ * ⚠ **Y lo que este ranking hace visible por primera vez: el empalme (C18).**
+ * Una unidad que sirvió dos rutas del turno aparecerá con B alto en dos, y hoy
+ * el motor no tiene forma de verlo — le pregunta a cada servicio por su ruta y
+ * nada más. **Esto no lo arregla; lo deja medido.**
+ */
+export function rankearRutasDelTurno(
+  points: GpsPoint[],
+  rutas: RutaDelTurno[],
+  corridorKm: number,
+): LugarEnElRanking[] {
+  return rutas
+    .filter((r) => r.waypoints.length > 0)
+    .map((r) => ({
+      routeShiftId: r.routeShiftId,
+      nombre: r.nombre,
+      esLaDelServicio: r.esLaDelServicio,
+      corridorPct: computeCorridorPrecisionPct(points, r.waypoints, corridorKm),
+    }))
+    .sort((a, b) => b.corridorPct - a.corridorPct);
+}
+
 export function determineTiming(
   arrivalAt: Date,
   deadline: Date,
@@ -1239,6 +1295,49 @@ export function verifyService(input: VerificationInput): VerificationResult {
          * ausencia significa «no se preguntó», no «no falló nada».
          */
         motivos: motivos.length > 0 ? motivos : undefined,
+      },
+    });
+  }
+
+  /*
+   * Paso 2 · el corredor contra TODAS las rutas del turno, con su ranking.
+   *
+   * **No decide nada todavía**: la atribución no pasa a B hasta el paso 3. Esto
+   * deja registrado, dentro del hecho, contra qué ruta encajaba mejor cada
+   * candidata — que es exactamente lo que el paso 3 va a mover.
+   *
+   * ⚠ **Solo para las candidatas que LLEGARON, y hay que decir por qué.** Un
+   * servicio evalúa la flota entera —mediana de 50 candidatas— y el turno tiene
+   * hasta 27 rutas: rankear todo serían ~1 350 cálculos de corredor por
+   * servicio, con el cron corriendo cada minuto. Se rankea a las que entraron a
+   * la geocerca, y **el total evaluado se declara** — misma ley que el corte del
+   * expediente: un recorte sin su total esconde.
+   */
+  if (input.rutasDelTurno && input.rutasDelTurno.length > 0) {
+    const llegaron = candidateUnits.filter((c) => c.arrivalAt !== null);
+    const rankings = llegaron.map((c) => ({
+      unidadId: c.unitId,
+      ranking: rankearRutasDelTurno(
+        byUnit.get(c.unitId) ?? [],
+        input.rutasDelTurno!,
+        corridorKm,
+      ),
+    }));
+    steps.push({
+      step: "ranking_rutas",
+      result: `${rankings.length}_rankeadas`,
+      details: {
+        rutasDelTurno: input.rutasDelTurno.length,
+        candidatasEvaluadas: candidateUnits.length,
+        candidatasRankeadas: rankings.length,
+        rankings,
+        /*
+         * Como la densidad del paso 1: se declara que NO gobierna. Un ranking
+         * junto a un veredicto invita a leerse como la razón de la atribución, y
+         * hasta el paso 3 la atribución sigue saliendo de A∧B contra una sola
+         * ruta.
+         */
+        gobierna: false,
       },
     });
   }
