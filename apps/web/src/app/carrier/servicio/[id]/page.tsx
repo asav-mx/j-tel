@@ -12,6 +12,7 @@ import {
   candidatasDelLedger,
 } from "@/lib/expediente-sin-atribucion";
 import { ExpedienteSinAtribucionView } from "@/components/expediente-sin-atribucion";
+import { CajaAportacion, type AportacionVista } from "@/components/caja-aportacion";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { getRepos } from "@/lib/db";
 import {
@@ -310,6 +311,29 @@ export default async function CarrierServicioPage({
       })
     : null;
 
+  /*
+   * La reconciliación — donde el transportista pone su versión.
+   *
+   * El catálogo sale de la política del SELLO cuando el hecho existe: es con la
+   * que se juzgó ese servicio, y ofrecer motivos que entonces no existían sería
+   * dejar aportar contra una regla que no aplicaba (C24).
+   */
+  const aportacionesFilas = sinUnidadAcreditada
+    ? await repos.aportaciones.listarPorOcurrencia(id)
+    : [];
+  const etiquetaUnidad = new Map(unitOptions.map((u) => [u.id, u.label]));
+  const aportaciones: AportacionVista[] = aportacionesFilas.map((a) => ({
+    id: a.id,
+    motivo: a.motivo,
+    nota: a.nota,
+    unidadEtiqueta: a.declaredUnitId ? (etiquetaUnidad.get(a.declaredUnitId) ?? null) : null,
+    adjuntos: a.adjuntos ?? [],
+    estado: a.estado,
+    creadaAt: a.createdAt.toISOString(),
+    resolucionNota: a.resolucionNota,
+  }));
+  const catalogoExcusables = (politicaDelSello?.excusableReasons ?? []) as string[];
+
   const tz = policy.timeZone ?? JTTEL_TZ;
   const calibrationWindowLabel = `${formatShort(loadFrom.toISOString(), tz)} → ${formatShort(
     loadTo.toISOString(), tz,
@@ -336,6 +360,21 @@ export default async function CarrierServicioPage({
 
         {expediente ? (
           <ExpedienteSinAtribucionView expediente={expediente} timeZone={tz} />
+        ) : null}
+
+        {/*
+         * Justo debajo del expediente, que es donde el árbitro acaba de decir
+         * que no pudo atribuir. En una bandeja aparte sería una queja; aquí la
+         * versión se lee junto a la evidencia que la sostiene o la contradice.
+         */}
+        {sinUnidadAcreditada ? (
+          <CajaAportacion
+            occurrenceId={id}
+            accountSlug={carrier.slug}
+            catalogo={catalogoExcusables}
+            unidades={unitOptions}
+            existentes={aportaciones}
+          />
         ) : null}
 
         {showLabelForm ? (
