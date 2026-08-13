@@ -72,6 +72,7 @@ import type {
   CreateContractInput,
   CreateServiceProfileInput,
 } from "@jtel/domain";
+import { routeLengthKm } from "@jtel/domain";
 import { localDateIso, JTTEL_TZ, civilDatesInRange, addDaysIso } from "@jtel/domain";
 
 function suggestProfileCodeFromName(name: string): string {
@@ -804,6 +805,31 @@ export class RouteRepository {
    * Reutiliza la misma lógica temporal de getKmlVersionForDate por variante.
    */
   /**
+   * El largo del trazado vigente de cada ruta, en km.
+   *
+   * Es el arranque en frío de la derivación de ventana: sin historia medida, la
+   * duración se estima sobre la geometría. Se trae de una vez porque
+   * preguntarlo por ocurrencia haría mil consultas para las mismas rutas.
+   */
+  async largoDeTrazadoVigente(): Promise<Map<string, number>> {
+    const filas = await this.db
+      .selectDistinctOn([routeKmlVersions.routeId], {
+        routeId: routeKmlVersions.routeId,
+        waypoints: routeKmlVersions.waypoints,
+      })
+      .from(routeKmlVersions)
+      .where(isNull(routeKmlVersions.validTo))
+      .orderBy(routeKmlVersions.routeId, desc(routeKmlVersions.validFrom));
+
+    const mapa = new Map<string, number>();
+    for (const f of filas) {
+      const wp = f.waypoints as Array<{ lat: number; lng: number }> | null;
+      if (Array.isArray(wp) && wp.length > 1) mapa.set(f.routeId, routeLengthKm(wp));
+    }
+    return mapa;
+  }
+
+  /**
    * Las rutas del MISMO turno, con su trazado vigente a la fecha — Paso 2.
    *
    * **Es la carga de datos que el paso 2 necesita y que el motor no tenía:**
@@ -946,6 +972,29 @@ export class RouteRepository {
       .from(routeTraversalMeasurements)
       .where(inArray(routeTraversalMeasurements.routeShiftId, routeShiftIds))
       .groupBy(routeTraversalMeasurements.routeShiftId);
+  }
+
+  /**
+   * Todas las duraciones medidas, sin agrupar.
+   *
+   * La revisión de ventanas necesita las MUESTRAS, no un conteo: el resumen usa
+   * un percentil y un piso de cotas inferiores, y eso no se puede reconstruir
+   * desde `count()`. Se traen de una vez —son cientos de filas, no millones— en
+   * vez de una consulta por ocurrencia.
+   */
+  async todasLasDuraciones() {
+    const filas = await this.db
+      .select({
+        routeShiftId: routeTraversalMeasurements.routeShiftId,
+        durationMinutes: routeTraversalMeasurements.durationMinutes,
+        lowerBound: routeTraversalMeasurements.lowerBound,
+      })
+      .from(routeTraversalMeasurements);
+    return filas.map((f) => ({
+      routeShiftId: f.routeShiftId,
+      durationMinutes: Number(f.durationMinutes),
+      lowerBound: Boolean(f.lowerBound),
+    }));
   }
 
   async getVariantsForRoute(routeId: string) {
@@ -2508,6 +2557,55 @@ export class OccurrenceRepository {
    * necesita seis campos por fila, y traer el árbol para descartarlo es el
    * costo que `verificar-conteos` ya midió una vez.
    */
+  /**
+   * Las ocurrencias sin sellar, con su ventana congelada — Frente A de la
+   * ventana congelada.
+   *
+   * Hermana de `futurasSinSellarParaRevision`, y distinta en dos cosas que
+   * importan: trae `evidence_window_start` del viaje —el campo que se revisa— y
+   * el `route_shift_id`, porque **la ventana se deriva por ruta×turno** y es
+   * también como se agrupa el aviso.
+   *
+   * **Solo lo que no tiene hecho:** un sello ya decidió con su ventana, y
+   * moverla sería reescribir el marco del juicio. Eso es D4.
+   */
+  async sinSellarParaRevisionDeVentana() {
+    return this.db
+      .select({
+        id: serviceOccurrences.id,
+        serviceDate: serviceOccurrences.serviceDate,
+        expectedDeadline: serviceOccurrences.expectedDeadline,
+        evidenceWindowStart: trips.evidenceWindowStart,
+        contractId: serviceContracts.id,
+        contractName: serviceContracts.name,
+        policy: serviceContracts.policy,
+        clientName: accounts.name,
+        routeShiftId: routeShifts.id,
+        routeId: routeShifts.routeId,
+        routeName: routes.name,
+        shiftName: shifts.name,
+      })
+      .from(serviceOccurrences)
+      .innerJoin(trips, eq(trips.serviceOccurrenceId, serviceOccurrences.id))
+      .innerJoin(serviceProfiles, eq(serviceProfiles.id, serviceOccurrences.serviceProfileId))
+      .innerJoin(serviceContracts, eq(serviceContracts.id, serviceOccurrences.contractId))
+      .innerJoin(accounts, eq(accounts.id, serviceContracts.clientAccountId))
+      .innerJoin(routeShifts, eq(routeShifts.id, serviceProfiles.routeShiftId))
+      .innerJoin(routes, eq(routes.id, routeShifts.routeId))
+      .innerJoin(shifts, eq(shifts.id, routeShifts.shiftId))
+      .leftJoin(
+        complianceFacts,
+        eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id),
+      )
+      .where(
+        and(
+          isNull(complianceFacts.id),
+          eq(serviceContracts.status, "active"),
+          eq(accounts.isDemo, false),
+        ),
+      );
+  }
+
   async futurasSinSellarParaRevision() {
     return this.db
       .select({

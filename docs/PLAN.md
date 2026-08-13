@@ -4786,3 +4786,41 @@ migraciones atrás**. Nada vigilaba ninguna de las dos.
   y CI no las tiene. **Las pruebas del parser sí corren** —13 casos, sin tocar
   ninguna base—, que es donde estuvieron los dos errores. La valla completa se
   corre a mano **antes de desplegar**.
+
+**14 de agosto de 2026 (Frente A de la ventana congelada, construido).**
+
+**La ficha no necesitaba rediseño: el Frente A ya estaba diseñado** y con su
+decisión escrita —**no corrige**—, así que se podía construir sin decisión de
+Asav. Lo que sigue sin diseñarse es el Frente B, y sus tres preguntas siguen
+abiertas.
+
+- 🟢 **Y el tamaño, medido antes de construir: 843 de 1 013 ocurrencias SIN
+  SELLAR corren hoy con una ventana desalineada**, en **47 ruta×turno**. Todas
+  congeladas en el piso de 60 minutos mientras hoy se derivarían **62–95**. No es
+  una cola histórica: **es el 83 % de todo lo que todavía no se ha juzgado**.
+- ✅ **`/api/cron/revisar-ventanas`**, hermano de `revisar-horas-limite` y con su
+  misma forma: una vez al día después del generador, **agrupa por ruta×turno** —
+  treinta renglones idénticos no son treinta hallazgos—, **responde 503 si no
+  había nada que revisar** —un cero no puede confundirse con un medidor ciego— y
+  **no corrige**.
+- 🟢 **Deriva con la MISMA función que el generador** (`computeEvidenceWindow`),
+  no con una copia: una segunda implementación compararía la ventana contra una
+  regla que el motor no usa.
+- 🟢 **Separa las dos causas y nunca las suma:** que la ventana se ensanche
+  porque se midieron más recorridos (`medida`) es el sistema aprendiendo; que se
+  mueva porque alguien tocó una perilla (`politica`) es una decisión de una
+  persona. **Dueños distintos, arreglos distintos.**
+- 🟢 **Y no insinúa que un veredicto cambiaría** — lo dice explícitamente en el
+  cuerpo, que es más fuerte que callarlo. No lo sabe: otra ventana es otra
+  evidencia, y saberlo exige correr el árbitro (D4).
+- 🟢 **Probado en seco contra datos reales**: 1 013 revisadas · 843 desalineadas ·
+  47 grupos, con el correo armado y legible. Nueve pruebas nuevas, y **el
+  compilador atrapó la omisión del asunto** porque el `switch` de clases es
+  exhaustivo.
+- ⚠ **Hereda la deuda de su hermano, y no cuenta como cerrado sin ella:** nadie
+  ha visto el correo llegar a una bandeja —las llaves de Resend no existen fuera
+  de producción—. Nace con `?simular=1` por la regla 16.
+- ⚠ **Y una consecuencia del tamaño que decide Asav:** con 47 grupos, **el correo
+  lleva 47 avisos**. Agrupar por servicio sería peor (843 renglones), pero 47
+  hallazgos en un correo es mucho. Las salidas son dejarlo así o **colapsarlos en
+  un solo aviso con tabla** — y eso es decisión de producto, no de este PR.

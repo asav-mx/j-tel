@@ -153,6 +153,13 @@ export type Aviso = {
     | "sin-veredicto"
     | "hora-limite-vieja"
     /**
+     * La ventana de evidencia congelada que ya no es la que se derivaría.
+     * Clase propia y no la de la hora límite: son dos campos con dos causas y
+     * dos arreglos, y compartir clase haría que el asunto del correo nombrara
+     * el campo equivocado.
+     */
+    | "ventana-desalineada"
+    /**
      * Un correo provocado a mano para comprobar que el canal llega. Tiene clase
      * propia y no reusa la de un hallazgo: si compartiera clase, el asunto
      * diría «Hora límite desalineada» y la notificación del teléfono se leería
@@ -595,6 +602,92 @@ export function avisoHoraLimiteVieja(
 }
 
 /**
+ * La ventana congelada — Frente A.
+ *
+ * Hermano de `avisoHoraLimiteVieja`, y el mismo mecanismo en otro campo: la
+ * ventana se calcula al crear el viaje y **nadie la vuelve a mirar**, mientras
+ * la derivación aprende de una historia que crece.
+ *
+ * ⚠ **Las dos causas van SEPARADAS y nunca sumadas.** Que la ventana se ensanche
+ * porque se midieron más recorridos (`medida`) es el sistema aprendiendo —lo
+ * esperado— y que se mueva porque alguien tocó una perilla (`politica`) es una
+ * decisión de una persona. **Tienen dueños distintos y arreglos distintos**, y un
+ * aviso que las mezclara mandaría a revisar la perilla equivocada.
+ */
+export function avisoVentanaDesalineada(
+  grupo: {
+    contratoNombre: string;
+    rutaNombre: string;
+    turnoNombre: string;
+    ocurrencias: number;
+    congeladaMinutos: number;
+    derivadaMinutos: number;
+    difMinutos: number;
+    baseHoy: "medida" | "estimada_geometria" | "politica";
+    muestras: number;
+    proxima: string;
+  },
+  ahora: Date,
+  revisadas: number,
+): Aviso {
+  /*
+   * `difMinutos` es `derivada − congelada`: POSITIVO significa que hoy la
+   * ventana abriría ANTES, o sea que la congelada mira menos ruta. Se dice el
+   * signo una sola vez y se usa esa variable — es el mismo cuidado que su
+   * hermano necesitó cuando el valor contradecía a su lectura en la misma línea.
+   */
+  const hoyAbririaAntes = grupo.difMinutos > 0;
+  const porQue =
+    grupo.baseHoy === "medida"
+      ? `la duración medida de la ruta se movió · ${grupo.muestras} muestras hoy`
+      : grupo.baseHoy === "estimada_geometria"
+        ? "no hay historia suficiente: hoy se estimaría sobre la geometría del trazado"
+        : "cambió la política del contrato, no la medición";
+
+  return {
+    clase: "ventana-desalineada",
+    titulo: `${grupo.ocurrencias} servicio${grupo.ocurrencias === 1 ? "" : "s"} de ${grupo.rutaNombre} van a juzgarse con una ventana que ya no es la que se derivaría.`,
+    mediciones: [
+      {
+        etiqueta: "Servicios sin sellar",
+        valor: String(grupo.ocurrencias),
+        lectura: `de ${revisadas} revisados · ${grupo.rutaNombre} · turno «${grupo.turnoNombre}» de ${grupo.contratoNombre}`,
+      },
+      {
+        etiqueta: "La ventana congelada abre",
+        valor: `${grupo.congeladaMinutos} min antes`,
+        lectura: `hoy se derivarían ${grupo.derivadaMinutos} min · ${duracion(Math.abs(grupo.difMinutos))} ${hoyAbririaAntes ? "MENOS" : "más"} de los que hoy se mirarían`,
+      },
+      {
+        etiqueta: "Por qué cambió",
+        valor: grupo.baseHoy,
+        lectura: porQue,
+      },
+      {
+        etiqueta: "El primero se juzga",
+        valor: grupo.proxima,
+        lectura: "desde ahí ya no se corrige, se re-verifica",
+      },
+    ],
+    consecuencia: hoyAbririaAntes
+      ? "La ventana es la frontera de lo que el árbitro alcanza a ver. Estos servicios se van a juzgar mirando menos recorrido del que hoy se miraría, y el tramo que no se mire se califica igual: contra el trazado completo."
+      : "Estos servicios se van a juzgar con una ventana más ancha que la que hoy se derivaría. No es un riesgo de acusar de más, pero sí de juzgar con un marco que ya nadie produce.",
+    /*
+     * No dice si algún veredicto cambiaría. **No lo sabe**: otra ventana es otra
+     * evidencia y otro emparejamiento, y saberlo exige correr el árbitro — D4.
+     * Insinuarlo aquí convertiría un aviso en una promesa.
+     */
+    accion:
+      "Decidir si se re-dimensionan antes de que se sellen o si se dejan · Asav",
+    detalle: [
+      `congelada ${grupo.congeladaMinutos} min · hoy ${grupo.derivadaMinutos} min · próxima ${grupo.proxima}`,
+      "Este aviso NO dice si algún veredicto cambiaría: eso exige volver a correr el árbitro.",
+    ],
+    instante: ahora,
+  };
+}
+
+/**
  * Un aviso de SIMULACRO: se manda a propósito, por el canal de verdad, para
  * comprobar que el camino completo llega hasta una bandeja.
  *
@@ -664,6 +757,13 @@ export function asuntoDe(aviso: Aviso): string {
       return `J-Telemetry · Servicios sin veredicto`;
     case "hora-limite-vieja":
       return `J-Telemetry · Hora límite desalineada`;
+    /*
+     * Nombra la VENTANA y no la hora límite, aunque el mecanismo sea el mismo:
+     * quien lo lea en el teléfono tiene que saber qué campo mirar antes de
+     * abrir el correo, y son dos campos con dos arreglos.
+     */
+    case "ventana-desalineada":
+      return `J-Telemetry · Ventana de evidencia desalineada`;
     case "simulacro":
       return `J-Telemetry · SIMULACRO · prueba del canal de avisos`;
   }

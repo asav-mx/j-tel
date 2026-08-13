@@ -37,6 +37,13 @@ export {
   type HoraLimiteDesalineada,
   type RevisionDeHorasLimite,
 } from "./horas-limite.js";
+export {
+  revisarVentanas,
+  agruparPorRutaTurno,
+  type VentanaDesalineada,
+  type RevisionDeVentanas,
+  type GrupoDeVentanas,
+} from "./ventanas-desalineadas.js";
 /**
  * Fixture de pruebas, no de producto. Se niega a sembrar fuera de
  * `DATABASE_URL_TEST`; ver el candado dentro del archivo.
