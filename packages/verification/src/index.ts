@@ -694,6 +694,84 @@ export function devicesOf(points: readonly GpsPoint[]): string[] {
   return [...new Set(points.map((p) => p.imei))].sort();
 }
 
+/**
+ * La densidad de la evidencia con la que se juzgó — Paso 1 de las preguntas
+ * separadas.
+ *
+ * **No decide nada.** Se calcula, se anota y se congela dentro del hecho; el
+ * piso que la usará se enciende en el paso 4. Es «el piso apagado».
+ *
+ * ---
+ *
+ * **La definición es la de `medir-cadencia`, deliberadamente:** la MEDIANA de
+ * los segundos entre dos puntos consecutivos **del mismo aparato**. No es
+ * puntos÷duración, y eso importa — un cociente sube y baja porque cambia el
+ * denominador, y ya engañó una vez: *«puntos normales, puntos por aparato
+ * normales, y la cadencia 34 % abajo»*. **El hueco entre puntos no tiene
+ * denominador que se mueva.**
+ *
+ * Se agrupa por APARATO y no por unidad: la cadencia es del dispositivo que
+ * emite, y una unidad que cambió de aparato a media ventana tiene dos cadencias,
+ * no una promediada (Ley 5 del Marco).
+ *
+ * **Por qué la mediana de las medianas y no la de todos los huecos juntos:**
+ * mezclar los huecos de todos los aparatos deja que el que más emite domine la
+ * cifra. Cada aparato aporta su cadencia y el servicio resume esas cadencias.
+ */
+export type DensidadDeEvidencia = {
+  /** Mediana de las cadencias de los aparatos que emitieron (s); null sin datos. */
+  huecoMedianaS: number | null;
+  /** La cadencia del aparato más lento — el que más se acerca al piso. */
+  huecoPeorS: number | null;
+  /** Cuántos aparatos aportaron al menos dos puntos, que es lo mínimo para tener cadencia. */
+  aparatos: number;
+  puntos: number;
+};
+
+function medianaDe(valores: number[]): number | null {
+  if (valores.length === 0) return null;
+  const orden = [...valores].sort((a, b) => a - b);
+  const mitad = Math.floor(orden.length / 2);
+  return orden.length % 2 === 1
+    ? orden[mitad]!
+    : (orden[mitad - 1]! + orden[mitad]!) / 2;
+}
+
+export function medirDensidad(
+  points: GpsPoint[],
+  window: { start: Date; end: Date } | null,
+): DensidadDeEvidencia {
+  const dentro = window
+    ? points.filter(
+        (p) => p.timestamp >= window.start && p.timestamp <= window.end,
+      )
+    : points;
+
+  const porAparato = new Map<string, number[]>();
+  for (const p of dentro) {
+    const arr = porAparato.get(p.imei) ?? [];
+    arr.push(p.timestamp.getTime());
+    porAparato.set(p.imei, arr);
+  }
+
+  const cadencias: number[] = [];
+  for (const instantes of porAparato.values()) {
+    if (instantes.length < 2) continue;
+    const orden = instantes.sort((a, b) => a - b);
+    const huecos: number[] = [];
+    for (let i = 1; i < orden.length; i++) huecos.push((orden[i]! - orden[i - 1]!) / 1000);
+    const m = medianaDe(huecos);
+    if (m !== null) cadencias.push(m);
+  }
+
+  return {
+    huecoMedianaS: medianaDe(cadencias),
+    huecoPeorS: cadencias.length > 0 ? Math.max(...cadencias) : null,
+    aparatos: cadencias.length,
+    puntos: dentro.length,
+  };
+}
+
 export function determineTiming(
   arrivalAt: Date,
   deadline: Date,
@@ -1003,6 +1081,39 @@ export function verifyService(input: VerificationInput): VerificationResult {
 
   steps.push({ step: "evidencia", result: "disponible", details: { count: input.evidencePoints.length } });
 
+  /*
+   * Paso 1 · La densidad se calcula y se anota. **No decide nada todavía.**
+   *
+   * Va aquí, después de la cobertura y antes del match, porque es una propiedad
+   * de LA EVIDENCIA y no de ninguna candidata: describe con qué material se va a
+   * juzgar. El piso que la use se enciende en el paso 4.
+   *
+   * Que exista sin decidir es el punto: deja medido de antemano lo que el paso 4
+   * va a mover, dentro del propio hecho y no en una corrida por fuera.
+   */
+  const densidad = medirDensidad(
+    input.evidencePoints,
+    input.coverageWindowStart && input.coverageWindowEnd
+      ? { start: input.coverageWindowStart, end: input.coverageWindowEnd }
+      : null,
+  );
+  steps.push({
+    step: "densidad_evidencia",
+    result: densidad.huecoMedianaS === null ? "sin_cadencia" : "medida",
+    details: {
+      huecoMedianaS: densidad.huecoMedianaS,
+      huecoPeorS: densidad.huecoPeorS,
+      aparatos: densidad.aparatos,
+      puntos: densidad.puntos,
+      /*
+       * Se declara que NO gobierna. Un paso del ledger que trae un número junto
+       * a un veredicto invita a leerlo como causa; éste es informativo hasta que
+       * el paso 4 lo encienda, y el expediente tiene que poder decirlo.
+       */
+      gobierna: false,
+    },
+  });
+
   const hasKml = (input.kmlWaypoints?.length ?? 0) > 0;
   const corridorKm = Math.min(0.5, Math.max(0.01, (input.kmlCorridorMeters ?? 120) / 1000));
   // Umbrales configurables. Sin KML no aplican A/B.
@@ -1178,6 +1289,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
         lateExcusable: false,
         routeStrictnessApplied: input.routeStrictness,
         ledgerSteps: steps,
+        densidadEvidencia: densidad,
         candidateUnits,
       };
     }
@@ -1224,6 +1336,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
           lateExcusable: false,
           routeStrictnessApplied: input.routeStrictness,
           ledgerSteps: steps,
+          densidadEvidencia: densidad,
           candidateUnits,
         };
       }
@@ -1243,6 +1356,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
       lateExcusable: false,
       routeStrictnessApplied: input.routeStrictness,
       ledgerSteps: steps,
+      densidadEvidencia: densidad,
       candidateUnits,
     };
   }
@@ -1288,6 +1402,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
     lateExcusable,
     routeStrictnessApplied: input.routeStrictness,
     ledgerSteps: steps,
+    densidadEvidencia: densidad,
     candidateUnits,
   };
 }

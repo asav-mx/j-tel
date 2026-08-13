@@ -3610,6 +3610,17 @@ export class ComplianceRepository {
      * Rellenarlo lo borraría sin dejar rastro.
      */
     candidatasSnapshot?: CandidatasSnapshot | null;
+    /**
+     * La densidad con la que se juzgó — Paso 1. Solo entra por este INSERT, y
+     * como `candidatasSnapshot`, **nunca se escribe sobre un hecho ya sellado**:
+     * su `null` significa «no se midió» y rellenarlo lo borraría.
+     */
+    densidadSnapshot?: {
+      huecoMedianaS: number | null;
+      huecoPeorS: number | null;
+      aparatos: number;
+      puntos: number;
+    } | null;
   }) {
     const [fact] = await this.db
       .insert(complianceFacts)

@@ -627,6 +627,29 @@ export const complianceFacts = pgTable("compliance_facts", {
   candidatasSnapshot: jsonb("candidatas_snapshot")
     .$type<import("@jtel/domain").CandidatasSnapshot>(),
   /**
+   * La densidad de la evidencia con la que se juzgó — Paso 1.
+   *
+   * Mediana de segundos entre puntos consecutivos del mismo aparato, con la
+   * MISMA definición que `medir-cadencia`: si el hecho y el instrumento no
+   * midieran lo mismo, comparar el «antes» con el «después» del cambio no
+   * querría decir nada.
+   *
+   * ⚠ **No gobierna.** Es el «piso apagado»: se anota y ningún veredicto la
+   * mira. El piso se enciende en el paso 4.
+   *
+   * **Columna propia y no dentro de `candidatasSnapshot`** aunque saldría más
+   * barato: aquél dice «candidatas» y esto es propiedad de la EVIDENCIA. Un
+   * campo cuyo nombre no describe su contenido es C15 y C20 otra vez.
+   *
+   * `null` = no se midió. No se rellena hacia atrás.
+   */
+  densidadSnapshot: jsonb("densidad_snapshot").$type<{
+    huecoMedianaS: number | null;
+    huecoPeorS: number | null;
+    aparatos: number;
+    puntos: number;
+  }>(),
+  /**
    * El chofer declarado, CONGELADO dentro del hecho — Capa 1 del Plan-Choferes.
    *
    * El nombre es texto plano, no una referencia. Es la única forma de que la
