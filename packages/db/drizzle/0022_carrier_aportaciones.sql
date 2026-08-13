@@ -72,17 +72,22 @@
 --    WHERE table_schema='public' AND table_name='carrier_aportaciones'
 --    ORDER BY ordinal_position;
 --
---   -- 2. Y NO tiene forma de tocar un veredicto: cero referencias a
---   --    compliance_facts. Si algún día esto devuelve una fila, la ley 1 se
---   --    rompió en una migración.
+--   -- 2. Y NO tiene forma de tocar un veredicto: cero llaves foráneas hacia
+--   --    compliance_facts. Si algún día esto devuelve algo distinto de 0, la
+--   --    ley 1 se rompió en una migración.
 --   SELECT count(*) AS referencias_a_hechos
---     FROM information_schema.constraint_column_usage ccu
---     JOIN information_schema.table_constraints tc
---       ON tc.constraint_name = ccu.constraint_name
---    WHERE tc.table_name = 'carrier_aportaciones'
---      AND tc.constraint_type = 'FOREIGN KEY'
---      AND ccu.table_name = 'compliance_facts';
+--     FROM pg_constraint c
+--     JOIN pg_class t ON t.oid = c.conrelid
+--     JOIN pg_class f ON f.oid = c.confrelid
+--    WHERE c.contype = 'f'
+--      AND t.relname = 'carrier_aportaciones'
+--      AND f.relname = 'compliance_facts';
 --   -- Espera: 0
+--
+--   ⚠ Estas cuatro se pueden correr DENTRO de la transacción, antes del COMMIT:
+--   el DDL de Postgres es transaccional, así que `information_schema` y
+--   `pg_constraint` ya ven la tabla nueva. Si algo no cuadra, `ROLLBACK;` y no
+--   quedó nada. Es preferible a comprobar después y tener que deshacer.
 --
 --   -- 3. Los conteos no se movieron. Una aditiva que mueve un conteo no lo es.
 --   SELECT (SELECT count(*) FROM compliance_facts)     AS hechos,       -- 1326
