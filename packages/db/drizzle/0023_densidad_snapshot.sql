@@ -1,0 +1,74 @@
+-- Paso 1 de las preguntas separadas · la densidad se congela dentro del hecho.
+--
+-- ADITIVA. Se aplica DESPUÉS de la 0022. Una columna, nullable, SIN DEFAULT.
+-- Va en transacción; no lleva CONCURRENTLY ni índice.
+--
+-- ## Qué es y qué NO es
+--
+-- La densidad de la evidencia con la que se juzgó un servicio: la MEDIANA de los
+-- segundos entre dos puntos consecutivos del mismo aparato, resumida sobre los
+-- aparatos que emitieron. **Es la definición de `medir-cadencia`**, a propósito:
+-- si el hecho y el instrumento no midieran lo mismo, comparar el «antes» con el
+-- «después» del cambio no querría decir nada.
+--
+-- ⚠ **NO gobierna nada.** Es el «piso apagado» del paso 1: se calcula, se anota
+-- y se congela, y **ningún veredicto la mira**. El piso que la usará se enciende
+-- en el paso 4, y esa sí es una decisión con su número —60 s, decidido por Asav
+-- el 13 de agosto de 2026— que no entra en esta migración.
+--
+-- **Por qué existe antes de que sirva:** es la medición de «antes» construida
+-- DENTRO del motor. Sin ella, el efecto del paso 4 habría que medirlo contra una
+-- corrida distinta; con ella, cada hecho carga la densidad con la que se le
+-- juzgó y el «después» se compara contra el «antes» del MISMO hecho.
+--
+-- ## Por qué columna propia y no dentro de `candidatas_snapshot`
+--
+-- Ese jsonb ya existe y sería más barato meterla ahí. **No se hace:** su nombre
+-- dice «candidatas» y la densidad es una propiedad de LA EVIDENCIA, no de
+-- ninguna candidata. Un campo cuyo nombre no describe su contenido es
+-- exactamente C15 y C20, las dos causas que este repo ya pagó. **El ahorro no
+-- vale el precedente.**
+--
+-- ## NULLABLE y SIN DEFAULT, por la misma razón de la 0021
+--
+--   NULL  = no se midió (hechos anteriores a este paso)
+--   {...} = se midió, y esto es lo que había
+--
+-- Un default haría que todo lo ya sellado afirmara una densidad que nadie
+-- calculó, y sería irreversible. No hay relleno hacia atrás: deducir la densidad
+-- de un servicio de julio sería escribir un hecho que nadie observó (Marco §E).
+--
+-- ## Foto de ANTES — 2026-08-13, con jtel_readonly
+--
+--   hechos sellados ....................... 1326
+--   ocurrencias ........................... 2468
+--   tablas en public ...................... 43
+--   columnas de compliance_facts .......... 20
+--   densidad_snapshot existe .............. false
+--
+-- ## Verificación DESPUÉS — con jtel_readonly
+--
+--   -- 1. La columna quedó como se pidió: jsonb, NULLABLE, SIN default.
+--   SELECT column_name, data_type, is_nullable, column_default
+--     FROM information_schema.columns
+--    WHERE table_schema='public' AND table_name='compliance_facts'
+--      AND column_name='densidad_snapshot';
+--   -- Espera exactamente:  jsonb | YES | NULL
+--
+--   -- 2. Los conteos no se movieron.
+--   SELECT (SELECT count(*) FROM compliance_facts)    AS hechos,       -- 1326
+--          (SELECT count(*) FROM service_occurrences) AS ocurrencias,  -- 2468
+--          (SELECT count(*) FROM information_schema.columns
+--            WHERE table_schema='public' AND table_name='compliance_facts')
+--                                                     AS columnas;     -- 21
+--
+--   -- 3. Y la que prueba lo que esta migración existe para lograr: TODO lo ya
+--   --    sellado queda en NULL.
+--   SELECT count(*) FILTER (WHERE densidad_snapshot IS NULL)     AS sin_medir,  -- 1326
+--          count(*) FILTER (WHERE densidad_snapshot IS NOT NULL) AS con_dato    -- 0
+--     FROM compliance_facts;
+
+ALTER TABLE "compliance_facts" ADD COLUMN "densidad_snapshot" jsonb;
+--> statement-breakpoint
+COMMENT ON COLUMN "compliance_facts"."densidad_snapshot" IS
+  'Densidad de la evidencia con la que se juzgo: mediana de segundos entre puntos consecutivos del mismo aparato (misma definicion que medir-cadencia). Paso 1 de las preguntas separadas: se anota y NO gobierna. NULL = no se midio; no se rellena hacia atras.';

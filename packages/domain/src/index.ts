@@ -685,6 +685,19 @@ export interface VerificationResult {
   /** Variante de trazado que sirvió la unidad. Llenado por la capa de servicios, no por verifyService. */
   servedVariantId?: string | null;
   ledgerSteps: LedgerStep[];
+  /**
+   * La densidad de la evidencia con la que se juzgó — Paso 1.
+   *
+   * **Informativa: no gobierna nada todavía.** El piso que la usará se enciende
+   * en el paso 4, y hasta entonces esto solo deja registrado, dentro del hecho,
+   * con qué material se decidió. Es la medición de «antes» del propio cambio.
+   */
+  densidadEvidencia?: {
+    huecoMedianaS: number | null;
+    huecoPeorS: number | null;
+    aparatos: number;
+    puntos: number;
+  } | null;
   candidateUnits: Array<{
     unitId: string;
     servedRoute: boolean;

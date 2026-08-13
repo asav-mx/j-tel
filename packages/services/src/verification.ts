@@ -1353,6 +1353,12 @@ export class VerificationService {
        * quedan en `null`, que significa «no se preguntó» — y ese nulo es la
        * única forma de saberlo.
        */
+      /*
+       * Paso 1 · la densidad se congela con el hecho. No gobierna: se anota.
+       * Va aquí y no en `candidatasSnapshot` porque es propiedad de la
+       * evidencia, no de ninguna candidata.
+       */
+      densidadSnapshot: verification.densidadEvidencia ?? null,
       candidatasSnapshot: armarCandidatasSnapshot({
         verification,
         evidencePoints: enrichedPoints,
