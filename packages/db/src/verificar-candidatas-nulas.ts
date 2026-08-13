@@ -220,7 +220,17 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error(e instanceof Error ? e.message : e);
-  process.exit(1);
-});
+/*
+ * Solo corre como guion. Importado desde una prueba, no se conecta a nada.
+ *
+ * Sin esta guardia el módulo abre una conexión al importarse: la prueba pasaba
+ * en local —leyendo PRODUCCIÓN, que ya está mal— y reventaba en CI, donde no
+ * hay credenciales. Un verde local que depende de un `.env` no es un verde.
+ * La casa ya tenía este patrón en `corregir-deadlines` y `medir-cadencia`.
+ */
+if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split("/").pop() ?? "")) {
+  main().catch((e) => {
+    console.error(e instanceof Error ? e.message : e);
+    process.exit(1);
+  });
+}
