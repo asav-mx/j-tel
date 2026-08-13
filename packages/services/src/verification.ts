@@ -14,6 +14,7 @@ import {
   type MotivoSinEvidencia,
 } from "./motivo-sin-evidencia.js";
 import { motivoCuentaDemo } from "./cuenta-demo.js";
+import { armarCandidatasSnapshot } from "./candidatas-snapshot.js";
 import type { ComplianceFact, Repositories } from "@jtel/db";
 import type { ContractPolicy, VerificationResult } from "@jtel/domain";
 import { localDateIso, JTTEL_TZ, DEFAULT_FRECHET_MAX_KM } from "@jtel/domain";
@@ -1157,6 +1158,17 @@ export class VerificationService {
     // --- Evaluación multi-variante ---
     let verification: VerificationResult;
     let servedVariantId: string | null = null;
+    /*
+     * CONTRA QUÉ trazado se calificó, se haya acreditado o no.
+     *
+     * `servedVariantId` significa «la que sirvió» y por eso queda en nulo cuando
+     * ninguna sirvió — eso está bien y no se toca. Pero el expediente necesita
+     * la otra pregunta: **contra qué se le juzgó**. Sin ella, un no cumplido
+     * solo puede dibujar el trazado reconstruyéndolo por fecha, que es lectura
+     * de hoy y se mueve si alguien edita la ruta (C24).
+     */
+    let evaluatedVariantId: string | null = null;
+    let evaluatedKmlVersionId: string | null = null;
 
     if (variants.length <= 1) {
       // 0 o 1 variante: flujo idéntico al anterior (regresión cero).
@@ -1164,6 +1176,8 @@ export class VerificationService {
         ...baseInput,
         kmlWaypoints: variants[0]?.waypoints,
       });
+      evaluatedVariantId = variants[0]?.variantId ?? null;
+      evaluatedKmlVersionId = variants[0]?.kmlVersionId ?? null;
       if (verification.status === "cumplido" && variants[0]?.variantId) {
         servedVariantId = variants[0].variantId;
       }
@@ -1211,6 +1225,10 @@ export class VerificationService {
 
       const best = pool[0]!;
       verification = best.result;
+      // La ganadora del ranking es contra la que se calificó, acredite o no.
+      evaluatedVariantId = best.variantId;
+      evaluatedKmlVersionId =
+        variants.find((v) => v.variantId === best.variantId)?.kmlVersionId ?? null;
       if (verification.status === "cumplido") {
         servedVariantId = best.variantId;
       }
@@ -1321,6 +1339,34 @@ export class VerificationService {
       lateExcusable: finalStatus === "cumplido" ? verification.lateExcusable : false,
       routeStrictnessApplied: verification.routeStrictnessApplied,
       contractPolicySnapshot: policy,
+      /*
+       * El porqué de cada candidata, congelado dentro del hecho — Parte 2.
+       *
+       * Se escribe SIEMPRE que el motor haya evaluado alguna candidata, en los
+       * tres veredictos: un cumplido también merece explicar contra qué se
+       * calificó y quién más llegó.
+       *
+       * ⚠ **Solo se escribe en hechos NUEVOS.** No hay relleno hacia atrás y no
+       * puede haberlo: deducir el motivo de un servicio de julio con los números
+       * que sí quedaron sería escribir un hecho que nadie observó dentro de un
+       * expediente sellado (Marco §E). Los hechos anteriores a esta línea se
+       * quedan en `null`, que significa «no se preguntó» — y ese nulo es la
+       * única forma de saberlo.
+       */
+      candidatasSnapshot: armarCandidatasSnapshot({
+        verification,
+        evidencePoints: enrichedPoints,
+        ventanaCobertura: {
+          inicio: baseInput.coverageWindowStart,
+          fin: baseInput.coverageWindowEnd,
+        },
+        minCoveragePct: baseInput.evidenceMinCoveragePct,
+        maxGapMinutes: baseInput.evidenceMaxGapMinutes,
+        trazadoEvaluado:
+          evaluatedVariantId || evaluatedKmlVersionId
+            ? { variantId: evaluatedVariantId, kmlVersionId: evaluatedKmlVersionId }
+            : null,
+      }),
     });
 
     // Enlazar la fila de historial al hecho sucesor recién creado.

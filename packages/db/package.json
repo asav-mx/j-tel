@@ -35,7 +35,8 @@
     "que-ve-el-cliente": "tsx src/medir-que-ve-el-cliente.ts",
     "medir-expediente-mutable": "tsx src/medir-expediente-mutable.ts",
     "comparar-politicas": "tsx src/comparar-politicas.ts",
-    "verificar-solo-lectura": "tsx src/verificar-solo-lectura.ts"
+    "verificar-solo-lectura": "tsx src/verificar-solo-lectura.ts",
+    "verificar-candidatas-nulas": "tsx src/verificar-candidatas-nulas.ts"
   },
   "dependencies": {
     "@jtel/domain": "workspace:*",

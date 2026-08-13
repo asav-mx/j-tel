@@ -65,7 +65,12 @@ import {
   clientCarrierAuthorizations,
 } from "../schema/index.js";
 import type { ComplianceFact } from "../schema/index.js";
-import type { ContractPolicy, CreateContractInput, CreateServiceProfileInput } from "@jtel/domain";
+import type {
+  CandidatasSnapshot,
+  ContractPolicy,
+  CreateContractInput,
+  CreateServiceProfileInput,
+} from "@jtel/domain";
 import { localDateIso, JTTEL_TZ, civilDatesInRange, addDaysIso } from "@jtel/domain";
 
 function suggestProfileCodeFromName(name: string): string {
@@ -3518,6 +3523,16 @@ export class ComplianceRepository {
     excusableReason?: string | null;
     routeStrictnessApplied: "destino_only" | "kml_full";
     contractPolicySnapshot: ContractPolicy;
+    /**
+     * El expediente de candidatas — Parte 2. Opcional a propósito.
+     *
+     * ⚠ **Solo entra por aquí, que es un INSERT.** No existe —y no debe
+     * existir— ningún camino que lo escriba sobre un hecho ya sellado: los
+     * anteriores a la Parte 2 se quedan en `null` para siempre, y ese `null` es
+     * la única forma de saber que a esas candidatas nunca se les preguntó.
+     * Rellenarlo lo borraría sin dejar rastro.
+     */
+    candidatasSnapshot?: CandidatasSnapshot | null;
   }) {
     const [fact] = await this.db
       .insert(complianceFacts)

@@ -714,8 +714,89 @@ export interface VerificationResult {
      * el trazado entero, y el expediente debe poder decir cuál de las dos es.
      */
     observableFraction?: number;
+    /**
+     * Por qué NO acreditó — todas las compuertas que falló, no la primera.
+     *
+     * Vacío significa que acreditó. Existe porque hasta la Parte 2 el ledger
+     * guardaba un motivo del SERVICIO —`ninguna_unidad_coincidio_ruta`, que dice
+     * lo mismo que «no se pudo atribuir»— y ninguno de la candidata: el
+     * expediente tenía que deducirlo comparando números con umbrales, y eso solo
+     * funciona donde los números están.
+     */
+    motivos?: MotivoDeCandidata[];
   }>;
 }
+
+/**
+ * La compuerta que rechazó a una candidata, **con la población a la que se le
+ * preguntó**.
+ *
+ * ⚠ **Las dos partes van juntas y no se pueden separar.** `tramo_observable`
+ * medido sobre la CANDIDATA y medido sobre el VIAJE son la misma comprobación
+ * con dos respuestas distintas — el viaje trae la evidencia de la flota entera,
+ * con mediana de cincuenta unidades, así que casi siempre contesta que sí. Eso
+ * es C25, y **un motivo que no diga a quién se le preguntó repite el defecto
+ * dentro del registro**: el expediente afirmaría una causa que no es la que
+ * operó.
+ */
+export type MotivoDeCandidata = {
+  compuerta:
+    | "no_llego"
+    | "tramo_observable"
+    | "cobertura_de_trazado"
+    | "precision_de_corredor";
+  /** A quién se le preguntó: la unidad candidata, o la evidencia del viaje (la flota). */
+  poblacion: "candidata" | "viaje";
+  /** Lo medido, en la unidad de esa compuerta. `null` cuando no se pudo medir. */
+  medido: number | null;
+  /** El umbral que se le aplicó, de la política del contrato. Nunca una constante. */
+  umbral: number | null;
+};
+
+/** La señal de UNA candidata — no la de la mejor unidad del viaje. */
+export type SenalDeCandidata = {
+  coberturaPct: number;
+  huecoMaximoMin: number;
+  /** Mediana del hueco entre puntos consecutivos (s); null con menos de dos puntos. */
+  cadenciaMedianaS: number | null;
+  puntos: number;
+};
+
+/**
+ * Lo que se congela dentro del hecho sobre las candidatas que se evaluaron.
+ *
+ * `evaluadas` es obligatorio y es **la ley del corte**: la lista guarda solo las
+ * relevantes —mediana de 3 contra una flota de 50—, y sin el total un filtro se
+ * vuelve ocultamiento. Un transportista que hizo la ruta con GPS pobre y quedó
+ * fuera del corte tiene que poder ver que hubo un corte, o diría «sí fui y ni
+ * aparezco», con razón.
+ *
+ * ⚠ **`null` en la columna NO es esto con la lista vacía.** `null` significa
+ * «no se preguntó» —los 1 297 hechos sellados antes de la Parte 2— y una lista
+ * vacía significa «se preguntó y no hubo ninguna candidata». Los dos casos no se
+ * dibujan igual, y lo viejo **no se rellena nunca**.
+ */
+export type CandidatasSnapshot = {
+  /** CUÁNTAS se evaluaron en total, no cuántas se guardaron. */
+  evaluadas: number;
+  /** Con qué se recortó la lista, para que el corte sea auditable. */
+  criterio: string;
+  candidatas: Array<{
+    unidadId: string | null;
+    imeis: string[];
+    llegadaAt: string | null;
+    acredito: boolean;
+    /** Todas las compuertas que fallaron, no la primera: colapsarlas inventa una prioridad. */
+    motivos: MotivoDeCandidata[];
+    senal: SenalDeCandidata | null;
+  }>;
+  /**
+   * Contra qué trazado se le calificó — **no «cuál sirvió»**, que sigue en nulo
+   * cuando ninguna sirvió. Son dos preguntas distintas y el expediente necesita
+   * la primera.
+   */
+  trazadoEvaluado: { variantId: string | null; kmlVersionId: string | null } | null;
+};
 
 export * from "./enforcement.js";
 export * from "./identidad.js";
