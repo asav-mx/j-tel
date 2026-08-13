@@ -372,6 +372,33 @@ verdad. Esta se mide sola: ¿puedes abrir el expediente y explicarlo? Sí o no.
     documento es que **hay que volver a medirla entera para poder dudar de
     ella**.
 
+20.b **El rótulo cuenta una población y el dato cuenta otra — y solo se ve en
+    la pantalla.** Va pegada a la 20 porque es su gemela: allá el número se
+    perdía, aquí el número está bien y **miente el renglón de encima**.
+
+    🟢 **El caso del 13 de agosto de 2026, y es mío.** El titular del expediente
+    sin atribución decía **«13 unidades llegaron al destino»** en un servicio
+    donde **llegaron 15**: las 13 eran las que pasaban el corte de relevancia.
+    Las dos cifras eran correctas — una cuenta llegadas, la otra cuenta filas
+    mostradas— y **el titular hablaba de la primera enseñando la segunda**.
+
+    ⚠ **Lo que la vuelve el caso del día: es la misma familia que el «412 sin
+    llegada» de la pantalla del contrato**, donde `observed_arrival_at` en nulo
+    se leyó como «no se vio llegar a nadie» cuando significaba «ninguna
+    acreditó». **Y la cometió quien había corregido aquélla ocho días antes**,
+    en la pantalla que escribió para no volver a cometerla.
+
+    **Por qué no la atrapa nada de lo que ya tenemos:** compila, pasa las
+    pruebas —todas miraban el modelo, y el modelo estaba bien—, y el número que
+    imprime existe. **Solo se ve leyendo la frase completa en el navegador y
+    preguntándose de qué habla cada mitad.**
+
+    **Qué exige, y es una pregunta por cada rótulo:** ¿el sujeto de esta frase
+    es la misma población que el número que la acompaña? Si el número sale de
+    una lista filtrada y la frase habla del universo, **hay que decir las dos**
+    — «15 llegaron · 13 relevantes de 52 evaluadas · 2 quedaron fuera del
+    corte»—, que además es lo que el lector necesitaba.
+
 21. **Preguntar sobre «alguno de» una población que es el universo entero
     contesta que sí siempre.** El resultado sale en 100 %, se ve como un
     hallazgo fortísimo, y **no dice nada**: la pregunta se contestó sola por el
@@ -4340,4 +4367,37 @@ se ha sellado.** No es un problema: es el reloj.
   que la vuelve grave: **la guardia ya existía en `corregir-deadlines` y
   `medir-cadencia`, con su comentario, y no se usó.** Regla 14 otra vez — un
   patrón que hay que acordarse de copiar no es una defensa, es una costumbre.
+- 🟢 **`servedRoute` sigue intacta.**
+
+**13 de agosto de 2026, cierre (la pantalla existe: un servicio sin atribución ya
+enseña algo).**
+
+**La Parte 1 está construida y mergeada (#300).** Reviste
+`carrier/servicio/[id]`. Con eso, la pregunta con la que arrancó el bloque —*qué
+le enseñamos a alguien cuando decimos «no cumplió»*— tiene respuesta en pantalla
+y no solo en una ficha.
+
+- 🟢 **Visto en el navegador con un servicio real de los 397** (`2026-07-09`, 52
+  evaluadas, 15 llegadas), **en los dos temas**. El renglón que resume para qué
+  sirve: **«cobertura del trazado 39.2 % · mínimo del contrato 40.0 %»** — falló
+  por ocho décimas, y eso es lo que un transportista necesita para defenderse.
+- 🟢 **La ley del hueco, construida y no prometida:** cada dato lleva su
+  procedencia y **«no se preguntó» se escribe con palabras**, nunca `—` ni una
+  barra vacía ni un cero.
+- 🟢 **Y el motivo NO se deduce cuando falta.** Deducirlo comparando A y B con
+  sus umbrales **se equivoca en 260 de 285, y siempre del lado que acusa** al
+  transportista de una conducta donde hubo un fallo de observación.
+- 🆕 **Regla 20.b**, y es el caso del día: el titular decía «13 unidades
+  llegaron» donde llegaron 15. **Misma familia que el «412 sin llegada», y la
+  cometió quien había corregido aquélla ocho días antes**, en la pantalla que
+  escribió para no volver a cometerla. Solo se ve leyendo la frase en el
+  navegador.
+- ⚠ **Y una contaminación de herramienta que casi produce un defecto falso:** el
+  tema claro no salía en las capturas. **No era el componente: el perfil de
+  Chrome headless se quedó pegado en oscuro** por una bandera de un PR anterior.
+  Se comprobó contra una pantalla que ya se sabía clara **antes** de creerle a la
+  conclusión — si no, se habría reportado un defecto que no existía. Es la regla
+  17 en su forma de herramienta.
+- 🔵 **Lo que sigue son decisiones de Asav**, no trabajo pendiente de medir: C19
+  y su frontera con C25 y C14.
 - 🟢 **`servedRoute` sigue intacta.**
