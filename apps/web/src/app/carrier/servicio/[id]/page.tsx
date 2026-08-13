@@ -249,8 +249,11 @@ export default async function CarrierServicioPage({
         carrier.id,
         occurrence.serviceDate,
         id,
+        // El cliente de ESTE servicio: el nombre de la otra ruta solo sale si
+        // coincide. Ley 3, aplicada en el repositorio y no en la vista.
+        occurrence.profile.contract.clientAccountId,
       )
-    : new Map<string, { rutaNombre: string; fecha: string }>();
+    : new Map<string, { rutaNombre: string | null; fecha: string }>();
 
   const puntosPorClave = new Map<string, Array<{ at: Date }>>();
   for (const p of evidencePoints) {
@@ -334,6 +337,20 @@ export default async function CarrierServicioPage({
   }));
   const catalogoExcusables = (politicaDelSello?.excusableReasons ?? []) as string[];
 
+  /*
+   * El empalme por unidad, para que el transportista pueda señalarlo.
+   *
+   * ⚠ **El nombre de la otra ruta solo viaja si es del MISMO cliente.** Está
+   * medido que en 49 de 397 servicios (12.3 %) la unidad acreditó a OTRO
+   * cliente, y nombrar esa ruta contaría la operación de un tercero. En ese caso
+   * se dice que hubo empalme y no cuál — la misma forma que el Marco ya usa para
+   * `arrivalOutsideContractGeofence`.
+   */
+  const empalmePorUnidad: Record<string, { rutaNombre: string | null }> = {};
+  for (const [clave, e] of empalmesDelDia) {
+    empalmePorUnidad[clave] = { rutaNombre: e.rutaNombre };
+  }
+
   const tz = policy.timeZone ?? JTTEL_TZ;
   const calibrationWindowLabel = `${formatShort(loadFrom.toISOString(), tz)} → ${formatShort(
     loadTo.toISOString(), tz,
@@ -374,6 +391,7 @@ export default async function CarrierServicioPage({
             catalogo={catalogoExcusables}
             unidades={unitOptions}
             existentes={aportaciones}
+            empalmePorUnidad={empalmePorUnidad}
           />
         ) : null}
 

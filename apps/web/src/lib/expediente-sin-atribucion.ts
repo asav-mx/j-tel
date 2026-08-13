@@ -62,7 +62,15 @@ export type SenalVista = {
 };
 
 export type EmpalmeVista = {
-  rutaNombre: string;
+  /**
+   * `null` cuando la otra ruta es de OTRO cliente.
+   *
+   * El hecho —hubo empalme— sí es del interés de quien mira; **de quién era el
+   * otro servicio, no** (Ley 3). Está medido que el caso existe: en 49 de 397
+   * servicios (12.3 %) la unidad que llegó acreditó a otro cliente. El nombre se
+   * cae en el repositorio, no aquí, para que ninguna vista lo reciba.
+   */
+  rutaNombre: string | null;
   fecha: string;
   procedencia: Procedencia;
 };
@@ -331,7 +339,7 @@ export type ArmarVistaInput = {
   /** Cómo se llama cada unidad, si se puede resolver. */
   etiquetaDe: (clave: string) => string | null;
   /** Qué otra ruta acreditó esa unidad ese día. Siempre lectura de HOY. */
-  empalmeDe: (clave: string) => { rutaNombre: string; fecha: string } | null;
+  empalmeDe: (clave: string) => { rutaNombre: string | null; fecha: string } | null;
   senalDe?: (clave: string) => Omit<SenalVista, "procedencia"> | null;
   /** Puntos de evidencia del viaje entero — contesta «¿reportó el GPS ese día?». */
   puntosDeLaFlota?: number;
