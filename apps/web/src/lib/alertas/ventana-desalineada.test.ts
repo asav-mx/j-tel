@@ -35,7 +35,11 @@ const GRUPO = {
 describe("no promete lo que no sabe", () => {
   it("NO dice que algún veredicto cambiaría", () => {
     const a = avisoVentanaDesalineada(GRUPO, AHORA, 1013);
-    const todo = [a.titulo, a.consecuencia, a.accion, ...a.detalle].join(" ").toLowerCase();
+    // `detalle` es opcional en `Aviso`: sin el `?? []` esto no compila, y el
+    // `pnpm test` local no lo atrapa porque vitest no corre `tsc`.
+    const todo = [a.titulo, a.consecuencia, a.accion, ...(a.detalle ?? [])]
+      .join(" ")
+      .toLowerCase();
 
     expect(todo).not.toContain("cambiaría el resultado");
     expect(todo).not.toContain("se acreditaría");
