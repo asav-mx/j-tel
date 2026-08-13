@@ -17,6 +17,7 @@ import {
   medidasDe,
   motivosDe,
   PISO_CORREDOR_PCT,
+  MAX_SIN_LLEGADAS,
 } from "./expediente-sin-atribucion";
 import type { CandidatasSnapshot } from "@jtel/domain";
 
@@ -199,6 +200,94 @@ describe("el corte y su ley", () => {
   });
 });
 
+describe("cuando NINGUNA llegó — «nadie llegó» sigue siendo un hallazgo", () => {
+  /*
+   * El caso que Asav abrió y que la primera versión no explicaba: 42 candidatas
+   * evaluadas, ninguna entró a la geocerca, y la pantalla mostraba una lista
+   * vacía bajo «0 unidades llegaron». Son 204 de los 608 acusados.
+   */
+  const nadieLlego = [
+    { unitId: "u-1", arrivalAt: null, routeMatchPct: 18, corridorPrecisionPct: 22 },
+    { unitId: "u-2", arrivalAt: null, routeMatchPct: 9, corridorPrecisionPct: 11 },
+    { unitId: "u-3", arrivalAt: null, routeMatchPct: 0, corridorPrecisionPct: 0 },
+  ];
+
+  it("no deja la lista vacía: muestra las que más se acercaron al trazado", () => {
+    const e = armarExpediente({
+      snapshot: null,
+      ledgerCandidatas: nadieLlego,
+      umbrales: UMBRALES,
+      etiquetaDe: SIN_ETIQUETA,
+      empalmeDe: SIN_EMPALME,
+      puntosDeLaFlota: 5053,
+    })!;
+    expect(e.llegaron).toBe(0);
+    expect(e.criterio).toBe("sin_llegadas");
+    expect(e.candidatas.length).toBeGreaterThan(0);
+    // La que más se acercó va primero.
+    expect(e.candidatas[0]!.clave).toBe("u-1");
+  });
+
+  it("deja fuera a la que no dejó ningún rastro sobre la ruta", () => {
+    const e = armarExpediente({
+      snapshot: null,
+      ledgerCandidatas: nadieLlego,
+      umbrales: UMBRALES,
+      etiquetaDe: SIN_ETIQUETA,
+      empalmeDe: SIN_EMPALME,
+    })!;
+    expect(e.candidatas.map((c) => c.clave)).not.toContain("u-3");
+  });
+
+  it("contesta las tres preguntas del caso: señal, trazado y GPS de la flota", () => {
+    const e = armarExpediente({
+      snapshot: null,
+      ledgerCandidatas: nadieLlego,
+      umbrales: UMBRALES,
+      etiquetaDe: SIN_ETIQUETA,
+      empalmeDe: SIN_EMPALME,
+      puntosDeLaFlota: 5053,
+      senalDe: (clave) =>
+        clave === "u-3" ? null : { coberturaPct: 90, huecoMaximoMin: 1, cadenciaMedianaS: 30, puntos: 100 },
+    })!;
+    expect(e.sinLlegadas).not.toBeNull();
+    expect(e.sinLlegadas!.conSenal).toBe(2);
+    expect(e.sinLlegadas!.tocaronElTrazado).toBe(2);
+    expect(e.sinLlegadas!.puntosDeLaFlota).toBe(5053);
+  });
+
+  it("con llegadas, `sinLlegadas` va en null — son dos lecturas distintas", () => {
+    const e = armarExpediente({
+      snapshot: null,
+      ledgerCandidatas: [VIEJA],
+      umbrales: UMBRALES,
+      etiquetaDe: SIN_ETIQUETA,
+      empalmeDe: SIN_EMPALME,
+    })!;
+    expect(e.sinLlegadas).toBeNull();
+  });
+
+  it("tope al listar, y el total evaluado sigue viajando para que el tope no esconda", () => {
+    const muchas = Array.from({ length: 42 }, (_, i) => ({
+      unitId: `u-${i}`,
+      arrivalAt: null,
+      routeMatchPct: 42 - i,
+      corridorPrecisionPct: 42 - i,
+    }));
+    const e = armarExpediente({
+      snapshot: null,
+      ledgerCandidatas: muchas,
+      umbrales: UMBRALES,
+      etiquetaDe: SIN_ETIQUETA,
+      empalmeDe: SIN_EMPALME,
+    })!;
+    expect(e.candidatas).toHaveLength(MAX_SIN_LLEGADAS);
+    expect(e.evaluadas).toBe(42);
+    // Y las que muestra son las de arriba, no las primeras del arreglo.
+    expect(e.candidatas[0]!.clave).toBe("u-0");
+  });
+});
+
 describe("lo derivado se marca como lectura de hoy", () => {
   it("el empalme nunca se presenta como del sello", () => {
     const e = armarExpediente({
@@ -291,6 +380,96 @@ describe("cuando el hecho SÍ trae expediente sellado, manda el sello", () => {
       empalmeDe: SIN_EMPALME,
     })!;
     expect(e.noSePregunto).toEqual([]);
+  });
+});
+
+describe("los 4 sellados con el expediente VACÍO", () => {
+  /*
+   * Cuatro servicios se sellaron con la lista en blanco antes de que el motor
+   * supiera guardar el caso «nadie llegó». El hecho no se reescribe: lo que se
+   * enseña se calcula hoy del ledger, que sí tiene las candidatas — 205 de 205
+   * las tienen, y 205 de 205 conservan sus puntos.
+   */
+  const selloVacio: CandidatasSnapshot = {
+    evaluadas: 42,
+    criterio: "sin_llegadas_mas_cercanas_al_trazado",
+    candidatas: [],
+    trazadoEvaluado: { variantId: "v-1", kmlVersionId: "k-1" },
+  };
+
+  it("cae al ledger en vez de quedarse mudo", () => {
+    const e = armarExpediente({
+      snapshot: selloVacio,
+      ledgerCandidatas: [
+        { unitId: "u-1", arrivalAt: null, routeMatchPct: 18, corridorPrecisionPct: 22 },
+      ],
+      umbrales: UMBRALES,
+      etiquetaDe: SIN_ETIQUETA,
+      empalmeDe: SIN_EMPALME,
+    })!;
+    expect(e.candidatas.length).toBeGreaterThan(0);
+  });
+
+  it("se marca como reconstruido — no puede verse igual que lo sellado", () => {
+    const e = armarExpediente({
+      snapshot: selloVacio,
+      ledgerCandidatas: [
+        { unitId: "u-1", arrivalAt: null, routeMatchPct: 18, corridorPrecisionPct: 22 },
+      ],
+      umbrales: UMBRALES,
+      etiquetaDe: SIN_ETIQUETA,
+      empalmeDe: SIN_EMPALME,
+    })!;
+    expect(e.origen).toBe("reconstruido");
+  });
+
+  it("conserva el total evaluado DEL SELLO, que sí se congeló", () => {
+    const e = armarExpediente({
+      snapshot: selloVacio,
+      ledgerCandidatas: [
+        { unitId: "u-1", arrivalAt: null, routeMatchPct: 18, corridorPrecisionPct: 22 },
+      ],
+      umbrales: UMBRALES,
+      etiquetaDe: SIN_ETIQUETA,
+      empalmeDe: SIN_EMPALME,
+    })!;
+    expect(e.evaluadas).toBe(42);
+  });
+
+  it("un sello vacío SIN ledger utilizable se queda como sello, no inventa", () => {
+    const e = armarExpediente({
+      snapshot: selloVacio,
+      ledgerCandidatas: [],
+      umbrales: UMBRALES,
+      etiquetaDe: SIN_ETIQUETA,
+      empalmeDe: SIN_EMPALME,
+    })!;
+    expect(e.origen).toBe("sello");
+    expect(e.candidatas).toEqual([]);
+  });
+
+  it("y un sello CON candidatas nunca se reconstruye", () => {
+    const e = armarExpediente({
+      snapshot: {
+        ...selloVacio,
+        candidatas: [
+          {
+            unidadId: "u-9",
+            imeis: [],
+            llegadaAt: null,
+            acredito: false,
+            motivos: [],
+            senal: null,
+          },
+        ],
+      },
+      ledgerCandidatas: [{ unitId: "otra", arrivalAt: null, routeMatchPct: 99 }],
+      umbrales: UMBRALES,
+      etiquetaDe: SIN_ETIQUETA,
+      empalmeDe: SIN_EMPALME,
+    })!;
+    expect(e.origen).toBe("sello");
+    expect(e.candidatas[0]!.clave).toBe("u-9");
   });
 });
 

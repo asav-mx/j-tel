@@ -48,6 +48,16 @@ export const PISO_CORREDOR_RELEVANTE_PCT = 5;
 export const CRITERIO_RELEVANTE = `llego_a_geocerca_y_corredor_mayor_${PISO_CORREDOR_RELEVANTE_PCT}pct`;
 /** El de respaldo, cuando el corte de arriba no deja a nadie. */
 export const CRITERIO_SOLO_LLEGADA = "llego_a_geocerca";
+/** Cuando NINGUNA llegó: se guardan las que más se acercaron al trazado. */
+export const CRITERIO_SIN_LLEGADAS = "sin_llegadas_mas_cercanas_al_trazado";
+/**
+ * Cuántas guardar cuando nadie llegó.
+ *
+ * Sin llegada no hay corte natural y sin tope se guardaría la flota entera —42
+ * en el servicio que destapó esto—. El total evaluado viaja aparte, que es lo
+ * que impide que el tope esconda.
+ */
+export const MAX_SIN_LLEGADAS = 5;
 
 /** Mediana del hueco entre puntos consecutivos (s); null con menos de dos. */
 function cadenciaMedianaS(instantes: number[]): number | null {
@@ -128,14 +138,41 @@ export function armarCandidatasSnapshot(
   const cercanas = llegaron.filter(
     (c) => c.corridorPrecisionPct > PISO_CORREDOR_RELEVANTE_PCT,
   );
-  /*
-   * Si el segundo criterio no deja a nadie, se cae al primero. **La pantalla
-   * nunca se queda vacía**: que ninguna se acercara al trazado es un hecho del
-   * servicio, y de los más elocuentes que este expediente puede dar — pero se
-   * cuenta enseñando a las que llegaron, no dejando la lista en blanco.
-   */
-  const relevantes = cercanas.length > 0 ? cercanas : llegaron;
-  const criterio = cercanas.length > 0 ? CRITERIO_RELEVANTE : CRITERIO_SOLO_LLEGADA;
+
+  let relevantes: typeof todas;
+  let criterio: string;
+  if (llegaron.length === 0) {
+    /*
+     * NADIE LLEGÓ — y el expediente tiene que explicar eso también.
+     *
+     * Esta rama existe porque su ausencia se vio en pantalla: un servicio con
+     * **42 candidatas evaluadas y ninguna llegada** se sellaba con la lista
+     * VACÍA, así que el expediente quedaba mudo para siempre. Son 204 de los
+     * 608 acusados. «Nadie llegó» es un hallazgo, no una ausencia.
+     *
+     * Se guardan las que más se acercaron al trazado, aunque ninguna haya
+     * entrado a la geocerca: es la única respuesta honesta a «dónde anduvieron»,
+     * y sale de lo que el motor ya midió.
+     */
+    relevantes = [...todas]
+      .filter((c) => c.corridorPrecisionPct > 0 || c.routeMatchPct > 0)
+      .sort(
+        (a, b) =>
+          Math.min(b.routeMatchPct, b.corridorPrecisionPct) -
+          Math.min(a.routeMatchPct, a.corridorPrecisionPct),
+      )
+      .slice(0, MAX_SIN_LLEGADAS);
+    criterio = CRITERIO_SIN_LLEGADAS;
+  } else {
+    /*
+     * Si el segundo criterio no deja a nadie, se cae al primero. **La pantalla
+     * nunca se queda vacía**: que ninguna se acercara al trazado es un hecho del
+     * servicio, y de los más elocuentes que este expediente puede dar — pero se
+     * cuenta enseñando a las que llegaron, no dejando la lista en blanco.
+     */
+    relevantes = cercanas.length > 0 ? cercanas : llegaron;
+    criterio = cercanas.length > 0 ? CRITERIO_RELEVANTE : CRITERIO_SOLO_LLEGADA;
+  }
 
   // El mismo orden del motor: la que más cerca estuvo de acreditar, primero.
   const ordenadas = [...relevantes].sort(

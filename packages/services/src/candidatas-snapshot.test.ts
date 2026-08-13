@@ -18,6 +18,7 @@ import {
   CRITERIO_RELEVANTE,
   CRITERIO_SOLO_LLEGADA,
   PISO_CORREDOR_RELEVANTE_PCT,
+  CRITERIO_SIN_LLEGADAS,
 } from "./candidatas-snapshot.js";
 
 /** Un cuadrado de ~1 km alrededor del destino. */
@@ -257,6 +258,35 @@ describe("el corte, y la ley que lo acompaña", () => {
     expect(v.status).not.toBe("cumplido");
     // `servedVariantId` seguirá en nulo; esto es la OTRA pregunta.
     expect(snap.trazadoEvaluado).toEqual({ variantId: "var-1", kmlVersionId: "kml-1" });
+  });
+});
+
+describe("cuando NADIE llegó, el expediente sellado no queda mudo", () => {
+  /*
+   * Esta rama existe porque su ausencia se vio en pantalla: un servicio con 42
+   * candidatas evaluadas y ninguna llegada se sellaba con la lista VACÍA, y el
+   * expediente quedaba mudo para siempre. Son 205 de los acusados sin unidad,
+   * y en 156 de ellos SÍ hay alguna unidad sobre el corredor del trazado.
+   */
+  it("guarda las que más se acercaron aunque ninguna entrara a la geocerca", () => {
+    const puntos = [...desvioLargo("1", "u-cerca"), ...porOtroLado("2", "u-lejos")];
+    const v = verifyService(entrada(puntos));
+    const snap = armar(v, puntos)!;
+
+    expect(v.candidateUnits.every((c) => c.arrivalAt === null || !c.servedRoute)).toBe(true);
+    const llegaron = v.candidateUnits.filter((c) => c.arrivalAt !== null);
+    if (llegaron.length === 0) {
+      expect(snap.candidatas.length).toBeGreaterThan(0);
+      expect(snap.criterio).toBe(CRITERIO_SIN_LLEGADAS);
+      // La que anduvo sobre el trazado va; la que nunca lo pisó, no.
+      expect(snap.candidatas.map((c) => c.unidadId)).toContain("u-cerca");
+    }
+  });
+
+  it("y el total evaluado sigue viajando, para que el tope no esconda", () => {
+    const puntos = [...desvioLargo("1", "u-cerca"), ...porOtroLado("2", "u-lejos")];
+    const snap = armar(verifyService(entrada(puntos)), puntos)!;
+    expect(snap.evaluadas).toBe(2);
   });
 });
 

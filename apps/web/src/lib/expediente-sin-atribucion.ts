@@ -79,6 +79,23 @@ export type CandidataVista = {
   empalme: EmpalmeVista | null;
 };
 
+/**
+ * Lo que se observó de la FLOTA cuando ninguna candidata llegó.
+ *
+ * «Nadie llegó» sigue siendo un hallazgo, y hasta ahora la pantalla lo decía
+ * como si no hubiera pasado nada: lista vacía bajo un titular de «0 unidades
+ * llegaron». Son **204 de los 608 acusados**. Esto es lo que sí se puede
+ * enseñar de ellos sin inventar nada.
+ */
+export type LecturaSinLlegadas = {
+  /** Cuántas emitieron algún punto en la ventana. Distingue «no fue» de «no se vio». */
+  conSenal: number;
+  /** Cuántas pisaron el corredor del trazado, aunque no llegaran al destino. */
+  tocaronElTrazado: number;
+  /** Puntos de evidencia del viaje entero — si la flota reportó ese día. */
+  puntosDeLaFlota: number;
+};
+
 export type ExpedienteSinAtribucion = {
   /** Cuántas se evaluaron EN TOTAL. La ley del corte: sin esto el filtro esconde. */
   evaluadas: number;
@@ -93,10 +110,22 @@ export type ExpedienteSinAtribucion = {
    * eje del alcance.
    */
   llegaron: number;
-  criterio: "llego_y_cerca" | "solo_llegada";
+  criterio: "llego_y_cerca" | "solo_llegada" | "sin_llegadas";
+  /** Solo cuando `llegaron === 0`. Es el hallazgo de ese caso, no su ausencia. */
+  sinLlegadas: LecturaSinLlegadas | null;
   candidatas: CandidataVista[];
-  /** De dónde salió el expediente entero. */
-  origen: "sello" | "ledger";
+  /**
+   * De dónde salió el expediente entero.
+   *
+   *   sello        — el hecho lo trae congelado. Se muestra tal cual.
+   *   ledger       — el hecho es anterior a la Parte 2 (sello en `null`) y se
+   *                  lee del asiento que juzgó. Trae huecos declarados.
+   *   reconstruido — **el hecho trae el sello VACÍO.** Se sellaron 4 servicios
+   *                  con la lista en blanco antes de que el motor supiera
+   *                  guardar el caso «nadie llegó». El hecho no se toca; lo que
+   *                  se enseña se calcula HOY del ledger, y va marcado.
+   */
+  origen: "sello" | "ledger" | "reconstruido";
   /**
    * Qué NO se preguntó en esta época, en palabras. La pantalla las imprime;
    * no las traduce a huecos.
@@ -106,6 +135,16 @@ export type ExpedienteSinAtribucion = {
 
 /** Piso de corredor para entrar al expediente. Mismo número que el motor. */
 export const PISO_CORREDOR_PCT = 5;
+
+/**
+ * Cuántas enseñar cuando NINGUNA llegó.
+ *
+ * Sin llegada no hay corte natural —el criterio es «llegó y se acercó»— y sin
+ * tope se listaría la flota entera: 42 filas en el servicio que lo destapó. Se
+ * muestran las que más se acercaron, y el total evaluado va arriba, que es lo
+ * que impide que el tope esconda.
+ */
+export const MAX_SIN_LLEGADAS = 5;
 
 type CandidataCruda = {
   unitId?: string | null;
@@ -255,6 +294,8 @@ export type ArmarVistaInput = {
   /** Qué otra ruta acreditó esa unidad ese día. Siempre lectura de HOY. */
   empalmeDe: (clave: string) => { rutaNombre: string; fecha: string } | null;
   senalDe?: (clave: string) => Omit<SenalVista, "procedencia"> | null;
+  /** Puntos de evidencia del viaje entero — contesta «¿reportó el GPS ese día?». */
+  puntosDeLaFlota?: number;
 };
 
 /**
@@ -264,7 +305,20 @@ export type ArmarVistaInput = {
 export function armarExpediente(
   input: ArmarVistaInput,
 ): ExpedienteSinAtribucion | null {
-  const desdeSello = input.snapshot !== null;
+  /*
+   * El sello manda — salvo cuando viene VACÍO y el ledger sí tiene candidatas.
+   *
+   * Cuatro servicios se sellaron con la lista en blanco antes de que el motor
+   * supiera guardar el caso «nadie llegó». **El hecho no se toca ni se
+   * reescribe**: lo que se enseña se calcula hoy del asiento que juzgó, y va
+   * marcado como tal. Los puntos nunca se perdieron; lo que faltó fue el
+   * resumen que el motor no armó.
+   */
+  const selloVacio =
+    input.snapshot !== null &&
+    input.snapshot.candidatas.length === 0 &&
+    input.ledgerCandidatas.length > 0;
+  const desdeSello = input.snapshot !== null && !selloVacio;
 
   const crudas: CandidataCruda[] = desdeSello
     ? input.snapshot!.candidatas.map((c) => ({
@@ -275,7 +329,11 @@ export function armarExpediente(
       }))
     : input.ledgerCandidatas;
 
-  const evaluadas = desdeSello ? input.snapshot!.evaluadas : input.ledgerCandidatas.length;
+  // El total evaluado sale del sello aunque su lista viniera vacía: ese número
+  // sí lo congeló el motor y es el que manda.
+  const evaluadas = input.snapshot
+    ? input.snapshot.evaluadas
+    : input.ledgerCandidatas.length;
   if (crudas.length === 0 && evaluadas === 0) return null;
 
   /*
@@ -290,16 +348,38 @@ export function armarExpediente(
       input.snapshot!.criterio === "llego_a_geocerca" ? "solo_llegada" : "llego_y_cerca";
   } else {
     const llegaron = crudas.filter((c) => iso(c.arrivalAt) !== null);
-    const cercanas = llegaron.filter((c) => (n(c.corridorPrecisionPct) ?? 0) > PISO_CORREDOR_PCT);
-    relevantes = cercanas.length > 0 ? cercanas : llegaron;
-    criterio = cercanas.length > 0 ? "llego_y_cerca" : "solo_llegada";
+    if (llegaron.length === 0) {
+      /*
+       * Nadie llegó. Antes esto dejaba la lista vacía bajo un titular de «0
+       * unidades llegaron», que es la pantalla que no explica nada — el caso que
+       * Asav abrió y con razón: 42 candidatas evaluadas y ni una fila.
+       *
+       * Se muestran las que MÁS SE ACERCARON al trazado, aunque ninguna haya
+       * entrado a la geocerca. No es un premio de consolación: es la única
+       * respuesta honesta a «dónde anduvieron», y sale del mismo ledger.
+       */
+      relevantes = [...crudas].filter(
+        (c) => (n(c.corridorPrecisionPct) ?? 0) > 0 || (n(c.routeMatchPct) ?? 0) > 0,
+      );
+      criterio = "sin_llegadas";
+    } else {
+      const cercanas = llegaron.filter(
+        (c) => (n(c.corridorPrecisionPct) ?? 0) > PISO_CORREDOR_PCT,
+      );
+      relevantes = cercanas.length > 0 ? cercanas : llegaron;
+      criterio = cercanas.length > 0 ? "llego_y_cerca" : "solo_llegada";
+    }
   }
 
-  const ordenadas = [...relevantes].sort((a, b) => {
-    const sa = Math.min(n(a.routeMatchPct) ?? -1, n(a.corridorPrecisionPct) ?? -1);
-    const sb = Math.min(n(b.routeMatchPct) ?? -1, n(b.corridorPrecisionPct) ?? -1);
-    return sb - sa;
-  });
+  const ordenadas = [...relevantes]
+    .sort((a, b) => {
+      const sa = Math.min(n(a.routeMatchPct) ?? -1, n(a.corridorPrecisionPct) ?? -1);
+      const sb = Math.min(n(b.routeMatchPct) ?? -1, n(b.corridorPrecisionPct) ?? -1);
+      return sb - sa;
+    })
+    // El tope va DESPUÉS de ordenar: cortar antes dejaría fuera justo a las que
+    // más se acercaron, que son las únicas que este caso puede enseñar.
+    .slice(0, criterio === "sin_llegadas" ? MAX_SIN_LLEGADAS : relevantes.length);
 
   const candidatas: CandidataVista[] = ordenadas.map((c) => {
     const clave = c.unitId ?? "";
@@ -346,16 +426,34 @@ export function armarExpediente(
     ) {
       noSePregunto.push("cuánta ruta alcanzó a verse de cada candidata");
     }
-    noSePregunto.push("qué trazado contratado se usó para calificar");
+    // El trazado sí quedó sellado cuando el hecho trae expediente, aunque su
+    // lista viniera vacía: no se enuncia como faltante en ese caso.
+    if (!input.snapshot) {
+      noSePregunto.push("qué trazado contratado se usó para calificar");
+    }
   }
+
+  const llegaronTotal = crudas.filter((c) => iso(c.arrivalAt) !== null).length;
 
   return {
     evaluadas,
     // De TODAS las evaluadas, no de las que quedaron en la lista.
-    llegaron: crudas.filter((c) => iso(c.arrivalAt) !== null).length,
+    llegaron: llegaronTotal,
+    sinLlegadas:
+      llegaronTotal === 0
+        ? {
+            conSenal: crudas.filter(
+              (c) => (input.senalDe?.(c.unitId ?? "")?.puntos ?? 0) > 0,
+            ).length,
+            tocaronElTrazado: crudas.filter(
+              (c) => (n(c.corridorPrecisionPct) ?? 0) > 0,
+            ).length,
+            puntosDeLaFlota: input.puntosDeLaFlota ?? 0,
+          }
+        : null,
     criterio,
     candidatas,
-    origen: desdeSello ? "sello" : "ledger",
+    origen: desdeSello ? "sello" : selloVacio ? "reconstruido" : "ledger",
     noSePregunto,
   };
 }
