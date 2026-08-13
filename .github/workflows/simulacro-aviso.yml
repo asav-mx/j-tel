@@ -12,6 +12,14 @@
 # canal de entrega es un camino distinto y se prueba por separado, o no se
 # prueba. Dos generaciones del vigilante pasaron por sanas estando mudas.
 #
+# ## Por qué elige la ruta y no la trae horneada
+#
+# Cada cron que avisa es **su propio camino**: su guarda, su resolución de
+# canal, su manejo del fallo de entrega. Que el de la hora límite entregue no
+# dice que el de las ventanas entregue — es la misma clase de suposición que
+# dejó mudo al vigilante. La lista es cerrada a propósito: un campo de texto
+# libre aquí es una URL arbitraria firmada con `CRON_SECRET`.
+#
 # ## Por qué hace falta un simulacro y no basta con esperar
 #
 # El cron `revisar-horas-limite` corre a diario y hoy **no encuentra nada**: no
@@ -43,6 +51,16 @@ name: Simulacro del aviso
 on:
   workflow_dispatch:
     inputs:
+      ruta:
+        description: >-
+          Qué cron manda el simulacro. Cada uno es un camino de entrega
+          distinto y se prueba por separado.
+        required: true
+        type: choice
+        default: revisar-horas-limite
+        options:
+          - revisar-horas-limite
+          - revisar-ventanas
       confirmo:
         description: >-
           Escribe SIMULACRO para confirmar. Esto MANDA UN CORREO REAL a
@@ -89,6 +107,7 @@ jobs:
         env:
           SALUD_URL: ${{ vars.SALUD_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          RUTA: ${{ inputs.ruta }}
         run: |
           set -euo pipefail
 
@@ -107,7 +126,7 @@ jobs:
           set +e
           RESP=$(curl -sS --max-time 60 -w '\n%{http_code}' \
             -H "authorization: Bearer $CRON_SECRET" \
-            "$BASE/api/cron/revisar-horas-limite?simular=1")
+            "$BASE/api/cron/$RUTA?simular=1")
           RC=$?
           set -e
 
@@ -144,12 +163,14 @@ jobs:
         env:
           REFERENCIA: ${{ steps.simulacro.outputs.referencia }}
           DESTINATARIOS: ${{ steps.simulacro.outputs.destinatarios }}
+          RUTA: ${{ inputs.ruta }}
         run: |
           {
             echo "## Resend aceptó el correo"
             echo ""
             echo "| | |"
             echo "|---|---|"
+            echo "| Cron | \`$RUTA\` |"
             echo "| Referencia | \`$REFERENCIA\` |"
             echo "| Destinatarios | $DESTINATARIOS |"
             echo "| Asunto | J-Telemetry · SIMULACRO · prueba del canal de avisos |"

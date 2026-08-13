@@ -176,6 +176,15 @@ export type Aviso = {
   accion: string;
   /** Lista larga opcional (los servicios de un grupo, p. ej.). */
   detalle?: string[];
+  /**
+   * Un desglose largo, cuando el hallazgo es uno y sus filas son muchas.
+   *
+   * Existe por las 47 ventanas: el correo llevaba 47 avisos, uno por ruta×turno,
+   * y **47 correos-hallazgo entrenan a ignorar el remitente** igual que 47
+   * correos sueltos. Es un solo hallazgo —la ventana congelada envejeció— con
+   * 47 renglones de evidencia, y así se escribe.
+   */
+  tabla?: { titulo: string; columnas: string[]; filas: string[][] };
   /** El instante del hecho que se anuncia, no el de la corrida. */
   instante: Date;
 };
@@ -614,64 +623,100 @@ export function avisoHoraLimiteVieja(
  * decisión de una persona. **Tienen dueños distintos y arreglos distintos**, y un
  * aviso que las mezclara mandaría a revisar la perilla equivocada.
  */
-export function avisoVentanaDesalineada(
-  grupo: {
-    contratoNombre: string;
-    rutaNombre: string;
-    turnoNombre: string;
-    ocurrencias: number;
-    congeladaMinutos: number;
-    derivadaMinutos: number;
-    difMinutos: number;
-    baseHoy: "medida" | "estimada_geometria" | "politica";
-    muestras: number;
-    proxima: string;
-  },
+export type GrupoParaAviso = {
+  contratoNombre: string;
+  rutaNombre: string;
+  turnoNombre: string;
+  ocurrencias: number;
+  congeladaMin: number;
+  congeladaMax: number;
+  derivadaMinutos: number;
+  ensanchan: number;
+  angostan: number;
+  baseHoy: "medida" | "estimada_geometria" | "politica";
+  muestras: number;
+  proxima: string;
+};
+
+/**
+ * UN aviso para todas las ventanas desalineadas de la corrida, con su desglose
+ * como tabla.
+ *
+ * La primera versión mandaba **un aviso por ruta×turno**: con 47 grupos, un
+ * correo con 47 hallazgos. Es la lección del vigilante por el otro lado —no un
+ * canal que grita seguido, sino uno que grita mucho de una vez—, y el efecto es
+ * el mismo: se archiva sin leer. El hallazgo es **uno solo** —la ventana
+ * congelada envejeció mientras la historia crecía— y los 47 renglones son su
+ * evidencia, no 47 noticias.
+ */
+export function avisoVentanasDesalineadas(
+  grupos: GrupoParaAviso[],
   ahora: Date,
   revisadas: number,
 ): Aviso {
+  const servicios = grupos.reduce((n, g) => n + g.ocurrencias, 0);
+  const ensanchan = grupos.reduce((n, g) => n + g.ensanchan, 0);
+  const angostan = grupos.reduce((n, g) => n + g.angostan, 0);
+
   /*
-   * `difMinutos` es `derivada − congelada`: POSITIVO significa que hoy la
-   * ventana abriría ANTES, o sea que la congelada mira menos ruta. Se dice el
-   * signo una sola vez y se usa esa variable — es el mismo cuidado que su
-   * hermano necesitó cuando el valor contradecía a su lectura en la misma línea.
+   * Las causas se cuentan por separado y NUNCA se suman en un total.
+   * `medida` es la historia creciendo —el sistema aprendiendo—; `politica` es
+   * que alguien movió una perilla. Tienen dueños distintos y arreglos
+   * distintos, y un solo número mandaría a revisar el equivocado.
    */
-  const hoyAbririaAntes = grupo.difMinutos > 0;
-  const porQue =
-    grupo.baseHoy === "medida"
-      ? `la duración medida de la ruta se movió · ${grupo.muestras} muestras hoy`
-      : grupo.baseHoy === "estimada_geometria"
-        ? "no hay historia suficiente: hoy se estimaría sobre la geometría del trazado"
-        : "cambió la política del contrato, no la medición";
+  const porBase = new Map<GrupoParaAviso["baseHoy"], number>();
+  for (const g of grupos) porBase.set(g.baseHoy, (porBase.get(g.baseHoy) ?? 0) + g.ocurrencias);
+  const nombreBase: Record<GrupoParaAviso["baseHoy"], string> = {
+    medida: "la duración medida de la ruta se movió",
+    estimada_geometria: "no hay historia suficiente: hoy se estimaría sobre la geometría",
+    politica: "cambió la política del contrato, no la medición",
+  };
+  const causas = [...porBase]
+    .sort((a, b) => b[1] - a[1])
+    .map(([base, n]) => `${n} ${nombreBase[base]}`)
+    .join(" · ");
+
+  const proxima = grupos.reduce((p, g) => (g.proxima < p ? g.proxima : p), grupos[0]!.proxima);
+  const pct = ((servicios / revisadas) * 100).toFixed(1);
 
   return {
     clase: "ventana-desalineada",
-    titulo: `${grupo.ocurrencias} servicio${grupo.ocurrencias === 1 ? "" : "s"} de ${grupo.rutaNombre} van a juzgarse con una ventana que ya no es la que se derivaría.`,
+    titulo: `${servicios} servicios sin sellar van a juzgarse con una ventana de evidencia que ya no es la que hoy se derivaría.`,
     mediciones: [
       {
         etiqueta: "Servicios sin sellar",
-        valor: String(grupo.ocurrencias),
-        lectura: `de ${revisadas} revisados · ${grupo.rutaNombre} · turno «${grupo.turnoNombre}» de ${grupo.contratoNombre}`,
+        valor: String(servicios),
+        lectura: `de ${revisadas} revisados · ${pct} % de todo lo que todavía no se ha juzgado`,
       },
       {
-        etiqueta: "La ventana congelada abre",
-        valor: `${grupo.congeladaMinutos} min antes`,
-        lectura: `hoy se derivarían ${grupo.derivadaMinutos} min · ${duracion(Math.abs(grupo.difMinutos))} ${hoyAbririaAntes ? "MENOS" : "más"} de los que hoy se mirarían`,
+        etiqueta: "Rutas y turnos",
+        valor: String(grupos.length),
+        lectura: "cada uno con su propia ventana; el desglose va abajo",
+      },
+      {
+        /*
+         * Las dos direcciones, separadas y sin total. Ensanchar hace que el
+         * árbitro mire MÁS recorrido; angostar, que mire MENOS — y mirar menos
+         * es la mecánica de las acusaciones que no se sostienen. Sumarlas en
+         * «843 desalineadas» esconde que unas van en el sentido contrario.
+         */
+        etiqueta: "Hacia dónde se moverían",
+        valor: `${ensanchan} se ensanchan`,
+        lectura: `${angostan} se angostan · ensanchar hace que el árbitro mire más recorrido; angostar, que mire menos`,
       },
       {
         etiqueta: "Por qué cambió",
-        valor: grupo.baseHoy,
-        lectura: porQue,
+        valor: causas,
+        lectura: "la historia que crece y la perilla que alguien mueve tienen dueños distintos",
       },
       {
         etiqueta: "El primero se juzga",
-        valor: grupo.proxima,
+        valor: proxima,
         lectura: "desde ahí ya no se corrige, se re-verifica",
       },
     ],
-    consecuencia: hoyAbririaAntes
-      ? "La ventana es la frontera de lo que el árbitro alcanza a ver. Estos servicios se van a juzgar mirando menos recorrido del que hoy se miraría, y el tramo que no se mire se califica igual: contra el trazado completo."
-      : "Estos servicios se van a juzgar con una ventana más ancha que la que hoy se derivaría. No es un riesgo de acusar de más, pero sí de juzgar con un marco que ya nadie produce.",
+    consecuencia:
+      "La ventana es la frontera de lo que el árbitro alcanza a ver, y estos servicios se van a juzgar con una que se congeló cuando la ruta tenía menos historia. Lo que quede fuera de la ventana no se mira, y se califica igual: contra el trazado completo.",
     /*
      * No dice si algún veredicto cambiaría. **No lo sabe**: otra ventana es otra
      * evidencia y otro emparejamiento, y saberlo exige correr el árbitro — D4.
@@ -679,8 +724,28 @@ export function avisoVentanaDesalineada(
      */
     accion:
       "Decidir si se re-dimensionan antes de que se sellen o si se dejan · Asav",
+    tabla: {
+      titulo: "Desglose por ruta y turno",
+      columnas: ["Ruta", "Turno", "Contrato", "Serv.", "Congelada", "Hoy", "Muestras"],
+      filas: grupos.map((g) => [
+        g.rutaNombre,
+        g.turnoNombre,
+        g.contratoNombre,
+        String(g.ocurrencias),
+        /*
+         * Rango, no representante. Dentro de un ruta×turno conviven ventanas de
+         * 60 y de 120 minutos porque cada ocurrencia se congeló en un momento
+         * distinto; escribir la del primer servicio como si fuera la del grupo
+         * es un dato correcto vuelto afirmación falsa por la agrupación.
+         */
+        g.congeladaMin === g.congeladaMax
+          ? `${g.congeladaMin} min`
+          : `${g.congeladaMin}–${g.congeladaMax} min`,
+        `${g.derivadaMinutos} min`,
+        String(g.muestras),
+      ]),
+    },
     detalle: [
-      `congelada ${grupo.congeladaMinutos} min · hoy ${grupo.derivadaMinutos} min · próxima ${grupo.proxima}`,
       "Este aviso NO dice si algún veredicto cambiaría: eso exige volver a correr el árbitro.",
     ],
     instante: ahora,

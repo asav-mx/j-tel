@@ -4824,3 +4824,55 @@ abiertas.
   lleva 47 avisos**. Agrupar por servicio sería peor (843 renglones), pero 47
   hallazgos en un correo es mucho. Las salidas son dejarlo así o **colapsarlos en
   un solo aviso con tabla** — y eso es decisión de producto, no de este PR.
+
+**13 de agosto de 2026 (las 843, el aviso que se colapsa, y dos números míos que
+eran falsos).**
+
+- 🆕 **Regla 26: vitest no corre el compilador, así que una suite verde no dice
+  nada de los tipos.** Subí #316 con `pnpm test` en 1 036 verdes y CI reventó en
+  `typecheck`: `a.detalle` es `string[] | undefined` y lo esparcí sin `?? []`.
+  Es la misma familia de «un verde no prueba lo que crees» que ya dio la regla
+  23 —un verde local que depende del `.env`— y la 24 —un verde sobre un árbol
+  vaciado—. **Antes de subir: `pnpm turbo typecheck`, no solo `pnpm test`.**
+- ⚠ **Y una corrección de lo que te escribí en #316: «todas congeladas en el
+  piso de 60 minutos» era falso.** Salía de `agruparPorRutaTurno`, que guardaba
+  la ventana del PRIMER servicio del grupo y la presentaba como la del grupo.
+  **38 de los 47 grupos tienen más de una ventana congelada adentro** —uno tiene
+  cinco: 60, 67, 71, 74 y 120, todas derivando hoy a 75—. El reparto real de las
+  843: **548 en el piso de 60, y el resto repartidas de 62 a 136**. Marco §D en
+  su forma más limpia: **dato correcto, afirmación falsa por la agrupación**.
+- ⚠ **Y el segundo, que el primero tapaba: no todas se ensanchan.** Por servicio
+  son **737 que se ensanchan y 106 que se angostan** —hasta 45 minutos menos—.
+  Con la agrupación rota, el resumen decía «2 grupos se angostan». Ensanchar
+  hace que el árbitro mire MÁS recorrido; angostar, que mire MENOS, **que es la
+  mecánica exacta de las acusaciones que este frente existe para cerrar**. No
+  son el mismo acto y ya no se suman en ningún lado.
+- ✅ **El aviso pasa de 47 a UNO, con su desglose como tabla.** 47 hallazgos en
+  un correo se archivan igual que 47 correos — es la lección del vigilante por
+  el otro lado. El hallazgo es uno solo —la ventana congelada envejeció mientras
+  la historia crecía— y los 47 renglones son su evidencia. La congelada de cada
+  grupo va como **rango** (`60–120 min`), no como representante.
+- ✅ **`corregir-ventanas`**, hermano de `corregir-deadlines`: simulacro por
+  omisión, `--sql` para la consola de Neon, `--solo-ensanchan` para dejar fuera
+  las 106. **No tiene `--aplicar`** — un camino de escritura en un binario local
+  que corre con la `DATABASE_URL` que haya en el ambiente es una palanca
+  esperando un dedo.
+- 🟢 **La corrida en seco: 843 de 843 se pueden mover, 0 bloqueadas.** Todas son
+  futuras y sin un solo punto anclado. Y todas son `medida`: **ninguna de las
+  843 viene de que alguien moviera una perilla.**
+- 🟢 **La guarda que decide si esto arregla o rompe:** ensanchar la ventana de un
+  viaje que YA tiene puntos anclados **empeora su cobertura** —se mide más tiempo
+  contra la misma evidencia—. Va dentro del `WHERE`, no solo en el plan.
+- 🟢 **Probado el SQL en la base desechable**, y ahí salieron dos cosas: que
+  `pnpm ... --sql > archivo` mete el encabezado de pnpm y **Postgres muere con
+  `syntax error at or near ">"`** —hay que usar `--silent`, y el hermano
+  `corregir-deadlines` promete el mismo pipe sin decirlo—; y que mi verificación
+  pedía solo `sin_mover = 0`, **que da 0 igual si todo se movió que si el JOIN no
+  encontró nada**. Ahora pide los tres números.
+- ✅ **El botón del simulacro elige cron** (lista cerrada: un campo libre ahí es
+  una URL arbitraria firmada con `CRON_SECRET`). Cada cron es su propio camino
+  de entrega: que el de la hora límite entregue no dice que el de las ventanas
+  entregue.
+- 🟡 **Y el correo se disparó de verdad**: Resend lo aceptó, 1 destinatario,
+  referencia `9c1a4075`. **Aceptado no es llegado** — falta que Asav lo vea en
+  su bandeja, y eso no lo puede comprobar ningún workflow.

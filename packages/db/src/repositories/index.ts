@@ -2606,6 +2606,32 @@ export class OccurrenceRepository {
       );
   }
 
+  /**
+   * El estado del viaje de cada ocurrencia, para decidir si su ventana **se
+   * puede** mover. Compañero de `sinSellarParaRevisionDeVentana`, separado a
+   * propósito: detectar no necesita esto, y corregir no puede sin ello.
+   *
+   * El conteo de puntos anclados es la guarda que más importa. Ensanchar la
+   * ventana de un viaje que ya tiene puntos **empeora su cobertura**: se mide
+   * más tiempo contra los mismos puntos, y el tramo nuevo entra vacío. Corregir
+   * sin mirar esto convertiría un arreglo en la fábrica de acusaciones que el
+   * arreglo existe para cerrar.
+   */
+  async estadoDeViajeDeOcurrencias(ocurrenciaIds: string[]) {
+    if (ocurrenciaIds.length === 0) return [];
+    return this.db
+      .select({
+        occurrenceId: trips.serviceOccurrenceId,
+        tripId: trips.id,
+        evidenceStatus: trips.evidenceStatus,
+        puntos: count(evidencePoints.id),
+      })
+      .from(trips)
+      .leftJoin(evidencePoints, eq(evidencePoints.tripId, trips.id))
+      .where(inArray(trips.serviceOccurrenceId, ocurrenciaIds))
+      .groupBy(trips.serviceOccurrenceId, trips.id, trips.evidenceStatus);
+  }
+
   async futurasSinSellarParaRevision() {
     return this.db
       .select({
