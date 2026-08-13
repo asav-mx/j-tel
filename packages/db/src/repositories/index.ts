@@ -3542,6 +3542,60 @@ export class ComplianceRepository {
     return fact!;
   }
 
+  /**
+   * Qué unidades ACREDITARON otra ruta ese mismo día, para este transportista.
+   *
+   * Es el empalme del expediente sin atribución, y **es lectura de hoy**: no hay
+   * campo que lo guarde, se deriva cruzando el ledger del día consigo mismo. La
+   * pantalla tiene que declararlo como tal.
+   *
+   * ⚠ Se pregunta por la candidata que llegó, no por «alguna candidata»: la
+   * lista de candidatas de un servicio es la flota entera —mediana de 50— y
+   * preguntar «¿alguna acreditó otra ruta?» contesta que sí siempre (regla 21).
+   * Aquí eso se respeta devolviendo un mapa POR UNIDAD, para que quien llama
+   * consulte solo las que le interesan.
+   */
+  async unidadesQueAcreditaronEnFecha(
+    carrierAccountId: string,
+    serviceDate: string,
+    excluirOccurrenceId: string,
+  ): Promise<Map<string, { rutaNombre: string; fecha: string }>> {
+    const filas = await this.db.execute<{
+      clave: string;
+      ruta: string;
+    }>(sql`
+      WITH ult AS (
+        SELECT DISTINCT ON (le.service_occurrence_id)
+               le.service_occurrence_id AS occ, le.steps
+          FROM ledger_entries le
+         WHERE EXISTS (
+           SELECT 1 FROM jsonb_array_elements(le.steps) s WHERE s->>'step' = 'decision')
+         ORDER BY le.service_occurrence_id, le.created_at DESC
+      )
+      SELECT COALESCE(s->'details'->>'unidadId', s->'details'->>'imei') AS clave,
+             r.name AS ruta
+        FROM ult
+        JOIN service_occurrences o ON o.id = ult.occ
+        JOIN service_contracts sc ON sc.id = o.contract_id
+        JOIN route_shifts rs ON rs.id = o.route_shift_id
+        JOIN routes r ON r.id = rs.route_id
+        CROSS JOIN LATERAL jsonb_array_elements(ult.steps) s
+       WHERE o.service_date = ${serviceDate}
+         AND sc.carrier_account_id = ${carrierAccountId}
+         AND o.id <> ${excluirOccurrenceId}
+         AND s->>'step' = 'candidata'
+         AND s->>'result' = 'sirvio_ruta'
+         AND COALESCE(s->'details'->>'unidadId', s->'details'->>'imei') IS NOT NULL
+    `);
+
+    const mapa = new Map<string, { rutaNombre: string; fecha: string }>();
+    for (const f of filas as unknown as Array<{ clave: string; ruta: string }>) {
+      if (!f.clave || mapa.has(f.clave)) continue;
+      mapa.set(f.clave, { rutaNombre: f.ruta, fecha: serviceDate });
+    }
+    return mapa;
+  }
+
   /** Borra el hecho sin archivar — para retries de pendiente y limpieza en tests. */
   async deleteFactForOccurrence(serviceOccurrenceId: string) {
     await this.db
