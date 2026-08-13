@@ -4876,3 +4876,24 @@ eran falsos).**
 - 🟡 **Y el correo se disparó de verdad**: Resend lo aceptó, 1 destinatario,
   referencia `9c1a4075`. **Aceptado no es llegado** — falta que Asav lo vea en
   su bandeja, y eso no lo puede comprobar ningún workflow.
+
+**13 de agosto de 2026 (el SQL de las 738, con su razón escrita).**
+
+- ✅ **Decidido por Asav: `--solo-ensanchan`.** Se mueven **738**; las **111** que
+  se angostarían se quedan. Su razón, textual y guardada en
+  `docs/correcciones/2026-08-13-ventanas-737.md`: *«corregí las 96 porque su
+  ventana no contenía la operación; estas tienen lo contrario. Angostarlas le
+  quita recorrido al árbitro, que es la mecánica exacta de las acusaciones que
+  este frente existe para cerrar. **Nunca hemos ganado nada haciendo que el
+  árbitro vea menos.**»*
+- 🟢 **El SQL queda en el repo** —`2026-08-13-ventanas-737.sql`, 1 526 líneas—
+  junto a su nota. Un acto sobre producción que solo vive en una consola no deja
+  cómo se revisó ni por qué se hizo.
+- ⚠ **Y el número se movió entre ayer y hoy: 1 008 revisadas, 849 desalineadas,
+  738 / 111.** No es un error: el generador siguió corriendo y algunas se
+  sellaron. **Un SQL con UUIDs adentro es una foto**, y por eso las guardas van
+  dentro del `WHERE` y la verificación pide `encontrados`, no solo `sin_mover`.
+- 🟢 **Probado otra vez contra la base desechable**: corre completo, en
+  transacción, y devuelve los tres números.
+- 🟡 **Las 111 van a seguir apareciendo en el aviso diario, y es correcto**:
+  siguen desalineadas. Lo que se decidió es no corregirlas en esa dirección.
