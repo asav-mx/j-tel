@@ -3636,10 +3636,18 @@ export class ComplianceRepository {
     carrierAccountId: string,
     serviceDate: string,
     excluirOccurrenceId: string,
-  ): Promise<Map<string, { rutaNombre: string; fecha: string }>> {
+    /**
+     * El cliente de ESTE servicio. Cuando la otra ruta es de otro cliente, el
+     * nombre **no sale**: decirlo contaría la operación de un tercero (Ley 3).
+     * Está medido que el caso existe — en 49 de 397 servicios (12.3 %) la unidad
+     * que llegó acreditó a otro cliente—, así que no es una hipótesis.
+     */
+    clientAccountId?: string,
+  ): Promise<Map<string, { rutaNombre: string | null; fecha: string }>> {
     const filas = await this.db.execute<{
       clave: string;
       ruta: string;
+      cliente: string;
     }>(sql`
       WITH ult AS (
         SELECT DISTINCT ON (le.service_occurrence_id)
@@ -3650,7 +3658,8 @@ export class ComplianceRepository {
          ORDER BY le.service_occurrence_id, le.created_at DESC
       )
       SELECT COALESCE(s->'details'->>'unidadId', s->'details'->>'imei') AS clave,
-             r.name AS ruta
+             r.name AS ruta,
+             sc.client_account_id::text AS cliente
         FROM ult
         JOIN service_occurrences o ON o.id = ult.occ
         JOIN service_contracts sc ON sc.id = o.contract_id
@@ -3665,10 +3674,25 @@ export class ComplianceRepository {
          AND COALESCE(s->'details'->>'unidadId', s->'details'->>'imei') IS NOT NULL
     `);
 
-    const mapa = new Map<string, { rutaNombre: string; fecha: string }>();
-    for (const f of filas as unknown as Array<{ clave: string; ruta: string }>) {
+    const mapa = new Map<string, { rutaNombre: string | null; fecha: string }>();
+    for (const f of filas as unknown as Array<{
+      clave: string;
+      ruta: string;
+      cliente: string;
+    }>) {
       if (!f.clave || mapa.has(f.clave)) continue;
-      mapa.set(f.clave, { rutaNombre: f.ruta, fecha: serviceDate });
+      /*
+       * El HECHO de que hubo empalme sí es del interés de esta planta; **de
+       * quién era el otro servicio, no**. Cuando el cliente difiere, el nombre
+       * se cae aquí — en el repositorio y no en la pantalla, para que ninguna
+       * vista futura lo reciba y tenga que acordarse de filtrarlo.
+       */
+      const esDelMismoCliente =
+        clientAccountId === undefined || f.cliente === clientAccountId;
+      mapa.set(f.clave, {
+        rutaNombre: esDelMismoCliente ? f.ruta : null,
+        fecha: serviceDate,
+      });
     }
     return mapa;
   }

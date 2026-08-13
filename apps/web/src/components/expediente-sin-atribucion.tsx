@@ -204,8 +204,18 @@ function CandidataTarjeta({
           className="mt-2 border-t pt-2 text-[12.5px]"
           style={{ borderColor: "var(--linea-tenue)", color: "var(--texto)" }}
         >
-          Ese mismo turno acreditó{" "}
-          <span className="font-mono">{c.empalme.rutaNombre}</span>
+          {/*
+           * Sin nombre cuando la otra ruta es de otro cliente: el hecho sí es
+           * del interés de quien mira; de quién era el otro servicio, no.
+           */}
+          {c.empalme.rutaNombre ? (
+            <>
+              Ese mismo turno acreditó{" "}
+              <span className="font-mono">{c.empalme.rutaNombre}</span>
+            </>
+          ) : (
+            <>Ese mismo turno cubrió otro servicio</>
+          )}
           <Marca procedencia={c.empalme.procedencia} />
         </p>
       ) : null}

@@ -333,6 +333,26 @@ describe("lo derivado se marca como lectura de hoy", () => {
     expect(e.candidatas[0]!.empalme!.procedencia).toBe("hoy");
   });
 
+  it("el empalme de OTRO cliente llega sin nombre — Ley 3", () => {
+    /*
+     * Está medido que el caso existe: en 49 de 397 servicios (12.3 %) la unidad
+     * que llegó acreditó a otro cliente. El hecho —hubo empalme— sí es del
+     * interés de quien mira; de quién era el otro servicio, no.
+     */
+    const e = armarExpediente({
+      snapshot: null,
+      ledgerCandidatas: [VIEJA],
+      umbrales: UMBRALES,
+      etiquetaDe: SIN_ETIQUETA,
+      empalmeDe: () => ({ rutaNombre: null, fecha: "2026-07-24" }),
+    })!;
+    const emp = e.candidatas[0]!.empalme!;
+    expect(emp.rutaNombre).toBeNull();
+    // Pero el empalme SIGUE existiendo: no se esconde el hecho, solo el nombre.
+    expect(emp.fecha).toBe("2026-07-24");
+    expect(emp.procedencia).toBe("hoy");
+  });
+
   it("sin empalme no hay renglón — no se escribe «no sirvió otra ruta»", () => {
     const e = armarExpediente({
       snapshot: null,

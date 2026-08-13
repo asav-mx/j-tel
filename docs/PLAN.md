@@ -4548,3 +4548,34 @@ segunda mitad de reconciliación tiene ficha).**
 - 🟢 **Qué se puede construir sin decisiones: las tres primeras piezas**, y **la
   cara del cliente no cambia ni un píxel**.
 - 🟢 **`servedRoute` sigue intacta.**
+
+**13 de agosto de 2026, noche (las tres piezas de «señalar en vez de escribir»).**
+
+**Construidas las tres que no dependen de ninguna decisión.** El transportista
+pasa de narrar a **señalar lo que ya existe**.
+
+- 🟢 **El recorrido COMPLETO del día, al declarar una unidad.** Y el primer caso
+  real medido lo dice todo: en el servicio del 9 de julio, la unidad reportó
+  **1 014 puntos ese día y solo 96 cayeron dentro de la ventana — 422 fueron
+  ANTES de que el árbitro empezara a mirar.** Eso es lo que el transportista no
+  podía enseñar.
+- ⚠ **Con su ley en la pantalla, no solo en la ficha:** los tres tramos van
+  **separados** —antes · dentro · después—, porque sumarlos borraría la frontera
+  con la que se juzgó. Y el renglón que lo cierra: *«fuera de la ventana es
+  evidencia para mirar, no parte del resultado: el árbitro juzgó con la
+  ventana»*. **Si un dato de fuera moviera un resultado, la ventana dejaría de
+  ser la frontera de nada.**
+- 🟢 **El empalme, invocable.** La pantalla ya sabía el hecho —150 de 397— y lo
+  enseñaba como renglón del sistema. Ahora el transportista puede **señalarlo en
+  su versión**, que lo convierte en **afirmación suya con su firma**. ⚠ Y sigue
+  sin decir *«por eso no acreditó aquí»*: esa conclusión es C18.
+- 🟢 **La Ley 3 se aplica en el REPOSITORIO, no en la vista.** Cuando la otra
+  ruta es de otro cliente, **el nombre se cae antes de salir de la base** — así
+  ninguna vista futura lo recibe y tiene que acordarse de filtrarlo. Es la regla
+  del skill: *cuando se puede no traer el dato, no se trae*. El hecho —hubo
+  empalme— sí sale; **de quién era el otro servicio, no**.
+- ⚠ **Lo que NO se verificó, y se dice:** la interacción —elegir unidad y ver su
+  día— **no se pulsó en un navegador dirigido**. Se comprobó el render estático y
+  **el endpoint contra datos reales**, que es la mitad sustantiva; la otra mitad
+  queda pendiente de una corrida con navegador de verdad.
+- 🟢 **`servedRoute` sigue intacta.** Una consulta de solo lectura y piel.
