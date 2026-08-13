@@ -654,6 +654,24 @@ export interface VerificationInput {
    */
   routeCorpus?: Array<Array<{ lat: number; lng: number }>>;
   /**
+   * Las rutas del MISMO turno, para rankear el corredor contra todas — Paso 2.
+   *
+   * **Informativo: no gobierna.** La atribución sigue saliendo de A∧B contra la
+   * ruta contratada hasta el paso 3. Si se omite, el paso simplemente no se
+   * escribe y nada cambia.
+   *
+   * Es distinto de `routeCorpus`, que son trazados hermanos usados como CORPUS
+   * para pesar segmentos raros. Aquí cada ruta es una **candidata a explicar el
+   * recorrido**, y por eso viaja con su identidad y su nombre.
+   */
+  rutasDelTurno?: Array<{
+    routeShiftId: string;
+    routeId: string;
+    nombre: string;
+    waypoints: Array<{ lat: number; lng: number }>;
+    esLaDelServicio: boolean;
+  }>;
+  /**
    * Distancia de Fréchet máxima aceptable (km) como filtro suave de forma.
    * Default 0.8. Solo aplica con KML.
    */

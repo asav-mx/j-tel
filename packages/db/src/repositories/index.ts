@@ -803,6 +803,72 @@ export class RouteRepository {
    *
    * Reutiliza la misma lógica temporal de getKmlVersionForDate por variante.
    */
+  /**
+   * Las rutas del MISMO turno, con su trazado vigente a la fecha — Paso 2.
+   *
+   * **Es la carga de datos que el paso 2 necesita y que el motor no tenía:**
+   * hasta ahora se le entregaba el trazado de UNA ruta —la contratada— porque
+   * era la única contra la que medía. Para preguntar «¿contra cuál encaja
+   * mejor?» hacen falta todas las del turno.
+   *
+   * Se acota al **contrato** además del turno: dos contratos pueden compartir
+   * nombre de turno —ya pasó, es C20— y mezclarlos pondría rutas de otro cliente
+   * en el ranking de éste.
+   *
+   * Devuelve la variante **principal vigente** de cada ruta, no todas: el
+   * ranking contesta «cuál ruta», no «cuál variante». Esa segunda pregunta ya la
+   * resuelve la evaluación multi-variante del servicio.
+   */
+  async rutasDelTurnoParaFecha(
+    contractId: string,
+    shiftId: string,
+    at: Date,
+  ): Promise<
+    Array<{ routeShiftId: string; routeId: string; nombre: string; waypoints: Array<{ lat: number; lng: number }> }>
+  > {
+    const perfiles = await this.db
+      .select({
+        routeShiftId: routeShifts.id,
+        routeId: routeShifts.routeId,
+        nombre: routes.name,
+      })
+      .from(serviceProfiles)
+      .innerJoin(routeShifts, eq(routeShifts.id, serviceProfiles.routeShiftId))
+      .innerJoin(routes, eq(routes.id, routeShifts.routeId))
+      .where(
+        and(
+          eq(serviceProfiles.contractId, contractId),
+          eq(routeShifts.shiftId, shiftId),
+          eq(serviceProfiles.active, true),
+        ),
+      );
+
+    const salida: Array<{
+      routeShiftId: string;
+      routeId: string;
+      nombre: string;
+      waypoints: Array<{ lat: number; lng: number }>;
+    }> = [];
+    const vistas = new Set<string>();
+    for (const p of perfiles) {
+      if (vistas.has(p.routeShiftId)) continue;
+      vistas.add(p.routeShiftId);
+      const variantes = await this.getActiveVariantVersionsForDate(p.routeId, at);
+      const principal =
+        variantes.find((v) => v.variantName === "Principal") ?? variantes[0];
+      if (!principal || !Array.isArray(principal.waypoints) || principal.waypoints.length === 0) {
+        continue;
+      }
+      salida.push({
+        routeShiftId: p.routeShiftId,
+        routeId: p.routeId,
+        nombre: p.nombre,
+        waypoints: principal.waypoints,
+      });
+    }
+    return salida;
+  }
+
   async getActiveVariantVersionsForDate(routeId: string, at: Date) {
     const variants = await this.db.query.routeKmlVariants.findMany({
       where: and(
