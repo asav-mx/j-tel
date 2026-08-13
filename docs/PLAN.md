@@ -4612,3 +4612,39 @@ de ser argumento: se ve en producción).**
   nadie; el cuello no está donde parecía.
 - ⚠ **Y lo que ninguna de estas cifras dice:** que un veredicto cambiaría. Son
   cotas de **a cuántos alcanza** cada forma. Mover uno es re-verificar: D4.
+
+**13 de agosto de 2026, cierre (la fuga del registro NO existe — la alarma era
+mía — y la construcción de las preguntas separadas tiene ficha).**
+
+- ⚠ **CORRECCIÓN a algo que yo afirmé en el turno anterior: «la defensa está
+  puesta y algo la rodeó» era FALSO.** Reconstruida la línea de tiempo con los
+  sellos —que congelan la estrictez aplicada—: **Planta 47 pasó a `destino_only`
+  el 31 de julio** (su última escritura de contrato: `2026-07-31T13:28`) y **el
+  Campus se editó el 6 de agosto** (`2026-08-06T09:14`). **El trigger de la 0020
+  se decidió el 7 de agosto**, o sea **después de las dos**. 🟢 **Cero filas es
+  lo esperado: desde que el trigger existe, nadie ha editado una política.**
+- ✅ **Y ya no está sin ejercitar: se vio disparar.** Contra la rama desechable,
+  un `UPDATE` crudo a `policy` **escribió su fila y firmó `sql_directo`**, con
+  `ROLLBACK` para no dejar nada. Regla 8 satisfecha — hasta hoy el trigger era
+  una defensa que ninguna prueba distinguía de su ausencia.
+- ⚠ **Y el hueco que sí existe, encontrado al leerlo:** `updatePolicy` **apaga el
+  trigger ANTES del UPDATE** (`jtel.registrado=1`) y luego escribe su fila **solo
+  si `huboCambio`** — comparando la política **canónica efectiva**. El trigger,
+  en cambio, dispara con **diferencia CRUDA** (`NEW.policy IS DISTINCT FROM
+  OLD.policy`). **Los dos guardas no coinciden en qué cuenta como cambio, y
+  cuando corre la aplicación gana su definición.** Una edición canónicamente
+  igual y crudamente distinta **no deja rastro por ningún lado**: el trigger
+  estaba apagado y la aplicación decidió no escribir. **Hoy nadie ha caído ahí;
+  el camino existe.**
+- ✅ **DECIDIDO por Asav: se separan las dos preguntas, más el piso.** Con el
+  número que lo cerró: **la forma «cambiar la métrica» sale en CERO** — el cuello
+  no era A, era **A junto con B**.
+- **La ficha de construcción:**
+  `docs/marco-limpio/Ficha-Construccion-Preguntas-Separadas.md`. Cuatro PRs, un
+  término por PR, el 4 después del 3. ⚠ **Y un ajuste que sale de hoy: el efecto
+  del paso 4 se concentra en el Campus**, porque Planta 47 ya manda sus servicios
+  sin atribución a pendiente por la perilla. **Medirlo junto promediaría dos
+  regímenes distintos.**
+- ⏸ **Acreditar por llegar queda para después**, por decisión de Asav y por su
+  razón: *convertir un pendiente en cumplido es mucho más caro de deshacer que al
+  revés*.
