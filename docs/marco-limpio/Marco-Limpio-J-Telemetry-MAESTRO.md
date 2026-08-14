@@ -1,9 +1,10 @@
-La única fuente de verdad. Cuatro piezas, derivadas del proyecto completo y verificadas una por una por ASAV. Reemplaza toda la documentación vieja (queda archivada). De aquí en adelante, esto es lo único que hay que cargar — ni conversaciones ni docs viejos. Aterrizado en contratos reales (Tecma 47, Honeywell MX07). Fecha: 6 de julio de 2026.
+La única fuente de verdad. Cinco piezas, derivadas del proyecto completo y verificadas una por una por ASAV. Reemplaza toda la documentación vieja (queda archivada). De aquí en adelante, esto es lo único que hay que cargar — ni conversaciones ni docs viejos. Aterrizado en contratos reales (Tecma 47, Honeywell MX07). Fecha: 6 de julio de 2026.
 Contenido
 Pieza 1 — El dominio y las leyes intocables
 Pieza 2 — Las dos caras del producto
 Pieza 3 — Las reglas de verificación
 Pieza 4 — Usuarios, roles y accesos
+Pieza 5 — La forma de la suite
 
 
 Pieza 1 — El dominio y las leyes intocables
@@ -309,3 +310,71 @@ Las cuentas son privadas. Nadie cruza entre cuentas — salvo J-Staff por la com
 Toda acción sensible queda en el ledger (quién hizo qué y cuándo).
 Un usuario pertenece a una cuenta; J-Staff es aparte.
 Roles, alcances y escalaciones son configurables — no vienen fijos.
+
+
+Pieza 5 — La forma de la suite
+Por qué existe esta pieza
+Las Piezas 1 a 4 definen el árbitro: el dominio, quién ve qué, cómo se verifica y quién entra. No dicen qué se construye encima. Esta pieza lo dice.
+
+Se escribió después de leer contratos reales de dos extremos del mercado: uno que no menciona GPS y tiene una sola regla de puntualidad, y otro con GPS obligatorio, catálogo de penalizaciones con reincidencia mensual, reportes y auditorías. Los dos caben en el mismo producto porque todo umbral es configuración del contrato. Lo que los dos destaparon es que el árbitro solo no es la suite.
+
+
+La ley que gobierna esta pieza
+Penalizar al transportista no es el modelo de negocio. Los contratos están escritos en tono punitivo porque son documentos de la planta protegiéndose; eso describe qué duele, no qué construir. Un producto cuyo valor crece con las faltas del carrier se destruye solo conforme el servicio mejora, y aliena a la mitad del mercado. El valor está en eliminar fricción operativa: facturar con respaldo, no perder papeles, esquivar la penalización antes de que ocurra, y planear mejor.
+
+
+A. Los tres horizontes
+Un solo cuerpo de hechos sellados alimenta tres productos, distinguidos por el tiempo al que miran.
+
+El pasado — el estado de cuenta. La verdad compartida de un periodo, en tono neutral: cuántos servicios, cómo se ejecutaron, qué se justificó, qué quedó pendiente. El carrier lo usa para facturar con respaldo; el cliente para pagar sin discutir. Cuando el contrato define penalizaciones, la aritmética es un renglón derivado del documento, nunca su propósito.
+
+El presente — lo preventivo. Avisar antes de que el hecho se selle, cuando todavía se puede actuar: la unidad que va a llegar tarde y hay tiempo de mandar respaldo, el dispositivo cuya emisión viene degradándose y va a producir pendientes, el documento por vencer, la ruta que lleva semanas llegando con minutos de margen. Los contratos suelen dar ventanas de gracia (avisar con horas de anticipación, reponer unidad en minutos) que solo se aprovechan si alguien avisa a tiempo. Lo preventivo convierte cláusulas punitivas en cláusulas esquivables.
+
+El futuro — la planeación. Un espacio de ensayo donde se dibujan, parten, unen y prueban rutas contra los tiempos reales medidos, con las restricciones del contrato como reglas del juego. Los contratos ya piden esto como entregable del carrier (reingeniería de rutas, datos de uso por parada) y hoy ningún carrier tiene con qué producirlo.
+
+
+B. Los dos afluentes del hecho
+No todo lo que un contrato regula lo puede ver la telemetría. Uniforme, botiquín, extintor, cinturones, la inspección física mensual de la unidad: nada sale del GPS. Son hallazgos humanos registrados por una inspección.
+
+Por lo tanto el estado de cuenta tiene dos afluentes: lo que el árbitro sella con evidencia GPS, y lo que una persona registra en una inspección o en un expediente documental. Los dos desembocan en la misma cuenta del periodo. Ninguno de los dos manda sobre el otro; son de naturaleza distinta y así se muestran.
+
+
+C. El expediente
+Lo penalizable que ningún GPS ve, y lo que hace que a un carrier le suspendan pagos completos sin haber llegado tarde una sola vez: pólizas y permisos con su vencimiento, exámenes y capacitaciones con su periodicidad, mantenimiento firmado, inspecciones físicas con su evidencia.
+
+El expediente es del carrier y el cliente ve su espejo — porque en los contratos reales el cliente queda expuesto si su transportista incumple obligaciones patronales o legales. Esto es coherente con la zona compartida de la Pieza 2: la planta audita, el carrier provee. El expediente es donde vive esa evidencia.
+
+
+D. Las justificaciones
+Los contratos reconocen causas que excusan un retraso: lluvia que inunda, marcha, paso de ferrocarril, falla mecánica, obra sin aviso. Hoy eso se resuelve de palabra y el carrier siempre pierde el argumento.
+
+La regla es la siguiente, y no admite excepción: el hecho sellado no cambia. Si la unidad llegó tarde, eso es verdad congelada y así se queda, conforme a la ley de la Pieza 1. Lo que se agrega es una capa adjunta al hecho — la justificación — donde el auditado registra la causa con su evidencia, y donde el propio GPS sirve de respaldo (una unidad detenida largo rato en un cruce es evidencia, no palabra).
+
+El estado de cuenta muestra entonces las tres cosas por separado: el hecho, la justificación, y la consecuencia resultante. Verdad intacta, consecuencia ajustada. Quién acepta una justificación y bajo qué proceso es configuración del contrato, no del producto: los contratos ya traen sus propios mecanismos de disputa y plazos de enmienda.
+
+
+E. La telemetría base del carrier
+El carrier hoy paga a un proveedor de telemetría por lecturas crudas: mapa en vivo, historial de recorridos, kilómetros por unidad, velocidades, geocercas propias, uso fuera de horario. Eso no necesita veredictos, ni contratos, ni hechos sellados.
+
+Por eso la telemetría base cuelga directamente de la capa de captura y no pasa por el árbitro. Es la quinta pieza de la suite del carrier y la que hace que dejar a su proveedor actual no le cueste nada.
+
+Regla de convivencia: la lectura cruda jamás puede contradecir en pantalla a un hecho sellado. Las trazas se cortan en la llegada a la geocerca, en todas las caras y en todos los productos, sin excepción — protege al carrier y al chofer.
+
+
+F. Cómo queda la suite por cara
+Cada cara arma su suite escogiendo piezas de la misma casa. Nadie lee una base de datos distinta.
+
+Carrier: telemetría base, su lado del estado de cuenta con justificaciones, su expediente, lo preventivo, la planeación.
+Cliente — planta: su lado del estado de cuenta, lo que requiere decisión, el seguimiento del día, y el espejo del expediente de su carrier.
+Cliente — corporativo: el panorama de sus plantas. Comparar, no operar.
+Operador de la plataforma: todo, más el razonamiento completo.
+
+
+Reglas de esta pieza
+El árbitro es el cimiento; sin veredicto confiable, nada de lo que va encima vale.
+Un solo cuerpo de hechos, tres horizontes: pasado, presente, futuro.
+Dos afluentes: lo que sella el árbitro y lo que registra una persona.
+El hecho no se reescribe nunca; la justificación se adjunta y la consecuencia se ajusta.
+La telemetría base no pasa por el árbitro, y nunca lo contradice.
+Penalizar no es el modelo de negocio.
+Todo umbral, tolerancia, catálogo de penalización y proceso de disputa es configuración del contrato.
