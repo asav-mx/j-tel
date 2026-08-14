@@ -108,7 +108,7 @@ export async function GET(request: Request) {
         { status: 503 },
       );
     }
-    const mensaje = renderAvisos([avisoDeSimulacro(ahora)], ahora, PIE_HORAS_LIMITE);
+    const mensaje = renderAvisos([avisoDeSimulacro(ahora, "revisar-horas-limite")], ahora, PIE_HORAS_LIMITE);
     try {
       const envio = await canal.mandar(mensaje);
       return NextResponse.json({

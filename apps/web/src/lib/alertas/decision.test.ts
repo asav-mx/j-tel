@@ -454,4 +454,42 @@ describe("el simulacro se anuncia como simulacro", () => {
     expect(provocado?.lectura).toContain("?simular=1");
     expect(provocado?.lectura).toContain("ninguna corrida programada");
   });
+
+  /*
+   * Los dos primeros simulacros —hora límite y ventanas— llegaron a la bandeja
+   * con el MISMO asunto y el mismo título. Eran dos correos idénticos probando
+   * dos caminos distintos, y no había forma de saber cuál probaba cuál. **Una
+   * prueba cuyo resultado no se puede atribuir no prueba nada**, que es la misma
+   * lección del vigilante en su versión chica.
+   */
+  describe("dos crones distintos no producen el mismo correo", () => {
+    it("el asunto nombra el cron, que es lo único que se ve en el teléfono", () => {
+      const a = asuntoDe(avisoDeSimulacro(ahora, "revisar-horas-limite"));
+      const b = asuntoDe(avisoDeSimulacro(ahora, "revisar-ventanas"));
+
+      expect(a).toContain("revisar-horas-limite");
+      expect(b).toContain("revisar-ventanas");
+      expect(a).not.toBe(b);
+      // Y sigue anunciándose como simulacro: nombrar el cron no puede costar eso.
+      expect(a).toContain("SIMULACRO");
+    });
+
+    it("el cuerpo dice de dónde vino, no solo el asunto", () => {
+      const quien = avisoDeSimulacro(ahora, "revisar-ventanas").mediciones.find(
+        (m) => m.etiqueta === "Quién lo mandó",
+      );
+
+      expect(quien?.valor).toBe("/api/cron/revisar-ventanas");
+      expect(quien?.lectura).toContain("que otro entregue no dice que éste entregue");
+    });
+
+    it("sin cron declarado lo dice, en vez de fingir que se sabe", () => {
+      const quien = avisoDeSimulacro(ahora).mediciones.find(
+        (m) => m.etiqueta === "Quién lo mandó",
+      );
+
+      expect(quien?.valor).toBe("sin declarar");
+      expect(quien?.lectura).toContain("no se puede atribuir");
+    });
+  });
 });
