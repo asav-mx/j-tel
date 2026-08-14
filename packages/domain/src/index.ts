@@ -155,6 +155,33 @@ export function localDateTimeShort(date: Date | string, timeZone = JTTEL_TZ): st
   if (Number.isNaN(d.getTime())) return "—";
   return `${localDateIso(d, timeZone)} ${localTimeHHMM(d, timeZone)}`;
 }
+
+/**
+ * Como `localDateTimeShort` pero **con segundos**: "YYYY-MM-DD HH:MM:SS".
+ *
+ * Para donde el segundo es parte de la evidencia —el primer y el último punto
+ * del rastro de una unidad, una llegada—. Y **con su fecha, siempre**: la caja
+ * de aportación imprimía solo la hora y un día real de rastro salió como *«de
+ * 18:28:33 a 17:58:47»*, dos números correctos formando una frase falsa. El
+ * rastro se recorta en días UTC, así que en la zona de la operación cruza la
+ * medianoche; una hora sin fecha no sostiene un caso.
+ *
+ * Vive aquí y no en la app para que el producto formate instantes en un solo
+ * lugar: la versión que estaba dentro del componente además omitía `timeZone`,
+ * y sin él `Intl` usa el reloj de quien mira.
+ */
+export function localDateTimeSeconds(date: Date | string, timeZone = JTTEL_TZ): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return "—";
+  const hhmmss = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).format(d);
+  return `${localDateIso(d, timeZone)} ${hhmmss}`;
+}
 // ─────────────────────────────────────────────────────────────────────────
 
 export const AccountType = z.enum(["carrier", "client", "jstaff"]);

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { localDateTimeSeconds } from "@jtel/domain";
 
 /**
  * Tu versión de este servicio — la caja de reconciliación.
@@ -60,8 +61,10 @@ function etiquetaDe(codigo: string): string {
   return ETIQUETA_MOTIVO[codigo] ?? codigo.replace(/_/g, " ");
 }
 
-function fechaCorta(iso: string): string {
+/** La hora en que se aportó, en la zona del contrato — no en la de quien mira. */
+function fechaCorta(iso: string, timeZone: string): string {
   return new Intl.DateTimeFormat("es-MX", {
+    timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -86,14 +89,14 @@ type RecorridoDia = {
   ultimo?: string | null;
 };
 
-function soloHora(iso: string): string {
-  return new Intl.DateTimeFormat("es-MX", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).format(new Date(iso));
-}
+/*
+ * El formateo de instantes vive en el dominio, no aquí. La versión que estaba
+ * en este archivo imprimía **solo la hora** y **sin zona**, y las dos mitades
+ * estaban mal: un día real de rastro salió como «de 18:28:33 a 17:58:47» —el
+ * rastro se recorta en días UTC y cruza la medianoche—, y el reloj era el del
+ * navegador mientras el resto del expediente usaba el del contrato. Dos relojes
+ * en la misma pantalla, y el de abajo contradiciendo al del sello.
+ */
 
 export function CajaAportacion({
   occurrenceId,
@@ -102,9 +105,16 @@ export function CajaAportacion({
   unidades,
   existentes,
   empalmePorUnidad = {},
+  timeZone,
 }: {
   occurrenceId: string;
   accountSlug: string;
+  /**
+   * La zona del contrato, la misma con la que la página arma el expediente. Es
+   * obligatoria a propósito: con un valor por omisión, olvidarla compilaría y
+   * la caja volvería a mostrar el reloj del navegador sin que nadie lo note.
+   */
+  timeZone: string;
   /** Los excusables que la política del contrato declara. Puede venir vacío. */
   catalogo: string[];
   unidades: Array<{ id: string; label: string }>;
@@ -250,7 +260,7 @@ export function CajaAportacion({
                   className="font-mono text-[11px] tabular-nums"
                   style={{ color: "var(--tenue)" }}
                 >
-                  {fechaCorta(a.creadaAt)}
+                  {fechaCorta(a.creadaAt, timeZone)}
                 </span>
               </div>
               {a.nota ? (
@@ -393,8 +403,14 @@ export function CajaAportacion({
               <>
                 <p className="text-[12.5px]" style={{ color: "var(--texto)" }}>
                   <strong>Su día completo:</strong> {dia.total} puntos, de{" "}
-                  <span className="font-mono">{soloHora(dia.primero!)}</span> a{" "}
-                  <span className="font-mono">{soloHora(dia.ultimo!)}</span>.
+                  <span className="font-mono">
+                    {localDateTimeSeconds(dia.primero!, timeZone)}
+                  </span>{" "}
+                  a{" "}
+                  <span className="font-mono">
+                    {localDateTimeSeconds(dia.ultimo!, timeZone)}
+                  </span>
+                  .
                 </p>
                 <p className="mt-1 font-mono text-[11.5px]" style={{ color: "var(--tenue)" }}>
                   {dia.antes} antes de la ventana · {dia.dentro} dentro ·{" "}

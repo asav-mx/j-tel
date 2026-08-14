@@ -4915,3 +4915,31 @@ eran falsos).**
   vez de fingir que se sabe.
 - 🟢 Tres pruebas nuevas, y la que importa es que **dos crones no pueden producir
   el mismo asunto**.
+
+**13 de agosto de 2026 (el clic, verificado en el navegador — y lo que ahí salió).**
+
+- ✅ **El clic de la aportación funciona de punta a punta.** Verificado con
+  navegador dirigido sobre un servicio real de las 397: **82 unidades** en el
+  desplegable, el bloque del día **ausente antes** de elegir y **presente
+  después**, `200` de `/api/carrier/recorrido-dia`, y los tres tramos cuadrando
+  —548 + 148 + 197 = 893—.
+- ⚠ **Y ahí salió un defecto que ninguna prueba veía:** el bloque decía *«Su día
+  completo: 893 puntos, de **18:28:33 a 17:58:47**»*. Dos números correctos
+  formando una frase falsa — se lee como si el día terminara antes de empezar. El
+  rastro se recorta en días **UTC**, así que en la zona de la operación **cruza
+  la medianoche**, y el componente pedía solo la hora. Es la ley que ya estaba
+  escrita —*en evidencia toda hora lleva su fecha, un turno nocturno cruza la
+  medianoche*— rota en el único lugar donde se notaba.
+- ⚠ **Y debajo, el segundo: el reloj era el del navegador.** Sin `timeZone`
+  explícito `Intl` usa el de quien mira, mientras el resto del expediente se arma
+  en el servidor con el del contrato. **Dos relojes en la misma pantalla**, y el
+  de abajo contradiciendo al del sello — para un transportista en otra zona.
+- ✅ **`localDateTimeSeconds` en el dominio**, junto a `localDateTimeShort`. El
+  producto formatea instantes en un solo lugar; la copia que vivía dentro del
+  componente es la que omitía la zona. `timeZone` es **obligatorio** en la caja:
+  con valor por omisión, olvidarlo compilaría.
+- 🟢 **Seis pruebas**, y la que importa es que dos extremos ordenados como texto
+  **siguen en orden** — con solo la hora, se invertían.
+- 🟢 Visto en los dos temas. Y una trampa del método: **Chrome headless arranca
+  en claro**, así que una corrida sin declarar el esquema rinde el tema claro
+  creyendo que rindió el oscuro.
