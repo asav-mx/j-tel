@@ -392,6 +392,7 @@ export default async function CarrierServicioPage({
             unidades={unitOptions}
             existentes={aportaciones}
             empalmePorUnidad={empalmePorUnidad}
+            timeZone={tz}
           />
         ) : null}
 
