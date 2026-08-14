@@ -775,12 +775,28 @@ export function avisoVentanasDesalineadas(
  * lugar equivocado —§D del Marco— y haría que alguien fuera a buscar 47
  * servicios que no existen.
  */
-export function avisoDeSimulacro(ahora: Date): Aviso {
+export function avisoDeSimulacro(ahora: Date, cron?: string): Aviso {
   return {
     clase: "simulacro",
-    titulo:
-      "SIMULACRO · Esto no es un hallazgo: es la prueba de que este canal llega a una persona.",
+    titulo: cron
+      ? `SIMULACRO de ${cron} · Esto no es un hallazgo: es la prueba de que ESTE canal llega a una persona.`
+      : "SIMULACRO · Esto no es un hallazgo: es la prueba de que este canal llega a una persona.",
     mediciones: [
+      {
+        /*
+         * Qué cron lo mandó, dentro del correo y no solo en el resumen de la
+         * corrida. Cada cron es su propio camino de entrega y se prueba por
+         * separado — pero los dos primeros simulacros llegaron con el MISMO
+         * título y el mismo asunto, así que en la bandeja eran dos correos
+         * idénticos y no había forma de saber cuál probaba cuál. Una prueba
+         * cuyo resultado no se puede atribuir no prueba nada.
+         */
+        etiqueta: "Quién lo mandó",
+        valor: cron ? `/api/cron/${cron}` : "sin declarar",
+        lectura: cron
+          ? "cada cron es su propio camino de entrega: que otro entregue no dice que éste entregue"
+          : "el llamador no dijo de qué cron viene — no se puede atribuir a ninguno",
+      },
       {
         etiqueta: "Qué se está probando",
         valor: "el camino del aviso",
@@ -829,7 +845,16 @@ export function asuntoDe(aviso: Aviso): string {
      */
     case "ventana-desalineada":
       return `J-Telemetry · Ventana de evidencia desalineada`;
-    case "simulacro":
-      return `J-Telemetry · SIMULACRO · prueba del canal de avisos`;
+    case "simulacro": {
+      /*
+       * El asunto lleva el cron. Es lo único que se ve en la notificación del
+       * teléfono, y sin él dos simulacros de dos caminos distintos llegan como
+       * el mismo correo repetido.
+       */
+      const de = aviso.mediciones.find((m) => m.etiqueta === "Quién lo mandó")?.valor;
+      return de && de.startsWith("/api/cron/")
+        ? `J-Telemetry · SIMULACRO · ${de.replace("/api/cron/", "")}`
+        : `J-Telemetry · SIMULACRO · prueba del canal de avisos`;
+    }
   }
 }

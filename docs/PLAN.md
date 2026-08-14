@@ -4897,3 +4897,21 @@ eran falsos).**
   transacción, y devuelve los tres números.
 - 🟡 **Las 111 van a seguir apareciendo en el aviso diario, y es correcto**:
   siguen desalineadas. Lo que se decidió es no corregirlas en esa dirección.
+
+**13 de agosto de 2026 (ejecutado, y el simulacro que no se sabía atribuir).**
+
+- ✅ **Las 738 movidas por Asav, y verificado por mi lado**: el detector pasó de
+  **849 desalineadas a 111**, y las 111 que quedan son exactamente las que se
+  angostaban — **0 se ensanchan**. Los tres números cuadraron en la consola:
+  738 encontrados · 738 con la nueva · 0 sin mover.
+- ⚠ **Y un defecto que salió al disparar el segundo simulacro: los dos crones
+  mandaban el MISMO correo.** Mismo asunto, mismo título, cero diferencia. En la
+  bandeja eran dos correos idénticos probando dos caminos distintos, y **una
+  prueba cuyo resultado no se puede atribuir no prueba nada** — la lección del
+  vigilante en su versión chica. El resumen de la corrida sí decía el cron; el
+  correo, que es lo que se mira, no.
+- ✅ **Ahora el simulacro nombra su cron** en el asunto —lo único que se ve en la
+  notificación del teléfono— y en el cuerpo. Sin cron declarado **lo dice**, en
+  vez de fingir que se sabe.
+- 🟢 Tres pruebas nuevas, y la que importa es que **dos crones no pueden producir
+  el mismo asunto**.
