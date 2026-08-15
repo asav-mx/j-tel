@@ -111,7 +111,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Meta del demo](#meta-del-demo) | La cifra que hay que sostener |
 | [El deadline depende de dónde corre el generador](#el-deadline-depende-de-dónde-corre-el-generador) | **PRIORIDAD 1 — bug en producción** |
 | [Vista de flota del carrier](#vista-de-flota-del-carrier) | **PRIORIDAD 1 — en curso** |
-| [Compuerta de densidad de observación](#compuerta-de-densidad-de-observación) | Diseño aprobado, sin construir |
+| [Compuerta de densidad de observación](#compuerta-de-densidad-de-observación) | **Piso decidido en 60 s · se mide y se congela (paso 1); falta encenderla (paso 4)** |
 | [Identificación que se explica](#identificación-que-se-explica) | El corazón de v1 |
 | [Expediente del no cumplido](#expediente-del-no-cumplido) | Consecuencia de la Ley 2 |
 | [Lenore v1 — vigía y narradora](#lenore-v1--vigía-y-narradora) | Entra en el demo |
@@ -185,7 +185,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Migrar `autopsia.ts` al emparejamiento nuevo](#migrar-autopsiats-al-emparejamiento-nuevo) | Herramienta interna |
 | [La contraseña del readonly es la misma que la del dueño](#la-contraseña-del-readonly-es-la-misma-que-la-del-dueño) | 🟡 🤝 Toca producción |
 | [La base de pruebas está atrasada](#la-base-de-pruebas-está-atrasada) | ✅ Cerrada el 4 de agosto · eran tres, no una |
-| [Las migraciones del repo crean una columna que el código no conoce](#las-migraciones-del-repo-crean-una-columna-que-el-código-no-conoce) | 🟡 🤝 `0018` escrita · falta aplicarla a producción |
+| [Las migraciones del repo crean una columna que el código no conoce](#las-migraciones-del-repo-crean-una-columna-que-el-código-no-conoce) | ✅ **Cerrada el 15 de agosto** — la `0018` está aplicada en producción |
 | [`demos/activate` cruza cuentas](#demosactivate-cruza-cuentas) | 🟡 Protegida; falta decidir qué hace |
 | [No hay configuración de ESLint](#no-hay-configuración-de-eslint) | 🟢 Junto con el corredor de pruebas |
 | ["Consolidación" significa dos cosas](#consolidación-significa-dos-cosas) | 🟢 Renombrar la de política |
@@ -340,6 +340,28 @@ debajo del umbral, el resultado es `pendiente_evidencia`, no rojo. El umbral viv
 la política del contrato —`evidenceMaxPingSeconds`, o `evidenceMinResolutionPct`
 derivado de la geometría—, nunca clavado en código.
 
+**Dónde va, al 15 de agosto de 2026 — y la mitad que falta es justo la que la vuelve
+compuerta.** Esta entrada decía «diseño aprobado, sin construir» y eso ya no es cierto:
+
+- ✅ **El número está decidido: el piso va en 60 segundos**, por Asav el 13 de agosto,
+  y con su razón escrita, que es lo que lo hace defendible: **60 es exactamente el
+  intervalo con el que emitían los aparatos de Planta 47 los trece días que causaron
+  todo esto**. 45 alcanzaría a 203 servicios y 90 no toca a nadie.
+- ✅ **La medición existe y ya viaja dentro del hecho** (paso 1 de las preguntas
+  separadas, #312): `medirDensidad` usa **la misma definición que `medir-cadencia`**
+  —mediana del hueco entre puntos consecutivos **del mismo aparato**, no puntos÷duración,
+  que es un cociente que se mueve por el denominador y ya engañó una vez— y se congela
+  en `compliance_facts.densidad_snapshot` (migración `0023`). 🟢 Corriendo en producción:
+  **48 de 48 hechos del 14 de agosto la traen**.
+- 🔵 **Lo que NO está, y es lo único que la convierte en compuerta: el umbral.** El paso
+  del ledger declara **`gobierna: false`** a propósito, y **el piso no existe como perilla
+  en ninguna parte** — ni en `contractPolicySchema` ni en el motor. Los 60 segundos son
+  hoy una decisión escrita, no un número que el árbitro pueda leer. **Encenderlo es el
+  paso 4**, y va después del paso 3.
+- 🟢 **Y hay una prueba que vigila justo eso:** la misma geometría con evidencia cada 10 s
+  y cada 120 s **da el mismo veredicto**. Si se pone roja sin que nadie encienda el paso 4,
+  **la densidad empezó a decidir sin que se decidiera**.
+
 **Compuerta, no normalizador.** Decisión tomada y su razón: normalizar A hacia arriba
 inventa evidencia que nadie observó. La compuerta dice la verdad —*no vimos con
 suficiente resolución para juzgar*— y por la Ley 1 eso es un pendiente.
@@ -360,9 +382,18 @@ superarla por bien que maneje. De ahí sale el umbral, no de un número redondo.
 27.3%). La compuerta habría salvado el 28 y nada más. Es correcta y necesaria; no es
 la causa de aquello.
 
-**Dónde toca.** El paso `cobertura_evidencia` del ledger — medición y umbral juntos,
-como manda el Marco. `packages/verification/src`, `contractPolicySchema` en
-`packages/domain/src`, y su perilla en la pantalla de contratos.
+**Dónde toca.** ⚠ **Y aquí hay una corrección de la propia entrada: el diseño decía «el
+paso `cobertura_evidencia` del ledger», y no aterrizó ahí.** La densidad quedó en un paso
+propio, **`densidad_evidencia`**, y en columna propia (`0023`) en vez de dentro de
+`candidatas_snapshot` aunque saliera más barato — porque aquél dice «candidatas» y la
+densidad es propiedad de la **evidencia**, y un campo cuyo nombre no describe su
+contenido es C15 y C20 otra vez. `cobertura_evidencia` sigue existiendo y es **otra
+pregunta**: si la evidencia cubrió la ventana.
+
+Lo que queda por tocar es el umbral: `packages/verification/src` —donde hoy
+`medirDensidad` mide sin gobernar—, `contractPolicySchema` en `packages/domain/src`, y su
+perilla en la pantalla de contratos. **Medición y umbral juntos, como manda el Marco** —
+hoy están separados, y ésa es exactamente la mitad que falta.
 
 ## Identificación que se explica
 
@@ -2104,10 +2135,11 @@ dejarlo dentro del procedimiento, para que la siguiente no vuelva a quedarse atr
 
 ## Las migraciones del repo crean una columna que el código no conoce
 
-**Qué es.** 🟡 `ledger_entries.actor_user_id` la crea la `0000`, el esquema de Drizzle
-**no la declara** desde la `0012`, y **producción todavía la tiene**. La `0012` anunció
-su baja —«se elimina en Migración B después del deploy»— y esa Migración B nunca se
-escribió.
+**Qué es.** ✅ **CERRADA el 15 de agosto de 2026: la `0018` está aplicada en producción
+y la columna ya no existe.** `ledger_entries.actor_user_id` la creaba la `0000`, el
+esquema de Drizzle **no la declara** desde la `0012`, y producción la tuvo de más
+durante tres semanas. La `0012` anunció su baja —«se elimina en Migración B después del
+deploy»— y esa Migración B nunca se escribió; la `0018` la escribió.
 
 **Por qué se aplazó.** No se aplazó: **fue invisible durante tres semanas.**
 `esquema.yml` atrapa la columna que **falta**, no la que **sobra** — levanta una base
@@ -2117,15 +2149,26 @@ de más cabe perfectamente. Es
 otro lado — sigue en verde porque una columna de más no molesta, hasta el día que sí.
 
 **Medido el 2026-08-04 con `jtel_readonly`**, nunca con el dueño: `ledger_entries` tiene
-**167 372 filas y 0 con `actor_user_id`**. La columna está vacía; quien firma hoy es
-`actor_kind` (64 661 filas). Ninguna línea de `packages/` ni de `apps/` la nombra.
+**167 372 filas y 0 con `actor_user_id`**. La columna estaba vacía; quien firma es
+`actor_kind` (64 661 filas). Ninguna línea de `packages/` ni de `apps/` la nombraba.
 
-**Qué lo desbloquea.** 🤝 **Aplicar la `0018` a producción — es de Asav**, porque toca la
-base real. El archivo ya existe, es idempotente (`DROP COLUMN IF EXISTS`) y quedó
-aplicado y comprobado dos veces contra la rama desechable, donde es un no-op.
+**Qué la cerró.** 🤝 Asav aplicó la `0018` a producción. **Comprobado el 15 de agosto de
+2026 en solo lectura con `DATABASE_URL_READONLY`:** `ledger_entries` tiene hoy nueve
+columnas —`id`, `trip_id`, `service_occurrence_id`, `action`, `steps`, `metadata`,
+`created_at`, `actor_kind`, `actor_id`— y **`actor_user_id` no está entre ellas**.
 
-**Dónde toca.** `packages/db/drizzle/0018_ledger_actor_user_id.sql`;
-`docs/Procedimiento-Migraciones.md`.
+⚠ **Y el límite de esa comprobación, dicho antes que el resultado** —es el mismo que
+declara la valla de `verificar-migraciones-aplicadas.ts`—: **se comprobó el EFECTO, no
+la ejecución.** Sabemos que la columna no está; **no sabemos por qué camino ni cuándo se
+fue**, y esta entrada no lo afirma. Para «¿esta base tiene lo que el código necesita?»
+ésa es la respuesta correcta; para «¿quién y cuándo?» no sirve, y no pretende.
+
+**Dónde tocaba.** `packages/db/drizzle/0018_ledger_actor_user_id.sql`;
+`docs/Procedimiento-Migraciones.md`. **Hoy la vigila la valla**
+(`packages/db/src/verificar-migraciones-aplicadas.ts`, #315), que es lo que impide que
+esta clase de hueco vuelva a ser invisible tres semanas — ⚠ **con su propio límite: no
+corre en CI**, porque necesita credenciales de las dos bases. Se corre a mano antes de
+desplegar.
 
 ## `demos/activate` cruza cuentas
 
