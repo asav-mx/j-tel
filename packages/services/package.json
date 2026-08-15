@@ -24,6 +24,7 @@
     "reverify-day": "tsx src/reverify-day.ts",
     "reverificar-zona-planta47": "tsx src/reverificar-zona-planta47.ts",
     "simular-reverificacion-planta47": "tsx src/simular-reverificacion-planta47.ts",
+    "simular-motor-actual-planta47": "tsx src/simular-motor-actual-planta47.ts",
     "analizar-kml-sospechoso-planta47": "tsx src/analizar-kml-sospechoso-planta47.ts",
     "medir-ventana-vs-ruta": "tsx src/medir-ventana-vs-ruta.ts",
     "medir-efecto-densidad": "tsx src/medir-efecto-densidad.ts",
