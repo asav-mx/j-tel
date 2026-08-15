@@ -14,15 +14,18 @@
  * carrier (`findOpenByKind`), y de paso da gratis el aviso de "ya volvió" y el
  * conteo del resumen diario.
  *
- * El juicio de salud NO se reimplementa aquí: se llama a `evaluarSalud` de
- * `@jtel/services`, el mismo que lee `/api/salud` y el mismo umbral. Dos
- * definiciones del mismo umbral es cómo se llega a que el correo diga una cosa
- * y el vigilante otra.
+ * La muestra de salud tampoco se arma aquí: se pide a `lib/salud-muestra`, el
+ * mismo armado que lee `/api/salud`. Antes había una copia en este archivo que
+ * decía estar hecha igual y no lo estaba —le faltaba el chequeo de
+ * verificación—, y el correo salió reportando que no pudo contar. Dos
+ * definiciones de la misma muestra es cómo se llega a que el correo diga una
+ * cosa y el vigilante otra.
  */
 
 import type { Repositories } from "@jtel/db";
-import { evaluarSalud, UMBRALES_SALUD, diagnostico } from "@jtel/services";
+import { UMBRALES_SALUD, diagnostico } from "@jtel/services";
 import { localDateIso, JTTEL_TZ } from "@/lib/local-time";
+import { leerMuestraDeSalud } from "@/lib/salud-muestra";
 import {
   agruparSinVeredicto,
   CLASES_POR_CUBETA,
@@ -71,38 +74,6 @@ export type ResultadoDeteccion = {
   /** Se alcanzó el tope de lectura: puede haber resoluciones no vistas. */
   topeAlcanzado: boolean;
 };
-
-/** La muestra de salud, armada igual que en `/api/salud`. */
-async function leerSalud(repos: Repositories, ahora: Date) {
-  const carriers = await repos.accounts.listByType("carrier", { includeDemo: false });
-  const reales = new Set(carriers.map((c) => c.id));
-
-  const [marcasTodas, abiertas] = await Promise.all([
-    repos.telemetry.listWatermarks(),
-    repos.ingestAlerts.listUnresolved(100),
-  ]);
-
-  const marcas = marcasTodas
-    .filter((m) => reales.has(m.carrierAccountId))
-    .map((m) => ({ lastRecordedAt: m.lastRecordedAt, updatedAt: m.updatedAt }));
-
-  const criticas = abiertas.filter((a) => a.severity === "critical");
-
-  const resultado = evaluarSalud(
-    {
-      ahora,
-      marcas,
-      carriersEsperados: carriers.length,
-      alertasCriticasAbiertas: criticas.length,
-      alertaCriticaMasAntigua: criticas.length
-        ? criticas.reduce((v, a) => (a.createdAt < v ? a.createdAt : v), criticas[0]!.createdAt)
-        : null,
-    },
-    UMBRALES_SALUD,
-  );
-
-  return { resultado, abiertas, marcas };
-}
 
 /**
  * El incidente del archivador: se abre cuando cruza el umbral y se cierra
@@ -267,7 +238,7 @@ export async function detectarAvisos(
   ahora: Date,
 ): Promise<ResultadoDeteccion> {
   const cubeta = cubetaDeCorrida(ahora);
-  const { resultado, marcas } = await leerSalud(repos, ahora);
+  const { resultado, marcas } = await leerMuestraDeSalud(repos, ahora);
 
   const archivador = resultado.chequeos.find((c) => c.id === "archivador");
   const atendido = await atenderArchivador(repos, ahora, archivador, marcas.length);
@@ -306,7 +277,7 @@ export async function armarResumen(
   repos: Repositories,
   ahora: Date,
 ): Promise<ResumenDiario> {
-  const { resultado } = await leerSalud(repos, ahora);
+  const { resultado } = await leerMuestraDeSalud(repos, ahora);
 
   const ayer = new Date(ahora.getTime() - 24 * 60 * 60_000);
   const diaIso = localDateIso(ayer, JTTEL_TZ);

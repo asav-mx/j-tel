@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRepos, isDatabaseConfigured } from "@/lib/db";
-import { evaluarSalud, diagnostico, UMBRALES_SALUD, HORAS_FALLO_MUDO } from "@jtel/services";
+import { diagnostico } from "@jtel/services";
+import { leerMuestraDeSalud } from "@/lib/salud-muestra";
 
 export const dynamic = "force-dynamic";
 
@@ -92,47 +93,12 @@ export async function GET(request: Request) {
       });
     }
 
-    // Las cuentas demo no se vigilan: archivarlas fue sacarlas de la vista, y
-    // una demo sin telemetría no es una falla de plataforma.
-    //
-    // El filtro ya NO se aplica aquí a mano: vive en `deCuentaReal`, dentro del
-    // paquete `db`, y lo heredan las TRES consultas de abajo. Filtrarlo en la
-    // ruta era lo que dejaba que un chequeo nuevo se olvidara de hacerlo — y eso
-    // fue exactamente lo que pasó con `contarFallosMudos`.
-    const carriers = await repos.accounts.listByType("carrier", { includeDemo: false });
-
-    const [marcasTodas, abiertas, fallosMudos] = await Promise.all([
-      repos.telemetry.listWatermarks(),
-      repos.ingestAlerts.listUnresolved(100),
-      // El chequeo que faltaba: si el árbitro llegó a dictar. Todo lo demás que
-      // vigila esta ruta es INGESTA, y por eso pudo decir "sano" durante 35
-      // días con ocho servicios de un cliente vivo sin veredicto.
-      repos.occurrences.contarFallosMudos(HORAS_FALLO_MUDO),
-    ]);
-
-    const marcas = marcasTodas.map((m) => ({
-      lastRecordedAt: m.lastRecordedAt,
-      updatedAt: m.updatedAt,
-    }));
-
-    const criticas = abiertas.filter((a) => a.severity === "critical");
-
-    const resultado = evaluarSalud(
-      {
-        ahora,
-        marcas,
-        carriersEsperados: carriers.length,
-        alertasCriticasAbiertas: criticas.length,
-        alertaCriticaMasAntigua: criticas.length
-          ? criticas.reduce((v, a) => (a.createdAt < v ? a.createdAt : v), criticas[0]!.createdAt)
-          : null,
-        verificacion: {
-          fallosMudos: fallosMudos.total,
-          masAntiguoHoras: fallosMudos.masAntiguoHoras,
-        },
-      },
-      UMBRALES_SALUD,
-    );
+    // La muestra se arma en un solo lugar —`lib/salud-muestra`— y de ahí la
+    // lee también el canal de alertas. Tenerla dos veces fue lo que dejó al
+    // correo sin el chequeo de verificación durante todo el tiempo que la ruta
+    // sí lo hacía. Lo que se queda aquí es la envoltura: la sonda de arriba, el
+    // código de estado y qué se le cuenta a quien no se autenticó.
+    const { resultado } = await leerMuestraDeSalud(repos, ahora);
 
     return responder(resultado.estado, {
       diagnostico: diagnostico(resultado),
