@@ -15,15 +15,17 @@ Bloque C existe por una razón: el motor produjo 397 acusaciones de incumplimien
 Bloque C está cerrado cuando:
 1. El motor ya no puede producir una acusación sin unidad atribuida detrás (la separación atribución/cumplimiento gobierna los veredictos nuevos).
 2. La clase de error que produjo la mayoría de las 397 está eliminada hacia adelante (C25).
-3. La compuerta de aviso está probada de verdad: un correo visto llegar a una bandeja humana (C21).
+3. La compuerta de aviso está probada de verdad: el resumen llega a una bandeja humana y sus conteos son conteos medidos, no ceros por falla.
 
 Nada más pertenece al cierre. Todo lo demás es afinación y vive en DESPUÉS.
 
 
 C. El trabajo restante, en orden
 
-1. C21 — probar la compuerta. (Hoy, sin construir nada.)
-   Resend aceptó el correo del simulacro; aceptado no es llegado. Asav dispara el simulacro y confirma con sus ojos que el correo está en la bandeja. Con eso se tacha el pendiente que el plan marca como lo único abierto de la lista original del tramo.
+1. C21 — probar la compuerta.
+   Primera mitad: cumplida. El 15 de agosto Asav vio llegar el resumen diario a su bandeja (corrida de las 07:00, resumen del día anterior). La plomería —cron, plantilla, envío, entrega— funciona de punta a punta.
+   Segunda mitad: pendiente. El mismo correo reporta un chequeo fuera de umbral: no pudo contar los servicios vencidos sin veredicto. Por lo tanto el "0 servicios sin veredicto" del encabezado no es un cero medido: es un cero que puede significar "ninguno" o "no pude contar". Esa es la clase de error que este proyecto ya tiene nombrada: correcto como conteo, falso como afirmación.
+   C21 cierra cuando el chequeo cuente de verdad y el resumen distinga en pantalla un cero medido de un dato no disponible. Una compuerta que no puede contar no está probada, y un aviso que presenta un no-dato como un cero es peor que no avisar.
 
 2. Corrección de backlog — hecha. (PR #323, abierto para revisión de Asav.)
    DESPUES.md afirmaba que la migración de la columna borrada "falta aplicarla a producción". Está aplicada y verificada, y la entrada ya lo dice, con el límite de esa comprobación escrito al lado: se comprobó el efecto, no la ejecución. El rótulo "sin aplicar" de la 0021 no estaba en DESPUES.md — vive en el título del commit #296 y en una entrada fechada de bitácora de PLAN.md que ya se corrige a sí misma más abajo, y una bitácora fechada no se reescribe. Un backlog que miente enseña a ignorar el backlog; se corrigió antes de que envenenara otra decisión.
