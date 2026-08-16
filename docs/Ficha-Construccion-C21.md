@@ -27,8 +27,14 @@ Es la misma enfermedad que Bloque C vino a curar, ahora en el sistema de avisos:
 Un aviso que presenta un no-dato como un cero es peor que no avisar: enseña a confiar en un número que no se midió.
 
 
-C. La construcción — tres PRs, en este orden
+C. La construcción — cuatro PRs, en este orden
 Un defecto por PR. Cada uno se puede ver, medir y revertir por separado.
+
+Esta ficha se escribió con tres, y el cuarto no es un cambio de alcance: ya estaba diagnosticado arriba. La sección A lo describe entero —"el del encabezado mira tres días atrás y solo contratos activos; el que falló no tiene ventana de días y usa otro umbral… uno puede decir cero mientras el otro dice otra cosa"— y aun así no se le dio PR propio.
+
+Por qué se escapó: ese día las dos poblaciones estaban en cero, así que la contradicción no tenía cómo verse. Y mientras dos renglones se llamaran igual, el rótulo cruzado la tapaba. Al separarlos el PR 3, quedó a la vista con números distintos.
+
+La lección, que vale más que la corrección: un defecto descrito en la sección de diagnóstico y sin PR asignado no está en el plan, está en una nota. Se anota aquí en vez de reescribir la historia.
 
 PR 1 — Que el conteo exista.
 Fundir los dos armados de la muestra de salud en uno solo. El corte va donde el diagnóstico lo puso: la pieza común es armar la muestra y evaluarla; la envoltura HTTP de la ruta (sonda de esquema, respuesta, detalle de error según autenticación, códigos) se queda en la ruta y no se funde.
@@ -47,19 +53,27 @@ PR 3 — El rótulo y la valla.
 - Una valla que impida que un chequeo nuevo herede el caso por omisión de la escalera en silencio. Esta es la corrección de fondo: el defecto de origen no fue una consulta olvidada, fue que el sistema permite olvidarla sin avisar.
 - Cobertura de prueba del chequeo en el camino del correo, que hoy no existe.
 
+PR 4 — El título contra las dos poblaciones.
+Con los rótulos ya separados quedó visible que el título afirma un conteo —"2 servicios sin veredicto"— mientras el renglón de arriba reporta otro número para lo que el lector entiende como lo mismo. Los dos medidos, los dos correctos, y el titular falso por afirmar sin decir de qué recorte era.
+- Las dos poblaciones no se contienen en ninguna dirección: una mira 3 días atrás, solo contratos activos y espera 30 min; la otra no tiene ventana de días, admite cualquier estado de contrato y espera 2 h. Un vencido hace 45 min está en la primera y no en la segunda; uno de hace diez días, al revés. No hay un número "bueno" que elegir.
+- Cada conteo sale con su corte puesto, y los dos se declaran coincidan o no, para que el titular tenga una sola forma.
+- Nunca se afirma que sean los mismos servicios cuando los números coinciden: dos recortes distintos pueden dar la misma cifra por casualidad, y eso sería un dato correcto sosteniendo una afirmación falsa.
+- Obstáculo de fondo: el segundo conteo solo existía dentro de la prosa de su lectura. Para que el título pudiera contrastarse, el número tuvo que viajar como número.
+
 
 D. Cuándo cierra C21
 C21 cierra cuando:
 1. El conteo se hace y su resultado es un número medido.
 2. El correo distingue en pantalla un cero medido de un dato no disponible.
 3. Cada renglón lleva el nombre de la población que reporta.
-4. Un resumen diario posterior a los tres PRs llega a una bandeja humana y se lee coherente de arriba a abajo.
+4. Ningún número del correo afirma más de lo que su población midió — empezando por el título, que es lo primero y a veces lo único que se lee.
+5. Un resumen diario posterior a los cuatro PRs llega a una bandeja humana y se lee coherente de arriba a abajo.
 
-El punto 4 lo cierra Asav mirando el correo, igual que la primera mitad. Una compuerta no se da por probada porque el código compile.
+El punto 5 lo cierra Asav mirando el correo, igual que la primera mitad. Una compuerta no se da por probada porque el código compile.
 
 
 E. Reglas que aplican
 - Un defecto por PR; el orden importa y no se altera.
 - Ningún hecho sellado se toca; esto es plomería de avisos, no motor de veredictos.
-- Los umbrales de salud no se mueven en ninguno de los tres PRs. Si alguno pareciera necesitarlo, se detiene y se decide aparte.
+- Los umbrales de salud no se mueven en ninguno de los cuatro PRs. Si alguno pareciera necesitarlo, se detiene y se decide aparte.
 - Asav revisa Files Changed y mergea.
