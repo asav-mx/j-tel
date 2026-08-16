@@ -71,11 +71,30 @@ export type MuestraSalud = {
   verificacion?: { fallosMudos: number; masAntiguoHoras: number | null };
 };
 
+/**
+ * El veredicto GLOBAL sigue siendo binario, y eso no se toca: el vigilante
+ * externo necesita saber si grita o no, y lee el código de estado.
+ */
 export type EstadoSalud = "sano" | "enfermo";
+
+/**
+ * El estado de UN chequeo, que sí tiene un tercer valor.
+ *
+ * `no_medido` no es un matiz de "enfermo": es otra cosa. Enfermo es "lo miré y
+ * está mal"; no medido es "no lo pude mirar". Sin este valor, las dos se
+ * cuentan igual y quien lee un aviso no tiene cómo distinguir una violación de
+ * una ceguera — lo único que las separaría son las palabras de la prosa, y la
+ * prosa no es estado.
+ *
+ * Es el mismo tercer valor que el Marco ya le dio a los veredictos con
+ * `pendiente por evidencia`, por la misma razón: para que la falta de evidencia
+ * jamás se confunda con una falta.
+ */
+export type EstadoChequeo = EstadoSalud | "no_medido";
 
 export type Chequeo = {
   id: "gps" | "archivador" | "marcas" | "alertas" | "verificacion";
-  estado: EstadoSalud;
+  estado: EstadoChequeo;
   /** Frase lista para leer: la medición SIEMPRE junto a su umbral. */
   lectura: string;
   minutos: number | null;
@@ -197,10 +216,12 @@ export function evaluarSalud(
       umbralMinutos: HORAS_FALLO_MUDO * 60,
     });
   } else {
-    // La ausencia se declara. Un chequeo que no corrió no es un chequeo sano.
+    // La ausencia se declara, y se declara COMO ausencia. Un chequeo que no
+    // corrió no es un chequeo sano —eso ya se sabía— pero tampoco es uno que
+    // haya salido mal: es uno que no se pudo hacer, y así se dice.
     chequeos.push({
       id: "verificacion",
-      estado: "enfermo",
+      estado: "no_medido",
       lectura: "no se pudo contar los servicios vencidos sin veredicto",
       minutos: null,
       umbralMinutos: HORAS_FALLO_MUDO * 60,
@@ -208,7 +229,13 @@ export function evaluarSalud(
   }
 
   return {
-    estado: chequeos.some((c) => c.estado === "enfermo") ? "enfermo" : "sano",
+    /*
+     * Sano solo si TODOS los chequeos salieron sanos — y "no medido" no lo es.
+     * Que el estado global no distinga entre roto y ciego es deliberado: el
+     * vigilante externo necesita una respuesta binaria para decidir si grita, y
+     * ante la duda grita. El matiz viaja en el chequeo, para quien sí lo pinta.
+     */
+    estado: chequeos.some((c) => c.estado !== "sano") ? "enfermo" : "sano",
     chequeos,
   };
 }
@@ -224,9 +251,11 @@ export function evaluarSalud(
  */
 export function diagnostico(r: ResultadoSalud): string {
   // El motor manda sobre la ingesta: que la telemetría entre puntual no
-  // consuela si nadie está dictando veredictos con ella.
+  // consuela si nadie está dictando veredictos con ella. Y no poder mirarlo
+  // manda igual: un diagnóstico que calla lo que no midió es el que dejó pasar
+  // 35 días de silencio.
   const ver = r.chequeos.find((c) => c.id === "verificacion");
-  if (ver?.estado === "enfermo") return ver.lectura;
+  if (ver && ver.estado !== "sano") return ver.lectura;
 
   const gps = r.chequeos.find((c) => c.id === "gps");
   const arch = r.chequeos.find((c) => c.id === "archivador");

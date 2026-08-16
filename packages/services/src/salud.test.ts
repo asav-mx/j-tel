@@ -135,15 +135,38 @@ describe("el chequeo que faltaba — servicios vencidos sin veredicto", () => {
 
   it("SIN el conteo, la salud NO se da por buena", () => {
     /*
-     * La valla de este PR. Si el conteo no llega —consulta caída, refactor que
-     * la olvida— la respuesta honesta es "no sé", y "no sé" no es "sano". Un
-     * vigilante que calla lo que no midió es el que dejó pasar los 35 días.
+     * La valla. Si el conteo no llega —consulta caída, refactor que la olvida—
+     * la respuesta honesta es "no sé", y "no sé" no es "sano". Un vigilante que
+     * calla lo que no midió es el que dejó pasar los 35 días.
      */
     const sinConteo = muestra();
     delete (sinConteo as Partial<MuestraSalud>).verificacion;
     const r = evaluarSalud(sinConteo);
-    expect(chequeo(r, "verificacion").estado).toBe("enfermo");
     expect(r.estado).toBe("enfermo");
     expect(diagnostico(r)).toContain("no se pudo contar");
+  });
+
+  it("y lo dice como ausencia, no como falla: 'no sé' tiene su propio valor", () => {
+    /*
+     * El tercer estado. Antes, no poder medir se marcaba `enfermo` — el mismo
+     * valor que "lo miré y está roto". Con eso, ningún aviso podía distinguir
+     * una violación de umbral de una ceguera, porque no había con qué.
+     *
+     * El estado GLOBAL sigue siendo binario a propósito: el vigilante externo
+     * necesita saber si grita, y ante la duda grita.
+     */
+    const sinConteo = muestra();
+    delete (sinConteo as Partial<MuestraSalud>).verificacion;
+    const r = evaluarSalud(sinConteo);
+    expect(chequeo(r, "verificacion").estado).toBe("no_medido");
+    expect(r.estado).toBe("enfermo");
+  });
+
+  it("medir cero NO es lo mismo que no medir", () => {
+    // Los dos son "no hay nada que reportar" en el conteo, y son estados
+    // distintos: uno lo comprobó y el otro no pudo.
+    const medido = chequeo(evaluarSalud(muestra()), "verificacion");
+    expect(medido.estado).toBe("sano");
+    expect(medido.lectura).toContain("sin servicios vencidos sin veredicto");
   });
 });
