@@ -21,7 +21,7 @@
  * instrumento" aunque no sea IBM Plex.
  */
 
-import type { EstadoChequeo } from "@jtel/services";
+import type { Chequeo, EstadoChequeo } from "@jtel/services";
 import { instanteSellado, duracion } from "@/lib/formato-tiempo";
 import {
   asuntoDe,
@@ -291,6 +291,40 @@ export function renderAvisos(
   };
 }
 
+/**
+ * Cómo se llama cada chequeo en el correo. Uno por cada uno, sin escalera.
+ *
+ * ── La valla, y por qué es un `Record` y no un `if` más ─────────────────────
+ *
+ * Esto era una escalera de ternarios que terminaba en un caso por omisión. El
+ * chequeo de verificación se agregó después, no tenía rama, y cayó al último
+ * peldaño: salió rotulado **«Alertas críticas»**, que es el nombre de otra
+ * población. El correo traía dos renglones con el mismo nombre —uno real y uno
+ * que era otra cosa— y ninguno de los dos lo delataba, porque el caso por
+ * omisión siempre tiene algo que devolver.
+ *
+ * El defecto de fondo no fue la rama olvidada: fue que el sistema **permite
+ * olvidarla en silencio**. Un `Record<Chequeo["id"], string>` no lo permite —
+ * agregar un chequeo nuevo a `Chequeo["id"]` sin nombrarlo aquí no compila. La
+ * valla la pone el compilador y no la memoria de quien escriba el chequeo
+ * siguiente, que es justo quien no va a acordarse.
+ *
+ * ── Por qué "Cola de verificación" y no "Servicios sin veredicto" ───────────
+ *
+ * Porque ese nombre ya es de otro renglón: el de `sinVeredicto`, que mira los
+ * últimos días y solo contratos activos. Este chequeo cuenta otra población
+ * —vencidos hace más de 2 h sin NINGÚN hecho, sin ventana de días— y darle el
+ * nombre del otro sería repetir el defecto con mejor ortografía. "Cola de
+ * verificación" es como el propio correo ya la nombra en su día limpio.
+ */
+const ETIQUETA_CHEQUEO: Record<Chequeo["id"], string> = {
+  gps: "Dato de GPS",
+  archivador: "Archivador",
+  marcas: "Marcas de agua",
+  alertas: "Alertas críticas",
+  verificacion: "Cola de verificación",
+};
+
 /** Lo que el resumen diario cuenta del día anterior. */
 export type ResumenDiario = {
   /** Día civil que se reporta, en ISO. */
@@ -305,7 +339,7 @@ export type ResumenDiario = {
    * y un `string` deja pasar cualquier cosa sin que nadie se entere. Es el
    * mismo descuido que dejó al correo sin poder decir "no sé".
    */
-  chequeos: Array<{ id: string; estado: EstadoChequeo; lectura: string }>;
+  chequeos: Array<{ id: Chequeo["id"]; estado: EstadoChequeo; lectura: string }>;
   /** Alertas abiertas ahora mismo, por tipo. */
   abiertasPorTipo: Array<{ tipo: string; cantidad: number; masAntigua: Date | null }>;
   /** Alertas que se abrieron durante el día reportado, por tipo. */
@@ -359,7 +393,12 @@ export function renderResumen(r: ResumenDiario, ahora: Date): Mensaje {
 
   const mediciones: Medicion[] = [
     ...r.chequeos.map((c) => ({
-      etiqueta: c.id === "gps" ? "Dato de GPS" : c.id === "archivador" ? "Archivador" : c.id === "marcas" ? "Marcas de agua" : "Alertas críticas",
+      /*
+       * Si algún día llegara un id sin nombre, el renglón sale con el id crudo:
+       * feo y evidente. Nunca con el nombre de otra población, que es la forma
+       * de fallar que se ve bien y miente.
+       */
+      etiqueta: ETIQUETA_CHEQUEO[c.id] ?? c.id,
       valor: c.estado === "sano" ? "al día" : c.estado === "no_medido" ? "no medido" : "fuera de umbral",
       lectura: c.lectura,
       noMedido: c.estado === "no_medido",
