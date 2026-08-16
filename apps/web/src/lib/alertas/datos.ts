@@ -277,7 +277,7 @@ export async function armarResumen(
   repos: Repositories,
   ahora: Date,
 ): Promise<ResumenDiario> {
-  const { resultado } = await leerMuestraDeSalud(repos, ahora);
+  const { resultado, fallosMudos } = await leerMuestraDeSalud(repos, ahora);
 
   const ayer = new Date(ahora.getTime() - 24 * 60 * 60_000);
   const diaIso = localDateIso(ayer, JTTEL_TZ);
@@ -321,5 +321,17 @@ export async function armarResumen(
       contratos: contratos.size,
     },
     diasMirados: DIAS_SIN_VEREDICTO,
+    /*
+     * La otra población, como número.
+     *
+     * Se declara `null` cuando su propio chequeo salió `no_medido`, y se lee
+     * del chequeo en vez de suponerlo: así el número del título y el estado
+     * del renglón no pueden divergir nunca. Si la consulta no se pudo hacer,
+     * el renglón dirá "no medido" y el título no inventará un conteo.
+     */
+    colaVerificacion:
+      resultado.chequeos.find((c) => c.id === "verificacion")?.estado === "no_medido"
+        ? null
+        : { total: fallosMudos.total },
   };
 }

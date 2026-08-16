@@ -91,3 +91,43 @@ describe("el resumen diario cuenta los servicios vencidos sin veredicto", () => 
     expect(medido.diagnostico).not.toContain("no se pudo contar");
   });
 });
+
+/*
+ * El conteo tiene que llegar al resumen COMO NÚMERO.
+ *
+ * Antes solo llegaba dentro de la prosa de `lectura`, y por eso el título no
+ * tenía con qué contrastarse: afirmaba `sinVeredicto.total` a secas mientras
+ * el renglón de abajo reportaba otra cifra de otra población. La única forma
+ * de arreglarlo sin esto habría sido leer el número de vuelta de su propio
+ * texto, que es como se construye el siguiente defecto.
+ */
+describe("la cola de verificación viaja como número, no como prosa", () => {
+  it("el conteo medido llega al resumen y no solo dentro de la frase", async () => {
+    const { repos } = repositorios({ total: 6, masAntiguoHoras: 49.8 });
+
+    const r = await armarResumen(repos, AHORA);
+
+    expect(r.colaVerificacion).toEqual({ total: 6 });
+  });
+
+  it("un cero medido llega como cero, no como ausencia", async () => {
+    const { repos } = repositorios();
+
+    const r = await armarResumen(repos, AHORA);
+
+    // `null` significaría "no se pudo medir", y aquí SÍ se midió. Confundir
+    // los dos es el defecto que el PR 2 de C21 existió para cerrar.
+    expect(r.colaVerificacion).toEqual({ total: 0 });
+  });
+
+  it("el número del título y el estado del renglón no pueden divergir", async () => {
+    const { repos } = repositorios({ total: 6, masAntiguoHoras: 49.8 });
+
+    const r = await armarResumen(repos, AHORA);
+
+    // Se lee del chequeo, no se supone: si el renglón dice "no medido", el
+    // título no tiene número que decir, y al revés.
+    expect(verificacion(r.chequeos)?.estado).not.toBe("no_medido");
+    expect(r.colaVerificacion).not.toBeNull();
+  });
+});
