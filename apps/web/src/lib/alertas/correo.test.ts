@@ -128,6 +128,7 @@ const resumen = (parcial: Partial<ResumenDiario> = {}): ResumenDiario => ({
   nuevasPorTipo: [],
   sinVeredicto: { total: 0, sinViaje: 0, contratos: 0 },
   diasMirados: 3,
+  colaVerificacion: { total: 0 },
   ...parcial,
 });
 
@@ -166,6 +167,96 @@ describe("el resumen diario", () => {
 
     expect(texto).toContain("7 servicios sin veredicto");
     expect(texto).toContain("3 sin fila de viaje");
+  });
+});
+
+/*
+ * El título contra las dos poblaciones — el último defecto de C21.
+ *
+ * El resumen enseñaba «0 incidentes abiertos y 2 servicios sin veredicto» y un
+ * renglón más abajo «Cola de verificación: 6». Los dos números medidos y
+ * correctos; el titular, falso, porque afirmaba un conteo sin decir de qué
+ * recorte era. Quien lo leía entendía "hay 2" y tenía enfrente un 6.
+ *
+ * Las poblaciones no se contienen en ninguna dirección —ventanas, umbrales y
+ * filtros de contrato distintos—, así que no hay un número "bueno" que elegir.
+ * Cada uno sale con su corte puesto.
+ */
+describe("el título no afirma un número que la otra población contradice", () => {
+  const dosPoblaciones = resumen({
+    saludAhora: "enfermo",
+    sinVeredicto: { total: 2, sinViaje: 1, contratos: 1 },
+    colaVerificacion: { total: 6 },
+  });
+
+  it("el conteo propio nunca sale sin su corte de días", () => {
+    const { texto } = renderResumen(dosPoblaciones, AHORA);
+    const titulo = texto.split("\n")[0]!;
+
+    expect(titulo).toContain("2 servicios sin veredicto de los últimos 3 días");
+    // El defecto exacto: el conteo a secas, que se lee como un total.
+    expect(titulo).not.toMatch(/2 servicios sin veredicto[.·]/);
+  });
+
+  it("la otra población se declara en el mismo título, con el suyo", () => {
+    const { texto } = renderResumen(dosPoblaciones, AHORA);
+    const titulo = texto.split("\n")[0]!;
+
+    expect(titulo).toContain("la cola de verificación cuenta 6 sin ventana de días");
+  });
+
+  it("el 2 y el 6 conviven sin contradecirse: cada uno dice de dónde sale", () => {
+    const { texto } = renderResumen(dosPoblaciones, AHORA);
+    const titulo = texto.split("\n")[0]!;
+
+    // La regresión concreta del 15 de agosto, escrita como prueba.
+    expect(titulo).toContain("2");
+    expect(titulo).toContain("6");
+    expect(titulo).toContain("últimos 3 días");
+    expect(titulo).toContain("sin ventana de días");
+  });
+
+  it("cuando los dos conteos coinciden, NO dice que sean los mismos servicios", () => {
+    const { texto } = renderResumen(
+      resumen({
+        saludAhora: "enfermo",
+        sinVeredicto: { total: 6, sinViaje: 0, contratos: 2 },
+        colaVerificacion: { total: 6 },
+      }),
+      AHORA,
+    );
+    const titulo = texto.split("\n")[0]!;
+
+    // Dos recortes distintos pueden dar 6 por casualidad. "Los mismos 6" sería
+    // un dato correcto sosteniendo una afirmación falsa.
+    expect(titulo).not.toContain("los mismos");
+    expect(titulo).not.toContain("el mismo");
+    // Se siguen declarando los dos, con su corte: la forma del titular no
+    // cambia porque los números coincidan.
+    expect(titulo).toContain("6 servicios sin veredicto de los últimos 3 días");
+    expect(titulo).toContain("la cola de verificación cuenta 6 sin ventana de días");
+  });
+
+  it("el día limpio sigue siendo una sola frase, sin conteos que reconciliar", () => {
+    const { texto } = renderResumen(resumen(), AHORA);
+    const titulo = texto.split("\n")[0]!;
+
+    expect(titulo).toBe(
+      "Sin incidentes abiertos. La ingesta, el archivador y la cola de verificación están al día.",
+    );
+  });
+
+  it("con cero propio y cola con hallazgos, el titular deja de leerse como 'no hay nada'", () => {
+    // El caso que más engaña: todo lo del recorte de 3 días en cero, y 6
+    // esperando fuera de esa ventana.
+    const { texto } = renderResumen(
+      resumen({ saludAhora: "enfermo", colaVerificacion: { total: 6 } }),
+      AHORA,
+    );
+    const titulo = texto.split("\n")[0]!;
+
+    expect(titulo).not.toContain("Sin incidentes abiertos");
+    expect(titulo).toContain("la cola de verificación cuenta 6 sin ventana de días");
   });
 });
 
@@ -233,26 +324,37 @@ describe("cada renglón lleva el nombre de la población que reporta", () => {
   });
 });
 
+/*
+ * El chequeo ciego es el de la cola, así que `colaVerificacion` va en `null`:
+ * ese es el par que arma `armarResumen` de verdad. Si un día llegara un número
+ * junto a un renglón que dice "no medido", el título afirmaría un conteo que
+ * el desglose desmiente — la contradicción que el PR 4 quita, al revés.
+ */
+const resumenCiego = (parcial: Partial<ResumenDiario> = {}) =>
+  resumen({ chequeos: [sinMedir], saludAhora: "enfermo", colaVerificacion: null, ...parcial });
+
 describe("cuando un chequeo no se pudo medir", () => {
   it("la medición se enuncia como hueco, no como falla de umbral", () => {
-    const { texto } = renderResumen(resumen({ chequeos: [sinMedir], saludAhora: "enfermo" }), AHORA);
+    const { texto } = renderResumen(resumenCiego(), AHORA);
 
     expect(texto).toContain("no medido");
     expect(texto).not.toContain("fuera de umbral");
   });
 
   it("el título no afirma un conteo que nadie pudo hacer", () => {
-    const { texto } = renderResumen(resumen({ chequeos: [sinMedir], saludAhora: "enfermo" }), AHORA);
+    const { texto } = renderResumen(resumenCiego(), AHORA);
 
     expect(texto).toContain("no se pudo medir");
     // Ni la tranquilidad falsa del día limpio, ni el "0 y 0" que se leía como
     // "no hay nada" cuando lo que había era un instrumento ciego.
     expect(texto).not.toContain("Sin incidentes abiertos");
     expect(texto).not.toContain("0 incidentes abiertos y 0 servicios sin veredicto");
+    // Tampoco un conteo de la cola: si no se pudo contar, no hay número.
+    expect(texto).not.toContain("la cola de verificación cuenta");
   });
 
   it("tampoco dice que no haya nada que hacer", () => {
-    const { texto } = renderResumen(resumen({ chequeos: [sinMedir], saludAhora: "enfermo" }), AHORA);
+    const { texto } = renderResumen(resumenCiego(), AHORA);
 
     expect(texto).not.toContain("Nada que hacer");
     expect(texto).toContain("Revisar por qué el chequeo no pudo medirse");
@@ -260,9 +362,7 @@ describe("cuando un chequeo no se pudo medir", () => {
 
   it("lo que SÍ se midió se sigue diciendo con su número", () => {
     const { texto } = renderResumen(
-      resumen({
-        chequeos: [sinMedir],
-        saludAhora: "enfermo",
+      resumenCiego({
         abiertasPorTipo: [{ tipo: "rate_limit", cantidad: 4, masAntigua: T("2026-07-30T09:00:00Z") }],
       }),
       AHORA,
@@ -272,8 +372,44 @@ describe("cuando un chequeo no se pudo medir", () => {
     expect(texto).toContain("sin medir, así que puede haber más");
   });
 
+  it("un chequeo ciego no esconde el conteo de la cola cuando ese SÍ se midió", () => {
+    // El ciego es el GPS; la cola se contó y dio 6. Callar el 6 por el hueco
+    // del GPS sería el error simétrico del que este correo ya se cuida.
+    const { texto } = renderResumen(
+      resumen({
+        chequeos: [{ id: "gps", estado: "no_medido", lectura: "no se pudo leer la marca de GPS" }],
+        saludAhora: "enfermo",
+        colaVerificacion: { total: 6 },
+      }),
+      AHORA,
+    );
+    const titulo = texto.split("\n")[0]!;
+
+    expect(titulo).toContain("no se pudo medir");
+    expect(titulo).toContain("la cola de verificación cuenta 6 sin ventana de días");
+  });
+
+  it("y con incidentes abiertos, las tres piezas conviven en un solo titular", () => {
+    const { texto } = renderResumen(
+      resumen({
+        chequeos: [{ id: "gps", estado: "no_medido", lectura: "no se pudo leer la marca de GPS" }],
+        saludAhora: "enfermo",
+        abiertasPorTipo: [{ tipo: "rate_limit", cantidad: 4, masAntigua: T("2026-07-30T09:00:00Z") }],
+        colaVerificacion: { total: 6 },
+      }),
+      AHORA,
+    );
+    const titulo = texto.split("\n")[0]!;
+
+    // Lo medido, la otra población, y el hueco declarado: ninguna se calla por
+    // culpa de otra.
+    expect(titulo).toContain("4 incidentes abiertos");
+    expect(titulo).toContain("la cola de verificación cuenta 6 sin ventana de días");
+    expect(titulo).toContain("sin medir, así que puede haber más");
+  });
+
   it("no se pinta con el color de lo medido: el acero afirmaría que ahí hay un dato", () => {
-    const ciego = renderResumen(resumen({ chequeos: [sinMedir], saludAhora: "enfermo" }), AHORA);
+    const ciego = renderResumen(resumenCiego(), AHORA);
     const roto = renderResumen(
       resumen({
         chequeos: [{ id: "gps", estado: "enfermo", lectura: "dato de GPS más nuevo hace 91.4 min · umbral 20 min" }],

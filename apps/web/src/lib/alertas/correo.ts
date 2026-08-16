@@ -348,7 +348,52 @@ export type ResumenDiario = {
   sinVeredicto: { total: number; sinViaje: number; contratos: number };
   /** Cuántos días atrás se miraron los servicios. Se declara para no mentir. */
   diasMirados: number;
+  /**
+   * La cola de verificación, como NÚMERO — la otra población.
+   *
+   * `null` cuando su chequeo no se pudo medir; entonces no hay número que
+   * declarar y el título ya toma la rama de "no sé".
+   *
+   * Existe porque `sinVeredicto.total` y este conteo miden cosas distintas y
+   * ninguno contiene al otro (ver `SIN_ESE_CORTE`). Antes de esto el segundo
+   * número solo vivía dentro de la prosa de `lectura`, así que el título no
+   * tenía con qué contrastarse y afirmaba el primero a secas.
+   */
+  colaVerificacion: { total: number } | null;
 };
+
+/**
+ * Cómo se nombra en el título el corte que separa a las dos poblaciones.
+ *
+ * ── Por qué el título llevaba una contradicción ─────────────────────────────
+ *
+ * El resumen enseñaba «0 incidentes abiertos y 2 servicios sin veredicto»
+ * arriba, y un renglón más abajo «Cola de verificación: 6». Los dos números
+ * eran correctos y el titular era falso, porque afirmaba un conteo sin decir
+ * de qué recorte era — y el lector, con razón, lo leía como el total.
+ *
+ * Las dos poblaciones NO se contienen, en ninguna de las dos direcciones:
+ *
+ *   `sinVeredicto`        últimos 3 días · solo contratos activos · +30 min
+ *                         después de que ya se podía juzgar
+ *   cola de verificación  sin ventana de días · cualquier estado de contrato
+ *                         · +2 h después
+ *
+ * Un servicio vencido hace 45 min con contrato activo está en el primero y no
+ * en el segundo. Uno vencido hace diez días, o de un contrato suspendido, está
+ * en el segundo y no en el primero. Por eso no se puede elegir "el bueno" ni
+ * decir que uno es parte del otro: la única salida honesta es que cada número
+ * viaje con su corte puesto.
+ *
+ * ── Por qué NO dice "los mismos N" cuando coinciden ─────────────────────────
+ *
+ * Que los dos conteos den 6 no significa que sean los mismos 6 servicios: son
+ * recortes distintos que pueden coincidir en tamaño por casualidad. "Los
+ * mismos 6" sería un dato correcto sosteniendo una afirmación falsa, que es
+ * justo la forma de mentir que C21 vino a cerrar. El título dice los dos
+ * números con su corte y no opina sobre si los conjuntos se tocan.
+ */
+const SIN_ESE_CORTE = "sin ventana de días";
 
 /**
  * El resumen diario, que llega HAYA O NO pasado algo.
@@ -367,8 +412,24 @@ export function renderResumen(r: ResumenDiario, ahora: Date): Mensaje {
    * puede afirmar que no falte nada: no lo sabe.
    */
   const sinMedir = r.chequeos.filter((c) => c.estado === "no_medido");
-  const conteos = `${totalAbiertas} incidente${totalAbiertas === 1 ? "" : "s"} abierto${totalAbiertas === 1 ? "" : "s"} y ${r.sinVeredicto.total} servicio${r.sinVeredicto.total === 1 ? "" : "s"} sin veredicto`;
+  /*
+   * El conteo NUNCA sale sin su corte. Decir "2 servicios sin veredicto" a
+   * secas es afirmar un total, y este número no es un total: es lo que se ve
+   * mirando 3 días atrás. Ver `SIN_ESE_CORTE`.
+   */
+  const conteos = `${totalAbiertas} incidente${totalAbiertas === 1 ? "" : "s"} abierto${totalAbiertas === 1 ? "" : "s"} y ${r.sinVeredicto.total} servicio${r.sinVeredicto.total === 1 ? "" : "s"} sin veredicto de los últimos ${r.diasMirados} días`;
   const nadaAbierto = totalAbiertas === 0 && r.sinVeredicto.total === 0;
+
+  /* La otra población, con su corte puesto. Se dice coincida o no: así el
+   * lector aprende una sola forma de titular, y el día que los dos números se
+   * separen no parece que algo se haya roto. */
+  const fraseCola = r.colaVerificacion
+    ? `la cola de verificación cuenta ${r.colaVerificacion.total} ${SIN_ESE_CORTE}`
+    : null;
+
+  /** Une las piezas que tengan algo que decir. Ninguna se calla por otra. */
+  const frase = (...partes: Array<string | null>) =>
+    `${partes.filter((p): p is string => Boolean(p)).join(" · ")}.`;
 
   /*
    * El título no afirma un conteo completo cuando hay un chequeo que no se
@@ -381,15 +442,24 @@ export function renderResumen(r: ResumenDiario, ahora: Date): Mensaje {
    * falso como afirmación.
    *
    * Los conteos que SÍ se midieron se siguen diciendo: callarlos por un hueco
-   * en otro chequeo sería el error simétrico.
+   * en otro chequeo sería el error simétrico. Por eso la frase de la cola se
+   * agrega también aquí: un chequeo ciego no es motivo para esconder un número
+   * que sí se midió, aunque el ciego sea otro.
    */
   const titulo = sinMedir.length
     ? nadaAbierto
-      ? `${sinMedir.length === 1 ? "Un chequeo no se pudo medir" : `${sinMedir.length} chequeos no se pudieron medir`}: este resumen no puede afirmar que no haya nada pendiente.`
-      : `${conteos} · y ${sinMedir.length === 1 ? "un chequeo" : `${sinMedir.length} chequeos`} sin medir, así que puede haber más.`
+      ? frase(
+          `${sinMedir.length === 1 ? "Un chequeo no se pudo medir" : `${sinMedir.length} chequeos no se pudieron medir`}: este resumen no puede afirmar que no haya nada pendiente`,
+          fraseCola,
+        )
+      : frase(
+          conteos,
+          fraseCola,
+          `y ${sinMedir.length === 1 ? "un chequeo" : `${sinMedir.length} chequeos`} sin medir, así que puede haber más`,
+        )
     : nadaAbierto && r.saludAhora === "sano"
       ? "Sin incidentes abiertos. La ingesta, el archivador y la cola de verificación están al día."
-      : `${conteos}.`;
+      : frase(conteos, fraseCola);
 
   const mediciones: Medicion[] = [
     ...r.chequeos.map((c) => ({

@@ -45,6 +45,13 @@ import { evaluarSalud, UMBRALES_SALUD, HORAS_FALLO_MUDO } from "@jtel/services";
  * Devuelve, además del veredicto, las marcas y las alertas abiertas tal como
  * se leyeron: quien llama ya las reusaba, y volver a pedirlas sería otra
  * consulta que puede divergir.
+ *
+ * `fallosMudos` también sale por aquí, y por la misma razón. Ya estaba medido
+ * —se calcula tres líneas arriba— pero solo salía convertido en la prosa de
+ * `lectura` del chequeo. Un número que solo existe dentro de una frase no lo
+ * puede comparar nadie: para que el título del resumen dejara de contradecir
+ * al desglose, la única alternativa habría sido leer el conteo de vuelta de su
+ * propio texto. Se devuelve como número y el problema no existe.
  */
 export async function leerMuestraDeSalud(repos: Repositories, ahora: Date) {
   const carriers = await repos.accounts.listByType("carrier", { includeDemo: false });
@@ -83,5 +90,5 @@ export async function leerMuestraDeSalud(repos: Repositories, ahora: Date) {
     UMBRALES_SALUD,
   );
 
-  return { resultado, marcas, abiertas };
+  return { resultado, marcas, abiertas, fallosMudos };
 }
