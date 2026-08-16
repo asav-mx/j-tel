@@ -168,6 +168,79 @@ describe("el resumen diario", () => {
   });
 });
 
+/*
+ * El correo tiene que poder decir "no sé".
+ *
+ * El 15 de agosto salió con un chequeo que no se pudo hacer y lo dijo con las
+ * mismas dos palabras que usa para un umbral roto —"fuera de umbral"—, bajo un
+ * título que afirmaba cero de todo. Una ceguera pintada como una violación, y
+ * una tranquilidad que nadie había medido.
+ */
+const sinMedir = {
+  id: "verificacion",
+  estado: "no_medido" as const,
+  lectura: "no se pudo contar los servicios vencidos sin veredicto",
+};
+
+describe("cuando un chequeo no se pudo medir", () => {
+  it("la medición se enuncia como hueco, no como falla de umbral", () => {
+    const { texto } = renderResumen(resumen({ chequeos: [sinMedir], saludAhora: "enfermo" }), AHORA);
+
+    expect(texto).toContain("no medido");
+    expect(texto).not.toContain("fuera de umbral");
+  });
+
+  it("el título no afirma un conteo que nadie pudo hacer", () => {
+    const { texto } = renderResumen(resumen({ chequeos: [sinMedir], saludAhora: "enfermo" }), AHORA);
+
+    expect(texto).toContain("no se pudo medir");
+    // Ni la tranquilidad falsa del día limpio, ni el "0 y 0" que se leía como
+    // "no hay nada" cuando lo que había era un instrumento ciego.
+    expect(texto).not.toContain("Sin incidentes abiertos");
+    expect(texto).not.toContain("0 incidentes abiertos y 0 servicios sin veredicto");
+  });
+
+  it("tampoco dice que no haya nada que hacer", () => {
+    const { texto } = renderResumen(resumen({ chequeos: [sinMedir], saludAhora: "enfermo" }), AHORA);
+
+    expect(texto).not.toContain("Nada que hacer");
+    expect(texto).toContain("Revisar por qué el chequeo no pudo medirse");
+  });
+
+  it("lo que SÍ se midió se sigue diciendo con su número", () => {
+    const { texto } = renderResumen(
+      resumen({
+        chequeos: [sinMedir],
+        saludAhora: "enfermo",
+        abiertasPorTipo: [{ tipo: "rate_limit", cantidad: 4, masAntigua: T("2026-07-30T09:00:00Z") }],
+      }),
+      AHORA,
+    );
+
+    expect(texto).toContain("4 incidentes abiertos");
+    expect(texto).toContain("sin medir, así que puede haber más");
+  });
+
+  it("no se pinta con el color de lo medido: el acero afirmaría que ahí hay un dato", () => {
+    const ciego = renderResumen(resumen({ chequeos: [sinMedir], saludAhora: "enfermo" }), AHORA);
+    const roto = renderResumen(
+      resumen({
+        chequeos: [{ id: "gps", estado: "enfermo", lectura: "dato de GPS más nuevo hace 91.4 min · umbral 20 min" }],
+        saludAhora: "enfermo",
+      }),
+      AHORA,
+    );
+
+    // Una violación de umbral es una medición, y va en acero como toda medición.
+    expect(roto.html).toContain(`<span style="color:#3d6a8f">fuera de umbral</span>`);
+    // Un hueco no lo es: va en tenue y con el punteado, que sobrevive incluso a
+    // un cliente de correo que reescriba los colores.
+    expect(ciego.html).toContain(
+      `<span style="color:#5a6874;border-bottom:1px dotted #5a6874">no medido</span>`,
+    );
+  });
+});
+
 describe("el pie dice de qué corrida viene", () => {
   const deHoraLimite: Aviso = {
     clase: "hora-limite-vieja",

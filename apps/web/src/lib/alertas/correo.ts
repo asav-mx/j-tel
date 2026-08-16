@@ -21,6 +21,7 @@
  * instrumento" aunque no sea IBM Plex.
  */
 
+import type { EstadoChequeo } from "@jtel/services";
 import { instanteSellado, duracion } from "@/lib/formato-tiempo";
 import {
   asuntoDe,
@@ -72,9 +73,25 @@ function seccion(texto: string): string {
 }
 
 function medicionHtml(m: Medicion): string {
+  /*
+   * Una ceguera no se puede ver igual que una violación de umbral.
+   *
+   * `fuera de umbral` es una medición que salió mal, y va en acero como toda
+   * medición. `no medido` no es una medición: es el hueco donde debía haber
+   * una. Por eso NO va en acero —el acero afirmaría que ahí hay un dato— sino
+   * en tenue y con subrayado punteado, la misma marca de "esto está declarado,
+   * no observado" que lleva el sello.
+   *
+   * El punteado hace el trabajo cuando el color no puede: sobrevive a un
+   * cliente de correo que reescribe colores, y sobrevive impreso en blanco y
+   * negro.
+   */
+  const estiloValor = m.noMedido
+    ? `color:${C.tenue};border-bottom:1px dotted ${C.tenue}`
+    : `color:${C.acero}`;
   return `<tr>
   <td style="padding:6px 16px 6px 0;font-family:${SANS};font-size:13px;color:${C.tenue};vertical-align:top;white-space:nowrap">${esc(m.etiqueta)}</td>
-  <td style="padding:6px 0;font-family:${MONO};font-size:13px;font-variant-numeric:tabular-nums;color:${C.acero};vertical-align:top">${esc(m.valor)}<span style="color:${C.tenue}"> · ${esc(m.lectura)}</span></td>
+  <td style="padding:6px 0;font-family:${MONO};font-size:13px;font-variant-numeric:tabular-nums;vertical-align:top"><span style="${estiloValor}">${esc(m.valor)}</span><span style="color:${C.tenue}"> · ${esc(m.lectura)}</span></td>
 </tr>`;
 }
 
@@ -281,8 +298,14 @@ export type ResumenDiario = {
   /** Estado actual de `/api/salud`, leído con el mismo juicio que el vigilante. */
   saludAhora: "sano" | "enfermo";
   diagnostico: string;
-  /** La lectura de cada chequeo de salud, tal como la escribe `evaluarSalud`. */
-  chequeos: Array<{ id: string; estado: string; lectura: string }>;
+  /**
+   * La lectura de cada chequeo de salud, tal como la escribe `evaluarSalud`.
+   *
+   * El estado viene tipado —y con sus tres valores— a propósito: era `string`,
+   * y un `string` deja pasar cualquier cosa sin que nadie se entere. Es el
+   * mismo descuido que dejó al correo sin poder decir "no sé".
+   */
+  chequeos: Array<{ id: string; estado: EstadoChequeo; lectura: string }>;
   /** Alertas abiertas ahora mismo, por tipo. */
   abiertasPorTipo: Array<{ tipo: string; cantidad: number; masAntigua: Date | null }>;
   /** Alertas que se abrieron durante el día reportado, por tipo. */
@@ -305,16 +328,41 @@ export function renderResumen(r: ResumenDiario, ahora: Date): Mensaje {
   const totalAbiertas = r.abiertasPorTipo.reduce((s, a) => s + a.cantidad, 0);
   const totalNuevas = r.nuevasPorTipo.reduce((s, a) => s + a.cantidad, 0);
 
-  const titulo =
-    totalAbiertas === 0 && r.sinVeredicto.total === 0 && r.saludAhora === "sano"
+  /*
+   * Los chequeos que no se pudieron medir. Mientras haya uno, este resumen no
+   * puede afirmar que no falte nada: no lo sabe.
+   */
+  const sinMedir = r.chequeos.filter((c) => c.estado === "no_medido");
+  const conteos = `${totalAbiertas} incidente${totalAbiertas === 1 ? "" : "s"} abierto${totalAbiertas === 1 ? "" : "s"} y ${r.sinVeredicto.total} servicio${r.sinVeredicto.total === 1 ? "" : "s"} sin veredicto`;
+  const nadaAbierto = totalAbiertas === 0 && r.sinVeredicto.total === 0;
+
+  /*
+   * El título no afirma un conteo completo cuando hay un chequeo que no se
+   * pudo hacer.
+   *
+   * El 15 de agosto el título dijo "0 incidentes abiertos y 0 servicios sin
+   * veredicto" con un chequeo caído debajo. Los dos ceros eran ciertos —cada
+   * uno de su población— y el titular era falso: se leía como "no hay nada", y
+   * lo que había era un instrumento que no pudo mirar. Correcto como conteo,
+   * falso como afirmación.
+   *
+   * Los conteos que SÍ se midieron se siguen diciendo: callarlos por un hueco
+   * en otro chequeo sería el error simétrico.
+   */
+  const titulo = sinMedir.length
+    ? nadaAbierto
+      ? `${sinMedir.length === 1 ? "Un chequeo no se pudo medir" : `${sinMedir.length} chequeos no se pudieron medir`}: este resumen no puede afirmar que no haya nada pendiente.`
+      : `${conteos} · y ${sinMedir.length === 1 ? "un chequeo" : `${sinMedir.length} chequeos`} sin medir, así que puede haber más.`
+    : nadaAbierto && r.saludAhora === "sano"
       ? "Sin incidentes abiertos. La ingesta, el archivador y la cola de verificación están al día."
-      : `${totalAbiertas} incidente${totalAbiertas === 1 ? "" : "s"} abierto${totalAbiertas === 1 ? "" : "s"} y ${r.sinVeredicto.total} servicio${r.sinVeredicto.total === 1 ? "" : "s"} sin veredicto.`;
+      : `${conteos}.`;
 
   const mediciones: Medicion[] = [
     ...r.chequeos.map((c) => ({
       etiqueta: c.id === "gps" ? "Dato de GPS" : c.id === "archivador" ? "Archivador" : c.id === "marcas" ? "Marcas de agua" : "Alertas críticas",
-      valor: c.estado === "sano" ? "al día" : "fuera de umbral",
+      valor: c.estado === "sano" ? "al día" : c.estado === "no_medido" ? "no medido" : "fuera de umbral",
       lectura: c.lectura,
+      noMedido: c.estado === "no_medido",
     })),
     {
       etiqueta: "Incidentes abiertos",
@@ -345,12 +393,20 @@ export function renderResumen(r: ResumenDiario, ahora: Date): Mensaje {
     mediciones,
     // El diagnóstico va dentro de una frase de consecuencia, no suelto: bajo el
     // título "Consecuencia", un "ingesta al día" a secas no dice qué implica.
-    consecuencia:
-      r.saludAhora === "sano"
+    //
+    // "Incompleta" y "no se pudo comprobar" no son lo mismo, y la diferencia es
+    // justo la que este PR existe para poder decir: la primera afirma que falta
+    // evidencia; la segunda admite que no se sabe si falta.
+    consecuencia: sinMedir.length
+      ? `Lo que el árbitro juzgue ahora lo juzga sin que se haya podido comprobar todo — ${r.diagnostico}.`
+      : r.saludAhora === "sano"
         ? `Lo que el árbitro juzgue ahora lo juzga con evidencia al día — ${r.diagnostico}.`
         : `Lo que el árbitro juzgue ahora lo juzga con evidencia incompleta — ${r.diagnostico}.`,
-    accion:
-      totalAbiertas === 0 && r.sinVeredicto.total === 0
+    // "Nada que hacer" con un chequeo ciego debajo es la misma mentira que el
+    // título: no se sabe si hay algo que hacer.
+    accion: sinMedir.length
+      ? `Revisar por qué ${sinMedir.length === 1 ? "el chequeo no pudo medirse" : "los chequeos no pudieron medirse"} · J-Staff`
+      : nadaAbierto
         ? "Nada que hacer. Este correo llega todos los días: si un día no llega, la plomería de alertas es lo que está caído."
         : "Atender lo abierto desde la compuerta de soporte · J-Staff",
     instante: ahora,

@@ -137,7 +137,18 @@ export function instanteSinVeredicto(
  * `47.3 min · umbral 30 min` ya trae la conclusión puesta y no obliga a quien
  * lo lee a calcular a las 3 de la mañana.
  */
-export type Medicion = { etiqueta: string; valor: string; lectura: string };
+export type Medicion = {
+  etiqueta: string;
+  valor: string;
+  lectura: string;
+  /**
+   * Verdadero cuando el valor NO es una medición, sino la declaración de que no
+   * se pudo medir. Lo pinta distinto `correo.ts`: en todo el producto el acero
+   * es el color de lo medido, así que un hueco pintado de acero afirmaría que
+   * el hueco es un dato.
+   */
+  noMedido?: boolean;
+};
 
 /**
  * Un aviso, con las cuatro partes que el skill exige de un hallazgo. Si le
