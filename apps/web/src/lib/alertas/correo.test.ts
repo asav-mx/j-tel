@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { evaluarSalud } from "@jtel/services";
 import {
   renderAvisos,
   renderResumen,
@@ -176,11 +177,61 @@ describe("el resumen diario", () => {
  * título que afirmaba cero de todo. Una ceguera pintada como una violación, y
  * una tranquilidad que nadie había medido.
  */
-const sinMedir = {
+const sinMedir: ResumenDiario["chequeos"][number] = {
   id: "verificacion",
-  estado: "no_medido" as const,
+  estado: "no_medido",
   lectura: "no se pudo contar los servicios vencidos sin veredicto",
 };
+
+/** Los renglones del bloque EVIDENCIA, ya partidos en etiqueta y resto. */
+const etiquetasDeEvidencia = (texto: string): string[] =>
+  texto
+    .split("EVIDENCIA")[1]!
+    .split("CONSECUENCIA")[0]!
+    .trim()
+    .split("\n")
+    .map((l) => l.split(":")[0]!.trim());
+
+describe("cada renglón lleva el nombre de la población que reporta", () => {
+  /*
+   * Los chequeos salen de `evaluarSalud` de verdad, no de una lista escrita a
+   * mano: si mañana nace un chequeo nuevo, aparece aquí solo y estas pruebas se
+   * enteran. Una lista copiada no se habría enterado — que es exactamente cómo
+   * el chequeo de verificación pasó meses con el nombre de otra población.
+   */
+  const completos = evaluarSalud({
+    ahora: AHORA,
+    marcas: [{ lastRecordedAt: T("2026-07-31T13:29:00Z"), updatedAt: T("2026-07-31T13:30:00Z") }],
+    carriersEsperados: 1,
+    alertasCriticasAbiertas: 0,
+    alertaCriticaMasAntigua: null,
+    verificacion: { fallosMudos: 0, masAntiguoHoras: null },
+  }).chequeos.map((c) => ({ id: c.id, estado: c.estado, lectura: c.lectura }));
+
+  it("ningún renglón del correo repite el nombre de otro", () => {
+    // El defecto, dicho como propiedad: dos renglones con el mismo nombre son
+    // dos poblaciones distintas presentadas como si fueran la misma.
+    const etiquetas = etiquetasDeEvidencia(renderResumen(resumen({ chequeos: completos }), AHORA).texto);
+
+    expect(new Set(etiquetas).size).toBe(etiquetas.length);
+  });
+
+  it("el chequeo de verificación tiene nombre propio, no el de las alertas", () => {
+    const { texto } = renderResumen(resumen({ chequeos: completos }), AHORA);
+    const etiquetas = etiquetasDeEvidencia(texto);
+
+    expect(etiquetas).toContain("Cola de verificación");
+    expect(etiquetas.filter((e) => e === "Alertas críticas")).toHaveLength(1);
+  });
+
+  it("ningún chequeo sale rotulado con su id crudo", () => {
+    // El respaldo de `ETIQUETA_CHEQUEO` es mostrar el id: feo y evidente. Que
+    // se vea aquí significaría que un chequeo se quedó sin nombre.
+    const etiquetas = etiquetasDeEvidencia(renderResumen(resumen({ chequeos: completos }), AHORA).texto);
+
+    for (const c of completos) expect(etiquetas).not.toContain(c.id);
+  });
+});
 
 describe("cuando un chequeo no se pudo medir", () => {
   it("la medición se enuncia como hueco, no como falla de umbral", () => {
