@@ -350,6 +350,43 @@ export type EnforcementRules = z.infer<typeof enforcementRulesSchema>;
  */
 export const DEFAULT_FRECHET_MAX_KM = 0.8;
 
+/**
+ * Por cuántos puntos de corredor tiene que ganar la ruta del servicio para que
+ * la atribución se haga — Paso 3 de las preguntas separadas.
+ *
+ * ── Por qué existe una perilla nueva ────────────────────────────────────────
+ *
+ * Desde el paso 3, «cuál ruta sirvió» la contesta B: la ruta del servicio tiene
+ * que ser la de mayor precisión de corredor **entre todas las del turno**.
+ * Atribuir a la mayor sin margen resuelve por ruido dos rutas separadas por una
+ * décima, así que el margen es parte de la pregunta, no una afinación.
+ *
+ * ── Por qué 5, y por qué el número no salió de aquí ─────────────────────────
+ *
+ * Medido el 17 de agosto de 2026 sobre los rankings sellados por el paso 2, por
+ * contrato, contando solo las candidatas que HOY acreditan —las únicas a las que
+ * el margen les cambia el veredicto:
+ *
+ *     margen      0     1     2     5    10
+ *     Campus      0     0     0     0     0
+ *     Planta 47   0     0     0     0     0
+ *
+ * Ningún valor entre 0 y 10 mueve una acreditación de hoy. La decisión fue de
+ * Asav y su razón está escrita: **0 significaría que el corredor nunca opina y
+ * la perilla no existiría**; 5 dice «algo de precisión, sin exigir», no mueve
+ * nada hoy, y queda sellado en cada hecho para poder auditarlo después.
+ *
+ * ⚠ **Y qué pasa cuando el margen no alcanza:** no se elige. Dos rutas empatadas
+ * son una atribución que el sistema no puede hacer, y eso es `pendiente`, nunca
+ * un volado. Es la misma ley del piso, aplicada al empate.
+ *
+ * Vive en la política y no en el motor por la Ley 6 —todo umbral es configurable
+ * por contrato— y por C12: un número horneado es un umbral que nadie puede
+ * auditar. Al vivir aquí viaja dentro de `contractPolicySnapshot`, así que cada
+ * hecho sellado dice con qué margen se le atribuyó.
+ */
+export const DEFAULT_CORRIDOR_ATTRIBUTION_MARGIN_PCT = 5;
+
 export const contractPolicySchema = z.object({
   toleranceMinutes: z.number().int().nonnegative(),
   /** Minutos antes del inicio del turno en que debe estar en geocerca (deadline). */
@@ -411,6 +448,19 @@ export const contractPolicySchema = z.object({
    * servicios está mirando el umbral equivocado.
    */
   frechetMaxKm: z.number().min(0).default(DEFAULT_FRECHET_MAX_KM),
+  /**
+   * Margen de corredor con el que se atribuye la ruta — Paso 3.
+   *
+   * A diferencia de `frechetMaxKm`, **este umbral SÍ entra en `servedRoute`**:
+   * mover este número puede cambiar un veredicto. Ver
+   * `DEFAULT_CORRIDOR_ATTRIBUTION_MARGIN_PCT` para la medición que sostiene el 5
+   * y para qué pasa cuando el margen no alcanza.
+   */
+  corridorAttributionMarginPct: z
+    .number()
+    .min(0)
+    .max(100)
+    .default(DEFAULT_CORRIDOR_ATTRIBUTION_MARGIN_PCT),
   excusableReasons: z.array(ExcusableReason).default([]),
   enforcementRules: z.array(enforcementRulesSchema).default([]),
   /**
@@ -703,6 +753,14 @@ export interface VerificationInput {
    * Default 0.8. Solo aplica con KML.
    */
   frechetMaxKm?: number;
+  /**
+   * Margen de corredor para atribuir — Paso 3. Default 5.
+   *
+   * Sin `rutasDelTurno` no hay contra qué comparar y la atribución se queda como
+   * antes del paso 3: B contra su propio umbral. Se declara en el ledger, no se
+   * asume.
+   */
+  corridorAttributionMarginPct?: number;
   evidencePoints: GpsPoint[];
   excusableReasons: ExcusableReason[];
   manualExcusable?: ExcusableReason | null;
@@ -802,7 +860,19 @@ export type MotivoDeCandidata = {
     | "no_llego"
     | "tramo_observable"
     | "cobertura_de_trazado"
-    | "precision_de_corredor";
+    | "precision_de_corredor"
+    /**
+     * Paso 3 · fue precisa, pero de OTRA ruta del turno — o le ganó a la mejor
+     * ajena por menos que el margen.
+     *
+     * Distinta de `precision_de_corredor` a propósito: aquélla dice «no siguió
+     * un corredor», ésta dice «siguió el de otra ruta». Un expediente que las
+     * colapsara acusaría de no hacer su trazado a un camión que sí hizo uno.
+     *
+     * `medido` = por cuánto ganó la propia (negativo si perdió) · `umbral` = el
+     * margen. `null` en `medido` cuando no había ninguna otra ruta que comparar.
+     */
+    | "atribucion_de_ruta";
   /** A quién se le preguntó: la unidad candidata, o la evidencia del viaje (la flota). */
   poblacion: "candidata" | "viaje";
   /** Lo medido, en la unidad de esa compuerta. `null` cuando no se pudo medir. */

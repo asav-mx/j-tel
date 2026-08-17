@@ -40,6 +40,7 @@
     "verificar-candidatas-nulas": "tsx src/verificar-candidatas-nulas.ts",
     "tres-preguntas": "tsx src/medir-tres-preguntas.ts",
     "alcance-paso3": "tsx src/medir-alcance-paso3.ts",
+    "efecto-paso3": "tsx src/medir-efecto-paso3.ts",
     "verificar-migraciones": "tsx src/verificar-migraciones-aplicadas.ts"
   },
   "dependencies": {

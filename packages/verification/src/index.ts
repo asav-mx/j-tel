@@ -8,7 +8,11 @@ import type {
   MotivoDeCandidata,
 } from "@jtel/domain";
 
-import { haversineKm, DEFAULT_FRECHET_MAX_KM } from "@jtel/domain";
+import {
+  haversineKm,
+  DEFAULT_FRECHET_MAX_KM,
+  DEFAULT_CORRIDOR_ATTRIBUTION_MARGIN_PCT,
+} from "@jtel/domain";
 
 /**
  * La geometría base y la matemática de la ventana viven en `@jtel/domain`:
@@ -465,6 +469,36 @@ export type RouteMatchParams = {
   minObservableFraction?: number;
   /** IDF por segmento para métrica A ponderada; null = A sin ponderar. */
   idf?: Map<string, number> | null;
+  /**
+   * Las rutas del turno contra las que se decide la ATRIBUCIÓN — Paso 3.
+   *
+   * Sin esto la atribución se queda como antes del paso 3: B contra su propio
+   * umbral y nada más. No se inventa un ranking de una sola ruta.
+   */
+  rutasDelTurno?: RutaDelTurno[];
+  /** Por cuántos puntos de B tiene que ganar la propia. Ver el default en `@jtel/domain`. */
+  corridorAttributionMarginPct?: number;
+};
+
+/**
+ * Qué contestó la pregunta «cuál ruta sirvió» — Paso 3, para el expediente.
+ *
+ * Va al ledger tal cual: un veredicto que cambia porque el recorrido encajaba
+ * mejor en otra ruta tiene que poder decir **en cuál** y **por cuánto**, o el
+ * expediente no sostiene la decisión.
+ */
+export type Atribucion = {
+  /** B de la candidata contra la ruta del servicio. */
+  propia: number;
+  /** La mejor B contra cualquier OTRA ruta del turno; `null` si no había otras. */
+  mejorAjena: number | null;
+  /** Nombre de esa otra ruta, para que el expediente no obligue a adivinar. */
+  mejorAjenaNombre: string | null;
+  margen: number;
+  /** `false` = no se atribuye. Empate o ruta ajena mejor: pendiente, no volado. */
+  gana: boolean;
+  /** `false` = no había rutas del turno; la atribución se decidió como antes. */
+  comparada: boolean;
 };
 
 /** Evaluación de una unidad contra una ruta (misma matemática en todos lados). */
@@ -480,8 +514,19 @@ export type RouteMatchEvaluation = {
   frechetKm: number | null;
   directionSimilarity: number | null;
   shapeOk: boolean;
-  /** Sirvió la ruta: llegó a la geocerca y (sin KML) o (A ≥ umbral A ∧ B ≥ umbral B). */
+  /**
+   * Sirvió la ruta: llegó a la geocerca y —con KML— cubrió bastante (A) y la
+   * ruta le fue ATRIBUIDA (B, contra las demás del turno).
+   *
+   * Desde el paso 3 la atribución ya no la decide A: A dice *cuánto cubrió* y B
+   * dice *de cuál ruta*. Ver `atribucion`.
+   */
   servedRoute: boolean;
+  /**
+   * Cómo se resolvió «cuál ruta» — Paso 3. `null` sin KML o sin llegada, que es
+   * cuando la pregunta no llega a hacerse.
+   */
+  atribucion: Atribucion | null;
   /**
    * Qué fracción de la ruta representa el tramo sobre el que se calculó A
    * (1 = la ruta completa). Se declara aparte, nunca se mezcla con el
@@ -583,12 +628,73 @@ export function evaluateUnitRouteMatch(
     params.minObservableFraction ?? 1 - DEFAULT_KML_ORIGIN_TOLERANCE_FRACTION;
   const observableEnough = !hasKml || span.observableFraction + 1e-9 >= minObservableFraction;
 
+  /*
+   * ── Paso 3 · la atribución pasa a B ────────────────────────────────────────
+   *
+   * Hasta aquí, una sola expresión contestaba dos preguntas: A y B juntas
+   * decidían **cuál** ruta se sirvió y **cuánto** de ella. El problema no era
+   * que A fuera mala midiendo cobertura —para eso está—, sino que su fragilidad
+   * frente a la densidad se contagiaba a la atribución: con muestreo ralo A cae
+   * (36 % a 120 s medido el 12 de agosto) y arrastra consigo la respuesta de
+   * quién fue.
+   *
+   * Desde el paso 3, cada término contesta una pregunta:
+   *
+   *   ¿ES ESTA la ruta?      → B, contra TODAS las del turno, con margen
+   *   ¿CUBRIÓ bastante?      → A, igual que siempre, con su mismo umbral
+   *
+   * **Solo cambia el papel de B.** `routeMatchPct >= minKmlPct` sigue idéntico,
+   * y por eso este PR toca un término y no dos — la regla del nudo.
+   *
+   * El piso de densidad NO entra aquí: es el paso 4, y el orden importa porque
+   * el piso protege a A y A solo queda sola después de que la atribución se
+   * movió.
+   *
+   * ⚠ **Solo se rankea si llegó.** Un servicio evalúa la flota entera y el turno
+   * tiene hasta 27 rutas: rankear todo serían ~1 350 cálculos de corredor por
+   * servicio con el cron corriendo cada minuto. Quien no entró a la geocerca no
+   * acredita por otras razones, así que no hace falta preguntarle de qué ruta
+   * era.
+   */
+  const margen =
+    params.corridorAttributionMarginPct ?? DEFAULT_CORRIDOR_ATTRIBUTION_MARGIN_PCT;
+  let atribucion: Atribucion | null = null;
+  if (hasKml && arrivalAt !== null) {
+    const ajenas = (params.rutasDelTurno ?? []).filter(
+      (r) => !r.esLaDelServicio && r.waypoints.length > 0,
+    );
+    let mejor: { pct: number; nombre: string } | null = null;
+    for (const r of ajenas) {
+      const pct = computeCorridorPrecisionPct(sortedPoints, r.waypoints, params.corridorKm);
+      if (!mejor || pct > mejor.pct) mejor = { pct, nombre: r.nombre };
+    }
+    const comparada = ajenas.length > 0;
+    /*
+     * Ganar es ganar POR EL MARGEN. Un empate —o una diferencia menor que el
+     * margen— no se resuelve por ruido: es una atribución que el sistema no
+     * puede hacer, y sale sin atribuir. La misma ley del piso, en el empate.
+     */
+    const gana =
+      corridorPrecisionPct >= params.minCorridorPct &&
+      (!comparada || corridorPrecisionPct - mejor!.pct >= margen);
+    atribucion = {
+      propia: corridorPrecisionPct,
+      mejorAjena: mejor ? mejor.pct : null,
+      mejorAjenaNombre: mejor ? mejor.nombre : null,
+      margen,
+      gana,
+      comparada,
+    };
+  }
+
   const servedRoute =
     arrivalAt !== null &&
     (!hasKml ||
       (observableEnough &&
         routeMatchPct >= params.minKmlPct &&
-        corridorPrecisionPct >= params.minCorridorPct));
+        (atribucion
+          ? atribucion.gana
+          : corridorPrecisionPct >= params.minCorridorPct)));
 
   /*
    * El porqué, escrito desde las MISMAS condiciones de arriba.
@@ -634,6 +740,34 @@ export function evaluateUnitRouteMatch(
           umbral: params.minCorridorPct,
         });
       }
+      /*
+       * Paso 3 · pasó su propio umbral de corredor y aun así no se le atribuyó:
+       * otra ruta del turno le encaja mejor, o le gana por menos que el margen.
+       *
+       * Es un motivo APARTE de `precision_de_corredor` y no una variante suya. El
+       * otro dice «no fue suficientemente precisa»; éste dice «fue precisa, pero
+       * de OTRA ruta». Colapsarlos dejaría el expediente afirmando que el camión
+       * no siguió su trazado cuando lo que pasó es que siguió otro — un dato
+       * correcto sosteniendo una afirmación falsa.
+       *
+       * `medido` es por cuánto ganó (negativo si perdió) y `umbral` es el margen,
+       * para que el renglón se lea sin ir a buscar la política.
+       */
+      if (
+        atribucion &&
+        !atribucion.gana &&
+        corridorPrecisionPct >= params.minCorridorPct
+      ) {
+        motivos.push({
+          compuerta: "atribucion_de_ruta",
+          poblacion: "candidata",
+          medido:
+            atribucion.mejorAjena === null
+              ? null
+              : Number((corridorPrecisionPct - atribucion.mejorAjena).toFixed(1)),
+          umbral: atribucion.margen,
+        });
+      }
     }
   }
 
@@ -646,6 +780,7 @@ export function evaluateUnitRouteMatch(
     directionSimilarity: dirSim,
     shapeOk,
     servedRoute,
+    atribucion,
     observableFraction: span.observableFraction,
     motivos,
   };
@@ -1182,6 +1317,9 @@ export function verifyService(input: VerificationInput): VerificationResult {
   // C12 · El default viene del esquema de la política, no de aquí. Era el
   // único umbral de KML que el motor resolvía por su cuenta (Ley 6).
   const frechetMaxKm = input.frechetMaxKm ?? DEFAULT_FRECHET_MAX_KM;
+  // Paso 3 · el margen con el que B atribuye. De la política, nunca horneado.
+  const corridorAttributionMarginPct =
+    input.corridorAttributionMarginPct ?? DEFAULT_CORRIDOR_ATTRIBUTION_MARGIN_PCT;
   // Una sola perilla gobierna las dos mitades del arreglo: cuánto arranque de
   // ruta se tolera perder. De ahí sale tanto el piso del tramo observable como
   // el gate que manda a pendiente_evidencia más abajo.
@@ -1213,6 +1351,7 @@ export function verifyService(input: VerificationInput): VerificationResult {
       directionSimilarity: dirSim,
       shapeOk,
       servedRoute,
+      atribucion,
       observableFraction,
       motivos,
     } = evaluateUnitRouteMatch(sorted, {
@@ -1224,6 +1363,9 @@ export function verifyService(input: VerificationInput): VerificationResult {
       frechetMaxKm,
       minObservableFraction,
       idf,
+      // Paso 3 · sin esto la atribución se queda como antes: B contra su umbral.
+      rutasDelTurno: input.rutasDelTurno,
+      corridorAttributionMarginPct,
     });
 
     candidateUnits.push({
@@ -1295,6 +1437,25 @@ export function verifyService(input: VerificationInput): VerificationResult {
          * ausencia significa «no se preguntó», no «no falló nada».
          */
         motivos: motivos.length > 0 ? motivos : undefined,
+        /*
+         * Paso 3 · con qué se le atribuyó la ruta, o por qué no.
+         *
+         * Va dentro de la candidata y no en el paso `ranking_rutas` porque son
+         * dos cosas: aquél es la foto de TODAS las rutas —la medición de
+         * «antes», que sigue sin gobernar— y esto es **la comparación que
+         * decidió a esta candidata**. Un veredicto que cambia porque el
+         * recorrido encajaba mejor en otra ruta tiene que decir en cuál y por
+         * cuánto, o el expediente no sostiene la decisión.
+         *
+         * `comparada: false` significa que no había otras rutas del turno contra
+         * qué comparar, así que la atribución se resolvió como antes del paso 3.
+         * Se declara: un expediente que callara eso se leería como si el
+         * corredor hubiera ganado una comparación que nunca se hizo.
+         *
+         * Aditivo: los hechos anteriores al paso 3 no lo traen, y esa ausencia
+         * significa «no se preguntó». No se rellena hacia atrás.
+         */
+        atribucion: atribucion ?? undefined,
       },
     });
   }

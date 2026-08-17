@@ -186,6 +186,15 @@ const TEXTO_COMPUERTA: Record<MotivoDeCandidata["compuerta"], string> = {
   tramo_observable: "No se le vio suficiente ruta para poder calificarla",
   cobertura_de_trazado: "No recorrió suficiente del trazado contratado",
   precision_de_corredor: "No se mantuvo sobre el trazado contratado",
+  /*
+   * Paso 3 · dice lo contrario que el de arriba, y por eso es su propio renglón.
+   *
+   * `precision_de_corredor` es «no siguió un trazado». Éste es «siguió uno, pero
+   * de otra ruta del turno». Darles el mismo texto acusaría de no hacer su ruta
+   * a un camión que sí hizo una — un dato correcto sosteniendo una afirmación
+   * falsa, que es justo lo que el expediente existe para no hacer.
+   */
+  atribucion_de_ruta: "Su recorrido encaja mejor en otra ruta del turno",
 };
 
 /**
