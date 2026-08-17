@@ -64,6 +64,13 @@ function punto(imei: string, i: number, lat: number, lng: number): GpsPoint {
   } as GpsPoint;
 }
 
+/** Recorre SU ruta entera y entra a la geocerca: A y B en regla. */
+function porLaRutaA(imei: string): GpsPoint[] {
+  const camino = RUTA_A.map((w, i) => punto(imei, i, w.lat, w.lng));
+  camino.push(punto(imei, 20, 31.725, -106.395));
+  return camino;
+}
+
 /** Recorre la ruta B entera y termina entrando a la geocerca. */
 function porLaRutaB(imei: string): GpsPoint[] {
   const camino = RUTA_B.map((w, i) => punto(imei, i, w.lat, w.lng));
@@ -119,22 +126,45 @@ describe("el ranking ordena por corredor", () => {
   });
 });
 
-describe("el paso 2 NO gobierna", () => {
-  it("el veredicto es idéntico con y sin las rutas del turno", () => {
+describe("el paso 2 NO gobierna — hasta que el paso 3 lo enciende", () => {
+  /*
+   * ⚠ **Esta invariante terminó a propósito el 17 de agosto de 2026.**
+   *
+   * El paso 2 se construyó con la garantía de que el ranking no decidía nada, y
+   * esta prueba la vigilaba: mismo veredicto con y sin rutas del turno. Era lo
+   * único que hacía seguro construirlo antes del paso 3.
+   *
+   * El paso 3 es exactamente el momento de romperla: la atribución pasa a B y el
+   * ranking empieza a decidir. Por eso la prueba no se borra —borrarla dejaría
+   * el repo sin registro de que la garantía existió y de cuándo dejó de valer—
+   * sino que **se invierte**: ahora vigila que el ranking SÍ gobierne.
+   *
+   * Si esta prueba se pone verde en su forma vieja, el paso 3 se apagó.
+   */
+  it("desde el paso 3, el ranking SÍ mueve el veredicto", () => {
     /*
-     * La misma evidencia, dos entradas que solo difieren en si se pasan las
-     * rutas del turno. Si esta prueba se pone roja sin que nadie encienda el
-     * paso 3, el ranking empezó a decidir sin que se decidiera.
+     * El caso que aísla el cambio, y hubo que construirlo a propósito: una
+     * unidad que recorre OTRA ruta falla también A, así que su rechazo no
+     * probaría nada del paso 3. Aquí la unidad hace SU ruta entera —A y B en
+     * regla— y el turno trae una ruta gemela que comparte el trazado. La propia
+     * ya no gana por el margen, y la atribución no se hace.
      */
-    const puntos = porLaRutaB("u-b");
-    const sin = verifyService(entrada(puntos, false));
-    const con = verifyService(entrada(puntos, true));
+    const puntos = porLaRutaA("u-a");
+    const conGemela = {
+      ...entrada(puntos, false),
+      rutasDelTurno: [
+        RUTAS[0]!,
+        { routeShiftId: "rs-g", routeId: "r-g", nombre: "Gemela", waypoints: RUTA_A, esLaDelServicio: false },
+      ],
+    } as VerificationInput;
 
-    expect(con.status).toBe(sin.status);
-    expect(con.observedUnitId).toBe(sin.observedUnitId);
-    expect(con.candidateUnits.map((c) => c.servedRoute)).toEqual(
-      sin.candidateUnits.map((c) => c.servedRoute),
-    );
+    const sin = verifyService(entrada(puntos, false));
+    const con = verifyService(conGemela);
+
+    // Sin rutas del turno no hay contra qué comparar: se resuelve como antes.
+    expect(sin.candidateUnits.find((c) => c.unitId === "u-a")?.servedRoute).toBe(true);
+    // Con la gemela, empata consigo misma y el sistema no puede atribuir.
+    expect(con.candidateUnits.find((c) => c.unitId === "u-a")?.servedRoute).toBe(false);
   });
 
   it("se anota en el ledger declarando que no gobierna", () => {
