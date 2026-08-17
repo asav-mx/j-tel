@@ -121,7 +121,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [El hecho debe bastarse a sí mismo](#el-hecho-debe-bastarse-a-sí-mismo) | **Bloquea a Lenore-narradora** |
 | [Cierre del turno](#cierre-del-turno) | **Construida contra el molde aprobado** |
 | [Ponderación de la cobertura por valor del tramo](#ponderación-de-la-cobertura-por-valor-del-tramo) | Hipótesis medible, sin caso todavía |
-| [Afinar la ventana derivada con el match observable](#afinar-la-ventana-derivada-con-el-match-observable) | Ola 2 — espera historia, no trabajo |
+| [Afinar la ventana derivada con el match observable](#afinar-la-ventana-derivada-con-el-match-observable) | **Sube: la deriva se midió y es rápida — arriba de solicitudes y quejas** |
 | [Las 300 congeladas — la foto de referencia](#las-300-congeladas--la-foto-de-referencia) | **PR #124 abierto a propósito** |
 | [Las tres rutas con falla real](#las-tres-rutas-con-falla-real) | Pide ojo humano sobre el KML |
 | [Dirección visual del producto](#dirección-visual-del-producto) | 🔴 **PENDIENTE DE ASAV — bloquea pantallas** |
@@ -776,6 +776,47 @@ mover el número sin que nadie sepa cuál de las dos lo movió.
 
 **Qué lo desbloquea.** Que `route_traversal_measurements` acumule historia real de la
 operación. Es tiempo, no trabajo.
+
+### Ya no es «ola 2»: la deriva se midió, y es rápida — 17 de agosto de 2026
+
+El Acta de Cierre de Bloque C recortó esta entrada con la razón de que «ya estaba en ola
+2; ahí sigue». **Eso se sostenía sobre una suposición que ahora está medida y era
+optimista.**
+
+Al re-dimensionar la tanda de ventanas desalineadas se contaron dos veces, con el mismo
+instrumento y con 17 horas de diferencia:
+
+| | ocurrencias sin sellar | con la ventana desalineada |
+|---|---:|---:|
+| 16 ago, 00:41 UTC | 1 056 | **278** |
+| 17 ago, 17:18 UTC | 1 075 | **475** |
+
+**+197 en 17 horas.** No es error de medición ni población nueva: solo entraron 19
+ocurrencias al universo revisado. Lo que creció fue la **desalineación** —
+`route_traversal_measurements` suma ~48 filas al día y cada una mueve la derivación de su
+ruta×turno, así que ocurrencias que ayer estaban alineadas hoy ya no lo están.
+
+**Lo que eso cambia.** La corrección de la tanda es una foto: lo re-dimensionado hoy
+vuelve a desalinearse en días, y mientras tanto el motor sigue sellando ~10 servicios
+diarios de esa población. **Cada día que pasa produce hechos juzgados con marco viejo**, y
+un hecho sellado no se corrige — se re-verifica, que es D4 y otra firma.
+
+**Y ya costó.** El 17 de agosto, entre que la alerta avisó y la decisión se tomó, sellaron
+~5 servicios con ventana desalineada. Se quedan como están: moverlos sería re-verificar.
+
+**Por eso sube.** Deja de ser afinación de precisión y pasa a ser contención de una fuente
+activa de hechos malos. Va **arriba de solicitudes y quejas** en el orden de la frontera.
+
+⚠ **Y una precisión de alcance, para que nadie la construya de más.** Esta entrada, tal
+como está escrita arriba, es *afinar la derivación*. Lo que la medición vuelve urgente es
+algo adyacente y más chico: **que la ventana se vuelva a derivar antes de juzgar, en vez
+de quedarse con la que se congeló al crear el viaje**. Las dos se tocan y conviene
+decidir si son una pieza o dos **antes** de abrir ninguna — la misma regla del nudo que
+gobierna los pasos 3 y 4. El detector ya existe (`revisar-ventanas`) y avisa; lo que no
+existe es que alguien actúe sin que un humano pegue SQL.
+
+**El instrumento.** `pnpm --filter @jtel/db corregir-ventanas` (simulacro) y
+`ventanas-desalineadas.ts`. Las dos cifras de arriba se pueden volver a sacar cuando sea.
 
 **Y qué desbloquea a su vez.** [Las 300 congeladas](#las-300-congeladas--la-foto-de-referencia),
 que no se re-verifican antes que esto.
