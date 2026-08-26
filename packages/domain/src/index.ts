@@ -687,6 +687,12 @@ export interface GpsPoint {
   longitude: number;
   timestamp: Date;
   speed?: number;
+  /**
+   * Rumbo en grados (0 = norte, 90 = este). Umbrella lo manda como `azimuth` y
+   * hasta ahora se tiraba. La app del pasajero lo necesita para dibujar hacia
+   * dónde apunta el camión; el archivador no lo usa y no le estorba.
+   */
+  heading?: number;
   /** El APARATO que emitió el punto. Nunca la unidad — ver `unitId`. */
   imei: string;
   /**

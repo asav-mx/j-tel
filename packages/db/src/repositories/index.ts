@@ -64,6 +64,7 @@ import {
   ingestAlerts,
   routeTraversalMeasurements,
   clientCarrierAuthorizations,
+  livePositions,
 } from "../schema/index.js";
 import type { ComplianceFact } from "../schema/index.js";
 import type {
@@ -5317,6 +5318,95 @@ export class ProcedenciaRepository {
   }
 }
 
+/**
+ * Posición viva — la última posición conocida de cada aparato.
+ *
+ * Deliberadamente pequeño: escribir y leer. Toda la lógica de qué se publica y
+ * qué no vive en el endpoint público, no aquí.
+ */
+export class LivePositionRepository {
+  constructor(private db: Database) {}
+
+  /**
+   * Guarda la posición de un aparato **solo si es más nueva que la guardada**.
+   *
+   * Esa condición es la que vuelve inofensivo el desorden. El recolector hace
+   * varios sondeos por minuto y uno lento puede llegar después de otro más
+   * nuevo; sin el `where`, el sondeo atrasado pisaría la posición buena con una
+   * vieja y el pasajero vería al camión brincar hacia atrás.
+   *
+   * Con él, un sondeo tardío no hace nada. Escribir dos veces sale igual que
+   * escribir una, y en desorden sale igual que en orden.
+   */
+  async upsertMany(
+    posiciones: Array<{
+      imei: string;
+      carrierAccountId: string;
+      deviceId?: string | null;
+      unitId?: string | null;
+      latitude: number;
+      longitude: number;
+      speed?: number | null;
+      heading?: number | null;
+      recordedAt: Date;
+      collectedAt?: Date;
+    }>,
+  ) {
+    if (posiciones.length === 0) return [];
+    const ahora = new Date();
+    return escribirEnLotes(
+      posiciones.map((p) => ({
+        imei: p.imei,
+        carrierAccountId: p.carrierAccountId,
+        deviceId: p.deviceId ?? undefined,
+        unitId: p.unitId ?? undefined,
+        latitude: p.latitude,
+        longitude: p.longitude,
+        speed: p.speed ?? undefined,
+        heading: p.heading ?? undefined,
+        recordedAt: p.recordedAt,
+        collectedAt: p.collectedAt ?? ahora,
+        updatedAt: ahora,
+      })),
+      filasPorSentencia(livePositions),
+      (lote) =>
+        this.db
+          .insert(livePositions)
+          .values(lote)
+          .onConflictDoUpdate({
+            target: livePositions.imei,
+            set: {
+              carrierAccountId: sql`excluded.carrier_account_id`,
+              deviceId: sql`excluded.device_id`,
+              unitId: sql`excluded.unit_id`,
+              latitude: sql`excluded.latitude`,
+              longitude: sql`excluded.longitude`,
+              speed: sql`excluded.speed`,
+              heading: sql`excluded.heading`,
+              recordedAt: sql`excluded.recorded_at`,
+              collectedAt: sql`excluded.collected_at`,
+              updatedAt: sql`excluded.updated_at`,
+            },
+            where: sql`${livePositions.recordedAt} < excluded.recorded_at`,
+          })
+          .returning(),
+    );
+  }
+
+  /** Posiciones vivas de un carrier. El filtro de frescura lo aplica quien lee. */
+  async listForCarrier(carrierAccountId: string) {
+    return this.db
+      .select()
+      .from(livePositions)
+      .where(eq(livePositions.carrierAccountId, carrierAccountId));
+  }
+
+  async getByImei(imei: string) {
+    const [fila] = await this.db.select().from(livePositions).where(eq(livePositions.imei, imei));
+    return fila ?? null;
+  }
+}
+
 export function createRepositories(db: Database) {
   return {
     procedencia: new ProcedenciaRepository(db),
@@ -5342,6 +5432,7 @@ export function createRepositories(db: Database) {
     occurrenceGroundTruth: new OccurrenceGroundTruthRepository(db),
     aportaciones: new AportacionesRepository(db),
     ingestAlerts: new IngestAlertRepository(db),
+    livePositions: new LivePositionRepository(db),
   };
 }
 

@@ -129,6 +129,14 @@ export const carrierProfiles = pgTable("carrier_profiles", {
   // Credenciales del proveedor. La contraseña se guarda cifrada (AES-256-GCM).
   umbrellaUserId: text("umbrella_user_id"),
   umbrellaPasswordEncrypted: text("umbrella_password_encrypted"),
+  /**
+   * Cada cuántos segundos se sondea al proveedor de este carrier.
+   *
+   * Vive aquí y no en el código porque el sondeo es contra SU proveedor con SUS
+   * credenciales: un carrier con otro proveedor y otra cadencia se ajusta desde
+   * la pantalla, sin desplegar. 30 s es el valor de hoy para Umbrella, no una ley.
+   */
+  gpsPollSeconds: integer("gps_poll_seconds").notNull().default(30),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
@@ -939,6 +947,39 @@ export const telemetryWatermarks = pgTable("telemetry_watermarks", {
 }, (table) => [
   uniqueIndex("telemetry_watermarks_carrier_idx").on(table.carrierAccountId),
 ]);
+
+/**
+ * Última posición conocida por aparato — el camino propio de la app pública.
+ *
+ * **No es histórico y no crece: se sobrescribe.** El histórico sigue siendo
+ * `telemetryPoints`, que llena el archivador cada 10 minutos. La app del
+ * pasajero no puede leer aquello: medido el 26 de agosto de 2026, el archivador
+ * mete un p99 de 12.84 min de retraso, y una posición congelada doce minutos es
+ * la mentira que el Tramo JB prohíbe.
+ */
+export const livePositions = pgTable(
+  "live_positions",
+  {
+    imei: text("imei").primaryKey(),
+    carrierAccountId: uuid("carrier_account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    deviceId: uuid("device_id").references(() => devices.id, { onDelete: "set null" }),
+    unitId: uuid("unit_id").references(() => units.id, { onDelete: "set null" }),
+    latitude: doublePrecision("latitude").notNull(),
+    longitude: doublePrecision("longitude").notNull(),
+    speed: doublePrecision("speed"),
+    heading: doublePrecision("heading"),
+    /** Cuándo el aparato tomó el fix. De aquí sale la antigüedad que decide si está fresco. */
+    recordedAt: timestamp("recorded_at", { withTimezone: true, mode: "date" }).notNull(),
+    /** Cuándo lo recogimos. `collectedAt - recordedAt` es el retraso de nuestro propio camino. */
+    collectedAt: timestamp("collected_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("live_positions_carrier_recorded_idx").on(table.carrierAccountId, table.recordedAt),
+  ],
+);
 
 /** Marca de agua por IMEI (Fase 5): relleno dirigido sin saltar huecos ajenos. */
 export const telemetryImeiWatermarks = pgTable(
