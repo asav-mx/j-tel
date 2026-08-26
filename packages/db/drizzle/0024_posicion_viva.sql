@@ -37,15 +37,17 @@
 -- proveedor con SUS credenciales. Un concesionario que mañana opere con otro
 -- proveedor y otra cadencia se ajusta desde la pantalla que ya existe, sin
 -- desplegar. 30 segundos es el valor de hoy para Umbrella, no una ley.
-
-BEGIN;
+--
+-- ADITIVA y en transacción. Sin CONCURRENTLY: `live_positions` es nueva y no
+-- recibe tráfico todavía, así que un CREATE INDEX normal no bloquea a nadie.
+-- Se puede aplicar ANTES de desplegar el código sin romper lo que corre hoy.
 
 ALTER TABLE carrier_profiles
   ADD COLUMN IF NOT EXISTS gps_poll_seconds INTEGER NOT NULL DEFAULT 30;
-
+--> statement-breakpoint
 COMMENT ON COLUMN carrier_profiles.gps_poll_seconds IS
   'Cada cuántos segundos se sondea al proveedor GPS de este carrier. Configurable por carrier; nunca constante en el código.';
-
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS live_positions (
   imei                TEXT PRIMARY KEY,
   carrier_account_id  UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -55,21 +57,13 @@ CREATE TABLE IF NOT EXISTS live_positions (
   longitude           DOUBLE PRECISION NOT NULL,
   speed               DOUBLE PRECISION,
   heading             DOUBLE PRECISION,
-  -- Cuándo el aparato tomó el fix. De aquí sale la antigüedad que decide si el
-  -- dato está fresco. NUNCA se calcula con el reloj del teléfono del pasajero.
   recorded_at         TIMESTAMPTZ NOT NULL,
-  -- Cuándo lo recogimos nosotros. La resta contra `recorded_at` es el retraso
-  -- de nuestro propio camino, y es lo que hay que vigilar para que no se
-  -- convierta en otro archivador.
   collected_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
+--> statement-breakpoint
 COMMENT ON TABLE live_positions IS
   'Última posición conocida por aparato. Camino propio de la app pública: no es histórico y no crece. El histórico vive en telemetry_points.';
-
--- Lectura de la app: dame las unidades de este carrier con dato reciente.
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS live_positions_carrier_recorded_idx
   ON live_positions (carrier_account_id, recorded_at DESC);
-
-COMMIT;
