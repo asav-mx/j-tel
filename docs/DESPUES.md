@@ -201,6 +201,15 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Decisiones de producto pendientes](#decisiones-de-producto-pendientes) | Producto |
 | [El orden recomendado](#el-orden-recomendado) | ⛔ Se movió a `PLAN.md` §4 |
 
+### 6 · Juárez Bus público — frente concesionado
+
+> Frente paralelo, **transporte público concesionado**, no transporte especial. Su
+> orden vive en `PLAN.md` §4, «Tramo JB». Aquí solo lo que se aplazó a propósito.
+
+| Entrada | Horizonte |
+|---|---|
+| [El mapa de las paradas reales de Juárez](#el-mapa-de-las-paradas-reales-de-juárez) | Frontera post-sprint |
+
 ---
 
 # 1 · v1 — en construcción ahora
@@ -2362,3 +2371,39 @@ frente de producto entero.
 >
 > La foto de cómo se veía este orden el 3 de agosto está en
 > [`docs/corte-2026-08-03/DESPUES.md`](corte-2026-08-03/DESPUES.md).
+
+---
+
+# 6 · Juárez Bus público — frente concesionado
+
+Lo aplazado del frente del transporte público concesionado. **No es transporte
+especial**: no confundir con `Vision-Modo-Pasajero-jid.md`, que es el modo pasajero
+de Tecma y las plantas. El orden de este frente vive en [`PLAN.md`](PLAN.md) §4,
+en el «Tramo JB».
+
+## El mapa de las paradas reales de Juárez
+
+**Qué es.** Si el sistema mide **dónde se detiene realmente cada unidad** sobre el
+trazado —no dónde debería—, en unos meses existe el mapa de las paradas reales de la
+ciudad: dónde la gente sube y baja de verdad, con qué frecuencia y a qué horas. Ese
+dato no lo tiene nadie, **ni la Dirección de Transporte**.
+
+**Por qué se aplazó.** Porque el sprint de 15 días tiene que sacar unidades a la
+calle con app de pasajero, y esto no es necesario para eso. Se anota ahora, y no
+después, porque la corrección del día 1 —la app se calcula sobre el trazado, no sobre
+paradas, ya que en Juárez el camión se detiene donde el pasajero lo pide— es
+exactamente lo que lo vuelve posible: la misma proyección punto-a-segmento que calcula
+la llegada sabe también dónde una unidad se quedó quieta. Sale **solo**, del flujo que
+ya alimenta la app, sin pedirle nada al pasajero ni instalar nada nuevo.
+
+**Qué lo desbloquea.** Que el Tramo JB cierre con la geometría capaz de producirlo:
+posición proyectada sobre el trazado, que ya es la misma que calcula la llegada. Nada
+más se necesita del lado del dato. La decisión de construirlo se toma en la frontera
+post-sprint.
+
+**Dónde toca.** El recolector a 30–60 s y la tabla de posición actual del Tramo JB;
+la geometría punto-a-segmento contra el trazado del circuito. Es además el insumo
+natural de las otras dos salidas que el mismo motor ya contempla: el reporte
+operativo al concesionario y el **reporte agregado a la autoridad de transporte**,
+que es cliente natural a futuro. Y la base para decidir dónde poner letreros que sí
+correspondan a la realidad, en vez de heredar los que nadie usa.

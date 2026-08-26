@@ -1,8 +1,9 @@
 # J-Telemetry — El Plan
 
 **Corte: 3 de agosto de 2026.**
-**Última edición: 6 de agosto de 2026** (Tramo 2 · la ficha de consolidación de §5
-reescrita contra producción, y la regla de la fecha de medición en §0).
+**Última edición: 26 de agosto de 2026** (entra el **Tramo JB — Juárez Bus
+público**, frente paralelo del transporte concesionado, con la corrección del día 1
+—la app se calcula sobre el trazado, no sobre paradas— ya en el cuerpo).
 
 Este es el único plan. Reemplaza a `PLAN-v1.md`, a `Plan-Camino-a-v1.md`, a
 `docs/marco-limpio/Despues.md` y a la parte de orden de `DESPUES.md`.
@@ -1903,6 +1904,132 @@ memoria**.
 
 **Compuerta de v1:** un cliente nuevo se da de alta, entra con su usuario, ve solo
 lo suyo, y el ≥90% de capacidad de mostrar se sostiene.
+
+---
+
+### Tramo JB — Juárez Bus público · frente paralelo, transporte CONCESIONADO
+
+> **No confundir con `Vision-Modo-Pasajero-jid.md`.** Aquel es el modo pasajero del
+> **transporte especial**: verificar que el empleado llegó a su planta, con j-id.
+> Éste es el **transporte público concesionado** de Ciudad Juárez: una app abierta,
+> sin cuenta, para quien espera un camión en la calle. Nombres parecidos, productos
+> distintos, clientes distintos. El único código que comparten es la geometría.
+
+**Arranque: 26 de agosto de 2026. Salida: 10 de septiembre de 2026.** Frente
+paralelo: no depende de los Tramos 2 a 7 ni los bloquea. Mientras dure, el carril
+de motor (Tramo 3 y C25) se pausa; la medición de efecto-paso3 sigue sola porque
+es pasiva.
+
+**Qué es.** Las primeras unidades públicas de Juárez Bus salen con app de pasajero.
+PWA sin registro y sin cuenta, QR por parada, registro interno de concesión y
+circuito, monitoreo para el carrier y reporte de comportamiento para J-Staff.
+
+**La estructura nueva, y es la razón de fondo del tramo.** Tres sujetos entran al
+sistema como expedientes, con la relación correcta desde el día uno: la **CONCESIÓN**
+es entidad propia con su ledger, muchos-a-muchos con carriers; el **CIRCUITO**
+pertenece a la concesión, no al carrier, con su trazado, su frecuencia declarada y
+su horario; la **PARADA** es un punto del circuito con nombre, orden y QR. No se
+construye «multi-concesionario»: se construye la relación correcta y el multi viene
+solo. Ésa es la puerta por la que entran los concesionarios invitados.
+
+#### La corrección del día 1: la app se calcula sobre el TRAZADO, no sobre paradas
+
+En el transporte público de Juárez **el camión no se detiene en las paradas
+oficiales**. Se detiene donde el pasajero lo pide, sin regla. Una app que calcule
+llegadas parada por parada mide algo que no ocurre.
+
+La llegada se calcula proyectando la unidad sobre el recorrido: **dónde va el camión
+sobre el trazado → cuánto falta para que pase por donde está el pasajero.** Funciona
+igual en un paradero oficial que en cualquier esquina de la ruta.
+
+**Y es la misma geometría punto-a-segmento que decide en-circuito / fuera-de-circuito
+para el reporte de comportamiento.** Una sola geometría sirve para las dos cosas: la
+llegada del pasajero y la lectura del carrier. Las vueltas del día salen del mismo
+avance sobre el trazado.
+
+Las paradas oficiales siguen existiendo, pero como **referencias con nombre**: para el
+hilo de la app, para orientar, y para colgar los QR de los letreros que sí existen.
+**No son la unidad de cálculo, y el circuito 1 se levanta sin esperarlas.** El sistema
+tiene que funcionar con pocas o con ninguna.
+
+#### Sello contra reporte — la ley de este tramo
+
+**El SELLO no sale al público.** El sello congela un hecho porque un pago depende de
+él, y vive donde hay contrato: la modalidad especial. En público el motor **mide y
+REPORTA**: qué pasó, sin firma que condene.
+
+La razón no es técnica. J-Tel no multa ni es autoridad; ofrece el servicio de medir.
+Quien sanciona es la Dirección de Transporte con sus propias reglas. Y los
+concesionarios que se sumen lo hacen a una plataforma **que los muestra, no que los
+vigila**: si el sistema empezara a firmar faltas contra ellos desde el día uno, la
+invitación cambia de naturaleza y el universo no nace. Perilla por concesión, nunca
+horneada, apagada por defecto.
+
+#### Lo medido, con su fecha
+
+> **Corte de medición: 26 de agosto de 2026**, sobre 2 695 572 puntos reales de
+> `telemetry_points` (fuente `umbrella`, 61 unidades, 9 jul → 26 ago) y contra
+> `api/Tracker` y `api/LastLocation` de Umbrella en vivo. Solo lectura.
+
+| Qué | Medido | Consecuencia |
+|---|---|---|
+| Cadencia de fix por unidad | **mediana 1.00 min · p90 2.00 · p99 2.00** sobre 2 045 165 huecos en horario de servicio | Umbrella entrega un fix por minuto y **no se degrada en hora pico**: idéntico en las 24 horas locales, y entre las 61 unidades va de 0.52 a 2.00 min |
+| Retraso del archivador de J-Tel | **mediana 6.09 min · p90 10.18 · p99 12.84** | **No es de Umbrella: es nuestro.** El cron `/api/cron/archive` corre `*/10`, y un punto espera a que pase. La app pública **no puede leer esa tabla** — con p99 de 12.84 min sería la posición congelada que este tramo prohíbe |
+| Hora del equipo contra hora del servidor | `l_datetime` presente en **81 de 81** registros; desfase mediana **0.05 min**, p90 0.10, máx 0.98 | El `?? loc.r_datetime` de `toGpsPoint` **no dispara**, y si disparara la diferencia es de segundos. **Se midió y no era problema**: no se aplaza, se cierra aquí |
+| Dato viejo, para un pasajero parado | **3 minutos** sin posición nueva | El p99 del hueco entre fixes es 2 min: a los 3 la unidad se saltó tres reportes esperados. Ahí desaparece el rango y entra la frecuencia declarada. **No reutiliza `SIN_SENAL_MINUTOS`** (15 min), que es el umbral de la torre interna — otro público, otro número |
+| Ancho del rango de llegada | **piso de ±3 minutos** | p90 de fix (2 min) + retraso de un camino propio (~1 min). La **varianza de tráfico** que se suma encima **no está medida**: sale de la prueba de campo de los días 11–13, y hasta entonces no se inventa |
+
+#### Las piezas
+
+| Pieza | Qué |
+|---|---|
+| **Recolector a 30–60 s** | Camino propio contra Umbrella escribiendo posición actual. **Primero de todo, y no depende del modelo de circuito.** A 30–60 s la posición queda con p90 ≈ 2.5 min de antigüedad, debajo del umbral de 3. Si Umbrella no contesta, el dato envejece y la app cae a frecuencia declarada: el pasajero **nunca** ve un error en vivo |
+| **Modelo: concesión · circuito · parada** | Con sus expedientes mínimos y el registro interno para darlos de alta |
+| **Endpoint público** | Solo lectura, **sin autenticación**, siempre por circuito en la ruta — nunca una lista global, o el sistema se raspa con una llamada. Expone `id_publico` (opaco y **rotativo por día**), `lat`, `lon`, `rumbo`, `sentido`, `circuito_id`, `antiguedad_seg` **calculada en el servidor**, `fresco` ya resuelto, `frecuencia_declarada_min`, `generado_en`, `ttl_seg`. **Nunca**: identificadores internos, `imei`, placas, número económico, chofer, carrier, concesión, contrato, velocidad reportada, histórico de ninguna clase, ni unidades de otra modalidad. Tres reglas de operación: el filtro por asignación y horario es **del servidor**; cache y límite de tasa **obligatorios**, con TTL atado a la cadencia medida; y **si el dato está viejo, la respuesta no trae posición** — manda la frecuencia declarada y ya. Lo que no debe verse, no se envía |
+| **PWA del pasajero** | Sin registro y sin cuenta. Mapa vivo, hilo de paradas con camiones animados, rango de llegada, estado «Llegando», caída honesta a frecuencia declarada. **La posición del pasajero se calcula en su teléfono y el servidor jamás la recibe** — proyecta su propia ubicación sobre el trazado en el dispositivo. Instalable, y rápida en un Android de gama baja con datos limitados: ése es el teléfono real del pasajero |
+| **«¿A dónde vas?» honesto** | Si el circuito sirve, lo dice; si no sirve, **lo dice claro** con mapa de cobertura y «estamos creciendo». Con una sola ruta no combina |
+| **QR por parada** | Cada parada con su liga que abre la app situada ahí, y el pliego listo para imprimir |
+| **Monitoreo y reporte de comportamiento** | Para el carrier y J-Staff: unidades en operación sobre el mapa, en circuito o fuera, adelantada / a tiempo / atrasada contra la frecuencia declarada, y vueltas del día. **Lectura, no sello** |
+
+**Dónde vive.** App pública en **proyecto de Vercel aparte** para aislar el tráfico
+abierto, **dentro de este monorepo** — el repo despliega varias apps a proyectos
+distintos. Ningún repo nuevo. Dominio: **juarezbus.digital**.
+
+⚠ **Su DNS no está en Vercel: los nameservers apuntan a Unstoppable Domains y hoy no
+resuelve a nada.** El dominio va impreso en los letreros de los QR en los días 9–11 y
+un letrero impreso no se cambia: **confirmar control del DNS antes de mandar
+imprimir** es trabajo humano bloqueante, no tarea de código.
+
+**Circuito 1 — Oasis–Centro.** KML confirmado el 26 de agosto. Las capas buenas son
+las de «Indicaciones»: ida **661 puntos / 20.83 km**, regreso **456 / 16.44 km**,
+espaciado mediano 19 y 25 m, extremos exactos sobre las dos terminales. El archivo
+trae además un par «Trayecto» más burdo (143 / 89 puntos, saltos de hasta 874 m) que
+**no se usa**: a esa resolución el trazado corta esquinas y el en-circuito miente.
+**Ida y regreso no son espejo** — 20.83 contra 16.44 km, por los sentidos únicos del
+Centro—, así que el `sentido` es por trayecto y no se calcula invirtiendo el otro. Y
+con huecos de hasta 224 m entre vértices, la geometría mide **punto-a-segmento**, no
+punto-a-vértice, o un camión a medio tramo se ve 112 m fuera de ruta sin estarlo.
+
+#### La regla que gobierna este tramo: NADA HARDCODEADO
+
+**Ni un nombre, ni una coordenada, ni un número dentro del código.** El KML se sube
+desde la pantalla, las paradas se dan de alta desde la UI, y frecuencia, horario,
+umbral de dato viejo y piso del rango son **campos por circuito**.
+
+No es preferencia de estilo: el sistema nace para recibir concesionarios invitados.
+Cualquier dato de operación horneado convierte el alta de un concesionario nuevo en
+un despliegue, y mata la estructura antes de que crezca. Caso concreto que ya
+apareció: el KML del circuito 1 trae cuatro capas de línea, y **cuál es ida y cuál
+regreso lo escoge la pantalla al subirlo**, no un nombre de capa dentro del código.
+
+**Compuerta del tramo:** un pasajero que no sabe nada del sistema escanea el QR de un
+letrero en la calle, ve dónde viene su camión con un rango que se cumple, y cuando el
+dato envejece la app se lo dice en vez de mentirle. Y el mismo día, el carrier ve sus
+unidades y su reporte de comportamiento sin que nadie haya firmado una falta.
+
+**Lo que NO sale y no se negocia dentro del tramo:** el sello, calificaciones o
+rankings de concesionarios o choferes, pagos y recargas, app de tiendas, y el
+planificador multi-ruta completo.
 
 ---
 
