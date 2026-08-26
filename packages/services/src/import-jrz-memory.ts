@@ -80,6 +80,10 @@ async function main() {
   let mapped = 0;
   let saved = 0;
   let skippedUnmapped = 0;
+  // Qué equipos quedaron fuera y con cuántos puntos. Un conteo agregado no
+  // basta: el 2026-07-09 esta importación terminó en verde dejando fuera 3
+  // unidades reales y 44 384 puntos, y nadie lo vio hasta agosto.
+  const omitidosPorEquipo = new Map<string, number>();
 
   while (true) {
     const rows = await oldDb.execute<{
@@ -114,6 +118,7 @@ async function main() {
       const match = imeiByAsset.get(row.asset_id);
       if (!match) {
         skippedUnmapped++;
+        omitidosPorEquipo.set(row.asset_id, (omitidosPorEquipo.get(row.asset_id) ?? 0) + 1);
         continue;
       }
       mapped++;
@@ -159,6 +164,27 @@ async function main() {
   console.log(`  sin equipo en j-tel: ${skippedUnmapped}`);
   console.log(`  guardados (nuevos):  ${saved}`);
 
+  if (omitidosPorEquipo.size > 0) {
+    console.error(`\n${omitidosPorEquipo.size} equipos quedaron FUERA de la importación:`);
+    for (const [assetId, puntos] of [...omitidosPorEquipo].sort((a, b) => b[1] - a[1])) {
+      console.error(`  ${assetId}  ${puntos} puntos sin copiar`);
+    }
+    console.error(
+      "\nEstos equipos no existen en j-tel con su IMEI. Su IMEI se recupera de\n" +
+        "Umbrella (api/Tracker) comparando el hash del IMEI contra el asset_id.\n" +
+        "Dalos de alta en `devices` y vuelve a correr esta importación.",
+    );
+  }
+
+  // La importación NO se declara exitosa si dejó algo fuera. Un proceso que
+  // termina en verde ocultando lo que no copió es peor que uno que falla.
+  const faltantes = scanned - mapped;
+  if (faltantes > 0) {
+    console.error(`\nIMPORTACIÓN INCOMPLETA: ${faltantes} de ${scanned} puntos no se copiaron.`);
+    process.exit(1);
+  }
+
+  console.log("\nImportación completa: no quedó nada fuera.");
   process.exit(0);
 }
 
