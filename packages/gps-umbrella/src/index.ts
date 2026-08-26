@@ -34,6 +34,8 @@ interface UmbrellaGpsInfo {
   longitude?: number;
   speed?: number;
   gps_valid?: boolean;
+  /** Rumbo en grados. Así lo llama Umbrella. */
+  azimuth?: number;
 }
 
 interface UmbrellaLocation {
@@ -208,6 +210,7 @@ export class UmbrellaGpsProvider implements GpsProvider {
       latitude: lat,
       longitude: lng,
       speed: gps.speed,
+      heading: gps.azimuth,
       timestamp,
     };
   }

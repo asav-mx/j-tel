@@ -4,6 +4,7 @@ export * from "./recuperacion-tardia.js";
 export * from "./motivo-sin-evidencia.js";
 export * from "./providers.js";
 export * from "./archiver.js";
+export * from "./collector.js";
 export * from "./ingest-health.js";
 export * from "./gap-backfill.js";
 export * from "./salud.js";

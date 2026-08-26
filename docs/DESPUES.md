@@ -209,6 +209,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | Entrada | Horizonte |
 |---|---|
 | [El mapa de las paradas reales de Juárez](#el-mapa-de-las-paradas-reales-de-juárez) | Frontera post-sprint |
+| [Los 30 s del recolector son un límite de la plataforma](#los-30-s-del-recolector-son-un-límite-de-la-plataforma) | Cuando llegue el fierro propio |
 
 ---
 
@@ -2407,3 +2408,28 @@ natural de las otras dos salidas que el mismo motor ya contempla: el reporte
 operativo al concesionario y el **reporte agregado a la autoridad de transporte**,
 que es cliente natural a futuro. Y la base para decidir dónde poner letreros que sí
 correspondan a la realidad, en vez de heredar los que nadie usa.
+
+## Los 30 s del recolector son un límite de la plataforma
+
+**Qué es.** La cadencia de 30 segundos del recolector —dos sondeos dentro de una
+misma invocación del cron— **no es una decisión de producto: es la forma de darle
+la vuelta a un límite de la plataforma.** Los crones de Vercel tienen granularidad
+de un minuto, y a 60 s la antigüedad p90 queda en 3.0 min, exactamente el umbral de
+dato viejo: la app estaría cayendo a frecuencia declarada todo el tiempo. Con dos
+sondeos por invocación baja a ~2.5 min y quedan 30 s de margen.
+
+**Por qué se aplazó.** Porque hoy funciona y el sprint tiene que salir. Pero
+conviene que quede escrito que es un rodeo, no un diseño: quien lea el recolector
+dentro de seis meses tiene que saber que los dos sondeos existen por el cron, no
+porque alguien creyera que sondear dos veces es mejor que una.
+
+**Qué lo desbloquea.** El fierro propio. Con equipos que empujan su posición en vez
+de que nosotros la vayamos a buscar, **el dato llega solo** y todo esto se vuelve
+innecesario: se borran los sondeos, se borra la espera de 30 s dentro de la
+invocación, y la frescura deja de depender de con qué frecuencia preguntamos.
+Mientras se sondee a un proveedor, la cadencia es un rodeo por definición.
+
+**Dónde toca.** `packages/services/src/collector.ts` (los sondeos por ventana),
+`apps/web/vercel.json` (el cron `* * * * *`) y `carrier_profiles.gps_poll_seconds`,
+que es lo único que sobreviviría: si un carrier trae fierro propio, su cadencia deja
+de importar y esa columna simplemente no se usa para él.
