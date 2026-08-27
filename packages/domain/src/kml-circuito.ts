@@ -34,6 +34,15 @@ export interface CapaKml {
   huecoMaximoMetros: number;
   inicio: { lat: number; lon: number };
   fin: { lat: number; lon: number };
+  /**
+   * Verdadero cuando otra capa recorre el mismo corredor con mucho más detalle.
+   *
+   * Vive en el dato y no en la pantalla a propósito: el 26 de agosto de 2026 se
+   * guardaron las capas burdas del circuito 1 porque la lista las mostraba
+   * primero, con botones idénticos a los de las buenas, y el aviso vivía en otra
+   * caja. Marcar la capa hace que la pantalla no pueda presentarlas como iguales.
+   */
+  cortaEsquinas: boolean;
 }
 
 export interface PuntoKml {
@@ -139,6 +148,7 @@ export function analizarKmlDeCircuito(xml: string): AnalisisKml {
         );
       }
       capas.push({
+        cortaEsquinas: false,
         nombre,
         carpeta,
         coordenadas,
@@ -176,6 +186,7 @@ export function analizarKmlDeCircuito(xml: string): AnalisisKml {
       if (largoParecido && resolucionDistinta) {
         const fina = a.puntos > b.puntos ? a : b;
         const burda = a.puntos > b.puntos ? b : a;
+        burda.cortaEsquinas = true;
         avisos.push(
           `"${fina.nombre}" y "${burda.nombre}" recorren lo mismo con distinto detalle ` +
             `(${fina.puntos} contra ${burda.puntos} puntos). La de menos puntos corta esquinas: ` +
@@ -185,6 +196,14 @@ export function analizarKmlDeCircuito(xml: string): AnalisisKml {
       }
     }
   }
+
+  // Las capas se devuelven con las utilizables primero y, dentro de cada grupo,
+  // la de más detalle arriba. El orden del archivo no dice nada sobre la calidad
+  // del trazado, y dejarlo mandar fue lo que hizo que se guardara la burda.
+  capas.sort((a, b) => {
+    if (a.cortaEsquinas !== b.cortaEsquinas) return a.cortaEsquinas ? 1 : -1;
+    return b.puntos - a.puntos;
+  });
 
   return { capas, puntos, avisos };
 }

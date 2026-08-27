@@ -30,6 +30,7 @@ export interface CapaAnalizada {
   largoMetros: number;
   espaciadoMedianoMetros: number;
   huecoMaximoMetros: number;
+  cortaEsquinas: boolean;
   coordenadas: Array<[number, number]>;
 }
 
@@ -88,6 +89,7 @@ export function CircuitoEditor({
   const [soltarPegado, setSoltarPegado] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [mapaListo, setMapaListo] = useState(false);
 
   // ── mapa ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -97,9 +99,13 @@ export function CircuitoEditor({
       if (cancelado || !contenedor.current || mapa.current) return;
       L.current = mod;
       const m = mod.map(contenedor.current, { scrollWheelZoom: true }).setView([31.7, -106.45], 12);
+      // OpenStreetMap directo: CARTO empezó a exigir llave y devuelve un mosaico
+      // con "API KEY REQUIRED" impreso, que es lo que dejó el mapa negro. Aquí
+      // hace falta un mapa LEGIBLE para picar paradas sobre calles reales, así
+      // que el fondo claro además ayuda.
       mod
-        .tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-          attribution: "© OpenStreetMap, © CARTO",
+        .tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
           maxZoom: 19,
         })
         .addTo(m);
@@ -107,6 +113,11 @@ export function CircuitoEditor({
       capaParadas.current = mod.layerGroup().addTo(m);
       capaFantasma.current = mod.layerGroup().addTo(m);
       mapa.current = m;
+      // El mapa se crea de forma asíncrona, así que el primer dibujo del
+      // trazado puede correr ANTES de que exista y su encuadre se pierde: al
+      // recargar el editor había que ir a buscar el circuito a mano. Con esto
+      // el dibujo se rehace en cuanto el mapa está listo.
+      setMapaListo(true);
       setMensaje("Pica sobre el mapa para poner una parada.");
     });
     return () => {
@@ -118,7 +129,7 @@ export function CircuitoEditor({
 
   const dibujarTrazados = useCallback(() => {
     const mod = L.current;
-    if (!mod || !capaTrazados.current) return;
+    if (!mod || !capaTrazados.current || !mapaListo) return;
     capaTrazados.current.clearLayers();
     for (const t of trazados) {
       mod
@@ -135,11 +146,11 @@ export function CircuitoEditor({
       );
       mapa.current.fitBounds(mod.latLngBounds(todas).pad(0.05));
     }
-  }, [trazados]);
+  }, [trazados, mapaListo]);
 
   const dibujarParadas = useCallback(() => {
     const mod = L.current;
-    if (!mod || !capaParadas.current) return;
+    if (!mod || !capaParadas.current || !mapaListo) return;
     capaParadas.current.clearLayers();
     for (const p of paradas) {
       mod
@@ -153,7 +164,7 @@ export function CircuitoEditor({
         .bindTooltip(`${p.name} · orden ${p.orden}`)
         .addTo(capaParadas.current);
     }
-  }, [paradas]);
+  }, [paradas, mapaListo]);
 
   useEffect(dibujarTrazados, [dibujarTrazados]);
   useEffect(dibujarParadas, [dibujarParadas]);
@@ -386,8 +397,24 @@ export function CircuitoEditor({
                 </p>
               ))}
               {analisis.capas.map((c) => (
-                <div key={c.indice} className="rounded border border-[var(--linea-tenue)] p-2 text-xs">
-                  <p className="font-medium">{c.nombre}</p>
+                <div
+                  key={c.indice}
+                  className={`rounded border p-2 text-xs ${
+                    c.cortaEsquinas
+                      ? "border-dashed border-[var(--linea-tenue)] opacity-60"
+                      : "border-[var(--linea-tenue)]"
+                  }`}
+                >
+                  <p className="font-medium">
+                    {c.nombre}
+                    {c.cortaEsquinas ? (
+                      <span className="ml-2 rounded bg-[var(--aviso-fondo,#3a2d00)] px-1 py-0.5">
+                        ⚠ corta esquinas — no usar
+                      </span>
+                    ) : (
+                      <span className="ml-2 text-[var(--muted)]">recomendada</span>
+                    )}
+                  </p>
                   <p className="text-[var(--muted)]">
                     {c.puntos} puntos · {(c.largoMetros / 1000).toFixed(2)} km · espaciado{" "}
                     {c.espaciadoMedianoMetros} m · hueco máx {c.huecoMaximoMetros} m
@@ -398,7 +425,22 @@ export function CircuitoEditor({
                         key={s}
                         type="button"
                         disabled={ocupado}
-                        onClick={() => void guardarTrazado(c, s)}
+                        onClick={() => {
+                          // Escoger una capa marcada sigue siendo posible —puede
+                          // ser el único trazado que exista— pero deja de ser un
+                          // clic distraído.
+                          if (
+                            c.cortaEsquinas &&
+                            !window.confirm(
+                              `"${c.nombre}" tiene saltos de hasta ${c.huecoMaximoMetros} m entre puntos. ` +
+                                `A esa resolución el trazado corta esquinas y el "en circuito" miente. ` +
+                                `¿Usarla de todos modos como ${s}?`,
+                            )
+                          ) {
+                            return;
+                          }
+                          void guardarTrazado(c, s);
+                        }}
                         className="rounded border border-[var(--linea-tenue)] px-2 py-1"
                       >
                         {puestos.has(s) ? `Reemplazar ${s}` : `Usar como ${s}`}
