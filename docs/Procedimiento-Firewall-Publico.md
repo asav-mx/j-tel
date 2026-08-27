@@ -8,6 +8,10 @@
 > nadie cuando falta. Si borras este archivo, en tres semanas nadie sabe que el
 > endpoint depende de una regla puesta a mano.
 
+> **El proyecto de Vercel que hospeda ese endpoint se crea con
+> [`Procedimiento-Proyecto-Publico.md`](Procedimiento-Proyecto-Publico.md).**
+> Esta regla se pone ahí, no en el proyecto de la cara interna.
+
 ---
 
 ## La decisión, y lo que costó
