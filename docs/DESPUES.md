@@ -186,6 +186,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [La contraseña del readonly es la misma que la del dueño](#la-contraseña-del-readonly-es-la-misma-que-la-del-dueño) | 🟡 🤝 Toca producción |
 | [La base de pruebas está atrasada](#la-base-de-pruebas-está-atrasada) | ✅ Cerrada el 4 de agosto · eran tres, no una |
 | [Las migraciones del repo crean una columna que el código no conoce](#las-migraciones-del-repo-crean-una-columna-que-el-código-no-conoce) | ✅ **Cerrada el 15 de agosto** — la `0018` está aplicada en producción |
+| [La `0027`, la `0028` y la `0029` no están en el journal del repo](#la-0027-la-0028-y-la-0029-no-están-en-el-journal-del-repo) | 🟢 Junto con la próxima migración del tramo |
 | [`demos/activate` cruza cuentas](#demosactivate-cruza-cuentas) | 🟡 Protegida; falta decidir qué hace |
 | [No hay configuración de ESLint](#no-hay-configuración-de-eslint) | 🟢 Junto con el corredor de pruebas |
 | ["Consolidación" significa dos cosas](#consolidación-significa-dos-cosas) | 🟢 Renombrar la de política |
@@ -2230,6 +2231,51 @@ fue**, y esta entrada no lo afirma. Para «¿esta base tiene lo que el código n
 esta clase de hueco vuelva a ser invisible tres semanas — ⚠ **con su propio límite: no
 corre en CI**, porque necesita credenciales de las dos bases. Se corre a mano antes de
 desplegar.
+
+## La `0027`, la `0028` y la `0029` no están en el journal del repo
+
+**Qué es.** 🟢 Las tres migraciones del Tramo JB —`0027_asignacion_vigencia`,
+`0028_publicacion_circuito` y `0029_velocidad_circuito`— tienen su `.sql`, están
+declaradas en el esquema de Drizzle y **están aplicadas en producción**, pero
+`packages/db/drizzle/meta/_journal.json` **se detiene en la `0026`**. Le faltan las
+tres entradas que pide el paso 2 de `docs/Procedimiento-Migraciones.md`.
+
+**Medido el 2026-08-27** contra `origin/main` (d02b729) y contra producción con
+`DATABASE_URL_READONLY`: el journal tiene 27 entradas (`idx` 0 a 26); los objetos de
+las tres migraciones —`circuit_unit_assignments.motivo`, `circuits.published_at` con
+su índice parcial, `circuits.avg_speed_kmh` y `circuits.color_hex`— sí existen en la
+base. **La base está bien; el índice del repo es el que miente.**
+
+**Por qué se aplazó.** No se aplazó: **nadie lo vio, y no hay nada que lo vea.**
+Es literalmente la falla de la `0017` que el propio procedimiento ya documenta —«se
+descubrió que la `0017` nunca se anotó, y nada falló por eso»— repetida tres veces
+seguidas.
+
+Y la razón por la que se repite está escrita en el mismo documento: **el migrador no
+usa este archivo.** Tampoco lo usa nadie más — se comprobó recorriendo `packages/`,
+`apps/`, `.github/` y `scripts/`, y **cero líneas lo leen**. `esquema.yml` aplica los
+`.sql` por orden de nombre de archivo (`packages/db/ci/aplicar-migraciones.mjs`), no
+por el journal. Un archivo que ninguna máquina lee sólo lo mantiene la disciplina de
+quien escribe la migración, y la disciplina falla en silencio: **no hay verde que se
+ponga rojo cuando esto pasa.**
+
+**Por qué importa aunque no rompa nada.** Es el índice legible del directorio y la
+única lista ordenada de qué migraciones existen. Mientras esté atrasado, cualquiera
+que lo consulte para saber en qué número va —al escribir la siguiente, o al comparar
+la base de pruebas contra el repo, que es como se descubrieron los tres faltantes del
+4 de agosto— lee `0026` y se equivoca de número. Es la misma clase de daño que la
+columna que sobra: dos verdades distintas conviviendo sin que nada lo diga.
+
+**Dónde tocaba.** `packages/db/drizzle/meta/_journal.json` — tres entradas con `idx`
+27, 28 y 29 y el mismo `tag` que el nombre de cada archivo. **Se pone al día junto con
+la próxima migración del tramo**, que es como se puso al día la `0017` (con la
+`0018`), para no gastar un PR en tres líneas de JSON que nadie ejecuta.
+
+⚠ **Lo que esto NO cierra**, y conviene decirlo en vez de fingir que sí: ponerlas al
+día arregla estas tres y deja viva la causa. Mientras nada lea el archivo, la cuarta
+vez llegará igual. La valla verdadera —un paso que compare los `.sql` del directorio
+contra las entradas del journal y falle si difieren— cabe en `esquema.yml`, que ya
+recorre ese directorio, y no está escrita.
 
 ## `demos/activate` cruza cuentas
 
