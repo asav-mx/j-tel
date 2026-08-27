@@ -178,6 +178,31 @@ describe("caché", () => {
     const r = await GET(pedir(), ctx("oasis-centro"));
     const cuerpo = await r.json();
     expect(r.headers.get("cache-control")).toContain(`s-maxage=${cuerpo.ttl_seg}`);
-    expect(r.headers.get("cache-control")).toContain("stale-while-revalidate=30");
+  });
+
+  it("NO lleva stale-while-revalidate: el navegador lo obedece y serviría camiones viejos", async () => {
+    /*
+     * SWR no es solo del CDN. Con 30 s de ventana, un teléfono sirve
+     * posiciones de hasta 30 s más viejas mientras revalida — encima del TTL,
+     * son 45 s de un presupuesto de 180. Se vio en la calle: el endpoint
+     * contestaba «fuera de horario» y la pantalla seguía en «Llegando».
+     */
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue(CIRCUITO);
+    const r = await GET(pedir(), ctx("oasis-centro"));
+    expect(r.headers.get("cache-control")).not.toContain("stale-while-revalidate");
+  });
+
+  it("el NAVEGADOR no guarda nada: max-age=0, o dibuja camiones donde ya no están", () => {
+    /*
+     * Esta prueba existe por un bug que se vio en la calle, no en la
+     * compilación: sin `max-age`, el navegador cachea heurísticamente una
+     * respuesta `public` y la app siguió diciendo «Llegando» cuando el
+     * endpoint ya contestaba cero unidades. El caché de lo vivo va en el CDN,
+     * compartido, nunca dentro de un teléfono.
+     */
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue(CIRCUITO);
+    return GET(pedir(), ctx("oasis-centro")).then((r) => {
+      expect(r.headers.get("cache-control")).toContain("max-age=0");
+    });
   });
 });

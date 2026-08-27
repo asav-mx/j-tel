@@ -5579,6 +5579,20 @@ export class CircuitRepository {
     return fila ?? null;
   }
 
+  /**
+   * Los circuitos que la app del pasajero puede enseñar.
+   *
+   * Solo lo publicado, y solo lo que un pasajero necesita para escoger: nombre
+   * y slug. Ni el uuid, ni la concesión, ni quién los corre.
+   */
+  async listPublishedCircuits() {
+    return this.db
+      .select({ publicSlug: circuits.publicSlug, name: circuits.name })
+      .from(circuits)
+      .where(isNotNull(circuits.publishedAt))
+      .orderBy(circuits.name);
+  }
+
   /** Prende o apaga la publicación. Apagar no borra nada del circuito. */
   async setCircuitPublished(id: string, publicado: boolean) {
     const [fila] = await this.db
