@@ -205,11 +205,19 @@ de estas leyes está mal escrita, y se corrige la entrada.
 
 > Frente paralelo, **transporte público concesionado**, no transporte especial. Su
 > orden vive en `PLAN.md` §4, «Tramo JB». Aquí solo lo que se aplazó a propósito.
+>
+> **La regla que gobierna estas entradas: todo lo que se construya hoy tiene que
+> dejar estas puertas abiertas sin abrirlas.** Ninguna entra al sprint. Lo que sí
+> es obligación del sprint es no cerrarlas — y por eso cada una dice qué del
+> diseño de hoy la mantiene viva.
 
 | Entrada | Horizonte |
 |---|---|
 | [El mapa de las paradas reales de Juárez](#el-mapa-de-las-paradas-reales-de-juárez) | Frontera post-sprint |
 | [Los 30 s del recolector son un límite de la plataforma](#los-30-s-del-recolector-son-un-límite-de-la-plataforma) | Cuando llegue el fierro propio |
+| [El pasajero como usuario](#el-pasajero-como-usuario) | Cuando la app tenga uso real |
+| [Sensores más allá del GPS](#sensores-más-allá-del-gps) | Cuando exista la suite del concesionario |
+| [Mapas de demanda](#mapas-de-demanda) | Después de los sensores |
 
 ---
 
@@ -2433,3 +2441,70 @@ Mientras se sondee a un proveedor, la cadencia es un rodeo por definición.
 `apps/web/vercel.json` (el cron `* * * * *`) y `carrier_profiles.gps_poll_seconds`,
 que es lo único que sobreviviría: si un carrier trae fierro propio, su cadencia deja
 de importar y esa columna simplemente no se usa para él.
+
+## El pasajero como usuario
+
+**Qué es.** El pasajero deja de ser anónimo si quiere: perfil con viajes
+guardados, favoritos, alertas propias —«avísame cuando el camión esté a cinco
+minutos de mi parada»— y, más adelante, pago. **Opcional siempre:** la app sin
+cuenta tiene que seguir sirviendo completa.
+
+**Por qué se aplazó.** Porque nadie crea una cuenta para saber cuándo pasa el
+camión. Pedir registro antes de haber dado algo de valor es la forma más rápida
+de que la app no se use. La cuenta se agrega **encima** de una app que ya tiene
+uso, no debajo de una que todavía no lo tiene.
+
+**Qué lo desbloquea.** Uso real medido: gente escaneando QRs y volviendo. Antes
+de eso no hay a quién ofrecerle una cuenta.
+
+**Dónde toca.** Y qué del diseño de hoy la mantiene abierta: el endpoint público
+es **de solo lectura y sin estado**, así que una capa autenticada se pone al lado
+sin tocarlo. La regla de que **la posición del pasajero se calcula en su teléfono
+y el servidor jamás la recibe** tampoco estorba: unos viajes guardados son
+origen y destino que él eligió, no un rastro suyo. Y el `qr_slug` de la parada,
+que vive en la identidad y no en la versión, ya es una liga estable a la que
+colgar una alerta. Nada de esto hay que deshacer para agregar cuentas.
+
+## Sensores más allá del GPS
+
+**Qué es.** Contadores de pasajeros e ingresos por unidad, alimentando la suite
+del concesionario: cuánta gente sube, dónde, a qué hora, y cuánto entró.
+
+**Por qué se aplazó.** El sprint saca unidades a la calle con app de pasajero, y
+para eso el GPS basta. Un contador es fierro que hay que comprar, instalar y
+calibrar por unidad, y eso es camino de meses, no de quince días.
+
+**Qué lo desbloquea.** Que exista la suite del concesionario con algo que
+mostrar, y unidades donde valga la pena instalarlo. Probablemente llega junto
+con el fierro propio que sustituye a Umbrella.
+
+**Dónde toca.** Y qué lo mantiene abierto: `devices` es un **aparato**, no un
+GPS — la identidad de la unidad ya está separada de la del aparato que la
+reporta, así que un contador es otro aparato de la misma unidad y no hay que
+inventar un modelo nuevo. Y la proyección sobre el trazado
+(`proyectarSobreTrazado`) convierte un conteo con hora en **una subida o bajada
+en un punto del recorrido**, que es el dato que de verdad vale. Esa función ya
+existe y ya se usa para la llegada.
+
+## Mapas de demanda
+
+**Qué es.** Zonas y horarios de demanda real de la ciudad: dónde y cuándo la
+gente necesita moverse, medido en vez de supuesto. Base para optimizar
+frecuencias y rutas, y el insumo natural para la **autoridad de transporte como
+cliente futuro**, que es una de las tres salidas que el Marco ya contempla.
+
+**Por qué se aplazó.** Depende de los sensores, y los sensores dependen del
+fierro. Además necesita meses de operación acumulada: un mapa de demanda de dos
+semanas no es un mapa, es una anécdota.
+
+**Qué lo desbloquea.** Los contadores instalados y varios meses corriendo. Se
+apoya también en [el mapa de las paradas reales](#el-mapa-de-las-paradas-reales-de-juárez),
+que sale antes y solo del GPS.
+
+**Dónde toca.** Y qué lo mantiene abierto: el ledger de la concesión acumula
+foja por foja desde el día uno —circuitos, carriers operadores, unidades por día
+y reportes de comportamiento—, así que **la historia se está guardando aunque
+todavía no se lea así**. Esa acumulación es, además, lo que vuelve valioso
+formalizar más adelante. Lo único que hay que cuidar en el sprint es no tirar
+resolución: la posición viva se sobrescribe a propósito, pero `telemetry_points`
+guarda el histórico completo y de ahí sale todo esto.
