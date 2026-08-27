@@ -1,53 +1,59 @@
 /*
- * La piel de la app del pasajero.
+ * La piel de la app del pasajero — del prototipo aprobado del 27 de agosto.
  *
  * **No es el registro de las caras internas, y es deliberado.** Aquéllas son
- * para un operador sentado que administra: densas, con muchos datos a la vez.
- * Ésta es para alguien parado en el sol, con una mano ocupada y prisa. Una
- * cifra grande, toques grandes, contraste alto.
+ * para un operador sentado que administra. Ésta es para alguien parado en el
+ * sol, con una mano ocupada y prisa: mapa de fondo, una cifra enorme, y todo lo
+ * demás guardado en una hoja que sube cuando la pide.
  *
- * Lo que SÍ se hereda entero es la honestidad: cada número con su lectura, y
- * ningún hueco rellenado con algo bonito.
+ * ## La ley de color, y son cuatro reglas
  *
- * Sin framework de CSS: son cuatro pantallas y un Tailwind entero pesaría más
- * que todo lo demás junto en un teléfono con datos contados.
+ *  1. **El color de la RUTA sale del dato** (`--ruta`, escrito desde el
+ *     componente). Con más circuitos cada uno lleva el suyo, y el pasajero los
+ *     distingue por color antes que por nombre.
+ *  2. **El ÁMBAR es siempre el camión.**
+ *  3. **El VERDE solo para «En vivo» y «Llegando».** Nada más.
+ *  4. **El GRIS para «Por horario»** — que no es un error, es otro modo.
+ *
+ * Claro por omisión, oscuro incluido: al revés de las caras internas, porque
+ * esto se usa a mediodía en la calle.
  */
 
 :root {
-  --fondo: #f4f6f8;
-  --panel: #ffffff;
-  --linea: rgba(16, 26, 36, 0.14);
-  --texto: #111820;
-  --tenue: #5a6874;
-  --azul: #2a6fb5;
-  /*
-   * La ley de color de esta app, y son cuatro reglas:
-   *  - El color de la RUTA sale del dato, nunca de aquí. Con más circuitos,
-   *    cada uno lleva el suyo y el pasajero los distingue por eso.
-   *  - El ÁMBAR es siempre el camión.
-   *  - El VERDE solo para «En vivo» y «Llegando». Nada más.
-   *  - El GRIS para «Por horario» — que no es un error, es otro modo.
-   */
-  --ambar: #e3a81f;
-  --verde: #1f9d55;
-  --gris: #8a93a6;
+  --lienzo: #ffffff;
+  --tinta: #171528;
+  --tenue: #6b6885;
+  /* Provisionales: el componente los sobrescribe con el color del circuito. */
+  --ruta: #5b3ea6;
+  --ruta-claro: #efe9fc;
+  --ambar: #f59e0b;
+  --verde: #15803d;
+  --gris: #7d8aa3;
+  --gris-bg: #eff2f6;
+  --linea: #e9e6f2;
 }
 
-/*
- * Claro por omisión, oscuro incluido — al revés de las caras internas. El
- * pasajero usa esto en la calle, con sol encima; el oscuro es para la noche.
- */
+[data-tema="noche"] {
+  --lienzo: #141225;
+  --tinta: #f2efff;
+  --tenue: #9b95b8;
+  --ambar: #fbbf24;
+  --verde: #4ade80;
+  --gris: #8a97af;
+  --gris-bg: rgba(125, 138, 163, 0.16);
+  --linea: rgba(167, 139, 250, 0.2);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
-    --fondo: #0f1418;
-    --panel: #172026;
-    --linea: rgba(255, 255, 255, 0.12);
-    --texto: #f2f6f8;
-    --tenue: #8fa2ae;
-    --azul: #4c9ae0;
-    --ambar: #e3a81f;
-    --verde: #34c77b;
-    --gris: #8a93a6;
+  :root:not([data-tema="dia"]) {
+    --lienzo: #141225;
+    --tinta: #f2efff;
+    --tenue: #9b95b8;
+    --ambar: #fbbf24;
+    --verde: #4ade80;
+    --gris: #8a97af;
+    --gris-bg: rgba(125, 138, 163, 0.16);
+    --linea: rgba(167, 139, 250, 0.2);
   }
 }
 
@@ -60,318 +66,571 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: var(--fondo);
-  color: var(--texto);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  /* El teléfono del pasajero no trae fuentes de la casa, y bajarlas cuesta
-     datos que él paga. La del sistema ya está ahí y se ve bien. */
-  font-size: 16px;
-  line-height: 1.4;
-  overscroll-behavior-y: none;
+  height: 100%;
+  overscroll-behavior: none;
 }
 
-.envoltura {
-  max-width: 560px;
-  margin: 0 auto;
-  padding: 0 16px 32px;
+body {
+  background: var(--lienzo);
+  color: var(--tinta);
+  font-family: var(--fuente-texto), system-ui, sans-serif;
+  transition: background 0.3s;
 }
 
-/* ── La respuesta, que es lo primero y lo más grande ─────────────── */
+/* ── El mapa es el FONDO, no una tarjeta ─────────────────────────── */
 
-.respuesta {
-  padding: 22px 0 16px;
-}
-
-.respuesta .cifra {
-  font-size: 42px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Verde solo aquí y en «En vivo». Es la ley de color de esta app. */
-.respuesta .cifra.llegando {
-  color: var(--verde);
-}
-
-.respuesta .lectura {
-  margin-top: 6px;
-  font-size: 14px;
-  color: var(--tenue);
-}
-
-.respuesta .lectura b {
-  color: var(--texto);
-  font-weight: 600;
-}
-
-/* ── Mapa ────────────────────────────────────────────────────────── */
-
-.mapa {
-  height: 46vh;
-  min-height: 260px;
-  border-radius: 12px;
-  border: 1px solid var(--linea);
+.pantalla {
+  position: fixed;
+  inset: 0;
   overflow: hidden;
-  background: var(--panel);
 }
 
-/* Los marcadores se dibujan con divIcon: cero imágenes que bajar. */
-.camion {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 2px solid var(--fondo);
-  display: grid;
-  place-items: center;
-  font-size: 13px;
-  color: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-}
-
-/*
- * El camión es ÁMBAR siempre, vaya de ida o de vuelta. El sentido se lee en la
- * flecha, no en el color: pintarlos de dos colores competiría con el color de
- * la ruta, que es el que identifica al circuito.
- */
-.camion.ida,
-.camion.vuelta {
-  background: var(--ambar);
-}
-
-/* Sin sentido afirmable, gris: no se sabe si viene o va, y no se finge. */
-.camion.sin-sentido {
-  background: var(--gris);
-}
-
-.yo {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--texto);
-  border: 3px solid var(--fondo);
-  box-shadow: 0 0 0 2px var(--texto);
-}
-
-/* ── Hilo de paradas ─────────────────────────────────────────────── */
-
-.hilo {
-  margin-top: 22px;
-}
-
-.hilo h2 {
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--tenue);
-  font-weight: 600;
-  margin: 0 0 10px;
-}
-
-.hilo ol {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border-left: 2px solid var(--linea);
-}
-
-.hilo li {
-  position: relative;
-  padding: 10px 0 10px 18px;
-}
-
-.hilo li::before {
-  content: "";
+#mapa {
   position: absolute;
-  left: -6px;
-  top: 16px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--linea);
+  inset: 0;
+  z-index: 1;
 }
 
-.hilo li.cerca::before {
-  background: var(--texto);
+.leaflet-control-attribution {
+  font-size: 8px;
+  opacity: 0.6;
 }
 
-.hilo .nombre {
-  font-size: 15px;
-}
+/* ── La barra que flota encima ───────────────────────────────────── */
 
-.hilo .dato {
-  font-size: 13px;
-  color: var(--tenue);
-  font-variant-numeric: tabular-nums;
-}
-
-.hilo .camion-entre {
-  padding: 4px 0 4px 18px;
-  font-size: 13px;
-  color: var(--azul);
-}
-
-/* ── Avisos y pie ────────────────────────────────────────────────── */
-
-.aviso {
-  margin-top: 14px;
-  padding: 12px 14px;
-  border: 1px solid var(--linea);
-  border-radius: 10px;
-  font-size: 14px;
-  color: var(--tenue);
-  background: var(--panel);
-}
-
-.aviso b {
-  color: var(--texto);
-}
-
-.boton {
-  display: inline-block;
-  margin-top: 10px;
-  padding: 12px 18px;
-  min-height: 44px;
-  border: 1px solid var(--azul);
-  border-radius: 10px;
-  background: transparent;
-  color: var(--azul);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.pie {
-  margin-top: 26px;
-  font-size: 12px;
-  color: var(--tenue);
-  line-height: 1.5;
-}
-
-.lista-circuitos {
-  list-style: none;
-  padding: 0;
-  margin: 20px 0 0;
-}
-
-.lista-circuitos a {
-  display: block;
-  padding: 18px;
-  margin-bottom: 10px;
-  border: 1px solid var(--linea);
-  border-radius: 12px;
-  background: var(--panel);
-  color: var(--texto);
-  text-decoration: none;
-  font-size: 17px;
-  font-weight: 600;
-}
-
-/* ── La etiqueta de modo: En vivo / Por horario ───────────────────── */
-
-.etiqueta {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-}
-
-.etiqueta.verde {
-  color: var(--verde);
-}
-.etiqueta.gris {
-  color: var(--gris);
-}
-
-.respuesta .cifra.gris {
-  color: var(--gris);
-}
-
-/* ── La barra de acercamiento ─────────────────────────────────────── */
-
-.acercamiento {
+.tope {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  padding: 16px 14px 0;
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 16px;
+  gap: 10px;
+  pointer-events: none;
 }
 
-.acercamiento .pista {
-  position: relative;
-  flex: 1;
-  height: 32px;
-  border-radius: 16px;
-  background: var(--panel);
-  border: 1px solid var(--linea);
+.chapa {
+  pointer-events: auto;
+  background: var(--lienzo);
+  border-radius: 15px;
+  padding: 9px 13px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
+  font-weight: 900;
+  font-size: 15px;
+  color: var(--tinta);
 }
 
-.acercamiento .camion-mini {
-  position: absolute;
-  top: 50%;
+.chapa .cuad {
   width: 24px;
   height: 24px;
-  margin-left: -12px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
+  border-radius: 8px;
+  background: var(--ambar);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 12px;
-  color: #fff;
-  transform: translateY(-50%) rotate(90deg);
-  /* El movimiento acompaña un dato que cambió, no adorna: sin él el camión
-     brinca de un sondeo al siguiente y se lee como error de dibujo. */
-  transition: left 900ms ease-out;
+  color: #3a2500;
+  font-weight: 900;
+}
+
+.btn-tema {
+  pointer-events: auto;
+  margin-left: auto;
+  background: var(--lienzo);
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* ── La hoja de abajo ────────────────────────────────────────────── */
+
+.hoja {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  background: var(--lienzo);
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.22);
+  height: 322px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: height 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mientras el dedo la arrastra no hay transición: si no, va atrasada. */
+.hoja.arrastrando {
+  transition: none;
+}
+
+.hoja.abierta {
+  height: min(640px, 88vh);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .acercamiento .camion-mini {
+  .hoja {
     transition: none;
   }
 }
 
-.acercamiento .yo-punto {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  width: 12px;
-  height: 12px;
-  margin-top: -6px;
-  border-radius: 50%;
-  background: var(--texto);
+.asa {
+  padding: 9px 0 4px;
+  display: flex;
+  justify-content: center;
+  cursor: grab;
+  flex-shrink: 0;
+  touch-action: none;
+  /* Toda la franja es agarradera: en un teléfono el objetivo tiene que ser
+     grande, no del tamaño del dibujito. */
+  min-height: 30px;
+  border: none;
+  background: none;
+  width: 100%;
 }
 
-.acercamiento .metros {
+.asa span {
+  width: 38px;
+  height: 5px;
+  border-radius: 5px;
+  background: var(--linea);
+}
+
+/* ── La tarjeta de la ruta ───────────────────────────────────────── */
+
+.tarjeta {
+  margin: 4px 14px 0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--ruta-claro);
+  flex-shrink: 0;
+}
+
+.tj-cab {
+  background: var(--ruta);
+  color: #fff;
+  padding: 11px 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.insignia {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  padding: 3px 9px;
+  font-weight: 900;
   font-size: 14px;
-  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.tj-cab .nom {
+  font-weight: 800;
+  font-size: 15px;
+  flex: 1;
+}
+
+.tj-cuerpo {
+  padding: 15px;
+}
+
+.eta-fila {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.eta-1 {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.eta-1 .n {
+  font-size: 62px;
+  font-weight: 900;
+  line-height: 0.82;
+  color: var(--ruta);
+  letter-spacing: -2px;
   font-variant-numeric: tabular-nums;
-  color: var(--texto);
-  min-width: 62px;
+}
+
+.eta-1 .u {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--tenue);
+}
+
+.eta-sig {
+  margin-left: auto;
   text-align: right;
 }
 
-/* ── La de después ────────────────────────────────────────────────── */
-
-.despues {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--linea);
-}
-
-.despues .k {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.13em;
+.eta-sig .k {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--tenue);
 }
 
-.despues .v {
-  font-size: 22px;
+.eta-sig .v {
+  font-family: var(--fuente-mono), monospace;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--tinta);
+  margin-top: 2px;
+}
+
+/* «Llegando» es verde y más chico: es palabra, no cifra. */
+.llegando .eta-1 .n {
+  font-size: 40px;
+  color: var(--verde);
+  letter-spacing: 0;
+}
+
+/* ── La barra de acercamiento ────────────────────────────────────── */
+
+.pista {
+  margin-top: 15px;
+  position: relative;
+  height: 34px;
+}
+
+.riel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 15px;
+  height: 5px;
+  border-radius: 5px;
+  background: var(--linea);
+}
+
+.riel-vivo {
+  position: absolute;
+  left: 0;
+  top: 15px;
+  height: 5px;
+  border-radius: 5px;
+  background: var(--ruta);
+  transition: width 0.9s linear;
+}
+
+.marca-yo {
+  position: absolute;
+  right: 0;
+  top: 6px;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  background: var(--lienzo);
+  border: 4px solid var(--ruta);
+  z-index: 3;
+}
+
+.bus-pista {
+  position: absolute;
+  top: 3px;
+  width: 29px;
+  height: 29px;
+  border-radius: 50%;
+  background: var(--ambar);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+  transition: left 0.9s linear;
+  z-index: 4;
+}
+
+.bus-pista svg {
+  width: 16px;
+  height: 16px;
+  fill: #3a2500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .riel-vivo,
+  .bus-pista {
+    transition: none;
+  }
+}
+
+.pista-lbl {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  color: var(--tenue);
+  margin-top: 2px;
+}
+
+.fresca {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--tenue);
+}
+
+.fresca .p {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--verde);
+  animation: lat 2s infinite;
+}
+
+@keyframes lat {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fresca .p {
+    animation: none;
+  }
+}
+
+/* ── Modo POR HORARIO ────────────────────────────────────────────── */
+
+/*
+ * No es una falla y la app no se disculpa: es otra fuente, declarada.
+ *
+ * **Un solo modo para las tres causas** —sin conexión, fuera de horario, sin
+ * unidades con posición— porque para el pasajero significan lo mismo: hoy toca
+ * guiarse por la frecuencia. Separarlas sería contarle de quién es la culpa, y
+ * eso ni le sirve ni le corresponde. Es ley del producto desde el 27 de agosto.
+ */
+[data-modo="horario"] .tarjeta {
+  background: var(--gris-bg);
+}
+
+[data-modo="horario"] .tj-cab {
+  background: var(--gris);
+}
+
+[data-modo="horario"] .eta-1 .n {
+  color: var(--gris);
+  font-size: 44px;
+  letter-spacing: -1px;
+}
+
+/* La pista DESAPARECE. Congelada afirmaría una distancia que nadie mide. */
+[data-modo="horario"] .pista,
+[data-modo="horario"] .pista-lbl,
+[data-modo="horario"] .eta-sig {
+  display: none;
+}
+
+[data-modo="horario"] .fresca .p {
+  background: var(--gris);
+  animation: none;
+}
+
+.cada {
+  display: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tenue);
+  margin-top: 9px;
+  line-height: 1.45;
+}
+
+[data-modo="horario"] .cada {
+  display: block;
+}
+
+/* ── La lista de paradas ─────────────────────────────────────────── */
+
+.lista {
+  padding: 14px 16px 22px;
+  overflow-y: auto;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
+}
+
+.lista h3 {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tenue);
+  margin: 0 0 12px;
+}
+
+.hilo {
+  position: relative;
+  padding-left: 30px;
+}
+
+.hilo::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 5px;
+  bottom: 5px;
+  width: 4px;
+  border-radius: 4px;
+  background: var(--ruta);
+  opacity: 0.28;
+}
+
+.par {
+  position: relative;
+  padding-bottom: 23px;
+}
+
+.par:last-child {
+  padding-bottom: 0;
+}
+
+.par .b {
+  position: absolute;
+  left: -27px;
+  top: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--lienzo);
+  border: 3px solid var(--ruta);
+}
+
+.par.yo .b {
+  background: var(--ruta);
+  box-shadow: 0 0 0 5px var(--ruta-claro);
+}
+
+.par .n {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--tenue);
+}
+
+.par.yo .n {
+  color: var(--tinta);
+  font-weight: 800;
+}
+
+.par .e {
+  font-family: var(--fuente-mono), monospace;
+  font-size: 11.5px;
+  color: var(--tenue);
+  margin-top: 1px;
+}
+
+.par .tu {
+  display: inline-block;
+  margin-left: 7px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--ruta);
+  padding: 2px 7px;
+  border-radius: 9px;
+  vertical-align: 1px;
+}
+
+.bus-hilo {
+  position: absolute;
+  left: -33px;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: var(--ambar);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+  transition: top 0.9s linear;
+  z-index: 5;
+}
+
+.bus-hilo svg {
+  width: 14px;
+  height: 14px;
+  fill: #3a2500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bus-hilo {
+    transition: none;
+  }
+}
+
+.lista-vacia {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--tenue);
+  line-height: 1.5;
+}
+
+/* ── El pie de la promesa ────────────────────────────────────────── */
+
+.promesa {
+  margin: 18px 0 0;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tenue);
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
+/* ── La puerta, cuando hay más de un circuito ────────────────────── */
+
+.puerta {
+  padding: 28px 18px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.puerta h1 {
+  font-size: 30px;
+  font-weight: 900;
+  margin: 0 0 6px;
+}
+
+.puerta p {
+  color: var(--tenue);
+  font-weight: 600;
+  margin: 0 0 18px;
+}
+
+.puerta ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.puerta a {
+  display: block;
+  padding: 18px;
+  margin-bottom: 10px;
+  border-radius: 16px;
+  background: var(--gris-bg);
+  color: var(--tinta);
+  text-decoration: none;
+  font-size: 17px;
+  font-weight: 800;
 }

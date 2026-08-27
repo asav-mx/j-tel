@@ -98,10 +98,23 @@ export interface RangoDeLlegada {
   hastaSeg: number;
   /** El centro, para ordenar unidades. No se enseña solo: sin su rango miente. */
   estimadoSeg: number;
-  /** El rango ya incluye el ahora: el camión está llegando. */
+/** El camión está a menos de `llegandoMetros`: se ve venir. */
   llegando: boolean;
   metrosDeDistancia: number;
 }
+
+/**
+ * A cuántos metros un camión está «Llegando».
+ *
+ * **Se mide en METROS y no en minutos, y eso es del diseño aprobado.** A cuatro
+ * cuadras el pasajero levanta la vista y lo ve; un umbral en minutos diría
+ * «llegando» a un kilómetro de distancia cuando el tráfico está lento, y quien
+ * salió corriendo a la esquina se queda parado ahí tres minutos.
+ *
+ * Es parámetro con default, no constante escondida: si un corredor pide otro
+ * número, se vuelve columna del circuito como los demás umbrales.
+ */
+export const LLEGANDO_METROS = 400;
 
 /**
  * El rango de llegada de UNA unidad, o `null` si no se puede afirmar.
@@ -121,6 +134,7 @@ export function rangoDeLlegada(
   avancePasajeroMetros: number,
   velocidadKmh: number,
   pisoSegundos: number,
+  llegandoMetros = LLEGANDO_METROS,
 ): RangoDeLlegada | null {
   if (!(velocidadKmh > 0)) return null;
 
@@ -133,9 +147,7 @@ export function rangoDeLlegada(
     desdeSeg: Math.max(0, estimadoSeg - pisoSegundos),
     hastaSeg: estimadoSeg + pisoSegundos,
     estimadoSeg,
-    // El rango ya toca el ahora. Sale del piso configurado del circuito, no de
-    // un número nuevo inventado para esto.
-    llegando: estimadoSeg <= pisoSegundos,
+    llegando: metros <= llegandoMetros,
     metrosDeDistancia: Math.round(metros),
   };
 }

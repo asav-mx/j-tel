@@ -116,12 +116,30 @@ describe("el rango de llegada", () => {
     expect(r.desdeSeg).toBe(0);
   });
 
-  it("«Llegando» cuando el rango ya incluye el ahora, y no antes", () => {
-    // Justo en el borde: estimado == piso.
-    const metrosDelPiso = (PISO * VEL) / 3.6;
-    expect(rangoDeLlegada(0, metrosDelPiso, VEL, PISO)!.llegando).toBe(true);
-    // Un poco más lejos ya no está llegando.
-    expect(rangoDeLlegada(0, metrosDelPiso * 1.2, VEL, PISO)!.llegando).toBe(false);
+  it("«Llegando» se decide por METROS, no por minutos", () => {
+    /*
+     * A cuatro cuadras el pasajero levanta la vista y ve el camión. Un umbral
+     * en minutos diría «llegando» a un kilómetro cuando el tráfico está lento,
+     * y quien salió corriendo a la esquina se queda parado tres minutos.
+     */
+    expect(rangoDeLlegada(0, 399, VEL, PISO)!.llegando).toBe(true);
+    expect(rangoDeLlegada(0, 401, VEL, PISO)!.llegando).toBe(false);
+  });
+
+  it("justo en el borde de los 400 m todavía está llegando", () => {
+    expect(rangoDeLlegada(0, 400, VEL, PISO)!.llegando).toBe(true);
+  });
+
+  it("el umbral es parámetro: con otro número, otro borde", () => {
+    expect(rangoDeLlegada(0, 401, VEL, PISO, 600)!.llegando).toBe(true);
+    expect(rangoDeLlegada(0, 399, VEL, PISO, 200)!.llegando).toBe(false);
+  });
+
+  it("un camión lento y cerca sigue «Llegando», aunque su rango sea ancho", () => {
+    // 300 m a 5 km/h son 216 s: en minutos no diría «llegando», y sí se ve.
+    const r = rangoDeLlegada(0, 300, 5, PISO)!;
+    expect(r.llegando).toBe(true);
+    expect(r.estimadoSeg).toBeGreaterThan(PISO);
   });
 
   it("una velocidad de cero no divide entre cero: devuelve null", () => {

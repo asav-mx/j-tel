@@ -17,18 +17,11 @@ export default async function Inicio() {
   if (circuitos.length === 1) redirect(`/c/${circuitos[0].publicSlug}`);
 
   return (
-    <main className="envoltura">
-      <div className="respuesta">
-        <div className="cifra">¿A dónde vas?</div>
-        <p className="lectura">
-          {circuitos.length === 0
-            ? "Todavía no hay circuitos publicados."
-            : "Escoge tu circuito."}
-        </p>
-      </div>
-
+    <main className="puerta">
+      <h1>¿A dónde vas?</h1>
+      <p>{circuitos.length === 0 ? "Todavía no hay rutas publicadas." : "Escoge tu ruta."}</p>
       {circuitos.length > 0 && (
-        <ul className="lista-circuitos">
+        <ul>
           {circuitos.map((c) => (
             <li key={c.publicSlug}>
               <Link href={`/c/${c.publicSlug}`}>{c.name}</Link>
