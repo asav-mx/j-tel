@@ -32,20 +32,37 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     return Number.isFinite(v) && v > 0 ? Math.round(v) : null; // null = inválido
   };
 
-  const cambios: Record<string, unknown> = {};
+  // Objeto TIPADO, sin `as never`. Un cast aquí apagaría justo la comprobación
+  // que evita mandar un nombre de columna que no existe — que es exactamente el
+  // bug que dejó sin crearse todas las paradas del 26 de agosto.
+  const cambios: Partial<{
+    name: string;
+    declaredFrequencyMinutes: number;
+    staleAfterSeconds: number;
+    arrivalRangeFloorSeconds: number;
+    stopSnapToleranceMeters: number;
+    serviceStartLocal: string;
+    serviceEndLocal: string;
+  }> = {};
+
   const nombre = String(form.get("nombre") ?? "").trim();
   if (nombre) cambios.name = nombre;
 
-  for (const [campo, columna] of [
-    ["frecuenciaMin", "declaredFrequencyMinutes"],
-    ["umbralSeg", "staleAfterSeconds"],
-    ["pisoSeg", "arrivalRangeFloorSeconds"],
-    ["toleranciaM", "stopSnapToleranceMeters"],
-  ] as const) {
-    const v = entero(campo);
-    if (v === null) return volver({ error: `"${campo}" tiene que ser un número mayor que cero` });
-    if (v !== undefined) cambios[columna] = v;
-  }
+  const frecuencia = entero("frecuenciaMin");
+  if (frecuencia === null) return volver({ error: "La frecuencia tiene que ser mayor que cero" });
+  if (frecuencia !== undefined) cambios.declaredFrequencyMinutes = frecuencia;
+
+  const umbral = entero("umbralSeg");
+  if (umbral === null) return volver({ error: "El umbral de dato viejo tiene que ser mayor que cero" });
+  if (umbral !== undefined) cambios.staleAfterSeconds = umbral;
+
+  const piso = entero("pisoSeg");
+  if (piso === null) return volver({ error: "El piso del rango tiene que ser mayor que cero" });
+  if (piso !== undefined) cambios.arrivalRangeFloorSeconds = piso;
+
+  const tolerancia = entero("toleranciaM");
+  if (tolerancia === null) return volver({ error: "La tolerancia tiene que ser mayor que cero" });
+  if (tolerancia !== undefined) cambios.stopSnapToleranceMeters = tolerancia;
 
   const hora = (campo: string) => {
     const v = String(form.get(campo) ?? "").trim();
@@ -59,7 +76,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   if (Object.keys(cambios).length === 0) return volver({ error: "No mandaste ningún cambio" });
 
   try {
-    const actualizado = await getRepos().circuits.updateCircuit(id, cambios as never);
+    const actualizado = await getRepos().circuits.updateCircuit(id, cambios);
     if (!actualizado) return volver({ error: "No existe ese circuito" });
   } catch {
     // Los CHECK de la base rechazando un valor imposible.

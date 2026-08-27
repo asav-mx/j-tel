@@ -280,10 +280,23 @@ export function CircuitoEditor({
       const r = await fetch(`/api/jstaff/circuitos/${circuitoId}/paradas`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ lat: pendiente.lat, lon: pendiente.lon, sinPegar: soltarPegado }),
+        // `sinPegar` solo viaja si el pico se salió de la tolerancia: dentro de
+        // ella no hay nada que soltar, y mandarlo sería pasar una decisión que
+        // nadie tomó.
+        body: JSON.stringify({
+          lat: pendiente.lat,
+          lon: pendiente.lon,
+          sinPegar: pendiente.fuera && soltarPegado,
+        }),
       });
+      // Un 500 devuelve HTML, no JSON: si se intenta `r.json()` primero, revienta
+      // el parseo y el mensaje que llega es "Unexpected token <", que no dice
+      // nada. Se lee el estado ANTES de suponer que la respuesta es JSON.
+      if (!r.ok) {
+        const detalle = await r.text();
+        throw new Error(`El servidor contestó ${r.status}. ${detalle.slice(0, 200)}`);
+      }
       const cuerpo = await r.json();
-      if (!r.ok) throw new Error(cuerpo.error ?? "No se pudo crear");
       setParadas((prev) => [
         ...prev,
         {
@@ -466,14 +479,23 @@ export function CircuitoEditor({
                 trazado; si la parada va de verdad donde picaste, suelta el pegado.
               </p>
             )}
-            <label className="mt-2 flex items-center gap-2 text-xs">
-              <input
-                type="checkbox"
-                checked={soltarPegado}
-                onChange={(e) => setSoltarPegado(e.target.checked)}
-              />
-              Soltar el pegado y dejarla donde piqué
-            </label>
+            {/*
+              La casilla solo aparece cuando el pico se salió de la tolerancia.
+              Ofrecerla siempre invitaba a dejar paradas sin pegar sin que nadie
+              lo pidiera, y en un mapa oscuro una casilla sin marcar se confunde
+              con una marcada. Dentro de la tolerancia el pegado no se discute:
+              la parada está sobre la ruta por definición.
+            */}
+            {pendiente.fuera && (
+              <label className="mt-2 flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={soltarPegado}
+                  onChange={(e) => setSoltarPegado(e.target.checked)}
+                />
+                Soltar el pegado y dejarla donde piqué
+              </label>
+            )}
             <div className="mt-2 flex gap-2">
               <button
                 type="button"
