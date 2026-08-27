@@ -937,3 +937,5 @@ export * from "./identidad.js";
 export * from "./operational-scope.js";
 export * from "./senal.js";
 export * from "./ventana-observacion.js";
+
+export * from "./kml-circuito.js";

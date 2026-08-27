@@ -13,9 +13,11 @@ import {
   index,
   doublePrecision,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
-export const accountTypeEnum = pgEnum("account_type", ["carrier", "client", "jstaff"]);
+export const accountTypeEnum = pgEnum("account_type", ["carrier", "client", "jstaff", "concesion"]);
+/** Ida y vuelta son caminos distintos, no espejo: en el circuito 1 son 20.83 y 16.44 km. */
+export const sentidoCircuitoEnum = pgEnum("sentido_circuito", ["ida", "vuelta"]);
 export const complianceStatusEnum = pgEnum("compliance_status", [
   "cumplido",
   "no_cumplido",
@@ -978,6 +980,207 @@ export const livePositions = pgTable(
   },
   (table) => [
     index("live_positions_carrier_recorded_idx").on(table.carrierAccountId, table.recordedAt),
+  ],
+);
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Transporte concesionado — Tramo JB. Nada de esto toca el transporte especial.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Perfil de una concesión. La concesión **no es tabla propia**: es un `accounts`
+ * de tipo `concesion`, para heredar membresías, alcance y ledger sin duplicar
+ * expediente.
+ */
+export const concessionProfiles = pgTable("concession_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  accountId: uuid("account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" })
+    .unique(),
+  legalName: text("legal_name").notNull(),
+  /** Opcional a propósito: un concesionario invitado puede entrar antes de formalizar. */
+  numeroConcesion: text("numero_concesion"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+});
+
+/** Muchos-a-muchos concesión ↔ carrier, con vigencia. */
+export const concessionCarriers = pgTable(
+  "concession_carriers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    concessionAccountId: uuid("concession_account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    carrierAccountId: uuid("carrier_account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    validFrom: timestamp("valid_from", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    validTo: timestamp("valid_to", { withTimezone: true, mode: "date" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("concession_carriers_concession_idx").on(table.concessionAccountId, table.validTo),
+    index("concession_carriers_carrier_idx").on(table.carrierAccountId, table.validTo),
+  ],
+);
+
+/**
+ * Circuito. **Pertenece a la concesión, no al carrier.** Quién lo opera hoy lo
+ * dice `circuitUnitAssignments`.
+ *
+ * Los tres campos configurables son campos y no constantes por la regla del
+ * tramo: nada hardcodeado. Los defaults son los del circuito 1.
+ */
+export const circuits = pgTable(
+  "circuits",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    concessionAccountId: uuid("concession_account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** Va en la URL pública y en el QR impreso. No se cambia después de imprimir. */
+    publicSlug: text("public_slug").notNull().unique(),
+    /** En minutos: es una promesa pública, y en minutos se promete. */
+    declaredFrequencyMinutes: integer("declared_frequency_minutes").notNull().default(20),
+    /** En segundos: la prueba de campo puede pedir afinarlo por debajo del minuto. */
+    staleAfterSeconds: integer("stale_after_seconds").notNull().default(180),
+    /** En segundos, por la misma razón. Es el piso; la varianza de tráfico se suma encima. */
+    arrivalRangeFloorSeconds: integer("arrival_range_floor_seconds").notNull().default(180),
+    serviceStartLocal: time("service_start_local").notNull().default("05:00"),
+    serviceEndLocal: time("service_end_local").notNull().default("23:00"),
+    timeZone: text("time_zone").notNull().default("America/Ciudad_Juarez"),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [index("circuits_concession_idx").on(table.concessionAccountId, table.active)],
+);
+
+/** El trazado de un sentido. Uno por sentido: ida y vuelta no son espejo. */
+export const circuitPaths = pgTable(
+  "circuit_paths",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    circuitId: uuid("circuit_id")
+      .notNull()
+      .references(() => circuits.id, { onDelete: "cascade" }),
+    sentido: sentidoCircuitoEnum("sentido").notNull(),
+    /** `[[lon, lat], ...]` en el orden del recorrido. */
+    coordinates: jsonb("coordinates").$type<Array<[number, number]>>().notNull(),
+    pointCount: integer("point_count").notNull(),
+    lengthMeters: doublePrecision("length_meters").notNull(),
+    /**
+     * De qué capa del KML salió, **según la escogió un humano en la pantalla**.
+     * Se guarda para auditar la decisión, nunca para tomarla por nombre: el KML
+     * del circuito 1 trae cuatro capas y dos son una versión burda que no sirve.
+     */
+    sourceLayerName: text("source_layer_name"),
+    sourceFileName: text("source_file_name"),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("circuit_paths_un_sentido").on(table.circuitId, table.sentido)],
+);
+
+/**
+ * IDENTIDAD de una parada: lo que el QR impreso señala.
+ *
+ * El `qrSlug` vive aquí y no en la versión **porque va impreso en un letrero de
+ * lámina atornillado a un poste**. Si la parada se mueve media cuadra, el
+ * letrero sigue siendo el mismo y su QR tiene que seguir funcionando. Nombre y
+ * posición viven en `circuitStopVersions` y cambian con vigencia.
+ *
+ * Las paradas son **referencias con nombre, no la unidad de cálculo**: en
+ * Juárez el camión se detiene donde el pasajero lo pide, así que la llegada se
+ * calcula proyectando la unidad sobre el trazado. Un circuito funciona con
+ * pocas paradas o con ninguna.
+ */
+export const circuitStops = pgTable(
+  "circuit_stops",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    circuitId: uuid("circuit_id")
+      .notNull()
+      .references(() => circuits.id, { onDelete: "cascade" }),
+    qrSlug: text("qr_slug").notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    /** Retirar una parada tampoco borra: se marca y deja de publicarse. */
+    retiredAt: timestamp("retired_at", { withTimezone: true, mode: "date" }),
+  },
+  (table) => [index("circuit_stops_circuit_idx").on(table.circuitId)],
+);
+
+/**
+ * Versión de una parada: su nombre y su lugar, con vigencia.
+ *
+ * Mover o renombrar **no sobrescribe**: cierra la versión anterior con su
+ * `validTo` y abre una nueva. Misma forma que la política del contrato y las
+ * variantes de trazado — cambia hacia adelante, el pasado no se reescribe, y el
+ * pasajero siempre ve la vigente.
+ *
+ * Existe porque las paradas cambian seguido en la vida real: obra en una
+ * avenida, calle cerrada, ajuste de operación.
+ */
+export const circuitStopVersions = pgTable(
+  "circuit_stop_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    stopId: uuid("stop_id")
+      .notNull()
+      .references(() => circuitStops.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    orden: integer("orden").notNull(),
+    /** NULL = sirve en los dos sentidos. */
+    sentido: sentidoCircuitoEnum("sentido"),
+    latitude: doublePrecision("latitude").notNull(),
+    longitude: doublePrecision("longitude").notNull(),
+    validFrom: timestamp("valid_from", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    validTo: timestamp("valid_to", { withTimezone: true, mode: "date" }),
+    /** Por qué cambió, cuando quien la movió se molesta en decirlo. */
+    motivo: text("motivo"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("circuit_stop_versions_stop_idx").on(table.stopId, table.validTo),
+    /**
+     * Una sola versión vigente por parada. La garantía de que «la parada 7 de
+     * hoy» nunca sea ambigua la da la base, no el código de turno.
+     */
+    uniqueIndex("circuit_stop_versions_una_vigente")
+      .on(table.stopId)
+      .where(sql`${table.validTo} IS NULL`),
+  ],
+);
+
+/**
+ * Qué unidad corre qué circuito y bajo qué carrier.
+ *
+ * Para el pasajero es invisible. Para el sistema es la puerta de entrada de los
+ * concesionarios invitados, y **el filtro que decide qué unidades se publican**:
+ * fuera de asignación o fuera de horario, una unidad no existe para el público.
+ */
+export const circuitUnitAssignments = pgTable(
+  "circuit_unit_assignments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    circuitId: uuid("circuit_id")
+      .notNull()
+      .references(() => circuits.id, { onDelete: "cascade" }),
+    unitId: uuid("unit_id")
+      .notNull()
+      .references(() => units.id, { onDelete: "cascade" }),
+    carrierAccountId: uuid("carrier_account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    validFrom: timestamp("valid_from", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    validTo: timestamp("valid_to", { withTimezone: true, mode: "date" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("circuit_unit_assignments_circuit_idx").on(table.circuitId, table.validTo),
+    index("circuit_unit_assignments_unit_idx").on(table.unitId, table.validTo),
   ],
 );
 
