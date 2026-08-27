@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
+import { circuitoParaLaApp } from "@/lib/vista-previa";
 
 /**
  * La FORMA del circuito: su configuración, sus dos trazados y sus paradas.
@@ -30,10 +31,11 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
 
   // La misma puerta que el endpoint de unidades: un circuito no publicado no
   // existe, y contesta igual que un slug inventado.
-  const circuito = await getRepos().circuits.getPublishedCircuitBySlug(slug);
-  if (!circuito) {
+  const visible = await circuitoParaLaApp(slug);
+  if (!visible) {
     return NextResponse.json({ error: "No existe ese circuito" }, { status: 404 });
   }
+  const { circuito } = visible;
 
   const [trazados, paradas] = await Promise.all([
     getRepos().circuits.getPaths(circuito.id),

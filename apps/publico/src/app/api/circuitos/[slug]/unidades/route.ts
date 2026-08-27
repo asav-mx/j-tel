@@ -9,6 +9,7 @@ import {
   type TrazadoDeSentido,
 } from "@jtel/domain/publico";
 import { getRepos } from "@/lib/db";
+import { circuitoParaLaApp } from "@/lib/vista-previa";
 
 /**
  * Dónde vienen los camiones de un circuito. **Sin autenticación, solo lectura.**
@@ -70,12 +71,14 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
    *
    * El filtro no está aquí: está dentro de `getPublishedCircuitBySlug`, para
    * que no haya una línea que alguien pueda borrar y abrir la fuga sin que se
-   * rompa nada.
+   * rompa nada. `circuitoParaLaApp` respeta esa forma — es la única puerta, y
+   * su única excepción (la vista previa) no existe en producción.
    */
-  const circuito = await getRepos().circuits.getPublishedCircuitBySlug(slug);
-  if (!circuito) {
+  const visible = await circuitoParaLaApp(slug);
+  if (!visible) {
     return NextResponse.json({ error: "No existe ese circuito" }, { status: 404 });
   }
+  const { circuito } = visible;
 
   const ahora = new Date();
   const enServicio = enHorarioDeServicio(

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getRepos } from "@/lib/db";
+import { circuitoParaLaApp } from "@/lib/vista-previa";
 import { VistaPasajero, type Forma } from "@/components/vista-pasajero";
 
 export const dynamic = "force-dynamic";
@@ -19,9 +20,11 @@ export default async function CircuitoPublico({ params }: { params: Promise<{ sl
   const { slug } = await params;
   const repos = getRepos();
 
-  // La misma puerta de siempre: sin publicar, no existe.
-  const circuito = await repos.circuits.getPublishedCircuitBySlug(slug);
-  if (!circuito) notFound();
+  // La misma puerta de siempre: sin publicar, no existe — salvo vista previa,
+  // que no existe en producción.
+  const visible = await circuitoParaLaApp(slug);
+  if (!visible) notFound();
+  const { circuito, esVistaPrevia } = visible;
 
   const [trazados, paradas] = await Promise.all([
     repos.circuits.getPaths(circuito.id),
@@ -56,5 +59,5 @@ export default async function CircuitoPublico({ params }: { params: Promise<{ sl
     })),
   };
 
-  return <VistaPasajero forma={forma} />;
+  return <VistaPasajero forma={forma} esVistaPrevia={esVistaPrevia} />;
 }
