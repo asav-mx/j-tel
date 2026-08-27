@@ -70,6 +70,7 @@ import {
   circuitStops,
   circuitStopVersions,
   circuitUnitAssignments,
+  concessionCarriers,
   concessionProfiles,
 } from "../schema/index.js";
 import type { ComplianceFact } from "../schema/index.js";
@@ -5468,6 +5469,72 @@ export class CircuitRepository {
     });
   }
 
+  /**
+   * Los transportistas ligados a una concesión, vigentes e históricos.
+   *
+   * Esta liga es la que abre el universo de unidades asignables: sin ella, la
+   * pantalla del circuito no tiene de dónde escoger. Lleva vigencia por la
+   * misma razón que la asignación — un transportista puede dejar de correr para
+   * una concesión sin que su historia se borre.
+   */
+  async listConcessionCarriers(concessionAccountId: string) {
+    return this.db
+      .select({
+        id: concessionCarriers.id,
+        carrierAccountId: concessionCarriers.carrierAccountId,
+        carrierName: accounts.name,
+        validFrom: concessionCarriers.validFrom,
+        validTo: concessionCarriers.validTo,
+      })
+      .from(concessionCarriers)
+      .innerJoin(accounts, eq(accounts.id, concessionCarriers.carrierAccountId))
+      .where(eq(concessionCarriers.concessionAccountId, concessionAccountId))
+      .orderBy(accounts.name);
+  }
+
+  /**
+   * Liga un transportista a una concesión. Idempotente: si ya hay una liga
+   * vigente, la devuelve en vez de abrir una segunda.
+   *
+   * Sin candado en la base para esto —a diferencia de la asignación de unidad—
+   * porque dos ligas abiertas del mismo par no publican nada mal: solo duplican
+   * un renglón. Se evita aquí, donde cuesta una consulta.
+   */
+  async linkCarrierToConcession(concessionAccountId: string, carrierAccountId: string) {
+    const [yaEsta] = await this.db
+      .select()
+      .from(concessionCarriers)
+      .where(
+        and(
+          eq(concessionCarriers.concessionAccountId, concessionAccountId),
+          eq(concessionCarriers.carrierAccountId, carrierAccountId),
+          isNull(concessionCarriers.validTo),
+        ),
+      );
+    if (yaEsta) return yaEsta;
+
+    const [fila] = await this.db
+      .insert(concessionCarriers)
+      .values({ concessionAccountId, carrierAccountId })
+      .returning();
+    return fila;
+  }
+
+  /**
+   * Termina la liga. No borra, y **no toca las asignaciones vigentes de sus
+   * unidades**: cerrarlas en cascada decidiría por el despachador qué motivo
+   * llevan y a partir de cuándo. Lo que sí ocurre es que esas unidades dejan de
+   * aparecer como asignables para nuevas asignaciones.
+   */
+  async unlinkCarrierFromConcession(id: string) {
+    const [fila] = await this.db
+      .update(concessionCarriers)
+      .set({ validTo: new Date() })
+      .where(and(eq(concessionCarriers.id, id), isNull(concessionCarriers.validTo)))
+      .returning();
+    return fila ?? null;
+  }
+
   /** Todos los circuitos, con el nombre de su concesión. Para la lista. */
   async listAllCircuits() {
     return this.db
@@ -5679,6 +5746,154 @@ export class CircuitRepository {
       .where(
         and(eq(circuitUnitAssignments.circuitId, circuitId), isNull(circuitUnitAssignments.validTo)),
       );
+  }
+
+  /**
+   * Las asignaciones de un circuito: las vigentes **y las terminadas**.
+   *
+   * La historia no es un extra de esta lista, es la mitad del punto. Una
+   * asignación cerrada con su motivo —«se fue a maquila»— es lo que vuelve
+   * explicable la operación de la concesión meses después. Mostrar solo lo
+   * vigente dejaría a quien mira sin saber si una unidad se retiró o si nunca
+   * estuvo.
+   *
+   * Las vigentes primero y, dentro de cada grupo, lo más reciente arriba.
+   */
+  async listAssignments(circuitId: string) {
+    return this.db
+      .select({
+        id: circuitUnitAssignments.id,
+        unitId: circuitUnitAssignments.unitId,
+        unitLabel: units.label,
+        plateNumber: units.plateNumber,
+        carrierAccountId: circuitUnitAssignments.carrierAccountId,
+        carrierName: accounts.name,
+        validFrom: circuitUnitAssignments.validFrom,
+        validTo: circuitUnitAssignments.validTo,
+        motivo: circuitUnitAssignments.motivo,
+      })
+      .from(circuitUnitAssignments)
+      .innerJoin(units, eq(units.id, circuitUnitAssignments.unitId))
+      .innerJoin(accounts, eq(accounts.id, circuitUnitAssignments.carrierAccountId))
+      .where(eq(circuitUnitAssignments.circuitId, circuitId))
+      .orderBy(desc(circuitUnitAssignments.validFrom));
+  }
+
+  /**
+   * Qué unidades se pueden asignar a un circuito, y cuál viene ocupada.
+   *
+   * El universo son las unidades activas de los carriers ligados a la concesión
+   * por un `concession_carriers` **vigente**: quién puede correr un circuito lo
+   * dice esa relación, no una lista de toda la flota del sistema.
+   *
+   * Cada renglón trae la asignación abierta que ya tenga, si tiene, para que la
+   * pantalla pueda avisar ANTES de moverla. Reasignar en silencio una unidad
+   * que estaba corriendo otro circuito es exactamente lo que no queremos.
+   */
+  async listUnidadesAsignables(concessionAccountId: string) {
+    const vigente = this.db
+      .select({
+        unitId: circuitUnitAssignments.unitId,
+        circuitId: circuitUnitAssignments.circuitId,
+        assignmentId: circuitUnitAssignments.id,
+        validFrom: circuitUnitAssignments.validFrom,
+      })
+      .from(circuitUnitAssignments)
+      .where(isNull(circuitUnitAssignments.validTo))
+      .as("vigente");
+
+    return this.db
+      .select({
+        unitId: units.id,
+        label: units.label,
+        plateNumber: units.plateNumber,
+        carrierAccountId: units.carrierAccountId,
+        carrierName: accounts.name,
+        // Null cuando la unidad está libre. Cuando no, es el circuito que
+        // dejaría de correr si se asigna aquí. El nombre viaja junto al id
+        // porque la pantalla tiene que poder decir CUÁL, no solo que hay uno.
+        ocupadaEnCircuitoId: vigente.circuitId,
+        ocupadaEnCircuito: circuits.name,
+        ocupadaDesde: vigente.validFrom,
+      })
+      .from(concessionCarriers)
+      .innerJoin(units, eq(units.carrierAccountId, concessionCarriers.carrierAccountId))
+      .innerJoin(accounts, eq(accounts.id, units.carrierAccountId))
+      .leftJoin(vigente, eq(vigente.unitId, units.id))
+      .leftJoin(circuits, eq(circuits.id, vigente.circuitId))
+      .where(
+        and(
+          eq(concessionCarriers.concessionAccountId, concessionAccountId),
+          isNull(concessionCarriers.validTo),
+          eq(units.active, true),
+        ),
+      )
+      .orderBy(units.label);
+  }
+
+  /**
+   * Asigna una unidad a un circuito. **No pisa: cierra y abre.**
+   *
+   * Si la unidad venía corriendo otro circuito —o el mismo—, esa asignación se
+   * cierra con su hora y su motivo, y se abre una nueva. El pasado no se
+   * reescribe: queda la fila anterior con su `validFrom` intacto.
+   *
+   * El orden dentro de la transacción no es cosmético. `circuit_unit_assignments_una_vigente`
+   * prohíbe dos filas abiertas de la misma unidad, así que insertar antes de
+   * cerrar revienta contra el candado. Cerrar primero, insertar después.
+   *
+   * Devuelve también **la que cerró**, para que la pantalla lo diga en voz alta
+   * en vez de que el cambio ocurra callado.
+   */
+  async assignUnit(datos: {
+    circuitId: string;
+    unitId: string;
+    carrierAccountId: string;
+    motivoDelCierre?: string | null;
+  }) {
+    return this.db.transaction(async (tx) => {
+      const ahora = new Date();
+      const [cerrada] = await tx
+        .update(circuitUnitAssignments)
+        .set({ validTo: ahora, motivo: datos.motivoDelCierre ?? null })
+        .where(
+          and(
+            eq(circuitUnitAssignments.unitId, datos.unitId),
+            isNull(circuitUnitAssignments.validTo),
+          ),
+        )
+        .returning();
+
+      const [abierta] = await tx
+        .insert(circuitUnitAssignments)
+        .values({
+          circuitId: datos.circuitId,
+          unitId: datos.unitId,
+          carrierAccountId: datos.carrierAccountId,
+          validFrom: ahora,
+        })
+        .returning();
+
+      return { abierta, cerrada: cerrada ?? null };
+    });
+  }
+
+  /**
+   * Termina una asignación: la unidad deja de publicarse, su historia se queda.
+   *
+   * No borra, igual que retirar una parada no borra. El `motivo` es el que
+   * escribió quien la cerró — «se fue a maquila», «entró a taller»—, y es lo
+   * único de esta fila que un humano no puede reconstruir después.
+   */
+  async endAssignment(assignmentId: string, motivo?: string) {
+    const [fila] = await this.db
+      .update(circuitUnitAssignments)
+      .set({ validTo: new Date(), motivo: motivo?.trim() || null })
+      .where(
+        and(eq(circuitUnitAssignments.id, assignmentId), isNull(circuitUnitAssignments.validTo)),
+      )
+      .returning();
+    return fila ?? null;
   }
 }
 

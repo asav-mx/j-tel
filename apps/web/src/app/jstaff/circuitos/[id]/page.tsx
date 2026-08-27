@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AppNav, Card } from "@/components/ui";
 import { CircuitoEditor } from "@/components/circuito-editor";
+import { CircuitoUnidades } from "@/components/circuito-unidades";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
 
@@ -24,9 +25,11 @@ export default async function CircuitoPage({
   const circuito = await repos.circuits.getCircuit(id);
   if (!circuito) notFound();
 
-  const [trazados, paradas] = await Promise.all([
+  const [trazados, paradas, asignaciones, asignables] = await Promise.all([
     repos.circuits.getPaths(id),
     repos.circuits.listStopsVigentes(id),
+    repos.circuits.listAssignments(id),
+    repos.circuits.listUnidadesAsignables(circuito.concessionAccountId),
   ]);
 
   return (
@@ -140,6 +143,35 @@ export default async function CircuitoPage({
               orden: p.orden,
               latitude: p.latitude,
               longitude: p.longitude,
+            }))}
+          />
+
+          {/*
+            Quién corre el circuito vive aquí y no en pantalla aparte: el
+            trazado, las paradas y las unidades son las tres respuestas de la
+            misma pregunta, y separarlas obliga a recordar dónde quedó cada una.
+          */}
+          <CircuitoUnidades
+            circuitoId={circuito.id}
+            zonaHoraria={circuito.timeZone}
+            asignacionesIniciales={asignaciones.map((a) => ({
+              id: a.id,
+              unitId: a.unitId,
+              unitLabel: a.unitLabel,
+              plateNumber: a.plateNumber,
+              carrierName: a.carrierName,
+              validFrom: a.validFrom.toISOString(),
+              validTo: a.validTo ? a.validTo.toISOString() : null,
+              motivo: a.motivo,
+            }))}
+            asignablesIniciales={asignables.map((u) => ({
+              unitId: u.unitId,
+              label: u.label,
+              plateNumber: u.plateNumber,
+              carrierName: u.carrierName,
+              ocupadaEnCircuitoId: u.ocupadaEnCircuitoId,
+              ocupadaEnCircuito: u.ocupadaEnCircuito,
+              ocupadaDesde: u.ocupadaDesde ? u.ocupadaDesde.toISOString() : null,
             }))}
           />
         </Card>

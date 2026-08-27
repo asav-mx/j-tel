@@ -1182,11 +1182,26 @@ export const circuitUnitAssignments = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     validFrom: timestamp("valid_from", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     validTo: timestamp("valid_to", { withTimezone: true, mode: "date" }),
+    /**
+     * Por qué TERMINÓ la asignación. Se escribe al cerrar, no al abrir: al
+     * abrir todavía no hay nada que explicar. Es lo que convierte una fecha en
+     * historial de la concesión.
+     */
+    motivo: text("motivo"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   },
   (table) => [
     index("circuit_unit_assignments_circuit_idx").on(table.circuitId, table.validTo),
     index("circuit_unit_assignments_unit_idx").on(table.unitId, table.validTo),
+    /**
+     * Una sola asignación vigente por unidad. Un camión corre un circuito a la
+     * vez, y sin este candado una unidad con dos filas abiertas se publica en
+     * dos circuitos — el filtro del endpoint público la vería en ambos. La
+     * garantía la da la base, no el código de turno.
+     */
+    uniqueIndex("circuit_unit_assignments_una_vigente")
+      .on(table.unitId)
+      .where(sql`${table.validTo} IS NULL`),
   ],
 );
 
