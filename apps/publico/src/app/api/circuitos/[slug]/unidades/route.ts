@@ -44,8 +44,20 @@ import { getRepos } from "@/lib/db";
 /** Segundos que la respuesta vive en el CDN. El cuerpo dice lo mismo que el encabezado. */
 const TTL_SEGUNDOS = 15;
 
-/** Margen de revalidación: el CDN sirve lo viejo mientras trae lo nuevo. */
-const REVALIDAR_SEGUNDOS = 30;
+/*
+ * ⚠ Este endpoint NO lleva `stale-while-revalidate`, y es una decisión.
+ *
+ * SWR también lo respeta el NAVEGADOR, no solo el CDN: con una ventana de 30 s,
+ * un teléfono sirve posiciones de hasta 30 s más viejas mientras revalida por
+ * detrás. Sumado al TTL son 45 s encima de la antigüedad que el fix ya traía, y
+ * el umbral de dato viejo del circuito son 180: se comería un cuarto del
+ * presupuesto entero, sin que nadie lo viera.
+ *
+ * Se vio en la prueba de punta a punta: el endpoint contestaba `en_servicio:
+ * false` y la pantalla seguía diciendo lo de hacía un rato. El endpoint de la
+ * FORMA sí lo lleva, porque ahí un trazado de hace un minuto no le miente a
+ * nadie.
+ */
 
 export async function GET(_request: Request, ctx: { params: Promise<{ slug: string }> }) {
   const { slug } = await ctx.params;
@@ -143,7 +155,21 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
 function conCache(cuerpo: unknown) {
   return NextResponse.json(cuerpo, {
     headers: {
-      "cache-control": `public, s-maxage=${TTL_SEGUNDOS}, stale-while-revalidate=${REVALIDAR_SEGUNDOS}`,
+      /*
+       * `max-age=0` NO es redundante, y costó encontrarlo.
+       *
+       * `s-maxage` gobierna al CDN; sin un `max-age` explícito, el NAVEGADOR
+       * aplica caché heurístico sobre una respuesta marcada `public` y sirve
+       * una copia vieja sin preguntar. En la prueba de punta a punta eso se vio
+       * exactamente así: se envejecieron todas las unidades en la base, el
+       * endpoint ya contestaba `unidades: []`, y la app seguía diciendo
+       * «Llegando» con un camión dibujado donde ya no estaba.
+       *
+       * Con esto el teléfono revalida siempre y el CDN conserva sus 15 s, que
+       * es donde el caché sí debe vivir: compartido entre los cincuenta
+       * teléfonos de una parada, no dentro de uno solo.
+       */
+      "cache-control": `public, max-age=0, s-maxage=${TTL_SEGUNDOS}`,
     },
   });
 }

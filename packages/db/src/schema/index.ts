@@ -1055,6 +1055,28 @@ export const circuits = pgTable(
      * calle del Centro y una avenida no admiten el mismo margen.
      */
     stopSnapToleranceMeters: doublePrecision("stop_snap_tolerance_meters").notNull().default(25),
+    /**
+     * Velocidad EFECTIVA de avance, en km/h: desplazamiento entre tiempo, con
+     * las paradas y los semáforos adentro. Es lo que responde «en cuánto
+     * llega»; la instantánea no responde eso.
+     *
+     * Punto de partida del rango de llegada — el teléfono la corrige con lo que
+     * mide. **No reutiliza `routeAvgSpeedKmh`** de la política del contrato:
+     * ése es de la modalidad especial, y afinar uno movería el otro.
+     *
+     * El default 20.5 está medido (9 118 ventanas, 35 aparatos, 14 días) sobre
+     * la flota que reporta, **no sobre este circuito**. Se calibra en la calle.
+     */
+    avgSpeedKmh: doublePrecision("avg_speed_kmh").notNull().default(20.5),
+    /**
+     * El color con que se identifica la ruta en el mapa y en la app.
+     *
+     * Por circuito y no en el código: con más rutas, cada una lleva el suyo, y
+     * el pasajero las distingue por color antes que por nombre. Un hex aquí
+     * inválido no revienta nada — pinta una ruta invisible, que es peor—, así
+     * que lo comprueba un CHECK de la base.
+     */
+    colorHex: text("color_hex").notNull().default("#7C5CE0"),
     serviceStartLocal: time("service_start_local").notNull().default("05:00"),
     serviceEndLocal: time("service_end_local").notNull().default("23:00"),
     timeZone: text("time_zone").notNull().default("America/Ciudad_Juarez"),

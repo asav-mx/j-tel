@@ -41,6 +41,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     staleAfterSeconds: number;
     arrivalRangeFloorSeconds: number;
     stopSnapToleranceMeters: number;
+    avgSpeedKmh: number;
     serviceStartLocal: string;
     serviceEndLocal: string;
   }> = {};
@@ -63,6 +64,21 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const tolerancia = entero("toleranciaM");
   if (tolerancia === null) return volver({ error: "La tolerancia tiene que ser mayor que cero" });
   if (tolerancia !== undefined) cambios.stopSnapToleranceMeters = tolerancia;
+
+  /*
+   * La velocidad admite decimales —la medida fue 20.5— así que no pasa por
+   * `entero`, que redondea. Un 20 en vez de un 20.5 mueve el rango de llegada
+   * un 2.5%: poco, y aun así es un dato calibrado perdiendo precisión por una
+   * función que no era para él.
+   */
+  const crudaVel = form.get("velocidadKmh");
+  if (crudaVel !== null && String(crudaVel).trim() !== "") {
+    const v = Number(crudaVel);
+    if (!Number.isFinite(v) || v <= 0) {
+      return volver({ error: "La velocidad tiene que ser mayor que cero" });
+    }
+    cambios.avgSpeedKmh = v;
+  }
 
   const hora = (campo: string) => {
     const v = String(form.get(campo) ?? "").trim();

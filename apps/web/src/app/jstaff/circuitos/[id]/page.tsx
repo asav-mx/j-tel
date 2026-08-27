@@ -151,6 +151,7 @@ export default async function CircuitoPage({
                   ["umbralSeg", "Dato viejo a los (seg)", circuito.staleAfterSeconds],
                   ["pisoSeg", "Piso del rango (seg)", circuito.arrivalRangeFloorSeconds],
                   ["toleranciaM", "Tolerancia de pegado (m)", circuito.stopSnapToleranceMeters],
+                  ["velocidadKmh", "Velocidad efectiva (km/h)", circuito.avgSpeedKmh],
                 ] as const
               ).map(([campo, etiqueta, valor]) => (
                 <div key={campo}>
@@ -161,7 +162,8 @@ export default async function CircuitoPage({
                     id={campo}
                     name={campo}
                     type="number"
-                    min={1}
+                    min={campo === "velocidadKmh" ? 0.1 : 1}
+                    step={campo === "velocidadKmh" ? 0.1 : 1}
                     defaultValue={Number(valor)}
                     className="w-full rounded border border-[var(--linea-tenue)] bg-transparent px-2 py-1 text-sm"
                   />
