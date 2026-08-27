@@ -939,3 +939,4 @@ export * from "./senal.js";
 export * from "./ventana-observacion.js";
 
 export * from "./kml-circuito.js";
+export * from "./trazado.js";
