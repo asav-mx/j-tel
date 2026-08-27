@@ -1049,6 +1049,12 @@ export const circuits = pgTable(
     staleAfterSeconds: integer("stale_after_seconds").notNull().default(180),
     /** En segundos, por la misma razón. Es el piso; la varianza de tráfico se suma encima. */
     arrivalRangeFloorSeconds: integer("arrival_range_floor_seconds").notNull().default(180),
+    /**
+     * A partir de cuántos metros del trazado el pegado de una parada deja de ser
+     * obvio y la pantalla avisa, ofreciendo soltarlo. Por circuito porque una
+     * calle del Centro y una avenida no admiten el mismo margen.
+     */
+    stopSnapToleranceMeters: doublePrecision("stop_snap_tolerance_meters").notNull().default(25),
     serviceStartLocal: time("service_start_local").notNull().default("05:00"),
     serviceEndLocal: time("service_end_local").notNull().default("23:00"),
     timeZone: text("time_zone").notNull().default("America/Ciudad_Juarez"),
