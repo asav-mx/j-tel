@@ -3,7 +3,8 @@
 **Corte: 3 de agosto de 2026.**
 **Última edición: 26 de agosto de 2026** (entra el **Tramo JB — Juárez Bus
 público**, frente paralelo del transporte concesionado, con la corrección del día 1
-—la app se calcula sobre el trazado, no sobre paradas— ya en el cuerpo).
+—la app se calcula sobre el trazado, no sobre paradas— ya en el cuerpo, y el ajuste
+del mismo día que saca los letreros físicos del sprint).
 
 Este es el único plan. Reemplaza a `PLAN-v1.md`, a `Plan-Camino-a-v1.md`, a
 `docs/marco-limpio/Despues.md` y a la parte de orden de `DESPUES.md`.
@@ -1988,7 +1989,7 @@ horneada, apagada por defecto.
 | **Endpoint público** | Solo lectura, **sin autenticación**, siempre por circuito en la ruta — nunca una lista global, o el sistema se raspa con una llamada. Expone `id_publico` (opaco y **rotativo por día**), `lat`, `lon`, `rumbo`, `sentido`, `circuito_id`, `antiguedad_seg` **calculada en el servidor**, `fresco` ya resuelto, `frecuencia_declarada_min`, `generado_en`, `ttl_seg`. **Nunca**: identificadores internos, `imei`, placas, número económico, chofer, carrier, concesión, contrato, velocidad reportada, histórico de ninguna clase, ni unidades de otra modalidad. Tres reglas de operación: el filtro por asignación y horario es **del servidor**; cache y límite de tasa **obligatorios**, con TTL atado a la cadencia medida; y **si el dato está viejo, la respuesta no trae posición** — manda la frecuencia declarada y ya. Lo que no debe verse, no se envía |
 | **PWA del pasajero** | Sin registro y sin cuenta. Mapa vivo, hilo de paradas con camiones animados, rango de llegada, estado «Llegando», caída honesta a frecuencia declarada. **La posición del pasajero se calcula en su teléfono y el servidor jamás la recibe** — proyecta su propia ubicación sobre el trazado en el dispositivo. Instalable, y rápida en un Android de gama baja con datos limitados: ése es el teléfono real del pasajero |
 | **«¿A dónde vas?» honesto** | Si el circuito sirve, lo dice; si no sirve, **lo dice claro** con mapa de cobertura y «estamos creciendo». Con una sola ruta no combina |
-| **QR por parada** | Cada parada con su liga que abre la app situada ahí, y el pliego listo para imprimir |
+| **QR por parada** | Cada parada con su liga que abre la app situada ahí. **Se construye y se prueba desde la pantalla del teléfono; el pliego de impresión y el material físico salen del sprint** (ajuste del 26 de agosto). La app arranca con **la ubicación del pasajero**, que es lo que la hace funcionar desde el día uno; el QR es un extra para después |
 | **Monitoreo y reporte de comportamiento** | Para el carrier y J-Staff: unidades en operación sobre el mapa, en circuito o fuera, adelantada / a tiempo / atrasada contra la frecuencia declarada, y vueltas del día. **Lectura, no sello** |
 
 **Dónde vive.** App pública en **proyecto de Vercel aparte** para aislar el tráfico
@@ -1996,9 +1997,9 @@ abierto, **dentro de este monorepo** — el repo despliega varias apps a proyect
 distintos. Ningún repo nuevo. Dominio: **juarezbus.digital**.
 
 ⚠ **Su DNS no está en Vercel: los nameservers apuntan a Unstoppable Domains y hoy no
-resuelve a nada.** El dominio va impreso en los letreros de los QR en los días 9–11 y
-un letrero impreso no se cambia: **confirmar control del DNS antes de mandar
-imprimir** es trabajo humano bloqueante, no tarea de código.
+resuelve a nada.** Asav confirmó el 26 de agosto que controla el panel y puede editar
+registros. Con los letreros fuera del sprint ya no es una fecha límite dura —nada se
+imprime—, pero sigue siendo condición para que la app exista en su dominio el día 15.
 
 **Circuito 1 — Oasis–Centro.** KML confirmado el 26 de agosto. Las capas buenas son
 las de «Indicaciones»: ida **661 puntos / 20.83 km**, regreso **456 / 16.44 km**,
@@ -2022,10 +2023,28 @@ un despliegue, y mata la estructura antes de que crezca. Caso concreto que ya
 apareció: el KML del circuito 1 trae cuatro capas de línea, y **cuál es ida y cuál
 regreso lo escoge la pantalla al subirlo**, no un nombre de capa dentro del código.
 
-**Compuerta del tramo:** un pasajero que no sabe nada del sistema escanea el QR de un
-letrero en la calle, ve dónde viene su camión con un rango que se cumple, y cuando el
-dato envejece la app se lo dice en vez de mentirle. Y el mismo día, el carrier ve sus
-unidades y su reporte de comportamiento sin que nadie haya firmado una falta.
+**Ajuste del 26 de agosto — los letreros salen del sprint.** Nada de generar pliegos
+de impresión ni preparar material físico: eso es fase siguiente. La app entra por la
+ubicación del pasajero, no por el QR, y eso es lo que la vuelve útil desde el primer
+día en cualquier esquina —que es además la consecuencia natural de calcular sobre el
+trazado y no sobre paradas—. **La capacidad que se libera de los días 9–11 se va al
+buscador de «¿a dónde vas?» y a pulir lo que enseñe la prueba de campo.**
+
+Consecuencia sobre lo ya construido: el `qr_slug` sigue viviendo en la identidad de la
+parada y no en su versión, pero **la razón cambió de peso**. Ya no es «hay una lámina
+atornillada a un poste que nadie va a bajar a cambiar», sino que una liga que alguien
+guardó o compartió no debe romperse porque la parada se movió media cuadra. Sigue
+siendo la forma correcta, por una razón más débil. Cuando los letreros vuelvan, la
+razón fuerte vuelve con ellos.
+
+**Compuerta del tramo:** un pasajero que no sabe nada del sistema abre la app parado en
+cualquier esquina del recorrido, ve dónde viene su camión con un rango que se cumple, y
+cuando el dato envejece la app se lo dice en vez de mentirle. Y el mismo día, el carrier
+ve sus unidades y su reporte de comportamiento sin que nadie haya firmado una falta.
+
+La compuerta se corre **con la ubicación del pasajero**, no con un QR escaneado: los
+letreros salieron del sprint, y una compuerta que exige material impreso mediría la
+imprenta, no el producto.
 
 **Lo que NO sale y no se negocia dentro del tramo:** el sello, calificaciones o
 rankings de concesionarios o choferes, pagos y recargas, app de tiendas, y el
