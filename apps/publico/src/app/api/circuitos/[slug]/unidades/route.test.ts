@@ -29,7 +29,20 @@ const CIRCUITO = {
   serviceStartLocal: "00:00",
   serviceEndLocal: "00:00", // 24 h: la prueba no depende de la hora a la que corra.
   timeZone: "America/Ciudad_Juarez",
+  corridorToleranceMeters: 150,
 };
+
+/*
+ * Un trazado recto que pasa por los dos puntos que usan las pruebas. Existe
+ * porque el endpoint ya no publica a nadie fuera del corredor: sin trazado no
+ * hay corredor, y sin corredor no se puede afirmar que la unidad vaya en ruta.
+ */
+const TRAZADO = [
+  { sentido: "ida" as const, coordinates: [[-106.45, 31.71], [-106.4, 31.7]] as Array<[number, number]> },
+];
+
+/** Lejos de todo trazado de estas pruebas: ~15 km. */
+const FUERA = { latitude: 31.6, longitude: -106.3 };
 
 const ctx = (slug: string) => ({ params: Promise.resolve({ slug }) });
 const pedir = () => new Request("http://publico.test/api/circuitos/oasis-centro/unidades");
@@ -37,7 +50,7 @@ const pedir = () => new Request("http://publico.test/api/circuitos/oasis-centro/
 beforeEach(() => {
   vi.clearAllMocks();
   process.env.JTEL_SECRET_KEY = "llave-de-prueba";
-  repos.circuits.getPaths.mockResolvedValue([]);
+  repos.circuits.getPaths.mockResolvedValue(TRAZADO);
   repos.circuits.listLivePositionsForCircuit.mockResolvedValue([]);
 });
 
@@ -114,10 +127,62 @@ describe("lo que sale, y lo que no", () => {
     expect(crudo).not.toContain("recorded_at");
   });
 
-  it("sin trazado el sentido es null, y la unidad se publica igual", async () => {
+  it("sin trazado no se publica nada: sin corredor no hay nada que afirmar", async () => {
+    /*
+     * Antes se publicaba con `sentido: null`. Cambió a propósito el 27 de
+     * agosto: si no hay trazado, el sistema no puede afirmar que la unidad vaya
+     * en la ruta, y dibujarla en el mapa del circuito es exactamente esa
+     * afirmación. La app cae a «Por horario», que es lo honesto.
+     */
+    repos.circuits.getPaths.mockResolvedValue([]);
     const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
-    expect(cuerpo.unidades).toHaveLength(1);
-    expect(cuerpo.unidades[0].sentido).toBeNull();
+    expect(cuerpo.unidades).toEqual([]);
+  });
+});
+
+describe("fuera del corredor", () => {
+  beforeEach(() => {
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue(CIRCUITO);
+  });
+
+  it("una unidad asignada y fresca pero lejos del trazado NO se publica", async () => {
+    repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
+      { unitId: "u-lejos", ...FUERA, heading: 0, recordedAt: new Date(Date.now() - 30_000) },
+    ]);
+    const crudo = await (await GET(pedir(), ctx("oasis-centro"))).text();
+    expect(JSON.parse(crudo).unidades).toEqual([]);
+    expect(crudo).not.toContain("u-lejos");
+  });
+
+  it("cuando TODAS quedan fuera, la respuesta es una lista vacía en servicio", async () => {
+    /*
+     * Es lo que hace que la app caiga a «Por horario» en vez de enseñar un mapa
+     * vacío sin explicación: `porHorario` se enciende con `unidades.length === 0`
+     * estando `en_servicio`. La misma caída que el dato viejo y que la falta de
+     * conexión — un solo modo para las tres causas.
+     */
+    repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
+      { unitId: "a", ...FUERA, heading: 0, recordedAt: new Date(Date.now() - 10_000) },
+      { unitId: "b", ...FUERA, heading: 90, recordedAt: new Date(Date.now() - 20_000) },
+    ]);
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.en_servicio).toBe(true);
+    expect(cuerpo.unidades).toEqual([]);
+  });
+
+  it("el corte es el DEL CIRCUITO, no una constante", async () => {
+    // A ~1.2 km del trazado: fuera con 150 m, dentro con un corredor de 2 km.
+    const lejito = { latitude: 31.72, longitude: -106.45 };
+    repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
+      { unitId: "u", ...lejito, heading: 0, recordedAt: new Date(Date.now() - 10_000) },
+    ]);
+
+    const estrecho = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(estrecho.unidades).toEqual([]);
+
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue({ ...CIRCUITO, corridorToleranceMeters: 2000 });
+    const ancho = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(ancho.unidades).toHaveLength(1);
   });
 });
 

@@ -98,6 +98,36 @@ describe("circuits_velocidad_positiva", () => {
   });
 });
 
+describe("circuits_corredor_positivo", () => {
+  it("rechaza el cero: con corredor cero no se publicaría jamás una unidad", async () => {
+    const quien = await violacion(() =>
+      db.update(circuits).set({ corridorToleranceMeters: 0 }).where(inArray(circuits.id, [circuitoId])),
+    );
+    expect(quien).toBe("circuits_corredor_positivo");
+  });
+
+  it("rechaza el negativo", async () => {
+    const quien = await violacion(() =>
+      db.update(circuits).set({ corridorToleranceMeters: -1 }).where(inArray(circuits.id, [circuitoId])),
+    );
+    expect(quien).toBe("circuits_corredor_positivo");
+  });
+
+  it("deja pasar un corredor ancho para un trazado burdo", async () => {
+    const c = await repos.circuits.updateCircuit(circuitoId, { corridorToleranceMeters: 250 });
+    expect(c?.corridorToleranceMeters).toBe(250);
+  });
+
+  it("es independiente de la tolerancia de pegado: son dos conceptos", async () => {
+    const c = await repos.circuits.updateCircuit(circuitoId, {
+      corridorToleranceMeters: 150,
+      stopSnapToleranceMeters: 25,
+    });
+    expect(c?.corridorToleranceMeters).toBe(150);
+    expect(c?.stopSnapToleranceMeters).toBe(25);
+  });
+});
+
 describe("circuits_color_valido", () => {
   it("rechaza un color que no es hexadecimal", async () => {
     const quien = await violacion(() =>

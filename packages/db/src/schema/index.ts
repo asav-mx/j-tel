@@ -1056,6 +1056,18 @@ export const circuits = pgTable(
      */
     stopSnapToleranceMeters: doublePrecision("stop_snap_tolerance_meters").notNull().default(25),
     /**
+     * A cuántos metros del trazado deja de poderse afirmar que una unidad va en
+     * la ruta. Más allá de esto **no se publica al pasajero**: misma ley que el
+     * dato viejo — si el sistema no puede afirmarlo, no lo dibuja.
+     *
+     * **No es `stopSnapToleranceMeters`**, y confundirlas rompe la app. Aquélla
+     * es para que una persona coloque una parada a mano sobre un mapa quieto, y
+     * por eso son 25 m. Un camión en movimiento trae error de GPS, va por el
+     * carril de la orilla, y el trazado que lo juzga tiene sus propios huecos
+     * entre vértices: con 25 m no se publicaría casi nada.
+     */
+    corridorToleranceMeters: doublePrecision("corridor_tolerance_meters").notNull().default(150),
+    /**
      * Velocidad EFECTIVA de avance, en km/h: desplazamiento entre tiempo, con
      * las paradas y los semáforos adentro. Es lo que responde «en cuánto
      * llega»; la instantánea no responde eso.

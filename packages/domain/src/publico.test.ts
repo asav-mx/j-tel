@@ -7,6 +7,7 @@ import {
   esFresco,
   sentidoDeLaUnidad,
   type TrazadoDeSentido,
+  vaSobreElCircuito,
 } from "./publico.js";
 
 const LLAVE = "llave-de-prueba-no-es-la-de-produccion";
@@ -164,5 +165,43 @@ describe("sentido de la unidad", () => {
     const aMediaCuadra = { lat: 31.71, lon: -106.4512 }; // ~114 m
     expect(sentidoDeLaUnidad(aMediaCuadra, 0, ambos)).toBe("ida");
     expect(sentidoDeLaUnidad(aMediaCuadra, 0, ambos, 50)).toBeNull();
+  });
+});
+
+describe("vaSobreElCircuito", () => {
+  /* Un tramo recto de ~1 km sobre la misma latitud. */
+  const trazados = [
+    { sentido: "ida" as const, coordinates: [[-106.45, 31.71], [-106.44, 31.71]] as Array<[number, number]> },
+  ];
+
+  it("sobre el trazado, va", () => {
+    expect(vaSobreElCircuito({ lat: 31.71, lon: -106.445 }, trazados, 150)).toBe(true);
+  });
+
+  it("a media cuadra de una avenida ancha, sigue yendo", () => {
+    // ~55 m al norte del tramo: el caso que motiva los 150 m por defecto.
+    expect(vaSobreElCircuito({ lat: 31.7105, lon: -106.445 }, trazados, 150)).toBe(true);
+  });
+
+  it("a nueve kilómetros, no va — y es el caso real que lo motivó", () => {
+    expect(vaSobreElCircuito({ lat: 31.63, lon: -106.445 }, trazados, 150)).toBe(false);
+  });
+
+  it("el corte es el que se le pasa, no una constante escondida", () => {
+    const punto = { lat: 31.7105, lon: -106.445 }; // ~55 m
+    expect(vaSobreElCircuito(punto, trazados, 25)).toBe(false);
+    expect(vaSobreElCircuito(punto, trazados, 150)).toBe(true);
+  });
+
+  it("sin trazados no se puede afirmar nada: false", () => {
+    expect(vaSobreElCircuito({ lat: 31.71, lon: -106.445 }, [], 150)).toBe(false);
+  });
+
+  it("basta con ir sobre UN sentido", () => {
+    const dos = [
+      { sentido: "ida" as const, coordinates: [[-106.45, 31.71], [-106.44, 31.71]] as Array<[number, number]> },
+      { sentido: "vuelta" as const, coordinates: [[-106.35, 31.61], [-106.34, 31.61]] as Array<[number, number]> },
+    ];
+    expect(vaSobreElCircuito({ lat: 31.61, lon: -106.345 }, dos, 150)).toBe(true);
   });
 });

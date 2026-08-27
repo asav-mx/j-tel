@@ -6,6 +6,7 @@ import {
   fechaLocalDelCircuito,
   idPublicoDelDia,
   sentidoDeLaUnidad,
+  vaSobreElCircuito,
   type TrazadoDeSentido,
 } from "@jtel/domain/publico";
 import { getRepos } from "@/lib/db";
@@ -40,6 +41,10 @@ import { circuitoParaLaApp } from "@/lib/vista-previa";
  * 3. **Si el dato está viejo, no hay posición.** No se manda la última conocida:
  *    un camión de hace veinte minutos dibujado en un mapa en vivo se lee como
  *    «va llegando». La app cae a la frecuencia declarada, que es honesta.
+ * 4. **Si la unidad no va sobre el circuito, tampoco.** Misma ley que la
+ *    anterior, aplicada al espacio: estar ASIGNADO no es estar EN RUTA, y una
+ *    unidad asignada que anda en el taller o cubriendo otra cosa sigue
+ *    reportando. Dibujarla sería afirmar que viene en camino.
  */
 
 /** Segundos que la respuesta vive en el CDN. El cuerpo dice lo mismo que el encabezado. */
@@ -138,12 +143,25 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
     // El umbral es del circuito, no una constante: otro corredor puede pedir otro.
     if (!esFresco(antiguedad, circuito.staleAfterSeconds)) continue;
 
+    /*
+     * Fuera del corredor no se publica. La tolerancia es del circuito y NO es
+     * `stopSnapToleranceMeters`: aquélla mide otra cosa —colocar una parada a
+     * mano sobre un mapa quieto— y con sus 25 m no se publicaría casi nada.
+     */
+    if (!vaSobreElCircuito({ lat: p.latitude, lon: p.longitude }, trazadosPorSentido, circuito.corridorToleranceMeters))
+      continue;
+
     cuerpo.unidades.push({
       id_publico: idPublicoDelDia(p.unitId, fechaLocal, secreto),
       lat: p.latitude,
       lon: p.longitude,
       rumbo: p.heading,
-      sentido: sentidoDeLaUnidad({ lat: p.latitude, lon: p.longitude }, p.heading, trazadosPorSentido),
+      sentido: sentidoDeLaUnidad(
+        { lat: p.latitude, lon: p.longitude },
+        p.heading,
+        trazadosPorSentido,
+        circuito.corridorToleranceMeters,
+      ),
       antiguedad_seg: antiguedad,
       // Siempre true: las que no lo están no llegan hasta aquí. Va en el cuerpo
       // para que la app no tenga que deducirlo de la antigüedad y del umbral,
