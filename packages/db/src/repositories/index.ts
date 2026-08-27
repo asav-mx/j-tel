@@ -1,4 +1,4 @@
-import { eq, and, or, not, gt, gte, lte, isNull, inArray, sql, ne, desc, count } from "drizzle-orm";
+import { eq, and, or, not, gt, gte, lte, isNull, isNotNull, inArray, sql, ne, desc, count } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   computeExpectedDeadline,
@@ -5560,6 +5560,73 @@ export class CircuitRepository {
   async getCircuitByPublicSlug(slug: string) {
     const [fila] = await this.db.select().from(circuits).where(eq(circuits.publicSlug, slug));
     return fila ?? null;
+  }
+
+  /**
+   * El circuito **publicado** de ese slug, o `null`.
+   *
+   * Ésta es la única puerta del endpoint público, y por eso el filtro va en la
+   * consulta y no arriba: un circuito sin publicar tiene que ser
+   * indistinguible de un slug inventado, y si el `published_at IS NOT NULL`
+   * viviera en el handler, bastaría borrar una línea para abrir la fuga. Aquí
+   * la línea que habría que borrar deja la función sin sentido.
+   */
+  async getPublishedCircuitBySlug(slug: string) {
+    const [fila] = await this.db
+      .select()
+      .from(circuits)
+      .where(and(eq(circuits.publicSlug, slug), isNotNull(circuits.publishedAt)));
+    return fila ?? null;
+  }
+
+  /** Prende o apaga la publicación. Apagar no borra nada del circuito. */
+  async setCircuitPublished(id: string, publicado: boolean) {
+    const [fila] = await this.db
+      .update(circuits)
+      .set({ publishedAt: publicado ? new Date() : null, updatedAt: new Date() })
+      .where(eq(circuits.id, id))
+      .returning();
+    return fila ?? null;
+  }
+
+  /**
+   * Dónde va cada unidad que corre este circuito, ahora.
+   *
+   * **La posición NO se une por `unit_id`.** El recolector escribe `unitId:
+   * null` en `live_positions` —se comprobó contra producción el 26 de agosto de
+   * 2026: 78 de 78 filas con `unit_id` vacío y `device_id` lleno—, así que la
+   * cadena real es asignación → aparato vigente → posición del aparato. Unir
+   * por `unit_id` compila, corre, y devuelve cero filas para siempre con todo
+   * bien configurado: el peor modo de falla, el que se ve normal.
+   *
+   * Devuelve el dato crudo con su `recordedAt`. **Quién está fresco y quién no
+   * lo decide el llamador contra el umbral del circuito**, no esta consulta:
+   * el umbral es un campo por circuito y hornearlo aquí lo volvería constante.
+   */
+  async listLivePositionsForCircuit(circuitId: string) {
+    return this.db
+      .select({
+        unitId: circuitUnitAssignments.unitId,
+        latitude: livePositions.latitude,
+        longitude: livePositions.longitude,
+        heading: livePositions.heading,
+        recordedAt: livePositions.recordedAt,
+      })
+      .from(circuitUnitAssignments)
+      .innerJoin(
+        deviceAssignments,
+        and(
+          eq(deviceAssignments.unitId, circuitUnitAssignments.unitId),
+          isNull(deviceAssignments.validTo),
+        ),
+      )
+      .innerJoin(livePositions, eq(livePositions.deviceId, deviceAssignments.deviceId))
+      .where(
+        and(
+          eq(circuitUnitAssignments.circuitId, circuitId),
+          isNull(circuitUnitAssignments.validTo),
+        ),
+      );
   }
 
   async listCircuitsForConcession(concessionAccountId: string) {

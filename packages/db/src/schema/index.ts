@@ -1059,10 +1059,30 @@ export const circuits = pgTable(
     serviceEndLocal: time("service_end_local").notNull().default("23:00"),
     timeZone: text("time_zone").notNull().default("America/Ciudad_Juarez"),
     active: boolean("active").notNull().default(true),
+    /**
+     * Desde cuándo el circuito es visible para la app del pasajero.
+     *
+     * `null` = **creado pero no publicado**: el endpoint público contesta como
+     * si el slug no existiera. Es lo que permite armar el circuito por partes
+     * —trazado, paradas, unidades— y probar el endpoint con datos reales sin
+     * que aparezca en la app.
+     *
+     * **No confundir con `active`**, que es dado de baja. Un circuito puede
+     * estar vivo y sin publicar durante días, y ése es el caso normal mientras
+     * se arma. `active` además nace en `true`, así que no serviría de puerta:
+     * publicaría solo por existir.
+     */
+    publishedAt: timestamp("published_at", { withTimezone: true, mode: "date" }),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   },
-  (table) => [index("circuits_concession_idx").on(table.concessionAccountId, table.active)],
+  (table) => [
+    index("circuits_concession_idx").on(table.concessionAccountId, table.active),
+    /** Por dónde entra el endpoint público: slug, y solo entre los publicados. */
+    index("circuits_publicados_idx")
+      .on(table.publicSlug)
+      .where(sql`${table.publishedAt} IS NOT NULL`),
+  ],
 );
 
 /** El trazado de un sentido. Uno por sentido: ida y vuelta no son espejo. */

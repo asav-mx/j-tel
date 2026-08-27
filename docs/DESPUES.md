@@ -214,6 +214,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 
 | Entrada | Horizonte |
 |---|---|
+| [La pantalla de alta se organizó por tablas, no por tarea](#la-pantalla-de-alta-se-organizó-por-tablas-no-por-tarea) | **Candidata alta cuando lleguen las fichas de pantalla del esqueleto** |
 | [El mapa de las paradas reales de Juárez](#el-mapa-de-las-paradas-reales-de-juárez) | Frontera post-sprint |
 | [Los 30 s del recolector son un límite de la plataforma](#los-30-s-del-recolector-son-un-límite-de-la-plataforma) | Cuando llegue el fierro propio |
 | [El pasajero como usuario](#el-pasajero-como-usuario) | Cuando la app tenga uso real |
@@ -2442,6 +2443,48 @@ Mientras se sondee a un proveedor, la cadencia es un rodeo por definición.
 `apps/web/vercel.json` (el cron `* * * * *`) y `carrier_profiles.gps_poll_seconds`,
 que es lo único que sobreviviría: si un carrier trae fierro propio, su cadencia deja
 de importar y esa columna simplemente no se usa para él.
+
+## La pantalla de alta se organizó por tablas, no por tarea
+
+**Qué es.** `/jstaff/circuitos` —el alta del frente concesionado— necesita rediseño
+**guiado por tarea, no por tabla**. Hoy cada bloque corresponde a una tabla del
+modelo, y quien la usa tiene que reconstruir el proceso en su cabeza.
+
+Los cuatro problemas concretos, levantados por Asav el 26 de agosto de 2026 usando
+la pantalla de verdad:
+
+1. El bloque «Concesiones» **mezcla tres cosas**: la lista, el formulario de crear, y
+   la liga con el transportista.
+2. **La liga concesión–transportista es el paso que abre todo lo demás** —sin ella no
+   hay ni una unidad asignable— y aparece como un renglón chiquito, sin decir para
+   qué sirve.
+3. El formulario de crear circuito **sale debajo de un circuito existente**, así que
+   no se lee como «crear otro».
+4. **No hay orden de pasos, aunque el proceso sí tiene orden:** concesión → ligar
+   transportista → circuito → trazado → unidades.
+
+El síntoma que lo prueba: quien diseñó el modelo entró a la pantalla del circuito y
+leyó «ningún transportista ligado a esta concesión tiene unidades activas» sin saber
+dónde se arreglaba. **Si el autor del modelo se pierde, la pantalla no está
+explicando el modelo: lo está exponiendo.**
+
+**Por qué se aplazó.** Es pantalla interna de J-Staff y el sprint del Tramo JB manda.
+Rediseñarla ahora cambiaría horas de sprint por comodidad de un usuario experto que
+ya sabe el camino, mientras la app del pasajero —que es la compuerta del tramo— sigue
+sin existir. La decisión es de Asav, del mismo día, y es explícita.
+
+**Qué lo desbloquea.** Las fichas de pantalla del esqueleto de navegación. **Entra
+como candidata alta entre las primeras**, no al final de la cola: es alta de datos, y
+un alta que se malentiende produce datos mal ligados que después hay que deshacer.
+
+**Dónde toca.** `apps/web/src/app/jstaff/circuitos/page.tsx` (la lista, el alta de
+concesión, la liga con el transportista y el alta de circuito, hoy en dos `Card`) y
+`apps/web/src/app/jstaff/circuitos/[id]/page.tsx` (trazado, paradas, unidades). Las
+tablas debajo están bien y **no son el problema** —`accounts` de tipo `concesion`,
+`concession_carriers`, `circuits`, `circuit_paths`, `circuit_stops`,
+`circuit_unit_assignments`, cada una con su vigencia—: lo que falta es que la
+pantalla cuente el proceso que esas tablas ya modelan. Nada del rediseño pide
+migración.
 
 ## El pasajero como usuario
 
