@@ -133,3 +133,57 @@ describe("CollectorService", () => {
     expect(sleep).toHaveBeenCalledTimes(1); // solo antes del segundo
   });
 });
+
+describe("CollectorService · un carrier no tumba a los demás", () => {
+  /** Dos carriers: el primero revienta al leer su perfil, el segundo está sano. */
+  function reposDosCarriers() {
+    const guardado: Array<{ imei: string }> = [];
+    return {
+      guardado,
+      repos: {
+        accounts: {
+          listByType: async () => [
+            { id: "carrier-roto", name: "Carrier roto" },
+            { id: "carrier-sano", name: "Carrier sano" },
+          ],
+        },
+        carriers: {
+          getProfileByAccountId: async (id: string) => {
+            if (id === "carrier-roto") throw new Error('column "gps_poll_seconds" does not exist');
+            return { gpsPollSeconds: 60 };
+          },
+        },
+        fleet: { getDevicesForCarrier: async () => [{ id: "dev-1", imei: "111" }] },
+        livePositions: {
+          upsertMany: async (filas: Array<{ imei: string }>) => {
+            guardado.push(...filas);
+            return filas;
+          },
+        },
+      } as never,
+    };
+  }
+
+  it("el carrier que falla antes de sondear no impide que el sano recolecte", async () => {
+    const f = reposDosCarriers();
+    const svc = new CollectorService(f.repos, config, {
+      sleep: async () => {},
+      now: () => new Date("2026-08-26T20:00:00Z"),
+      provider: proveedor([{ puntos: [{ recordedAt: new Date("2026-08-26T19:59:00Z") }] }]),
+    } as never);
+
+    const r = await svc.collectAll();
+
+    const roto = r.carriers.find((c) => c.carrierName === "Carrier roto")!;
+    expect(roto.ok).toBe(false);
+    expect(roto.error).toContain("gps_poll_seconds");
+    expect(roto.sondeos).toEqual([]);
+
+    const sano = r.carriers.find((c) => c.carrierName === "Carrier sano")!;
+    expect(sano.ok).toBe(true);
+    expect(sano.written).toBe(1);
+
+    expect(f.guardado).toHaveLength(1);
+    expect(r.anyOk).toBe(true); // no se responde 503 por culpa del roto
+  });
+});
