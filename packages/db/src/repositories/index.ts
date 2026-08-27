@@ -65,6 +65,12 @@ import {
   routeTraversalMeasurements,
   clientCarrierAuthorizations,
   livePositions,
+  circuits,
+  circuitPaths,
+  circuitStops,
+  circuitStopVersions,
+  circuitUnitAssignments,
+  concessionProfiles,
 } from "../schema/index.js";
 import type { ComplianceFact } from "../schema/index.js";
 import type {
@@ -5407,6 +5413,228 @@ export class LivePositionRepository {
   }
 }
 
+/**
+ * Concesión, circuito y parada — el registro interno del transporte concesionado.
+ *
+ * **La regla de vigencia vive aquí dentro, no en quien llama.** Mover o
+ * renombrar una parada cierra su versión y abre otra en la misma transacción:
+ * si eso dependiera de que cada pantalla se acuerde, el día que alguien no se
+ * acuerde el pasado se reescribe en silencio.
+ */
+export class CircuitRepository {
+  constructor(private db: Database) {}
+
+  async listConcessions() {
+    return this.db
+      .select({
+        accountId: accounts.id,
+        name: accounts.name,
+        slug: accounts.slug,
+        legalName: concessionProfiles.legalName,
+        numeroConcesion: concessionProfiles.numeroConcesion,
+      })
+      .from(accounts)
+      .leftJoin(concessionProfiles, eq(concessionProfiles.accountId, accounts.id))
+      .where(eq(accounts.type, "concesion"));
+  }
+
+  async getCircuit(id: string) {
+    const [fila] = await this.db.select().from(circuits).where(eq(circuits.id, id));
+    return fila ?? null;
+  }
+
+  async getCircuitByPublicSlug(slug: string) {
+    const [fila] = await this.db.select().from(circuits).where(eq(circuits.publicSlug, slug));
+    return fila ?? null;
+  }
+
+  async listCircuitsForConcession(concessionAccountId: string) {
+    return this.db
+      .select()
+      .from(circuits)
+      .where(eq(circuits.concessionAccountId, concessionAccountId));
+  }
+
+  async createCircuit(datos: typeof circuits.$inferInsert) {
+    const [fila] = await this.db.insert(circuits).values(datos).returning();
+    return fila;
+  }
+
+  async updateCircuit(id: string, cambios: Partial<typeof circuits.$inferInsert>) {
+    const [fila] = await this.db
+      .update(circuits)
+      .set({ ...cambios, updatedAt: new Date() })
+      .where(eq(circuits.id, id))
+      .returning();
+    return fila ?? null;
+  }
+
+  async getPaths(circuitId: string) {
+    return this.db.select().from(circuitPaths).where(eq(circuitPaths.circuitId, circuitId));
+  }
+
+  /**
+   * Guarda el trazado de un sentido. Reemplaza el que hubiera: un KML corregido
+   * sustituye al anterior, y el `sourceLayerName` deja constancia de qué capa
+   * escogió la persona que lo subió.
+   */
+  async upsertPath(datos: typeof circuitPaths.$inferInsert) {
+    const [fila] = await this.db
+      .insert(circuitPaths)
+      .values(datos)
+      .onConflictDoUpdate({
+        target: [circuitPaths.circuitId, circuitPaths.sentido],
+        set: {
+          coordinates: datos.coordinates,
+          pointCount: datos.pointCount,
+          lengthMeters: datos.lengthMeters,
+          sourceLayerName: datos.sourceLayerName ?? null,
+          sourceFileName: datos.sourceFileName ?? null,
+          uploadedAt: new Date(),
+        },
+      })
+      .returning();
+    return fila;
+  }
+
+  /** Las paradas vigentes de un circuito, en orden. Es lo que ve el pasajero. */
+  async listStopsVigentes(circuitId: string) {
+    return this.db
+      .select({
+        stopId: circuitStops.id,
+        qrSlug: circuitStops.qrSlug,
+        versionId: circuitStopVersions.id,
+        name: circuitStopVersions.name,
+        orden: circuitStopVersions.orden,
+        sentido: circuitStopVersions.sentido,
+        latitude: circuitStopVersions.latitude,
+        longitude: circuitStopVersions.longitude,
+        validFrom: circuitStopVersions.validFrom,
+      })
+      .from(circuitStops)
+      .innerJoin(circuitStopVersions, eq(circuitStopVersions.stopId, circuitStops.id))
+      .where(
+        and(
+          eq(circuitStops.circuitId, circuitId),
+          isNull(circuitStops.retiredAt),
+          isNull(circuitStopVersions.validTo),
+        ),
+      )
+      .orderBy(circuitStopVersions.orden);
+  }
+
+  /** Toda la historia de una parada, para poder explicar por qué se movió. */
+  async getStopHistory(stopId: string) {
+    return this.db
+      .select()
+      .from(circuitStopVersions)
+      .where(eq(circuitStopVersions.stopId, stopId))
+      .orderBy(circuitStopVersions.validFrom);
+  }
+
+  async createStop(datos: {
+    circuitId: string;
+    qrSlug: string;
+    name: string;
+    orden: number;
+    latitude: number;
+    longitude: number;
+    sentido?: "ida" | "vuelta" | null;
+  }) {
+    return this.db.transaction(async (tx) => {
+      const [identidad] = await tx
+        .insert(circuitStops)
+        .values({ circuitId: datos.circuitId, qrSlug: datos.qrSlug })
+        .returning();
+      const [version] = await tx
+        .insert(circuitStopVersions)
+        .values({
+          stopId: identidad.id,
+          name: datos.name,
+          orden: datos.orden,
+          latitude: datos.latitude,
+          longitude: datos.longitude,
+          sentido: datos.sentido ?? null,
+        })
+        .returning();
+      return { identidad, version };
+    });
+  }
+
+  /**
+   * Mover o renombrar una parada. **No sobrescribe:** cierra la versión vigente
+   * y abre una nueva, las dos en la misma transacción. El QR no se toca — el
+   * letrero sigue en su poste.
+   */
+  async reviseStop(
+    stopId: string,
+    cambios: {
+      name?: string;
+      orden?: number;
+      latitude?: number;
+      longitude?: number;
+      sentido?: "ida" | "vuelta" | null;
+      motivo?: string | null;
+    },
+  ) {
+    return this.db.transaction(async (tx) => {
+      const [vigente] = await tx
+        .select()
+        .from(circuitStopVersions)
+        .where(and(eq(circuitStopVersions.stopId, stopId), isNull(circuitStopVersions.validTo)));
+      if (!vigente) return null;
+
+      const ahora = new Date();
+      await tx
+        .update(circuitStopVersions)
+        .set({ validTo: ahora })
+        .where(eq(circuitStopVersions.id, vigente.id));
+
+      const [nueva] = await tx
+        .insert(circuitStopVersions)
+        .values({
+          stopId,
+          name: cambios.name ?? vigente.name,
+          orden: cambios.orden ?? vigente.orden,
+          latitude: cambios.latitude ?? vigente.latitude,
+          longitude: cambios.longitude ?? vigente.longitude,
+          sentido: cambios.sentido === undefined ? vigente.sentido : cambios.sentido,
+          motivo: cambios.motivo ?? null,
+          validFrom: ahora,
+        })
+        .returning();
+      return nueva;
+    });
+  }
+
+  /** Retirar no borra: deja de publicarse y su historia se conserva. */
+  async retireStop(stopId: string, motivo?: string) {
+    return this.db.transaction(async (tx) => {
+      const ahora = new Date();
+      await tx
+        .update(circuitStopVersions)
+        .set({ validTo: ahora, motivo: motivo ?? null })
+        .where(and(eq(circuitStopVersions.stopId, stopId), isNull(circuitStopVersions.validTo)));
+      const [fila] = await tx
+        .update(circuitStops)
+        .set({ retiredAt: ahora })
+        .where(eq(circuitStops.id, stopId))
+        .returning();
+      return fila ?? null;
+    });
+  }
+
+  /** Unidades asignadas y vigentes de un circuito: el filtro de qué se publica. */
+  async listActiveAssignments(circuitId: string) {
+    return this.db
+      .select()
+      .from(circuitUnitAssignments)
+      .where(
+        and(eq(circuitUnitAssignments.circuitId, circuitId), isNull(circuitUnitAssignments.validTo)),
+      );
+  }
+}
+
 export function createRepositories(db: Database) {
   return {
     procedencia: new ProcedenciaRepository(db),
@@ -5433,6 +5661,7 @@ export function createRepositories(db: Database) {
     aportaciones: new AportacionesRepository(db),
     ingestAlerts: new IngestAlertRepository(db),
     livePositions: new LivePositionRepository(db),
+    circuits: new CircuitRepository(db),
   };
 }
 
