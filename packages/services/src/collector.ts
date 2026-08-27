@@ -17,8 +17,14 @@ export interface CarrierCollectResult {
   pollSeconds: number;
   sondeos: SondeoResult[];
   written: number;
-  /** Falso solo si TODOS los sondeos de este carrier fallaron. */
+  /** Falso si todos los sondeos fallaron, o si el carrier ni siquiera llegó a sondear. */
   ok: boolean;
+  /**
+   * Presente solo cuando el carrier falló ANTES del primer sondeo — leyendo su
+   * perfil, por ejemplo. Ahí no hay sondeos que reportar, y sin este campo el
+   * resumen diría `sondeos: []` sin decir por qué.
+   */
+  error?: string;
 }
 
 export interface CollectorOptions {
@@ -107,7 +113,27 @@ export class CollectorService {
     const resultados: CarrierCollectResult[] = [];
 
     for (const carrier of carriers) {
-      resultados.push(await this.collectCarrier(carrier.id, carrier.name));
+      // Cada carrier aislado. Lo que pasa antes del primer sondeo —leer su
+      // perfil, resolver sus credenciales— también puede fallar, y eso queda
+      // fuera del try/catch de `unSondeo`. Sin esto, UN carrier roto tumba la
+      // recolección de TODOS los demás: el 26 de agosto de 2026 la columna
+      // `gps_poll_seconds` no existía todavía en producción y la invocación
+      // entera reventaba con 500 cada minuto, aunque el proveedor respondía
+      // bien. Con un solo carrier no se notó la diferencia; con dos, uno malo
+      // habría dejado ciego al bueno.
+      try {
+        resultados.push(await this.collectCarrier(carrier.id, carrier.name));
+      } catch (err) {
+        resultados.push({
+          carrierAccountId: carrier.id,
+          carrierName: carrier.name,
+          pollSeconds: 0,
+          sondeos: [],
+          written: 0,
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
 
     return {
