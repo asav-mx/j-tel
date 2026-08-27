@@ -59,6 +59,7 @@ La verificación no se calcula al abrir una pantalla. Se genera sola tras el dea
 El producto siempre debe poder soportarse. Existe una compuerta interna para diagnosticar y resolver fallas, respetando datos personales y sin alterar la verdad guardada.
 Un dato correcto puede volverse una afirmación falsa según dónde se lea, cómo se agrupe, sobre qué universo hable, de qué color se pinte, cuántos valores se hayan colapsado para producirlo, o qué cosa se haya contado. El valor guardado siendo correcto no basta: lo que el usuario recibe es la afirmación completa, y esa la arman también el lugar, la agrupación, el alcance, el color, la reducción y la unidad. Ver la sección D.
 Y lo que el sistema no midió no se dibuja, aunque quede feo. Una pantalla que completa lo que le falta se ve mejor que una que admite el hueco, y por eso la tentación de completarlo es permanente. Ver la sección E.
+Y probar no es mentir. Lo prohibido es inventar un dato y presentarlo como real; no lo está montar un espacio aparte con datos de verdad. Confundir las dos cosas paraliza la construcción sin proteger a nadie. Ver la sección F.
 Idioma nativo del sistema: español.
 
 
@@ -119,6 +120,26 @@ Por qué esto no lo atrapa ninguna prueba, y aquí se distingue de la sección D
 
 La valla, cuando la hay, es la misma que en D: una vez encontrado el caso se cerca. La traza partida en tramos observados tiene su prueba, y la parada cortada por hueco de señal también. Lo que ninguna valla cubre es la próxima vez que lo honesto se vea peor en otro lugar de la pantalla.
 
+
+F. Dónde se prueba sin mentir
+
+Esta sección no cambia ninguna ley. Le escribe su alcance, porque el alcance faltaba y esa falta empezó a costar.
+
+Las secciones D y E prohíben una sola cosa dicha de dos maneras: **no afirmar lo que no se midió.** D lo prohíbe cuando el dato existe y engaña por dónde queda; E lo prohíbe cuando el dato no existe y se completa para que la pantalla se vea entera. Las dos son sobre no mentir.
+
+De ahí se derivó, sin decirlo nunca en voz alta, una tercera regla que nadie escribió y que no se sigue de las otras dos: que no se puede montar nada para probar. Y ésa sí paraliza. Un frente entero se queda esperando fierro en la calle porque construir un espacio de pruebas «se sentía» como violar la ley, cuando la ley no dice eso.
+
+**Lo prohibido, y no se negocia:** inventar datos y presentarlos como reales. Camiones que no existen, posiciones generadas, hechos sembrados que se leen igual que los sellados, un número que sale de un generador y entra a una pantalla sin decir de dónde vino. Eso es exactamente la falta de D y de E, y sigue prohibido en cualquier ambiente y para cualquier propósito, incluido «es solo para probar».
+
+**Lo permitido, y hay que decirlo porque el silencio lo volvió prohibido:** un espacio separado con datos de verdad. Dos formas, las dos ya construidas:
+
+La **rama desechable de la base** (`DATABASE_URL_TEST`), que es donde vive todo lo que escribe. Ya es ley del `Procedimiento-Migraciones`, por su propia razón —que ninguna prueba toque a un cliente vivo— y esta sección sólo la nombra como lo que también es: el lugar donde sí se puede.
+
+Y el **circuito creado y no publicado**, que es la forma nueva y la que faltaba nombrar. Un circuito sin `published_at` existe, se le sube su trazado, se le ponen paradas, se le asignan unidades reales y se prueba de punta a punta contra camiones reales moviéndose — y para la app del pasajero **no existe**: el endpoint público contesta lo mismo que para un slug inventado. No es un modo de demostración ni una bandera que alguien pueda olvidar apagada: es ausencia de publicación, y publicar es un acto explícito.
+
+**Por qué esto no es una rendija.** Un espacio de pruebas con datos reales no puede producir una afirmación falsa, porque no afirma nada hacia afuera: nadie lo lee. El daño de D y de E siempre es un daño a quien recibe la afirmación —el auditado, la planta, el pasajero—, y donde no hay receptor no hay afirmación. La rendija sería la contraria: un ambiente que sí publica y que se disculpa con «era de prueba». Eso lo cierra la misma regla de siempre — el hecho sellado y la pantalla pública no distinguen ambientes, y por eso el ambiente se distingue antes, no después.
+
+**La forma corta, para cuando alguien dude:** ¿esto que voy a montar va a producirle a alguien una afirmación que el sistema no midió? Si sí, no va, sea cual sea el ambiente. Si no, no hay nada que pedir permiso — móntalo con datos reales y pruébalo.
 
 Cómo se usa este documento
 Esta pieza es fuente de verdad para el dominio y las leyes. Las siguientes piezas (las dos caras del producto, y las reglas de verificación) colgarán de aquí. Los documentos viejos quedan archivados y no se editan.
