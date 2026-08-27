@@ -2011,6 +2011,41 @@ Centro—, así que el `sentido` es por trayecto y no se calcula invirtiendo el 
 con huecos de hasta 224 m entre vértices, la geometría mide **punto-a-segmento**, no
 punto-a-vértice, o un camión a medio tramo se ve 112 m fuera de ruta sin estarlo.
 
+#### El «Corredor de prueba» es laboratorio, NO es una ruta
+
+**Ésta es la distinción que hay que no perder, y se pierde sola.** El 27 de agosto se
+dio de alta un segundo circuito, `corredor-prueba`, y **no es un circuito de
+transporte público.** Es un eje que recorren unidades de **transporte de personal
+sirviendo maquila** —la modalidad especial, el otro producto— y que se cargó porque
+tiene lo único que Oasis–Centro no tiene hoy: camiones reales moviéndose sobre un
+trazado real, en vivo.
+
+Existe para probar la app contra evidencia de verdad sin inventar nada y sin publicar
+nada, que es exactamente el permiso que el Marco §F acaba de escribir. **No es la ruta
+1, no es la ruta 2, y no cuenta como circuito del sprint.** El día que se listen los
+circuitos que salen a la calle, éste no está en la lista.
+
+**Cómo se armó, con su fecha y su límite.** Corte del **27 de agosto de 2026**, sobre
+7 días de `telemetry_points` en horario de servicio. No salió de un KML: salió de
+apilar las pasadas observadas y tomar la mediana por tramo de 30 m. Ida **270 vértices
+/ 24.62 km**, vuelta **304 / 24.61 km**, separación mediana **66 m**, p90 193 m, **máx
+475 m**. Cinco unidades lo recorren completo (6284, 9385, 10249, 9199, 9382: cobertura
+84–100%), y once cubren ≥50%.
+
+⚠ **Su resolución es peor que la de un KML declarado** —66 m contra los 19–25 m de las
+«Indicaciones» de Oasis–Centro— y por eso lleva tolerancia de pegado de **120 m**, no
+de 25. Cuando se mida si el rango de llegada se cumple, **ese error de trazado entra en
+el resultado**: es laboratorio con datos reales, no un patrón contra el que calibrar.
+
+**Y por qué esto no releva a Oasis–Centro de nada.** Oasis–Centro sigue esperando la
+respuesta del concesionario sobre qué camiones la corren y qué traen puesto. Medido el
+27 de agosto: **ninguna de las 82 unidades con GPS del transportista recorrió
+Oasis–Centro en siete días** —la mejor cobertura en un solo día fue 48%, y no se mueve
+al quintuplicar el corredor de 50 a 250 m—. Las tres Dina asignadas no reportan desde
+mayo y febrero. **Que el laboratorio funcione no es que el circuito 1 funcione**, y
+confundir las dos cosas es cómo el sprint se declara listo sobre un producto que
+todavía no tiene con qué salir a la calle.
+
 #### La regla que gobierna este tramo: NADA HARDCODEADO
 
 **Ni un nombre, ni una coordenada, ni un número dentro del código.** El KML se sube
