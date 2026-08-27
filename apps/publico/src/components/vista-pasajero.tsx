@@ -90,7 +90,18 @@ const IconoBus = () => (
 
 // ── El componente ────────────────────────────────────────────────────────
 
-export function VistaPasajero({ forma }: { forma: Forma }) {
+export function VistaPasajero({
+  forma,
+  esVistaPrevia = false,
+}: {
+  forma: Forma;
+  /**
+   * El circuito se está enseñando SIN publicar. Se pinta, y no es decoración:
+   * una app que se ve idéntica publicada y sin publicar es exactamente cómo
+   * alguien acaba creyendo que ya está en la calle.
+   */
+  esVistaPrevia?: boolean;
+}) {
   const [vivo, setVivo] = useState<Vivo | null>(null);
   const [yo, setYo] = useState<{ lat: number; lon: number } | null>(null);
   const [error, setError] = useState(false);
@@ -428,6 +439,12 @@ export function VistaPasajero({ forma }: { forma: Forma }) {
   return (
     <div className="pantalla" style={estiloRuta} data-modo={porHorario ? "horario" : "vivo"}>
       <div id="mapa" ref={contenedor} />
+
+      {esVistaPrevia && (
+        <div className="franja-previa" role="status">
+          Vista previa · circuito sin publicar
+        </div>
+      )}
 
       <div className="tope">
         <div className="chapa">
