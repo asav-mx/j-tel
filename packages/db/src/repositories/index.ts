@@ -5438,6 +5438,53 @@ export class CircuitRepository {
       .where(eq(accounts.type, "concesion"));
   }
 
+  /**
+   * Da de alta una concesión: la cuenta y su perfil, en la misma transacción.
+   *
+   * La concesión es un `accounts` de tipo `concesion` — no una tabla aparte—
+   * para heredar membresías, alcance y ledger. Crear la cuenta sin su perfil
+   * dejaría una concesión sin razón social, así que van juntas o no van.
+   */
+  async createConcession(datos: {
+    name: string;
+    slug: string;
+    legalName: string;
+    numeroConcesion?: string | null;
+  }) {
+    return this.db.transaction(async (tx) => {
+      const [cuenta] = await tx
+        .insert(accounts)
+        .values({ name: datos.name, slug: datos.slug, type: "concesion" })
+        .returning();
+      const [perfil] = await tx
+        .insert(concessionProfiles)
+        .values({
+          accountId: cuenta.id,
+          legalName: datos.legalName,
+          numeroConcesion: datos.numeroConcesion ?? null,
+        })
+        .returning();
+      return { cuenta, perfil };
+    });
+  }
+
+  /** Todos los circuitos, con el nombre de su concesión. Para la lista. */
+  async listAllCircuits() {
+    return this.db
+      .select({
+        id: circuits.id,
+        name: circuits.name,
+        publicSlug: circuits.publicSlug,
+        active: circuits.active,
+        declaredFrequencyMinutes: circuits.declaredFrequencyMinutes,
+        concessionAccountId: circuits.concessionAccountId,
+        concessionName: accounts.name,
+      })
+      .from(circuits)
+      .innerJoin(accounts, eq(accounts.id, circuits.concessionAccountId))
+      .orderBy(accounts.name, circuits.name);
+  }
+
   async getCircuit(id: string) {
     const [fila] = await this.db.select().from(circuits).where(eq(circuits.id, id));
     return fila ?? null;

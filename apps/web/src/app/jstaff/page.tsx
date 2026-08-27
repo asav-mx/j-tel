@@ -36,6 +36,7 @@ export default async function JStaffDashboardPage({
             { href: "/jstaff/cuentas", label: "Cuentas" },
             { href: "/jstaff/comercial", label: "Comercial" },
             { href: "/jstaff/demos", label: "Demos" },
+            { href: "/jstaff/circuitos", label: "Circuitos" },
             { href: "/jstaff/verificacion", label: "Verificación" },
             { href: "/jstaff/diagnostico", label: "Diagnóstico" },
             { href: "/jstaff/soporte", label: "Compuerta de atención" },
