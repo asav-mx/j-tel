@@ -104,6 +104,35 @@ export interface TrazadoDeSentido {
  */
 export const CORREDOR_METROS_POR_DEFECTO = 150;
 
+/**
+ * ¿Se puede afirmar que esta unidad va sobre el circuito?
+ *
+ * **Es la misma ley que el dato viejo, aplicada al espacio en vez del tiempo.**
+ * Un fix de hace veinte minutos no se publica porque ya no dice dónde está el
+ * camión; una unidad a nueve kilómetros del trazado no se publica porque no
+ * dice que venga en la ruta. En los dos casos el sistema no puede afirmarlo, y
+ * en los dos la app cae a «Por horario», que es honesto.
+ *
+ * Existe porque estar ASIGNADO no es estar EN RUTA. Una unidad asignada va al
+ * taller, al patio, o a cubrir otra cosa, y sigue reportando todo el tiempo.
+ * Medido el 27 de agosto contra `corredor-prueba`: de cuatro unidades vivas y
+ * asignadas, las cuatro estaban fuera del corredor.
+ *
+ * La tolerancia entra por parámetro y es campo del circuito: un corredor de
+ * KML fino y uno derivado de trazas no admiten el mismo margen.
+ */
+export function vaSobreElCircuito(
+  punto: { lat: number; lon: number },
+  trazados: TrazadoDeSentido[],
+  corredorMetros: number,
+): boolean {
+  for (const t of trazados) {
+    const p = proyectarSobreTrazado(punto, t.coordinates);
+    if (p && p.distanciaMetros <= corredorMetros) return true;
+  }
+  return false;
+}
+
 /** Cuánto puede diferir el rumbo del camión del rumbo del tramo y seguir siendo ese sentido. */
 const RUMBO_TOLERANCIA_GRADOS = 70;
 

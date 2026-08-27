@@ -186,7 +186,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [La contraseña del readonly es la misma que la del dueño](#la-contraseña-del-readonly-es-la-misma-que-la-del-dueño) | 🟡 🤝 Toca producción |
 | [La base de pruebas está atrasada](#la-base-de-pruebas-está-atrasada) | ✅ Cerrada el 4 de agosto · eran tres, no una |
 | [Las migraciones del repo crean una columna que el código no conoce](#las-migraciones-del-repo-crean-una-columna-que-el-código-no-conoce) | ✅ **Cerrada el 15 de agosto** — la `0018` está aplicada en producción |
-| [La `0027`, la `0028` y la `0029` no están en el journal del repo](#la-0027-la-0028-y-la-0029-no-están-en-el-journal-del-repo) | 🟢 Junto con la próxima migración del tramo |
+| [La `0027`, la `0028` y la `0029` no están en el journal del repo](#la-0027-la-0028-y-la-0029-no-están-en-el-journal-del-repo) | ✅ **Cerrada el 27 de agosto** — al día con la `0030`; la causa sigue viva |
 | [`demos/activate` cruza cuentas](#demosactivate-cruza-cuentas) | 🟡 Protegida; falta decidir qué hace |
 | [No hay configuración de ESLint](#no-hay-configuración-de-eslint) | 🟢 Junto con el corredor de pruebas |
 | ["Consolidación" significa dos cosas](#consolidación-significa-dos-cosas) | 🟢 Renombrar la de política |
@@ -2267,15 +2267,21 @@ la base de pruebas contra el repo, que es como se descubrieron los tres faltante
 columna que sobra: dos verdades distintas conviviendo sin que nada lo diga.
 
 **Dónde tocaba.** `packages/db/drizzle/meta/_journal.json` — tres entradas con `idx`
-27, 28 y 29 y el mismo `tag` que el nombre de cada archivo. **Se pone al día junto con
-la próxima migración del tramo**, que es como se puso al día la `0017` (con la
-`0018`), para no gastar un PR en tres líneas de JSON que nadie ejecuta.
+27, 28 y 29 y el mismo `tag` que el nombre de cada archivo. **Se puso al día junto con
+la `0030`**, que es como se puso al día la `0017` (con la `0018`), para no gastar un PR
+en tres líneas de JSON que nadie ejecuta.
 
-⚠ **Lo que esto NO cierra**, y conviene decirlo en vez de fingir que sí: ponerlas al
-día arregla estas tres y deja viva la causa. Mientras nada lea el archivo, la cuarta
-vez llegará igual. La valla verdadera —un paso que compare los `.sql` del directorio
-contra las entradas del journal y falle si difieren— cabe en `esquema.yml`, que ya
-recorre ese directorio, y no está escrita.
+✅ **Cerrada el 27 de agosto de 2026.** El journal quedó con **31 entradas para 31
+archivos `.sql`**, sin faltantes — comprobado comparando el directorio contra las
+entradas, no leyéndolas.
+
+⚠ **Lo que esto NO cierra, y sigue abierto:** ponerlas al día arregló estas tres y
+**dejó viva la causa**. Mientras nada lea el archivo, la cuarta vez llegará igual — y
+que esta vez se haya puesto al día no es una valla, es que alguien se acordó. La valla
+verdadera —un paso que compare los `.sql` del directorio contra las entradas del
+journal y falle si difieren— cabe en `esquema.yml`, que ya recorre ese directorio, y
+**no está escrita**. La comprobación que se corrió a mano el 27 de agosto es
+exactamente la que ese paso automatizaría, y cabe en cinco líneas.
 
 ## `demos/activate` cruza cuentas
 
