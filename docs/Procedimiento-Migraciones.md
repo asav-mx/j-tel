@@ -157,6 +157,59 @@ conversación y no se hace sin plan de dos pasos.
 
 ---
 
+### La regla que las gobierna a las dos, aprendida a golpes el 27 de agosto de 2026
+
+> **Una prueba que no corre en el mismo entorno que el runbook no prueba el
+> runbook.**
+>
+> **El entorno de producción es la consola SQL de Neon, no una terminal.**
+
+Es la segunda vez que la misma clase de error tumba una aplicación a medio
+camino. La trampa de los enums de arriba fue la primera; la segunda fue ésta.
+
+**Qué pasó.** Los runbooks de la 0027 y la 0029 traían «pruebas negativas»
+dentro de la transacción: una escritura que **debía** fallar, envuelta en
+`SAVEPOINT`, para demostrar que el candado rechaza el valor malo.
+
+```sql
+SAVEPOINT probar_check;
+UPDATE circuits SET avg_speed_kmh = 0;   -- debe fallar
+ROLLBACK TO SAVEPOINT probar_check;      -- ...y aquí se recupera
+```
+
+En una terminal de `psql` eso funciona perfecto. **En la consola SQL de Neon,
+no:** se detiene en la primera sentencia que falla y marca la transacción como
+fallida, así que el `ROLLBACK TO SAVEPOINT` **nunca llega a correr**. La 0029
+llegó al paso 12 y murió en el 13, con la migración a medias y un `ROLLBACK`
+completo como única salida.
+
+Lo peor no es que fallara: es que **la 0027 pasó con esa misma trampa dentro**,
+por casualidad. Su prueba negativa hacía `INSERT ... SELECT` de una tabla vacía,
+así que insertó cero filas y no falló. Pasó en verde sin haber probado nada, y
+dejó el patrón en el repositorio como si funcionara.
+
+**La regla que queda, en tres partes:**
+
+1. **Todas las verificaciones del runbook son de LECTURA.** Ninguna sentencia de
+   un runbook puede fallar a propósito. Que un `CHECK` existe y dice lo correcto
+   se comprueba leyendo `pg_get_constraintdef`, no intentando violarlo: prueba lo
+   mismo y no puede tumbar la corrida.
+2. **Que el candado MUERDE se comprueba aparte**, contra `DATABASE_URL_TEST`,
+   automatizado. Para los `CHECK` de `circuits` eso vive en
+   `packages/db/src/circuits-constraints.integration.test.ts`; para el índice
+   único de las asignaciones, en `asignacion-circuito.integration.test.ts`.
+3. **No copies el patrón del `SAVEPOINT` que quedó en los runbooks viejos de la
+   0027 y la 0029.** Se dejaron como estaban porque ya se aplicaron y son
+   historia, pero son la plantilla equivocada.
+
+**Y la parte general, que es la que importa.** El runbook se ejecuta pegándolo en
+una consola web con reglas propias: se detiene al primer error, no tiene
+`\set ON_ERROR_STOP`, no siempre respeta los savepoints, y no da una terminal
+donde recuperarse. Antes de escribir una verificación, la pregunta no es «¿esto
+es SQL válido?» sino **«¿esto sobrevive en la consola donde lo voy a pegar?»**.
+
+---
+
 ## Aplicar una migración
 
 ### Antes de tocar nada — leer
