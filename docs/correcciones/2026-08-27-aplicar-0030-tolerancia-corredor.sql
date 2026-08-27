@@ -31,8 +31,19 @@ SELECT EXISTS (SELECT 1 FROM information_schema.columns
        (SELECT count(*) FROM compliance_facts)    AS hechos,
        (SELECT count(*) FROM service_occurrences) AS ocurrencias;
 
--- `esta_la_0029` TRUE · `ya_esta_la_0030` FALSE.
--- Anota `circuitos`, `hechos` y `ocurrencias`: son la foto de "antes".
+-- LO QUE DEBES VER:
+--
+--   esta_la_0029     TRUE
+--   ya_esta_la_0030  FALSE      <- si sale TRUE, ya está aplicada: no la
+--                                  vuelvas a aplicar, salta al PASO 3
+--   circuitos        2          (oasis-centro y corredor-prueba)
+--
+-- `hechos` y `ocurrencias`: ANÓTALOS, no los compares contra un número de
+-- esta hoja. Se mueven solos —el motor sigue sellando— y de hecho ya se
+-- movieron de 1 777 a 1 806 entre dos lecturas del mismo día 27. La
+-- comparación que vale es TU paso 1 contra TU paso 3, con minutos de
+-- diferencia. Como referencia de orden de magnitud, no de igualdad:
+-- hechos ~1 806, ocurrencias 2 988 al 27 de agosto 19:40 UTC.
 
 
 -- ───────────────────────────────────────────────────────────────────
@@ -76,12 +87,20 @@ SELECT conname, pg_get_constraintdef(oid) AS definicion
 SELECT public_slug, corridor_tolerance_meters, stop_snap_tolerance_meters
   FROM circuits ORDER BY public_slug;
 
--- Los dos circuitos con 150 en la del corredor. `corredor-prueba` conserva sus
--- 120 en la de pegado, que es otra cosa y no se toca.
+-- LO QUE DEBES VER, exactamente:
+--
+--   corredor-prueba   corridor_tolerance_meters 150   stop_snap 120
+--   oasis-centro      corridor_tolerance_meters 150   stop_snap  25
+--
+-- Los dos con 150 en la del corredor, y cada uno conservando la suya de
+-- pegado. Que salgan distintas en la misma fila es la comprobación de que
+-- NO se reusó una columna para dos conceptos.
 
 SELECT (SELECT count(*) FROM circuits)            AS circuitos,
        (SELECT count(*) FROM compliance_facts)    AS hechos,
        (SELECT count(*) FROM service_occurrences) AS ocurrencias;
 
--- Idénticos a la foto del PASO 1. Una migración aditiva que mueve un conteo no
--- es aditiva.
+-- `circuitos` idéntico (2). `hechos` y `ocurrencias` iguales o MAYORES que en
+-- tu PASO 1 —el motor sigue sellando mientras aplicas—, nunca menores. Una
+-- migración aditiva que BAJA un conteo no es aditiva: ahí se detiene todo y se
+-- va a la marcha atrás.
