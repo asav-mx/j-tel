@@ -5,10 +5,22 @@
 -- del código que corre hoy conoce nada de esto, así que se aplica
 -- antes de desplegar la pantalla.
 --
--- Va entera en una transacción. `ALTER TYPE ... ADD VALUE` sí puede ir
--- dentro de una transacción desde Postgres 12 mientras el valor nuevo
--- no se USE en la misma transacción — y aquí no se usa. Probado contra
--- la base de pruebas.
+-- VA EN DOS TRANSACCIONES, y la razón importa.
+--
+-- `ALTER TYPE ... ADD VALUE` sí puede ir dentro de una transacción desde
+-- Postgres 12, pero el valor nuevo NO SE PUEDE USAR hasta que esa
+-- transacción haga COMMIT. Y «usar» incluye leerlo: un
+-- `enum_range(NULL::account_type)` en la verificación es uso, y revienta
+-- con 55P04 «unsafe use of new value».
+--
+-- La primera versión de este runbook metía todo junto y falló en
+-- producción el 26 de agosto de 2026, en la verificación, después de
+-- crear las siete tablas. No falló el DDL: falló la comprobación.
+--
+-- Además, agregar un valor a un enum NO SE PUEDE DESHACER —Postgres no
+-- permite quitar valores—, así que meterlo en la misma transacción que
+-- el resto fingía una atomicidad que no existe. Separarlo lo hace
+-- visible: el paso 2A es irreversible, el 2B se puede tirar entero.
 --
 -- Marcha atrás: packages/db/drizzle/0025_concesion_circuito_parada.reversa.sql
 -- ═══════════════════════════════════════════════════════════════════
@@ -29,12 +41,29 @@ SELECT (SELECT count(*) FROM information_schema.tables WHERE table_schema='publi
 
 
 -- ───────────────────────────────────────────────────────────────────
--- PASO 2 · APLICAR. De aquí al COMMIT, todo junto.
+-- PASO 2A · EL VALOR DEL ENUM, SOLO. Su propia transacción.
+--
+-- ⚠ IRREVERSIBLE: Postgres no permite quitar valores de un enum. Es
+--   inofensivo —un valor que nadie usa no molesta a nada— pero no tiene
+--   marcha atrás, y por eso va aparte y no colgado del resto.
 -- ───────────────────────────────────────────────────────────────────
 
 BEGIN;
 
 ALTER TYPE account_type ADD VALUE IF NOT EXISTS 'concesion';
+
+COMMIT;
+
+-- Comprobar aquí, YA COMMITEADO. Ahora sí se puede leer sin 55P04.
+-- Debe incluir 'concesion'.
+SELECT enum_range(NULL::account_type)::text AS tipos_de_cuenta;
+
+
+-- ───────────────────────────────────────────────────────────────────
+-- PASO 2B · TODO LO DEMÁS. Una sola transacción, ésta sí reversible.
+-- ───────────────────────────────────────────────────────────────────
+
+BEGIN;
 DO $$ BEGIN
   CREATE TYPE sentido_circuito AS ENUM ('ida', 'vuelta');
 EXCEPTION WHEN duplicate_object THEN NULL;
@@ -161,8 +190,9 @@ SELECT count(*) AS tablas_nuevas FROM information_schema.tables
  ('concession_profiles','concession_carriers','circuits','circuit_paths',
   'circuit_stops','circuit_stop_versions','circuit_unit_assignments');
 
--- 3.2 · El tipo de cuenta nuevo existe. Debe incluir 'concesion'.
-SELECT enum_range(NULL::account_type)::text AS tipos_de_cuenta;
+-- 3.2 · (El tipo de cuenta ya se comprobó en el paso 2A, fuera de esta
+--        transacción. Leerlo aquí dentro es justo lo que reventó la
+--        primera vez: NO lo vuelvas a meter.)
 
 -- 3.3 · Los tres campos del circuito traen su default. Debe dar TRUE.
 SELECT (SELECT column_default FROM information_schema.columns
@@ -187,7 +217,7 @@ SELECT (SELECT count(*) FROM information_schema.tables WHERE table_schema='publi
 
 
 -- ───────────────────────────────────────────────────────────────────
--- PASO 4 · Si todo cuadró:
+-- PASO 4 · Si el paso 2B cuadró:
 COMMIT;
 -- Si no:
 -- ROLLBACK;

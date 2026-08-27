@@ -39,6 +39,15 @@
 -- umbrales van en SEGUNDOS porque la prueba de campo de los días 11–13 puede
 -- pedir afinarlos por debajo del minuto, y no quiero una migración para eso.
 
+-- ⚠ TRAMPA CONOCIDA, y costó un intento fallido en producción el 26 de agosto
+-- de 2026: un valor nuevo de enum NO SE PUEDE USAR —ni siquiera LEER con
+-- `enum_range`— en la misma transacción donde se agrega. Postgres responde
+-- 55P04 «unsafe use of new value».
+--
+-- Este archivo es seguro tal cual porque ninguna de sus sentencias usa
+-- 'concesion': solo crea tablas. Pero si alguien agrega aquí una comprobación
+-- que lea el enum, o una fila de tipo 'concesion', revienta. Esa comprobación
+-- va DESPUÉS del COMMIT — ver el runbook en docs/correcciones/.
 ALTER TYPE account_type ADD VALUE IF NOT EXISTS 'concesion';
 --> statement-breakpoint
 DO $$ BEGIN
