@@ -120,6 +120,36 @@ Cuatro archivos, siempre los cuatro:
    `0002` y no reflejan la realidad; regenerarlos produciría un diff falso.
    Las migraciones se escriben a mano.
 
+### La trampa de los enums, aprendida el 26 de agosto de 2026
+
+> **Un valor nuevo de enum no se puede usar en la misma transacción donde se
+> agrega. Y «usar» incluye leerlo.**
+
+`ALTER TYPE ... ADD VALUE` sí corre dentro de una transacción desde Postgres 12,
+pero el valor queda inservible hasta el `COMMIT`. Un `enum_range(NULL::mi_tipo)`
+en la verificación **es uso**, y Postgres contesta `55P04 unsafe use of new
+value`.
+
+La `0025` falló así en producción: no falló el DDL —las siete tablas se crearon
+sin problema— falló la consulta de verificación que leía el enum, ya al final.
+
+Y hay una razón de fondo para separarlo aunque no fallara: **agregar un valor a
+un enum no se puede deshacer.** Postgres no permite quitar valores. Meterlo en la
+misma transacción que el resto finge una atomicidad que no existe.
+
+**La forma:** el `ALTER TYPE` en su propia transacción con su `COMMIT`, la
+comprobación del enum después de ese `COMMIT`, y todo lo demás en una segunda
+transacción que sí se puede tirar entera.
+
+**Y por qué la prueba no lo detectó**, que es la parte que importa: la prueba
+contra `DATABASE_URL_TEST` aplicó el DDL en transacción y usó el valor nuevo
+*después*, fuera de ella. Pasó por la misma razón por la que el archivo de
+migración es seguro — y no probó lo que el runbook realmente hacía. **Una prueba
+que no corre las mismas sentencias en el mismo orden que el runbook no está
+probando el runbook.** Peor: una vez que el valor queda commiteado en la base de
+pruebas, el fallo ya no se puede reproducir ahí. Para comprobar el mecanismo hay
+que usar un enum desechable.
+
 **Preferir siempre migraciones aditivas** (tabla nueva, columna nueva nullable,
 índice nuevo). Se pueden aplicar antes de desplegar el código sin romper lo que
 está corriendo. Un `DROP` o un `NOT NULL` sobre datos existentes es otra
