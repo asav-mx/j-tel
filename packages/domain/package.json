@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./publico": {
+      "types": "./dist/publico.d.ts",
+      "import": "./dist/publico.js"
     }
   },
   "scripts": {

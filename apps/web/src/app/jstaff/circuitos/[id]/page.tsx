@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { AppNav, Card } from "@/components/ui";
+import { localDateTimeShort } from "@jtel/domain";
 import { CircuitoEditor } from "@/components/circuito-editor";
 import { CircuitoUnidades } from "@/components/circuito-unidades";
 import { getRepos } from "@/lib/db";
@@ -32,6 +33,9 @@ export default async function CircuitoPage({
     repos.circuits.listUnidadesAsignables(circuito.concessionAccountId),
   ]);
 
+  const publicado = circuito.publishedAt !== null;
+  const unidadesVigentes = asignaciones.filter((a) => !a.validTo).length;
+
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-6xl">
@@ -43,6 +47,83 @@ export default async function CircuitoPage({
         {ok && (
           <p className="mb-4 rounded border border-[var(--linea-tenue)] p-3 text-sm">✓ {ok}</p>
         )}
+
+        {/*
+          El interruptor de publicación, antes que nada de lo que se edita.
+
+          Va arriba porque responde la pregunta que cambia el significado de
+          todo lo de abajo: si esto ya lo ve un pasajero o todavía no. Un
+          circuito se arma por partes, y durante ese rato tiene que poder
+          probarse con datos reales sin aparecer en la app.
+
+          Estado operativo, no veredicto: acero y tenue. Ni verde ni ámbar.
+        */}
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              {publicado ? (
+                <>
+                  <p className="text-sm font-medium text-[var(--texto)]">
+                    Publicado
+                    <span className="ml-2 font-[family-name:var(--fuente-mono)] tabular-nums text-[var(--acero)]">
+                      desde {localDateTimeShort(circuito.publishedAt as Date, circuito.timeZone)}
+                    </span>
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--tenue)]">
+                    La app del pasajero lo ve. Responde en{" "}
+                    <code>/circuitos/{circuito.publicSlug}/unidades</code>.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-[var(--texto)]">No publicado</p>
+                  <p className="mt-1 text-xs text-[var(--tenue)]">
+                    Este circuito no existe para la app del pasajero: el endpoint contesta lo
+                    mismo que para un slug inventado. Se puede armar y probar sin que nadie lo
+                    vea.
+                  </p>
+                </>
+              )}
+
+              {/*
+                Lo que le falta se ENUNCIA, no se bloquea. Publicar sin trazado
+                es legítimo —el endpoint contesta igual, con el sentido en
+                nulo—, y un candado aquí decidiría por quien opera.
+              */}
+              <ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                {(
+                  [
+                    ["Trazado", `${trazados.length} de 2 sentidos`, trazados.length > 0],
+                    ["Paradas", String(paradas.length), paradas.length > 0],
+                    ["Unidades corriendo", String(unidadesVigentes), unidadesVigentes > 0],
+                  ] as const
+                ).map(([que, cuanto, hay]) => (
+                  <li key={que} className={hay ? "text-[var(--tenue)]" : "text-[var(--texto)]"}>
+                    {que}:{" "}
+                    <span className="font-[family-name:var(--fuente-mono)] tabular-nums text-[var(--acero)]">
+                      {cuanto}
+                    </span>
+                    {!hay && <span className="text-[var(--tenue)]"> — falta</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <form
+              action={`/api/jstaff/circuitos/${circuito.id}/publicacion`}
+              method="post"
+              className="shrink-0"
+            >
+              <input type="hidden" name="publicar" value={publicado ? "no" : "si"} />
+              <button
+                type="submit"
+                className="rounded border border-[var(--azul)]/50 bg-[var(--azul)]/10 px-4 py-2 text-sm font-medium text-[var(--azul)] hover:bg-[var(--azul)]/20"
+              >
+                {publicado ? "Despublicar" : "Publicar"}
+              </button>
+            </form>
+          </div>
+        </Card>
 
         <Card>
           {/*

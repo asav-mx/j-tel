@@ -22,7 +22,11 @@ for (const p of ["../../.env", ".env"]) {
 
 export default defineConfig({
   test: {
-    include: ["src/integration.test.ts", "src/asignacion-circuito.integration.test.ts"],
+    include: [
+      "src/integration.test.ts",
+      "src/asignacion-circuito.integration.test.ts",
+      "src/publicacion-circuito.integration.test.ts",
+    ],
     // Escriben en la misma rama desechable: en paralelo se pisan.
     fileParallelism: false,
     /*
