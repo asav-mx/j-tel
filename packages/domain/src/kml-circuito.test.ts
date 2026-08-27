@@ -103,3 +103,31 @@ describe("metrosEntre", () => {
     expect(d).toBeLessThan(9800);
   });
 });
+
+describe("marcar y ordenar por calidad", () => {
+  it("marca la capa burda, no la fina", () => {
+    const a = analizarKmlDeCircuito(KML);
+    const fina = a.capas.find((c) => c.nombre === "Fino de ida")!;
+    const burda = a.capas.find((c) => c.nombre === "Burdo de ida")!;
+    expect(fina.cortaEsquinas).toBe(false);
+    expect(burda.cortaEsquinas).toBe(true);
+  });
+
+  it("devuelve las utilizables primero, aunque en el archivo vayan después", () => {
+    // En el KML de prueba la fina va primero; se invierte para probar el orden.
+    const invertido = KML.replace(
+      /<Folder><name>Detallado<\/name>[\s\S]*?<\/Folder>/,
+      "",
+    ).replace(
+      "</Document>",
+      `<Folder><name>Detallado</name><Placemark><name>Fino de ida</name><LineString><coordinates>
+        -106.4000,31.7000,0 -106.4010,31.7000,0 -106.4020,31.7000,0 -106.4030,31.7000,0
+        -106.4040,31.7000,0 -106.4050,31.7000,0 -106.4060,31.7000,0 -106.4070,31.7000,0
+      </coordinates></LineString></Placemark></Folder></Document>`,
+    );
+    const a = analizarKmlDeCircuito(invertido);
+    expect(a.capas[0].nombre).toBe("Fino de ida");
+    expect(a.capas[0].cortaEsquinas).toBe(false);
+    expect(a.capas[a.capas.length - 1].cortaEsquinas).toBe(true);
+  });
+});

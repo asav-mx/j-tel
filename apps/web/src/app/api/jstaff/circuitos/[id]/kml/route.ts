@@ -42,6 +42,7 @@ export async function POST(request: Request) {
       largoMetros: Math.round(c.largoMetros),
       espaciadoMedianoMetros: Math.round(c.espaciadoMedianoMetros),
       huecoMaximoMetros: Math.round(c.huecoMaximoMetros),
+      cortaEsquinas: c.cortaEsquinas,
       inicio: c.inicio,
       fin: c.fin,
       coordenadas: c.coordenadas,

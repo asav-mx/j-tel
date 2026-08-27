@@ -73,12 +73,16 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     // ni cuando la parada se mueva.
     qrSlug: `${circuito.publicSlug}-${randomBytes(4).toString("hex")}`,
     // Arrancan numeradas; el nombre se edita desde la pantalla.
-    nombre: cuerpo.nombre?.trim() || `Parada ${orden}`,
+    // El campo se llama `name`, como la columna. Mandarlo como `nombre` fue el
+    // bug: la fila salía sin nombre y la base la rechazaba por NOT NULL. Iba
+    // tapado por un `as never` — un cast que apaga exactamente la comprobación
+    // que lo habría cazado. Por eso ya no hay cast aquí.
+    name: cuerpo.nombre?.trim() || `Parada ${orden}`,
     orden,
     latitude: destino.lat,
     longitude: destino.lon,
     sentido: cuerpo.sentido ?? null,
-  } as never);
+  });
 
   return NextResponse.json({
     stopId: creada.identidad.id,

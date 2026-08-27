@@ -34,9 +34,17 @@ export async function PATCH(
   const circuito = await repos.circuits.getCircuit(id);
   if (!circuito) return NextResponse.json({ error: "No existe ese circuito" }, { status: 404 });
 
-  const cambios: Record<string, unknown> = {};
+  // Tipado, sin cast: ver la nota del alta de paradas.
+  const cambios: {
+    name?: string;
+    orden?: number;
+    latitude?: number;
+    longitude?: number;
+    sentido?: "ida" | "vuelta" | null;
+    motivo?: string | null;
+  } = {};
   if (typeof cuerpo.nombre === "string" && cuerpo.nombre.trim()) cambios.name = cuerpo.nombre.trim();
-  if (Number.isFinite(cuerpo.orden)) cambios.orden = cuerpo.orden;
+  if (typeof cuerpo.orden === "number" && Number.isFinite(cuerpo.orden)) cambios.orden = cuerpo.orden;
   if (cuerpo.sentido !== undefined) cambios.sentido = cuerpo.sentido;
   if (typeof cuerpo.motivo === "string" && cuerpo.motivo.trim()) cambios.motivo = cuerpo.motivo.trim();
 
@@ -62,7 +70,7 @@ export async function PATCH(
     return NextResponse.json({ error: "No mandaste ningún cambio" }, { status: 400 });
   }
 
-  const nueva = await repos.circuits.reviseStop(stopId, cambios as never);
+  const nueva = await repos.circuits.reviseStop(stopId, cambios);
   if (!nueva) return NextResponse.json({ error: "Esa parada no tiene versión vigente" }, { status: 404 });
 
   return NextResponse.json({

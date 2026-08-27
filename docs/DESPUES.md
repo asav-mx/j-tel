@@ -192,6 +192,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Los documentos llegan con la codificación rota](#los-documentos-llegan-con-la-codificación-rota) | 🟢 Revisar el traspaso, no el síntoma |
 | [Documentación por marcar como superseded](#documentación-por-marcar-como-superseded) | Desbloqueado por el #130 |
 | [Los 15 pendientes del 28-jul se quedan pendientes](#los-15-pendientes-del-28-jul-se-quedan-pendientes) | Decidido, no se toca |
+| [Dos mapas de producción salen en negro: CARTO ahora exige llave](#dos-mapas-de-producción-salen-en-negro-carto-ahora-exige-llave) | 🟡 Superficie visible rota |
 
 ### 5 · Trámites y decisiones abiertas
 
@@ -2508,3 +2509,26 @@ todavía no se lea así**. Esa acumulación es, además, lo que vuelve valioso
 formalizar más adelante. Lo único que hay que cuidar en el sprint es no tirar
 resolución: la posición viva se sobrescribe a propósito, pero `telemetry_points`
 guarda el histórico completo y de ahí sale todo esto.
+
+## Dos mapas de producción salen en negro: CARTO ahora exige llave
+
+**Qué es.** `cierre-mapa.tsx` y `ruta-trazado-mapa.tsx` piden sus mosaicos a
+`basemaps.cartocdn.com`, que empezó a exigir llave de API. No fallan: devuelven
+**200 con un PNG de 2 KB que dice «API KEY REQUIRED» impreso**, así que el mapa
+se ve negro con ese texto repetido y ningún log se queja. Medido el 26 de agosto
+de 2026: CARTO 2 228 bytes contra 6 933 de un mosaico real de OSM.
+
+**Por qué se aplazó.** Salió de rebote arreglando el mapa del editor de
+circuitos, que tenía el mismo problema. Ése se arregló porque era del sprint;
+estos dos son del transporte especial y tocarlos ahora sería meter mano en un
+frente pausado sin haberlos mirado en pantalla.
+
+**Qué lo desbloquea.** Nada técnico: es cambiar una URL, como se hizo en
+`circuito-editor.tsx`. Solo hace falta decidir el fondo —`monitoreo-map`,
+`jornada-contrast-map` y `carrier-candidate-compare-map` ya usan OSM directo y
+funcionan— y confirmar en pantalla que se ven bien, porque el diseño de esas dos
+asumía fondo oscuro.
+
+**Dónde toca.** `apps/web/src/components/cierre-mapa.tsx:59` y
+`apps/web/src/components/ruta-trazado-mapa.tsx:59`. **Nadie lo había reportado**,
+que es el dato incómodo: son superficies que alguien debería estar mirando.
