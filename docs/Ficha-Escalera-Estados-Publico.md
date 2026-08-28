@@ -58,7 +58,7 @@ en el primero que aplique**. Vive en `estadoDelCircuito`
 ### Las reglas duras, y por qué cada una
 
 **La asignación vigente es plan, no evidencia.** Un circuito con cinco unidades
-asignadas y ninguna observación reciente cae a `sin_servicio`, **nunca** a
+asignadas y ninguna observación reciente cae a `sin_evidencia`, **nunca** a
 `por_horario`. La asignación dice qué se planeó; sólo el GPS puede afirmar que
 hay servicio.
 
@@ -166,6 +166,66 @@ concesionarios.
 
 ---
 
+---
+
+## La corrección del 28 de agosto — el cuarto estado emitía un veredicto
+
+El estado se llamaba `sin_servicio` y la app decía *«Ahorita no hay unidades en
+servicio en esta ruta»*. **Las dos cosas estaban mal, y por la misma razón: se
+trajo la lógica del árbitro a donde no toca.**
+
+En transporte especial el silencio es prueba en contra —sin evidencia no hay
+cumplimiento, porque de eso depende un pago—. En transporte público es al revés:
+la unidad está declarada en la concesión y el horario también, y eso no es una
+suposición nuestra sino **un hecho que el propio operador publicó**. Que nosotros
+no veamos una posición no autoriza a afirmar que no hay servicio. El pasajero no
+está juzgando a nadie.
+
+Y la redacción tenía algo peor: *«no hay unidades en servicio»* le contaba al
+pasajero que **nuestra telemetría falló**, y eso expone al operador. La app no
+expone al operador nunca. Esa falla es una alerta operativa y su lugar es el
+centro de control del carrier — otro frente, no la cara pública.
+
+**Lo que cambió, exactamente:**
+
+| | Antes | Ahora |
+|---|---|---|
+| Nombre del estado | `sin_servicio` | `sin_evidencia` |
+| Titular, con frecuencia | «Sin servicio» | «Cada N min» |
+| Titular, sin frecuencia | «Sin servicio» | el horario declarado |
+| Frase | «Ahorita no hay unidades en servicio en esta ruta» | «Servicio declarado de 05:00 a 23:00» — y **nada** cuando el titular ya es el horario |
+| Rótulo | (no había) | «Horario / Frecuencia declarada por el concesionario» |
+
+**Fuera de horario sí se afirma**, y no cambió: eso se lee de la configuración,
+no se infiere de un silencio.
+
+### El camión con dato viejo se queda en el mapa
+
+Antes desaparecía. El argumento era que la última posición conocida «se lee como
+va llegando», y **estaba mal planteado**: lo que se lee así es un punto pintado
+*como si fuera de ahorita*, no el hecho de que exista. Un camión que perdió señal
+no se fue a ningún lado —sigue su recorrido— y borrarlo manda al pasajero
+caminando a otra ruta más lejos por algo que no ocurrió.
+
+Ahora va, **apagado, más chico y con «hace N min» al lado**. Tres señales para lo
+mismo, porque el color solo no lo ve quien trae el teléfono al sol.
+
+**La línea no está en si el camión se ve, sino en si se ve como si fuera de
+ahorita.** Por eso el RANGO sí desaparece con el dato viejo: calcularlo desde una
+posición vieja es inventar un número, y lo paga la persona parada en la banqueta.
+
+Al agotarse la ventana de confianza el punto sí se va: a esas alturas ya no se
+puede sostener que la unidad siga en la ruta.
+
+### Lo que esto le costó al contrato
+
+`fresco` **dejó de ser siempre `true`**. Era un campo que sólo confirmaba lo que
+el filtro ya garantizaba; ahora decide si la app pinta la unidad encendida y la
+usa para el rango, o apagada y sólo como «por aquí se le vio». Se resuelve en el
+servidor porque el umbral es del circuito y el teléfono no lo conoce.
+
+---
+
 ## Una decisión que tomé y no estaba en el encargo
 
 **`sin_conexion` es un quinto modo, del lado del teléfono.**
@@ -194,6 +254,10 @@ operador —sólo describe lo que pasó del lado del teléfono— y no promete n
 - Typecheck limpio en `@jtel/publico`, `@jtel/db` y `@jtel/web`.
 - Revisión en navegador, con teléfono simulado, de los estados alcanzables con
   los datos reales de hoy.
+- **28 de agosto:** `sin_evidencia` revisado en el navegador contra producción.
+  Mirarlo encontró un defecto que ninguna prueba vio: el titular decía «05:00 a
+  23:00» y la frase de abajo repetía «servicio de 05:00 a 23:00» — la misma
+  falta que se acababa de corregir en el rótulo, ahora entre titular y frase.
 
 ## Lo que esta ficha NO afirma
 
