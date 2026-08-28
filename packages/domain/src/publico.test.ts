@@ -226,12 +226,12 @@ describe("estadoDelCircuito · la escalera", () => {
     expect(estadoDelCircuito({ ...base, observaciones: [enRuta(600)] })).toBe("por_horario");
   });
 
-  it("pasada la confianza: sin servicio", () => {
-    expect(estadoDelCircuito({ ...base, observaciones: [enRuta(1200)] })).toBe("sin_servicio");
+  it("pasada la confianza: sin evidencia", () => {
+    expect(estadoDelCircuito({ ...base, observaciones: [enRuta(1200)] })).toBe("sin_evidencia");
   });
 
-  it("sin ninguna observación: sin servicio, nunca por horario", () => {
-    expect(estadoDelCircuito({ ...base, observaciones: [] })).toBe("sin_servicio");
+  it("sin ninguna observación: sin evidencia, nunca por horario", () => {
+    expect(estadoDelCircuito({ ...base, observaciones: [] })).toBe("sin_evidencia");
   });
 
   it("EL CAMIÓN DEL PATIO: fresquísimo pero fuera del corredor no sostiene nada", () => {
@@ -240,10 +240,10 @@ describe("estadoDelCircuito · la escalera", () => {
      * mantendría la ruta «por horario» toda la noche prometiendo una cadencia
      * que nadie está dando. Es el caso que decidió la regla.
      */
-    expect(estadoDelCircuito({ ...base, observaciones: [fuera(1)] })).toBe("sin_servicio");
+    expect(estadoDelCircuito({ ...base, observaciones: [fuera(1)] })).toBe("sin_evidencia");
     expect(
       estadoDelCircuito({ ...base, observaciones: [fuera(1), fuera(2), fuera(3)] }),
-    ).toBe("sin_servicio");
+    ).toBe("sin_evidencia");
   });
 
   it("EL TÚNEL: la vio la ruta hace rato, y eso sí cuenta", () => {
@@ -268,7 +268,7 @@ describe("estadoDelCircuito · la escalera", () => {
     ).toBe("en_vivo");
     expect(
       estadoDelCircuito({ ...base, observaciones: obs, confianzaSegundos: 120 }),
-    ).toBe("sin_servicio");
+    ).toBe("sin_evidencia");
   });
 
   it("el orden es el de la escalera: horario antes que evidencia", () => {

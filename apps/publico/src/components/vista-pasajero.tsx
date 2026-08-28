@@ -70,11 +70,17 @@ interface UnidadViva {
   rumbo: number | null;
   sentido: "ida" | "vuelta" | null;
   antiguedad_seg: number;
+  /**
+   * Si la posición todavía dice dónde está el camión. Las que NO lo están
+   * siguen viniendo —el camión no se fue a ningún lado— pero se pintan
+   * apagadas y no entran al cálculo del rango.
+   */
+  fresco: boolean;
 }
 
 interface Vivo {
   /** La escalera ya resuelta por el servidor. La pantalla lee, no deduce. */
-  estado: "fuera_de_horario" | "en_vivo" | "por_horario" | "sin_servicio";
+  estado: "fuera_de_horario" | "en_vivo" | "por_horario" | "sin_evidencia";
   /** A qué hora abre el circuito, para poder decirlo cuando está cerrado. */
   abre_a: string;
   /** El rango de llegada sólo se enseña si la velocidad del circuito ya se calibró. */
@@ -263,6 +269,12 @@ export function VistaPasajero({
     if (!vivo || !yo) return [] as RangoDeLlegada[];
     const salida: RangoDeLlegada[] = [];
     for (const u of vivo.unidades) {
+      /*
+       * Sólo las frescas. Calcular un rango desde una posición vieja es
+       * inventar un número, y lo paga la persona parada en la banqueta: se
+       * queda esperando un camión que ya pasó, o se va creyendo que tarda.
+       */
+      if (!u.fresco) continue;
       if (!u.sentido) continue; // sin sentido no se sabe si viene o va
       const trazado = trazadoPorSentido.get(u.sentido);
       if (!trazado) continue;
@@ -408,27 +420,49 @@ export function VistaPasajero({
         .addTo(capa);
     }
 
-    // En modo «Por horario» no hay camión que dibujar: los que quedaban tenían
-    // el dato viejo y el servidor ya los quitó.
-    if (!vivo || porHorario) return;
+    if (!vivo) return;
 
+    /*
+     * Se dibujan TODAS las que llegan, frescas o no.
+     *
+     * La vieja se pinta apagada y con cuánto hace que se le vio. No desaparece:
+     * el camión no se fue a ningún lado —perdió señal y sigue su recorrido— y
+     * un mapa vacío manda al pasajero caminando a otra ruta más lejos por algo
+     * que no ocurrió. El servidor ya quitó las que pasaron la ventana de
+     * confianza, que son las únicas de las que ya no se puede sostener nada.
+     */
     for (const u of vivo.unidades) {
+      const min = Math.max(1, Math.round(u.antiguedad_seg / 60));
+      const cuerpo = u.fresco
+        ? '<div style="width:30px;height:30px;background:var(--ambar);border:3px solid #fff;' +
+          'border-radius:50%;box-shadow:0 3px 12px rgba(0,0,0,.4);display:flex;align-items:center;' +
+          'justify-content:center"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:#3A2500">' +
+          '<path d="M4 16c0 .88.39 1.67 1 2.22V20a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm9 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm1.5-6H6V6h12v5z"/></svg></div>'
+        : /*
+           * Apagado, más chico y con su antigüedad al lado. Tres señales para
+           * lo mismo, porque una sola —sólo el color— no la ve quien trae el
+           * teléfono al sol o no distingue bien los tonos.
+           */
+          '<div style="display:flex;align-items:center;gap:4px">' +
+          '<div style="width:22px;height:22px;background:var(--gris);border:2px solid #fff;opacity:.75;' +
+          'border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;' +
+          'justify-content:center"><svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:#fff">' +
+          '<path d="M4 16c0 .88.39 1.67 1 2.22V20a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm9 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm1.5-6H6V6h12v5z"/></svg></div>' +
+          `<span style="background:#fff;color:var(--gris);border-radius:9px;padding:1px 6px;font-size:10px;` +
+          `font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25)">hace ${min} min</span>` +
+          "</div>";
       leaflet
         .marker([u.lat, u.lon], {
           icon: leaflet.divIcon({
             className: "",
-            html:
-              '<div style="width:30px;height:30px;background:var(--ambar);border:3px solid #fff;' +
-              'border-radius:50%;box-shadow:0 3px 12px rgba(0,0,0,.4);display:flex;align-items:center;' +
-              'justify-content:center"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:#3A2500">' +
-              '<path d="M4 16c0 .88.39 1.67 1 2.22V20a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm9 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm1.5-6H6V6h12v5z"/></svg></div>',
-            iconSize: [30, 30],
-            iconAnchor: [15, 15],
+            html: cuerpo,
+            iconSize: u.fresco ? [30, 30] : [22, 22],
+            iconAnchor: u.fresco ? [15, 15] : [11, 11],
           }),
         })
         .addTo(capa);
     }
-  }, [vivo, yo, porHorario, forma.color_hex]);
+  }, [vivo, yo, forma.color_hex]);
 
   // ── La hoja, que se arrastra ──────────────────────────────────────────
 
@@ -470,6 +504,8 @@ export function VistaPasajero({
    * fresca, y un `null` del sondeo es una respuesta, no un hueco que rellenar.
    */
   const cadaMin = vivo ? vivo.frecuencia_declarada_min : forma.frecuencia_declarada_min;
+  /* El horario tal como lo declaró la concesión. Se cita, no se interpreta. */
+  const horario = `${forma.horario.inicio.slice(0, 5)} a ${forma.horario.fin.slice(0, 5)}`;
   const pisoMin = Math.max(1, Math.round(forma.piso_rango_seg / 60));
   const nombreApp = forma.nombre;
   const insignia = iniciales(forma.nombre);
@@ -536,8 +572,22 @@ export function VistaPasajero({
                   <>
                     <span className="n">Abre {vivo?.abre_a}</span>
                   </>
-                ) : modo === "sin_servicio" ? (
-                  <span className="n">Sin servicio</span>
+                ) : modo === "sin_evidencia" ? (
+                  /*
+                   * El cuarto estado NO emite un veredicto sobre el mundo. Se
+                   * enseña lo que la concesión declaró; si no declaró
+                   * frecuencia, no se inventa ninguna NI se rellena el hueco
+                   * con otra cosa: el titular pasa a ser el horario, que
+                   * también es declaración suya.
+                   */
+                  cadaMin !== null ? (
+                    <>
+                      <span className="n">Cada {cadaMin}</span>
+                      <span className="u">min</span>
+                    </>
+                  ) : (
+                    <span className="n">{horario}</span>
+                  )
                 ) : modo === "sin_conexion" || modo === "cargando" ? (
                   <span className="n">—</span>
                 ) : modo === "por_horario" ? (
@@ -610,8 +660,21 @@ export function VistaPasajero({
             <div className="cada">
               {modo === "fuera_de_horario" ? (
                 <>Esta ruta no está en servicio ahorita. Abre a las {vivo?.abre_a}.</>
-              ) : modo === "sin_servicio" ? (
-                <>Ahorita no hay unidades en servicio en esta ruta.</>
+              ) : modo === "sin_evidencia" ? (
+                /*
+                 * Ni una palabra sobre lo que nuestra telemetría ve o deja de
+                 * ver. Decir «no hay unidades en servicio» era emitir un
+                 * veredicto que el sistema no puede sostener, y de paso le
+                 * contaba al pasajero una falla que le toca al centro de
+                 * control del carrier, no a él.
+                 *
+                 * Cada renglón AGREGA: con frecuencia, el titular la dice y
+                 * esta frase pone el horario; sin frecuencia el titular ya ES
+                 * el horario, y repetirlo aquí era el mismo defecto que se
+                 * acababa de corregir en el rótulo. La atribución no se pierde:
+                 * vive en el rótulo de abajo, en los dos casos.
+                 */
+                cadaMin !== null ? <>Servicio declarado de {horario}.</> : null
               ) : modo === "sin_conexion" ? (
                 <>No pudimos consultar el servicio. Revisa tu conexión y vuelve a intentar.</>
               ) : modo === "cargando" ? (
@@ -642,17 +705,20 @@ export function VistaPasajero({
             </div>
 
             {/*
-              En SIN SERVICIO el rótulo repetiría palabra por palabra el titular
-              —«Sin servicio» arriba y «Sin servicio» abajo—, así que no va. Un
-              rótulo que sólo repite gasta el renglón y hace dudar de si dice
-              otra cosa.
+              El rótulo vuelve al cuarto estado, y dice de dónde sale lo que se
+              está enseñando: es declaración del concesionario. No repite el
+              titular y no habla del GPS — «sin unidades en el corredor» habría
+              sido contarle al pasajero lo que nuestra telemetría ve.
             */}
-            {modo !== "sin_servicio" && (
             <div className="fresca">
               <span className="p" />
               <span>
                 {modo === "fuera_de_horario"
                   ? "Fuera de horario"
+                  : modo === "sin_evidencia"
+                    ? cadaMin !== null
+                      ? "Frecuencia declarada por el concesionario"
+                      : "Horario declarado por el concesionario"
                   : modo === "sin_conexion"
                       ? "Sin conexión"
                       : modo === "cargando"
@@ -666,7 +732,6 @@ export function VistaPasajero({
                               : "En vivo · sin tiempo estimado"}
               </span>
             </div>
-            )}
           </div>
         </div>
 

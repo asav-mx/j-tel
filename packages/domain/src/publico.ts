@@ -223,8 +223,18 @@ export type EstadoDelCircuito =
   | "en_vivo"
   /** Nadie fresco, pero se vio una unidad en el corredor dentro de la ventana de confianza. */
   | "por_horario"
-  /** Ninguna de las anteriores: ahorita no hay unidades en servicio. */
-  | "sin_servicio";
+  /**
+   * Ninguna de las anteriores: **el sistema no tiene evidencia**, y eso es
+   * todo lo que dice.
+   *
+   * Se llamaba `sin_servicio` y el nombre arrastraba la lógica del árbitro a
+   * donde no toca. En transporte especial el silencio es prueba en contra —de
+   * eso depende un pago—. En público es al revés: la unidad está declarada en
+   * la concesión y el horario también, y eso no es una suposición nuestra sino
+   * un hecho que el propio operador publicó. **Que no veamos una posición no
+   * autoriza a afirmar que no hay servicio.**
+   */
+  | "sin_evidencia";
 
 /** Lo que se sabe de una unidad para decidir el estado. */
 export interface ObservacionParaEstado {
@@ -259,5 +269,5 @@ export function estadoDelCircuito(entrada: {
   const enRuta = entrada.observaciones.filter((o) => o.enCorredor);
   if (enRuta.some((o) => o.antiguedadSeg < entrada.frescuraSegundos)) return "en_vivo";
   if (enRuta.some((o) => o.antiguedadSeg < entrada.confianzaSegundos)) return "por_horario";
-  return "sin_servicio";
+  return "sin_evidencia";
 }

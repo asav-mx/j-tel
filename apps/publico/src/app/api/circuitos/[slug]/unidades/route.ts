@@ -112,7 +112,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
       rumbo: number | null;
       sentido: "ida" | "vuelta" | null;
       antiguedad_seg: number;
-      fresco: true;
+      fresco: boolean;
     }> = [],
   ) =>
     conCache({
@@ -189,14 +189,23 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
   });
 
   /*
-   * Sólo EN VIVO lleva unidades. En POR HORARIO existe evidencia de servicio
-   * —alguien pasó por el corredor hace poco— pero **no hay una posición que
-   * siga diciendo dónde está el camión**, y dibujar la última conocida se lee
-   * como «va llegando». La evidencia sostiene la afirmación «hay servicio»; no
-   * alcanza para pintar un punto en un mapa.
+   * Van las unidades del CORREDOR que caen dentro de la ventana de confianza,
+   * frescas o no, cada una diciendo cuál es.
+   *
+   * Antes sólo salían las frescas, con el argumento de que la última posición
+   * conocida «se lee como va llegando». El argumento estaba mal planteado: lo
+   * que se lee como «va llegando» es un punto pintado **como si fuera de
+   * ahorita**, no el hecho de que exista. Un camión que perdió señal no se fue
+   * a ningún lado —sigue su recorrido—, y borrarlo del mapa manda al pasajero
+   * caminando a otra ruta más lejos por algo que no ocurrió.
+   *
+   * La línea no está en si el camión se ve, sino en si se ve como si fuera de
+   * ahorita: por eso viaja `fresco`, la app lo pinta apagado, y el RANGO —que
+   * sí sería un número inventado— no se calcula desde una posición vieja.
+   *
+   * Pasada la ventana de confianza el punto sí desaparece: a esas alturas ya no
+   * se puede sostener que la unidad siga en la ruta.
    */
-  if (estado !== "en_vivo") return responder(estado);
-
   const fechaLocal = fechaLocalDelCircuito(ahora, circuito.timeZone);
 
   const unidades: Array<{
@@ -206,13 +215,13 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
     rumbo: number | null;
     sentido: "ida" | "vuelta" | null;
     antiguedad_seg: number;
-    fresco: true;
+    fresco: boolean;
   }> = [];
 
   for (const { p, antiguedadSeg: antiguedad, enCorredor } of medidas) {
-    // Los dos mismos cortes que decidieron el estado, sobre la misma medición.
-    if (!esFresco(antiguedad, circuito.staleAfterSeconds)) continue;
+    // Los mismos cortes que decidieron el estado, sobre la misma medición.
     if (!enCorredor) continue;
+    if (antiguedad >= circuito.serviceConfidenceMinutes * 60) continue;
 
     unidades.push({
       id_publico: idPublicoDelDia(p.unitId, fechaLocal, secreto),
@@ -226,14 +235,17 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
         circuito.corridorToleranceMeters,
       ),
       antiguedad_seg: antiguedad,
-      // Siempre true: las que no lo están no llegan hasta aquí. Va en el cuerpo
-      // para que la app no tenga que deducirlo de la antigüedad y del umbral,
-      // que además no conoce.
-      fresco: true,
+      /*
+       * Ya NO es siempre true. Es lo que decide si la app la pinta encendida y
+       * la usa para el rango, o apagada y sólo como «por aquí se le vio». Va
+       * resuelto en el servidor porque el umbral es del circuito y el teléfono
+       * no lo conoce.
+       */
+      fresco: esFresco(antiguedad, circuito.staleAfterSeconds),
     });
   }
 
-  return responder("en_vivo", unidades);
+  return responder(estado, unidades);
 }
 
 function conCache(cuerpo: unknown) {
