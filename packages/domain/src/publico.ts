@@ -206,3 +206,58 @@ function diferenciaAngular(a: number, b: number): number {
   const d = Math.abs((((a - b) % 360) + 360) % 360);
   return d > 180 ? 360 - d : d;
 }
+
+// ── La escalera de estados ───────────────────────────────────────────────
+
+/**
+ * En qué está el circuito ahora mismo, para la app del pasajero.
+ *
+ * Cuatro estados, evaluados en orden y parando en el primero que aplique.
+ * Existen porque la app tenía **un solo silencio para tres cosas distintas** y
+ * las decía todas igual: «el servicio corre cada N minutos».
+ */
+export type EstadoDelCircuito =
+  /** El reloj está fuera del horario declarado. No se promete nada. */
+  | "fuera_de_horario"
+  /** Hay al menos una unidad con posición fresca dentro del corredor. */
+  | "en_vivo"
+  /** Nadie fresco, pero se vio una unidad en el corredor dentro de la ventana de confianza. */
+  | "por_horario"
+  /** Ninguna de las anteriores: ahorita no hay unidades en servicio. */
+  | "sin_servicio";
+
+/** Lo que se sabe de una unidad para decidir el estado. */
+export interface ObservacionParaEstado {
+  /** Su última posición conocida cae dentro del corredor del circuito. */
+  enCorredor: boolean;
+  antiguedadSeg: number;
+}
+
+/**
+ * La escalera, en un solo lugar y sin tocar la base.
+ *
+ * **La asignación vigente es plan, no evidencia.** Un circuito con cinco
+ * unidades asignadas y ninguna observación reciente cae a `sin_servicio`, nunca
+ * a `por_horario`: la asignación dice qué se planeó, y sólo el GPS puede
+ * afirmar que hay servicio. Por eso esta función no recibe cuántas unidades hay
+ * asignadas — no es un insumo de la decisión, y no tenerlo a la mano es lo que
+ * impide usarlo por descuido.
+ *
+ * **Los dos estados con evidencia exigen corredor.** Un camión parado en el
+ * patio reporta cada minuto y mantendría la ruta «por horario» toda la noche;
+ * su última posición está en el patio, así que no cuenta. El que se metió a un
+ * túnel sí cuenta: la última vez que se le vio, iba en la ruta.
+ */
+export function estadoDelCircuito(entrada: {
+  enHorario: boolean;
+  observaciones: ObservacionParaEstado[];
+  frescuraSegundos: number;
+  confianzaSegundos: number;
+}): EstadoDelCircuito {
+  if (!entrada.enHorario) return "fuera_de_horario";
+
+  const enRuta = entrada.observaciones.filter((o) => o.enCorredor);
+  if (enRuta.some((o) => o.antiguedadSeg < entrada.frescuraSegundos)) return "en_vivo";
+  if (enRuta.some((o) => o.antiguedadSeg < entrada.confianzaSegundos)) return "por_horario";
+  return "sin_servicio";
+}

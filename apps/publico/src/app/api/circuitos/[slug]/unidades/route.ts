@@ -3,10 +3,12 @@ import {
   antiguedadSegundos,
   enHorarioDeServicio,
   esFresco,
+  estadoDelCircuito,
   fechaLocalDelCircuito,
   idPublicoDelDia,
   sentidoDeLaUnidad,
   vaSobreElCircuito,
+  type EstadoDelCircuito,
   type TrazadoDeSentido,
 } from "@jtel/domain/publico";
 import { getRepos } from "@/lib/db";
@@ -86,20 +88,24 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
   const { circuito } = visible;
 
   const ahora = new Date();
-  const enServicio = enHorarioDeServicio(
+  const enHorario = enHorarioDeServicio(
     ahora,
     circuito.serviceStartLocal,
     circuito.serviceEndLocal,
     circuito.timeZone,
   );
 
-  const cuerpo = {
-    circuito_id: circuito.publicSlug,
-    generado_en: ahora.toISOString(),
-    ttl_seg: TTL_SEGUNDOS,
-    frecuencia_declarada_min: circuito.declaredFrequencyMinutes,
-    en_servicio: enServicio,
-    unidades: [] as Array<{
+  /**
+   * La respuesta lleva UN campo de estado, no varios booleanos.
+   *
+   * Antes iba `en_servicio` y la app deducía el resto contando unidades. Dos
+   * campos que pueden contradecirse son cómo un dato correcto se vuelve una
+   * afirmación falsa: aquí la escalera decide una vez, en el dominio, y la
+   * pantalla lee la decisión.
+   */
+  const responder = (
+    estado: EstadoDelCircuito,
+    unidades: Array<{
       id_publico: string;
       lat: number;
       lon: number;
@@ -107,17 +113,37 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
       sentido: "ida" | "vuelta" | null;
       antiguedad_seg: number;
       fresco: true;
-    }>,
-  };
+    }> = [],
+  ) =>
+    conCache({
+      circuito_id: circuito.publicSlug,
+      generado_en: ahora.toISOString(),
+      ttl_seg: TTL_SEGUNDOS,
+      estado,
+      /*
+       * `null` cuando el concesionario no la declaró, y entonces la app dice
+       * que hay servicio SIN tiempo estimado. Nunca se inventa una cadencia:
+       * afirmar «cada 20 minutos» porque una columna traía default es
+       * exactamente completar un hueco para que la pantalla se vea entera.
+       */
+      frecuencia_declarada_min: circuito.declaredFrequencyMinutes,
+      /* A qué hora abre, para que FUERA DE HORARIO pueda decirlo. */
+      abre_a: circuito.serviceStartLocal.slice(0, 5),
+      /*
+       * El rango se enseña sólo si ya se calibró la velocidad de ESTE circuito
+       * contra la calle. Apagado, EN VIVO sigue enseñando el camión moviéndose
+       * —verdad observada— y se calla el minuto estimado, que aún no lo es.
+       */
+      rango_activo: circuito.arrivalRangeEnabledAt !== null,
+      unidades,
+    });
 
   /*
    * Fuera de horario no se consulta nada. No es solo ahorro: un camión que
    * regresa al patio a las 23:30 sigue reportando posición, y publicarlo lo
    * volvería un servicio que nadie está dando.
    */
-  if (!enServicio) {
-    return conCache(cuerpo);
-  }
+  if (!enHorario) return responder("fuera_de_horario");
 
   const secreto = process.env.JTEL_SECRET_KEY;
   if (!secreto) {
@@ -136,22 +162,59 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
     coordinates: t.coordinates as Array<[number, number]>,
   }));
 
+  /*
+   * Se mide UNA vez por unidad y de ahí salen las dos cosas: el estado del
+   * circuito y qué unidades se publican. Medirlo dos veces con dos criterios
+   * es cómo la pantalla acaba diciendo algo que la respuesta no dice.
+   *
+   * `listLivePositionsForCircuit` ya trae sólo unidades con asignación
+   * vigente, pero la asignación NO entra en la decisión: lo único que se mira
+   * de aquí en adelante es dónde y cuándo se vio cada una.
+   */
+  const medidas = posiciones.map((p) => ({
+    p,
+    antiguedadSeg: antiguedadSegundos(p.recordedAt, ahora),
+    enCorredor: vaSobreElCircuito(
+      { lat: p.latitude, lon: p.longitude },
+      trazadosPorSentido,
+      circuito.corridorToleranceMeters,
+    ),
+  }));
+
+  const estado = estadoDelCircuito({
+    enHorario,
+    observaciones: medidas.map((m) => ({ enCorredor: m.enCorredor, antiguedadSeg: m.antiguedadSeg })),
+    frescuraSegundos: circuito.staleAfterSeconds,
+    confianzaSegundos: circuito.serviceConfidenceMinutes * 60,
+  });
+
+  /*
+   * Sólo EN VIVO lleva unidades. En POR HORARIO existe evidencia de servicio
+   * —alguien pasó por el corredor hace poco— pero **no hay una posición que
+   * siga diciendo dónde está el camión**, y dibujar la última conocida se lee
+   * como «va llegando». La evidencia sostiene la afirmación «hay servicio»; no
+   * alcanza para pintar un punto en un mapa.
+   */
+  if (estado !== "en_vivo") return responder(estado);
+
   const fechaLocal = fechaLocalDelCircuito(ahora, circuito.timeZone);
 
-  for (const p of posiciones) {
-    const antiguedad = antiguedadSegundos(p.recordedAt, ahora);
-    // El umbral es del circuito, no una constante: otro corredor puede pedir otro.
+  const unidades: Array<{
+    id_publico: string;
+    lat: number;
+    lon: number;
+    rumbo: number | null;
+    sentido: "ida" | "vuelta" | null;
+    antiguedad_seg: number;
+    fresco: true;
+  }> = [];
+
+  for (const { p, antiguedadSeg: antiguedad, enCorredor } of medidas) {
+    // Los dos mismos cortes que decidieron el estado, sobre la misma medición.
     if (!esFresco(antiguedad, circuito.staleAfterSeconds)) continue;
+    if (!enCorredor) continue;
 
-    /*
-     * Fuera del corredor no se publica. La tolerancia es del circuito y NO es
-     * `stopSnapToleranceMeters`: aquélla mide otra cosa —colocar una parada a
-     * mano sobre un mapa quieto— y con sus 25 m no se publicaría casi nada.
-     */
-    if (!vaSobreElCircuito({ lat: p.latitude, lon: p.longitude }, trazadosPorSentido, circuito.corridorToleranceMeters))
-      continue;
-
-    cuerpo.unidades.push({
+    unidades.push({
       id_publico: idPublicoDelDia(p.unitId, fechaLocal, secreto),
       lat: p.latitude,
       lon: p.longitude,
@@ -170,7 +233,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
     });
   }
 
-  return conCache(cuerpo);
+  return responder("en_vivo", unidades);
 }
 
 function conCache(cuerpo: unknown) {

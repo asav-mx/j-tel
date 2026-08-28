@@ -161,3 +161,69 @@ describe("circuits_color_valido", () => {
     );
   });
 });
+
+describe("la frecuencia declarada, desde la 0031", () => {
+  it("acepta el vacío: no declarada es un estado legítimo", async () => {
+    const c = await repos.circuits.updateCircuit(circuitoId, { declaredFrequencyMinutes: null });
+    expect(c?.declaredFrequencyMinutes).toBeNull();
+  });
+
+  it("el CHECK sigue mordiendo cuando SÍ hay valor", async () => {
+    const quien = await violacion(() =>
+      db.update(circuits).set({ declaredFrequencyMinutes: 0 }).where(inArray(circuits.id, [circuitoId])),
+    );
+    expect(quien).toBe("circuits_frecuencia_positiva");
+  });
+
+  it("un circuito nuevo NO hereda frecuencia: nace sin declarar", async () => {
+    /*
+     * Es la mitad que importa de la 0031. Antes nacía con 20 por default y la
+     * app afirmaba «cada 20 minutos» sin que nadie lo hubiera dicho.
+     */
+    const nuevo = await repos.circuits.createCircuit({
+      concessionAccountId: concesionId,
+      name: `Sin frecuencia ${Date.now()}`,
+      publicSlug: `sin-frec-${Date.now()}`,
+    });
+    expect(nuevo.declaredFrequencyMinutes).toBeNull();
+  });
+});
+
+describe("circuits_confianza_positiva", () => {
+  it("rechaza el cero: sin ventana, POR HORARIO no existiría nunca", async () => {
+    const quien = await violacion(() =>
+      db.update(circuits).set({ serviceConfidenceMinutes: 0 }).where(inArray(circuits.id, [circuitoId])),
+    );
+    expect(quien).toBe("circuits_confianza_positiva");
+  });
+
+  it("nace en 15 minutos y se puede afinar", async () => {
+    const c = await repos.circuits.updateCircuit(circuitoId, { serviceConfidenceMinutes: 25 });
+    expect(c?.serviceConfidenceMinutes).toBe(25);
+  });
+});
+
+describe("el interruptor del rango", () => {
+  it("nace apagado, y prenderlo deja fecha", async () => {
+    const nuevo = await repos.circuits.createCircuit({
+      concessionAccountId: concesionId,
+      name: `Rango ${Date.now()}`,
+      publicSlug: `rango-${Date.now()}`,
+    });
+    expect(nuevo.arrivalRangeEnabledAt).toBeNull();
+
+    const prendido = await repos.circuits.setArrivalRangeEnabled(nuevo.id, true);
+    expect(prendido?.arrivalRangeEnabledAt).toBeInstanceOf(Date);
+
+    const apagado = await repos.circuits.setArrivalRangeEnabled(nuevo.id, false);
+    expect(apagado?.arrivalRangeEnabledAt).toBeNull();
+  });
+
+  it("apagar el rango NO despublica: son dos decisiones", async () => {
+    await repos.circuits.setCircuitPublished(circuitoId, true);
+    await repos.circuits.setArrivalRangeEnabled(circuitoId, false);
+    const c = await repos.circuits.getCircuit(circuitoId);
+    expect(c?.publishedAt).not.toBeNull();
+    expect(c?.arrivalRangeEnabledAt).toBeNull();
+  });
+});

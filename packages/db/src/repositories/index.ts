@@ -5604,6 +5604,23 @@ export class CircuitRepository {
   }
 
   /**
+   * Prende y apaga el RANGO de llegada. Hermano del interruptor de publicación
+   * y por la misma razón marca de tiempo: «desde cuándo se calibró» sale gratis.
+   *
+   * Apagado no esconde el circuito ni las unidades — el pasajero sigue viendo
+   * el camión moverse en el mapa. Lo que se calla es el minuto estimado, que
+   * depende de una velocidad que todavía no se midió en esta calle.
+   */
+  async setArrivalRangeEnabled(id: string, activo: boolean) {
+    const [fila] = await this.db
+      .update(circuits)
+      .set({ arrivalRangeEnabledAt: activo ? new Date() : null, updatedAt: new Date() })
+      .where(eq(circuits.id, id))
+      .returning();
+    return fila ?? null;
+  }
+
+  /**
    * Dónde va cada unidad que corre este circuito, ahora.
    *
    * **La posición NO se une por `unit_id`.** El recolector escribe `unitId:

@@ -34,6 +34,7 @@ export default async function CircuitoPage({
   ]);
 
   const publicado = circuito.publishedAt !== null;
+  const rangoActivo = circuito.arrivalRangeEnabledAt !== null;
   const unidadesVigentes = asignaciones.filter((a) => !a.validTo).length;
 
   return (
@@ -96,6 +97,18 @@ export default async function CircuitoPage({
                     ["Trazado", `${trazados.length} de 2 sentidos`, trazados.length > 0],
                     ["Paradas", String(paradas.length), paradas.length > 0],
                     ["Unidades corriendo", String(unidadesVigentes), unidadesVigentes > 0],
+                    [
+                      "Frecuencia declarada",
+                      circuito.declaredFrequencyMinutes === null
+                        ? "sin declarar"
+                        : `cada ${circuito.declaredFrequencyMinutes} min`,
+                      circuito.declaredFrequencyMinutes !== null,
+                    ],
+                    [
+                      "Rango de llegada",
+                      rangoActivo ? "encendido" : "apagado",
+                      rangoActivo,
+                    ],
                   ] as const
                 ).map(([que, cuanto, hay]) => (
                   <li key={que} className={hay ? "text-[var(--tenue)]" : "text-[var(--texto)]"}>
@@ -109,19 +122,33 @@ export default async function CircuitoPage({
               </ul>
             </div>
 
-            <form
-              action={`/api/jstaff/circuitos/${circuito.id}/publicacion`}
-              method="post"
-              className="shrink-0"
-            >
-              <input type="hidden" name="publicar" value={publicado ? "no" : "si"} />
-              <button
-                type="submit"
-                className="rounded border border-[var(--azul)]/50 bg-[var(--azul)]/10 px-4 py-2 text-sm font-medium text-[var(--azul)] hover:bg-[var(--azul)]/20"
-              >
-                {publicado ? "Despublicar" : "Publicar"}
-              </button>
-            </form>
+            <div className="flex shrink-0 flex-col gap-2">
+              <form action={`/api/jstaff/circuitos/${circuito.id}/publicacion`} method="post">
+                <input type="hidden" name="publicar" value={publicado ? "no" : "si"} />
+                <button
+                  type="submit"
+                  className="w-full rounded border border-[var(--azul)]/50 bg-[var(--azul)]/10 px-4 py-2 text-sm font-medium text-[var(--azul)] hover:bg-[var(--azul)]/20"
+                >
+                  {publicado ? "Despublicar" : "Publicar"}
+                </button>
+              </form>
+
+              {/*
+                El interruptor del RANGO, aparte del de publicación porque son
+                dos decisiones: si el circuito se ve, y si además se le cree el
+                minuto estimado. Apagado, el pasajero sigue viendo el camión en
+                el mapa — lo que se calla es el número.
+              */}
+              <form action={`/api/jstaff/circuitos/${circuito.id}/rango`} method="post">
+                <input type="hidden" name="activar" value={rangoActivo ? "no" : "si"} />
+                <button
+                  type="submit"
+                  className="w-full rounded border border-[var(--linea)] px-4 py-2 text-sm text-[var(--tenue)] hover:bg-[var(--linea-tenue)]"
+                >
+                  {rangoActivo ? "Apagar el rango de llegada" : "Encender el rango de llegada"}
+                </button>
+              </form>
+            </div>
           </div>
         </Card>
 
@@ -147,7 +174,11 @@ export default async function CircuitoPage({
               </div>
               {(
                 [
-                  ["frecuenciaMin", "Frecuencia declarada (min)", circuito.declaredFrequencyMinutes],
+                  [
+                    "frecuenciaMin",
+                    "Frecuencia declarada (min) — vacía si no la declaró",
+                    circuito.declaredFrequencyMinutes,
+                  ],
                   ["umbralSeg", "Dato viejo a los (seg)", circuito.staleAfterSeconds],
                   ["pisoSeg", "Piso del rango (seg)", circuito.arrivalRangeFloorSeconds],
                   ["toleranciaM", "Tolerancia de pegado (m)", circuito.stopSnapToleranceMeters],
@@ -164,7 +195,12 @@ export default async function CircuitoPage({
                     type="number"
                     min={campo === "velocidadKmh" ? 0.1 : 1}
                     step={campo === "velocidadKmh" ? 0.1 : 1}
-                    defaultValue={Number(valor)}
+                    /*
+                      Vacío es un valor, no un hueco: la frecuencia sin declarar
+                      se ve vacía, y guardarla así la borra. `Number(null)` daría
+                      0 y el CHECK lo rechazaría sin que nadie entendiera por qué.
+                    */
+                    defaultValue={valor === null ? "" : Number(valor)}
                     className="w-full rounded border border-[var(--linea-tenue)] bg-transparent px-2 py-1 text-sm"
                   />
                 </div>

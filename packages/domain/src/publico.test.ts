@@ -8,6 +8,7 @@ import {
   sentidoDeLaUnidad,
   type TrazadoDeSentido,
   vaSobreElCircuito,
+  estadoDelCircuito,
 } from "./publico.js";
 
 const LLAVE = "llave-de-prueba-no-es-la-de-produccion";
@@ -203,5 +204,78 @@ describe("vaSobreElCircuito", () => {
       { sentido: "vuelta" as const, coordinates: [[-106.35, 31.61], [-106.34, 31.61]] as Array<[number, number]> },
     ];
     expect(vaSobreElCircuito({ lat: 31.61, lon: -106.345 }, dos, 150)).toBe(true);
+  });
+});
+
+describe("estadoDelCircuito · la escalera", () => {
+  const base = { enHorario: true, frescuraSegundos: 180, confianzaSegundos: 900 };
+  const enRuta = (antiguedadSeg: number) => ({ enCorredor: true, antiguedadSeg });
+  const fuera = (antiguedadSeg: number) => ({ enCorredor: false, antiguedadSeg });
+
+  it("fuera de horario gana sobre todo lo demás, incluso con una unidad encima", () => {
+    expect(
+      estadoDelCircuito({ ...base, enHorario: false, observaciones: [enRuta(5)] }),
+    ).toBe("fuera_de_horario");
+  });
+
+  it("una fresca en el corredor: en vivo", () => {
+    expect(estadoDelCircuito({ ...base, observaciones: [enRuta(30)] })).toBe("en_vivo");
+  });
+
+  it("vieja para en vivo pero dentro de la confianza: por horario", () => {
+    expect(estadoDelCircuito({ ...base, observaciones: [enRuta(600)] })).toBe("por_horario");
+  });
+
+  it("pasada la confianza: sin servicio", () => {
+    expect(estadoDelCircuito({ ...base, observaciones: [enRuta(1200)] })).toBe("sin_servicio");
+  });
+
+  it("sin ninguna observación: sin servicio, nunca por horario", () => {
+    expect(estadoDelCircuito({ ...base, observaciones: [] })).toBe("sin_servicio");
+  });
+
+  it("EL CAMIÓN DEL PATIO: fresquísimo pero fuera del corredor no sostiene nada", () => {
+    /*
+     * Reporta cada segundo desde el patio. Si la escalera no exigiera corredor,
+     * mantendría la ruta «por horario» toda la noche prometiendo una cadencia
+     * que nadie está dando. Es el caso que decidió la regla.
+     */
+    expect(estadoDelCircuito({ ...base, observaciones: [fuera(1)] })).toBe("sin_servicio");
+    expect(
+      estadoDelCircuito({ ...base, observaciones: [fuera(1), fuera(2), fuera(3)] }),
+    ).toBe("sin_servicio");
+  });
+
+  it("EL TÚNEL: la vio la ruta hace rato, y eso sí cuenta", () => {
+    expect(estadoDelCircuito({ ...base, observaciones: [enRuta(800)] })).toBe("por_horario");
+  });
+
+  it("basta UNA fresca entre muchas viejas para estar en vivo", () => {
+    expect(
+      estadoDelCircuito({ ...base, observaciones: [enRuta(5000), enRuta(60), enRuta(4000)] }),
+    ).toBe("en_vivo");
+  });
+
+  it("una fuera del corredor no descalifica a la que sí va en ruta", () => {
+    expect(estadoDelCircuito({ ...base, observaciones: [fuera(1), enRuta(60)] })).toBe("en_vivo");
+  });
+
+  it("los umbrales son los que se le pasan, no constantes escondidas", () => {
+    const obs = [enRuta(300)];
+    expect(estadoDelCircuito({ ...base, observaciones: obs })).toBe("por_horario");
+    expect(
+      estadoDelCircuito({ ...base, observaciones: obs, frescuraSegundos: 600 }),
+    ).toBe("en_vivo");
+    expect(
+      estadoDelCircuito({ ...base, observaciones: obs, confianzaSegundos: 120 }),
+    ).toBe("sin_servicio");
+  });
+
+  it("el orden es el de la escalera: horario antes que evidencia", () => {
+    // Cerrado y con un camión fresco encima de la ruta —el que regresa al
+    // patio— sigue siendo «fuera de horario». No hay servicio que anunciar.
+    expect(
+      estadoDelCircuito({ ...base, enHorario: false, observaciones: [enRuta(1)] }),
+    ).toBe("fuera_de_horario");
   });
 });

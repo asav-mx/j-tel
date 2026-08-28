@@ -51,6 +51,16 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
       /* Los tres números que la app necesita para calcular sin inventar nada. */
       piso_rango_seg: circuito.arrivalRangeFloorSeconds,
       dato_viejo_seg: circuito.staleAfterSeconds,
+      /*
+       * La MISMA tolerancia con la que el servidor decidió qué publicar. Iba
+       * clavada en 150 dentro del componente, y coincidía con la columna por
+       * casualidad: el día que alguien moviera la columna, el servidor
+       * publicaría un camión que el teléfono descartaría para calcular el
+       * rango, sin que nada lo dijera. Es la divergencia silenciosa que ya
+       * costó caro cuando la geocerca congelada en el hecho y la que usaba el
+       * motor para juzgar se separaron.
+       */
+      corredor_m: circuito.corridorToleranceMeters,
       velocidad_declarada_kmh: circuito.avgSpeedKmh,
       horario: {
         inicio: circuito.serviceStartLocal,
