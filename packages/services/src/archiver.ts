@@ -38,6 +38,49 @@ export interface CarrierArchiveResult {
  * crece (cron caído), hay que trocear por tiempo y por lotes de IMEI; si no,
  * la marca de agua se atasca y deja de guardar.
  */
+/**
+ * El error de un archivo, listo para guardar sin perder lo que importa.
+ *
+ * **La causa venía al final y se cortaba.** Las alertas guardaban
+ * `message.slice(0, 200)`, y el mensaje de una consulta fallida de Drizzle
+ * empieza con el SQL completo: doscientos caracteres no alcanzan ni para
+ * terminar el `select`. Las veinte alertas del 26 de agosto quedaron todas
+ * cortadas a media consulta, y **por qué falló no se puede saber** — si fue
+ * tiempo de espera, pool agotado o permisos.
+ *
+ * Ahora la causa va al FRENTE del mensaje, que es donde el humano la lee, y el
+ * texto íntegro va en `metadata`, que es `jsonb` y no lo recorta nadie. El
+ * mensaje sigue acotado a propósito: la pantalla de verificación lo pinta
+ * entero, y un `select` de cuarenta columnas ahí dentro no es información, es
+ * una pared.
+ */
+export function detalleDelError(err: unknown): {
+  /** El texto completo, tal cual. Va a `metadata`, nunca se recorta. */
+  error: string;
+  /** El error de abajo, que es el que dice QUÉ pasó. */
+  causa: string | null;
+  /** El código de Postgres, si lo hay: lo más diagnóstico y lo más corto. */
+  codigo: string | null;
+  /** Una línea para el humano: la causa si la hay, si no el principio. */
+  resumen: string;
+} {
+  const error = err instanceof Error ? err.message : String(err);
+  const abajo = err instanceof Error ? err.cause : undefined;
+  const causa =
+    abajo instanceof Error ? abajo.message : typeof abajo === "string" ? abajo : null;
+  const codigo =
+    abajo && typeof abajo === "object" && "code" in abajo && typeof abajo.code === "string"
+      ? abajo.code
+      : null;
+  const cabeza = causa ?? error;
+  return {
+    error,
+    causa,
+    codigo,
+    resumen: cabeza.length > 300 ? `${cabeza.slice(0, 300)}…` : cabeza,
+  };
+}
+
 export class ArchiverService {
   private firstRunLookbackMinutes: number;
   private overlapMinutes: number;
@@ -68,14 +111,19 @@ export class ArchiverService {
       try {
         results.push(await this.archiveCarrier(carrier.id, carrier.name, now));
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const d = detalleDelError(err);
         try {
           await this.repos.ingestAlerts.create({
             carrierAccountId: carrier.id,
             kind: "archive_error",
             severity: "warning",
-            message: `Archivo falló: ${message.slice(0, 200)}`,
-            metadata: { at: now.toISOString() },
+            message: `Archivo falló: ${d.resumen}`,
+            metadata: {
+              at: now.toISOString(),
+              error: d.error,
+              causa: d.causa,
+              codigo: d.codigo,
+            },
           });
         } catch {
           /* ignore */
@@ -88,7 +136,9 @@ export class ArchiverService {
           saved: 0,
           from: "",
           to: now.toISOString(),
-          error: message,
+          // El texto íntegro, el mismo que antes: este campo va al resumen de
+          // la corrida, no a la pantalla, y ahí recortar sólo estorba.
+          error: d.error,
         });
       }
     }
@@ -162,13 +212,20 @@ export class ArchiverService {
           base.chunks = chunks;
           base.to = cursor.toISOString();
           if (/429|503|quota|exceeded|too many/i.test(message)) {
+            const d = detalleDelError(err);
             try {
               await this.repos.ingestAlerts.create({
                 carrierAccountId,
                 kind: "rate_limit",
                 severity: "warning",
-                message: `Rate limit en archivo: ${message.slice(0, 180)}`,
-                metadata: { cursor: cursor.toISOString(), chunkEnd: chunkEnd.toISOString() },
+                message: `Rate limit en archivo: ${d.resumen}`,
+                metadata: {
+                  cursor: cursor.toISOString(),
+                  chunkEnd: chunkEnd.toISOString(),
+                  error: d.error,
+                  causa: d.causa,
+                  codigo: d.codigo,
+                },
               });
             } catch {
               /* ignore */
