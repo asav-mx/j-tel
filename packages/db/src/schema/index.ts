@@ -1044,7 +1044,15 @@ export const circuits = pgTable(
     /** Va en la URL pública y en el QR impreso. No se cambia después de imprimir. */
     publicSlug: text("public_slug").notNull().unique(),
     /** En minutos: es una promesa pública, y en minutos se promete. */
-    declaredFrequencyMinutes: integer("declared_frequency_minutes").notNull().default(20),
+    /**
+     * Cada cuántos minutos declara el concesionario que pasa una unidad.
+     *
+     * **`null` = no declarada**, y entonces la app dice que hay servicio *sin*
+     * tiempo estimado. Era `NOT NULL DEFAULT 20`, y por eso «declaró 20» y «no
+     * declaró nada» eran indistinguibles: la app afirmaba una cadencia que
+     * nadie había dicho, con la autoridad del sistema detrás.
+     */
+    declaredFrequencyMinutes: integer("declared_frequency_minutes"),
     /** En segundos: la prueba de campo puede pedir afinarlo por debajo del minuto. */
     staleAfterSeconds: integer("stale_after_seconds").notNull().default(180),
     /** En segundos, por la misma razón. Es el piso; la varianza de tráfico se suma encima. */
@@ -1067,6 +1075,23 @@ export const circuits = pgTable(
      * entre vértices: con 25 m no se publicaría casi nada.
      */
     corridorToleranceMeters: doublePrecision("corridor_tolerance_meters").notNull().default(150),
+    /**
+     * Cuánto tiempo después de ver una unidad **dentro del corredor** se puede
+     * seguir afirmando que hay servicio. Pasado esto el circuito cae a SIN
+     * SERVICIO y la app deja de prometer cadencia.
+     *
+     * No se deriva de la frecuencia: derivarla acoplaría dos perillas con
+     * significados distintos, y quien afinara la frecuencia movería sin saberlo
+     * cuánto tiempo la app sigue afirmando que hay servicio.
+     */
+    serviceConfidenceMinutes: integer("service_confidence_minutes").notNull().default(15),
+    /**
+     * Desde cuándo el circuito muestra el **rango** de llegada al pasajero.
+     * `null` = apagado: se ve el camión moverse en el mapa —verdad observada—
+     * pero no el minuto estimado, que depende de una velocidad todavía sin
+     * calibrar contra la calle. Hermana del interruptor de publicación.
+     */
+    arrivalRangeEnabledAt: timestamp("arrival_range_enabled_at", { withTimezone: true }),
     /**
      * Velocidad EFECTIVA de avance, en km/h: desplazamiento entre tiempo, con
      * las paradas y los semáforos adentro. Es lo que responde «en cuánto

@@ -228,8 +228,12 @@ export default async function CircuitosPage({
                   <span>
                     <strong>{c.name}</strong>
                     <span className="ml-2 text-xs text-[var(--muted)]">
-                      {c.concessionName} · cada {c.declaredFrequencyMinutes} min ·{" "}
-                      <code>{c.publicSlug}</code>
+                      {c.concessionName} ·{" "}
+                      {/* Vacía se enuncia, no se rellena con un número que nadie declaró. */}
+                      {c.declaredFrequencyMinutes === null
+                        ? "sin frecuencia declarada"
+                        : `cada ${c.declaredFrequencyMinutes} min`}{" "}
+                      · <code>{c.publicSlug}</code>
                     </span>
                   </span>
                   <Link href={`/jstaff/circuitos/${c.id}`} className="text-sm underline">

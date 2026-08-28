@@ -32,12 +32,31 @@ export async function POST(request: Request) {
     return Number.isFinite(v) && v > 0 ? Math.round(v) : porDefecto;
   };
 
+  /*
+   * La frecuencia NO lleva default, a diferencia de las demás perillas.
+   *
+   * Las otras son umbrales del instrumento: hay un valor razonable y heredarlo
+   * no afirma nada de cara al pasajero. La frecuencia sí — la app la dice en
+   * voz alta, «cada 20 minutos», con la autoridad del sistema detrás. Un
+   * default aquí volvía indistinguible «lo declaró el concesionario» de «nadie
+   * lo escribió», y la app afirmaba la cadencia igual en los dos casos.
+   *
+   * Sin valor capturado se guarda vacío, y la app dice que hay servicio sin
+   * tiempo estimado.
+   */
+  const frecuencia = (() => {
+    const crudo = String(form.get("frecuenciaMin") ?? "").trim();
+    if (!crudo) return null;
+    const v = Number(crudo);
+    return Number.isFinite(v) && v > 0 ? Math.round(v) : null;
+  })();
+
   try {
     const creado = await getRepos().circuits.createCircuit({
       concessionAccountId: concesion,
       name: nombre,
       publicSlug: slug,
-      declaredFrequencyMinutes: numero("frecuenciaMin", 20),
+      declaredFrequencyMinutes: frecuencia,
       staleAfterSeconds: numero("umbralSeg", 180),
       arrivalRangeFloorSeconds: numero("pisoSeg", 180),
       stopSnapToleranceMeters: numero("toleranciaM", 25),

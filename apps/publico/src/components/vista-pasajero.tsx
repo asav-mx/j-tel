@@ -37,11 +37,19 @@ import {
 export interface Forma {
   circuito_id: string;
   nombre: string;
-  frecuencia_declarada_min: number;
+  /** `null` cuando el concesionario no la declaró. La app entonces NO promete cadencia. */
+  frecuencia_declarada_min: number | null;
   /** El color de la ruta. Sale del dato: con más rutas, cada una lleva el suyo. */
   color_hex: string;
   piso_rango_seg: number;
   dato_viejo_seg: number;
+  /**
+   * La tolerancia del corredor del circuito, la misma con la que el servidor
+   * decidió qué publicar. Llega por la forma en vez de vivir clavada aquí: una
+   * copia local que coincide «por ahora» es una divergencia esperando el día
+   * que alguien mueva la columna.
+   */
+  corredor_m: number;
   velocidad_declarada_kmh: number;
   horario: { inicio: string; fin: string; zona: string };
   trazados: Array<{ sentido: "ida" | "vuelta"; coordenadas: Array<[number, number]>; largo_m: number }>;
@@ -65,8 +73,14 @@ interface UnidadViva {
 }
 
 interface Vivo {
-  en_servicio: boolean;
-  frecuencia_declarada_min: number;
+  /** La escalera ya resuelta por el servidor. La pantalla lee, no deduce. */
+  estado: "fuera_de_horario" | "en_vivo" | "por_horario" | "sin_servicio";
+  /** A qué hora abre el circuito, para poder decirlo cuando está cerrado. */
+  abre_a: string;
+  /** El rango de llegada sólo se enseña si la velocidad del circuito ya se calibró. */
+  rango_activo: boolean;
+  /** `null` cuando el concesionario no la declaró. La app entonces NO promete cadencia. */
+  frecuencia_declarada_min: number | null;
   unidades: UnidadViva[];
   generado_en: string;
 }
@@ -75,12 +89,11 @@ interface Vivo {
 const SONDEO_MS = 15_000;
 
 /** Cuánto se puede alejar algo del trazado y seguir «en el circuito». */
-const CORREDOR_METROS = 150;
 
 /** Cuánto camino cubre la barra de acercamiento. Del prototipo: 2.6 km. */
 const VENTANA_PISTA_M = 2600;
 
-const LLAVE_TEMA = "jb-tema";
+const LLAVE_TEMA = "jtel-tema";
 
 const IconoBus = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -226,7 +239,7 @@ export function VistaPasajero({
       if (!u.sentido) continue;
       const trazado = trazadoPorSentido.get(u.sentido);
       if (!trazado) continue;
-      const a = avanceSobreTrazado({ lat: u.lat, lon: u.lon }, trazado, CORREDOR_METROS);
+      const a = avanceSobreTrazado({ lat: u.lat, lon: u.lon }, trazado, forma.corredor_m);
       if (!a) continue;
       const antes = anteriores.current.get(u.id_publico);
       if (antes) {
@@ -253,8 +266,8 @@ export function VistaPasajero({
       if (!u.sentido) continue; // sin sentido no se sabe si viene o va
       const trazado = trazadoPorSentido.get(u.sentido);
       if (!trazado) continue;
-      const donde = avanceSobreTrazado({ lat: u.lat, lon: u.lon }, trazado, CORREDOR_METROS);
-      const miAvance = avanceSobreTrazado(yo, trazado, CORREDOR_METROS);
+      const donde = avanceSobreTrazado({ lat: u.lat, lon: u.lon }, trazado, forma.corredor_m);
+      const miAvance = avanceSobreTrazado(yo, trazado, forma.corredor_m);
       if (!donde || !miAvance) continue;
       const r = rangoDeLlegada(
         donde.avanceMetros,
@@ -272,13 +285,38 @@ export function VistaPasajero({
   const siguiente = llegadas.length > 1 ? llegadas[1] : null;
 
   /*
-   * EL MODO. Uno solo para las tres causas —sin conexión, fuera de horario, sin
-   * unidades con posición— porque para el pasajero significan lo mismo: hoy toca
-   * guiarse por la frecuencia. Separarlas sería contarle de quién es la culpa, y
-   * eso ni le sirve ni le corresponde. Ley del producto desde el 27 de agosto.
+   * EL MODO, y por qué dejó de ser uno solo.
+   *
+   * El 27 de agosto se colapsaron tres causas —sin conexión, fuera de horario,
+   * sin unidades con posición— en un único «Por horario». La razón era buena y
+   * sigue siéndolo: la app no le cuenta al pasajero de quién es la culpa, y
+   * antes de eso llegó a dibujar camiones donde no los había.
+   *
+   * Pero resolvió de más. «Por horario» no es un silencio: es una AFIRMACIÓN
+   * —«el servicio corre cada N minutos, aguanta»— y se estaba diciendo también
+   * cuando la ruta estaba cerrada y cuando no había un solo camión operando.
+   * Prometer cadencia donde no hay servicio es la falta de la sección E del
+   * Marco: completar un hueco porque la pantalla se ve mejor completa.
+   *
+   * Lo que lo reemplaza es una escalera de cuatro estados que **resuelve el
+   * servidor** y que esta pantalla sólo lee. No vuelve a separar por culpa:
+   * separa por lo que el sistema puede AFIRMAR. Cerrado, en vivo, hay servicio
+   * pero calló la señal, y no hay servicio — cuatro afirmaciones distintas
+   * porque son cuatro verdades distintas.
+   *
+   * `sin_conexion` es el único que decide el teléfono, y va aparte a propósito:
+   * sin respuesta no sabemos nada del servicio, así que no se puede reusar la
+   * copia de «sin servicio» —que afirma que no lo hay— ni la de «por horario»
+   * —que promete una cadencia sin evidencia—. Es el mismo error de antes visto
+   * desde el otro lado.
    */
-  const porHorario =
-    (error && !vivo) || (vivo !== null && (!vivo.en_servicio || vivo.unidades.length === 0));
+  type Modo = "cargando" | "sin_conexion" | Vivo["estado"];
+  const modo: Modo = error && !vivo ? "sin_conexion" : vivo === null ? "cargando" : vivo.estado;
+
+  /** Ni mapa vivo ni pista ni rango: no hay posición que dibujar. */
+  const porHorario = modo !== "en_vivo";
+  /** El rango existe sólo en vivo, con ubicación del pasajero, y con el interruptor prendido. */
+  const conRango = modo === "en_vivo" && (vivo?.rango_activo ?? false);
 
   // ── El mapa, de fondo ─────────────────────────────────────────────────
 
@@ -426,7 +464,12 @@ export function VistaPasajero({
 
   // ── Lo que se lee ─────────────────────────────────────────────────────
 
-  const cadaMin = forma.frecuencia_declarada_min;
+  /*
+   * La del sondeo cuando la hay, la de la forma mientras no. Dos fuentes para
+   * el mismo número es cómo terminan contradiciéndose: aquí manda la más
+   * fresca, y un `null` del sondeo es una respuesta, no un hueco que rellenar.
+   */
+  const cadaMin = vivo ? vivo.frecuencia_declarada_min : forma.frecuencia_declarada_min;
   const pisoMin = Math.max(1, Math.round(forma.piso_rango_seg / 60));
   const nombreApp = forma.nombre;
   const insignia = iniciales(forma.nombre);
@@ -437,7 +480,7 @@ export function VistaPasajero({
   } as React.CSSProperties;
 
   return (
-    <div className="pantalla" style={estiloRuta} data-modo={porHorario ? "horario" : "vivo"}>
+    <div className="pantalla" style={estiloRuta} data-modo={modo} data-rango={conRango ? "si" : "no"}>
       <div id="mapa" ref={contenedor} />
 
       {esVistaPrevia && (
@@ -489,12 +532,25 @@ export function VistaPasajero({
           <div className={`tj-cuerpo${proxima?.llegando && !porHorario ? " llegando" : ""}`}>
             <div className="eta-fila">
               <div className="eta-1">
-                {porHorario ? (
+                {modo === "fuera_de_horario" ? (
                   <>
-                    <span className="n">Cada {cadaMin}</span>
-                    <span className="u">min</span>
+                    <span className="n">Abre {vivo?.abre_a}</span>
                   </>
-                ) : proxima ? (
+                ) : modo === "sin_servicio" ? (
+                  <span className="n">Sin servicio</span>
+                ) : modo === "sin_conexion" || modo === "cargando" ? (
+                  <span className="n">—</span>
+                ) : modo === "por_horario" ? (
+                  /* Sin frecuencia declarada NO se inventa una cadencia. */
+                  cadaMin !== null ? (
+                    <>
+                      <span className="n">Cada {cadaMin}</span>
+                      <span className="u">min</span>
+                    </>
+                  ) : (
+                    <span className="n">En servicio</span>
+                  )
+                ) : conRango && proxima ? (
                   proxima.llegando ? (
                     <span className="n">Llegando</span>
                   ) : (
@@ -513,20 +569,22 @@ export function VistaPasajero({
                 )}
               </div>
 
-              {proxima && !porHorario && (
+              {conRango && proxima && (
                 <div className="eta-sig">
                   <div className="k">Después</div>
                   <div className="v">
                     {siguiente
                       ? `${Math.max(0, Math.floor(siguiente.desdeSeg / 60))}–${Math.ceil(siguiente.hastaSeg / 60)} min`
-                      : `~${cadaMin} min`}
+                      : cadaMin !== null
+                        ? `~${cadaMin} min`
+                        : "—"}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* La pista solo existe con posición en vivo. Ver la ley de arriba. */}
-            {proxima && !porHorario && (
+            {/* La pista solo existe con posición en vivo Y con el rango prendido. */}
+            {conRango && proxima && (
               <>
                 <div className="pista">
                   <div className="riel" />
@@ -550,20 +608,65 @@ export function VistaPasajero({
             )}
 
             <div className="cada">
-              El servicio de esta ruta corre cada {cadaMin} minutos. Verás el tiempo exacto en
-              cuanto haya ubicación.
+              {modo === "fuera_de_horario" ? (
+                <>Esta ruta no está en servicio ahorita. Abre a las {vivo?.abre_a}.</>
+              ) : modo === "sin_servicio" ? (
+                <>Ahorita no hay unidades en servicio en esta ruta.</>
+              ) : modo === "sin_conexion" ? (
+                <>No pudimos consultar el servicio. Revisa tu conexión y vuelve a intentar.</>
+              ) : modo === "cargando" ? (
+                <>Consultando el servicio…</>
+              ) : modo === "por_horario" ? (
+                cadaMin !== null ? (
+                  <>
+                    El servicio de esta ruta corre cada {cadaMin} minutos. Verás el tiempo exacto
+                    en cuanto haya ubicación.
+                  </>
+                ) : (
+                  /*
+                   * Hay evidencia de servicio y NO hay frecuencia declarada. Se
+                   * dice lo primero y se calla lo segundo: inventar una cadencia
+                   * para llenar el renglón es exactamente lo que este modo vino
+                   * a quitar.
+                   */
+                  <>Hay unidades corriendo esta ruta. Verás el tiempo exacto en cuanto haya ubicación.</>
+                )
+              ) : !conRango ? (
+                <>
+                  Puedes ver dónde vienen los camiones en el mapa. El tiempo estimado de esta ruta
+                  todavía no está calibrado.
+                </>
+              ) : (
+                <>Verás el tiempo exacto en cuanto actives tu ubicación.</>
+              )}
             </div>
 
+            {/*
+              En SIN SERVICIO el rótulo repetiría palabra por palabra el titular
+              —«Sin servicio» arriba y «Sin servicio» abajo—, así que no va. Un
+              rótulo que sólo repite gasta el renglón y hace dudar de si dice
+              otra cosa.
+            */}
+            {modo !== "sin_servicio" && (
             <div className="fresca">
               <span className="p" />
               <span>
-                {porHorario
-                  ? "Por horario"
-                  : proxima
-                    ? `En vivo · ±${pisoMin} min · ${velocidad.origen === "medida" ? `${velocidad.kmh.toFixed(1)} km/h medidos` : `${velocidad.kmh.toFixed(1)} km/h declarados`}`
-                    : "En vivo · activa tu ubicación para el tiempo"}
+                {modo === "fuera_de_horario"
+                  ? "Fuera de horario"
+                  : modo === "sin_conexion"
+                      ? "Sin conexión"
+                      : modo === "cargando"
+                        ? "Consultando…"
+                        : modo === "por_horario"
+                          ? "Por horario"
+                          : conRango && proxima
+                            ? `En vivo · ±${pisoMin} min · ${velocidad.origen === "medida" ? `${velocidad.kmh.toFixed(1)} km/h medidos` : `${velocidad.kmh.toFixed(1)} km/h declarados`}`
+                            : conRango
+                              ? "En vivo · activa tu ubicación para el tiempo"
+                              : "En vivo · sin tiempo estimado"}
               </span>
             </div>
+            )}
           </div>
         </div>
 
@@ -627,14 +730,14 @@ function Hilo({
 
   const miAvance = useMemo(() => {
     if (!yo || !principal) return null;
-    return avanceSobreTrazado(yo, principal, CORREDOR_METROS)?.avanceMetros ?? null;
+    return avanceSobreTrazado(yo, principal, forma.corredor_m)?.avanceMetros ?? null;
   }, [yo, principal]);
 
   const camiones = useMemo(() => {
     if (!vivo || !principal) return [] as number[];
     const out: number[] = [];
     for (const u of vivo.unidades) {
-      const a = avanceSobreTrazado({ lat: u.lat, lon: u.lon }, principal, CORREDOR_METROS);
+      const a = avanceSobreTrazado({ lat: u.lat, lon: u.lon }, principal, forma.corredor_m);
       if (a) out.push(a.avanceMetros);
     }
     return out;

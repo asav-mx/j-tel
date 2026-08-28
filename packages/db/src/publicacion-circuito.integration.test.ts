@@ -54,6 +54,10 @@ beforeAll(async () => {
     concessionAccountId: concesionId,
     name: `Circuito ${marca}`,
     publicSlug: slug,
+    // Explícita: desde la 0031 la frecuencia ya no tiene default, y esta prueba
+    // comprueba que despublicar NO borra los datos del circuito. Para eso el
+    // dato tiene que haber sido puesto por alguien.
+    declaredFrequencyMinutes: 20,
   });
   circuitoId = circuito.id;
 

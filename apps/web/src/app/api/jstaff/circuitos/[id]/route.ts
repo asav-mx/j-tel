@@ -37,7 +37,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   // bug que dejó sin crearse todas las paradas del 26 de agosto.
   const cambios: Partial<{
     name: string;
-    declaredFrequencyMinutes: number;
+    declaredFrequencyMinutes: number | null;
     staleAfterSeconds: number;
     arrivalRangeFloorSeconds: number;
     stopSnapToleranceMeters: number;
@@ -49,9 +49,22 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const nombre = String(form.get("nombre") ?? "").trim();
   if (nombre) cambios.name = nombre;
 
-  const frecuencia = entero("frecuenciaMin");
-  if (frecuencia === null) return volver({ error: "La frecuencia tiene que ser mayor que cero" });
-  if (frecuencia !== undefined) cambios.declaredFrequencyMinutes = frecuencia;
+  /*
+   * Vaciar el campo BORRA la frecuencia, y es una acción legítima: si el
+   * concesionario deja de declararla, la app tiene que dejar de prometerla. Por
+   * eso aquí el vacío no es «no cambies nada» como en los demás campos.
+   */
+  const frecuenciaCruda = String(form.get("frecuenciaMin") ?? "").trim();
+  if (form.has("frecuenciaMin")) {
+    if (!frecuenciaCruda) cambios.declaredFrequencyMinutes = null;
+    else {
+      const v = Number(frecuenciaCruda);
+      if (!Number.isFinite(v) || v <= 0) {
+        return volver({ error: "La frecuencia tiene que ser mayor que cero, o quedar vacía" });
+      }
+      cambios.declaredFrequencyMinutes = Math.round(v);
+    }
+  }
 
   const umbral = entero("umbralSeg");
   if (umbral === null) return volver({ error: "El umbral de dato viejo tiene que ser mayor que cero" });

@@ -413,35 +413,47 @@ body {
 /* ── Modo POR HORARIO ────────────────────────────────────────────── */
 
 /*
- * No es una falla y la app no se disculpa: es otra fuente, declarada.
+ * El tratamiento QUIETO: todo lo que no es «en vivo».
  *
- * **Un solo modo para las tres causas** —sin conexión, fuera de horario, sin
- * unidades con posición— porque para el pasajero significan lo mismo: hoy toca
- * guiarse por la frecuencia. Separarlas sería contarle de quién es la culpa, y
- * eso ni le sirve ni le corresponde. Es ley del producto desde el 27 de agosto.
+ * La app no se disculpa ni señala a nadie — eso no cambió. Lo que cambió es
+ * que ya no hay un solo modo. Antes estas reglas colgaban de
+ * `[data-modo="horario"]`, un único estado que juntaba sin conexión, fuera de
+ * horario y sin unidades. Hoy son cuatro estados con cuatro copias distintas,
+ * porque son cuatro verdades distintas.
+ *
+ * Lo VISUAL sí se comparte, y a propósito: ninguno de los cuatro tiene
+ * posición viva que enseñar, así que ninguno debe verse vivo. Por eso el
+ * selector es `:not([data-modo="en_vivo"])` y no una lista de estados — una
+ * lista habría que acordarse de actualizarla al agregar el quinto, y el día
+ * que alguien lo olvide el estado nuevo se pintaría como si estuviera en vivo.
  */
-[data-modo="horario"] .tarjeta {
+.pantalla:not([data-modo="en_vivo"]) .tarjeta {
   background: var(--gris-bg);
 }
 
-[data-modo="horario"] .tj-cab {
+.pantalla:not([data-modo="en_vivo"]) .tj-cab {
   background: var(--gris);
 }
 
-[data-modo="horario"] .eta-1 .n {
+.pantalla:not([data-modo="en_vivo"]) .eta-1 .n {
   color: var(--gris);
   font-size: 44px;
   letter-spacing: -1px;
 }
 
 /* La pista DESAPARECE. Congelada afirmaría una distancia que nadie mide. */
-[data-modo="horario"] .pista,
-[data-modo="horario"] .pista-lbl,
-[data-modo="horario"] .eta-sig {
+.pantalla:not([data-modo="en_vivo"]) .pista,
+.pantalla:not([data-modo="en_vivo"]) .pista-lbl,
+.pantalla:not([data-modo="en_vivo"]) .eta-sig {
   display: none;
 }
 
-[data-modo="horario"] .fresca .p {
+/*
+ * El punto deja de latir y deja de ser verde. El verde dice «esto está bien y
+ * está pasando ahora»: junto a «Sin servicio» estaría contradiciendo la frase
+ * que acompaña. El color es parte de la afirmación, no decoración.
+ */
+.pantalla:not([data-modo="en_vivo"]) .fresca .p {
   background: var(--gris);
   animation: none;
 }
@@ -455,7 +467,23 @@ body {
   line-height: 1.45;
 }
 
-[data-modo="horario"] .cada {
+/*
+ * La frase explicativa se enseña en TODOS los estados quietos, y es lo único
+ * que distingue «cerrado» de «no hay camiones» de «se cayó la señal». Sin
+ * ella los tres se ven igual, que era justo el defecto.
+ */
+.pantalla:not([data-modo="en_vivo"]) .cada {
+  display: block;
+}
+
+/* En vivo sin rango tampoco lleva pista ni «después»: no hay minuto que dar. */
+.pantalla[data-modo="en_vivo"][data-rango="no"] .pista,
+.pantalla[data-modo="en_vivo"][data-rango="no"] .pista-lbl,
+.pantalla[data-modo="en_vivo"][data-rango="no"] .eta-sig {
+  display: none;
+}
+
+.pantalla[data-modo="en_vivo"][data-rango="no"] .cada {
   display: block;
 }
 

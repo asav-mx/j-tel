@@ -30,6 +30,8 @@ const CIRCUITO = {
   serviceEndLocal: "00:00", // 24 h: la prueba no depende de la hora a la que corra.
   timeZone: "America/Ciudad_Juarez",
   corridorToleranceMeters: 150,
+  serviceConfidenceMinutes: 15,
+  arrivalRangeEnabledAt: null as Date | null,
 };
 
 /*
@@ -154,19 +156,19 @@ describe("fuera del corredor", () => {
     expect(crudo).not.toContain("u-lejos");
   });
 
-  it("cuando TODAS quedan fuera, la respuesta es una lista vacía en servicio", async () => {
+  it("cuando TODAS quedan fuera es SIN SERVICIO, no «por horario»", async () => {
     /*
-     * Es lo que hace que la app caiga a «Por horario» en vez de enseñar un mapa
-     * vacío sin explicación: `porHorario` se enciende con `unidades.length === 0`
-     * estando `en_servicio`. La misma caída que el dato viejo y que la falta de
-     * conexión — un solo modo para las tres causas.
+     * El caso que motivó la escalera. Cinco unidades asignadas, frescas, y
+     * ninguna en el corredor: eso NO es «hay servicio y calló la señal» — es
+     * que no hay servicio. Antes caía a «por horario» y la app prometía una
+     * cadencia sin una sola observación que la sostuviera.
      */
     repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
       { unitId: "a", ...FUERA, heading: 0, recordedAt: new Date(Date.now() - 10_000) },
       { unitId: "b", ...FUERA, heading: 90, recordedAt: new Date(Date.now() - 20_000) },
     ]);
     const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
-    expect(cuerpo.en_servicio).toBe(true);
+    expect(cuerpo.estado).toBe("sin_servicio");
     expect(cuerpo.unidades).toEqual([]);
   });
 
@@ -231,9 +233,117 @@ describe("horario", () => {
     if (hhmm === "03:00") return; // un minuto al día en que esta prueba no aplica
 
     const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
-    expect(cuerpo.en_servicio).toBe(false);
+    expect(cuerpo.estado).toBe("fuera_de_horario");
     expect(cuerpo.unidades).toEqual([]);
+    // Y dice a qué hora abre, que es lo único que el pasajero puede usar.
+    expect(cuerpo.abre_a).toBe("03:00");
     expect(repos.circuits.listLivePositionsForCircuit).not.toHaveBeenCalled();
+  });
+});
+
+describe("la escalera, por el endpoint", () => {
+  const enRuta = { latitude: 31.71, longitude: -106.45 };
+
+  beforeEach(() => {
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue(CIRCUITO);
+  });
+
+  it("fresca y en corredor: EN VIVO, con la unidad", async () => {
+    repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
+      { unitId: "u", ...enRuta, heading: 45, recordedAt: new Date(Date.now() - 30_000) },
+    ]);
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.estado).toBe("en_vivo");
+    expect(cuerpo.unidades).toHaveLength(1);
+  });
+
+  it("vieja pero dentro de la ventana de confianza: POR HORARIO, y SIN unidades", async () => {
+    /*
+     * Hay evidencia de servicio —se le vio en la ruta hace diez minutos— pero
+     * ninguna posición que siga diciendo dónde está. Dibujar la última conocida
+     * se leería como «va llegando».
+     */
+    repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
+      { unitId: "u", ...enRuta, heading: 45, recordedAt: new Date(Date.now() - 10 * 60_000) },
+    ]);
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.estado).toBe("por_horario");
+    expect(cuerpo.unidades).toEqual([]);
+  });
+
+  it("pasada la ventana de confianza: SIN SERVICIO", async () => {
+    repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
+      { unitId: "u", ...enRuta, heading: 45, recordedAt: new Date(Date.now() - 20 * 60_000) },
+    ]);
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.estado).toBe("sin_servicio");
+  });
+
+  it("la ventana de confianza es la DEL CIRCUITO", async () => {
+    repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
+      { unitId: "u", ...enRuta, heading: 45, recordedAt: new Date(Date.now() - 20 * 60_000) },
+    ]);
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue({
+      ...CIRCUITO,
+      serviceConfidenceMinutes: 30,
+    });
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.estado).toBe("por_horario");
+  });
+
+  it("una unidad vieja FUERA del corredor no sostiene POR HORARIO — el camión del patio", async () => {
+    /*
+     * Reporta cada minuto desde el patio. Su última posición está en el patio,
+     * así que no es evidencia de que la ruta esté corriendo.
+     */
+    repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
+      { unitId: "patio", ...FUERA, heading: 0, recordedAt: new Date(Date.now() - 10_000) },
+    ]);
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.estado).toBe("sin_servicio");
+  });
+
+  it("sin frecuencia declarada NO inventa cadencia: viaja null", async () => {
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue({
+      ...CIRCUITO,
+      declaredFrequencyMinutes: null,
+    });
+    repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
+      { unitId: "u", ...enRuta, heading: 45, recordedAt: new Date(Date.now() - 10 * 60_000) },
+    ]);
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.estado).toBe("por_horario");
+    expect(cuerpo.frecuencia_declarada_min).toBeNull();
+  });
+
+  it("el interruptor del rango viaja, y viene apagado", async () => {
+    repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
+      { unitId: "u", ...enRuta, heading: 45, recordedAt: new Date(Date.now() - 30_000) },
+    ]);
+    const apagado = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(apagado.rango_activo).toBe(false);
+    // Y con el rango apagado la unidad SIGUE saliendo: el mapa no se calla.
+    expect(apagado.unidades).toHaveLength(1);
+
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue({
+      ...CIRCUITO,
+      arrivalRangeEnabledAt: new Date(),
+    });
+    const prendido = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(prendido.rango_activo).toBe(true);
+  });
+
+  it("la asignación es plan, no evidencia: cinco asignadas sin observación reciente es SIN SERVICIO", async () => {
+    repos.circuits.listLivePositionsForCircuit.mockResolvedValue(
+      ["a", "b", "c", "d", "e"].map((unitId) => ({
+        unitId,
+        ...enRuta,
+        heading: 0,
+        recordedAt: new Date(Date.now() - 60 * 60_000),
+      })),
+    );
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.estado).toBe("sin_servicio");
   });
 });
 

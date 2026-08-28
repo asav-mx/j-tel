@@ -38,6 +38,7 @@ export default async function CircuitoPublico({ params }: { params: Promise<{ sl
     color_hex: circuito.colorHex,
     piso_rango_seg: circuito.arrivalRangeFloorSeconds,
     dato_viejo_seg: circuito.staleAfterSeconds,
+    corredor_m: circuito.corridorToleranceMeters,
     velocidad_declarada_kmh: circuito.avgSpeedKmh,
     horario: {
       inicio: circuito.serviceStartLocal,
