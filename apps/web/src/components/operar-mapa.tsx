@@ -73,11 +73,14 @@ export function OperarMapa({
       L.current = mod;
       const m = mod.map(contenedor.current, { zoomControl: false, scrollWheelZoom: false });
       // Mismo fondo que el editor: OSM directo. CARTO empezó a exigir llave y
-      // devuelve un mosaico con "API KEY REQUIRED" impreso encima. El tinte de
-      // «ciudad insinuada» lo pone `.mapa-circuito` en globals.css, sobre la
-      // capa de teselas y nunca sobre el contenedor: aplicado al contenedor
-      // teñiría también el trazado y las unidades, y el color del circuito
-      // dejaría de ser el color que se ve.
+      // devuelve un mosaico con "API KEY REQUIRED" impreso encima.
+      //
+      // El tinte lo pone `.mapa-circuito` en globals.css, con los MISMOS
+      // valores que la cara del pasajero: quien mira aquí busca en qué calle
+      // anda un camión, igual que el pasajero en la esquina, y las dos caras
+      // leen los mismos hechos. Va sobre la CAPA DE TESELAS y nunca sobre el
+      // contenedor: aplicado al contenedor teñiría también el trazado y las
+      // unidades, y el color del circuito dejaría de ser el color que se ve.
       mod
         .tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',

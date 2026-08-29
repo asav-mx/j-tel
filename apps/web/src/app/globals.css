@@ -205,27 +205,51 @@ body {
  *   oscuro además se invierte el tono para que el mapa no sea un rectángulo
  *   blanco dentro de una pantalla de tinta.
  */
-.mapa-torre .leaflet-tile-pane,
-.mapa-circuito .leaflet-tile-pane {
+.mapa-torre .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.85) saturate(0.35);
 }
 
-[data-tema="claro"] .mapa-torre .leaflet-tile-pane,
-[data-tema="claro"] .mapa-circuito .leaflet-tile-pane {
+[data-tema="claro"] .mapa-torre .leaflet-tile-pane {
   filter: saturate(0.4) contrast(0.92) brightness(1.04);
 }
 
 /*
- *   `.mapa-circuito` es el mapa del operador del concesionario, y comparte el
- *   selector en vez de traer su propio filtro. La cara del pasajero usa valores
- *   ligeramente distintos —conserva más color, porque quien mira va a pie y
- *   necesita reconocer la esquina—; dentro de J-Telemetry, dos mapas con dos
- *   tintes es el defecto, no la variedad.
+ * — El mapa del operador del concesionario, teñido como el del PASAJERO —
+ *
+ *   Mismos valores que `vista-pasajero.tsx`, y no los de la torre de arriba,
+ *   aunque los dos vivan en esta aplicación. La razón es a quién sirve el mapa,
+ *   no en qué repositorio está.
+ *
+ *   El de la torre es un tablero: quien mira ya sabe qué ruta es y quiere ver
+ *   las trazas contra el trazado, así que la ciudad se apaga casi del todo
+ *   —`saturate(0.35)`— para que no compita. Éste no. El concesionario abre esto
+ *   en el teléfono a las seis de la mañana para averiguar **en qué calle anda un
+ *   camión**, que es exactamente la pregunta del pasajero parado en la esquina,
+ *   y para contestarla hace falta reconocer la calle: por eso conserva más
+ *   color, `saturate(0.7)`.
+ *
+ *   Y hay una razón que pesa más que la legibilidad: **las dos caras están
+ *   mirando la misma calle y leen los mismos hechos** —el mismo `medirUnidad`,
+ *   el mismo corredor, la misma definición de EN RUTA—. Que se vean igual lo
+ *   dice sin escribirlo. Verse distinto insinuaría dos productos midiendo lo
+ *   mismo por su cuenta, que es justo lo que este trabajo existe para que no
+ *   ocurra.
+ *
+ *   Si algún día se afinan, se afinan LAS DOS: el par de aquí y el de
+ *   `apps/publico/src/components/vista-pasajero.tsx`. Están separados porque son
+ *   dos aplicaciones distintas, no porque sean dos decisiones distintas.
  */
+.mapa-circuito .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(185deg) brightness(0.82) contrast(0.92) saturate(0.7);
+}
+
+[data-tema="claro"] .mapa-circuito .leaflet-tile-pane {
+  filter: saturate(0.72) brightness(1.03);
+}
 
 /*
  *   Los controles de leaflet —zoom y atribución— NO son teselas, así que el
- *   filtro de arriba no los alcanza: sobre el mapa teñido quedaban dos
+ *   tinte no los alcanza: sobre el mapa teñido quedaban dos
  *   rectángulos blancos, que es en chico el mismo problema que el tinte vino a
  *   resolver. Se visten con los tokens del tema, así que siguen al interruptor.
  *
