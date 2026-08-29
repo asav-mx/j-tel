@@ -9,6 +9,8 @@ import {
   type TrazadoDeSentido,
   vaSobreElCircuito,
   estadoDelCircuito,
+  medirUnidad,
+  type MedidaDeUnidad,
 } from "./publico.js";
 
 const LLAVE = "llave-de-prueba-no-es-la-de-produccion";
@@ -207,31 +209,118 @@ describe("vaSobreElCircuito", () => {
   });
 });
 
+describe("medirUnidad · la clasificación que leen las dos caras", () => {
+  /* Un tramo recto de avenida, para que la distancia sea la única variable. */
+  const trazados: TrazadoDeSentido[] = [
+    {
+      sentido: "ida",
+      coordinates: [
+        [-106.45, 31.71],
+        [-106.44, 31.71],
+      ],
+    },
+  ];
+  const ahora = new Date("2026-08-27T12:00:00.000Z");
+  const umbrales = {
+    ahora,
+    trazados,
+    corredorMetros: 150,
+    frescuraSegundos: 180,
+    confianzaSegundos: 900,
+  };
+  /** Una unidad sobre la avenida, con `hace` segundos de antigüedad. */
+  const sobreLaRuta = (hace: number) =>
+    medirUnidad(
+      { lat: 31.71, lon: -106.445, recordedAt: new Date(ahora.getTime() - hace * 1000) },
+      umbrales,
+    );
+  /** La misma unidad, a nueve kilómetros del trazado. */
+  const enElPatio = (hace: number) =>
+    medirUnidad(
+      { lat: 31.63, lon: -106.445, recordedAt: new Date(ahora.getTime() - hace * 1000) },
+      umbrales,
+    );
+
+  it("fresca y en el corredor: en ruta", () => {
+    const m = sobreLaRuta(30);
+    expect(m.enCorredor).toBe(true);
+    expect(m.fresco).toBe(true);
+    expect(m.enRuta).toBe(true);
+  });
+
+  it("EL TÚNEL: en el corredor pero vieja — ya no está en ruta, y sigue contando", () => {
+    const m = sobreLaRuta(600);
+    expect(m.enRuta).toBe(false);
+    expect(m.enCorredor).toBe(true);
+    expect(m.dentroDeConfianza).toBe(true);
+  });
+
+  it("EL CAMIÓN DEL PATIO: fresquísimo y fuera del corredor NO está en ruta", () => {
+    const m = enElPatio(1);
+    expect(m.fresco).toBe(true);
+    expect(m.enCorredor).toBe(false);
+    expect(m.enRuta).toBe(false);
+  });
+
+  it("pasada la ventana de confianza deja de sostener nada", () => {
+    expect(sobreLaRuta(1200).dentroDeConfianza).toBe(false);
+  });
+
+  it("los umbrales son los que se le pasan, no constantes escondidas", () => {
+    const hace300 = { lat: 31.71, lon: -106.445, recordedAt: new Date(ahora.getTime() - 300_000) };
+    expect(medirUnidad(hace300, umbrales).fresco).toBe(false);
+    expect(medirUnidad(hace300, { ...umbrales, frescuraSegundos: 600 }).fresco).toBe(true);
+    expect(medirUnidad(hace300, { ...umbrales, confianzaSegundos: 120 }).dentroDeConfianza).toBe(
+      false,
+    );
+    /* Y el corredor: los 150 m no viven dentro de la función. */
+    const aMedioCuadra = { lat: 31.7105, lon: -106.445, recordedAt: ahora };
+    expect(medirUnidad(aMedioCuadra, umbrales).enCorredor).toBe(true);
+    expect(medirUnidad(aMedioCuadra, { ...umbrales, corredorMetros: 25 }).enCorredor).toBe(false);
+  });
+});
+
 describe("estadoDelCircuito · la escalera", () => {
-  const base = { enHorario: true, frescuraSegundos: 180, confianzaSegundos: 900 };
-  const enRuta = (antiguedadSeg: number) => ({ enCorredor: true, antiguedadSeg });
-  const fuera = (antiguedadSeg: number) => ({ enCorredor: false, antiguedadSeg });
+  const base = { enHorario: true };
+  /** En el corredor, con la frescura ya resuelta por `medirUnidad`. */
+  const enCorredor = (antiguedadSeg: number, fresco: boolean, dentroDeConfianza = true): MedidaDeUnidad => ({
+    enCorredor: true,
+    antiguedadSeg,
+    fresco,
+    dentroDeConfianza,
+    enRuta: fresco,
+  });
+  /** Fuera del corredor: por fresca que esté, no está en ruta. */
+  const fuera = (antiguedadSeg: number): MedidaDeUnidad => ({
+    enCorredor: false,
+    antiguedadSeg,
+    fresco: true,
+    dentroDeConfianza: true,
+    enRuta: false,
+  });
 
   it("fuera de horario gana sobre todo lo demás, incluso con una unidad encima", () => {
     expect(
-      estadoDelCircuito({ ...base, enHorario: false, observaciones: [enRuta(5)] }),
+      estadoDelCircuito({ ...base, enHorario: false, unidades: [enCorredor(5, true)] }),
     ).toBe("fuera_de_horario");
   });
 
-  it("una fresca en el corredor: en vivo", () => {
-    expect(estadoDelCircuito({ ...base, observaciones: [enRuta(30)] })).toBe("en_vivo");
+  it("una en ruta: en vivo", () => {
+    expect(estadoDelCircuito({ ...base, unidades: [enCorredor(30, true)] })).toBe("en_vivo");
   });
 
   it("vieja para en vivo pero dentro de la confianza: por horario", () => {
-    expect(estadoDelCircuito({ ...base, observaciones: [enRuta(600)] })).toBe("por_horario");
+    expect(estadoDelCircuito({ ...base, unidades: [enCorredor(600, false)] })).toBe("por_horario");
   });
 
   it("pasada la confianza: sin evidencia", () => {
-    expect(estadoDelCircuito({ ...base, observaciones: [enRuta(1200)] })).toBe("sin_evidencia");
+    expect(estadoDelCircuito({ ...base, unidades: [enCorredor(1200, false, false)] })).toBe(
+      "sin_evidencia",
+    );
   });
 
   it("sin ninguna observación: sin evidencia, nunca por horario", () => {
-    expect(estadoDelCircuito({ ...base, observaciones: [] })).toBe("sin_evidencia");
+    expect(estadoDelCircuito({ ...base, unidades: [] })).toBe("sin_evidencia");
   });
 
   it("EL CAMIÓN DEL PATIO: fresquísimo pero fuera del corredor no sostiene nada", () => {
@@ -240,42 +329,52 @@ describe("estadoDelCircuito · la escalera", () => {
      * mantendría la ruta «por horario» toda la noche prometiendo una cadencia
      * que nadie está dando. Es el caso que decidió la regla.
      */
-    expect(estadoDelCircuito({ ...base, observaciones: [fuera(1)] })).toBe("sin_evidencia");
-    expect(
-      estadoDelCircuito({ ...base, observaciones: [fuera(1), fuera(2), fuera(3)] }),
-    ).toBe("sin_evidencia");
+    expect(estadoDelCircuito({ ...base, unidades: [fuera(1)] })).toBe("sin_evidencia");
+    expect(estadoDelCircuito({ ...base, unidades: [fuera(1), fuera(2), fuera(3)] })).toBe(
+      "sin_evidencia",
+    );
   });
 
   it("EL TÚNEL: la vio la ruta hace rato, y eso sí cuenta", () => {
-    expect(estadoDelCircuito({ ...base, observaciones: [enRuta(800)] })).toBe("por_horario");
+    expect(estadoDelCircuito({ ...base, unidades: [enCorredor(800, false)] })).toBe("por_horario");
   });
 
-  it("basta UNA fresca entre muchas viejas para estar en vivo", () => {
+  it("basta UNA en ruta entre muchas viejas para estar en vivo", () => {
     expect(
-      estadoDelCircuito({ ...base, observaciones: [enRuta(5000), enRuta(60), enRuta(4000)] }),
+      estadoDelCircuito({
+        ...base,
+        unidades: [enCorredor(5000, false, false), enCorredor(60, true), enCorredor(4000, false, false)],
+      }),
     ).toBe("en_vivo");
   });
 
   it("una fuera del corredor no descalifica a la que sí va en ruta", () => {
-    expect(estadoDelCircuito({ ...base, observaciones: [fuera(1), enRuta(60)] })).toBe("en_vivo");
-  });
-
-  it("los umbrales son los que se le pasan, no constantes escondidas", () => {
-    const obs = [enRuta(300)];
-    expect(estadoDelCircuito({ ...base, observaciones: obs })).toBe("por_horario");
-    expect(
-      estadoDelCircuito({ ...base, observaciones: obs, frescuraSegundos: 600 }),
-    ).toBe("en_vivo");
-    expect(
-      estadoDelCircuito({ ...base, observaciones: obs, confianzaSegundos: 120 }),
-    ).toBe("sin_evidencia");
+    expect(estadoDelCircuito({ ...base, unidades: [fuera(1), enCorredor(60, true)] })).toBe(
+      "en_vivo",
+    );
   });
 
   it("el orden es el de la escalera: horario antes que evidencia", () => {
     // Cerrado y con un camión fresco encima de la ruta —el que regresa al
     // patio— sigue siendo «fuera de horario». No hay servicio que anunciar.
     expect(
-      estadoDelCircuito({ ...base, enHorario: false, observaciones: [enRuta(1)] }),
+      estadoDelCircuito({ ...base, enHorario: false, unidades: [enCorredor(1, true)] }),
     ).toBe("fuera_de_horario");
+  });
+
+  it("«en vivo» es literalmente «hay alguna EN RUTA» — la misma cifra del operador", () => {
+    /*
+     * Es la prueba que sostiene el acuerdo entre las dos caras: el «3 de 5» del
+     * concesionario cuenta `enRuta`, y el `en_vivo` del pasajero pregunta si
+     * ese conteo es mayor que cero. Si alguien cambiara una de las dos, esto
+     * se rompe aquí y no en producción.
+     */
+    const plan = [enCorredor(60, true), enCorredor(900, false), fuera(1), fuera(2), fuera(3)];
+    expect(plan.filter((u) => u.enRuta).length).toBe(1);
+    expect(estadoDelCircuito({ ...base, unidades: plan })).toBe("en_vivo");
+
+    const sinNinguna = plan.filter((u) => !u.enRuta);
+    expect(sinNinguna.filter((u) => u.enRuta).length).toBe(0);
+    expect(estadoDelCircuito({ ...base, unidades: sinNinguna })).toBe("por_horario");
   });
 });

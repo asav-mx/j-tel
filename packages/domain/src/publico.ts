@@ -236,18 +236,76 @@ export type EstadoDelCircuito =
    */
   | "sin_evidencia";
 
-/** Lo que se sabe de una unidad para decidir el estado. */
-export interface ObservacionParaEstado {
+/**
+ * Lo que se puede afirmar de UNA unidad, medido una sola vez.
+ *
+ * Existe porque las dos caras hacen la misma pregunta y la hacían por separado.
+ * El pasajero pregunta «¿hay servicio?» y el operador pregunta «¿cuántas de mi
+ * plan están dando servicio?»: son la misma medición leída con dos alcances, y
+ * mientras cada cara la calculaba con sus propios `filter`, **nada impedía que
+ * un día dijeran cosas distintas del mismo camión**. Aquí se mide una vez y las
+ * dos leen el resultado.
+ */
+export interface MedidaDeUnidad {
   /** Su última posición conocida cae dentro del corredor del circuito. */
   enCorredor: boolean;
   antiguedadSeg: number;
+  /** El fix todavía dice DÓNDE ESTÁ: por debajo del umbral de dato viejo. */
+  fresco: boolean;
+  /**
+   * Se le vio lo bastante recientemente como para seguir sosteniendo algo.
+   * Es sólo tiempo: no dice nada de dónde estaba.
+   */
+  dentroDeConfianza: boolean;
+  /**
+   * **EN RUTA: del plan, fresca y dentro del corredor.** Ésta es la definición,
+   * y no hay otra: `en_vivo` es «hay al menos una en ruta», y el «3 de 5» del
+   * operador es cuántas lo están. Un `filter` equivalente escrito en una
+   * pantalla sería una segunda definición, y las dos definiciones se separan.
+   */
+  enRuta: boolean;
+}
+
+/** Los tres umbrales del circuito. Ninguno tiene default: son columnas suyas. */
+export interface UmbralesDelCircuito {
+  corredorMetros: number;
+  frescuraSegundos: number;
+  confianzaSegundos: number;
+}
+
+/**
+ * Mide una unidad contra el circuito: dónde está y desde cuándo.
+ *
+ * Los umbrales entran por parámetro y salen de las columnas del circuito
+ * (`corridor_tolerance_meters`, `stale_after_seconds`,
+ * `service_confidence_minutes`). Hornear cualquiera convertiría el alta de un
+ * concesionario nuevo en un despliegue.
+ */
+export function medirUnidad(
+  observado: { lat: number; lon: number; recordedAt: Date },
+  contexto: { ahora: Date; trazados: TrazadoDeSentido[] } & UmbralesDelCircuito,
+): MedidaDeUnidad {
+  const antiguedadSeg = antiguedadSegundos(observado.recordedAt, contexto.ahora);
+  const enCorredor = vaSobreElCircuito(
+    { lat: observado.lat, lon: observado.lon },
+    contexto.trazados,
+    contexto.corredorMetros,
+  );
+  const fresco = esFresco(antiguedadSeg, contexto.frescuraSegundos);
+  return {
+    enCorredor,
+    antiguedadSeg,
+    fresco,
+    dentroDeConfianza: antiguedadSeg < contexto.confianzaSegundos,
+    enRuta: enCorredor && fresco,
+  };
 }
 
 /**
  * La escalera, en un solo lugar y sin tocar la base.
  *
  * **La asignación vigente es plan, no evidencia.** Un circuito con cinco
- * unidades asignadas y ninguna observación reciente cae a `sin_servicio`, nunca
+ * unidades asignadas y ninguna observación reciente cae a `sin_evidencia`, nunca
  * a `por_horario`: la asignación dice qué se planeó, y sólo el GPS puede
  * afirmar que hay servicio. Por eso esta función no recibe cuántas unidades hay
  * asignadas — no es un insumo de la decisión, y no tenerlo a la mano es lo que
@@ -257,17 +315,18 @@ export interface ObservacionParaEstado {
  * patio reporta cada minuto y mantendría la ruta «por horario» toda la noche;
  * su última posición está en el patio, así que no cuenta. El que se metió a un
  * túnel sí cuenta: la última vez que se le vio, iba en la ruta.
+ *
+ * **Ya no recibe umbrales**, y ése es el punto del cambio: los aplicó
+ * `medirUnidad` antes de llegar aquí, así que `en_vivo` es literalmente «alguna
+ * en ruta» en vez de una comparación repetida. Dos comparaciones equivalentes
+ * en dos archivos son dos definiciones esperando a separarse.
  */
 export function estadoDelCircuito(entrada: {
   enHorario: boolean;
-  observaciones: ObservacionParaEstado[];
-  frescuraSegundos: number;
-  confianzaSegundos: number;
+  unidades: MedidaDeUnidad[];
 }): EstadoDelCircuito {
   if (!entrada.enHorario) return "fuera_de_horario";
-
-  const enRuta = entrada.observaciones.filter((o) => o.enCorredor);
-  if (enRuta.some((o) => o.antiguedadSeg < entrada.frescuraSegundos)) return "en_vivo";
-  if (enRuta.some((o) => o.antiguedadSeg < entrada.confianzaSegundos)) return "por_horario";
+  if (entrada.unidades.some((u) => u.enRuta)) return "en_vivo";
+  if (entrada.unidades.some((u) => u.enCorredor && u.dentroDeConfianza)) return "por_horario";
   return "sin_evidencia";
 }
