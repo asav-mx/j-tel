@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import {
-  antiguedadSegundos,
   enHorarioDeServicio,
-  esFresco,
   estadoDelCircuito,
   fechaLocalDelCircuito,
   idPublicoDelDia,
+  medirUnidad,
   sentidoDeLaUnidad,
-  vaSobreElCircuito,
   type EstadoDelCircuito,
   type TrazadoDeSentido,
 } from "@jtel/domain/publico";
@@ -171,22 +169,20 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
    * vigente, pero la asignación NO entra en la decisión: lo único que se mira
    * de aquí en adelante es dónde y cuándo se vio cada una.
    */
-  const medidas = posiciones.map((p) => ({
-    p,
-    antiguedadSeg: antiguedadSegundos(p.recordedAt, ahora),
-    enCorredor: vaSobreElCircuito(
-      { lat: p.latitude, lon: p.longitude },
-      trazadosPorSentido,
-      circuito.corridorToleranceMeters,
-    ),
-  }));
-
-  const estado = estadoDelCircuito({
-    enHorario,
-    observaciones: medidas.map((m) => ({ enCorredor: m.enCorredor, antiguedadSeg: m.antiguedadSeg })),
+  const umbrales = {
+    ahora,
+    trazados: trazadosPorSentido,
+    corredorMetros: circuito.corridorToleranceMeters,
     frescuraSegundos: circuito.staleAfterSeconds,
     confianzaSegundos: circuito.serviceConfidenceMinutes * 60,
-  });
+  };
+
+  const medidas = posiciones.map((p) => ({
+    p,
+    m: medirUnidad({ lat: p.latitude, lon: p.longitude, recordedAt: p.recordedAt }, umbrales),
+  }));
+
+  const estado = estadoDelCircuito({ enHorario, unidades: medidas.map((x) => x.m) });
 
   /*
    * Van las unidades del CORREDOR que caen dentro de la ventana de confianza,
@@ -218,10 +214,10 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
     fresco: boolean;
   }> = [];
 
-  for (const { p, antiguedadSeg: antiguedad, enCorredor } of medidas) {
+  for (const { p, m } of medidas) {
     // Los mismos cortes que decidieron el estado, sobre la misma medición.
-    if (!enCorredor) continue;
-    if (antiguedad >= circuito.serviceConfidenceMinutes * 60) continue;
+    if (!m.enCorredor) continue;
+    if (!m.dentroDeConfianza) continue;
 
     unidades.push({
       id_publico: idPublicoDelDia(p.unitId, fechaLocal, secreto),
@@ -234,14 +230,14 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
         trazadosPorSentido,
         circuito.corridorToleranceMeters,
       ),
-      antiguedad_seg: antiguedad,
+      antiguedad_seg: m.antiguedadSeg,
       /*
        * Ya NO es siempre true. Es lo que decide si la app la pinta encendida y
        * la usa para el rango, o apagada y sólo como «por aquí se le vio». Va
        * resuelto en el servidor porque el umbral es del circuito y el teléfono
        * no lo conoce.
        */
-      fresco: esFresco(antiguedad, circuito.staleAfterSeconds),
+      fresco: m.fresco,
     });
   }
 

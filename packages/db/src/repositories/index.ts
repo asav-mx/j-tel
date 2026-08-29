@@ -5660,6 +5660,91 @@ export class CircuitRepository {
       );
   }
 
+  /**
+   * El plan del circuito con lo último que se sabe de cada unidad — **la
+   * consulta del operador, y es OTRA consulta a propósito.**
+   *
+   * No es `listLivePositionsForCircuit` con dos columnas más, y esa separación
+   * es estructura, no estilo: aquélla sirve al endpoint público, donde el
+   * número económico, la placa y el transportista **no deben existir**. Si las
+   * dos caras compartieran consulta, el día que alguien agregara un campo aquí
+   * lo agregaría también allá, y el filtro que lo quita sería una línea que
+   * alguien puede borrar sin que se rompa nada. Aquí la línea no existe: la
+   * consulta pública no trae `label` y nunca lo trajo.
+   *
+   * ## Parte de la ASIGNACIÓN, no de la posición
+   *
+   * `listLivePositionsForCircuit` une con `INNER JOIN`, así que una unidad
+   * asignada sin aparato vigente —o con aparato y sin una sola fila en
+   * `live_positions`— **desaparece de la lista sin decir nada**. Para el
+   * pasajero da igual: no hay nada que dibujar. Para el operador es justo el
+   * renglón que necesita ver, y desaparecido se lee como que la unidad no está
+   * asignada. Por eso aquí la asignación manda y la posición es opcional:
+   * `latitude`, `longitude`, `heading` y `recordedAt` llegan en `null` cuando
+   * de esa unidad no se sabe nada, y eso **se enuncia**, no se omite.
+   *
+   * La cadena de la posición es la misma y no se reinventa: asignación →
+   * aparato vigente → posición del aparato. Unir por `live_positions.unit_id`
+   * compila, corre y devuelve cero filas para siempre.
+   *
+   * ## Una fila por unidad
+   *
+   * Nada en la base impide dos aparatos vigentes sobre la misma unidad
+   * —`device_assignments` no tiene candado de una-sola-vigente, a diferencia de
+   * la asignación de circuito—, y dos filas de la misma unidad envenenarían el
+   * conteo: «4 de 3 en el plan». Se resuelve aquí, una vez, quedándose con el
+   * fix más reciente. Hacerlo en la pantalla sería dejar la garantía en el
+   * código de turno, que es el que cambia.
+   */
+  async listPlanDelCircuitoConPosicion(circuitId: string) {
+    const filas = await this.db
+      .select({
+        assignmentId: circuitUnitAssignments.id,
+        unitId: circuitUnitAssignments.unitId,
+        /** El número económico: lo que el operador dice por el radio. */
+        unitLabel: units.label,
+        plateNumber: units.plateNumber,
+        carrierAccountId: circuitUnitAssignments.carrierAccountId,
+        carrierName: accounts.name,
+        assignedFrom: circuitUnitAssignments.validFrom,
+        latitude: livePositions.latitude,
+        longitude: livePositions.longitude,
+        heading: livePositions.heading,
+        recordedAt: livePositions.recordedAt,
+      })
+      .from(circuitUnitAssignments)
+      .innerJoin(units, eq(units.id, circuitUnitAssignments.unitId))
+      .innerJoin(accounts, eq(accounts.id, circuitUnitAssignments.carrierAccountId))
+      .leftJoin(
+        deviceAssignments,
+        and(
+          eq(deviceAssignments.unitId, circuitUnitAssignments.unitId),
+          isNull(deviceAssignments.validTo),
+        ),
+      )
+      .leftJoin(livePositions, eq(livePositions.deviceId, deviceAssignments.deviceId))
+      .where(
+        and(
+          eq(circuitUnitAssignments.circuitId, circuitId),
+          isNull(circuitUnitAssignments.validTo),
+        ),
+      )
+      .orderBy(units.label);
+
+    const porUnidad = new Map<string, (typeof filas)[number]>();
+    for (const fila of filas) {
+      const previa = porUnidad.get(fila.unitId);
+      // Sin fecha no hay con qué comparar: cualquier fila con fix le gana a una
+      // sin él, y entre dos sin él da igual cuál quede.
+      const gana =
+        !previa ||
+        (fila.recordedAt !== null &&
+          (previa.recordedAt === null || fila.recordedAt > previa.recordedAt));
+      if (gana) porUnidad.set(fila.unitId, fila);
+    }
+    return [...porUnidad.values()];
+  }
+
   async listCircuitsForConcession(concessionAccountId: string) {
     return this.db
       .select()

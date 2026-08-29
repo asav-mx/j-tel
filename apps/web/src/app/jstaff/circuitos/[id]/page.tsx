@@ -40,7 +40,18 @@ export default async function CircuitoPage({
   return (
     <main className="min-h-screen p-8">
       <div className="mx-auto max-w-6xl">
-        <AppNav title={circuito.name} links={[{ href: "/jstaff", label: "← Panel" }]} />
+        <AppNav
+          title={circuito.name}
+          links={[
+            { href: "/jstaff", label: "← Panel" },
+            /*
+              La pantalla del día a día. Va desde aquí porque el camino natural
+              es al revés del que se construyó: se mira en Operar y se viene al
+              expediente cuando hay algo que cambiar.
+            */
+            { href: `/jstaff/circuitos/${id}/operar`, label: "Operar →" },
+          ]}
+        />
 
         {error && (
           <p className="mb-4 rounded border border-[var(--linea-tenue)] p-3 text-sm">⚠ {error}</p>

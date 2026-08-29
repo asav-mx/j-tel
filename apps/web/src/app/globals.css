@@ -214,6 +214,84 @@ body {
 }
 
 /*
+ * — El mapa del operador del concesionario, teñido como el del PASAJERO —
+ *
+ *   Mismos valores que `vista-pasajero.tsx`, y no los de la torre de arriba,
+ *   aunque los dos vivan en esta aplicación. La razón es a quién sirve el mapa,
+ *   no en qué repositorio está.
+ *
+ *   El de la torre es un tablero: quien mira ya sabe qué ruta es y quiere ver
+ *   las trazas contra el trazado, así que la ciudad se apaga casi del todo
+ *   —`saturate(0.35)`— para que no compita. Éste no. El concesionario abre esto
+ *   en el teléfono a las seis de la mañana para averiguar **en qué calle anda un
+ *   camión**, que es exactamente la pregunta del pasajero parado en la esquina,
+ *   y para contestarla hace falta reconocer la calle: por eso conserva más
+ *   color, `saturate(0.7)`.
+ *
+ *   Y hay una razón que pesa más que la legibilidad: **las dos caras están
+ *   mirando la misma calle y leen los mismos hechos** —el mismo `medirUnidad`,
+ *   el mismo corredor, la misma definición de EN RUTA—. Que se vean igual lo
+ *   dice sin escribirlo. Verse distinto insinuaría dos productos midiendo lo
+ *   mismo por su cuenta, que es justo lo que este trabajo existe para que no
+ *   ocurra.
+ *
+ *   Si algún día se afinan, se afinan LAS DOS: el par de aquí y el de
+ *   `apps/publico/src/components/vista-pasajero.tsx`. Están separados porque son
+ *   dos aplicaciones distintas, no porque sean dos decisiones distintas.
+ */
+.mapa-circuito .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(185deg) brightness(0.82) contrast(0.92) saturate(0.7);
+}
+
+[data-tema="claro"] .mapa-circuito .leaflet-tile-pane {
+  filter: saturate(0.72) brightness(1.03);
+}
+
+/*
+ *   Los controles de leaflet —zoom y atribución— NO son teselas, así que el
+ *   tinte no los alcanza: sobre el mapa teñido quedaban dos
+ *   rectángulos blancos, que es en chico el mismo problema que el tinte vino a
+ *   resolver. Se visten con los tokens del tema, así que siguen al interruptor.
+ *
+ *   Acotado a `.mapa-circuito` a propósito: el mapa de la torre tiene el mismo
+ *   detalle y se arregla en su propio cambio, no de contrabando en éste.
+ */
+.mapa-circuito .leaflet-bar a,
+.mapa-circuito.leaflet-container .leaflet-control-attribution {
+  background: var(--panel);
+  color: var(--tenue);
+  border-color: var(--linea-fuerte);
+}
+
+.mapa-circuito .leaflet-bar a:hover {
+  background: var(--hover);
+  color: var(--texto);
+}
+
+.mapa-circuito.leaflet-container .leaflet-control-attribution a {
+  color: var(--acero);
+}
+
+/*
+ * La banderita decorativa que leaflet mete en la atribución.
+ *
+ * Los dos selectores llevan `.leaflet-container` pegado a `.mapa-circuito` —el
+ * mismo div, leaflet le agrega su clase al inicializar— porque la regla de
+ * leaflet es `.leaflet-container .leaflet-control-attribution` y empata en
+ * especificidad con una sola clase mía. Empatada, gana la que se carga después,
+ * y leaflet.css lo importa el componente: sin este empujón el fondo blanco
+ * sobrevivía al tinte, que es en chico lo mismo que el tinte vino a resolver.
+ */
+.mapa-circuito.leaflet-container .leaflet-attribution-flag {
+  /*
+   * `!important` porque leaflet declara `display: inline !important` en esa
+   * misma bandera, y contra un `!important` la especificidad no alcanza. Es la
+   * única forma de ganarle, no una comodidad.
+   */
+  display: none !important;
+}
+
+/*
  * — El lienzo del Workbench: calles de referencia, jamás evidencia —
  *
  *   Aquí el fondo geográfico SÍ hace falta: el público final de este mapa no es

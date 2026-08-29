@@ -85,6 +85,32 @@ export function fechaDeIsoSinAnio(fechaIso: string, timeZone: string = JTTEL_TZ)
 }
 
 /**
+ * El día en que pasó algo, dicho como lo diría una persona: `20 de agosto`.
+ *
+ * Para lo que se cuenta, no para lo que se prueba. `2026-08-20 02:39` es la
+ * forma correcta de una marca de evidencia —fecha completa, hora al segundo—,
+ * pero puesta debajo de un renglón que sólo dice desde cuándo corre una unidad
+ * es idioma de máquina: la hora exacta no le sirve a nadie y el año se lee como
+ * ruido.
+ *
+ * **El año vuelve cuando NO es el del calendario de quien mira.** «20 de
+ * agosto» a secas para una asignación del año pasado sería un dato correcto
+ * leído como falso, que es peor que un dato largo. Es la misma regla de
+ * `fechaDeIsoSinAnio`, al revés: allá lo dijo el periodo de arriba; aquí no hay
+ * nada que lo diga, así que se dice cuando hace falta.
+ */
+export function diaYMes(d: Date, timeZone: string = JTTEL_TZ, ahora = new Date()): string {
+  const anioDe = (x: Date) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric" }).format(x);
+  return new Intl.DateTimeFormat("es-MX", {
+    timeZone,
+    day: "numeric",
+    month: "long",
+    ...(anioDe(d) === anioDe(ahora) ? {} : { year: "numeric" }),
+  }).format(d);
+}
+
+/**
  * Instante completo para marcas de sellado: `2026-07-24 06:50:00`.
  *
  * Fecha y hora juntas, en ese orden y sin abreviar, porque una marca de sello
@@ -112,6 +138,12 @@ export function instanteSellado(d: Date, timeZone: string = JTTEL_TZ): string {
  *
  * Por debajo de una hora se escribe en minutos con un decimal cuando el
  * decimal significa algo: un hueco de 46.4 min no es lo mismo que uno de 46.
+ *
+ * **Pasados dos días se escribe en días**, y no es cosmética. Una unidad que
+ * lleva sin reportar desde mayo daba `2 578 h`, que es correcto y no se lee:
+ * nadie divide entre veinticuatro de cabeza a las seis de la mañana. El corte
+ * está en 48 h y no en 24 para que un hueco de un turno de noche —«31 h»—
+ * conserve su hora, que ahí sí es la unidad en la que se piensa.
  */
 export function duracion(minutos: number): string {
   if (minutos < 1) {
@@ -122,10 +154,18 @@ export function duracion(minutos: number): string {
     const redondo = Math.round(minutos * 10) / 10;
     return Number.isInteger(redondo) ? `${redondo} min` : `${redondo.toFixed(1)} min`;
   }
-  const horas = Math.floor(minutos / 60);
-  const resto = Math.round(minutos - horas * 60);
-  if (resto === 0) return `${horas} h`;
-  return `${horas} h ${resto} min`;
+  if (minutos < 48 * 60) {
+    const horas = Math.floor(minutos / 60);
+    const resto = Math.round(minutos - horas * 60);
+    if (resto === 0) return `${horas} h`;
+    return `${horas} h ${resto} min`;
+  }
+  const dias = Math.floor(minutos / (24 * 60));
+  const horasResto = Math.round((minutos - dias * 24 * 60) / 60);
+  // 47 h de resto redondean a 24 y darían "3 días 24 h", que no existe.
+  if (horasResto >= 24) return `${dias + 1} días`;
+  if (horasResto === 0) return `${dias} días`;
+  return `${dias} días ${horasResto} h`;
 }
 
 /**
