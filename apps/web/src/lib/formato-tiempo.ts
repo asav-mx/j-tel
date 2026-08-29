@@ -85,6 +85,32 @@ export function fechaDeIsoSinAnio(fechaIso: string, timeZone: string = JTTEL_TZ)
 }
 
 /**
+ * El día en que pasó algo, dicho como lo diría una persona: `20 de agosto`.
+ *
+ * Para lo que se cuenta, no para lo que se prueba. `2026-08-20 02:39` es la
+ * forma correcta de una marca de evidencia —fecha completa, hora al segundo—,
+ * pero puesta debajo de un renglón que sólo dice desde cuándo corre una unidad
+ * es idioma de máquina: la hora exacta no le sirve a nadie y el año se lee como
+ * ruido.
+ *
+ * **El año vuelve cuando NO es el del calendario de quien mira.** «20 de
+ * agosto» a secas para una asignación del año pasado sería un dato correcto
+ * leído como falso, que es peor que un dato largo. Es la misma regla de
+ * `fechaDeIsoSinAnio`, al revés: allá lo dijo el periodo de arriba; aquí no hay
+ * nada que lo diga, así que se dice cuando hace falta.
+ */
+export function diaYMes(d: Date, timeZone: string = JTTEL_TZ, ahora = new Date()): string {
+  const anioDe = (x: Date) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric" }).format(x);
+  return new Intl.DateTimeFormat("es-MX", {
+    timeZone,
+    day: "numeric",
+    month: "long",
+    ...(anioDe(d) === anioDe(ahora) ? {} : { year: "numeric" }),
+  }).format(d);
+}
+
+/**
  * Instante completo para marcas de sellado: `2026-07-24 06:50:00`.
  *
  * Fecha y hora juntas, en ese orden y sin abreviar, porque una marca de sello

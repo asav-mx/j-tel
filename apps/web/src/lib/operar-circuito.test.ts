@@ -39,6 +39,7 @@ function unidad(parcial: Partial<UnidadDelPlan> = {}): UnidadDelPlan {
     unitId: `u-${n}`,
     unitLabel: `${10_000 + n}`,
     plateNumber: null,
+    carrierAccountId: "carrier-1",
     carrierName: "Transportista de prueba",
     assignedFrom: new Date("2026-08-01T00:00:00.000Z"),
     latitude: null,
@@ -263,5 +264,36 @@ describe("la apertura del horario es del CIRCUITO, y aguanta la medianoche", () 
   it("con el circuito cerrado no hay apertura que enseñar", () => {
     const op = armar([], { ...CIRCUITO, serviceStartLocal: "23:00", serviceEndLocal: "23:30" });
     expect(op.aperturaDelHorario).toBeNull();
+  });
+});
+
+describe("cuándo el nombre del transportista distingue algo", () => {
+  it("un solo transportista: el nombre no distingue, y el renglón no lo gasta", () => {
+    expect(armar([enLaRuta(30), enLaRuta(60), lejos(10)]).variosTransportistas).toBe(false);
+  });
+
+  it("dos transportistas: sí distingue, y entonces es información", () => {
+    const op = armar([
+      enLaRuta(30, { carrierAccountId: "carrier-1", carrierName: "Uno" }),
+      enLaRuta(60, { carrierAccountId: "carrier-2", carrierName: "Dos" }),
+    ]);
+    expect(op.variosTransportistas).toBe(true);
+  });
+
+  it("se cuenta por CUENTA, no por nombre: dos que se llamen igual son dos", () => {
+    /*
+     * Es §D en chico: contar rótulos en vez de cuentas fundiría a dos
+     * transportistas homónimos en uno, y el renglón dejaría de decir de quién
+     * es el camión justo donde hace falta.
+     */
+    const op = armar([
+      enLaRuta(30, { carrierAccountId: "carrier-1", carrierName: "Transportes del Norte" }),
+      enLaRuta(60, { carrierAccountId: "carrier-2", carrierName: "Transportes del Norte" }),
+    ]);
+    expect(op.variosTransportistas).toBe(true);
+  });
+
+  it("el plan vacío no afirma nada", () => {
+    expect(armar([]).variosTransportistas).toBe(false);
   });
 });

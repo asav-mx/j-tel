@@ -35,6 +35,14 @@ export interface UnidadDelPlan {
   /** El número económico. Es como el operador la nombra por el radio. */
   unitLabel: string;
   plateNumber: string | null;
+  /**
+   * El transportista, con su id además del nombre.
+   *
+   * El id no es un lujo: la pantalla decide con él si el nombre distingue algo
+   * —un circuito puede correrlo más de un transportista—, y contar nombres en
+   * vez de cuentas fundiría dos transportistas que se llamen igual en uno solo.
+   */
+  carrierAccountId: string;
   carrierName: string;
   assignedFrom: Date;
   /** `null` cuando de esta unidad no hay una sola posición. Se enuncia, no se omite. */
@@ -121,6 +129,16 @@ export interface Operacion {
    * Vacío cuando no hay nada que atender, y entonces la sección no se dibuja.
    */
   atencion: UnidadOperando[];
+  /**
+   * Si el plan lo corren varios transportistas — y por lo tanto si nombrarlos
+   * en cada renglón distingue algo o sólo repite.
+   *
+   * Se cuenta por **cuenta**, no por nombre: dos transportistas que se llamen
+   * igual son dos, y contarlos por su rótulo los fundiría en uno. Vive aquí y
+   * no dentro del componente porque es una afirmación sobre el plan, y una
+   * afirmación se prueba.
+   */
+  variosTransportistas: boolean;
 }
 
 export function armarOperacion(entrada: {
@@ -188,6 +206,7 @@ export function armarOperacion(entrada: {
     atencion: unidades.filter(
       (u) => u.situacion === "sin_senal" || u.situacion === "no_ha_salido",
     ),
+    variosTransportistas: new Set(unidades.map((u) => u.carrierAccountId)).size > 1,
   };
 }
 

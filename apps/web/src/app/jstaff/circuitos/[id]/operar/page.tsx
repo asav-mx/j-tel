@@ -4,7 +4,7 @@ import { localDateTimeSeconds, localDateTimeShort } from "@jtel/domain";
 import type { TrazadoDeSentido } from "@jtel/domain/publico";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
-import { duracion } from "@/lib/formato-tiempo";
+import { diaYMes, duracion } from "@/lib/formato-tiempo";
 import { armarOperacion, type Operacion, type UnidadOperando } from "@/lib/operar-circuito";
 import { OperarMapa } from "@/components/operar-mapa";
 import { FrescuraDelCorte } from "@/components/frescura-del-corte";
@@ -529,6 +529,19 @@ function PlanDelDia({
   abreALas: string;
   cierraALas: string;
 }) {
+  /*
+   * El horario sale de los renglones y se queda donde ya estaba explicado.
+   *
+   * Repetido en cada renglón decía lo que la nota de arriba acababa de decir, y
+   * tenía un costo que no se ve hasta después: el día que exista la franja
+   * horaria por unidad, esa columna va a traer información de verdad, y el ojo
+   * ya habría aprendido a saltársela.
+   *
+   * El nombre del transportista sigue la misma regla, con una condición —
+   * `op.variosTransportistas`, que la resuelve el dominio de la pantalla.
+   */
+  const { variosTransportistas } = op;
+
   return (
     <section className="mt-6">
       <h2 className="text-[15px] font-semibold text-[var(--texto)]">El plan de hoy</h2>
@@ -553,17 +566,39 @@ function PlanDelDia({
         <ul className="mt-3 divide-y divide-[var(--linea-tenue)] rounded-lg border border-[var(--linea)] bg-[var(--panel)]">
           {op.unidades.map((u) => (
             <li key={u.assignmentId} className="p-3">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                <Identidad u={u} />
-                <span className={`${mono} text-[11.5px] text-[var(--tenue)] tabular-nums`}>
-                  {abreALas}–{cierraALas}
+              {/*
+                Sólo el número económico, que es como el operador la nombra por
+                el radio. La placa vive en el expediente: aquí no distingue nada
+                que el económico no distinga ya.
+
+                El transportista aparece **sólo si el plan trae más de uno**.
+                Con uno solo, repetir su nombre en cada renglón gasta una línea
+                para decir lo que ya se sabe, y en el teléfono eso se paga en
+                cada renglón. Con dos, distingue — y entonces sí es información:
+                un circuito de una concesión puede correrlo más de un
+                transportista, y `circuit_unit_assignments` guarda cuál por
+                unidad.
+              */}
+              <p className="flex flex-wrap items-baseline gap-x-2">
+                <span
+                  className={`${mono} text-[16px] font-medium text-[var(--texto)] tabular-nums`}
+                >
+                  {u.unitLabel}
                 </span>
-              </div>
+                {variosTransportistas ? (
+                  <span className="text-[11.5px] text-[var(--tenue)]">{u.carrierName}</span>
+                ) : null}
+              </p>
               <p className="mt-1 text-[12.5px] leading-snug text-[var(--acero)]">
                 {enPalabras(u, zona)}
               </p>
-              <p className={`${mono} mt-0.5 text-[11px] text-[var(--tenue)] tabular-nums`}>
-                Asignada desde {localDateTimeShort(u.assignedFrom, zona)}
+              {/*
+                El día, no el instante. `2026-08-20 02:39` es la forma correcta
+                de una marca de evidencia, y aquí no hay ninguna que marcar:
+                esto es desde cuándo corre la unidad, y eso se cuenta por días.
+              */}
+              <p className="mt-0.5 text-[11.5px] text-[var(--tenue)]">
+                Asignada desde el {diaYMes(u.assignedFrom, zona, op.ahora)}
               </p>
             </li>
           ))}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { duracion, margen } from "./formato-tiempo";
+import { diaYMes, duracion, margen } from "./formato-tiempo";
 
 /*
  * `duracion` no tenía prueba, y acaba de ganar un escalón de días. Se fija aquí
@@ -48,5 +48,29 @@ describe("margen · el signo se dice en palabras", () => {
 
   it("el empate se dice, no se redondea a favor de nadie", () => {
     expect(margen(limite, limite)).toBe("justo en el límite");
+  });
+});
+
+describe("diaYMes · el día como lo diría una persona", () => {
+  const JUAREZ = "America/Ciudad_Juarez";
+  const ahora = new Date("2026-08-29T18:00:00.000Z");
+
+  it("dentro del año en curso no arrastra el año", () => {
+    expect(diaYMes(new Date("2026-08-20T08:39:00.000Z"), JUAREZ, ahora)).toBe("20 de agosto");
+  });
+
+  it("de otro año SÍ lo dice: si no, es un dato correcto leído como falso", () => {
+    expect(diaYMes(new Date("2025-11-03T18:00:00.000Z"), JUAREZ, ahora)).toBe(
+      "3 de noviembre de 2025",
+    );
+  });
+
+  it("el día es el de la ZONA DEL CIRCUITO, no el del proceso", () => {
+    /*
+     * 05:30 UTC del día 21 son las 23:30 del 20 en Ciudad Juárez. Formatear sin
+     * zona daría «21 de agosto» en el servidor y «20» en el teléfono de quien
+     * mira, para la misma fila.
+     */
+    expect(diaYMes(new Date("2026-08-21T05:30:00.000Z"), JUAREZ, ahora)).toBe("20 de agosto");
   });
 });
