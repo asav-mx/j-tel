@@ -205,12 +205,66 @@ body {
  *   oscuro además se invierte el tono para que el mapa no sea un rectángulo
  *   blanco dentro de una pantalla de tinta.
  */
-.mapa-torre .leaflet-tile-pane {
+.mapa-torre .leaflet-tile-pane,
+.mapa-circuito .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.85) saturate(0.35);
 }
 
-[data-tema="claro"] .mapa-torre .leaflet-tile-pane {
+[data-tema="claro"] .mapa-torre .leaflet-tile-pane,
+[data-tema="claro"] .mapa-circuito .leaflet-tile-pane {
   filter: saturate(0.4) contrast(0.92) brightness(1.04);
+}
+
+/*
+ *   `.mapa-circuito` es el mapa del operador del concesionario, y comparte el
+ *   selector en vez de traer su propio filtro. La cara del pasajero usa valores
+ *   ligeramente distintos —conserva más color, porque quien mira va a pie y
+ *   necesita reconocer la esquina—; dentro de J-Telemetry, dos mapas con dos
+ *   tintes es el defecto, no la variedad.
+ */
+
+/*
+ *   Los controles de leaflet —zoom y atribución— NO son teselas, así que el
+ *   filtro de arriba no los alcanza: sobre el mapa teñido quedaban dos
+ *   rectángulos blancos, que es en chico el mismo problema que el tinte vino a
+ *   resolver. Se visten con los tokens del tema, así que siguen al interruptor.
+ *
+ *   Acotado a `.mapa-circuito` a propósito: el mapa de la torre tiene el mismo
+ *   detalle y se arregla en su propio cambio, no de contrabando en éste.
+ */
+.mapa-circuito .leaflet-bar a,
+.mapa-circuito.leaflet-container .leaflet-control-attribution {
+  background: var(--panel);
+  color: var(--tenue);
+  border-color: var(--linea-fuerte);
+}
+
+.mapa-circuito .leaflet-bar a:hover {
+  background: var(--hover);
+  color: var(--texto);
+}
+
+.mapa-circuito.leaflet-container .leaflet-control-attribution a {
+  color: var(--acero);
+}
+
+/*
+ * La banderita decorativa que leaflet mete en la atribución.
+ *
+ * Los dos selectores llevan `.leaflet-container` pegado a `.mapa-circuito` —el
+ * mismo div, leaflet le agrega su clase al inicializar— porque la regla de
+ * leaflet es `.leaflet-container .leaflet-control-attribution` y empata en
+ * especificidad con una sola clase mía. Empatada, gana la que se carga después,
+ * y leaflet.css lo importa el componente: sin este empujón el fondo blanco
+ * sobrevivía al tinte, que es en chico lo mismo que el tinte vino a resolver.
+ */
+.mapa-circuito.leaflet-container .leaflet-attribution-flag {
+  /*
+   * `!important` porque leaflet declara `display: inline !important` en esa
+   * misma bandera, y contra un `!important` la especificidad no alcanza. Es la
+   * única forma de ganarle, no una comodidad.
+   */
+  display: none !important;
 }
 
 /*

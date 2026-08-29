@@ -41,6 +41,11 @@ export interface UnidadDibujable {
   enCorredor: boolean;
 }
 
+/** Alto de la cajita del rótulo, y ancho aproximado por carácter, en píxeles. */
+const ALTO_ROTULO = 17;
+const ANCHO_CARACTER = 6.3;
+const PADDING_ROTULO = 12;
+
 export function OperarMapa({
   trazados,
   unidades,
@@ -57,6 +62,8 @@ export function OperarMapa({
   const capaTrazados = useRef<import("leaflet").LayerGroup | null>(null);
   const capaUnidades = useRef<import("leaflet").LayerGroup | null>(null);
   const [listo, setListo] = useState(false);
+  /** Sube cada vez que el mapa se mueve: obliga a recolocar los rótulos. */
+  const [encuadre, setEncuadre] = useState(0);
 
   useEffect(() => {
     if (!contenedor.current || mapa.current) return;
@@ -66,7 +73,11 @@ export function OperarMapa({
       L.current = mod;
       const m = mod.map(contenedor.current, { zoomControl: false, scrollWheelZoom: false });
       // Mismo fondo que el editor: OSM directo. CARTO empezó a exigir llave y
-      // devuelve un mosaico con "API KEY REQUIRED" impreso encima.
+      // devuelve un mosaico con "API KEY REQUIRED" impreso encima. El tinte de
+      // «ciudad insinuada» lo pone `.mapa-circuito` en globals.css, sobre la
+      // capa de teselas y nunca sobre el contenedor: aplicado al contenedor
+      // teñiría también el trazado y las unidades, y el color del circuito
+      // dejaría de ser el color que se ve.
       mod
         .tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
@@ -76,6 +87,9 @@ export function OperarMapa({
       mod.control.zoom({ position: "bottomright" }).addTo(m);
       capaTrazados.current = mod.layerGroup().addTo(m);
       capaUnidades.current = mod.layerGroup().addTo(m);
+      // Al hacer zoom o mover, dos unidades que estaban lejos quedan juntas: el
+      // reparto de rótulos se rehace contra las posiciones nuevas.
+      m.on("zoomend moveend", () => setEncuadre((n) => n + 1));
       mapa.current = m;
       setListo(true);
     });
@@ -118,15 +132,72 @@ export function OperarMapa({
     }
   }, [trazados, colorTrazado, listo, puntosDelTrazado]);
 
-  /* Las unidades. */
+  /* Las unidades, con sus rótulos repartidos para que no se encalen. */
   useEffect(() => {
     const mod = L.current;
     const capa = capaUnidades.current;
-    if (!mod || !capa || !listo) return;
+    const m = mapa.current;
+    if (!mod || !capa || !m || !listo) return;
     capa.clearLayers();
 
-    for (const u of unidades) {
+    /*
+     * El reparto de rótulos.
+     *
+     * En una ruta urbana las unidades van sobre la misma avenida y a la misma
+     * escala, así que sus rótulos se montan uno encima de otro y dejan de
+     * leerse — que es justo lo que el rótulo venía a resolver. Leaflet no trae
+     * nada para esto.
+     *
+     * El reparto es voraz y determinista: se colocan primero las frescas —si
+     * algo tiene que quedar tapado, que sea lo que ya no dice dónde está—, y
+     * cada una toma la primera posición candidata que no choque con las ya
+     * puestas. Si ninguna cabe, se usa la primera: **una etiqueta encimada es
+     * mejor que una etiqueta escondida**, porque el operador puede mover el
+     * mapa y no puede adivinar lo que no se dibujó.
+     */
+    const orden = [...unidades].sort((a, b) => {
+      if (a.fresco !== b.fresco) return a.fresco ? -1 : 1;
+      return a.unitLabel.localeCompare(b.unitLabel);
+    });
+
+    const ocupados: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+    const choca = (r: { x1: number; y1: number; x2: number; y2: number }) =>
+      ocupados.some((o) => !(r.x2 < o.x1 || r.x1 > o.x2 || r.y2 < o.y1 || r.y1 > o.y2));
+
+    for (const u of orden) {
       const min = Math.max(1, Math.round(u.antiguedadSeg / 60));
+      const texto = u.fresco ? u.unitLabel : `${u.unitLabel} · hace ${min} min`;
+      const ancho = Math.round(texto.length * ANCHO_CARACTER + PADDING_ROTULO);
+
+      const p = m.latLngToContainerPoint([u.lat, u.lon]);
+      // Derecha, izquierda, y las mismas dos subidas y bajadas. En ese orden
+      // porque a la derecha del punto es donde el ojo lo busca.
+      const candidatos: Array<[number, number]> = [
+        [11, -ALTO_ROTULO / 2],
+        [-ancho - 11, -ALTO_ROTULO / 2],
+        [11, -ALTO_ROTULO - 8],
+        [-ancho - 11, -ALTO_ROTULO - 8],
+        [11, 8],
+        [-ancho - 11, 8],
+      ];
+      let elegido = candidatos[0]!;
+      for (const c of candidatos) {
+        const r = { x1: p.x + c[0], y1: p.y + c[1], x2: p.x + c[0] + ancho, y2: p.y + c[1] + ALTO_ROTULO };
+        if (!choca(r)) {
+          elegido = c;
+          break;
+        }
+      }
+      const r = {
+        x1: p.x + elegido[0],
+        y1: p.y + elegido[1],
+        x2: p.x + elegido[0] + ancho,
+        y2: p.y + elegido[1] + ALTO_ROTULO,
+      };
+      ocupados.push(r);
+      // El punto también ocupa lugar: sin esto un rótulo ajeno le cae encima.
+      ocupados.push({ x1: p.x - 8, y1: p.y - 8, x2: p.x + 8, y2: p.y + 8 });
+
       /*
        * Tres señales para lo mismo cuando está callada —color apagado, tamaño
        * menor y el «hace N min» escrito—, porque una sola no la ve quien trae
@@ -137,25 +208,26 @@ export function OperarMapa({
        * aquí no se sella nada.
        */
       const punto = u.fresco
-        ? `<span style="width:13px;height:13px;border-radius:50%;background:var(--acero);` +
-          `border:2px solid var(--panel);box-shadow:0 1px 6px rgba(0,0,0,.35);flex:none"></span>`
-        : `<span style="width:10px;height:10px;border-radius:50%;background:var(--tenue);` +
-          `border:2px solid var(--panel);opacity:.85;flex:none"></span>`;
+        ? `<span style="position:absolute;left:-6px;top:-6px;width:13px;height:13px;border-radius:50%;` +
+          `background:var(--acero);border:2px solid var(--panel);box-shadow:0 1px 6px rgba(0,0,0,.35)"></span>`
+        : `<span style="position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;` +
+          `background:var(--tenue);border:2px solid var(--panel);opacity:.85"></span>`;
 
       const rotulo =
-        `<span style="font-family:var(--fuente-mono);font-size:10.5px;font-variant-numeric:tabular-nums;` +
-        `padding:1px 5px;border-radius:3px;white-space:nowrap;border:1px solid ${
-          u.fresco ? "var(--b-acero)" : "var(--linea-fuerte)"
-        };background:var(--panel);color:${u.fresco ? "var(--acero)" : "var(--tenue)"}">` +
-        `${escapar(u.unitLabel)}${u.fresco ? "" : ` · hace ${min} min`}</span>`;
+        `<span style="position:absolute;left:${elegido[0]}px;top:${elegido[1]}px;` +
+        `font-family:var(--fuente-mono);font-size:10.5px;line-height:${ALTO_ROTULO - 3}px;` +
+        `font-variant-numeric:tabular-nums;padding:0 5px;border-radius:3px;white-space:nowrap;` +
+        `border:1px solid ${u.fresco ? "var(--b-acero)" : "var(--linea-fuerte)"};` +
+        `background:var(--panel);color:${u.fresco ? "var(--acero)" : "var(--tenue)"}">` +
+        `${escapar(texto)}</span>`;
 
       mod
         .marker([u.lat, u.lon], {
           icon: mod.divIcon({
             className: "",
-            html: `<div style="display:flex;align-items:center;gap:4px">${punto}${rotulo}</div>`,
+            html: `<div style="position:relative;width:0;height:0">${punto}${rotulo}</div>`,
             iconSize: [0, 0],
-            iconAnchor: [6, 6],
+            iconAnchor: [0, 0],
           }),
           // La fresca encima: si dos se enciman, la que dice dónde está gana.
           zIndexOffset: u.fresco ? 1000 : 0,
@@ -167,7 +239,7 @@ export function OperarMapa({
         )
         .addTo(capa);
     }
-  }, [unidades, listo]);
+  }, [unidades, listo, encuadre]);
 
   const verTodo = useCallback(() => {
     const mod = L.current;
@@ -197,7 +269,7 @@ export function OperarMapa({
     <div className="relative">
       <div
         ref={contenedor}
-        className="h-[54vh] min-h-[280px] w-full rounded-lg border border-[var(--linea)] bg-[var(--panel2)] sm:h-[420px]"
+        className="mapa-circuito h-[54vh] min-h-[280px] w-full rounded-lg border border-[var(--linea)] bg-[var(--panel2)] sm:h-[420px]"
         role="img"
         aria-label={`Mapa del circuito con ${unidades.length} unidad${
           unidades.length === 1 ? "" : "es"

@@ -7,6 +7,7 @@ import { exigirEnPagina } from "@/lib/guardia-pagina";
 import { duracion } from "@/lib/formato-tiempo";
 import { armarOperacion, type Operacion, type UnidadOperando } from "@/lib/operar-circuito";
 import { OperarMapa } from "@/components/operar-mapa";
+import { FrescuraDelCorte } from "@/components/frescura-del-corte";
 
 /**
  * **Operar** — el día a día del concesionario sobre un circuito.
@@ -101,7 +102,6 @@ export default async function OperarPage({
           cierraALas={cierraALas}
           umbralFrescuraSeg={circuito.staleAfterSeconds}
           corredorMetros={circuito.corridorToleranceMeters}
-          circuitoId={id}
         />
 
         {op.atencion.length > 0 ? (
@@ -136,37 +136,39 @@ function MarcoSuperior({
 }) {
   return (
     <header className="mb-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Link
-            href={`/jstaff/circuitos/${circuitoId}`}
-            className={`${mono} text-[11px] tracking-[.1em] text-[var(--tenue)] uppercase hover:text-[var(--texto)]`}
-          >
-            ← Expediente del circuito
-          </Link>
-          <h1 className="mt-1 truncate text-[26px] leading-tight font-bold tracking-[-.02em] text-[var(--texto)]">
-            {nombre}
-          </h1>
-          {concesion ? (
-            <p className={`${mono} mt-0.5 truncate text-[12px] text-[var(--tenue)]`}>
-              {concesion}
-            </p>
-          ) : null}
-        </div>
-
-        {/*
-          El asiento de Lenore.
-
-          Va vacío a propósito y ocupa su lugar desde hoy: cuando el copiloto
-          entre, entra AQUÍ, y el marco no se rediseña ni se le mueve el título
-          al operador que ya se acostumbró a dónde está cada cosa. Un hueco
-          declarado es más barato que un rediseño.
-        */}
-        <div
-          aria-hidden
-          className="hidden h-[54px] w-[132px] flex-none rounded-lg border border-dashed border-[var(--linea)] sm:block"
-        />
+      <div className="min-w-0">
+        <Link
+          href={`/jstaff/circuitos/${circuitoId}`}
+          className={`${mono} text-[11px] tracking-[.1em] text-[var(--tenue)] uppercase hover:text-[var(--texto)]`}
+        >
+          ← Expediente del circuito
+        </Link>
+        <h1 className="mt-1 text-[26px] leading-tight font-bold tracking-[-.02em] text-[var(--texto)]">
+          {nombre}
+        </h1>
+        {concesion ? (
+          <p className={`${mono} mt-0.5 truncate text-[12px] text-[var(--tenue)]`}>{concesion}</p>
+        ) : null}
       </div>
+
+      {/*
+        El asiento de Lenore.
+
+        Va vacío a propósito y ocupa su lugar desde hoy: cuando el copiloto
+        entre, entra AQUÍ, y el marco no se rediseña ni se le mueve el título al
+        operador que ya se acostumbró a dónde está cada cosa. Un hueco declarado
+        es más barato que un rediseño.
+
+        **De una línea y en TODOS los anchos**, no una caja que aparece a partir
+        de la tableta. Reservarlo sólo en ancho no reserva nada: el
+        concesionario abre esto en el teléfono siempre, así que el rediseño que
+        el asiento existe para evitar ocurriría exactamente donde no estaba
+        reservado. Y de una línea porque el copiloto habla en una frase.
+      */}
+      <div
+        aria-hidden
+        className="mt-3 h-[26px] w-full rounded-md border border-dashed border-[var(--linea)]"
+      />
 
       {/*
         La leyenda, permanente y no al pie en chico.
@@ -194,7 +196,6 @@ function Dominante({
   cierraALas,
   umbralFrescuraSeg,
   corredorMetros,
-  circuitoId,
 }: {
   op: Operacion;
   zona: string;
@@ -202,7 +203,6 @@ function Dominante({
   cierraALas: string;
   umbralFrescuraSeg: number;
   corredorMetros: number;
-  circuitoId: string;
 }) {
   return (
     <section className="rounded-lg border border-[var(--linea)] bg-gradient-to-b from-[var(--panel)] to-[var(--panel2)] p-5">
@@ -216,8 +216,15 @@ function Dominante({
               de {op.enElPlan}
             </span>
           </p>
+          {/*
+            La lectura dice QUÉ son los dos números, no los vuelve a contar.
+            Decía «de las 6 que el circuito tiene asignadas» con el 6 ya escrito
+            arriba: un número repetido obliga a comprobar que los dos digan lo
+            mismo, y esa comprobación es trabajo que la pantalla le pasa a quien
+            lee. Un rótulo nombra; no recuenta.
+          */}
           <p className="mt-2 text-[15px] leading-snug text-[var(--texto)]">
-            unidades en ruta, de las {op.enElPlan} que el circuito tiene asignadas
+            en ruta ahora, de las unidades asignadas al circuito
           </p>
         </>
       ) : (
@@ -254,18 +261,13 @@ function Dominante({
         ) : null}
       </dl>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Link
-          href={`/jstaff/circuitos/${circuitoId}/operar?t=${op.ahora.getTime()}`}
-          prefetch={false}
-          className={`${mono} rounded border border-[var(--linea-fuerte)] px-3 py-1.5 text-[11px] tracking-[.1em] text-[var(--tenue)] uppercase hover:border-[var(--acero)] hover:text-[var(--texto)]`}
-        >
-          Volver a medir
-        </Link>
-        <span className="text-[12px] text-[var(--tenue)]">
-          La pantalla no se refresca sola: lo que ves es el corte de arriba.
-        </span>
-      </div>
+      {/*
+        Lo único de la pantalla que se mueve sin que llegue un dato nuevo, y se
+        mueve envejeciendo. La hora del corte de arriba es la evidencia; esto es
+        para que a los veinte minutos la pantalla no se siga viendo igual de
+        firme que al segundo uno.
+      */}
+      <FrescuraDelCorte corteIso={op.ahora.toISOString()} />
     </section>
   );
 }
