@@ -221,6 +221,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [El mapa de las paradas reales de Juárez](#el-mapa-de-las-paradas-reales-de-juárez) | Frontera post-sprint |
 | [Los 30 s del recolector son un límite de la plataforma](#los-30-s-del-recolector-son-un-límite-de-la-plataforma) | Cuando llegue el fierro propio |
 | [La velocidad sin calibrar viaja al teléfono con el interruptor apagado](#la-velocidad-sin-calibrar-viaja-al-teléfono-con-el-interruptor-apagado) | Cuando los dos cachés se igualen |
+| [El buscador no entiende calle y número](#el-buscador-no-entiende-calle-y-número) | Cuando emparejar direcciones no exija sacar el destino del teléfono |
 | [El pasajero como usuario](#el-pasajero-como-usuario) | Cuando la app tenga uso real |
 | [Sensores más allá del GPS](#sensores-más-allá-del-gps) | Cuando exista la suite del concesionario |
 | [Mapas de demanda](#mapas-de-demanda) | Después de los sensores |
@@ -2693,6 +2694,59 @@ el primer render), `apps/publico/src/components/vista-pasajero.tsx` (que tendrí
 que saber esperar un permiso sin velocidad) y
 `packages/domain/src/llegada.ts` (`permisoDeRango`, que ya es el único lugar por
 donde pasaría).
+
+## El buscador no entiende calle y número
+
+**Qué es.** El buscador de «¿a dónde vas?» empareja lo que el pasajero escribe
+contra **los nombres de las paradas y de las rutas publicadas**, que es lo que el
+sistema conoce. No entiende «Av. Tecnológico 1500» ni «Hospital General», y para
+cualquier otro lugar hay que picarlo en el mapa. Entenderlos pide un
+geocodificador, y todos viven fuera.
+
+**Por qué se aplazó — decisión de Asav, 2 de septiembre de 2026.** No por costo:
+por el dato. Mandar a un tercero lo que el pasajero escribió sería mandarle **su
+destino**, y el destino dice de una persona más que su ubicación actual — su
+casa, su trabajo, un hospital. La ley de esta app es que nada suyo sale del
+teléfono, y un buscador de direcciones la rompería por el dato más íntimo y por
+una puerta lateral: la pantalla se vería igual y nadie notaría el viaje de
+salida.
+
+**Es la misma forma que la fuga del interruptor del rango.** Ahí la condición
+estaba escrita en el titular y faltaba en otros cuatro lugares que también
+afirmaban un tiempo; aquí la regla está escrita en la vista de la ruta —«tu
+ubicación se usa solo en este teléfono»— y una pantalla nueva podría dejar de
+cumplirla sin contradecir ninguna línea existente. Por eso la puerta se cierra
+por construcción y no por disciplina: **no hay ninguna petición de red en el
+camino de la búsqueda**, así que no hay una que revisar.
+
+**Lo que cuesta hoy, dicho en voz alta.** El límite se declara en la pantalla
+—«todavía no entendemos calle y número»— en vez de dejar que el pasajero crea que
+escribió mal. Con Oasis–Centro y sus paradas capturadas alcanza; con una ciudad
+cubierta, escribir el nombre de un negocio va a ser lo natural y esto se va a
+sentir corto.
+
+**Lo que esto NO cierra, y conviene que esté escrito.** La búsqueda no hace
+ninguna petición —medido: 21 peticiones en una búsqueda completa, todas al propio
+origen salvo los mosaicos, y **cero** con coordenadas o con lo escrito en la
+URL—. Pero **los mosaicos del mapa se piden a `tile.openstreetmap.org` por
+`z/x/y`**, y cuando hay respuesta el mapa se encuadra al viaje: las teselas que
+se piden a partir de ahí describen por dónde va ese viaje, con la precisión de
+un mosaico —cientos de metros—. No sale ninguna coordenada del pasajero, y aun
+así un tercero ve el rumbo general. Es la misma clase de puerta lateral que esta
+entrada existe para cerrar, un escalón más abajo, y lo cerraría servir los
+mosaicos desde nuestro propio origen. Se anota sin arreglarlo: la vista de la
+ruta ya tenía la misma propiedad desde que existe.
+
+**Qué lo desbloquea.** Que emparejar direcciones se pueda hacer sin que el
+destino salga del teléfono. Dos caminos, y cualquiera sirve: un índice de lugares
+de la ciudad **servido como la forma del circuito** —baja una vez, se empareja
+aquí— o un geocodificador propio dentro de nuestra infraestructura, que deja de
+ser un tercero pero sigue viendo el destino y por eso es el peor de los dos.
+
+**Dónde toca.** `apps/publico/src/lib/buscar-lugar.ts` (el emparejamiento, que ya
+es el único lugar por donde pasaría), `apps/publico/src/components/buscador.tsx`
+(el campo y sus sugerencias) y `apps/publico/src/app/buscar/page.tsx` (que hoy
+sirve las paradas de los circuitos publicados y serviría también el índice).
 
 ## Mapas de demanda
 

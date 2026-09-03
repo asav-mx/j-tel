@@ -761,6 +761,7 @@ export * from "./operational-scope.js";
 export * from "./senal.js";
 export * from "./ventana-observacion.js";
 
+export * from "./buscador.js";
 export * from "./kml-circuito.js";
 export * from "./llegada.js";
 export * from "./tiempo.js";

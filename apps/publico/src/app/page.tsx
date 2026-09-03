@@ -38,6 +38,17 @@ export default async function Inicio() {
       <p className="marca">{NOMBRE}</p>
       <h1>¿A dónde vas?</h1>
       <p>{circuitos.length === 0 ? "Todavía no hay rutas publicadas." : "Escoge tu ruta."}</p>
+      {/*
+        Y si no sabe cuál escoger, el buscador. Va arriba de la lista porque
+        con varias rutas la pregunta «¿cuál me sirve?» llega antes que la
+        respuesta «ésta»; con una sola esta página redirige y no se ve, así que
+        la liga que de verdad se usa es la de la vista de la ruta.
+      */}
+      {circuitos.length > 0 && (
+        <Link className="puerta-buscar" href="/buscar">
+          Ver cuál te sirve
+        </Link>
+      )}
       {circuitos.length > 0 && (
         <ul>
           {circuitos.map((c) => (

@@ -1,7 +1,11 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTema } from "@/lib/tema";
+import { useMiUbicacion } from "@/lib/ubicacion";
+import { iniciales, tinte } from "@/lib/color-ruta";
 import {
   avanceSobreTrazado,
   permisoDeRango,
@@ -101,8 +105,6 @@ const SONDEO_MS = 15_000;
 /** Cuánto camino cubre la barra de acercamiento. Del prototipo: 2.6 km. */
 const VENTANA_PISTA_M = 2600;
 
-const LLAVE_TEMA = "jtel-tema";
-
 const IconoBus = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <path d="M4 16c0 .88.39 1.67 1 2.22V20a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm9 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm1.5-6H6V6h12v5z" />
@@ -124,10 +126,18 @@ export function VistaPasajero({
   esVistaPrevia?: boolean;
 }) {
   const [vivo, setVivo] = useState<Vivo | null>(null);
-  const [yo, setYo] = useState<{ lat: number; lon: number } | null>(null);
   const [error, setError] = useState(false);
   const [abierta, setAbierta] = useState(false);
-  const [tema, setTema] = useState<"dia" | "noche" | null>(null);
+
+  /*
+   * El tema y la ubicación viven en `lib/` desde que el buscador los necesitó
+   * igual. **No fue limpieza:** dos copias de «claro por omisión, y la llave se
+   * llama así» se separan, y el pasajero vería un tema en la ruta y otro en el
+   * buscador. Lo mismo con la ubicación, que además es la que nunca sale del
+   * teléfono: un solo lugar es un solo lugar que revisar.
+   */
+  const { deNoche, alternar } = useTema();
+  const yo = useMiUbicacion();
 
   const contenedor = useRef<HTMLDivElement>(null);
   const mapa = useRef<import("leaflet").Map | null>(null);
@@ -135,46 +145,6 @@ export function VistaPasajero({
   const capaCamiones = useRef<import("leaflet").LayerGroup | null>(null);
   const anteriores = useRef<Map<string, { avance: number; en: number }>>(new Map());
   const [muestras, setMuestras] = useState<MuestraDeAvance[]>([]);
-
-  // ── Tema ──────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    try {
-      const g = localStorage.getItem(LLAVE_TEMA);
-      if (g === "dia" || g === "noche") setTema(g);
-    } catch {
-      /* modo privado: se queda con la preferencia del sistema */
-    }
-  }, []);
-
-  useEffect(() => {
-    if (tema) document.documentElement.dataset.tema = tema;
-    else delete document.documentElement.dataset.tema;
-  }, [tema]);
-
-  /*
-   * La preferencia del sistema vive en ESTADO y no se lee al vuelo.
-   *
-   * Leer `window.matchMedia` dentro del render tira el render del SERVIDOR con
-   * «window is not defined»: este componente es cliente, pero Next lo pinta
-   * primero en el servidor. Y de paso queda reactivo: si el teléfono entra en
-   * modo oscuro a las siete de la tarde, la app lo sigue sin recargar.
-   *
-   * Arranca en `false` —claro por omisión, como manda el diseño— y se corrige
-   * en cuanto monta.
-   */
-  const [sistemaOscuro, setSistemaOscuro] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
-    if (!mq) return;
-    setSistemaOscuro(mq.matches);
-    const alCambiar = (e: MediaQueryListEvent) => setSistemaOscuro(e.matches);
-    mq.addEventListener("change", alCambiar);
-    return () => mq.removeEventListener("change", alCambiar);
-  }, []);
-
-  const deNoche = tema ? tema === "noche" : sistemaOscuro;
 
   // ── Sondeo, en pausa cuando nadie mira ────────────────────────────────
 
@@ -213,20 +183,6 @@ export function VistaPasajero({
       parar();
     };
   }, [sondear]);
-
-  // ── Dónde está el pasajero. Nunca sale del teléfono. ──────────────────
-
-  useEffect(() => {
-    if (!("geolocation" in navigator)) return;
-    const id = navigator.geolocation.watchPosition(
-      (p) => setYo({ lat: p.coords.latitude, lon: p.coords.longitude }),
-      () => {
-        /* Sin permiso la app sigue sirviendo: enseña la ruta y la frecuencia. */
-      },
-      { enableHighAccuracy: true, maximumAge: 10_000, timeout: 20_000 },
-    );
-    return () => navigator.geolocation.clearWatch(id);
-  }, []);
 
   // ── El cálculo ────────────────────────────────────────────────────────
 
@@ -548,15 +504,7 @@ export function VistaPasajero({
         <button
           className="btn-tema"
           type="button"
-          onClick={() => {
-            const nuevo = deNoche ? "dia" : "noche";
-            setTema(nuevo);
-            try {
-              localStorage.setItem(LLAVE_TEMA, nuevo);
-            } catch {
-              /* sin almacenamiento, el tema dura lo que la sesión */
-            }
-          }}
+          onClick={alternar}
           aria-label={deNoche ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
         >
           {deNoche ? "☀" : "☾"}
@@ -789,6 +737,17 @@ export function VistaPasajero({
         </div>
 
         <div className="lista">
+          {/*
+            La liga al buscador vive AQUÍ y no sólo en la portada, y es lo que
+            lo hace existir: con un solo circuito publicado la portada redirige
+            derecho a esta pantalla y nunca se ve. Un buscador colgado sólo de
+            ella no lo abriría ningún pasajero el día del arranque.
+          */}
+          <Link className="liga-buscar" href="/buscar">
+            <span className="lb-t">¿A dónde vas?</span>
+            <span className="lb-s">Ve si alguna ruta te sirve</span>
+          </Link>
+
           <h3>Paradas de la ruta</h3>
           {forma.paradas.length === 0 ? (
             <p className="lista-vacia">
@@ -941,33 +900,4 @@ function pctPista(metros: number): number {
 /** Metros redondeados a la decena; kilómetros con un decimal pasando los mil. */
 function distancia(metros: number): string {
   return metros > 1000 ? `${(metros / 1000).toFixed(1)} km` : `${Math.round(metros / 10) * 10} m`;
-}
-
-/** Las iniciales del circuito para la insignia. Del dato, no del código. */
-function iniciales(nombre: string): string {
-  const partes = nombre
-    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
-    .split(/[\s-]+/)
-    .filter(Boolean);
-  if (partes.length === 0) return "··";
-  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
-  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
-}
-
-/**
- * El tinte claro del color de la ruta, para fondos.
- *
- * Se deriva del color del dato en vez de guardarse aparte: pedir dos colores por
- * circuito duplica lo que hay que mantener y deja abierta la puerta a que no
- * combinen. En noche es una transparencia; en día, una mezcla con blanco.
- */
-function tinte(hex: string, noche: boolean): string {
-  const n = hex.replace("#", "");
-  const r = parseInt(n.slice(0, 2), 16);
-  const g = parseInt(n.slice(2, 4), 16);
-  const b = parseInt(n.slice(4, 6), 16);
-  if (Number.isNaN(r + g + b)) return noche ? "rgba(255,255,255,.12)" : "#eee";
-  if (noche) return `rgba(${r},${g},${b},0.16)`;
-  const mez = (c: number) => Math.round(c + (255 - c) * 0.88);
-  return `rgb(${mez(r)},${mez(g)},${mez(b)})`;
 }
