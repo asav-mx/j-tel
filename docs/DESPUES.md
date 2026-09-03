@@ -132,7 +132,9 @@ de estas leyes está mal escrita, y se corrige la entrada.
 
 | Entrada | Horizonte |
 |---|---|
-| [Historia de cambios de configuración](#historia-de-cambios-de-configuración) | **Antes del segundo cliente** |
+| [Historia de cambios de configuración](#historia-de-cambios-de-configuración) | **Antes del segundo cliente** — y ahora también el circuito concesionado |
+| [El horario del circuito no tiene estado «sin declarar»](#el-horario-del-circuito-no-tiene-estado-sin-declarar) | 🟢 Se resuelve capturando el horario real — decisión de Asav |
+| [Mover, reordenar y dar sentido a las paradas desde la pantalla](#mover-reordenar-y-dar-sentido-a-las-paradas-desde-la-pantalla) | 🟢 Después del 10 de septiembre |
 | [La versión del motor en el hecho](#la-versión-del-motor-en-el-hecho) | v1.1 |
 | [Historia del sello en Cierre del turno](#historia-del-sello-en-cierre-del-turno) | v1.1 |
 | [Medición honesta de kilómetros con brincos de GPS](#medición-honesta-de-kilómetros-con-brincos-de-gps) | v1.1 |
@@ -1036,7 +1038,77 @@ humana todavía alcanza. Con dos, no.
 configuración aprendió"* es indistinguible de *"alguien le movió"*. Ver
 [El loop de aprendizaje de la operación](#el-loop-de-aprendizaje-de-la-operación).
 
-**Dónde toca.** `route_kml_versions`, `service_contracts.policy`, `service_profiles`.
+**Y ahora también el circuito concesionado — 2 de septiembre de 2026.** El expediente
+del circuito (#364) puso a mano, en una pantalla, seis umbrales que antes sólo se
+movían con SQL. Nada de lo del circuito deja rastro de quién lo cambió:
+`circuits` se sobrescribe y sólo conserva `updated_at`; publicar y prender el tiempo
+estimado guardan **cuándo** (`published_at`, `arrival_range_enabled_at`) pero no
+**quién**; el trazado se reemplaza. Paradas y asignaciones sí versionan con vigencia y
+motivo, y siguen sin actor.
+
+**Lo que ya cuesta, medido en la pantalla:** el expediente enseña «igual al valor de
+origen» y **no puede decir «sin ajustar»**, porque un 180 heredado y un 180 tecleado
+son indistinguibles en la base. Es el mismo hueco que tenía la frecuencia declarada
+antes de la `0031`, y esta entrada es lo único que lo cierra. La Pieza 4 del Marco ya
+lo exige —*toda acción sensible queda en el ledger*— y publicar un circuito a una
+ciudad entera califica.
+
+**El molde ya existe y es barato:** `shift_history` (`0019`) y
+`contract_policy_history` (`0020`) guardan antes/después + `actor_kind` + `actor_id` +
+`note` + `changed_at`, y **las escribe un trigger de Postgres, no el código**. Ésa es la
+lección de C13, escrita en el esquema: el registro vivía dentro de `updatePolicy` desde
+el 31 de julio y la tabla seguía vacía, porque la edición real la hizo un guion con
+`UPDATE` crudo. Un trigger alcanza también a los guiones y a la consola de Neon.
+
+**Dónde toca.** `route_kml_versions`, `service_contracts.policy`, `service_profiles`, y
+—para el frente concesionado— `circuits`, `circuit_paths`, `circuit_stop_versions`,
+`circuit_unit_assignments`.
+
+## El horario del circuito no tiene estado «sin declarar»
+
+**Qué es.** `circuits.service_start_local` y `service_end_local` son `NOT NULL` con
+valor de origen 05:00–23:00. La app del pasajero lee ese horario y **se lo atribuye al
+concesionario** —«Servicio declarado de 05:00 a 23:00», bajo el rótulo *«declarada por
+el concesionario»*— sin poder distinguir si alguien lo capturó o si el circuito nació
+así.
+
+**Es el mismo defecto que la frecuencia, un escalón más abajo.** La `0031` le quitó el
+`DEFAULT 20` a `declared_frequency_minutes` justo porque «declaró 20» y «no declaró
+nada» eran indistinguibles, y la app afirmaba la cadencia igual en los dos casos. El
+horario está exactamente ahí, con la diferencia de que **fuera de horario la app sí
+afirma**: dice a qué hora abre, y ésa es la única afirmación sin evidencia que se
+permite.
+
+**Por qué NO se migra ahora — decisión de Asav, 2 de septiembre de 2026.** Se resuelve
+capturando el horario real que declare el concesionario, que es trabajo de días de
+sprint y no de esquema. Hacer la columna anulable obliga además a decidir qué dice la
+app sin horario, y hoy no hay ningún caso que lo pida: el circuito que sale el 10 va a
+tener su horario capturado.
+
+**Qué lo desbloquea.** Un concesionario que **no** declare horario. Mientras todos lo
+declaren, la columna anulable resolvería un caso que no existe.
+
+**Dónde toca.** `packages/db/src/schema/index.ts` (`circuits`),
+`apps/publico/src/components/vista-pasajero.tsx` (el titular y la frase de
+`sin_evidencia`), `apps/web/src/app/jstaff/circuitos/[id]/page.tsx` (sección 2).
+
+## Mover, reordenar y dar sentido a las paradas desde la pantalla
+
+**Qué es.** Arrastrar una parada ya creada a otro punto del trazado, cambiarle el orden,
+y decirle si sirve un sentido o los dos.
+
+**Por qué se aplazó — decisión de Asav, 2 de septiembre de 2026: queda fuera hasta
+después del 10.** El `PATCH` de la parada **ya soporta las tres** (`lat`/`lon`, `orden`,
+`sentido`) y lo que falta es sólo la piel; pero mover pide arrastre sobre el marcador de
+Leaflet con su confirmación de pegado, y eso crece un PR que ya iba en 1 662 líneas. Con
+el sprint del Tramo JB encima, la parada mal puesta se arregla retirándola y volviéndola
+a picar — feo, y suficiente.
+
+**Qué lo desbloquea.** Que pase el 10 de septiembre.
+
+**Dónde toca.** `apps/web/src/components/circuito-editor.tsx` y
+`apps/web/src/app/api/jstaff/circuitos/[id]/paradas/[stopId]/route.ts` (que ya está
+listo).
 
 ## La versión del motor en el hecho
 
