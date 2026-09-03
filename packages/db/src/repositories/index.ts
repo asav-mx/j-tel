@@ -5745,6 +5745,116 @@ export class CircuitRepository {
     return [...porUnidad.values()];
   }
 
+  /**
+   * El HISTORIAL de un día para las unidades de un circuito — el insumo del
+   * reporte de comportamiento.
+   *
+   * Es la tercera consulta de este frente y otra vez es OTRA consulta: la del
+   * pasajero pide la última posición, la del operador pide el plan con su
+   * última posición, y ésta pide **el archivo**. Ninguna se puede reusar como
+   * las otras dos sin arrastrarle a alguien columnas que no le tocan.
+   *
+   * ## Se une por IMEI y no por `unit_id`, y está medido
+   *
+   * `telemetry_points.unit_id` **no siempre viene lleno**: medido contra
+   * producción el 3 de septiembre de 2026, 355 798 filas de 368 498 en siete
+   * días — **3.4% en nulo**, con `imei` y `device_id` al 100%. Una consulta por
+   * `unit_id` compila, corre, y **devuelve de menos en silencio**: el peor modo
+   * de falla, porque un reporte incompleto que se ve completo se defiende en una
+   * discusión. Es la misma cadena que ya usa el resto del frente, y por la misma
+   * razón.
+   *
+   * ## La asignación se resuelve AL MOMENTO OBSERVADO
+   *
+   * `device_assignments` se une contra `recorded_at`, no contra «la vigente
+   * hoy». Es la ley de la Pieza 1 —la evidencia entra por el aparato que la
+   * unidad traía puesto en ese momento— y sin ella un cambio de aparato a media
+   * mañana le regalaría a la unidad nueva los puntos de toda la mañana, o los
+   * perdería. Cambiar de aparato no reescribe el historial.
+   *
+   * Devuelve el punto crudo con su hora. **Quién estaba en el corredor y quién
+   * dio vueltas lo decide el dominio**, contra los umbrales del circuito: aquí
+   * no se filtra por geometría, porque el corredor es columna del circuito y
+   * hornearlo en el SQL lo volvería constante.
+   */
+  async listHistorialDelCircuito(circuitId: string, desde: Date, hasta: Date) {
+    return this.db
+      .select({
+        unitId: circuitUnitAssignments.unitId,
+        unitLabel: units.label,
+        latitude: telemetryPoints.latitude,
+        longitude: telemetryPoints.longitude,
+        recordedAt: telemetryPoints.recordedAt,
+      })
+      .from(circuitUnitAssignments)
+      .innerJoin(units, eq(units.id, circuitUnitAssignments.unitId))
+      .innerJoin(
+        deviceAssignments,
+        eq(deviceAssignments.unitId, circuitUnitAssignments.unitId),
+      )
+      .innerJoin(devices, eq(devices.id, deviceAssignments.deviceId))
+      .innerJoin(
+        telemetryPoints,
+        and(
+          eq(telemetryPoints.imei, devices.imei),
+          gte(telemetryPoints.recordedAt, desde),
+          lte(telemetryPoints.recordedAt, hasta),
+          /* La asignación que estaba viva cuando el aparato tomó ese fix. */
+          lte(deviceAssignments.validFrom, telemetryPoints.recordedAt),
+          or(
+            isNull(deviceAssignments.validTo),
+            gt(deviceAssignments.validTo, telemetryPoints.recordedAt),
+          ),
+        ),
+      )
+      .where(
+        and(
+          eq(circuitUnitAssignments.circuitId, circuitId),
+          isNull(circuitUnitAssignments.validTo),
+        ),
+      )
+      .orderBy(units.label, telemetryPoints.recordedAt);
+  }
+
+  /**
+   * Hasta qué instante llega el archivo de estas unidades.
+   *
+   * **El reporte tiene que poder decir dónde se corta.** El archivador corre
+   * cada diez minutos y mete su propio retraso —p99 de 12.84 min medido el 26 de
+   * agosto de 2026, 1 min 44 s medido el 3 de septiembre—, así que «las vueltas de hoy»
+   * es siempre «hasta donde el archivo alcanzó». Sin este dato la pantalla
+   * afirmaría sobre el día completo lo que sólo vale hasta el último punto
+   * archivado, que es §D en su forma de alcance.
+   *
+   * `null` cuando de estas unidades no hay un solo punto en el rango: un hueco
+   * declarado, nunca la hora del reloj.
+   */
+  async ultimoPuntoArchivado(circuitId: string, desde: Date, hasta: Date) {
+    const [fila] = await this.db
+      .select({ ultimo: sql<Date | null>`max(${telemetryPoints.recordedAt})` })
+      .from(circuitUnitAssignments)
+      .innerJoin(
+        deviceAssignments,
+        eq(deviceAssignments.unitId, circuitUnitAssignments.unitId),
+      )
+      .innerJoin(devices, eq(devices.id, deviceAssignments.deviceId))
+      .innerJoin(
+        telemetryPoints,
+        and(
+          eq(telemetryPoints.imei, devices.imei),
+          gte(telemetryPoints.recordedAt, desde),
+          lte(telemetryPoints.recordedAt, hasta),
+        ),
+      )
+      .where(
+        and(
+          eq(circuitUnitAssignments.circuitId, circuitId),
+          isNull(circuitUnitAssignments.validTo),
+        ),
+      );
+    return fila?.ultimo ?? null;
+  }
+
   async listCircuitsForConcession(concessionAccountId: string) {
     return this.db
       .select()
