@@ -422,16 +422,32 @@ export function CircuitoEditor({
 
         <section className="rounded border border-[var(--linea-tenue)] p-3">
           <h3 className="mb-2 font-medium">Trazado</h3>
-          <input
-            type="file"
-            accept=".kml"
-            disabled={ocupado}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void subirKml(f);
-            }}
-            className="text-sm"
-          />
+          {/*
+            El `<input type="file">` nativo pinta su propio texto —«Choose File
+            / No file chosen»— **en el idioma del navegador, no en el de la
+            página**. Ni `lang` ni ningún atributo lo cambian: es interfaz del
+            navegador. En un teléfono con el sistema en inglés, la única pantalla
+            en español se rompe a media captura.
+
+            La forma de arreglarlo es la de siempre: se esconde el control
+            nativo —sin quitarlo, para no perder el diálogo del sistema ni la
+            navegación con teclado— y la etiqueta se pinta encima. `sr-only` y
+            no `display:none`: escondido de ese modo, el input deja de recibir
+            foco y el campo se vuelve inalcanzable sin ratón.
+          */}
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-[var(--linea-tenue)] px-3 py-1.5 text-sm hover:bg-[var(--superficie-2)] has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50">
+            <input
+              type="file"
+              accept=".kml"
+              disabled={ocupado}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void subirKml(f);
+              }}
+              className="sr-only"
+            />
+            Elegir archivo KML
+          </label>
           {trazados.map((t) => (
             <p key={t.sentido} className="mt-2 text-xs text-[var(--muted)]">
               <span style={{ color: COLOR[t.sentido] }}>■</span> {t.sentido}: {t.pointCount} puntos ·{" "}
