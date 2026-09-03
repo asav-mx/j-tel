@@ -1,7 +1,7 @@
 # J-Telemetry — El Plan
 
 **Corte: 3 de agosto de 2026.**
-**Última edición: 26 de agosto de 2026** (entra el **Tramo JB — Juárez Bus
+**Última edición: 2 de septiembre de 2026** (entra el PR de detalles de la cara pública, con las seis cosas chicas). Antes, 26 de agosto (entra el **Tramo JB — Juárez Bus
 público**, frente paralelo del transporte concesionado, con la corrección del día 1
 —la app se calcula sobre el trazado, no sobre paradas— ya en el cuerpo, y el ajuste
 del mismo día que saca los letreros físicos del sprint).
@@ -2076,6 +2076,31 @@ razón fuerte vuelve con ellos.
 cualquier esquina del recorrido, ve dónde viene su camión con un rango que se cumple, y
 cuando el dato envejece la app se lo dice en vez de mentirle. Y el mismo día, el carrier
 ve sus unidades y su reporte de comportamiento sin que nadie haya firmado una falta.
+
+#### El PR de detalles de la cara pública — seis cosas chicas, una sola rama
+
+**Qué es.** Lo que se ve mal y no cambia ninguna decisión del motor. Va junto porque
+seis PRs de una línea cuestan más revisión que uno de seis:
+
+| Qué | Dónde |
+|---|---|
+| La página 404 sale en inglés | `apps/publico` |
+| El encabezado de la portada | `apps/publico/src/app/page.tsx` |
+| La brújula del mapa tapa texto | `apps/publico/src/components/vista-pasajero.tsx` |
+| La franja de vista previa queda encimada | `apps/publico` · ver `lib/vista-previa.ts` |
+| **«Calibrado» no es palabra de pasajero** — cambiarla por algo que se use en la calle | `apps/publico/src/components/vista-pasajero.tsx` |
+| El selector de KML sale en inglés («Choose File / No file chosen») | `apps/web/src/components/circuito-editor.tsx` |
+
+**Por qué ahora.** Son las que un pasajero ve el día uno y las que hacen que el
+producto parezca sin terminar. Ninguna toca el motor, ninguna pide migración.
+
+**El último renglón no es de la cara pública y va aquí de todos modos**, porque es el
+mismo tipo de arreglo y la misma revisión: el `<input type="file">` nativo del editor
+de circuitos, que en el teléfono se lee en inglés a media captura. Salió mirando el
+expediente en el navegador (#364).
+
+**Lo que este PR NO es.** No es el pulido que salga de la prueba de campo — ése tiene
+su propio espacio en los días 9–11 y se decide con la calle enfrente.
 
 La compuerta se corre **con la ubicación del pasajero**, no con un QR escaneado: los
 letreros salieron del sprint, y una compuerta que exige material impreso mediría la
