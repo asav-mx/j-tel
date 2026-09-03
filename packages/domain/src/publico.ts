@@ -330,3 +330,42 @@ export function estadoDelCircuito(entrada: {
   if (entrada.unidades.some((u) => u.enCorredor && u.dentroDeConfianza)) return "por_horario";
   return "sin_evidencia";
 }
+
+// ── Los valores con que nace un circuito ─────────────────────────────────
+
+/**
+ * Los valores con que NACE un circuito, y la única copia que existe de ellos.
+ *
+ * Existen como constante —y no sueltos dentro de cada `.default(…)` del
+ * esquema— porque **la pantalla del expediente los enseña**: un operador que lee
+ * «150 m» tiene derecho a saber si ese número lo escogió alguien para SU
+ * circuito o si es el que traía de origen. Si la pantalla los tuviera copiados,
+ * el día que se mueva un default seguiría diciendo el viejo con la autoridad del
+ * sistema detrás — que es la forma exacta en que un dato correcto se vuelve una
+ * afirmación falsa.
+ *
+ * Viven en el dominio y no en `@jtel/db` para que la pantalla los lea sin
+ * arrastrar el controlador de base de datos, y para que el esquema y la interfaz
+ * lean **el mismo símbolo** en vez de dos copias que se separan.
+ *
+ * ⚠ **Coincidir con el valor de origen NO prueba que nadie lo haya escrito.** Un
+ * 180 heredado y un 180 tecleado son indistinguibles en la base: es exactamente
+ * el hueco que tenía la frecuencia declarada antes de la `0031`. Por eso la
+ * pantalla dice «igual al valor de origen» y nunca «sin ajustar». Lo único que
+ * lo cerraría es un registro de cambios, que todavía no existe.
+ *
+ * **La frecuencia declarada no está aquí, y ésa es la diferencia de fondo:** no
+ * tiene valor de origen porque la app la dice en voz alta al pasajero.
+ */
+export const ORIGEN_DEL_CIRCUITO = {
+  frescuraSegundos: 180,
+  pisoDelRangoSegundos: 180,
+  pegadoDeParadasMetros: 25,
+  corredorEnRutaMetros: 150,
+  confianzaMinutos: 15,
+  velocidadKmh: 20.5,
+  colorHex: "#7C5CE0",
+  horaInicioLocal: "05:00",
+  horaFinLocal: "23:00",
+  zonaHoraria: "America/Ciudad_Juarez",
+} as const;
