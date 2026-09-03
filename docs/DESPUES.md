@@ -222,6 +222,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Los 30 s del recolector son un límite de la plataforma](#los-30-s-del-recolector-son-un-límite-de-la-plataforma) | Cuando llegue el fierro propio |
 | [La velocidad sin calibrar viaja al teléfono con el interruptor apagado](#la-velocidad-sin-calibrar-viaja-al-teléfono-con-el-interruptor-apagado) | Cuando los dos cachés se igualen |
 | [El buscador no entiende calle y número](#el-buscador-no-entiende-calle-y-número) | Cuando emparejar direcciones no exija sacar el destino del teléfono |
+| [¿Sigue siendo exacta «no se envía a ningún servidor»?](#sigue-siendo-exacta-no-se-envía-a-ningún-servidor) | **Pregunta abierta · después del 10** |
 | [El pasajero como usuario](#el-pasajero-como-usuario) | Cuando la app tenga uso real |
 | [Sensores más allá del GPS](#sensores-más-allá-del-gps) | Cuando exista la suite del concesionario |
 | [Mapas de demanda](#mapas-de-demanda) | Después de los sensores |
@@ -2747,6 +2748,48 @@ ser un tercero pero sigue viendo el destino y por eso es el peor de los dos.
 es el único lugar por donde pasaría), `apps/publico/src/components/buscador.tsx`
 (el campo y sus sugerencias) y `apps/publico/src/app/buscar/page.tsx` (que hoy
 sirve las paradas de los circuitos publicados y serviría también el índice).
+
+## ¿Sigue siendo exacta «no se envía a ningún servidor»?
+
+**Qué es. Es una pregunta, no una tarea, y se anota como pregunta a propósito.**
+La app le dice al pasajero, en dos pantallas, que su ubicación *«se usa solo en
+este teléfono. No se envía a ningún servidor»*. La frase describe lo que
+**nosotros** hacemos, y por ese lado es cierta y está medida: no hay ninguna
+petición que la mande, ni en la vista de la ruta ni en el buscador.
+
+La pregunta es si eso basta para lo que el lector entiende. Los mosaicos del mapa
+se piden a `tile.openstreetmap.org` por `z/x/y`, y el mapa se encuadra a lo que el
+pasajero está mirando — su ruta, o su viaje. Ninguna coordenada suya viaja, y aun
+así un tercero puede inferir la zona con precisión de un mosaico. **Quien lee «no
+se envía a ningún servidor» probablemente entiende «nadie afuera puede saber por
+dónde ando», y eso es un poco más de lo que la frase sostiene.**
+
+**Por qué es exactamente esta clase de problema.** Es la §D del Marco aplicada a
+nuestra propia redacción: el dato es correcto —no mandamos la ubicación— y lo que
+puede volverse falso es la afirmación completa que el lector recibe. Igual que un
+conteo correcto bajo un rótulo mal elegido. Y conviene notar de qué lado cae: aquí
+la promesa es NUESTRA y el que la lee es el pasajero, así que el costo de que sea
+demasiado amplia lo paga él.
+
+**Las tres salidas, y ninguna está escogida.** Servir los mosaicos desde nuestro
+propio origen, y entonces la frase queda exacta sin tocarla. Precisar la frase
+—decir qué es lo que no se envía— a costa de que se lea más técnica, en una
+pantalla que se usa parado en la calle. O dejarla como está y escribir por qué se
+consideró suficiente, que también es una respuesta siempre que quede el
+razonamiento y no el silencio.
+
+**Por qué se aplaza — decisión de Asav, 3 de septiembre de 2026.** El límite es
+conocido y está medido; no se arregla antes del 10. Lo que no se aplaza es la
+pregunta: se contesta después del 10, y se contesta a propósito en vez de que la
+frase siga puesta por inercia.
+
+**Qué lo desbloquea.** Nada técnico. Es una decisión de producto sobre qué
+prometemos, y la toma Asav.
+
+**Dónde toca.** `apps/publico/src/components/vista-pasajero.tsx` y
+`apps/publico/src/components/buscador.tsx` (las dos copias de la frase, en
+`.promesa`), y la capa de mosaicos de los dos mapas si la salida es servirlos
+nosotros.
 
 ## Mapas de demanda
 
