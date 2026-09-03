@@ -640,12 +640,26 @@ function enPalabras(u: UnidadOperando, zona: string): string {
 function AlExpediente({ circuitoId }: { circuitoId: string }) {
   return (
     <section className="mt-6 rounded-lg border border-[var(--linea)] bg-[var(--panel)] p-4">
-      <Link
-        href={`/jstaff/circuitos/${circuitoId}`}
-        className="inline-block rounded border border-[var(--azul)]/40 bg-[var(--azul)]/10 px-4 py-2 text-[13.5px] font-medium text-[var(--texto)] hover:border-[var(--azul)]"
-      >
-        Abrir el expediente del circuito →
-      </Link>
+      <div className="flex flex-wrap gap-2">
+        {/*
+          El reporte va primero porque es la pregunta que sigue: esta pantalla
+          dice qué está pasando ahora, y lo siguiente que el operador quiere
+          saber es cómo corrió la jornada. El expediente es para CAMBIAR cosas,
+          que es otra intención.
+        */}
+        <Link
+          href={`/jstaff/circuitos/${circuitoId}/reporte`}
+          className="inline-block rounded border border-[var(--azul)]/40 bg-[var(--azul)]/10 px-4 py-2 text-[13.5px] font-medium text-[var(--texto)] hover:border-[var(--azul)]"
+        >
+          Ver cómo corrió la jornada →
+        </Link>
+        <Link
+          href={`/jstaff/circuitos/${circuitoId}`}
+          className="inline-block rounded border border-[var(--linea-fuerte)] px-4 py-2 text-[13.5px] font-medium text-[var(--texto)] hover:border-[var(--azul)]"
+        >
+          Abrir el expediente del circuito →
+        </Link>
+      </div>
       <p className="mt-2 text-[12.5px] leading-snug text-[var(--tenue)]">
         Aquí se mira. Subir o bajar una unidad, mover el trazado y las paradas se hace en el
         expediente: esta pantalla no ejecuta cambios.

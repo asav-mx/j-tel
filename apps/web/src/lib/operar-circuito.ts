@@ -243,7 +243,7 @@ function situacionDe(medida: MedidaDeUnidad | null, enHorario: boolean): Situaci
  * `new Date(\`${fecha}T05:00:00\`)` se resuelve en la zona del proceso, y eso
  * ya costó 294 hechos sellados con la hora equivocada.
  */
-function aperturaDelHorario(ahora: Date, circuito: CircuitoParaOperar): Date {
+export function aperturaDelHorario(ahora: Date, circuito: CircuitoParaOperar): Date {
   const [hh, mm] = circuito.serviceStartLocal.slice(0, 5).split(":").map(Number);
   const minutos = (hh ?? 0) * 60 + (mm ?? 0);
   const hoy = localDateIso(ahora, circuito.timeZone);
