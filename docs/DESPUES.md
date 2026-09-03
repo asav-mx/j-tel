@@ -220,6 +220,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [La pantalla de alta se organizó por tablas, no por tarea](#la-pantalla-de-alta-se-organizó-por-tablas-no-por-tarea) | **Candidata alta cuando lleguen las fichas de pantalla del esqueleto** |
 | [El mapa de las paradas reales de Juárez](#el-mapa-de-las-paradas-reales-de-juárez) | Frontera post-sprint |
 | [Los 30 s del recolector son un límite de la plataforma](#los-30-s-del-recolector-son-un-límite-de-la-plataforma) | Cuando llegue el fierro propio |
+| [La velocidad sin calibrar viaja al teléfono con el interruptor apagado](#la-velocidad-sin-calibrar-viaja-al-teléfono-con-el-interruptor-apagado) | Cuando los dos cachés se igualen |
 | [El pasajero como usuario](#el-pasajero-como-usuario) | Cuando la app tenga uso real |
 | [Sensores más allá del GPS](#sensores-más-allá-del-gps) | Cuando exista la suite del concesionario |
 | [Mapas de demanda](#mapas-de-demanda) | Después de los sensores |
@@ -2653,6 +2654,45 @@ inventar un modelo nuevo. Y la proyección sobre el trazado
 (`proyectarSobreTrazado`) convierte un conteo con hora en **una subida o bajada
 en un punto del recorrido**, que es el dato que de verdad vale. Esa función ya
 existe y ya se usa para la llegada.
+
+## La velocidad sin calibrar viaja al teléfono con el interruptor apagado
+
+**Qué es.** `velocidad_declarada_kmh` se manda siempre en la forma del circuito
+—`apps/publico/src/app/c/[slug]/page.tsx` y el endpoint de forma— esté el
+interruptor del rango prendido o apagado. El interruptor vive en el **otro**
+endpoint, el de unidades, como `rango_activo`. La forma no lo conoce. La valla
+más dura sería no mandar el número: sin velocidad, ningún camino de código puede
+fabricar un minuto, ni por descuido ni a propósito.
+
+**Por qué se aplazó — decisión de Asav, 2 de septiembre de 2026.** Los dos
+endpoints tienen vidas de caché distintas: la forma vive **300 s** en el CDN y
+las unidades **15 s**. Condicionar la forma al interruptor pone las dos mitades
+del mismo interruptor a viajar por caminos que se pueden desincronizar hasta
+cinco minutos — prender el rango llegaría por unidades en quince segundos y la
+velocidad tardaría hasta cinco minutos en llegar, y la app tendría permiso sin
+número. **Es la misma divergencia silenciosa del `CORREDOR_METROS = 150` clavado
+en el componente**, que ya se pagó una vez en este mismo tramo y otra antes, con
+la geocerca congelada en el hecho contra la que usaba el motor para juzgar. No
+se paga dos veces por la misma lección.
+
+Lo que se hizo en su lugar es la valla de tipos —`PermisoDeRango`, ver
+[`Ficha-Escalera-Estados-Publico.md`](Ficha-Escalera-Estados-Publico.md)—, que
+cierra las cuatro fugas conocidas y hace que las nuevas no compilen. Lo que la
+valla **no** da es lo que daría no mandar el número: hoy la velocidad sigue en el
+teléfono, al alcance de cualquiera que decida dividir a mano en vez de llamar a
+`rangoDeLlegada`.
+
+**Qué lo desbloquea.** Que los dos cachés se igualen, y entonces vuelve a ser
+buena idea. Dos caminos, cualquiera sirve: que la forma y las unidades compartan
+TTL, o que el interruptor viaje por un solo endpoint. El segundo es el que
+además borra la pregunta, porque deja de haber dos mitades.
+
+**Dónde toca.** `apps/publico/src/app/api/circuitos/[slug]/route.ts` (el TTL de
+300 s y el campo), `apps/publico/src/app/c/[slug]/page.tsx` (la forma servida en
+el primer render), `apps/publico/src/components/vista-pasajero.tsx` (que tendría
+que saber esperar un permiso sin velocidad) y
+`packages/domain/src/llegada.ts` (`permisoDeRango`, que ya es el único lugar por
+donde pasaría).
 
 ## Mapas de demanda
 
