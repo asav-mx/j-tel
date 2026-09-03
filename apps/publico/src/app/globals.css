@@ -23,7 +23,18 @@
   --lienzo: #ffffff;
   --tinta: #171528;
   --tenue: #6b6885;
-  /* Provisionales: el componente los sobrescribe con el color del circuito. */
+  /*
+   * Provisionales: el componente los sobrescribe con el color del circuito.
+   *
+   * ⚠ **Son los dos únicos tokens sin par en las paletas de noche, y es a
+   * propósito** — no los define el tema, los inyecta quien sabe de qué ruta
+   * está hablando, con `tinte(color, deNoche)`. La consecuencia, que costó una
+   * pantalla ilegible: **usarlos fuera de un subárbol que los inyecta deja el
+   * valor de día puesto en los dos temas**, y entonces un fondo claro se queda
+   * claro mientras el texto de encima sigue al tema y se vuelve blanco sobre
+   * blanco. Para las superficies que no son de una ruta —la portada, el
+   * buscador— está `--acento`, que sí tiene sus tres.
+   */
   --ruta: #5b3ea6;
   --ruta-claro: #efe9fc;
   --ambar: #f59e0b;
@@ -31,6 +42,24 @@
   --gris: #7d8aa3;
   --gris-bg: #eff2f6;
   --linea: #e9e6f2;
+  /*
+   * El borde de los marcadores del mapa. **No cambia con el tema, a propósito**:
+   * las teselas se invierten de noche, así que un marcador que siguiera al tema
+   * se quedaría sin contraste justo en el tema que lo invierte. Va como token y
+   * no como literal para que se lea la decisión en vez de parecer un descuido.
+   */
+  --pin-borde: #ffffff;
+  /*
+   * El acento de las superficies que NO son de una ruta: la portada y el
+   * buscador. **No puede ser `--ruta`**, que en `:root` es provisional y lo
+   * sobrescribe el componente con el color del circuito que está enseñando. En
+   * el buscador no hay UN circuito —hay los que haya— y en la portada ninguno,
+   * así que ahí `--ruta` se quedaba en su valor de día: sin par de tema, el
+   * acento perdía contraste en la pantalla oscura y el fondo de una tarjeta
+   * quedaba claro con el texto encima casi blanco.
+   */
+  --acento: #5b3ea6;
+  --acento-suave: #efe9fc;
 }
 
 [data-tema="noche"] {
@@ -42,6 +71,9 @@
   --gris: #8a97af;
   --gris-bg: rgba(125, 138, 163, 0.16);
   --linea: rgba(167, 139, 250, 0.2);
+  --pin-borde: #ffffff;
+  --acento: #a78bfa;
+  --acento-suave: rgba(167, 139, 250, 0.16);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -54,6 +86,9 @@
     --gris: #8a97af;
     --gris-bg: rgba(125, 138, 163, 0.16);
     --linea: rgba(167, 139, 250, 0.2);
+    --pin-borde: #ffffff;
+    --acento: #a78bfa;
+    --acento-suave: rgba(167, 139, 250, 0.16);
   }
 }
 
@@ -666,7 +701,7 @@ body {
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--ruta);
+  color: var(--acento);
   margin: 0 0 6px;
 }
 
@@ -743,4 +778,403 @@ body {
     #f5c518 14px 28px
   );
   box-shadow: 0 1px 6px rgb(0 0 0 / 0.25);
+}
+
+
+/* ── El buscador: «¿A dónde vas?» ─────────────────────────────────── */
+
+/*
+ * Mapa arriba y panel abajo, no mapa de fondo con hoja encima como la vista de
+ * la ruta. La diferencia tiene razón: allá el pasajero mira UNA cosa —cuánto
+ * falta— y el mapa es el contexto; aquí escribe, escoge y lee una respuesta, y
+ * un teclado abierto sobre una hoja arrastrable pelea con el dedo.
+ *
+ * El mapa de arriba **es el mapa de cobertura**, y por eso está siempre puesto
+ * en vez de aparecer sólo cuando la respuesta es «no»: enseñar lo que se cubre
+ * es más honesto que afirmar lo que no.
+ */
+.busc {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--lienzo);
+}
+
+.busc-mapa {
+  position: relative;
+  flex: 0 0 42vh;
+  min-height: 230px;
+}
+
+.busc-mapa #mapa {
+  position: absolute;
+  inset: 0;
+}
+
+/* Con el modo de picar activo, el cursor lo dice en escritorio. */
+.busc[data-picando="destino"] .busc-mapa,
+.busc[data-picando="origen"] .busc-mapa {
+  cursor: crosshair;
+}
+
+.busc-picando {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 13px;
+  background: var(--lienzo);
+  color: var(--tinta);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+}
+
+.busc-picando button {
+  margin-left: auto;
+  border: none;
+  background: var(--gris-bg);
+  color: var(--tinta);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 11px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.busc-panel {
+  position: relative;
+  z-index: 10;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  margin-top: -18px;
+  padding: 18px 16px 30px;
+  background: var(--lienzo);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.16);
+}
+
+.busc-etiqueta {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--acento);
+  margin: 0 0 7px;
+}
+
+/*
+ * 16 px no es estética: por debajo de eso Safari en iPhone hace zoom solo al
+ * enfocar el campo, y el pasajero se queda con el mapa fuera de cuadro.
+ */
+.busc-campo {
+  width: 100%;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tinta);
+  background: var(--gris-bg);
+  border: 1px solid var(--linea);
+  border-radius: 13px;
+  padding: 13px 14px;
+}
+
+.busc-campo:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+
+.busc-sugs {
+  list-style: none;
+  padding: 0;
+  margin: 9px 0 0;
+}
+
+.busc-sugs button,
+.busc-sugs .sug-ruta {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  text-decoration: none;
+  font: inherit;
+  border: none;
+  background: transparent;
+  color: var(--tinta);
+  padding: 11px 8px;
+  border-bottom: 1px solid var(--linea);
+  cursor: pointer;
+}
+
+.busc-sugs .sug-n {
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.busc-sugs .sug-r {
+  margin-left: auto;
+  color: var(--tenue);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.busc-nota {
+  color: var(--tenue);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 10px 0 0;
+}
+
+.busc-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+}
+
+.busc-acciones button {
+  flex: 1 1 auto;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tinta);
+  background: var(--gris-bg);
+  border: 1px solid var(--linea);
+  border-radius: 11px;
+  padding: 11px 12px;
+  cursor: pointer;
+}
+
+.busc-desde {
+  color: var(--tenue);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 12px 0 0;
+}
+
+.busc-desde strong {
+  color: var(--tinta);
+}
+
+.busc-liga {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--acento);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ── La respuesta ─────────────────────────────────────────────────── */
+
+.busc-res {
+  margin: 18px 0 0;
+}
+
+.busc-sirve {
+  border: 1px solid var(--linea);
+  border-radius: 16px;
+  padding: 15px 16px;
+  margin: 0 0 10px;
+  background: var(--ruta-claro);
+}
+
+.busc-sirve h2 {
+  font-size: 18px;
+  font-weight: 900;
+  margin: 0 0 10px;
+}
+
+.busc-sirve dl {
+  margin: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.busc-sirve dl > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.busc-sirve dt {
+  flex: 0 0 76px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+
+.busc-sirve dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.busc-ver {
+  display: inline-block;
+  margin: 13px 0 0;
+  padding: 11px 15px;
+  border-radius: 12px;
+  background: var(--ruta);
+  color: var(--lienzo);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.busc-no {
+  border: 1px solid var(--linea);
+  border-radius: 16px;
+  padding: 15px 16px;
+  background: var(--gris-bg);
+}
+
+.busc-no h2 {
+  font-size: 17px;
+  font-weight: 900;
+  margin: 0 0 11px;
+  line-height: 1.28;
+}
+
+.busc-no ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.busc-no li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+  border-top: 1px solid var(--linea);
+}
+
+.busc-no .no-r {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.busc-no .no-p {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.busc-creciendo {
+  margin: 13px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tenue);
+}
+
+.busc-limite {
+  margin: 20px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--linea);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--tenue);
+}
+
+.busc-limite strong {
+  color: var(--tinta);
+}
+
+/* ── Los marcadores del viaje ─────────────────────────────────────── */
+
+/*
+ * Ni ámbar ni verde: en esta app el ámbar es siempre el camión y el verde sólo
+ * dice «En vivo» y «Llegando». Los puntos del pasajero van en tinta y los del
+ * recorrido en el color de la ruta, que es de donde son.
+ */
+.pin-origen,
+.pin-destino,
+.pin-subir,
+.pin-bajar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid var(--pin-borde);
+  box-shadow: 0 2px 9px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+}
+
+.pin-origen {
+  background: var(--tinta);
+}
+
+/* El destino se distingue por FORMA además de por relleno: el color solo no lo
+   ve quien trae el teléfono al sol ni quien no distingue bien los tonos. */
+.pin-destino {
+  background: var(--tinta);
+  border-radius: 3px;
+}
+
+.pin-subir,
+.pin-bajar {
+  background: var(--ruta);
+  width: 14px;
+  height: 14px;
+}
+
+.pin-bajar {
+  border-radius: 3px;
+}
+
+/* ── Las ligas al buscador ────────────────────────────────────────── */
+
+.liga-buscar {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 13px 14px;
+  margin: 0 0 15px;
+  border-radius: 13px;
+  background: var(--ruta-claro);
+  color: var(--tinta);
+  text-decoration: none;
+}
+
+.liga-buscar .lb-t {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.liga-buscar .lb-s {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ruta);
+  white-space: nowrap;
+}
+
+.puerta-buscar {
+  display: block;
+  padding: 15px 18px;
+  margin: 0 0 16px;
+  border-radius: 14px;
+  background: var(--acento);
+  color: var(--lienzo);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
 }
