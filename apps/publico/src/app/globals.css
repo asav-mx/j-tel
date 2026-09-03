@@ -91,9 +91,36 @@ body {
   z-index: 1;
 }
 
+/*
+ * El crédito de OpenStreetMap, y por qué se movió.
+ *
+ * Estaba abajo a la derecha, con 8 px y opacidad .6 — y la hoja lo tapaba
+ * ENTERO, en los dos estados. Medido: la atribución cae en (274, 833) de una
+ * ventana de 844, y `elementFromPoint` sobre su propio centro devuelve la hoja,
+ * nunca a ella. O sea que no se veía nunca, ni cerrada ni abierta.
+ *
+ * No es un detalle de estética: las teselas son de OpenStreetMap y su licencia
+ * pide el crédito **visible**. Un crédito que ningún usuario puede ver es lo
+ * mismo que no tenerlo.
+ *
+ * Se sube al borde superior del mapa, que es la única franja visible en los dos
+ * estados de la hoja. A la izquierda, debajo de la chapa del nombre, donde no
+ * choca con el botón de tema. La opacidad sube a .75: sigue siendo discreto y ya
+ * se lee.
+ */
+.leaflet-bottom.leaflet-right {
+  /* La posición nativa del control queda debajo de la hoja: se anula. */
+  bottom: auto;
+  right: auto;
+  top: 62px;
+  left: 0;
+}
+
 .leaflet-control-attribution {
-  font-size: 8px;
-  opacity: 0.6;
+  font-size: 9px;
+  opacity: 0.75;
+  border-radius: 0 8px 8px 0;
+  padding: 2px 6px;
 }
 
 /* ── La barra que flota encima ───────────────────────────────────── */
@@ -633,6 +660,16 @@ body {
   margin: 0 auto;
 }
 
+/* El nombre de la app, encima de la pregunta: quién le está preguntando. */
+.puerta .marca {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ruta);
+  margin: 0 0 6px;
+}
+
 .puerta h1 {
   font-size: 30px;
   font-weight: 900;
@@ -670,6 +707,26 @@ body {
  * confunda esta pantalla con la que ve un pasajero en la calle. Si se pudiera
  * esconder, la primera vez que estorbe alguien la esconde y deja de existir.
  */
+/*
+ * Y lo que le faltaba: **hacerle lugar.**
+ *
+ * La franja es `fixed` en `top: 0` con z-index 900, y `.tope` es `absolute` en
+ * `top: 0` con z-index 20. Las dos ocupaban la misma tira, así que la franja le
+ * comía el borde superior a la chapa con el nombre de la ruta — la única cosa de
+ * esa pantalla que dice qué ruta se está mirando.
+ *
+ * Se corre lo de abajo en vez de mover la franja: la franja tiene que quedarse
+ * arriba de todo, que es su razón de ser. Cuelga de `:has()` para que sin vista
+ * previa no sobre ni un pixel.
+ */
+.pantalla:has(.franja-previa) .tope {
+  padding-top: 42px;
+}
+
+.pantalla:has(.franja-previa) .leaflet-bottom.leaflet-right {
+  top: 88px;
+}
+
 .franja-previa {
   position: fixed;
   inset: 0 0 auto 0;

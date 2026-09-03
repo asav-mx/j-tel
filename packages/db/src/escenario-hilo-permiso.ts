@@ -23,7 +23,11 @@ import {
  *   pnpm --filter @jtel/db escenario-permiso                    # rango apagado
  *   pnpm --filter @jtel/db escenario-permiso --con-rango        # rango prendido
  *   pnpm --filter @jtel/db escenario-permiso --por-horario      # ninguna fresca
+ *   pnpm --filter @jtel/db escenario-permiso --sin-publicar     # vista previa
  *   pnpm --filter @jtel/db escenario-permiso --limpiar          # borrarlo
+ *
+ * `--sin-publicar` pide además `JTEL_VISTA_PREVIA=escenario-permiso` y un
+ * servidor de desarrollo: la vista previa no existe en producción, a propósito.
  *
  * Existe para poder MIRAR en el navegador lo que ninguna prueba de datos ve: qué
  * dibuja la app del pasajero con el interruptor apagado y qué dibuja con él
@@ -146,7 +150,12 @@ async function limpiar(db: ReturnType<typeof createDb>) {
   console.log("[escenario-permiso] borrado.");
 }
 
-async function sembrar(db: ReturnType<typeof createDb>, conRango: boolean, porHorario: boolean) {
+async function sembrar(
+  db: ReturnType<typeof createDb>,
+  conRango: boolean,
+  porHorario: boolean,
+  sinPublicar: boolean,
+) {
   const ahora = new Date();
 
   await limpiar(db); // idempotente: re-sembrar no acumula
@@ -179,7 +188,15 @@ async function sembrar(db: ReturnType<typeof createDb>, conRango: boolean, porHo
     serviceStartLocal: "00:00:00",
     serviceEndLocal: "23:59:00",
     timeZone: "America/Ciudad_Juarez",
-    publishedAt: ahora,
+    /*
+     * `--sin-publicar` deja el circuito como lo que la app llama VISTA PREVIA:
+     * existe, tiene trazado y unidades, y para el pasajero no existe. Es el
+     * único estado donde se dibuja la franja amarilla, así que es el único
+     * desde el cual se puede revisar que la franja no le coma el borde a la
+     * chapa. Sin esto, esa comprobación depende de que alguien tenga a mano un
+     * circuito a medio armar.
+     */
+    publishedAt: sinPublicar ? null : ahora,
     arrivalRangeEnabledAt: conRango ? ahora : null,
   });
 
@@ -281,6 +298,12 @@ console.log(
 const db = createDb(process.env.DATABASE_URL_TEST!);
 
 if (args.includes("--limpiar")) await limpiar(db);
-else await sembrar(db, args.includes("--con-rango"), args.includes("--por-horario"));
+else
+  await sembrar(
+    db,
+    args.includes("--con-rango"),
+    args.includes("--por-horario"),
+    args.includes("--sin-publicar"),
+  );
 
 process.exit(0);

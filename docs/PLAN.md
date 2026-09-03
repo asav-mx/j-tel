@@ -2037,14 +2037,28 @@ apilar las pasadas observadas y tomar la mediana por tramo de 30 m. Ida **270 v�
 de 25. Cuando se mida si el rango de llegada se cumple, **ese error de trazado entra en
 el resultado**: es laboratorio con datos reales, no un patrón contra el que calibrar.
 
-**Y por qué esto no releva a Oasis–Centro de nada.** Oasis–Centro sigue esperando la
-respuesta del concesionario sobre qué camiones la corren y qué traen puesto. Medido el
-27 de agosto: **ninguna de las 82 unidades con GPS del transportista recorrió
-Oasis–Centro en siete días** —la mejor cobertura en un solo día fue 48%, y no se mueve
-al quintuplicar el corredor de 50 a 250 m—. Las tres Dina asignadas no reportan desde
-mayo y febrero. **Que el laboratorio funcione no es que el circuito 1 funcione**, y
-confundir las dos cosas es cómo el sprint se declara listo sobre un producto que
-todavía no tiene con qué salir a la calle.
+**Y por qué esto no releva a Oasis–Centro de nada.** **Que el laboratorio funcione no es
+que el circuito 1 funcione**, y confundir las dos cosas es cómo el sprint se declara
+listo sobre un producto que todavía no tiene con qué salir a la calle.
+
+**Corregido el 2 de septiembre de 2026, y la redacción anterior afirmaba de más.** Decía
+que «ninguna de las 82 unidades con GPS del transportista recorrió Oasis–Centro en siete
+días», al lado de «las tres Dina asignadas no reportan». Las dos frases juntas se leen
+como un incumplimiento: unidades designadas que no están corriendo su ruta.
+
+**No hay unidades designadas.** Las de Oasis–Centro **están en preparación**, y el
+servicio arranca el **10 de septiembre**. La medición del 27 de agosto era correcta como
+consulta —esas 82 unidades efectivamente no pasaron por ahí— y falsa como afirmación,
+porque el lector supone que debían pasar. Es la §D del Marco aplicada a un documento de
+plan en vez de a una pantalla: lo falso lo puso el ALCANCE, medir el recorrido de una
+flota contra una ruta que todavía nadie le asignó.
+
+Estado real, al 2 de septiembre: **Oasis–Centro no tiene ninguna unidad asignada** —las
+dos de la prueba del sábado se cerraron ese día— y el Corredor de prueba conserva las
+suyas. La consecuencia práctica, para que no se vuelva a descubrir: **un circuito sin
+unidades asignadas no alcanza `en_vivo` ni `por_horario` a ninguna hora del día**, así
+que no se puede revisar la app contra él esperando a la hora de turno. Para eso está el
+escenario de la rama desechable (`escenario-permiso`, #367).
 
 #### La regla que gobierna este tramo: NADA HARDCODEADO
 

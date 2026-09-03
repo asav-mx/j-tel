@@ -739,9 +739,18 @@ export function VistaPasajero({
                   {rangoActivo && <>{" "}Verás el tiempo exacto en cuanto haya ubicación.</>}
                 </>
               ) : !conRango ? (
+                /*
+                 * «Calibrado» no es palabra de pasajero: es palabra de quien
+                 * afina un instrumento, y le pide a alguien parado en una
+                 * banqueta que entienda de qué instrumento hablamos.
+                 *
+                 * Lo que necesita saber es sólo esto: el camión sí se ve, el
+                 * minuto todavía no se lo podemos dar. Sin explicarle por qué
+                 * —eso es asunto nuestro— y sin prometerle cuándo.
+                 */
                 <>
-                  Puedes ver dónde vienen los camiones en el mapa. El tiempo estimado de esta ruta
-                  todavía no está calibrado.
+                  Puedes ver dónde vienen los camiones en el mapa. Todavía no podemos decirte en
+                  cuántos minutos llega.
                 </>
               ) : (
                 <>Verás el tiempo exacto en cuanto actives tu ubicación.</>
