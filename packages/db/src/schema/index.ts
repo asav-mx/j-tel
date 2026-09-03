@@ -14,6 +14,13 @@ import {
   doublePrecision,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
+/*
+ * Los defaults del circuito no se escriben aquí a mano: salen del dominio, que
+ * es de donde también los lee la pantalla que los enseña. Dos copias del mismo
+ * número —una en el esquema y otra en la interfaz— se separan el día que alguien
+ * mueva una, y la pantalla seguiría afirmando el valor viejo.
+ */
+import { ORIGEN_DEL_CIRCUITO } from "@jtel/domain/publico";
 
 export const accountTypeEnum = pgEnum("account_type", ["carrier", "client", "jstaff", "concesion"]);
 /** Ida y vuelta son caminos distintos, no espejo: en el circuito 1 son 20.83 y 16.44 km. */
@@ -1054,15 +1061,21 @@ export const circuits = pgTable(
      */
     declaredFrequencyMinutes: integer("declared_frequency_minutes"),
     /** En segundos: la prueba de campo puede pedir afinarlo por debajo del minuto. */
-    staleAfterSeconds: integer("stale_after_seconds").notNull().default(180),
+    staleAfterSeconds: integer("stale_after_seconds")
+      .notNull()
+      .default(ORIGEN_DEL_CIRCUITO.frescuraSegundos),
     /** En segundos, por la misma razón. Es el piso; la varianza de tráfico se suma encima. */
-    arrivalRangeFloorSeconds: integer("arrival_range_floor_seconds").notNull().default(180),
+    arrivalRangeFloorSeconds: integer("arrival_range_floor_seconds")
+      .notNull()
+      .default(ORIGEN_DEL_CIRCUITO.pisoDelRangoSegundos),
     /**
      * A partir de cuántos metros del trazado el pegado de una parada deja de ser
      * obvio y la pantalla avisa, ofreciendo soltarlo. Por circuito porque una
      * calle del Centro y una avenida no admiten el mismo margen.
      */
-    stopSnapToleranceMeters: doublePrecision("stop_snap_tolerance_meters").notNull().default(25),
+    stopSnapToleranceMeters: doublePrecision("stop_snap_tolerance_meters")
+      .notNull()
+      .default(ORIGEN_DEL_CIRCUITO.pegadoDeParadasMetros),
     /**
      * A cuántos metros del trazado deja de poderse afirmar que una unidad va en
      * la ruta. Más allá de esto **no se publica al pasajero**: misma ley que el
@@ -1074,7 +1087,9 @@ export const circuits = pgTable(
      * carril de la orilla, y el trazado que lo juzga tiene sus propios huecos
      * entre vértices: con 25 m no se publicaría casi nada.
      */
-    corridorToleranceMeters: doublePrecision("corridor_tolerance_meters").notNull().default(150),
+    corridorToleranceMeters: doublePrecision("corridor_tolerance_meters")
+      .notNull()
+      .default(ORIGEN_DEL_CIRCUITO.corredorEnRutaMetros),
     /**
      * Cuánto tiempo después de ver una unidad **dentro del corredor** se puede
      * seguir afirmando que hay servicio. Pasado esto el circuito cae a SIN
@@ -1084,7 +1099,9 @@ export const circuits = pgTable(
      * significados distintos, y quien afinara la frecuencia movería sin saberlo
      * cuánto tiempo la app sigue afirmando que hay servicio.
      */
-    serviceConfidenceMinutes: integer("service_confidence_minutes").notNull().default(15),
+    serviceConfidenceMinutes: integer("service_confidence_minutes")
+      .notNull()
+      .default(ORIGEN_DEL_CIRCUITO.confianzaMinutos),
     /**
      * Desde cuándo el circuito muestra el **rango** de llegada al pasajero.
      * `null` = apagado: se ve el camión moverse en el mapa —verdad observada—
@@ -1104,7 +1121,7 @@ export const circuits = pgTable(
      * El default 20.5 está medido (9 118 ventanas, 35 aparatos, 14 días) sobre
      * la flota que reporta, **no sobre este circuito**. Se calibra en la calle.
      */
-    avgSpeedKmh: doublePrecision("avg_speed_kmh").notNull().default(20.5),
+    avgSpeedKmh: doublePrecision("avg_speed_kmh").notNull().default(ORIGEN_DEL_CIRCUITO.velocidadKmh),
     /**
      * El color con que se identifica la ruta en el mapa y en la app.
      *
@@ -1113,10 +1130,10 @@ export const circuits = pgTable(
      * inválido no revienta nada — pinta una ruta invisible, que es peor—, así
      * que lo comprueba un CHECK de la base.
      */
-    colorHex: text("color_hex").notNull().default("#7C5CE0"),
-    serviceStartLocal: time("service_start_local").notNull().default("05:00"),
-    serviceEndLocal: time("service_end_local").notNull().default("23:00"),
-    timeZone: text("time_zone").notNull().default("America/Ciudad_Juarez"),
+    colorHex: text("color_hex").notNull().default(ORIGEN_DEL_CIRCUITO.colorHex),
+    serviceStartLocal: time("service_start_local").notNull().default(ORIGEN_DEL_CIRCUITO.horaInicioLocal),
+    serviceEndLocal: time("service_end_local").notNull().default(ORIGEN_DEL_CIRCUITO.horaFinLocal),
+    timeZone: text("time_zone").notNull().default(ORIGEN_DEL_CIRCUITO.zonaHoraria),
     active: boolean("active").notNull().default(true),
     /**
      * Desde cuándo el circuito es visible para la app del pasajero.

@@ -288,76 +288,120 @@ export default async function CircuitosPage({
                 />
               </div>
 
-              <div>
+              {/*
+                LA FRECUENCIA NO TRAE VALOR SUGERIDO, Y ES EL PUNTO DEL CAMPO.
+
+                Traía `defaultValue={20}`. La `0031` le quitó el DEFAULT a la
+                columna y al manejador del servidor, y este prellenado
+                **sobrevivió al arreglo**: quien daba de alta un circuito sin
+                borrarlo declaraba una cadencia que nadie declaró, y la app la
+                decía en voz alta con el sistema detrás.
+
+                Vacía es una respuesta, no un hueco que llenar.
+              */}
+              <div className="sm:col-span-3">
                 <label className={etiqueta} htmlFor="frecuenciaMin">
-                  Frecuencia declarada (min)
+                  Frecuencia declarada por el concesionario (min) — vacía si no la declaró
                 </label>
                 <input
                   id="frecuenciaMin"
                   name="frecuenciaMin"
                   type="number"
                   min={1}
-                  defaultValue={20}
                   className={campo}
+                  aria-describedby="frecuencia-nota"
                 />
-              </div>
-              <div>
-                <label className={etiqueta} htmlFor="umbralSeg">
-                  Dato viejo a los (seg)
-                </label>
-                <input
-                  id="umbralSeg"
-                  name="umbralSeg"
-                  type="number"
-                  min={1}
-                  defaultValue={180}
-                  className={campo}
-                />
-              </div>
-              <div>
-                <label className={etiqueta} htmlFor="pisoSeg">
-                  Piso del rango (seg)
-                </label>
-                <input
-                  id="pisoSeg"
-                  name="pisoSeg"
-                  type="number"
-                  min={1}
-                  defaultValue={180}
-                  className={campo}
-                />
+                <p id="frecuencia-nota" className="mt-1 text-xs text-[var(--muted)]">
+                  Sin ella la app dice que el servicio corre y se calla el número. Con ella dirá
+                  «cada N min» cuando no vea ningún camión en el corredor, así que tiene que venir
+                  del concesionario y no de aquí.
+                </p>
               </div>
 
-              <div>
-                <label className={etiqueta} htmlFor="toleranciaM">
-                  Tolerancia de pegado (m)
-                </label>
-                <input
-                  id="toleranciaM"
-                  name="toleranciaM"
-                  type="number"
-                  min={1}
-                  defaultValue={25}
-                  className={campo}
-                />
+              {/*
+                Las perillas de medición van VACÍAS con su valor de origen como
+                marca de agua. Un `placeholder` no se envía, así que no puede
+                confundirse con un valor decidido — y aun así deja ver con qué
+                nace el circuito, que es la mitad de la pregunta.
+
+                Se ajustan en el expediente, donde cada una lleva su explicación
+                al lado. Aquí sólo estorbarían: seis números sin lectura son la
+                pantalla que este frente vino a arreglar.
+              */}
+              <div className="sm:col-span-3">
+                <p className="text-xs text-[var(--muted)]">
+                  Lo de abajo son perillas de medición. Vacías toman su valor de origen, y se
+                  ajustan en el expediente con su explicación al lado.
+                </p>
+              </div>
+              {(
+                [
+                  ["velocidadKmh", "Velocidad efectiva (km/h)", 20.5, 0.1],
+                  ["corredorEnRutaM", "Cuenta como EN RUTA hasta (m)", 150, 1],
+                  ["frescuraSeg", "La posición dice dónde está hasta los (seg)", 180, 1],
+                  ["confianzaMin", "Sigue habiendo servicio hasta los (min)", 15, 1],
+                  ["pisoRangoSeg", "Piso del tiempo estimado (seg)", 180, 1],
+                  ["pegadoParadasM", "Pegado de paradas al trazado (m)", 25, 1],
+                ] as const
+              ).map(([nombreCampo, rotulo, origen, paso]) => (
+                <div key={nombreCampo}>
+                  <label className={etiqueta} htmlFor={nombreCampo}>
+                    {rotulo}
+                  </label>
+                  <input
+                    id={nombreCampo}
+                    name={nombreCampo}
+                    type="number"
+                    min={paso}
+                    step={paso}
+                    placeholder={`origen: ${origen}`}
+                    className={campo}
+                  />
+                </div>
+              ))}
+              {/*
+                La velocidad es la única de las seis que necesita su nota aquí, y
+                no en el expediente nada más: es la que decide si el tiempo
+                estimado se puede encender, y el número de origen viene de una
+                flota que no es ésta.
+              */}
+              <div className="sm:col-span-3">
+                <p className="text-xs text-[var(--muted)]">
+                  Los 20.5 km/h de origen se midieron sobre <strong>otra flota</strong> —9 118
+                  ventanas, 35 aparatos, 14 días—, no sobre este circuito. Por eso el tiempo
+                  estimado de llegada nace apagado: se enciende cuando la velocidad ya se calibró
+                  contra la calle.
+                </p>
               </div>
               <div>
                 <label className={etiqueta} htmlFor="horaInicio">
                   Inicio de servicio
                 </label>
-                <input
-                  id="horaInicio"
-                  name="horaInicio"
-                  type="time"
-                  defaultValue="05:00"
-                  className={campo}
-                />
+                <input id="horaInicio" name="horaInicio" type="time" className={campo} />
               </div>
               <div>
                 <label className={etiqueta} htmlFor="horaFin">
                   Fin de servicio
                 </label>
-                <input id="horaFin" name="horaFin" type="time" defaultValue="23:00" className={campo} />
+                <input id="horaFin" name="horaFin" type="time" className={campo} />
+              </div>
+              {/*
+                El horario tampoco viene prellenado, y por la misma razón que la
+                frecuencia: la app lo dice en voz alta —«servicio declarado de
+                05:00 a 23:00»— atribuido al concesionario.
+
+                ⚠ Con una diferencia que conviene no perder: la columna es NOT
+                NULL, así que vacío aquí **no guarda «sin declarar»**, guarda
+                05:00–23:00. No hay estado «sin horario» en el modelo. El
+                expediente lo enuncia como valor de origen en vez de fingir que
+                alguien lo escogió; hacerlo anulable como la frecuencia es una
+                migración y una decisión, no un arreglo de paso.
+              */}
+              <div className="sm:col-span-3">
+                <p className="text-xs text-[var(--muted)]">
+                  Vacíos, el circuito nace de 05:00 a 23:00 en la zona de Cd. Juárez. La app se lo
+                  atribuye al concesionario, así que conviene confirmarlo con él antes del día uno.
+                </p>
               </div>
 
               <div className="sm:col-span-3">

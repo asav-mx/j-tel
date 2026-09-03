@@ -87,6 +87,29 @@ export function CircuitoEditor({
     fuera: boolean;
   } | null>(null);
   const [soltarPegado, setSoltarPegado] = useState(false);
+  /**
+   * El nombre que va a llevar la parada que se está por crear.
+   *
+   * El endpoint ya aceptaba `nombre` desde el primer día y **la pantalla nunca
+   * lo mandaba**: toda parada nacía como «Parada 7» y había que renombrarla
+   * después, en otro paso. Quien captura tiene el nombre en la cabeza justo
+   * cuando pica el mapa —está viendo la esquina—, y es el único momento en que
+   * no cuesta nada escribirlo.
+   */
+  const [nombrePendiente, setNombrePendiente] = useState("");
+  /**
+   * La parada que se está renombrando, con lo tecleado hasta ahora.
+   *
+   * Antes eran dos `window.prompt` encadenados. En el teléfono eso es un cuadro
+   * del sistema operativo encima de la pantalla: no se ve qué parada se está
+   * cambiando, no se puede corregir sin volver a empezar, y el segundo cuadro
+   * —el del motivo— aparece sin contexto. La edición vive donde vive la parada.
+   */
+  const [editando, setEditando] = useState<{ stopId: string; nombre: string; motivo: string } | null>(
+    null,
+  );
+  /** La parada que se está por retirar, con su motivo. Misma razón que arriba. */
+  const [retirando, setRetirando] = useState<{ stopId: string; motivo: string } | null>(null);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [mapaListo, setMapaListo] = useState(false);
@@ -286,6 +309,11 @@ export function CircuitoEditor({
         body: JSON.stringify({
           lat: pendiente.lat,
           lon: pendiente.lon,
+          // Vacío viaja como vacío y el servidor la numera. No se manda un
+          // nombre inventado desde aquí: «Parada 7» puesta por el servidor es
+          // un marcador de posición honesto; puesta por la pantalla se leería
+          // como si alguien la hubiera nombrado así.
+          nombre: nombrePendiente.trim() || undefined,
           sinPegar: pendiente.fuera && soltarPegado,
         }),
       });
@@ -309,6 +337,7 @@ export function CircuitoEditor({
         },
       ]);
       setPendiente(null);
+      setNombrePendiente("");
       capaFantasma.current?.clearLayers();
       setMensaje(`${cuerpo.nombre} creada. Su QR es ${cuerpo.qrSlug} y ya no cambia.`);
     } catch (err) {
@@ -318,11 +347,18 @@ export function CircuitoEditor({
     }
   }
 
-  async function renombrar(parada: ParadaVigente) {
-    const nombre = window.prompt("Nombre de la parada", parada.name);
-    if (!nombre || nombre === parada.name) return;
-    const motivo = window.prompt("¿Por qué cambia? (opcional)") ?? undefined;
-    await revisar(parada.stopId, { nombre, motivo });
+  async function guardarNombre() {
+    if (!editando) return;
+    const nombre = editando.nombre.trim();
+    const parada = paradas.find((p) => p.stopId === editando.stopId);
+    // Sin cambio no se manda nada: una versión nueva idéntica a la anterior
+    // ensucia la historia de la parada sin decir nada.
+    if (!nombre || nombre === parada?.name) return setEditando(null);
+    await revisar(editando.stopId, {
+      nombre,
+      motivo: editando.motivo.trim() || undefined,
+    });
+    setEditando(null);
   }
 
   async function revisar(stopId: string, cambios: Record<string, unknown>) {
@@ -350,18 +386,20 @@ export function CircuitoEditor({
     }
   }
 
-  async function retirar(parada: ParadaVigente) {
-    if (!window.confirm(`¿Retirar ${parada.name}? Deja de publicarse; su historia se conserva.`)) return;
-    const motivo = window.prompt("¿Por qué se retira? (opcional)") ?? "";
+  async function confirmarRetiro() {
+    if (!retirando) return;
+    const parada = paradas.find((p) => p.stopId === retirando.stopId);
+    if (!parada) return setRetirando(null);
     setOcupado(true);
     try {
       const r = await fetch(
-        `/api/jstaff/circuitos/${circuitoId}/paradas/${parada.stopId}?motivo=${encodeURIComponent(motivo)}`,
+        `/api/jstaff/circuitos/${circuitoId}/paradas/${parada.stopId}?motivo=${encodeURIComponent(retirando.motivo.trim())}`,
         { method: "DELETE" },
       );
       if (!r.ok) throw new Error("No se pudo retirar");
       setParadas((prev) => prev.filter((p) => p.stopId !== parada.stopId));
-      setMensaje(`${parada.name} retirada.`);
+      setMensaje(`${parada.name} retirada. Deja de publicarse; su historia se conserva.`);
+      setRetirando(null);
     } catch (err) {
       setMensaje(err instanceof Error ? err.message : String(err));
     } finally {
@@ -474,11 +512,38 @@ export function CircuitoEditor({
               círculo punteado es donde va a quedar.
             </p>
             {pendiente.fuera && (
-              <p className="mt-2 rounded bg-[var(--aviso-fondo,#3a2d00)] p-2 text-xs">
-                ⚠ Pasa los {toleranciaMetros} m de tolerancia de este circuito. Se va a pegar al
+              // El color sale de los tokens de las dos paletas. El
+              // `var(--aviso-fondo,#3a2d00)` que vivía aquí no existía en
+              // ninguna: siempre caía al literal, y el literal es un café oscuro
+              // que en tema claro deja texto oscuro sobre fondo oscuro.
+              <p className="mt-2 rounded border border-[var(--b-ambar)] bg-[var(--t-ambar)] p-2 text-xs text-[var(--texto)]">
+                ⚠ Pasa los {toleranciaMetros} m de pegado de este circuito. Se va a pegar al
                 trazado; si la parada va de verdad donde picaste, suelta el pegado.
               </p>
             )}
+
+            {/*
+              El nombre se escribe AQUÍ, con la esquina enfrente.
+
+              El endpoint aceptaba `nombre` desde el primer día y la pantalla no
+              lo mandaba: toda parada nacía «Parada 7» y renombrarla era otro
+              paso, después, cuando ya nadie se acuerda de cuál era cuál.
+
+              Vacío es válido y el servidor la numera. El `placeholder` dice cómo
+              va a quedar si se deja así — no es un valor sugerido: no se envía.
+            */}
+            <div className="mt-3">
+              <label className="mb-1 block text-xs text-[var(--muted)]" htmlFor="nombreParada">
+                Nombre de la parada
+              </label>
+              <input
+                id="nombreParada"
+                value={nombrePendiente}
+                onChange={(e) => setNombrePendiente(e.target.value)}
+                placeholder={`vacío: Parada ${paradas.length + 1}`}
+                className="w-full rounded border border-[var(--linea)] bg-transparent px-2 py-1.5 text-sm text-[var(--texto)]"
+              />
+            </div>
             {/*
               La casilla solo aparece cuando el pico se salió de la tolerancia.
               Ofrecerla siempre invitaba a dejar paradas sin pegar sin que nadie
@@ -509,6 +574,7 @@ export function CircuitoEditor({
                 type="button"
                 onClick={() => {
                   setPendiente(null);
+                  setNombrePendiente("");
                   capaFantasma.current?.clearLayers();
                 }}
                 className="rounded px-3 py-1 text-sm text-[var(--muted)]"
@@ -527,26 +593,143 @@ export function CircuitoEditor({
               de las paradas.
             </p>
           )}
+          {/*
+            Renombrar y retirar viven DENTRO del renglón de su parada.
+
+            Eran `window.prompt` y `window.confirm`: cuadros del sistema
+            operativo encima de la pantalla, que en un teléfono tapan justo la
+            parada de la que hablan. Aquí se ve cuál se está cambiando, se puede
+            corregir sin volver a empezar, y el motivo aparece con su contexto en
+            vez de en un segundo cuadro suelto.
+          */}
           {paradas
             .slice()
             .sort((a, b) => a.orden - b.orden)
             .map((p) => (
               <div
                 key={p.stopId}
-                className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--linea-tenue)] pt-2 text-xs"
+                className="mt-2 border-t border-[var(--linea-tenue)] pt-2 text-xs"
               >
-                <span>
-                  <strong>{p.name}</strong>
-                  <span className="ml-1 text-[var(--muted)]">· QR {p.qrSlug}</span>
-                </span>
-                <span className="flex gap-2">
-                  <button type="button" disabled={ocupado} onClick={() => void renombrar(p)}>
-                    Renombrar
-                  </button>
-                  <button type="button" disabled={ocupado} onClick={() => void retirar(p)}>
-                    Retirar
-                  </button>
-                </span>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="min-w-0">
+                    <strong className="text-[var(--texto)]">{p.name}</strong>
+                    <span className="ml-1 text-[var(--muted)]">· QR {p.qrSlug}</span>
+                  </span>
+                  {editando?.stopId !== p.stopId && retirando?.stopId !== p.stopId ? (
+                    <span className="flex shrink-0 gap-3">
+                      <button
+                        type="button"
+                        disabled={ocupado}
+                        onClick={() => {
+                          setRetirando(null);
+                          setEditando({ stopId: p.stopId, nombre: p.name, motivo: "" });
+                        }}
+                        className="text-[var(--acero)] underline"
+                      >
+                        Renombrar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={ocupado}
+                        onClick={() => {
+                          setEditando(null);
+                          setRetirando({ stopId: p.stopId, motivo: "" });
+                        }}
+                        className="text-[var(--muted)] underline"
+                      >
+                        Retirar
+                      </button>
+                    </span>
+                  ) : null}
+                </div>
+
+                {editando?.stopId === p.stopId ? (
+                  <div className="mt-2 space-y-2 rounded border border-[var(--linea)] bg-[var(--panel2)] p-2">
+                    <div>
+                      <label className="mb-1 block text-[var(--muted)]" htmlFor={`nom-${p.stopId}`}>
+                        Nombre nuevo
+                      </label>
+                      <input
+                        id={`nom-${p.stopId}`}
+                        autoFocus
+                        value={editando.nombre}
+                        onChange={(e) => setEditando({ ...editando, nombre: e.target.value })}
+                        className="w-full rounded border border-[var(--linea)] bg-transparent px-2 py-1.5 text-sm text-[var(--texto)]"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[var(--muted)]" htmlFor={`mot-${p.stopId}`}>
+                        Por qué cambia (opcional)
+                      </label>
+                      <input
+                        id={`mot-${p.stopId}`}
+                        value={editando.motivo}
+                        onChange={(e) => setEditando({ ...editando, motivo: e.target.value })}
+                        placeholder="obra en la avenida, ajuste de operación…"
+                        className="w-full rounded border border-[var(--linea)] bg-transparent px-2 py-1.5 text-sm text-[var(--texto)]"
+                      />
+                    </div>
+                    <p className="text-[var(--muted)]">
+                      No sobrescribe: la versión anterior queda con su fecha y el QR impreso no se
+                      toca.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={ocupado}
+                        onClick={() => void guardarNombre()}
+                        className="rounded border border-[var(--b-acero)] bg-[var(--t-acero)] px-3 py-1.5 text-[var(--acero)]"
+                      >
+                        Guardar nombre
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditando(null)}
+                        className="rounded px-3 py-1.5 text-[var(--muted)]"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {retirando?.stopId === p.stopId ? (
+                  <div className="mt-2 space-y-2 rounded border border-[var(--b-ambar)] bg-[var(--t-ambar)] p-2">
+                    <p className="text-[var(--texto)]">
+                      Al retirarla deja de publicarse. No se borra: su historia y su QR se
+                      conservan.
+                    </p>
+                    <div>
+                      <label className="mb-1 block text-[var(--muted)]" htmlFor={`ret-${p.stopId}`}>
+                        Por qué se retira (opcional)
+                      </label>
+                      <input
+                        id={`ret-${p.stopId}`}
+                        autoFocus
+                        value={retirando.motivo}
+                        onChange={(e) => setRetirando({ ...retirando, motivo: e.target.value })}
+                        className="w-full rounded border border-[var(--linea)] bg-transparent px-2 py-1.5 text-sm text-[var(--texto)]"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={ocupado}
+                        onClick={() => void confirmarRetiro()}
+                        className="rounded border border-[var(--b-ambar)] px-3 py-1.5 text-[var(--ambar)]"
+                      >
+                        Retirar {p.name}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRetirando(null)}
+                        className="rounded px-3 py-1.5 text-[var(--muted)]"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ))}
         </section>
