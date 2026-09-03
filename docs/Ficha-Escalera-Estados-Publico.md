@@ -361,3 +361,68 @@ color no lleva su propia copia de esa condición — cuelga del mismo dato que e
 texto, o del estado que ya lo resume. Aquí se resolvió sin tocar el CSS ni la
 condición del JSX: `proxima` no puede existir sin permiso, así que el verde se
 quedó sin de dónde encenderse.
+
+### La revisión visual, y cómo se montó
+
+Las cuatro fugas se vieron en el navegador, con teléfono simulado a 390×844, en
+los dos temas. **Antes y después**, contra el mismo escenario — porque una
+revisión que no puede enseñar el defecto vivo no prueba que lo arregló.
+
+El escenario no se esperó a la calle. Vive en la **rama desechable**, con dos
+unidades del circuito a la vez:
+
+- una **fresca** en el corredor, avance ~944 m
+- una **vieja** en el corredor, avance ~1 800 m, con 6 minutos de dato
+
+y la vieja va **delante** de la fresca, más cerca de dos paradas. Eso es el
+corazón del montaje: si la vieja fuera detrás, el arreglo no cambiaría nada
+visible y la revisión pasaría en vacío.
+
+**Por qué un escenario y no la calle.** La fuga 2 pide un camión que pierda
+señal justo entre 3 y 15 minutos **estando dentro del corredor**. Eso no se
+agenda: hay que esperar a que un aparato real falle el rato exacto. Y el §F ya
+escribió el permiso — lo prohibido es que una afirmación no medida le llegue a
+alguien, y aquí no hay receptor: rama desechable, lo mira quien lo sembró, y se
+borra al terminar. El guion se negaba a correr si la URL no era la de
+`DATABASE_URL_TEST`, misma forma que `escenario-dos-carriers`.
+
+Lo que enseñó, con el rango **apagado** y el circuito en vivo:
+
+| | Antes | Después |
+|---|---|---|
+| Rótulo | «En vivo · sin tiempo estimado» | igual |
+| Mercado | `llegando` | *(vacío)* |
+| Hospital | `llegando` ← **del camión de hace 6 min** | *(vacío)* |
+| Plaza de Armas | `0–7 min` | *(vacío)* |
+| Terminal Norte | `4–11 min` | *(vacío)* |
+
+La contradicción se leía **en una sola pantalla**: el rótulo decía «sin tiempo
+estimado» y tres centímetros abajo la lista daba cuatro tiempos.
+
+Y con el rango **prendido**, que es donde vivía la fuga que sobrevivía al
+interruptor:
+
+| | Antes | Después |
+|---|---|---|
+| Titular | `0–7 min` (del camión fresco) | igual |
+| Hospital, donde está parado el pasajero | `llegando` ← **del camión de hace 6 min** | `0–7 min` |
+| Plaza de Armas | `0–7 min` | `3–10 min` |
+| Terminal Norte | `4–11 min` | `7–14 min` |
+
+Después del arreglo, **la parada donde está el pasajero dice el mismo número
+que el titular**, porque los dos leen del mismo camión. Antes se contradecían.
+
+**Dos regresiones comprobadas aparte**, porque el arreglo podía haberlas roto:
+
+- Los **dos** camiones se siguen dibujando en el mapa, y sólo el viejo lleva su
+  pastilla «hace 6 min». Filtrar quién puede afirmar un tiempo no es borrar del
+  mapa a quien perdió señal — eso rompería la decisión del #360.
+- En POR HORARIO **con el interruptor prendido** la promesa se conserva
+  («…Verás el tiempo exacto en cuanto haya ubicación»); apagado, desaparece.
+
+El tema oscuro se comprobó leyendo el **fondo rendido** (`rgb(20,18,37)`), no el
+tema pedido: headless arranca en claro, y una corrida que cree haber rendido el
+oscuro no prueba nada. Desbordamiento horizontal: 0 en todas las corridas.
+
+Al terminar, el escenario se borró: el endpoint contesta `404` y «No existe ese
+circuito» — lo mismo que para un slug inventado.
