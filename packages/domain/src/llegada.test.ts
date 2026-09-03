@@ -2,8 +2,10 @@ import { describe, it, expect } from "vitest";
 import {
   avanceSobreTrazado,
   velocidadDelCorredor,
+  permisoDeRango,
   rangoDeLlegada,
   proximaLlegada,
+  type PermisoDeRango,
   type RangoDeLlegada,
 } from "./llegada.js";
 
@@ -86,33 +88,164 @@ describe("velocidad del corredor", () => {
   });
 });
 
-describe("el rango de llegada", () => {
-  // A 20.5 km/h se recorren 5.694 m/s. Mil metros son ~176 s.
-  const VEL = 20.5;
-  const PISO = 180;
+// A 20.5 km/h se recorren 5.694 m/s. Mil metros son ~176 s.
+const VEL = 20.5;
+const PISO = 180;
 
+/** El permiso de un circuito calibrado, sobre una posición fresca. */
+const permiso = (velocidadKmh = VEL, pisoSegundos = PISO): PermisoDeRango =>
+  permisoDeRango({ rangoActivo: true, posicionFresca: true, velocidadKmh, pisoSegundos })!;
+
+describe("el permiso para afirmar un tiempo", () => {
+  /*
+   * Las dos condiciones que gobiernan el permiso son las dos que se olvidaron
+   * en cuatro de los cinco sitios que podían fabricar un minuto. Aquí quedan
+   * en un solo lugar, y cada una con su prueba.
+   */
+
+  it("con el interruptor del circuito apagado no hay permiso", () => {
+    expect(
+      permisoDeRango({
+        rangoActivo: false,
+        posicionFresca: true,
+        velocidadKmh: VEL,
+        pisoSegundos: PISO,
+      }),
+    ).toBeNull();
+  });
+
+  it("desde una posición vieja no hay permiso, aunque el interruptor esté prendido", () => {
+    /*
+     * Éste es el defecto que sobrevivía a encender el rango: el hilo de paradas
+     * calculaba desde camiones que la propia app pintaba grises con «hace N
+     * min». Un camión que perdió señal no se fue a ningún lado —por eso se
+     * sigue dibujando—, pero de dónde está AHORA no se sabe nada.
+     */
+    expect(
+      permisoDeRango({
+        rangoActivo: true,
+        posicionFresca: false,
+        velocidadKmh: VEL,
+        pisoSegundos: PISO,
+      }),
+    ).toBeNull();
+  });
+
+  it("una velocidad de cero no divide entre cero: tampoco hay permiso", () => {
+    expect(
+      permisoDeRango({
+        rangoActivo: true,
+        posicionFresca: true,
+        velocidadKmh: 0,
+        pisoSegundos: PISO,
+      }),
+    ).toBeNull();
+  });
+
+  it("con las dos condiciones cumplidas, el permiso lleva la velocidad adentro", () => {
+    const p = permisoDeRango({
+      rangoActivo: true,
+      posicionFresca: true,
+      velocidadKmh: VEL,
+      pisoSegundos: PISO,
+    });
+    expect(p).not.toBeNull();
+    expect(p!.velocidadKmh).toBe(VEL);
+    expect(p!.pisoSegundos).toBe(PISO);
+  });
+});
+
+describe("la valla: fabricar un minuto sin permiso no COMPILA", () => {
+  /*
+   * Esto no es una prueba de comportamiento — no hay valor que comparar. Es la
+   * demostración de la valla, y se lee al revés que una prueba normal.
+   *
+   * Cada `@ts-expect-error` de abajo exige que la línea siguiente FALLE al
+   * compilar. Si alguien vuelve a ensanchar la firma para aceptar una velocidad
+   * suelta, o afloja `PermisoDeRango` a un objeto cualquiera, esas líneas
+   * empiezan a compilar — y entonces `tsc` falla con «Unused '@ts-expect-error'
+   * directive». La valla se queja cuando DEJA de hacer falta, que es lo único
+   * que la distingue de una convención con otro nombre.
+   *
+   * Corre en `pnpm --filter @jtel/domain build`: el tsconfig del paquete
+   * incluye todo `src`, y eso alcanza a este archivo.
+   */
+
+  /*
+   * Las tres de abajo se DECLARAN y nunca se llaman, y eso es del diseño.
+   *
+   * Una llamada ilegal no produce un valor equivocado que comparar: produce un
+   * error de compilación. Ejecutarlas sólo mediría qué hace JavaScript con
+   * basura —desestructurar un `null` truena, desestructurar un número da
+   * `NaN`—, que no es lo que se está protegiendo. Viven en el archivo de
+   * pruebas porque es donde se leen junto a lo que protegen, y quien las
+   * comprueba es `tsc`.
+   */
+
+  /** La firma vieja: la velocidad suelta, por donde entraron las cuatro fugas. */
+  // @ts-expect-error — un número crudo no es permiso.
+  const conNumeroCrudo = () => rangoDeLlegada(0, 1000, VEL, PISO);
+
+  /** El permiso a mano: le falta la marca, que ningún literal puede escribir. */
+  // @ts-expect-error — `PermisoDeRango` no se construye desde afuera.
+  const conPermisoInventado: () => PermisoDeRango = () => ({
+    velocidadKmh: VEL,
+    pisoSegundos: PISO,
+  });
+
+  /**
+   * El permiso sin revisar. `permisoDeRango` devuelve `PermisoDeRango | null`,
+   * así que olvidar el `if (!p) return` deja de compilar — ésa es la mitad que
+   * convierte «hay que acordarse» en «no se puede olvidar».
+   */
+  const sinRevisarElNulo = (p: PermisoDeRango | null) =>
+    // @ts-expect-error — falta descartar el `null`.
+    rangoDeLlegada(0, 1000, p);
+
+  it("las tres formas de fabricar un minuto sin permiso no compilan", () => {
+    /*
+     * Que este `it` pase no prueba nada por sí solo — las funciones ni se
+     * llaman. Lo que prueba la valla es que `pnpm --filter @jtel/domain build`
+     * termina en cero CON las tres directivas puestas: si alguna dejara de
+     * hacer falta, `tsc` fallaría con «Unused '@ts-expect-error' directive».
+     * Se nombran aquí para que ningún linter las borre por no usarse.
+     */
+    expect([conNumeroCrudo, conPermisoInventado, sinRevisarElNulo]).toHaveLength(3);
+  });
+
+  it("y la forma correcta sí compila y sí da un rango", () => {
+    /*
+     * El control positivo, y no sobra: sin él, renombrar `rangoDeLlegada`
+     * dejaría las tres directivas de arriba «usadas» por el error equivocado
+     * —función inexistente— y la valla pasaría sin comprobar nada.
+     */
+    expect(rangoDeLlegada(0, 1000, permiso())).not.toBeNull();
+  });
+});
+
+describe("el rango de llegada", () => {
   it("el ancho es exactamente el piso del circuito, ni un segundo más", () => {
     // 3 km, bastante más allá del piso: aquí el ancho se puede afirmar entero.
     // Con 1000 m el estimado es 176 s y el recorte a cero se come parte del
     // lado izquierdo — eso es el caso de abajo, no éste.
-    const r = rangoDeLlegada(0, 3000, VEL, PISO)!;
+    const r = rangoDeLlegada(0, 3000, permiso())!;
     expect(r.hastaSeg - r.estimadoSeg).toBe(PISO);
     expect(r.estimadoSeg - r.desdeSeg).toBe(PISO);
   });
 
   it("una unidad que YA PASÓ no produce rango", () => {
     // La unidad va en el metro 1500, el pasajero en el 1000.
-    expect(rangoDeLlegada(1500, 1000, VEL, PISO)).toBeNull();
+    expect(rangoDeLlegada(1500, 1000, permiso())).toBeNull();
   });
 
   it("una unidad detrás sí, con su distancia", () => {
-    const r = rangoDeLlegada(500, 1000, VEL, PISO)!;
+    const r = rangoDeLlegada(500, 1000, permiso())!;
     expect(r.metrosDeDistancia).toBe(500);
     expect(r.estimadoSeg).toBeGreaterThan(0);
   });
 
   it("el piso nunca deja el rango en negativo", () => {
-    const r = rangoDeLlegada(990, 1000, VEL, PISO)!;
+    const r = rangoDeLlegada(990, 1000, permiso())!;
     expect(r.desdeSeg).toBe(0);
   });
 
@@ -122,32 +255,28 @@ describe("el rango de llegada", () => {
      * en minutos diría «llegando» a un kilómetro cuando el tráfico está lento,
      * y quien salió corriendo a la esquina se queda parado tres minutos.
      */
-    expect(rangoDeLlegada(0, 399, VEL, PISO)!.llegando).toBe(true);
-    expect(rangoDeLlegada(0, 401, VEL, PISO)!.llegando).toBe(false);
+    expect(rangoDeLlegada(0, 399, permiso())!.llegando).toBe(true);
+    expect(rangoDeLlegada(0, 401, permiso())!.llegando).toBe(false);
   });
 
   it("justo en el borde de los 400 m todavía está llegando", () => {
-    expect(rangoDeLlegada(0, 400, VEL, PISO)!.llegando).toBe(true);
+    expect(rangoDeLlegada(0, 400, permiso())!.llegando).toBe(true);
   });
 
   it("el umbral es parámetro: con otro número, otro borde", () => {
-    expect(rangoDeLlegada(0, 401, VEL, PISO, 600)!.llegando).toBe(true);
-    expect(rangoDeLlegada(0, 399, VEL, PISO, 200)!.llegando).toBe(false);
+    expect(rangoDeLlegada(0, 401, permiso(), 600)!.llegando).toBe(true);
+    expect(rangoDeLlegada(0, 399, permiso(), 200)!.llegando).toBe(false);
   });
 
   it("un camión lento y cerca sigue «Llegando», aunque su rango sea ancho", () => {
     // 300 m a 5 km/h son 216 s: en minutos no diría «llegando», y sí se ve.
-    const r = rangoDeLlegada(0, 300, 5, PISO)!;
+    const r = rangoDeLlegada(0, 300, permiso(5))!;
     expect(r.llegando).toBe(true);
     expect(r.estimadoSeg).toBeGreaterThan(PISO);
   });
 
-  it("una velocidad de cero no divide entre cero: devuelve null", () => {
-    expect(rangoDeLlegada(0, 1000, 0, PISO)).toBeNull();
-  });
-
   it("el piso viene del circuito: con otro piso, otro ancho", () => {
-    const r = rangoDeLlegada(0, 2000, VEL, 60)!;
+    const r = rangoDeLlegada(0, 2000, permiso(VEL, 60))!;
     expect(r.hastaSeg - r.estimadoSeg).toBe(60);
   });
 });

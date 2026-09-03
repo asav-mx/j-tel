@@ -116,6 +116,82 @@ export interface RangoDeLlegada {
  */
 export const LLEGANDO_METROS = 400;
 
+// ── El permiso para afirmar un tiempo ────────────────────────────────────
+
+declare const marcaDePermiso: unique symbol;
+
+/**
+ * El permiso para afirmar un tiempo de llegada. **No se construye a mano.**
+ *
+ * Lleva un símbolo único que ningún literal puede satisfacer, así que la única
+ * forma de tener uno es `permisoDeRango`, y la única forma de que
+ * `permisoDeRango` lo entregue es que las dos condiciones se cumplan. Un
+ * `number` con la velocidad adentro **no compila** donde va esto.
+ *
+ * La velocidad viaja dentro y no aparte, a propósito: separadas, alguien puede
+ * pedir el permiso y después calcular con otra velocidad, y la valla quedaría
+ * comprobando algo que ya no gobierna el resultado.
+ */
+export interface PermisoDeRango {
+  readonly [marcaDePermiso]: "rango";
+  readonly velocidadKmh: number;
+  readonly pisoSegundos: number;
+}
+
+/**
+ * Las dos condiciones que autorizan a decirle a alguien cuánto falta, y la
+ * única puerta por la que se pasa. Sin permiso no hay minuto.
+ *
+ * **El interruptor del circuito** (`rangoActivo`). Un circuito recién dado de
+ * alta trae una velocidad medida sobre OTRA flota; enseñar un minuto con eso es
+ * presentar una suposición como medición. Apagado, la app sigue enseñando el
+ * camión moverse —verdad observada— y se calla el número.
+ *
+ * **La frescura de ESA posición** (`posicionFresca`). Calcular desde una
+ * posición vieja es inventar un número, y lo paga la persona parada en la
+ * banqueta: se queda esperando un camión que ya pasó, o se va creyendo que
+ * tarda. La condición es por unidad y no por circuito, porque en el mismo
+ * sondeo llegan unidades frescas y viejas mezcladas.
+ *
+ * ## Por qué es un tipo y no una regla escrita
+ *
+ * Las dos condiciones existían y estaban documentadas. De los cinco lugares que
+ * podían fabricar un minuto, **cuatro se olvidaron de una o de las dos**: el
+ * hilo de paradas daba minutos con el interruptor apagado y desde camiones que
+ * la propia app pintaba grises, y el verde de «Llegando» seguía encendido sobre
+ * un titular que ya se había callado. Ninguna prueba lo vio, porque ningún
+ * valor estaba mal: lo que faltaba era la condición en el sitio de llamada.
+ *
+ * Ese es exactamente el caso donde el Marco §D dice que **la valla es el
+ * compilador** — cuando el error está en quién llama y no en qué hace, ninguna
+ * prueba sobre una función pura lo alcanza.
+ *
+ * La valla que lo demuestra vive en `llegada.test.ts` y es del tipo que se
+ * queja cuando DEJA de hacer falta: si alguien vuelve a ensanchar la firma para
+ * aceptar un número crudo, la directiva `@ts-expect-error` queda sin usar y
+ * `tsc` falla.
+ */
+export function permisoDeRango(entrada: {
+  /** `arrival_range_enabled_at` del circuito, ya resuelto por el servidor. */
+  rangoActivo: boolean;
+  /** El `fresco` de ESA unidad, ya resuelto por el servidor. */
+  posicionFresca: boolean;
+  velocidadKmh: number;
+  pisoSegundos: number;
+}): PermisoDeRango | null {
+  if (!entrada.rangoActivo) return null;
+  if (!entrada.posicionFresca) return null;
+  // Sin velocidad no hay división posible: antes se rechazaba dentro del
+  // cálculo, y su lugar es aquí — es una condición para poder afirmar, no un
+  // caso de borde de la aritmética.
+  if (!(entrada.velocidadKmh > 0)) return null;
+
+  return {
+    velocidadKmh: entrada.velocidadKmh,
+    pisoSegundos: entrada.pisoSegundos,
+  } as PermisoDeRango;
+}
+
 /**
  * El rango de llegada de UNA unidad, o `null` si no se puede afirmar.
  *
@@ -128,15 +204,16 @@ export const LLEGANDO_METROS = 400;
  * **El ancho es exactamente ± el piso del circuito.** La varianza de tráfico que
  * se sumaría encima no está medida, y hasta que la prueba de campo la mida, no
  * se inventa. Un rango angosto y honesto vale más que uno ancho y adivinado.
+ *
+ * Pide `PermisoDeRango` y no una velocidad suelta: ver arriba.
  */
 export function rangoDeLlegada(
   avanceUnidadMetros: number,
   avancePasajeroMetros: number,
-  velocidadKmh: number,
-  pisoSegundos: number,
+  permiso: PermisoDeRango,
   llegandoMetros = LLEGANDO_METROS,
 ): RangoDeLlegada | null {
-  if (!(velocidadKmh > 0)) return null;
+  const { velocidadKmh, pisoSegundos } = permiso;
 
   const metros = avancePasajeroMetros - avanceUnidadMetros;
   if (metros < 0) return null; // ya pasó

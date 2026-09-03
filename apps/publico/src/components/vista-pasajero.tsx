@@ -4,10 +4,12 @@ import "leaflet/dist/leaflet.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   avanceSobreTrazado,
+  permisoDeRango,
   proximaLlegada,
   rangoDeLlegada,
   velocidadDelCorredor,
   type MuestraDeAvance,
+  type PermisoDeRango,
   type RangoDeLlegada,
 } from "@jtel/domain";
 
@@ -270,23 +272,27 @@ export function VistaPasajero({
     const salida: RangoDeLlegada[] = [];
     for (const u of vivo.unidades) {
       /*
-       * Sólo las frescas. Calcular un rango desde una posición vieja es
-       * inventar un número, y lo paga la persona parada en la banqueta: se
-       * queda esperando un camión que ya pasó, o se va creyendo que tarda.
+       * El permiso resuelve las dos condiciones de una vez —el interruptor del
+       * circuito y la frescura de ESTA posición— y sin él no hay minuto que
+       * calcular. Antes aquí vivía un `if (!u.fresco)` suelto, y el interruptor
+       * se comprobaba mucho más abajo, al pintar. Que fueran dos comprobaciones
+       * separadas y lejos una de otra es lo que dejó al hilo de paradas sin
+       * ninguna de las dos.
        */
-      if (!u.fresco) continue;
+      const permiso = permisoDeRango({
+        rangoActivo: vivo.rango_activo,
+        posicionFresca: u.fresco,
+        velocidadKmh: velocidad.kmh,
+        pisoSegundos: forma.piso_rango_seg,
+      });
+      if (!permiso) continue;
       if (!u.sentido) continue; // sin sentido no se sabe si viene o va
       const trazado = trazadoPorSentido.get(u.sentido);
       if (!trazado) continue;
       const donde = avanceSobreTrazado({ lat: u.lat, lon: u.lon }, trazado, forma.corredor_m);
       const miAvance = avanceSobreTrazado(yo, trazado, forma.corredor_m);
       if (!donde || !miAvance) continue;
-      const r = rangoDeLlegada(
-        donde.avanceMetros,
-        miAvance.avanceMetros,
-        velocidad.kmh,
-        forma.piso_rango_seg,
-      );
+      const r = rangoDeLlegada(donde.avanceMetros, miAvance.avanceMetros, permiso);
       if (r) salida.push(r);
     }
     return salida.sort((a, b) => a.estimadoSeg - b.estimadoSeg);
@@ -327,8 +333,18 @@ export function VistaPasajero({
 
   /** Ni mapa vivo ni pista ni rango: no hay posición que dibujar. */
   const porHorario = modo !== "en_vivo";
+  /**
+   * El interruptor del circuito, **sin importar el modo**.
+   *
+   * Va aparte de `conRango` porque hay una afirmación de tiempo que se hace
+   * fuera de «en vivo»: la promesa de POR HORARIO —«verás el tiempo exacto en
+   * cuanto haya ubicación»—, que con el interruptor apagado promete algo que
+   * nunca va a llegar. `conRango` no la alcanzaba porque exige estar en vivo, y
+   * en ese modo no lo estamos.
+   */
+  const rangoActivo = vivo?.rango_activo ?? false;
   /** El rango existe sólo en vivo, con ubicación del pasajero, y con el interruptor prendido. */
-  const conRango = modo === "en_vivo" && (vivo?.rango_activo ?? false);
+  const conRango = modo === "en_vivo" && rangoActivo;
 
   // ── El mapa, de fondo ─────────────────────────────────────────────────
 
@@ -565,6 +581,19 @@ export function VistaPasajero({
             <span className="nom">{forma.nombre}</span>
           </div>
 
+          {/*
+            El VERDE de «Llegando» cuelga de `proxima`, que ahora sólo existe
+            con permiso. Antes colgaba de `proxima?.llegando && !porHorario`,
+            sin mirar el interruptor: con el rango apagado el titular decía «3
+            en ruta» y ese 3 se pintaba verde porque un camión venía cerca — el
+            color afirmando lo que la palabra ya se había callado, y encima
+            robándole el significado a un dato que no era el suyo.
+
+            Es la tercera vez que pasa (ver la ficha). Por eso no se arregló
+            agregando `conRango &&` aquí, que es acordarse otra vez: se arregló
+            haciendo que `proxima` no pueda existir sin permiso, y entonces el
+            color no tiene de dónde encenderse.
+          */}
           <div className={`tj-cuerpo${proxima?.llegando && !porHorario ? " llegando" : ""}`}>
             <div className="eta-fila">
               <div className="eta-1">
@@ -680,20 +709,35 @@ export function VistaPasajero({
               ) : modo === "cargando" ? (
                 <>Consultando el servicio…</>
               ) : modo === "por_horario" ? (
-                cadaMin !== null ? (
-                  <>
-                    El servicio de esta ruta corre cada {cadaMin} minutos. Verás el tiempo exacto
-                    en cuanto haya ubicación.
-                  </>
-                ) : (
-                  /*
-                   * Hay evidencia de servicio y NO hay frecuencia declarada. Se
-                   * dice lo primero y se calla lo segundo: inventar una cadencia
-                   * para llenar el renglón es exactamente lo que este modo vino
-                   * a quitar.
-                   */
-                  <>Hay unidades corriendo esta ruta. Verás el tiempo exacto en cuanto haya ubicación.</>
-                )
+                /*
+                 * La promesa va aparte del hecho, y sólo si se puede cumplir.
+                 *
+                 * «Verás el tiempo exacto en cuanto haya ubicación» es una
+                 * afirmación de tiempo en futuro, y con el interruptor apagado
+                 * es falsa: el pasajero da su ubicación, el circuito pasa a
+                 * vivo, y lo que aparece es «3 en ruta». Prometer un número que
+                 * el circuito no está autorizado a dar es la misma falta que
+                 * darlo, sólo que con un rato de retraso.
+                 *
+                 * Se mira `rangoActivo` y no `conRango`: aquí el modo es POR
+                 * HORARIO, así que `conRango` es falso por construcción y no
+                 * distingue un circuito calibrado de uno que no lo está.
+                 */
+                <>
+                  {cadaMin !== null ? (
+                    <>El servicio de esta ruta corre cada {cadaMin} minutos.</>
+                  ) : (
+                    /*
+                     * Hay evidencia de servicio y NO hay frecuencia declarada. Se
+                     * dice lo primero y se calla lo segundo: inventar una cadencia
+                     * para llenar el renglón es exactamente lo que este modo vino
+                     * a quitar.
+                     */
+                    <>Hay unidades corriendo esta ruta.</>
+                  )}
+                  {/* El espacio va explícito: pegado al texto lo puede comer el formateador. */}
+                  {rangoActivo && <>{" "}Verás el tiempo exacto en cuanto haya ubicación.</>}
+                </>
               ) : !conRango ? (
                 <>
                   Puedes ver dónde vienen los camiones en el mapa. El tiempo estimado de esta ruta
@@ -798,15 +842,37 @@ function Hilo({
     return avanceSobreTrazado(yo, principal, forma.corredor_m)?.avanceMetros ?? null;
   }, [yo, principal]);
 
+  /*
+   * Los camiones que pueden producir un tiempo en esta lista, cada uno con su
+   * permiso a cuestas.
+   *
+   * Antes era un `number[]` de puros avances, y ahí estaba el defecto: al tirar
+   * la unidad se tiraba también su `fresco`, así que el hilo daba minutos desde
+   * camiones que el mapa de arriba pintaba grises con «hace N min». Y como
+   * tampoco miraba el interruptor, los daba con el rango apagado. Cargar el
+   * permiso en vez del número suelto es lo que impide las dos cosas: sin él no
+   * se puede llamar a `rangoDeLlegada`.
+   *
+   * Los camiones se siguen DIBUJANDO todos en el mapa, frescos o no — eso no
+   * cambió y no debe cambiar. Lo que se filtra aquí es quién puede afirmar un
+   * tiempo, que es otra pregunta.
+   */
   const camiones = useMemo(() => {
-    if (!vivo || !principal) return [] as number[];
-    const out: number[] = [];
+    const out: Array<{ avance: number; permiso: PermisoDeRango }> = [];
+    if (!vivo || !principal) return out;
     for (const u of vivo.unidades) {
+      const permiso = permisoDeRango({
+        rangoActivo: vivo.rango_activo,
+        posicionFresca: u.fresco,
+        velocidadKmh,
+        pisoSegundos: pisoSeg,
+      });
+      if (!permiso) continue;
       const a = avanceSobreTrazado({ lat: u.lat, lon: u.lon }, principal, forma.corredor_m);
-      if (a) out.push(a.avanceMetros);
+      if (a) out.push({ avance: a.avanceMetros, permiso });
     }
     return out;
-  }, [vivo, principal]);
+  }, [vivo, principal, forma.corredor_m, velocidadKmh, pisoSeg]);
 
   /* La parada más cercana al pasajero: la que lleva la pastilla «aquí». */
   const miParada = useMemo(() => {
@@ -827,10 +893,13 @@ function Hilo({
         const avance = avances.get(p.id);
         /* El camión más cercano por detrás de ESTA parada. */
         const atras =
-          avance === undefined ? [] : camiones.filter((c) => c < avance).sort((a, b) => b - a);
-        const metros = avance !== undefined && atras.length ? avance - atras[0] : null;
+          avance === undefined
+            ? []
+            : camiones.filter((c) => c.avance < avance).sort((a, b) => b.avance - a.avance);
         const r =
-          metros !== null ? rangoDeLlegada(0, metros, velocidadKmh, pisoSeg) : null;
+          avance !== undefined && atras.length
+            ? rangoDeLlegada(0, avance - atras[0].avance, atras[0].permiso)
+            : null;
 
         return (
           <div className={`par${miParada === p.id ? " yo" : ""}`} key={p.id}>
