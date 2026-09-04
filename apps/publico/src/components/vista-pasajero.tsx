@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTema } from "@/lib/tema";
 import { useMiUbicacion } from "@/lib/ubicacion";
 import { iniciales, tinte } from "@/lib/color-ruta";
-import { minutosDesdeQueSeVio, rotuloDeLaTarjeta } from "@/lib/rotulo-de-la-tarjeta";
+import { haceNMinutos, rotuloDeLaTarjeta } from "@/lib/rotulo-de-la-tarjeta";
 import { useTinteDelMapa } from "@/lib/tinte-del-mapa";
 import { arranqueCorto, arranqueLargo } from "@/lib/fecha-arranque";
 import {
@@ -411,10 +411,11 @@ export function VistaPasajero({
      * confianza, que son las únicas de las que ya no se puede sostener nada.
      */
     for (const u of vivo.unidades) {
-      /* El MISMO redondeo que el rótulo de la tarjeta: hablan del mismo camión
-         en la misma pantalla, y «hace 6 min» arriba con «hace 7 min» abajo es
-         una contradicción que el pasajero sí ve. */
-      const min = minutosDesdeQueSeVio(u.antiguedad_seg);
+      /* La MISMA FRASE que el rótulo de la tarjeta, no sólo el mismo redondeo:
+         hablan del mismo camión en la misma pantalla, y dos formas de decir lo
+         mismo —«hace 6 min» y «6 min atrás»— son una contradicción aparente que
+         el pasajero sí ve. La prueba del rótulo exige que lo contenga. */
+      const cuando = haceNMinutos(u.antiguedad_seg);
       const cuerpo = u.fresco
         ? '<div style="width:30px;height:30px;background:var(--ambar);border:3px solid #fff;' +
           'border-radius:50%;box-shadow:0 3px 12px rgba(0,0,0,.4);display:flex;align-items:center;' +
@@ -431,7 +432,7 @@ export function VistaPasajero({
           'justify-content:center"><svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:#fff">' +
           '<path d="M4 16c0 .88.39 1.67 1 2.22V20a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm9 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm1.5-6H6V6h12v5z"/></svg></div>' +
           `<span style="background:#fff;color:var(--gris);border-radius:9px;padding:1px 6px;font-size:10px;` +
-          `font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25)">hace ${min} min</span>` +
+          `font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25)">${cuando}</span>` +
           "</div>";
       leaflet
         .marker([u.lat, u.lon], {
@@ -503,8 +504,8 @@ export function VistaPasajero({
    * en POR HORARIO por construcción, porque ese estado exige una unidad en el
    * corredor— y entonces el rótulo dice qué vimos sin inventar cuándo.
    */
-  const vistoHaceMin = useMemo(() => {
-    const edades = (vivo?.unidades ?? []).map((u) => minutosDesdeQueSeVio(u.antiguedad_seg));
+  const vistoHaceSeg = useMemo(() => {
+    const edades = (vivo?.unidades ?? []).map((u) => u.antiguedad_seg);
     return edades.length ? Math.min(...edades) : null;
   }, [vivo]);
 
@@ -792,7 +793,7 @@ export function VistaPasajero({
                   /* De esto depende de QUIÉN es el titular en POR HORARIO, y
                      por lo tanto quién firma el rótulo. Ver la regla en el lib. */
                   hayFrecuenciaDeclarada: cadaMin !== null,
-                  vistoHaceMin,
+                  vistoHaceSeg,
                   enVivo: {
                     conRango,
                     hayProxima: proxima !== null,

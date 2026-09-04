@@ -773,10 +773,35 @@ queda, porque ahí sí agrega algo que no es nuestro.
 | Frase | «Hay unidades corriendo esta ruta.» | *(vacía)* |
 | Rótulo | «Por horario» → «Según el concesionario» | «Vimos una unidad en la ruta hace 6 min» |
 
-**El titular no se tocó**, y conviene decirlo: «En servicio» sigue en presente.
-Se sostiene porque el renglón de abajo lo fecha — la misma forma que el camión
-apagado del mapa, que se dibuja y trae su «hace N min» al lado. Si algún día se
-cambia, es otra decisión.
+### «En servicio» SE QUEDA EN PRESENTE, y esto es una decisión, no un olvido
+
+Se planteó cambiarlo —es el mismo tiempo verbal que se acababa de sacar de la
+frase— y **se decidió que no**. Queda escrito para que el siguiente no lo
+«arregle» de vuelta.
+
+**Dentro de la ventana de confianza, que el servicio está corriendo sí lo
+podemos afirmar.** Para eso existe esa ventana: es cuánto tiempo después de ver
+una unidad en el corredor se puede seguir sosteniendo que hay servicio. Y el
+rótulo lo fecha, con su minuto, justo debajo — **la misma forma que el camión
+apagado del mapa**, que se dibuja y trae su «hace N min» al lado en vez de
+desaparecer.
+
+La lección, que es más grande que este renglón:
+
+> **Quedarnos cortos con algo que sí sabemos es el error opuesto al que llevamos
+> toda la semana arreglando, y también es un error.**
+
+Toda esta ficha va de no afirmar de más: no prometer cadencia sin declararla, no
+firmar con el nombre del concesionario una medición nuestra, no decir «hay
+unidades» cuando lo que hubo fue una hace seis minutos. El reflejo que eso
+entrena —ante la duda, callar— tiene su propia falla, y es la del §E al revés:
+**una pantalla que se calla lo que el sistema sí midió también le miente al
+pasajero**, sólo que por omisión, y encima lo manda a caminar a otra ruta por
+un servicio que sí está corriendo.
+
+La prueba que separa los dos casos es la de siempre, con el signo cambiado:
+¿esto que me estoy callando lo midió el sistema, o me lo estoy inventando? Si lo
+midió, se dice — y se fecha.
 
 ### La valla
 
@@ -790,6 +815,30 @@ Tres pruebas la sostienen:
 1. El mismo estado cambia de firma según la cadencia.
 2. **Ningún rótulo de fuente medida contiene «concesionario»** — recorre todos
    los estados con y sin cadencia, así que un estado nuevo entra al barrido solo.
-3. El minuto se redondea con la **misma función** que la pastilla del camión del
-   mapa. Hablan del mismo camión en la misma pantalla, y «hace 6 min» arriba con
-   «hace 7 min» abajo es una contradicción que el pasajero sí ve.
+3. El rótulo se compone con **la misma frase entera** que enseña la pastilla del
+   camión del mapa — ver abajo.
+
+### La pastilla y el rótulo salen de la misma función, y hay prueba de las dos mitades
+
+Hablan **del mismo camión en la misma pantalla**: el punto apagado del mapa con
+su pastilla, y el renglón de abajo de la tarjeta. Que uno dijera «hace 6 min» y
+el otro «hace 7» es una contradicción que el pasajero sí ve, y **ninguna prueba
+de datos la encuentra**: los dos valores serían correctos por separado.
+
+**Se comparte la frase entera, no sólo el número.** Compartir el redondeo dejaba
+la mitad del riesgo abierto: dos sitios pueden redondear igual y escribir
+distinto —«hace 6 min» y «6 min atrás»— y el pasajero ve dos formas de decir lo
+mismo del mismo camión. `haceNMinutos(antiguedadSeg)` devuelve la cadena, y el
+rótulo se compone con ella.
+
+La valla son dos pruebas, porque son dos mitades distintas:
+
+1. **El rótulo la contiene**, para un barrido de antigüedades. Eso cierra el
+   lado del rótulo.
+2. **La pantalla la usa**, comprobado leyendo el fuente. Es la mitad que ninguna
+   prueba de unidad alcanza: `rotuloDeLaTarjeta` puede componerse perfecto
+   mientras el mapa vuelve a escribir su `Math.round` a mano, y la primera
+   prueba seguiría en verde.
+
+Se comprobó rompiéndola a propósito —re-copiando el redondeo dentro del
+componente— y la segunda se cayó; restaurada, verde otra vez.

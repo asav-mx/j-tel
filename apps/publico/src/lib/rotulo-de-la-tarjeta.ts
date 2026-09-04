@@ -145,6 +145,23 @@ export function minutosDesdeQueSeVio(antiguedadSeg: number): number {
   return Math.max(1, Math.round(antiguedadSeg / 60));
 }
 
+/**
+ * «hace 6 min» — **la frase entera, no sólo el número.**
+ *
+ * Compartir el redondeo dejaba la mitad del riesgo abierto: dos sitios pueden
+ * redondear igual y escribir distinto —«hace 6 min» y «6 min atrás»—, y el
+ * pasajero ve dos formas de decir lo mismo del mismo camión. Con la frase
+ * compartida, el rótulo **se compone con la cadena que la pastilla enseña**, y
+ * la prueba lo comprueba pidiendo que la contenga.
+ *
+ * No lleva sujeto a propósito: la pastilla la pega al lado del camión y el
+ * rótulo la pega detrás de «Vimos una unidad en la ruta». El sujeto lo pone
+ * cada quien; el hecho y su hora son los mismos.
+ */
+export function haceNMinutos(antiguedadSeg: number): string {
+  return `hace ${minutosDesdeQueSeVio(antiguedadSeg)} min`;
+}
+
 /** Lo que el rótulo necesita saber del estado EN VIVO, que es el único con números. */
 export interface EnVivo {
   /** Ya se puede decir un minuto: interruptor prendido y llegada calculada. */
@@ -162,11 +179,14 @@ export interface DatosDelRotulo {
   /** Decide de quién es el titular en `por_horario`. Ver `fuenteDelTitular`. */
   hayFrecuenciaDeclarada: boolean;
   /**
-   * Hace cuántos minutos se vio la unidad **más reciente** de las publicadas.
-   * `null` si no hay ninguna — y entonces el rótulo dice qué vimos sin inventar
-   * cuándo.
+   * Antigüedad **en segundos** de la unidad más reciente de las publicadas.
+   *
+   * En segundos y no en minutos porque el redondeo y la frase se hacen aquí:
+   * si el que llama redondeara, volvería a haber dos sitios que pueden
+   * redondear distinto, que es lo que esto vino a cerrar. `null` si no hay
+   * ninguna — y entonces el rótulo dice qué vimos sin inventar cuándo.
    */
-  vistoHaceMin: number | null;
+  vistoHaceSeg: number | null;
   enVivo: EnVivo;
 }
 
@@ -215,7 +235,7 @@ export function rotuloDeLaTarjeta(modo: ModoDeLaTarjeta, datos: DatosDelRotulo):
    * dentro de la ventana de confianza. Por eso el verbo va en pasado y con su
    * minuto.
    */
-  return datos.vistoHaceMin === null
+  return datos.vistoHaceSeg === null
     ? "Vimos una unidad en la ruta"
-    : `Vimos una unidad en la ruta hace ${datos.vistoHaceMin} min`;
+    : `Vimos una unidad en la ruta ${haceNMinutos(datos.vistoHaceSeg)}`;
 }
