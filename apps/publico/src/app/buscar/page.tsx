@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getRepos } from "@/lib/db";
 import { Buscador, type CircuitoParaBuscador } from "@/components/buscador";
+import { salidaDelBuscador } from "@/lib/salida-del-buscador";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +30,21 @@ export const dynamic = "force-dynamic";
  * circuito acaban usándose la equivocada, que es la divergencia del
  * `CORREDOR_METROS` otra vez— sino servir una geometría de dibujo aparte, por su
  * propio camino, inalcanzable desde cualquier cálculo.
+ *
+ * ## La salida
+ *
+ * `?desde=<slug>` es de dónde llegó el pasajero, y lo pone la liga de la vista
+ * de la ruta. **Se coteja aquí contra lo publicado**, en el mismo lugar que ya
+ * tiene la lista: sin cotejo, una liga armada a mano produciría un botón que
+ * dice «Volver a la ruta» y aterriza en un 404.
  */
-export default async function BuscarPage() {
+export default async function BuscarPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = searchParams ? await searchParams : undefined;
+  const desde = typeof sp?.desde === "string" ? sp.desde : null;
   const repos = getRepos();
   const publicados = await repos.circuits.listPublishedCircuits();
 
@@ -82,5 +96,10 @@ export default async function BuscarPage() {
     );
   }
 
-  return <Buscador circuitos={circuitos} />;
+  return (
+    <Buscador
+      circuitos={circuitos}
+      salida={salidaDelBuscador(desde, circuitos.map((c) => c.slug))}
+    />
+  );
 }

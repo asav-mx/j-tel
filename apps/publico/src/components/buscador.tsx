@@ -25,6 +25,7 @@ import {
   type RutaBuscable,
   type Sugerencia,
 } from "@/lib/buscar-lugar";
+import type { SalidaDelBuscador } from "@/lib/salida-del-buscador";
 
 /**
  * «¿A dónde vas?» — el buscador honesto.
@@ -78,7 +79,17 @@ type Respuesta = { circuito: CircuitoParaBuscador; resultado: ResultadoDeBusqued
 
 // ── El componente ────────────────────────────────────────────────────────
 
-export function Buscador({ circuitos }: { circuitos: CircuitoParaBuscador[] }) {
+export function Buscador({
+  circuitos,
+  salida,
+}: {
+  circuitos: CircuitoParaBuscador[];
+  /**
+   * A dónde se sale de aquí. **La resuelve el servidor**, que es quien tiene la
+   * lista de lo publicado para cotejar el `desde` — ver `salida-del-buscador.ts`.
+   */
+  salida: SalidaDelBuscador;
+}) {
   const { deNoche, alternar } = useTema();
   const yo = useMiUbicacion();
 
@@ -316,8 +327,36 @@ export function Buscador({ circuitos }: { circuitos: CircuitoParaBuscador[] }) {
       <div className="busc-mapa">
         <div id="mapa" ref={contenedor} />
         <div className="tope">
+          {/*
+            LA SALIDA, y es el único control de esta pantalla que no se puede
+            omitir. El manifiesto declara `display: "standalone"`: instalada en
+            la pantalla de inicio no hay botón de atrás del navegador, así que
+            sin esto el buscador es una puerta sin salida — no una incomodidad.
+
+            Es una liga de verdad y NUNCA `history.back()`: quien abre esto de
+            frío no tiene historia, y ahí el botón no haría nada. Un control que
+            no hace nada es peor que ninguno, porque el que lo pica ya se creyó
+            que hay salida.
+
+            `<a>` y no `<Link>`, como las otras ligas de ruta de esta pantalla:
+            `<Link>` prefetchearía la página de la ruta en cuanto el botón entra
+            a la vista —y aquí está siempre—, y eso se paga en datos de un
+            teléfono que los tiene contados, aunque el pasajero nunca lo pique.
+
+            Enseña sólo la flecha. Arriba a la izquierda ya significa «regresar»
+            en cualquier teléfono, y el ancho que ahorra lo gana el nombre de la
+            ruta. El destino lo dice el nombre accesible, que es lo que lee
+            quien no ve el dibujo.
+          */}
+          <a className="btn-salida" href={salida.href} aria-label={salida.etiqueta}>
+            <span aria-hidden="true">←</span>
+          </a>
           <div className="chapa">
-            <span className="cuad">¿?</span> ¿A dónde vas?
+            <span className="cuad">¿?</span>
+            {/* En su propio `span` para que pueda recortarse con puntos
+                suspensivos: un texto suelto dentro de un flex se corta a la
+                mitad de una letra, y eso se lee como pantalla rota. */}
+            <span className="chapa-t">¿A dónde vas?</span>
           </div>
           <button
             className="btn-tema"

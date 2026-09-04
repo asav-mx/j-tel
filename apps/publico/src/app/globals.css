@@ -217,6 +217,58 @@ body {
   color: inherit;
 }
 
+/*
+ * La salida del buscador. Gemela del botón de tema —mismo tamaño, mismo
+ * lienzo, misma sombra— porque las dos son controles de la barra flotante y
+ * una salida más chica que el interruptor del tema diría cuál importa menos.
+ *
+ * 44 px es el área de toque, no la decoración: es lo mínimo que un pulgar
+ * acierta en una banqueta, y esta pantalla se usa de pie.
+ *
+ * La sombra no es adorno tampoco: el botón flota sobre el MAPA, que es fondo
+ * vivo —calles claras, parques verdes, avenidas ámbar— y sin ella el contraste
+ * dependería de qué le tocó abajo.
+ */
+.btn-salida {
+  pointer-events: auto;
+  flex: none;
+  background: var(--lienzo);
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--tinta);
+  text-decoration: none;
+}
+
+/*
+ * Con la salida puesta, la chapa tiene que poder encogerse: a 320 px son 44 del
+ * botón, 44 del tema y dos huecos de 10, y lo que queda no alcanza para el
+ * rótulo entero. Se recorta con puntos suspensivos en vez de empujar al botón
+ * de tema fuera de la pantalla.
+ */
+.busc .chapa {
+  min-width: 0;
+}
+
+.busc .chapa .cuad {
+  flex: none;
+}
+
+.busc .chapa-t {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ── La hoja de abajo ────────────────────────────────────────────── */
 
 .hoja {
