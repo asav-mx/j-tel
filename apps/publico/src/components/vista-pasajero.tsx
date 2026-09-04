@@ -7,6 +7,7 @@ import { useTema } from "@/lib/tema";
 import { useMiUbicacion } from "@/lib/ubicacion";
 import { iniciales, tinte } from "@/lib/color-ruta";
 import { rotuloDeLaTarjeta } from "@/lib/rotulo-de-la-tarjeta";
+import { useTinteDelMapa } from "@/lib/tinte-del-mapa";
 import { arranqueCorto, arranqueLargo } from "@/lib/fecha-arranque";
 import {
   avanceSobreTrazado,
@@ -147,6 +148,9 @@ export function VistaPasajero({
   const yo = useMiUbicacion();
 
   const contenedor = useRef<HTMLDivElement>(null);
+  /* «Ya hay mapa» es un hecho posterior al primer render: el mapa se crea en un
+     efecto asíncrono. Ver `lib/tinte-del-mapa.ts`. */
+  const [mapaListo, setMapaListo] = useState(false);
   const mapa = useRef<import("leaflet").Map | null>(null);
   const L = useRef<typeof import("leaflet") | null>(null);
   const capaCamiones = useRef<import("leaflet").LayerGroup | null>(null);
@@ -355,30 +359,26 @@ export function VistaPasajero({
       if (puntos.length) m.fitBounds(leaflet.latLngBounds(puntos), { padding: [30, 30] });
       capaCamiones.current = leaflet.layerGroup().addTo(m);
       mapa.current = m;
+      setMapaListo(true);
     })();
     return () => {
       montado = false;
       mapa.current?.remove();
       mapa.current = null;
+      setMapaListo(false);
     };
   }, [forma.trazados, forma.paradas, forma.color_hex]);
 
   /*
-   * Las teselas se tiñen para el tema: de noche, un mapa blanco encandila.
+   * Las teselas se tiñen para el tema, y la decisión vive en `lib/`.
    *
-   * El filtro va a la CAPA DE TESELAS, no al contenedor del mapa. Aplicado al
-   * contenedor teñía también el trazado y los camiones: el morado de la ruta
-   * salía invertido en lavanda y el ámbar dejaba de ser ámbar. O sea, el color
-   * que viene del dato dejaba de ser el color que se ve — que es exactamente lo
-   * que la regla del color por ruta existe para garantizar.
+   * Colgaba de `[deNoche, vivo]`, y **funcionaba por casualidad**: `vivo` cambia
+   * con cada sondeo, así que el primero re-corría el efecto después de que el
+   * mapa existiera. Con el endpoint caído —`vivo` se queda en `null`— esta
+   * pantalla se habría quedado con el mapa claro de noche, igual que le pasaba
+   * al buscador siempre. La dependencia que hacía falta era «ya hay mapa».
    */
-  useEffect(() => {
-    const pane = contenedor.current?.querySelector<HTMLElement>(".leaflet-tile-pane");
-    if (!pane) return;
-    pane.style.filter = deNoche
-      ? "invert(1) hue-rotate(185deg) brightness(.82) contrast(.92) saturate(.7)"
-      : "saturate(.72) brightness(1.03)";
-  }, [deNoche, vivo]);
+  useTinteDelMapa(contenedor, deNoche, mapaListo);
 
   /* Camiones y punto del pasajero: se redibujan por sondeo, el trazado no. */
   useEffect(() => {
