@@ -1,4 +1,4 @@
-# Ficha — La escalera de cuatro estados de la app pública
+# Ficha — La escalera de estados de la app pública
 
 **Fecha: 27 de agosto de 2026.** Cara pública del transporte concesionado (app
 del pasajero). Frente: Tramo JB. Migración: `0031_estados_publico`.
@@ -426,3 +426,192 @@ oscuro no prueba nada. Desbordamiento horizontal: 0 en todas las corridas.
 
 Al terminar, el escenario se borró: el endpoint contesta `404` y «No existe ese
 circuito» — lo mismo que para un slug inventado.
+
+---
+
+## La corrección del 3 de septiembre — el escalón del arranque
+
+**Migración: `0032_fecha_arranque`.** Un circuito sólo podía estar en dos
+estados: **invisible** —sin publicar— o **presentado como si operara**. Faltaba
+el de en medio, que es el que más falta hace las semanas antes de un arranque:
+declarado y visible, con el servicio sin empezar.
+
+El título de esta ficha perdió el «cuatro» por lo mismo que se corrige aquí: un
+número en un rótulo es una afirmación, y ésa acaba de dejar de ser cierta.
+
+### Qué estaba pasando
+
+Un circuito publicado tres semanas antes de su primer día caía a
+`sin_evidencia`, y la app le decía al pasajero el horario declarado con el
+rótulo de siempre. La frase no era falsa —nadie prometía cadencia— pero la
+pantalla **contaba una ausencia que no significa nada**: no hay unidades porque
+todavía no las tiene que haber. «No hemos visto camiones» describe un
+instrumento mirando un mundo donde aún no hay nada que mirar.
+
+Adentro era peor, porque adentro sí se enunciaba como carencia:
+
+| Pantalla | Qué decía tres semanas antes del arranque |
+|---|---|
+| Operar | `0 de 5` en ruta, y las cinco unidades en la caja ámbar de «qué necesita atención», cada una con «no ha salido» |
+| Reporte | `0 vueltas observadas`, `con señal 0 de 5`, y «no se puede medir el intervalo todavía» |
+
+Las seis cifras eran correctas y las seis mentían igual: **§D en su forma de
+alcance.** Cada una vale para una jornada que ocurrió, y ninguna jornada había
+ocurrido. «No ha salido» es lo más caro de los seis, porque es lo único de esas
+pantallas que se lee como reproche — y se lo hacía a un transportista por no
+estar trabajando antes de que existiera el trabajo.
+
+### El escalón, y por qué va hasta arriba
+
+`por_arrancar` se evalúa **antes que `fuera_de_horario`**: la fecha manda sobre
+el reloj. Preguntarle al horario si está abierto un servicio que no ha arrancado
+es preguntar por la puerta de algo que todavía no existe — y produciría «Abre
+05:00» un día 3 a las cuatro de la mañana, que invita a ir a la parada.
+
+| # | Estado | Cuándo |
+|---|---|---|
+| **1** | **`por_arrancar`** | **la fecha declarada todavía no llega** |
+| 2 | `fuera_de_horario` | el reloj está fuera del horario |
+| 3 | `en_vivo` | alguna unidad fresca y dentro del corredor |
+| 4 | `por_horario` | se vio alguna en el corredor dentro de la ventana de confianza |
+| 5 | `sin_evidencia` | ninguna de las anteriores |
+
+Pasada la fecha, la escalera trabaja exactamente igual que antes de que este
+escalón existiera. Es lo que fija una prueba, con ese nombre.
+
+### La valla: `estadoDelCircuito` EXIGE el dato
+
+`estadoDelCircuito` no ganó un parámetro opcional: ganó uno **requerido**,
+`yaArranco`. Los dos sitios de llamada —el endpoint del pasajero y Operar—
+dejaron de compilar hasta que cada uno decidió qué pasarle. Es la misma forma de
+defensa que este tramo ya usó tres veces: la función **no recibe** cuántas
+unidades hay asignadas, `fresco` se resuelve en el servidor, y `rangoDeLlegada`
+exige un `PermisoDeRango`. Un booleano con default habría dejado que la segunda
+cara se enterara del escalón en producción.
+
+La comparación vive en una sola función pura, `yaArrancoElServicio`, y **es de
+día civil en la zona del circuito**, no de instantes: el servicio arranca a las
+00:00 de donde corre. Construir un instante obligaría a inventar una hora de
+arranque que nadie declaró — lo que se declara es el día.
+
+### Por qué la columna NO se llama `service_start_date`
+
+Ésta es la decisión que hay que dejar escrita con su razón, no sólo con su
+resultado.
+
+Ya existe `service_start_local`, que es **la hora a la que el circuito abre cada
+día**. Una columna hermana —`service_start_date`— habría dejado dos campos
+contiguos, casi idénticos de leer, con significados distintos: uno es la hora de
+apertura diaria, el otro el día en que el servicio existe por primera vez.
+
+No es una hipótesis. **Es exactamente lo que ya pasó en esta misma tabla con las
+dos «tolerancias»**: el formulario llamaba «Tolerancia» al pegado de paradas
+(25 m) mientras la del corredor (150 m) —la que decide qué unidad ve el
+pasajero— no tenía ni editor. Quien buscaba «la tolerancia» encontraba la que no
+era, y la movía. Se arregló separando los nombres para que cada uno dijera qué
+hace su número.
+
+`service_launch_date` está lo bastante lejos de `service_start_local` como para
+que no se confundan al leerlas en una lista de columnas ni al teclear un
+autocompletado. En la piel, en las dos caras y sin excepción, se llama
+**«arranque del servicio»**.
+
+La regla general que sale de las dos veces: **dos columnas que comparten prefijo
+se leen como variantes de la misma cosa.** Si no lo son, el prefijo es una
+afirmación falsa escrita en el esquema, y la paga quien mueva la que no era.
+
+### Sin default, y aquí el default habría sido peor que en la frecuencia
+
+`NULL` significa **ya opera**, nunca «arranca hoy». La columna no tiene valor de
+origen y tampoco está en `ORIGEN_DEL_CIRCUITO`, por la razón de la `0031`: la
+app dice esta fecha en voz alta, así que tiene que venir del concesionario.
+
+Y hay un agravante propio. El default más «natural» —la fecha de hoy— no sólo
+fabricaría una declaración que nadie hizo: **apagaría el servicio de todo
+circuito existente hasta la medianoche**. Un valor de origen que cambia el
+comportamiento del sistema no es un punto de partida, es un interruptor
+escondido.
+
+Por eso la frase que acompaña al campo en el expediente dice, con todas sus
+letras, que vacío significa que ya opera. Un campo de fecha en blanco se lee
+como un pendiente, y aquí significa lo contrario.
+
+### Lo que ve el pasajero
+
+Con la fecha en el futuro, el endpoint **contesta antes de consultar
+posiciones**, igual que fuera de horario. No es ahorro: una unidad probando el
+recorrido la semana antes reporta como cualquier otra, y publicarla convertiría
+un ensayo en un servicio. Tiene su prueba, «el camión del ensayo», hermana de
+«el camión del patio».
+
+El recorrido y las paradas se siguen viendo — bajan del endpoint de la FORMA,
+que no depende de esto:
+
+| | Qué dice |
+|---|---|
+| Titular | `Arranca 15 sep` — corto, para rimar con el `Abre 05:00` de fuera de horario |
+| Frase | «El servicio de esta ruta arranca el martes 15 de septiembre, de 05:00 a 20:00.» |
+| Rótulo | «Arranque declarado por el concesionario» |
+
+**La frecuencia se agrega sólo si el concesionario la declaró**, y el caso que
+va a salir en el arranque real es el que no la trae: la frase se cierra en el
+horario y no inventa una cadencia para llenar el renglón. Es la misma regla de
+la `0031`, aplicada a un estado nuevo.
+
+**El color no hizo falta tocarlo, y conviene decir por qué.** El punto de estado
+y el atenuado de la tarjeta cuelgan de `:not([data-modo="en_vivo"])` desde el
+#359 — colgados de una lista de estados, este modo nuevo se habría pintado vivo
+por omisión. Es la cuarta vez que esa decisión paga sola.
+
+### Adentro, el ruido apagado
+
+- **Operar**: el número grande cede el lugar a `Arranca el martes 15 de
+  septiembre` y a cuántas unidades tiene asignadas, con la misma forma que ya
+  usaba el circuito cerrado. Toda unidad del plan cae en la situación nueva
+  `por_arrancar`, así que **la caja ámbar de atención queda vacía** — y eso es
+  lo que se prueba, no el rótulo.
+- **Reporte**: la pantalla se reemplaza entera, no se le pone un aviso encima.
+  Dejar las secciones con sus ceros y un letrero arriba sería §D en su forma de
+  agrupación: los ceros seguirían leyéndose como mediciones de una jornada que
+  no ocurrió, y el letrero no los desmiente — los acompaña. Corta **antes** de
+  leer el historial: preguntarle al archivo por una jornada que no empezó no
+  tiene respuesta.
+- **Expediente**: campo de fecha en «Lo que el concesionario declara», con su
+  frase de efecto —hermana de `loQueDiraLaApp`— y con las tres lecturas
+  separadas: sin fecha, con fecha futura, y **el día mismo**, que es el borde
+  donde una copia se equivoca sola. En «cómo va armado» entra como `decidido`,
+  nunca como `falta`, por lo mismo que la frecuencia.
+
+### Dos defectos que encontró escribir las pruebas
+
+**`Date.UTC` no rechaza un día imposible: lo desborda.** `2026-13-45` no da
+error — da el 14 de febrero de 2027, una fecha perfectamente creíble que nadie
+declaró. Lo cazó la prueba de «una fecha ilegible no produce un titular
+inventado». La comprobación quedó de ida y vuelta —si el día que sale no es el
+que entró, no era una fecha— y está en los dos lados: en el formateador del
+teléfono y en el `POST` que guarda, porque el `<input type="date">` del
+navegador no es la última palabra sobre lo que entra a la base.
+
+**El día del arranque no se lee como instante.** `new Date("2026-09-15")` es
+medianoche UTC y en Juárez se dibuja como el **14**. Un día corrido por uno
+manda a alguien a la parada la víspera, y en la pantalla no hay nada que se vea
+mal. Las dos funciones que lo escriben arman la fecha a mediodía UTC y tienen su
+prueba con ese nombre.
+
+### Una decisión que tomé y no estaba en el encargo
+
+**El buscador «¿a dónde vas?» no dice nada del arranque.** Contesta si una ruta
+le sirve al pasajero *geográficamente*, y eso es cierto antes y después del
+primer día; al abrirla, la pantalla del circuito ya se lo dice. Meterlo también
+ahí habría sido repetir la misma afirmación en dos lugares que se actualizan por
+separado — que es el arreglo del #366 al revés.
+
+Queda escrito para que sea decisión y no olvido. Si la prueba de campo enseña
+que alguien llega a la parada por el buscador sin haber abierto la ruta, ahí se
+revisa.
+
+### Lo que esta sección NO afirma
+
+Que se haya visto un arranque real. La fecha del primer circuito la captura el
+concesionario, y hasta que eso pase lo único que hay es el estado alcanzado a
+propósito en la rama desechable.

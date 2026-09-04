@@ -65,6 +65,43 @@ export function enHorarioDeServicio(
   return inicio < fin ? hhmm >= inicio && hhmm < fin : hhmm >= inicio || hhmm < fin;
 }
 
+// ── Fecha de arranque del servicio ───────────────────────────────────────
+
+/**
+ * ¿El servicio de este circuito ya arrancó?
+ *
+ * Existe porque un circuito sólo podía estar invisible o presentado como si
+ * operara, y faltaba el escalón de en medio: **declarado y visible, con el
+ * servicio sin arrancar**. Antes, un circuito publicado tres semanas antes de
+ * su primer día caía a `sin_evidencia` y la app contaba una ausencia que no
+ * significaba nada — no hay unidades porque todavía no las tiene que haber.
+ *
+ * **`null` significa que YA OPERA**, no que arranca hoy. Un circuito en marcha
+ * no tiene por qué inventarse una fecha de arranque hacia atrás, y poner la de
+ * hoy por defecto sería fabricar una declaración que nadie hizo — la misma
+ * falta que la frecuencia con `DEFAULT 20`.
+ *
+ * **Se compara la fecha civil del circuito, no un instante.** El servicio
+ * arranca a las 00:00 de la zona del circuito, y de ahí en adelante manda el
+ * reloj como siempre. Construir un instante obligaría a inventar una hora de
+ * arranque que nadie declaró: lo que se declara es el DÍA.
+ *
+ * Una fecha pasada da `true` igual que la ausencia. No se limpia sola: es el
+ * registro de cuándo arrancó, y borrarla al día siguiente perdería el dato por
+ * nada.
+ */
+export function yaArrancoElServicio(
+  ahora: Date,
+  fechaDeArranque: string | null,
+  zona: string,
+): boolean {
+  if (!fechaDeArranque) return true;
+  // Las dos son `YYYY-MM-DD`, y en ese formato el orden de texto es el del
+  // calendario. Comparar así evita construir fechas y atravesar el horario de
+  // verano por nada, igual que `enHorarioDeServicio` con las horas.
+  return localDateIso(ahora, zona) >= fechaDeArranque.slice(0, 10);
+}
+
 // ── Frescura ─────────────────────────────────────────────────────────────
 
 /** Segundos desde que el aparato tomó el fix. La cuenta la hace el servidor. */
@@ -212,11 +249,27 @@ function diferenciaAngular(a: number, b: number): number {
 /**
  * En qué está el circuito ahora mismo, para la app del pasajero.
  *
- * Cuatro estados, evaluados en orden y parando en el primero que aplique.
+ * Cinco estados, evaluados en orden y parando en el primero que aplique.
  * Existen porque la app tenía **un solo silencio para tres cosas distintas** y
- * las decía todas igual: «el servicio corre cada N minutos».
+ * las decía todas igual: «el servicio corre cada N minutos». El quinto llegó
+ * después, y por la falta simétrica: un circuito sin arrancar se presentaba
+ * como uno que opera y al que no se le ve nada.
  */
 export type EstadoDelCircuito =
+  /**
+   * **El servicio todavía no arranca**, y la fecha lo dice — no un silencio.
+   *
+   * Es el escalón que faltaba: un circuito sólo podía estar invisible o
+   * presentado como si operara. Va ARRIBA de `fuera_de_horario` porque la fecha
+   * manda sobre el reloj: preguntarle al horario si está abierto un servicio
+   * que no ha arrancado es preguntar por la hora de una puerta que todavía no
+   * existe.
+   *
+   * No cae a `sin_evidencia` porque **no hay nada que evidenciar todavía**.
+   * «No hemos visto unidades» sería contar una ausencia que no significa nada:
+   * las unidades no están porque aún no las tiene que haber.
+   */
+  | "por_arrancar"
   /** El reloj está fuera del horario declarado. No se promete nada. */
   | "fuera_de_horario"
   /** Hay al menos una unidad con posición fresca dentro del corredor. */
@@ -316,15 +369,26 @@ export function medirUnidad(
  * su última posición está en el patio, así que no cuenta. El que se metió a un
  * túnel sí cuenta: la última vez que se le vio, iba en la ruta.
  *
+ * **La fecha de arranque manda sobre el reloj**, y por eso va en el primer
+ * escalón. Un circuito que arranca el 15 no está «fuera de horario» el día 3 a
+ * las tres de la tarde: está sin arrancar, que es otra cosa y se dice distinto.
+ *
  * **Ya no recibe umbrales**, y ése es el punto del cambio: los aplicó
  * `medirUnidad` antes de llegar aquí, así que `en_vivo` es literalmente «alguna
  * en ruta» en vez de una comparación repetida. Dos comparaciones equivalentes
  * en dos archivos son dos definiciones esperando a separarse.
  */
 export function estadoDelCircuito(entrada: {
+  /**
+   * La fecha de arranque ya pasó — o el circuito no declaró ninguna, que
+   * significa que ya opera. Lo resuelve `yaArrancoElServicio` antes de llegar
+   * aquí, igual que `enHorario`.
+   */
+  yaArranco: boolean;
   enHorario: boolean;
   unidades: MedidaDeUnidad[];
 }): EstadoDelCircuito {
+  if (!entrada.yaArranco) return "por_arrancar";
   if (!entrada.enHorario) return "fuera_de_horario";
   if (entrada.unidades.some((u) => u.enRuta)) return "en_vivo";
   if (entrada.unidades.some((u) => u.enCorredor && u.dentroDeConfianza)) return "por_horario";

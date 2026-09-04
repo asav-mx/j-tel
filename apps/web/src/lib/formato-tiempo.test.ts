@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diaYMes, duracion, margen } from "./formato-tiempo";
+import { diaYMes, duracion, fechaCivilLarga, margen } from "./formato-tiempo";
 
 /*
  * `duracion` no tenía prueba, y acaba de ganar un escalón de días. Se fija aquí
@@ -72,5 +72,23 @@ describe("diaYMes · el día como lo diría una persona", () => {
      * mira, para la misma fila.
      */
     expect(diaYMes(new Date("2026-08-21T05:30:00.000Z"), JUAREZ, ahora)).toBe("20 de agosto");
+  });
+});
+
+describe("fechaCivilLarga · la fecha que se declara, no la que se sella", () => {
+  const JUAREZ = "America/Ciudad_Juarez";
+
+  it("se escribe entera y sin la coma que parte la frase", () => {
+    expect(fechaCivilLarga("2026-09-15", JUAREZ)).toBe("martes 15 de septiembre de 2026");
+  });
+
+  it("NO SE CORRE POR LA ZONA: es un día civil, no un instante", () => {
+    /*
+     * `new Date("2026-09-15")` es medianoche UTC, y en Juárez (UTC-6) caería en
+     * el 14. Una fecha corrida por uno anuncia el arranque la víspera, y en la
+     * pantalla no se ve nada raro.
+     */
+    expect(fechaCivilLarga("2026-01-01", JUAREZ)).toBe("jueves 1 de enero de 2026");
+    expect(fechaCivilLarga("2026-01-01", "UTC")).toBe("jueves 1 de enero de 2026");
   });
 });

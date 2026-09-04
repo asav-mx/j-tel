@@ -6,9 +6,9 @@ import { exigir } from "@/lib/guardia-api";
  * Editar los campos de un circuito, desde el expediente.
  *
  * Todo lo que define un circuito es **campo, no constante**: si el
- * concesionario cambia su frecuencia el martes, el martes se ajusta, sin
- * desplegar. Los `CHECK` de la base son la última palabra: un cero no entra
- * aunque el formulario lo deje escribir.
+ * concesionario cambia su frecuencia el martes —o mueve el día en que arranca
+ * su servicio—, el martes se ajusta, sin desplegar. Los `CHECK` de la base son
+ * la última palabra: un cero no entra aunque el formulario lo deje escribir.
  *
  * ## Las cuatro perillas que antes no se podían tocar
  *
@@ -78,6 +78,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     serviceStartLocal: string;
     serviceEndLocal: string;
     timeZone: string;
+    serviceLaunchDate: string | null;
   }> = {};
 
   const nombre = String(form.get("nombre") ?? "").trim();
@@ -165,6 +166,26 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     if (v !== undefined) p.aplicar(v);
   }
 
+  /*
+   * La fecha de arranque, con la MISMA regla que la frecuencia: vaciar el campo
+   * BORRA el valor. No es «no cambies nada», y es una acción legítima — si el
+   * circuito ya arrancó y alguien quiere dejar de anunciarlo, se vacía.
+   *
+   * `null` significa que el circuito ya opera. Nunca se rellena con la fecha de
+   * hoy: eso fabricaría una declaración que nadie hizo y, de paso, apagaría el
+   * servicio hasta la medianoche.
+   */
+  if (form.has("arrancaEl")) {
+    const crudo = String(form.get("arrancaEl") ?? "").trim();
+    if (!crudo) cambios.serviceLaunchDate = null;
+    else {
+      if (!esFechaCivil(crudo)) {
+        return volver({ error: "La fecha de arranque va en formato AAAA-MM-DD, o queda vacía" });
+      }
+      cambios.serviceLaunchDate = crudo;
+    }
+  }
+
   const hora = (campo: string) => {
     const v = String(form.get(campo) ?? "").trim();
     return /^\d{2}:\d{2}(:\d{2})?$/.test(v) ? v : undefined;
@@ -204,4 +225,27 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   }
 
   return volver({ ok: "Guardado" });
+}
+
+/**
+ * ¿Es una fecha civil de verdad, y no sólo diez caracteres con guiones?
+ *
+ * El formato solo no basta: `2026-13-45` lo cumple, y `new Date(...)` no lo
+ * rechaza — lo **desborda** al 14 de febrero de 2027, una fecha perfectamente
+ * creíble que nadie declaró. La comprobación es de ida y vuelta: si el día que
+ * sale no es el día que entró, la cadena no era una fecha.
+ *
+ * Se comprueba aquí y no sólo en el `<input type="date">` del formulario: el
+ * navegador no es la última palabra sobre lo que entra a la base.
+ */
+function esFechaCivil(valor: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor);
+  if (!m) return false;
+  const [, y, mes, d] = m;
+  const fecha = new Date(Date.UTC(Number(y), Number(mes) - 1, Number(d)));
+  return (
+    fecha.getUTCFullYear() === Number(y) &&
+    fecha.getUTCMonth() === Number(mes) - 1 &&
+    fecha.getUTCDate() === Number(d)
+  );
 }

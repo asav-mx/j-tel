@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ORIGEN_DEL_CIRCUITO } from "@jtel/domain/publico";
 import {
   faltantesDelCircuito,
+  loQueDiraDelArranque,
   loQueDiraLaApp,
   perillasDeMedicion,
   type CircuitoParaExpediente,
@@ -113,6 +114,8 @@ describe("lo que falta se enuncia, y lo decidido no se marca como carencia", () 
     unidadesVigentes: 0,
     frecuenciaMin: null,
     rangoEncendido: false,
+    arrancaEl: null,
+    zona: "America/Ciudad_Juarez",
   };
   const renglon = (e: Parameters<typeof faltantesDelCircuito>[0], que: string) => {
     const r = faltantesDelCircuito(e).find((x) => x.que === que);
@@ -155,11 +158,68 @@ describe("lo que falta se enuncia, y lo decidido no se marca como carencia", () 
       unidadesVigentes: 3,
       frecuenciaMin: 20,
       rangoEncendido: true,
+      arrancaEl: "2026-09-15",
+      zona: "America/Ciudad_Juarez",
     });
     expect(listo.some((x) => x.estado === "falta")).toBe(false);
   });
 
   it("cero paradas se enuncia como cero, no se esconde", () => {
     expect(renglon(vacio, "Paradas").cuanto).toBe("0");
+  });
+
+  it("el arranque sin fecha dice «ya opera», y tampoco es una falta", () => {
+    /*
+     * Vacío es una respuesta, igual que en la frecuencia. Y aquí marcarlo
+     * «falta» sería peor: la fecha que uno teclea para llenar el hueco es la de
+     * hoy, que además apagaría el servicio del circuito hasta la medianoche.
+     */
+    expect(renglon(vacio, "Arranque del servicio").cuanto).toBe("ya opera");
+    expect(renglon(vacio, "Arranque del servicio").estado).toBe("decidido");
+    expect(renglon({ ...vacio, arrancaEl: "2026-09-15" }, "Arranque del servicio").estado).toBe(
+      "decidido",
+    );
+  });
+
+  it("con fecha, el renglón la escribe como se lee — no en crudo", () => {
+    expect(renglon({ ...vacio, arrancaEl: "2026-09-15" }, "Arranque del servicio").cuanto).toBe(
+      "martes 15 de septiembre de 2026",
+    );
+  });
+});
+
+describe("qué va a hacer la app con la fecha de arranque guardada", () => {
+  const JUAREZ = "America/Ciudad_Juarez";
+  const HOY = "2026-09-03";
+
+  it("SIN FECHA dice que el circuito ya opera, y cierra la lectura de «arranca hoy»", () => {
+    /*
+     * Es la frase que más trabajo hace de las tres. Un campo de fecha vacío se
+     * lee como un pendiente, y aquí significa lo contrario: no hay arranque que
+     * anunciar porque el servicio ya corre.
+     */
+    const dicho = loQueDiraDelArranque(null, HOY, JUAREZ);
+    expect(dicho).toContain("YA OPERA");
+    expect(dicho).toContain("no significa «arranca hoy»");
+  });
+
+  it("con fecha futura describe lo que el pasajero va a ver, y que NO habrá carencia", () => {
+    const dicho = loQueDiraDelArranque("2026-09-15", HOY, JUAREZ);
+    expect(dicho).toContain("recorrido");
+    expect(dicho).toContain("no dice que falte evidencia");
+    // La fecha se escribe como se lee, no en crudo.
+    expect(dicho).toContain("martes 15 de septiembre de 2026");
+    expect(dicho).not.toContain("2026-09-15");
+  });
+
+  it("EL DÍA MISMO no dice «ya pasó» ni «todavía no» — dice que es hoy", () => {
+    // El borde entre las dos frases, que es donde una copia se equivoca sola.
+    expect(loQueDiraDelArranque(HOY, HOY, JUAREZ)).toContain("Es hoy");
+  });
+
+  it("con fecha pasada dice que ya opera y que la fecha se queda como registro", () => {
+    const dicho = loQueDiraDelArranque("2026-08-01", HOY, JUAREZ);
+    expect(dicho).toContain("ya pasó");
+    expect(dicho).toContain("no hace falta borrarla");
   });
 });

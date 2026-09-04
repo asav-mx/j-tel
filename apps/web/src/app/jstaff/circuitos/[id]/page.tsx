@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { localDateTimeShort } from "@jtel/domain";
+import { localDateIso, localDateTimeShort } from "@jtel/domain";
 import { CircuitoEditor } from "@/components/circuito-editor";
 import { CircuitoUnidades } from "@/components/circuito-unidades";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
 import {
   faltantesDelCircuito,
+  loQueDiraDelArranque,
   loQueDiraLaApp,
   perillasDeMedicion,
   type PerillaDeMedicion,
@@ -99,7 +100,16 @@ export default async function ExpedienteDelCircuitoPage({
     unidadesVigentes,
     frecuenciaMin: circuito.declaredFrequencyMinutes,
     rangoEncendido,
+    arrancaEl: circuito.serviceLaunchDate,
+    zona: circuito.timeZone,
   });
+
+  /*
+   * Hoy EN LA ZONA DEL CIRCUITO, que es con la que el endpoint decide si el
+   * servicio ya arrancó. Con el reloj del servidor, la pantalla diría una cosa
+   * y la app haría otra durante las horas en que las dos fechas no coinciden.
+   */
+  const hoyLocal = localDateIso(new Date(), circuito.timeZone);
 
   return (
     <main className="min-h-screen bg-[var(--fondo)] px-4 pt-4 pb-16 sm:px-6">
@@ -154,6 +164,8 @@ export default async function ExpedienteDelCircuitoPage({
           horaFin={String(circuito.serviceEndLocal).slice(0, 5)}
           zona={circuito.timeZone}
           frecuenciaMin={circuito.declaredFrequencyMinutes}
+          arrancaEl={circuito.serviceLaunchDate}
+          hoyLocal={hoyLocal}
         />
 
         <ComoSeMide circuitoId={id} perillas={perillasDeMedicion(circuito)} />
@@ -467,12 +479,16 @@ function LoQueDeclara({
   horaFin,
   zona,
   frecuenciaMin,
+  arrancaEl,
+  hoyLocal,
 }: {
   circuitoId: string;
   horaInicio: string;
   horaFin: string;
   zona: string;
   frecuenciaMin: number | null;
+  arrancaEl: string | null;
+  hoyLocal: string;
 }) {
   return (
     <Seccion
@@ -564,6 +580,37 @@ function LoQueDeclara({
           <p className="mt-1.5 text-[12px] leading-snug text-[var(--tenue)]">
             Dejarlo vacío es una respuesta, no un hueco. Vaciar el campo y guardar borra la
             frecuencia que hubiera.
+          </p>
+        </div>
+
+        <div className="border-t border-[var(--linea-tenue)] pt-4">
+          <label className={etiqueta} htmlFor="arrancaEl">
+            Día en que arranca el servicio
+          </label>
+          <input
+            id="arrancaEl"
+            name="arrancaEl"
+            type="date"
+            defaultValue={arrancaEl ?? ""}
+            className={campo}
+            aria-describedby="arranque-efecto"
+          />
+          {/*
+            La frase dice qué produce el valor guardado AHORA, igual que la de
+            la frecuencia. Aquí importa más: un campo de fecha vacío se lee
+            fácil como «arranca hoy», y es al revés — vacío significa que el
+            circuito ya opera.
+          */}
+          <p
+            id="arranque-efecto"
+            className="mt-2 rounded border border-[var(--linea)] bg-[var(--panel2)] p-2.5 text-[12.5px] leading-snug text-[var(--texto)]"
+          >
+            {loQueDiraDelArranque(arrancaEl, hoyLocal, zona)}
+          </p>
+          <p className="mt-1.5 text-[12px] leading-snug text-[var(--tenue)]">
+            Se lee con el reloj de la zona de arriba: el servicio arranca a las 00:00 de ese día,
+            y de ahí en adelante manda el horario. Vaciar el campo y guardar borra la fecha, y el
+            circuito pasa a operar desde ya.
           </p>
         </div>
 

@@ -1,4 +1,5 @@
 import { ORIGEN_DEL_CIRCUITO } from "@jtel/domain/publico";
+import { fechaCivilLarga } from "@/lib/formato-tiempo";
 
 /**
  * Lo que el expediente del circuito AFIRMA de cada número, fuera del `.tsx`.
@@ -176,6 +177,55 @@ export function loQueDiraLaApp(frecuenciaMin: number | null): string {
 }
 
 /**
+ * Qué va a hacer la app con la fecha de arranque que está guardada.
+ *
+ * Hermana de `loQueDiraLaApp`, y por la misma razón: dejarla vacía es una
+ * decisión legítima y quien la toma tiene que saber qué produce, **antes** de
+ * guardar. Aquí el hueco es más fácil de leer al revés que en la frecuencia —
+ * un campo de fecha vacío se parece mucho a «arranca hoy»— y la frase existe
+ * sobre todo para cerrar esa lectura.
+ *
+ * `hoyLocal` entra por parámetro y es la fecha civil **en la zona del
+ * circuito**: la misma con la que el endpoint decide. Calcularla aquí con el
+ * reloj del servidor haría que la pantalla dijera una cosa y la app hiciera
+ * otra durante las horas en que las dos fechas no coinciden.
+ */
+export function loQueDiraDelArranque(
+  arrancaEl: string | null,
+  hoyLocal: string,
+  zona: string,
+): string {
+  if (arrancaEl === null) {
+    return (
+      "Sin fecha, el circuito YA OPERA: la app enseña las unidades que vea y cae a los estados " +
+      "de siempre. Vacío no significa «arranca hoy» — significa que no hay arranque que anunciar."
+    );
+  }
+  if (arrancaEl > hoyLocal) {
+    return (
+      `Hasta el ${fechaCivilLarga(arrancaEl, zona)}, la app enseña el recorrido y lo declarado ` +
+      "y dice que el servicio arranca ese día. No enseña unidades, aunque las vea, y no dice " +
+      "que falte evidencia: todavía no hay nada que evidenciar."
+    );
+  }
+  if (arrancaEl === hoyLocal) {
+    /*
+     * El borde se dice, no se deja al azar. «Ya pasó» sería falso hoy y «todavía
+     * no» también: arrancó a las 00:00 de la zona del circuito, y desde ese
+     * minuto la app ya trabaja como con cualquier circuito en marcha.
+     */
+    return (
+      "Es hoy. Desde las 00:00 en la zona del circuito la app ya trabaja como con cualquier " +
+      "circuito en marcha: enseña las unidades que vea y cae a los estados de siempre."
+    );
+  }
+  return (
+    "Esa fecha ya pasó, así que la app trabaja como con cualquier circuito en marcha. " +
+    "Se queda guardada como el día en que arrancó; no hace falta borrarla."
+  );
+}
+
+/**
  * En qué estado está un renglón de «cómo va armado».
  *
  * **`decidido` existe por un defecto que sólo se vio mirando la pantalla.** La
@@ -215,6 +265,10 @@ export function faltantesDelCircuito(entrada: {
   unidadesVigentes: number;
   frecuenciaMin: number | null;
   rangoEncendido: boolean;
+  /** El día de arranque declarado, o `null` si el circuito ya opera. */
+  arrancaEl: string | null;
+  /** La zona del circuito, para escribir ese día como se lee. */
+  zona: string;
 }): RenglonDeArmado[] {
   const falta = (hay: boolean): EstadoDelRenglon => (hay ? "puesto" : "falta");
   return [
@@ -248,6 +302,18 @@ export function faltantesDelCircuito(entrada: {
       /* Apagado es el estado con que nace, y el correcto hasta calibrar. */
       que: "Tiempo estimado de llegada",
       cuanto: entrada.rangoEncendido ? "encendido" : "apagado",
+      estado: "decidido",
+    },
+    {
+      /*
+       * `decidido` por lo mismo que la frecuencia: **vacío es una respuesta**.
+       * Un circuito que ya opera no tiene fecha de arranque, y marcarla «falta»
+       * empujaría a inventar una — con el agravante de que aquí la fecha
+       * inventada más a la mano es la de hoy, que además apagaría el servicio
+       * hasta la medianoche.
+       */
+      que: "Arranque del servicio",
+      cuanto: entrada.arrancaEl ? fechaCivilLarga(entrada.arrancaEl, entrada.zona) : "ya opera",
       estado: "decidido",
     },
   ];

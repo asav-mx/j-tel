@@ -6,6 +6,7 @@ import {
   idPublicoDelDia,
   medirUnidad,
   sentidoDeLaUnidad,
+  yaArrancoElServicio,
   type EstadoDelCircuito,
   type TrazadoDeSentido,
 } from "@jtel/domain/publico";
@@ -33,8 +34,9 @@ import { circuitoParaLaApp } from "@/lib/vista-previa";
  *
  * ## Las tres reglas de operación
  *
- * 1. **El filtro es del servidor.** Publicación, horario y asignación se
- *    resuelven aquí; el teléfono no elige qué se le puede enseñar.
+ * 1. **El filtro es del servidor.** Publicación, fecha de arranque, horario y
+ *    asignación se resuelven aquí; el teléfono no elige qué se le puede
+ *    enseñar.
  * 2. **Caché obligatorio**, atado a la cadencia del recolector: 15 s. Una
  *    parada con cincuenta teléfonos pega al CDN, no a la base. El límite de
  *    tasa lo pone el firewall de Vercel — ver `docs/Procedimiento-Firewall-Publico.md`.
@@ -86,6 +88,14 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
   const { circuito } = visible;
 
   const ahora = new Date();
+
+  /*
+   * La fecha de arranque se resuelve ANTES que el horario, porque manda sobre
+   * el reloj: preguntarle a la hora si está abierto un servicio que todavía no
+   * arranca es preguntar por la puerta de algo que aún no existe.
+   */
+  const yaArranco = yaArrancoElServicio(ahora, circuito.serviceLaunchDate, circuito.timeZone);
+
   const enHorario = enHorarioDeServicio(
     ahora,
     circuito.serviceStartLocal,
@@ -128,6 +138,13 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
       /* A qué hora abre, para que FUERA DE HORARIO pueda decirlo. */
       abre_a: circuito.serviceStartLocal.slice(0, 5),
       /*
+       * Qué día arranca, para que POR ARRANCAR pueda decirlo. `null` en todo
+       * circuito que ya opera — que es lo mismo que la columna guarda, sin
+       * traducir: un «hoy» inventado aquí sería la app declarando por el
+       * concesionario.
+       */
+      arranca_el: circuito.serviceLaunchDate,
+      /*
        * El rango se enseña sólo si ya se calibró la velocidad de ESTE circuito
        * contra la calle. Apagado, EN VIVO sigue enseñando el camión moviéndose
        * —verdad observada— y se calla el minuto estimado, que aún no lo es.
@@ -135,6 +152,19 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
       rango_activo: circuito.arrivalRangeEnabledAt !== null,
       unidades,
     });
+
+  /*
+   * Sin arrancar no se consulta nada, y aquí el ahorro es lo de menos.
+   *
+   * Un camión probando el recorrido la semana antes del arranque reporta
+   * posición como cualquier otro. Publicarlo convertiría un ensayo en un
+   * servicio, y a alguien parado en la banqueta le diría que ya puede
+   * subirse. La fecha declarada manda sobre lo que el GPS alcance a ver.
+   *
+   * La app sigue enseñando el recorrido y las paradas: ésos bajan del endpoint
+   * de la FORMA, que no depende de esto. Lo que no sale son las unidades.
+   */
+  if (!yaArranco) return responder("por_arrancar");
 
   /*
    * Fuera de horario no se consulta nada. No es solo ahorro: un camión que
@@ -182,7 +212,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
     m: medirUnidad({ lat: p.latitude, lon: p.longitude, recordedAt: p.recordedAt }, umbrales),
   }));
 
-  const estado = estadoDelCircuito({ enHorario, unidades: medidas.map((x) => x.m) });
+  const estado = estadoDelCircuito({ yaArranco, enHorario, unidades: medidas.map((x) => x.m) });
 
   /*
    * Van las unidades del CORREDOR que caen dentro de la ventana de confianza,

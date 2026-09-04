@@ -31,6 +31,8 @@ const CIRCUITO = {
   timeZone: "America/Ciudad_Juarez",
   corridorToleranceMeters: 150,
   serviceConfidenceMinutes: 15,
+  /** Sin fecha de arranque: el circuito YA OPERA, que es el caso de siempre. */
+  serviceLaunchDate: null as string | null,
   arrivalRangeEnabledAt: null as Date | null,
 };
 
@@ -247,6 +249,94 @@ describe("horario", () => {
     // Y dice a qué hora abre, que es lo único que el pasajero puede usar.
     expect(cuerpo.abre_a).toBe("03:00");
     expect(repos.circuits.listLivePositionsForCircuit).not.toHaveBeenCalled();
+  });
+});
+
+describe("fecha de arranque", () => {
+  /** Un día que no llega nunca dentro de la vida de esta prueba. */
+  const MANANA = () => {
+    const d = new Date(Date.now() + 30 * 24 * 3600_000);
+    return d.toISOString().slice(0, 10);
+  };
+  const enRuta = { latitude: 31.71, longitude: -106.45 };
+
+  it("con la fecha en el futuro: POR ARRANCAR, y no se consulta una sola posición", async () => {
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue({
+      ...CIRCUITO,
+      serviceLaunchDate: MANANA(),
+    });
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.estado).toBe("por_arrancar");
+    expect(cuerpo.unidades).toEqual([]);
+    expect(repos.circuits.listLivePositionsForCircuit).not.toHaveBeenCalled();
+  });
+
+  it("dice QUÉ DÍA arranca — sin eso la app no tendría qué enseñar", async () => {
+    const fecha = MANANA();
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue({
+      ...CIRCUITO,
+      serviceLaunchDate: fecha,
+    });
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.arranca_el).toBe(fecha);
+  });
+
+  it("EL CAMIÓN DEL ENSAYO no se publica: la fecha manda sobre lo que el GPS ve", async () => {
+    /*
+     * Una unidad probando el recorrido la semana antes reporta como cualquier
+     * otra, fresca y dentro del corredor. Publicarla convertiría un ensayo en
+     * un servicio, y a alguien parado en la banqueta le diría que ya puede
+     * subirse.
+     */
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue({
+      ...CIRCUITO,
+      serviceLaunchDate: MANANA(),
+    });
+    repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
+      { unitId: "u-1", ...enRuta, heading: 45, recordedAt: new Date(Date.now() - 10_000) },
+    ]);
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.estado).toBe("por_arrancar");
+    expect(cuerpo.unidades).toEqual([]);
+  });
+
+  it("POR ARRANCAR gana sobre FUERA DE HORARIO: la fecha manda sobre el reloj", async () => {
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue({
+      ...CIRCUITO,
+      serviceLaunchDate: MANANA(),
+      serviceStartLocal: "03:00",
+      serviceEndLocal: "03:01",
+    });
+    const ahora = new Date();
+    const hhmm = new Intl.DateTimeFormat("en-GB", {
+      timeZone: CIRCUITO.timeZone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(ahora);
+    if (hhmm === "03:00") return; // un minuto al día en que esta prueba no aplica
+
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.estado).toBe("por_arrancar");
+  });
+
+  it("con la fecha ya pasada la escalera trabaja igual que sin fecha", async () => {
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue({
+      ...CIRCUITO,
+      serviceLaunchDate: "2026-01-01",
+    });
+    repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
+      { unitId: "u-1", ...enRuta, heading: 45, recordedAt: new Date(Date.now() - 10_000) },
+    ]);
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.estado).toBe("en_vivo");
+    expect(cuerpo.unidades).toHaveLength(1);
+  });
+
+  it("un circuito que ya opera manda `arranca_el` en null, no una fecha inventada", async () => {
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue(CIRCUITO);
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.arranca_el).toBeNull();
   });
 });
 

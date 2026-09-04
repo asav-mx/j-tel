@@ -1,0 +1,65 @@
+-- La fecha de arranque del servicio de un circuito.
+--
+-- Se aplica DESPUÉS de la 0031. **Puramente aditiva**: una columna nueva,
+-- nullable, sin default y sin tocar una sola fila existente. Los dos circuitos
+-- que hay quedan en NULL, que significa «ya opera» — que es la verdad de los
+-- dos.
+--
+-- ## Qué resuelve
+--
+-- Un circuito sólo podía estar en dos estados: invisible —sin publicar— o
+-- presentado como si operara. Faltaba el de en medio: **declarado y visible,
+-- con el servicio sin arrancar.**
+--
+-- Sin esta columna, un circuito publicado tres semanas antes de su primer día
+-- cae a SIN EVIDENCIA, y la app le cuenta al pasajero una ausencia que no
+-- significa nada: no hay unidades porque todavía no las tiene que haber.
+-- Adentro pasa lo mismo — la pantalla del operador y el reporte enuncian como
+-- carencia que nadie esté corriendo un circuito que aún no arranca.
+--
+-- Con la fecha, la app enseña el recorrido y lo declarado y dice qué día
+-- arranca. Es un escalón nuevo de la escalera, ARRIBA de «fuera de horario»:
+-- la fecha manda sobre el reloj. Pasada la fecha, todo trabaja igual que hoy.
+--
+-- ══════════════════════════════════════════════════════════════════════
+-- Por qué NO se llama `service_start_date`
+-- ══════════════════════════════════════════════════════════════════════
+--
+-- Ya existe `service_start_local`, que es **la hora a la que abre cada día**.
+-- Un nombre hermano —`service_start_date`— dejaría dos columnas contiguas,
+-- parecidas de leer y con significados distintos, y quien buscara «el start»
+-- encontraría una de las dos y la movería.
+--
+-- Eso no es una hipótesis: es exactamente lo que pasó con las dos
+-- «tolerancias» de este mismo circuito. El formulario llamaba «Tolerancia» al
+-- pegado de paradas (25 m) mientras la del corredor (150 m) —la que decide qué
+-- unidad ve el pasajero— no tenía ni editor. Se arregló separando los nombres,
+-- `stop_snap_tolerance_meters` y `corridor_tolerance_meters`, para que cada uno
+-- dijera qué hace su número.
+--
+-- `service_launch_date` está lo bastante lejos de `service_start_local` como
+-- para que las dos no se confundan al leerlas en una lista de columnas. En la
+-- piel se llama **«arranque del servicio»**, en las dos caras y sin excepción.
+--
+-- ══════════════════════════════════════════════════════════════════════
+-- Sin default, sin CHECK
+-- ══════════════════════════════════════════════════════════════════════
+--
+-- **Sin default** por la misma razón que la frecuencia declarada perdió el
+-- suyo en la 0031: la app dice esta fecha en voz alta y con el sistema detrás,
+-- así que tiene que venir del concesionario. Un default volvería
+-- indistinguibles «declaró esta fecha» y «la trajo la columna».
+--
+-- Y NULL significa **ya opera**, no «arranca hoy». Poner la fecha de hoy por
+-- defecto fabricaría una declaración que nadie hizo, y encima haría que todo
+-- circuito existente naciera afirmando que arrancó el día de la migración.
+--
+-- **Sin CHECK** porque no hay valor imposible que cercar. Una fecha pasada es
+-- legítima —es el registro de cuándo arrancó— y una futura es el caso que
+-- motiva la columna. Los CHECK de esta tabla existen donde un cero o un
+-- negativo romperían una medición; aquí no hay ninguno.
+
+ALTER TABLE circuits ADD COLUMN IF NOT EXISTS service_launch_date DATE;
+--> statement-breakpoint
+COMMENT ON COLUMN circuits.service_launch_date IS
+  'El dia en que arranca el servicio de este circuito. NULL = ya opera (nunca "arranca hoy"). Con fecha futura la app ensena el recorrido y lo declarado y dice que arranca ese dia, sin caer a SIN EVIDENCIA. Es el primer escalon de la escalera: la fecha manda sobre el reloj. No se llama service_start_date para no confundirse con service_start_local, que es la HORA de apertura diaria.';

@@ -189,6 +189,39 @@ describe("la frecuencia declarada, desde la 0031", () => {
   });
 });
 
+describe("la fecha de arranque, desde la 0032", () => {
+  it("un circuito nuevo NACE SIN FECHA: ya opera, no «arranca hoy»", async () => {
+    /*
+     * La columna no tiene default a propósito, por lo mismo que la frecuencia
+     * perdió el suyo: la app la dice en voz alta. Un default aquí, además,
+     * habría hecho que todo circuito naciera con el servicio apagado hasta la
+     * medianoche.
+     */
+    const nuevo = await repos.circuits.createCircuit({
+      concessionAccountId: concesionId,
+      name: `Sin arranque ${Date.now()}`,
+      publicSlug: `sin-arranque-${Date.now()}`,
+    });
+    expect(nuevo.serviceLaunchDate).toBeNull();
+  });
+
+  it("se guarda como día civil y regresa igual — sin corrimiento de zona", async () => {
+    const c = await repos.circuits.updateCircuit(circuitoId, { serviceLaunchDate: "2026-09-15" });
+    expect(c?.serviceLaunchDate).toBe("2026-09-15");
+  });
+
+  it("se puede vaciar: si el circuito ya arrancó, deja de anunciarse", async () => {
+    await repos.circuits.updateCircuit(circuitoId, { serviceLaunchDate: "2026-09-15" });
+    const limpio = await repos.circuits.updateCircuit(circuitoId, { serviceLaunchDate: null });
+    expect(limpio?.serviceLaunchDate).toBeNull();
+  });
+
+  it("acepta una fecha pasada: es el registro de cuándo arrancó, no un error", async () => {
+    const c = await repos.circuits.updateCircuit(circuitoId, { serviceLaunchDate: "2020-01-01" });
+    expect(c?.serviceLaunchDate).toBe("2020-01-01");
+  });
+});
+
 describe("circuits_confianza_positiva", () => {
   it("rechaza el cero: sin ventana, POR HORARIO no existiría nunca", async () => {
     const quien = await violacion(() =>

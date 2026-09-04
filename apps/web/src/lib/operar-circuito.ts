@@ -2,6 +2,7 @@ import { addDaysIso, haversineKm, localDateIso, instanteZonificado, proyectarSob
 import {
   enHorarioDeServicio,
   estadoDelCircuito,
+  yaArrancoElServicio,
   medirUnidad,
   type EstadoDelCircuito,
   type MedidaDeUnidad,
@@ -54,6 +55,14 @@ export interface UnidadDelPlan {
 
 /** Los umbrales y el horario, todos columnas del circuito. Ninguno horneado. */
 export interface CircuitoParaOperar {
+  /**
+   * El día en que arranca el servicio. `null` = ya opera.
+   *
+   * Entra aquí porque **apaga ruido**: sin ella, un circuito que arranca en tres
+   * semanas enseña «0 de 5» y manda sus cinco unidades a «no ha salido», que es
+   * un reproche por no estar trabajando antes de que exista el servicio.
+   */
+  serviceLaunchDate: string | null;
   serviceStartLocal: string;
   serviceEndLocal: string;
   timeZone: string;
@@ -69,13 +78,19 @@ export interface ParadaVigente {
 }
 
 /**
- * En cuál de los cuatro cajones cae una unidad del plan.
+ * En cuál de los cinco cajones cae una unidad del plan.
  *
  * Son excluyentes y cubren el plan entero: toda unidad asignada aparece en
  * exactamente uno. Que sumen es lo que permite escribir «3 de 5» sin que el
  * lector se quede preguntando dónde están las otras dos.
  */
 export type Situacion =
+  /**
+   * El servicio del circuito todavía no arranca. **No se afirma nada de nadie**,
+   * igual que fuera de horario: la unidad no está corriendo porque no la tiene
+   * que estar.
+   */
+  | "por_arrancar"
   /** Del plan, con señal fresca y dentro del corredor. Lo que cuenta el número grande. */
   | "en_ruta"
   /** Se le vio en el corredor y dejó de reportar. Sigue en su recorrido hasta donde sabemos. */
@@ -105,6 +120,13 @@ export interface UnidadOperando extends UnidadDelPlan {
 export interface Operacion {
   /** La hora del corte. Un dato sin su hora es un dato del que se puede dudar. */
   ahora: Date;
+  /**
+   * El servicio ya arrancó — o el circuito no declaró fecha, que significa que
+   * ya opera. La pantalla LEE esta decisión en vez de comparar fechas por su
+   * cuenta: una segunda comparación es una segunda definición esperando a
+   * separarse de ésta.
+   */
+  yaArranco: boolean;
   enHorario: boolean;
   /**
    * Cuándo abrió la ventana de servicio que corre ahora, o `null` con el
@@ -150,6 +172,12 @@ export function armarOperacion(entrada: {
 }): Operacion {
   const { ahora, circuito, trazados, paradas, plan } = entrada;
 
+  const yaArranco = yaArrancoElServicio(
+    ahora,
+    circuito.serviceLaunchDate,
+    circuito.timeZone,
+  );
+
   const enHorario = enHorarioDeServicio(
     ahora,
     circuito.serviceStartLocal,
@@ -176,7 +204,7 @@ export function armarOperacion(entrada: {
     return {
       ...u,
       medida,
-      situacion: situacionDe(medida, enHorario),
+      situacion: situacionDe(medida, enHorario, yaArranco),
       distanciaAlCorredorMetros: punto ? distanciaAlCorredor(punto, trazados) : null,
       paradaMasCercana: punto ? paradaMasCercanaA(punto, paradas) : null,
     };
@@ -191,14 +219,22 @@ export function armarOperacion(entrada: {
    * ausencia de una. La escalera decide con lo que el GPS vio.
    */
   const estado = estadoDelCircuito({
+    yaArranco,
     enHorario,
     unidades: unidades.map((u) => u.medida).filter((m): m is MedidaDeUnidad => m !== null),
   });
 
   return {
     ahora,
+    yaArranco,
     enHorario,
-    aperturaDelHorario: enHorario ? aperturaDelHorario(ahora, circuito) : null,
+    /*
+     * Sin arrancar no hay ventana de servicio corriendo, aunque el reloj caiga
+     * dentro del horario declarado. La usa la sección de atención para decir
+     * «desde que abrió, hace 40 min», y antes del arranque esa frase mediría
+     * una jornada que no empezó.
+     */
+    aperturaDelHorario: yaArranco && enHorario ? aperturaDelHorario(ahora, circuito) : null,
     estado,
     unidades,
     enRuta: unidades.filter((u) => u.situacion === "en_ruta").length,
@@ -213,9 +249,11 @@ export function armarOperacion(entrada: {
 /**
  * El reparto, y el orden importa.
  *
- * **Fuera de horario gana sobre todo**, igual que en la escalera del pasajero:
- * con el circuito cerrado, «no ha salido» sería un reproche por no estar
- * trabajando a las cuatro de la mañana.
+ * **Sin arrancar gana sobre todo, y el horario después**, igual que en la
+ * escalera del pasajero. Con el circuito cerrado, «no ha salido» sería un
+ * reproche por no estar trabajando a las cuatro de la mañana; antes del
+ * arranque sería el mismo reproche, tres semanas antes de que exista el
+ * servicio.
  *
  * **Sin una sola señal cae en `no_ha_salido`**, no en `sin_senal`. La
  * diferencia es la que pidió el operador: `sin_senal` es *estaba reportando en
@@ -223,7 +261,12 @@ export function armarOperacion(entrada: {
  * enseñar—, y sin señal alguna no hay ni lo uno ni lo otro. Meterlas juntas
  * borraría justo el dato que distingue los dos problemas.
  */
-function situacionDe(medida: MedidaDeUnidad | null, enHorario: boolean): Situacion {
+function situacionDe(
+  medida: MedidaDeUnidad | null,
+  enHorario: boolean,
+  yaArranco: boolean,
+): Situacion {
+  if (!yaArranco) return "por_arrancar";
   if (!enHorario) return "fuera_de_horario";
   if (!medida) return "no_ha_salido";
   if (medida.enRuta) return "en_ruta";

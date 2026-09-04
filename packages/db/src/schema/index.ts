@@ -1131,6 +1131,27 @@ export const circuits = pgTable(
      * que lo comprueba un CHECK de la base.
      */
     colorHex: text("color_hex").notNull().default(ORIGEN_DEL_CIRCUITO.colorHex),
+    /**
+     * El día en que arranca el servicio de este circuito. `null` = **ya opera**.
+     *
+     * Es el escalón que faltaba: un circuito sólo podía estar invisible o
+     * presentado como si operara. Con fecha en el futuro la app enseña el
+     * recorrido y lo declarado, dice que arranca ese día, y **no cae a “sin
+     * evidencia”** — no hay nada que evidenciar todavía.
+     *
+     * **No se llama `service_start_*` a propósito**, y la distancia del nombre
+     * es la defensa. `service_start_local` es la HORA a la que abre cada día;
+     * ésta es el DÍA en que el servicio existe por primera vez. Un nombre
+     * hermano dejaría que quien busca «el start» encuentre el que no es y lo
+     * mueva — que es exactamente lo que ya pasó con las dos «tolerancias»
+     * (`stop_snap` y `corridor`), y por eso ninguna de las dos se llama así.
+     *
+     * **Sin default, y por la misma razón que la frecuencia declarada.** Un
+     * valor de origen aquí volvería indistinguibles «el concesionario declaró
+     * esta fecha» y «la trajo la columna», y la app la dice en voz alta. Por
+     * eso tampoco está en `ORIGEN_DEL_CIRCUITO`: no tiene valor de origen.
+     */
+    serviceLaunchDate: date("service_launch_date"),
     serviceStartLocal: time("service_start_local").notNull().default(ORIGEN_DEL_CIRCUITO.horaInicioLocal),
     serviceEndLocal: time("service_end_local").notNull().default(ORIGEN_DEL_CIRCUITO.horaFinLocal),
     timeZone: text("time_zone").notNull().default(ORIGEN_DEL_CIRCUITO.zonaHoraria),

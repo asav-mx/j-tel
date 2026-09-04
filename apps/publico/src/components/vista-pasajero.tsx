@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTema } from "@/lib/tema";
 import { useMiUbicacion } from "@/lib/ubicacion";
 import { iniciales, tinte } from "@/lib/color-ruta";
+import { arranqueCorto, arranqueLargo } from "@/lib/fecha-arranque";
 import {
   avanceSobreTrazado,
   permisoDeRango,
@@ -86,9 +87,14 @@ interface UnidadViva {
 
 interface Vivo {
   /** La escalera ya resuelta por el servidor. La pantalla lee, no deduce. */
-  estado: "fuera_de_horario" | "en_vivo" | "por_horario" | "sin_evidencia";
+  estado: "por_arrancar" | "fuera_de_horario" | "en_vivo" | "por_horario" | "sin_evidencia";
   /** A qué hora abre el circuito, para poder decirlo cuando está cerrado. */
   abre_a: string;
+  /**
+   * Qué día arranca el servicio. `null` en todo circuito que ya opera — que es
+   * lo que la columna guarda, sin traducir.
+   */
+  arranca_el: string | null;
   /** El rango de llegada sólo se enseña si la velocidad del circuito ya se calibró. */
   rango_activo: boolean;
   /** `null` cuando el concesionario no la declaró. La app entonces NO promete cadencia. */
@@ -478,6 +484,14 @@ export function VistaPasajero({
   const cadaMin = vivo ? vivo.frecuencia_declarada_min : forma.frecuencia_declarada_min;
   /* El horario tal como lo declaró la concesión. Se cita, no se interpreta. */
   const horario = `${forma.horario.inicio.slice(0, 5)} a ${forma.horario.fin.slice(0, 5)}`;
+  /*
+   * El día del arranque, corto para el titular y largo para la frase. Los dos
+   * pueden ser `null` —fecha ilegible— y entonces la pantalla dice que el
+   * servicio no ha arrancado SIN decir cuándo: un día inventado manda a alguien
+   * a la parada el día que no es, y en la pantalla no se ve nada raro.
+   */
+  const arrancaCorto = vivo?.arranca_el ? arranqueCorto(vivo.arranca_el) : null;
+  const arrancaLargo = vivo?.arranca_el ? arranqueLargo(vivo.arranca_el) : null;
   const pisoMin = Math.max(1, Math.round(forma.piso_rango_seg / 60));
   const nombreApp = forma.nombre;
   const insignia = iniciales(forma.nombre);
@@ -545,7 +559,20 @@ export function VistaPasajero({
           <div className={`tj-cuerpo${proxima?.llegando && !porHorario ? " llegando" : ""}`}>
             <div className="eta-fila">
               <div className="eta-1">
-                {modo === "fuera_de_horario" ? (
+                {modo === "por_arrancar" ? (
+                  /*
+                   * Corto, para rimar con el «Abre 05:00» de fuera de horario:
+                   * los dos contestan «¿cuándo?» y los dos caben en el número
+                   * grande. La fecha completa va en la frase de abajo, que es
+                   * donde hay lugar para leerla.
+                   *
+                   * Sin fecha legible NO se inventa un día: se dice que no ha
+                   * arrancado, que sigue siendo cierto.
+                   */
+                  <span className="n">
+                    {arrancaCorto ? `Arranca ${arrancaCorto}` : "Por arrancar"}
+                  </span>
+                ) : modo === "fuera_de_horario" ? (
                   <>
                     <span className="n">Abre {vivo?.abre_a}</span>
                   </>
@@ -635,7 +662,24 @@ export function VistaPasajero({
             )}
 
             <div className="cada">
-              {modo === "fuera_de_horario" ? (
+              {modo === "por_arrancar" ? (
+                /*
+                 * Lo declarado, y nada más: qué día arranca y en qué horario va
+                 * a correr. Ni una palabra sobre unidades — no hay ninguna
+                 * porque todavía no las tiene que haber, y contarlo como
+                 * ausencia sería enunciar un hueco que no existe.
+                 *
+                 * La frecuencia se agrega SÓLO si el concesionario la declaró.
+                 * Sin ella la frase se cierra en el horario, que es el caso que
+                 * va a salir en el arranque y el que tiene que leerse entero.
+                 */
+                <>
+                  El servicio de esta ruta{" "}
+                  {arrancaLargo ? <>arranca el {arrancaLargo}</> : <>todavía no arranca</>}, de{" "}
+                  {horario}
+                  {cadaMin !== null ? <>, cada {cadaMin} min</> : null}.
+                </>
+              ) : modo === "fuera_de_horario" ? (
                 <>Esta ruta no está en servicio ahorita. Abre a las {vivo?.abre_a}.</>
               ) : modo === "sin_evidencia" ? (
                 /*
@@ -714,7 +758,9 @@ export function VistaPasajero({
             <div className="fresca">
               <span className="p" />
               <span>
-                {modo === "fuera_de_horario"
+                {modo === "por_arrancar"
+                  ? "Arranque declarado por el concesionario"
+                  : modo === "fuera_de_horario"
                   ? "Fuera de horario"
                   : modo === "sin_evidencia"
                     ? cadaMin !== null

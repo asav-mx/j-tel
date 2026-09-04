@@ -4,7 +4,7 @@ import { localDateTimeSeconds, localDateTimeShort } from "@jtel/domain";
 import type { TrazadoDeSentido } from "@jtel/domain/publico";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
-import { diaYMes, duracion } from "@/lib/formato-tiempo";
+import { diaYMes, duracion, fechaCivilLarga } from "@/lib/formato-tiempo";
 import { armarOperacion, type Operacion, type UnidadOperando } from "@/lib/operar-circuito";
 import { OperarMapa } from "@/components/operar-mapa";
 import { FrescuraDelCorte } from "@/components/frescura-del-corte";
@@ -98,6 +98,7 @@ export default async function OperarPage({
         <Dominante
           op={op}
           zona={zona}
+          arrancaEl={circuito.serviceLaunchDate}
           abreALas={abreALas}
           cierraALas={cierraALas}
           umbralFrescuraSeg={circuito.staleAfterSeconds}
@@ -192,6 +193,7 @@ function MarcoSuperior({
 function Dominante({
   op,
   zona,
+  arrancaEl,
   abreALas,
   cierraALas,
   umbralFrescuraSeg,
@@ -199,6 +201,7 @@ function Dominante({
 }: {
   op: Operacion;
   zona: string;
+  arrancaEl: string | null;
   abreALas: string;
   cierraALas: string;
   umbralFrescuraSeg: number;
@@ -206,7 +209,24 @@ function Dominante({
 }) {
   return (
     <section className="rounded-lg border border-[var(--linea)] bg-gradient-to-b from-[var(--panel)] to-[var(--panel2)] p-5">
-      {op.enHorario ? (
+      {!op.yaArranco ? (
+        <>
+          {/*
+            Antes del arranque el «0 de 5» sería cierto y diría una falsedad: se
+            lee como que cinco unidades debían estar corriendo y ninguna salió.
+            No debían — el servicio todavía no existe. Es la misma forma que ya
+            resolvió el circuito cerrado, un escalón más arriba.
+          */}
+          <p className="text-[34px] leading-none font-extrabold tracking-[-.02em] text-[var(--tenue)]">
+            {arrancaEl ? `Arranca el ${fechaCivilLarga(arrancaEl, zona)}` : "Sin arrancar"}
+          </p>
+          <p className="mt-2 text-[15px] leading-snug text-[var(--texto)]">
+            El servicio de este circuito todavía no arranca. Tiene{" "}
+            <span className={`${mono} text-[var(--acero)] tabular-nums`}>{op.enElPlan}</span>{" "}
+            {op.enElPlan === 1 ? "unidad asignada" : "unidades asignadas"}.
+          </p>
+        </>
+      ) : op.enHorario ? (
         <>
           <p className="flex items-baseline gap-2">
             <span className="text-[56px] leading-none font-extrabold tracking-[-.03em] text-[var(--acero)] tabular-nums">
@@ -250,10 +270,15 @@ function Dominante({
         <Renglon rotulo="Corte">
           {localDateTimeSeconds(op.ahora, zona)} · hora local del circuito ({zona})
         </Renglon>
+        {!op.yaArranco && arrancaEl ? (
+          <Renglon rotulo="Arranca">
+            {fechaCivilLarga(arrancaEl, zona)} · declarado por el concesionario en el expediente
+          </Renglon>
+        ) : null}
         <Renglon rotulo="Horario">
           {abreALas} a {cierraALas}
         </Renglon>
-        {op.enHorario ? (
+        {op.yaArranco && op.enHorario ? (
           <Renglon rotulo="En ruta es">
             señal de menos de {duracion(umbralFrescuraSeg / 60)} y dentro del corredor de{" "}
             {Math.round(corredorMetros)} m — la misma medición que ve el pasajero
@@ -617,6 +642,13 @@ function PlanDelDia({
  */
 function enPalabras(u: UnidadOperando, zona: string): string {
   switch (u.situacion) {
+    case "por_arrancar":
+      /*
+       * Del circuito, no de la unidad. «No ha salido» aquí sería un reproche
+       * por no estar trabajando antes de que exista el servicio — y esta
+       * unidad puede estar corriendo otro circuito ahora mismo.
+       */
+      return "El servicio del circuito todavía no arranca.";
     case "fuera_de_horario":
       return "El circuito está cerrado.";
     case "en_ruta":
