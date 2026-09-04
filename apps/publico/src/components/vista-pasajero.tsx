@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTema } from "@/lib/tema";
 import { useMiUbicacion } from "@/lib/ubicacion";
 import { iniciales, tinte } from "@/lib/color-ruta";
+import { rotuloDeLaTarjeta } from "@/lib/rotulo-de-la-tarjeta";
 import { arranqueCorto, arranqueLargo } from "@/lib/fecha-arranque";
 import {
   avanceSobreTrazado,
@@ -750,33 +751,25 @@ export function VistaPasajero({
             </div>
 
             {/*
-              El rótulo vuelve al cuarto estado, y dice de dónde sale lo que se
-              está enseñando: es declaración del concesionario. No repite el
-              titular y no habla del GPS — «sin unidades en el corredor» habría
-              sido contarle al pasajero lo que nuestra telemetría ve.
+              EL RÓTULO DICE DE DÓNDE SALE LA AFIRMACIÓN, NUNCA REPITE QUÉ ES.
+
+              Qué es ya lo dijeron el titular y la frase. Salió de aquí y se fue
+              a `lib/rotulo-de-la-tarjeta.ts` —con la regla escrita y probada—
+              porque una escalera de siete ternarios anidados dentro del JSX no
+              se puede leer para comprobar si un renglón repite al de arriba, y
+              ésa es exactamente la comprobación que esta pantalla ya falló tres
+              veces.
             */}
             <div className="fresca">
               <span className="p" />
               <span>
-                {modo === "por_arrancar"
-                  ? "Arranque declarado por el concesionario"
-                  : modo === "fuera_de_horario"
-                  ? "Fuera de horario"
-                  : modo === "sin_evidencia"
-                    ? cadaMin !== null
-                      ? "Frecuencia declarada por el concesionario"
-                      : "Horario declarado por el concesionario"
-                  : modo === "sin_conexion"
-                      ? "Sin conexión"
-                      : modo === "cargando"
-                        ? "Consultando…"
-                        : modo === "por_horario"
-                          ? "Por horario"
-                          : conRango && proxima
-                            ? `En vivo · ±${pisoMin} min · ${velocidad.origen === "medida" ? `${velocidad.kmh.toFixed(1)} km/h medidos` : `${velocidad.kmh.toFixed(1)} km/h declarados`}`
-                            : conRango
-                              ? "En vivo · activa tu ubicación para el tiempo"
-                              : "En vivo · sin tiempo estimado"}
+                {rotuloDeLaTarjeta(modo, {
+                  conRango,
+                  hayProxima: proxima !== null,
+                  pisoMin,
+                  velocidadKmh: velocidad.kmh,
+                  velocidadMedida: velocidad.origen === "medida",
+                })}
               </span>
             </div>
           </div>

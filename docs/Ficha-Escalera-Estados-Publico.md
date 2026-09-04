@@ -615,3 +615,86 @@ revisa.
 Que se haya visto un arranque real. La fecha del primer circuito la captura el
 concesionario, y hasta que eso pase lo único que hay es el estado alcanzado a
 propósito en la rama desechable.
+
+---
+
+## La corrección del 4 de septiembre — el rótulo repetía el titular
+
+**Sin migración.** Cambio de redacción en el renglón chico del pie de la
+tarjeta, y una regla que se deja escrita porque es la tercera vez que esta
+pantalla la infringe.
+
+### La regla
+
+> **El rótulo dice DE DÓNDE SALE la afirmación. Nunca repite QUÉ ES.**
+
+Qué es ya lo dijeron el titular y la frase, cada uno con su lugar y su tamaño.
+Un rótulo que lo vuelve a decir **gasta el único renglón que quedaba** para lo
+que nadie más está diciendo: quién responde por lo que se está afirmando.
+
+### Lo que se veía
+
+Con el titular en «05:00 a 23:00», el rótulo decía «Horario declarado por el
+concesionario». La palabra «horario» era la misma de arriba, y lo único que ese
+renglón agregaba —la atribución— venía enterrado detrás de ella.
+
+| Estado | Titular | Rótulo, antes | Rótulo, ahora |
+|---|---|---|---|
+| `por_arrancar` | `Arranca 15 sep` | «**Arranque** declarado por el concesionario» | «Según el concesionario» |
+| `fuera_de_horario` | `Abre 05:00` | «**Fuera de horario**» | «Según el concesionario» |
+| `sin_evidencia`, con frecuencia | `Cada 20 min` | «**Frecuencia** declarada por el concesionario» | «Según el concesionario» |
+| `sin_evidencia`, sin frecuencia | `05:00 a 23:00` | «**Horario** declarado por el concesionario» | «Según el concesionario» |
+
+Es la misma falta que ya se corrigió dos veces en esta pantalla —entre el
+titular y la frase el 28 de agosto, y entre el titular y el hilo de paradas en
+el #366—, y las tres se vieron **mirando**, nunca compilando.
+
+### La atribución NO se quita, y ésa es la otra mitad
+
+Acortar no es callar de dónde viene. **Sin el «según el concesionario», la app
+afirma el horario con su propia autoridad** — y nosotros no lo medimos: lo
+declaró él. Es la frontera de toda la cara pública: lo declarado se enseña como
+declarado y lo observado como observado.
+
+Por eso el arreglo no fue borrar el renglón, que era la salida fácil y la que
+habría quedado más limpia.
+
+### Las tres familias, que es lo que hay que mirar al agregar un estado
+
+| Familia | Fuente | Cómo la nombra el rótulo |
+|---|---|---|
+| **Declarado** — arranque, horario, frecuencia | el concesionario | «Según el concesionario» |
+| **Medido** — `en_vivo` | nuestro instrumento | «En vivo · ±3 min · 20.5 km/h declarados» |
+| **No se pudo preguntar** — sin conexión, consultando | nadie | dice qué pasó del lado del teléfono |
+
+**Los tres declarados comparten copia a propósito.** La fuente es la misma
+persona; darle a cada uno su variante insinuaría que hay tres fuentes distintas,
+y es exactamente por donde se había colado la repetición del titular.
+
+**El tercero no se atribuye a nadie, y es deliberado.** Sin conexión no hay
+afirmación sobre el servicio: colgarle un «según el concesionario» le atribuiría
+a él un silencio que es nuestro.
+
+### `por_horario` queda sin resolver, y se dice
+
+Su rótulo sigue siendo «Por horario», que nombra el modo en vez de la fuente. No
+se cambió porque **la fuente de ese estado es mixta**: la cadencia la declaró el
+concesionario, y que haya servicio lo vimos nosotros —una unidad en el corredor
+dentro de la ventana de confianza—. Ni «según el concesionario» ni un rótulo de
+instrumento le quedan sin decidir antes cuál de las dos mitades se está
+atribuyendo, y escogerle una de paso sería atribuirle a alguien media
+afirmación.
+
+Se deja enunciado en vez de resuelto a medias.
+
+### La valla
+
+La escalera de siete ternarios anidados salió del JSX a
+`lib/rotulo-de-la-tarjeta.ts`. No fue limpieza: **dentro del JSX no se puede
+leer si un renglón repite al de arriba**, y ésa es justo la comprobación que
+esta pantalla ya falló tres veces.
+
+Y la regla tiene prueba: para los tres estados declarados, el rótulo **no puede
+contener** «horario», «frecuencia» ni «arranque» —los sustantivos que el titular
+ya dice— y **sí tiene que contener** «concesionario». Si alguien deshace
+cualquiera de las dos mitades, se cae ahí y no en producción.
