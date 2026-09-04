@@ -1,11 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
+  fuenteDelTitular,
+  minutosDesdeQueSeVio,
   rotuloDeLaTarjeta,
   SEGUN_EL_CONCESIONARIO,
   type ModoDeLaTarjeta,
 } from "./rotulo-de-la-tarjeta";
 
-const VIVO = {
+const ENVIVO = {
   conRango: true,
   hayProxima: true,
   pisoMin: 3,
@@ -13,12 +15,27 @@ const VIVO = {
   velocidadMedida: false,
 };
 
+/** Con cadencia declarada, que es lo que hace suyo el titular de POR HORARIO. */
+const VIVO = { hayFrecuenciaDeclarada: true, vistoHaceMin: 6, enVivo: ENVIVO };
+/** Sin ella: el titular es «En servicio», y ése lo vimos nosotros. */
+const MEDIDO = { hayFrecuenciaDeclarada: false, vistoHaceMin: 6, enVivo: ENVIVO };
+
+const TODOS: ModoDeLaTarjeta[] = [
+  "por_arrancar",
+  "fuera_de_horario",
+  "en_vivo",
+  "por_horario",
+  "sin_evidencia",
+  "sin_conexion",
+  "cargando",
+];
+
 const DECLARADOS: ModoDeLaTarjeta[] = [
   "por_arrancar",
   "fuera_de_horario",
   "sin_evidencia",
-  /* Entró el 4 de septiembre. Encima suya está la cadencia declarada; que haya
-     servicio —que eso sí lo vimos nosotros— lo dice la frase, no el rótulo. */
+  /* Con cadencia declarada. Sin ella su titular es nuestro — ver el bloque de
+     «la fuente manda sobre el estado». */
   "por_horario",
 ];
 
@@ -71,24 +88,29 @@ describe("el rótulo dice de dónde sale la afirmación", () => {
 
   it("EN VIVO nombra el instrumento, con sus números", () => {
     expect(rotuloDeLaTarjeta("en_vivo", VIVO)).toBe("En vivo · ±3 min · 20.5 km/h declarados");
-    expect(rotuloDeLaTarjeta("en_vivo", { ...VIVO, velocidadMedida: true })).toContain("medidos");
+    expect(
+      rotuloDeLaTarjeta("en_vivo", { ...VIVO, enVivo: { ...ENVIVO, velocidadMedida: true } }),
+    ).toContain("medidos");
   });
 
   it("«medidos» y «declarados» no son sinónimos, y el rótulo los distingue", () => {
     // Una velocidad declarada es un punto de partida, no una medición de esta
     // calle: es el motivo por el que el tiempo estimado nace apagado.
-    const medida = rotuloDeLaTarjeta("en_vivo", { ...VIVO, velocidadMedida: true });
+    const medida = rotuloDeLaTarjeta("en_vivo", {
+      ...VIVO,
+      enVivo: { ...ENVIVO, velocidadMedida: true },
+    });
     const declarada = rotuloDeLaTarjeta("en_vivo", VIVO);
     expect(medida).not.toBe(declarada);
   });
 
   it("sin permiso de rango, EN VIVO no promete un tiempo ni lo insinúa", () => {
-    expect(rotuloDeLaTarjeta("en_vivo", { ...VIVO, conRango: false })).toBe(
-      "En vivo · sin tiempo estimado",
-    );
-    expect(rotuloDeLaTarjeta("en_vivo", { ...VIVO, hayProxima: false })).toBe(
-      "En vivo · activa tu ubicación para el tiempo",
-    );
+    expect(
+      rotuloDeLaTarjeta("en_vivo", { ...VIVO, enVivo: { ...ENVIVO, conRango: false } }),
+    ).toBe("En vivo · sin tiempo estimado");
+    expect(
+      rotuloDeLaTarjeta("en_vivo", { ...VIVO, enVivo: { ...ENVIVO, hayProxima: false } }),
+    ).toBe("En vivo · activa tu ubicación para el tiempo");
   });
 
   it("NINGÚN RÓTULO NOMBRA SU MODO — eso es vocabulario nuestro, no del pasajero", () => {
@@ -109,18 +131,79 @@ describe("el rótulo dice de dónde sale la afirmación", () => {
     }
   });
 
-  it("ningún estado se queda sin rótulo", () => {
-    const todos: ModoDeLaTarjeta[] = [
-      "por_arrancar",
-      "fuera_de_horario",
-      "en_vivo",
-      "por_horario",
-      "sin_evidencia",
-      "sin_conexion",
-      "cargando",
-    ];
-    for (const modo of todos) {
+  it("ningún estado se queda sin rótulo, con cadencia o sin ella", () => {
+    for (const modo of TODOS) {
       expect(rotuloDeLaTarjeta(modo, VIVO).length, modo).toBeGreaterThan(0);
+      expect(rotuloDeLaTarjeta(modo, MEDIDO).length, modo).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("la fuente manda sobre el estado", () => {
+  it("EL MISMO ESTADO CAMBIA DE FIRMA según de quién sea el titular", () => {
+    /*
+     * `por_horario` es el caso que obligó a la regla. Con cadencia declarada el
+     * titular es «Cada 20 min» y es suya; sin ella el titular es «En servicio»,
+     * que salió de nuestro GPS.
+     */
+    expect(fuenteDelTitular("por_horario", true)).toBe("declarada");
+    expect(fuenteDelTitular("por_horario", false)).toBe("medida");
+    expect(rotuloDeLaTarjeta("por_horario", VIVO)).toBe(SEGUN_EL_CONCESIONARIO);
+    expect(rotuloDeLaTarjeta("por_horario", MEDIDO)).not.toBe(SEGUN_EL_CONCESIONARIO);
+  });
+
+  it("NUESTRA MEDICIÓN NUNCA SE FIRMA CON SU NOMBRE — la valla de esta regla", () => {
+    /*
+     * El día que el GPS se equivoque —un aparato reportando desde el patio, una
+     * posición vieja que se coló— un rótulo con su nombre le carga a él nuestra
+     * falla delante del pasajero. Es la ley de no exponer al operador,
+     * invertida.
+     */
+    for (const modo of TODOS) {
+      for (const datos of [VIVO, MEDIDO]) {
+        if (fuenteDelTitular(modo, datos.hayFrecuenciaDeclarada) === "medida") {
+          expect(rotuloDeLaTarjeta(modo, datos).toLowerCase(), modo).not.toContain(
+            "concesionario",
+          );
+        }
+      }
+    }
+  });
+
+  it("lo medido dice QUÉ vimos y CUÁNDO, y en pasado", () => {
+    const r = rotuloDeLaTarjeta("por_horario", MEDIDO);
+    expect(r).toBe("Vimos una unidad en la ruta hace 6 min");
+    // En presente prometería que la estamos viendo ahorita — y si así fuera,
+    // el circuito estaría EN VIVO y no en este estado.
+    expect(r.toLowerCase()).not.toContain("hay unidades");
+  });
+
+  it("sin saber cuándo, dice qué vimos y NO inventa el minuto", () => {
+    expect(rotuloDeLaTarjeta("por_horario", { ...MEDIDO, vistoHaceMin: null })).toBe(
+      "Vimos una unidad en la ruta",
+    );
+  });
+
+  it("el minuto se redondea igual que la pastilla del camión del mapa", () => {
+    /*
+     * Hablan del mismo camión en la misma pantalla: «hace 6 min» arriba con
+     * «hace 7 min» abajo es una contradicción que el pasajero sí ve.
+     */
+    expect(minutosDesdeQueSeVio(360)).toBe(6);
+    expect(minutosDesdeQueSeVio(380)).toBe(6);
+    expect(minutosDesdeQueSeVio(390)).toBe(7);
+    // Y nunca «hace 0 min», que es una forma rara de decir «ahorita».
+    expect(minutosDesdeQueSeVio(20)).toBe(1);
+    expect(minutosDesdeQueSeVio(0)).toBe(1);
+  });
+
+  it("cada estado tiene una fuente, y sólo una", () => {
+    for (const modo of TODOS) {
+      for (const conFrecuencia of [true, false]) {
+        expect(["declarada", "medida", "ninguna"], modo).toContain(
+          fuenteDelTitular(modo, conFrecuencia),
+        );
+      }
     }
   });
 });

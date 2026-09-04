@@ -695,26 +695,15 @@ lo hacía, y ahora hay prueba de que ninguno lo vuelva a hacer.
 |---|---|---|---|
 | `por_horario` | `Cada 20 min` | «**Por horario**» | «Según el concesionario» |
 
-### ⚠ Lo que este arreglo NO cierra, y hay que decirlo
+### ⚠ Lo que este arreglo dejó abierto, y se cerró el mismo día
 
-**Con la frecuencia sin declarar, la atribución dice más de lo que tiene
-encima.** En ese caso el titular de `por_horario` es «En servicio» y la frase
-«Hay unidades corriendo esta ruta»: las dos salen de lo que vio el GPS, no de
-una declaración. «Según el concesionario» le atribuye ahí algo que medimos
-nosotros.
+Con la frecuencia sin declarar, el titular de `por_horario` es «En servicio» y
+la frase «Hay unidades corriendo esta ruta»: las dos salen de lo que vio el GPS,
+no de una declaración. «Según el concesionario» le atribuía ahí algo que medimos
+nosotros. **No era una esquina: es el circuito de producción** — Oasis–Centro
+tiene `declared_frequency_minutes` en `NULL` desde la `0031`.
 
-**No es una esquina: es el circuito de producción de hoy.** Oasis–Centro tiene
-`declared_frequency_minutes` en `NULL` desde la `0031`, justo porque un 20
-heredado no era una declaración.
-
-Las dos salidas que se ven, y ninguna se tomó de paso:
-
-1. **Distinguir la rama**: con frecuencia declarada, «Según el concesionario»;
-   sin ella, un rótulo de la familia del instrumento — que hay que redactar, y
-   sin decir un tiempo.
-2. **Dejarlo así** y aceptar que en ese caso el rótulo atribuye de más.
-
-Queda como la decisión abierta de esta ficha.
+Se cerró con la regla de la sección siguiente.
 
 ### La valla
 
@@ -728,3 +717,79 @@ contener** «horario», «frecuencia» ni «arranque» —los sustantivos que el
 ya dice— y **sí tiene que contener** «concesionario». Una tercera prueba fija que
 **ningún rótulo nombra su modo**. Si alguien deshace cualquiera de las tres, se
 cae ahí y no en producción.
+
+---
+
+## La corrección del 4 de septiembre, segunda parte — el rótulo sigue la fuente
+
+### La regla
+
+> **El rótulo sigue la fuente del TITULAR, no el estado.**
+>
+> Si arriba está lo que el concesionario **declaró**, «Según el concesionario».
+> Si arriba está lo que **medimos nosotros**, un rótulo de instrumento que diga
+> **qué vimos y cuándo**.
+
+Es la generalización de lo que la mañana había dejado como excepción. El estado
+no basta para escoger la firma, y `por_horario` es la prueba: **el mismo estado
+cambia de dueño según haya o no cadencia declarada.**
+
+| `por_horario` | Titular | De quién es | Rótulo |
+|---|---|---|---|
+| con cadencia | `Cada 20 min` | del concesionario | «Según el concesionario» |
+| **sin cadencia** | `En servicio` | **nuestro** | «Vimos una unidad en la ruta hace 6 min» |
+
+### Por qué importa, y no es una sutileza de redacción
+
+Firmar con su nombre una medición nuestra no es «atribuir de más»: es **poner
+nuestra medición en su boca**. El día que el GPS se equivoque —un aparato que
+reporta desde el patio, una posición vieja que se coló— el rótulo **le carga a
+él nuestra falla**, con su nombre, delante del pasajero.
+
+Es **la ley de no exponer al operador, invertida.** Aquélla prohíbe contarle al
+pasajero que nuestra telemetría falló, porque esa falla es nuestra y su lugar es
+el centro de control del carrier. Ésta prohíbe lo simétrico: firmar con el
+nombre del operador una afirmación que no es suya.
+
+Las dos protegen lo mismo desde lados opuestos: **cada afirmación se queda con
+el nombre de quien de verdad responde por ella.**
+
+### La frase también estaba en presente
+
+«Hay unidades corriendo esta ruta» prometía de más, y por la misma razón que el
+rótulo: **en este estado no estamos viendo un camión ahorita.** Si lo
+estuviéramos, el circuito estaría `en_vivo` — eso es literalmente lo que separa
+los dos peldaños. Lo que hay es una unidad vista dentro de la ventana de
+confianza.
+
+La frase **se fue entera** en esa rama, y no se reemplazó por una en pasado: el
+cuándo ya lo dice el rótulo, con su minuto, y repetirlo abajo sería la falta que
+la corrección de la mañana acababa de quitar. Con cadencia declarada la frase se
+queda, porque ahí sí agrega algo que no es nuestro.
+
+| | Antes | Ahora |
+|---|---|---|
+| Titular | `En servicio` | igual |
+| Frase | «Hay unidades corriendo esta ruta.» | *(vacía)* |
+| Rótulo | «Por horario» → «Según el concesionario» | «Vimos una unidad en la ruta hace 6 min» |
+
+**El titular no se tocó**, y conviene decirlo: «En servicio» sigue en presente.
+Se sostiene porque el renglón de abajo lo fecha — la misma forma que el camión
+apagado del mapa, que se dibuja y trae su «hace N min» al lado. Si algún día se
+cambia, es otra decisión.
+
+### La valla
+
+`fuenteDelTitular(modo, hayFrecuenciaDeclarada)` es una función aparte, y el
+rótulo **pregunta primero por la fuente y después por el estado**. El orden es
+el arreglo: deducir la fuente del estado es exactamente cómo `por_horario` acabó
+firmando con el nombre del concesionario una medición nuestra.
+
+Tres pruebas la sostienen:
+
+1. El mismo estado cambia de firma según la cadencia.
+2. **Ningún rótulo de fuente medida contiene «concesionario»** — recorre todos
+   los estados con y sin cadencia, así que un estado nuevo entra al barrido solo.
+3. El minuto se redondea con la **misma función** que la pastilla del camión del
+   mapa. Hablan del mismo camión en la misma pantalla, y «hace 6 min» arriba con
+   «hace 7 min» abajo es una contradicción que el pasajero sí ve.
