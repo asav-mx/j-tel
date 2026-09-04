@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   fuenteDelTitular,
+  haceNMinutos,
   minutosDesdeQueSeVio,
   rotuloDeLaTarjeta,
   SEGUN_EL_CONCESIONARIO,
@@ -16,9 +18,9 @@ const ENVIVO = {
 };
 
 /** Con cadencia declarada, que es lo que hace suyo el titular de POR HORARIO. */
-const VIVO = { hayFrecuenciaDeclarada: true, vistoHaceMin: 6, enVivo: ENVIVO };
+const VIVO = { hayFrecuenciaDeclarada: true, vistoHaceSeg: 360, enVivo: ENVIVO };
 /** Sin ella: el titular es «En servicio», y ése lo vimos nosotros. */
-const MEDIDO = { hayFrecuenciaDeclarada: false, vistoHaceMin: 6, enVivo: ENVIVO };
+const MEDIDO = { hayFrecuenciaDeclarada: false, vistoHaceSeg: 360, enVivo: ENVIVO };
 
 const TODOS: ModoDeLaTarjeta[] = [
   "por_arrancar",
@@ -179,20 +181,17 @@ describe("la fuente manda sobre el estado", () => {
   });
 
   it("sin saber cuándo, dice qué vimos y NO inventa el minuto", () => {
-    expect(rotuloDeLaTarjeta("por_horario", { ...MEDIDO, vistoHaceMin: null })).toBe(
+    expect(rotuloDeLaTarjeta("por_horario", { ...MEDIDO, vistoHaceSeg: null })).toBe(
       "Vimos una unidad en la ruta",
     );
   });
 
-  it("el minuto se redondea igual que la pastilla del camión del mapa", () => {
-    /*
-     * Hablan del mismo camión en la misma pantalla: «hace 6 min» arriba con
-     * «hace 7 min» abajo es una contradicción que el pasajero sí ve.
-     */
+  it("el minuto se redondea una sola vez, y nunca da «hace 0 min»", () => {
     expect(minutosDesdeQueSeVio(360)).toBe(6);
     expect(minutosDesdeQueSeVio(380)).toBe(6);
     expect(minutosDesdeQueSeVio(390)).toBe(7);
-    // Y nunca «hace 0 min», que es una forma rara de decir «ahorita».
+    // «hace 0 min» es una forma rara de decir «ahorita» — justo lo que este
+    // estado no puede afirmar.
     expect(minutosDesdeQueSeVio(20)).toBe(1);
     expect(minutosDesdeQueSeVio(0)).toBe(1);
   });
@@ -205,5 +204,47 @@ describe("la fuente manda sobre el estado", () => {
         );
       }
     }
+  });
+});
+
+describe("el rótulo y la pastilla del camión dicen lo mismo", () => {
+  /*
+   * Hablan DEL MISMO CAMIÓN en la misma pantalla: el punto apagado del mapa con
+   * su pastilla, y el renglón de abajo de la tarjeta. Que uno dijera «hace 6
+   * min» y el otro «hace 7» —o «6 min atrás»— es una contradicción que el
+   * pasajero sí ve, y ninguna prueba de datos la encuentra: los dos valores
+   * serían correctos por separado.
+   */
+
+  it("el rótulo se compone con la MISMA FRASE que enseña la pastilla", () => {
+    for (const seg of [181, 200, 359, 360, 380, 390, 600, 899]) {
+      const rotulo = rotuloDeLaTarjeta("por_horario", { ...MEDIDO, vistoHaceSeg: seg });
+      expect(rotulo, `${seg} s`).toContain(haceNMinutos(seg));
+    }
+  });
+
+  it("compartir el número no basta: se comparte la frase entera", () => {
+    // Dos sitios pueden redondear igual y escribir distinto.
+    expect(haceNMinutos(360)).toBe("hace 6 min");
+    expect(haceNMinutos(390)).toBe("hace 7 min");
+  });
+
+  it("LA PANTALLA LA USA, y no una copia suya que redondee por su cuenta", () => {
+    /*
+     * Esto lee el fuente a propósito, y es la única mitad que una prueba de
+     * unidad no alcanza: `rotuloDeLaTarjeta` puede componerse perfecto mientras
+     * el mapa vuelve a escribir su `Math.round` a mano, y las dos pruebas de
+     * arriba seguirían en verde.
+     *
+     * Si alguien renombra la función o reacomoda el componente, esto se cae y
+     * se actualiza a propósito — que es lo que se le pide a una valla.
+     */
+    const fuente = readFileSync(
+      new URL("../components/vista-pasajero.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(fuente).toContain("haceNMinutos(u.antiguedad_seg)");
+    // Y no queda ninguna copia del redondeo suelta en la pantalla.
+    expect(fuente).not.toContain("antiguedad_seg / 60");
   });
 });
