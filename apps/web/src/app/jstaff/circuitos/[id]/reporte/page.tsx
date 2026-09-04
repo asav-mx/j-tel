@@ -2,9 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { localDateTimeSeconds, localTimeHHMM } from "@jtel/domain";
 import type { TrazadoParaMedir } from "@jtel/domain";
+import { yaArrancoElServicio } from "@jtel/domain/publico";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
-import { duracion } from "@/lib/formato-tiempo";
+import { duracion, fechaCivilLarga } from "@/lib/formato-tiempo";
 import { aperturaDelHorario } from "@/lib/operar-circuito";
 import {
   agruparHistorial,
@@ -46,6 +47,13 @@ import {
  * 3. **Que sin frecuencia declarada no hay contra qué comparar.** Es lo único
  *    que el PLAN pedía y que hoy no se puede dar, y se dice.
  *
+ * ## Y un cuarto caso, que no es un hueco: el circuito sin arrancar
+ *
+ * Antes del día de arranque no hay jornada, y esta pantalla se reemplaza
+ * entera. Sus cifras serían todas correctas y todas falsas: «0 vueltas» se lee
+ * como que nadie dio una, y «con señal 0 de 5» como que cinco unidades
+ * callaron. No callaron — el servicio todavía no existe.
+ *
  * ## La puerta
  *
  * Igual que Operar: cuelga de `/jstaff` porque una cuenta de tipo `concesion`
@@ -67,6 +75,40 @@ export default async function ReportePage({ params }: { params: Promise<{ id: st
   if (!circuito) notFound();
 
   const ahora = new Date();
+
+  /*
+   * ANTES DEL ARRANQUE NO HAY JORNADA, y por eso esto corta aquí arriba.
+   *
+   * Con el circuito sin arrancar, cada cifra de este reporte sería cierta y
+   * diría algo falso: «0 vueltas observadas» se lee como que nadie dio una,
+   * «con señal 0 de 5» como que cinco unidades callaron, y «no se puede medir
+   * el intervalo» como una carencia del instrumento. Ninguna de las tres es un
+   * hueco: no hay nada que medir porque el servicio todavía no existe.
+   *
+   * Corta ANTES de consultar el historial, y no sólo por ahorro: leer el
+   * archivo de una jornada que no empezó es preguntar por algo que no tiene
+   * respuesta.
+   */
+  if (!yaArrancoElServicio(ahora, circuito.serviceLaunchDate, circuito.timeZone)) {
+    return (
+      <main className="min-h-screen bg-[var(--fondo)] px-4 pt-4 pb-16 sm:px-6">
+        <div className="mx-auto max-w-3xl">
+          <Marco
+            nombre={circuito.name}
+            concesion={(await repos.accounts.findById(circuito.concessionAccountId))?.name ?? null}
+            circuitoId={id}
+          />
+          <SinArrancar
+            arrancaEl={circuito.serviceLaunchDate}
+            zona={circuito.timeZone}
+            abreALas={circuito.serviceStartLocal.slice(0, 5)}
+            cierraALas={circuito.serviceEndLocal.slice(0, 5)}
+          />
+        </div>
+      </main>
+    );
+  }
+
   /*
    * El día del reporte es la JORNADA DE SERVICIO que corre ahora, no el día
    * civil. Se reusa `aperturaDelHorario`, que ya aguanta que la ventana cruce
@@ -153,6 +195,52 @@ function Marco({
         resultado y no se califica a ningún transportista.
       </p>
     </header>
+  );
+}
+
+/* ── El circuito que todavía no arranca ─────────────────────────────────── */
+
+/**
+ * Lo único que esta pantalla puede decir antes del arranque.
+ *
+ * **Reemplaza al reporte entero, no le pone un aviso encima.** Dejar las
+ * secciones con sus ceros y un letrero arriba sería la §D en su forma de
+ * agrupación: los ceros seguirían leyéndose como mediciones de una jornada que
+ * no ocurrió, y el letrero no los desmiente — los acompaña.
+ */
+function SinArrancar({
+  arrancaEl,
+  zona,
+  abreALas,
+  cierraALas,
+}: {
+  arrancaEl: string | null;
+  zona: string;
+  abreALas: string;
+  cierraALas: string;
+}) {
+  return (
+    <section className="rounded-lg border border-[var(--linea)] bg-gradient-to-b from-[var(--panel)] to-[var(--panel2)] p-5">
+      <p className="text-[30px] leading-none font-extrabold tracking-[-.02em] text-[var(--tenue)]">
+        {arrancaEl ? `Arranca el ${fechaCivilLarga(arrancaEl, zona)}` : "Sin arrancar"}
+      </p>
+      <p className="mt-2 text-[15px] leading-snug text-[var(--texto)]">
+        El servicio de este circuito todavía no arranca, así que no hay jornada que reportar. Las
+        vueltas, el intervalo entre camiones y la señal de cada unidad se empiezan a medir ese
+        día.
+      </p>
+
+      <dl className="mt-4 space-y-1.5 border-t border-[var(--linea-tenue)] pt-3">
+        {arrancaEl ? (
+          <Renglon rotulo="Arranca">
+            {fechaCivilLarga(arrancaEl, zona)} · declarado por el concesionario en el expediente
+          </Renglon>
+        ) : null}
+        <Renglon rotulo="Horario">
+          {abreALas} a {cierraALas} ({zona})
+        </Renglon>
+      </dl>
+    </section>
   );
 }
 

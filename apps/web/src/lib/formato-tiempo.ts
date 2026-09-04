@@ -61,6 +61,33 @@ export function fechaDeIso(fechaIso: string, timeZone: string = JTTEL_TZ): strin
 }
 
 /**
+ * La misma fecha civil, escrita entera: `martes 15 de septiembre de 2026`.
+ *
+ * **No es un sello de evidencia, y por eso no se abrevia.** `fechaDeIso` da
+ * `mar, 15 de sep de 2026`, que es la forma correcta para una tabla de hechos:
+ * corta, alineable, repetida cien veces. Ésta es para las fechas que se
+ * DECLARAN y se leen una sola vez, en un titular — el día en que arranca un
+ * servicio —, donde la abreviatura y su coma se leen como una lista.
+ *
+ * Se arma con las partes en vez de recortar texto, por lo mismo que su hermana:
+ * `es-MX` mete comas que dentro de una frase corrida no son pausas de nadie.
+ */
+export function fechaCivilLarga(fechaIso: string, timeZone: string = JTTEL_TZ): string {
+  const [y, m, d] = fechaIso.split("-").map(Number);
+  // Mediodía UTC: cualquier zona cae en el mismo día civil.
+  const instante = new Date(Date.UTC(y!, m! - 1, d!, 12));
+  return new Intl.DateTimeFormat("es-MX", {
+    timeZone,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  })
+    .format(instante)
+    .replace(",", "");
+}
+
+/**
  * La misma fecha sin el año, para cuando el periodo ya lo dijo arriba:
  * `mié 22 jul`.
  *

@@ -3,6 +3,7 @@ import {
   idPublicoDelDia,
   fechaLocalDelCircuito,
   enHorarioDeServicio,
+  yaArrancoElServicio,
   antiguedadSegundos,
   esFresco,
   sentidoDeLaUnidad,
@@ -83,6 +84,45 @@ describe("horario de servicio", () => {
   it("la zona es la del circuito: el mismo instante cae dentro o fuera según dónde corra", () => {
     expect(enHorarioDeServicio(madrugada, "05:00", "23:00", JUAREZ)).toBe(false);
     expect(enHorarioDeServicio(madrugada, "05:00", "23:00", "UTC")).toBe(true);
+  });
+});
+
+describe("fecha de arranque del servicio", () => {
+  // 19:00 UTC = 13:00 en Juárez (UTC-6).
+  const tresDeSeptiembre = new Date("2026-09-03T19:00:00.000Z");
+
+  it("sin fecha declarada el circuito YA OPERA — vacío no es «arranca hoy»", () => {
+    expect(yaArrancoElServicio(tresDeSeptiembre, null, JUAREZ)).toBe(true);
+  });
+
+  it("con la fecha en el futuro todavía no arrancó", () => {
+    expect(yaArrancoElServicio(tresDeSeptiembre, "2026-09-15", JUAREZ)).toBe(false);
+  });
+
+  it("EL DÍA MISMO ya arrancó, desde las 00:00 de la zona del circuito", () => {
+    // El borde se decide, no se deja al azar: quien declaró el 15 quiere
+    // servicio el 15, no el 16.
+    const quinceALaUna = new Date("2026-09-15T07:00:00.000Z"); // 01:00 en Juárez
+    expect(yaArrancoElServicio(quinceALaUna, "2026-09-15", JUAREZ)).toBe(true);
+  });
+
+  it("una fecha pasada da lo mismo que la ausencia: el circuito opera", () => {
+    expect(yaArrancoElServicio(tresDeSeptiembre, "2026-08-01", JUAREZ)).toBe(true);
+  });
+
+  it("la zona es la del circuito, no la del proceso", () => {
+    /*
+     * 04:00 UTC del 15 son todavía las 22:00 del 14 en Juárez. Con el reloj de
+     * UTC el servicio arrancaría seis horas antes de que amanezca donde corre,
+     * y la app diría «en servicio» la noche anterior.
+     */
+    const instante = new Date("2026-09-15T04:00:00.000Z");
+    expect(yaArrancoElServicio(instante, "2026-09-15", JUAREZ)).toBe(false);
+    expect(yaArrancoElServicio(instante, "2026-09-15", "UTC")).toBe(true);
+  });
+
+  it("aguanta la fecha con hora pegada, como la devolvería un `timestamp`", () => {
+    expect(yaArrancoElServicio(tresDeSeptiembre, "2026-09-15T00:00:00", JUAREZ)).toBe(false);
   });
 });
 
@@ -281,7 +321,7 @@ describe("medirUnidad · la clasificación que leen las dos caras", () => {
 });
 
 describe("estadoDelCircuito · la escalera", () => {
-  const base = { enHorario: true };
+  const base = { yaArranco: true, enHorario: true };
   /** En el corredor, con la frescura ya resuelta por `medirUnidad`. */
   const enCorredor = (antiguedadSeg: number, fresco: boolean, dentroDeConfianza = true): MedidaDeUnidad => ({
     enCorredor: true,
@@ -297,6 +337,35 @@ describe("estadoDelCircuito · la escalera", () => {
     fresco: true,
     dentroDeConfianza: true,
     enRuta: false,
+  });
+
+  it("SIN ARRANCAR gana sobre todo, incluso sobre el horario y sobre un camión encima", () => {
+    /*
+     * El escalón nuevo va arriba de todos. Un circuito que arranca el 15 no
+     * está «fuera de horario» el día 3 a las tres de la tarde ni «sin
+     * evidencia» a las seis de la mañana: está sin arrancar.
+     */
+    expect(
+      estadoDelCircuito({ yaArranco: false, enHorario: true, unidades: [enCorredor(5, true)] }),
+    ).toBe("por_arrancar");
+    expect(
+      estadoDelCircuito({ yaArranco: false, enHorario: false, unidades: [] }),
+    ).toBe("por_arrancar");
+  });
+
+  it("sin arrancar NO es «sin evidencia» — no hay nada que evidenciar todavía", () => {
+    // El mismo insumo que produciría `sin_evidencia` en un circuito en marcha.
+    expect(estadoDelCircuito({ yaArranco: false, enHorario: true, unidades: [] })).toBe(
+      "por_arrancar",
+    );
+    expect(estadoDelCircuito({ ...base, unidades: [] })).toBe("sin_evidencia");
+  });
+
+  it("pasada la fecha, la escalera trabaja igual que antes de que existiera", () => {
+    expect(estadoDelCircuito({ ...base, unidades: [enCorredor(30, true)] })).toBe("en_vivo");
+    expect(estadoDelCircuito({ ...base, enHorario: false, unidades: [] })).toBe(
+      "fuera_de_horario",
+    );
   });
 
   it("fuera de horario gana sobre todo lo demás, incluso con una unidad encima", () => {

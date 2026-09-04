@@ -21,6 +21,8 @@ const TRAZADOS: TrazadoDeSentido[] = [
 const AHORA = new Date("2026-08-29T18:00:00.000Z");
 
 const CIRCUITO = {
+  /** Sin fecha de arranque: el circuito ya opera, que es el caso de siempre. */
+  serviceLaunchDate: null as string | null,
   serviceStartLocal: "05:00",
   serviceEndLocal: "23:00",
   timeZone: "America/Ciudad_Juarez",
@@ -84,7 +86,7 @@ describe("el número grande y su denominador", () => {
     expect(op.enElPlan).toBe(5);
   });
 
-  it("las cuatro situaciones reparten el plan ENTERO, sin traslape ni sobrantes", () => {
+  it("las situaciones reparten el plan ENTERO, sin traslape ni sobrantes", () => {
     const op = armar([enLaRuta(30), enLaRuta(900), lejos(10), unidad()]);
     const cuenta = (s: string) => op.unidades.filter((u) => u.situacion === s).length;
     expect(cuenta("en_ruta")).toBe(1);
@@ -214,6 +216,79 @@ describe("los umbrales son del circuito, ninguno horneado", () => {
     expect(
       armar([aMedioCuadra], { ...CIRCUITO, corridorToleranceMeters: 25 }).unidades[0].situacion,
     ).toBe("no_ha_salido");
+  });
+});
+
+describe("el circuito que todavía no arranca", () => {
+  /** El mismo circuito, pero declarado para arrancar quince días después. */
+  const PORARRANCAR = { ...CIRCUITO, serviceLaunchDate: "2026-09-15" };
+  const armarSinArrancar = (plan: UnidadDelPlan[]) =>
+    armarOperacion({
+      ahora: AHORA, // 29 de agosto: faltan diecisiete días
+      circuito: PORARRANCAR,
+      trazados: TRAZADOS,
+      paradas: PARADAS,
+      plan,
+    });
+
+  it("NADIE cae en «no ha salido» — eso sería un reproche antes de que exista el servicio", () => {
+    const op = armarSinArrancar([enLaRuta(30), enLaRuta(900), lejos(10), unidad()]);
+    expect(op.unidades.every((u) => u.situacion === "por_arrancar")).toBe(true);
+    expect(op.unidades.filter((u) => u.situacion === "no_ha_salido")).toHaveLength(0);
+  });
+
+  it("LA SECCIÓN DE ATENCIÓN QUEDA VACÍA, que es el ruido que esto apaga", () => {
+    /*
+     * Sin la fecha, estas cuatro unidades llenaban la caja ámbar de «qué
+     * necesita atención» tres semanas antes del arranque. No hay nada que
+     * atender: el servicio no ha empezado.
+     */
+    const op = armarSinArrancar([enLaRuta(900), lejos(10), unidad(), unidad()]);
+    expect(op.atencion).toHaveLength(0);
+  });
+
+  it("el estado del circuito es POR ARRANCAR, aunque haya una unidad en ruta", () => {
+    const op = armarSinArrancar([enLaRuta(30)]);
+    expect(op.estado).toBe("por_arrancar");
+    expect(op.yaArranco).toBe(false);
+    // Y el número grande no cuenta a nadie: la pantalla no dibuja «0 de 1».
+    expect(op.enRuta).toBe(0);
+    expect(op.enElPlan).toBe(1);
+  });
+
+  it("NO HAY APERTURA DE JORNADA, aunque el reloj caiga dentro del horario", () => {
+    // Son las 12:00 y el circuito abre a las 05:00, pero la jornada no empezó:
+    // «desde que abrió, hace 7 h» mediría una jornada que no existe.
+    const op = armarSinArrancar([]);
+    expect(op.enHorario).toBe(true);
+    expect(op.aperturaDelHorario).toBeNull();
+  });
+
+  it("pasada la fecha, el reparto vuelve a ser el de siempre", () => {
+    const yaArrancado = { ...CIRCUITO, serviceLaunchDate: "2026-08-01" };
+    const op = armarOperacion({
+      ahora: AHORA,
+      circuito: yaArrancado,
+      trazados: TRAZADOS,
+      paradas: PARADAS,
+      plan: [enLaRuta(30), lejos(10)],
+    });
+    expect(op.yaArranco).toBe(true);
+    expect(op.enRuta).toBe(1);
+    expect(op.unidades[1].situacion).toBe("no_ha_salido");
+  });
+
+  it("EL DÍA MISMO ya arrancó: el borde se decide, no se deja al azar", () => {
+    const hoyMismo = { ...CIRCUITO, serviceLaunchDate: "2026-08-29" };
+    const op = armarOperacion({
+      ahora: AHORA, // 29 de agosto, 12:00 en Juárez
+      circuito: hoyMismo,
+      trazados: TRAZADOS,
+      paradas: PARADAS,
+      plan: [enLaRuta(30)],
+    });
+    expect(op.yaArranco).toBe(true);
+    expect(op.estado).toBe("en_vivo");
   });
 });
 
