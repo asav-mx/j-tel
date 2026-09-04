@@ -789,7 +789,12 @@ export function VistaPasajero({
             derecho a esta pantalla y nunca se ve. Un buscador colgado sólo de
             ella no lo abriría ningún pasajero el día del arranque.
           */}
-          <Link className="liga-buscar" href="/buscar">
+          {/*
+            `?desde=` es lo que le permite al buscador REGRESAR aquí. Sin él,
+            su salida cae a la portada — que hoy, con un solo circuito
+            publicado, redirige a esta misma ruta, pero con dos ya no.
+          */}
+          <Link className="liga-buscar" href={`/buscar?desde=${forma.circuito_id}`}>
             <span className="lb-t">¿A dónde vas?</span>
             <span className="lb-s">Ve si alguna ruta te sirve</span>
           </Link>
