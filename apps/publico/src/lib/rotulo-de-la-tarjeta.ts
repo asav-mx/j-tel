@@ -26,7 +26,7 @@
  *
  * ## Las tres familias, que es lo que hay que mirar al agregar un estado
  *
- * 1. **Lo DECLARADO** —arranque, horario, frecuencia—: la fuente es el
+ * 1. **Lo DECLARADO** —arranque, horario, frecuencia, cadencia—: la fuente es el
  *    concesionario, y el rótulo lo dice. Todos comparten copia a propósito: la
  *    fuente es la misma, y variarla por estado insinuaría que hay varias.
  * 2. **Lo MEDIDO** —«en vivo»—: la fuente es nuestro instrumento, y el rótulo
@@ -37,11 +37,24 @@
  *    Atribuírsela a alguien sería inventarla, y ahí el rótulo dice lo que pasó
  *    del lado del teléfono y nada más.
  *
- * `por_horario` **no está resuelto y no se toca aquí**: la fuente de ese estado
- * es mixta —la cadencia la declaró el concesionario, y que haya servicio lo
- * vimos nosotros—, así que ni «según el concesionario» ni un rótulo de
- * instrumento le quedan sin decidir antes qué se está atribuyendo. Se deja como
- * está, dicho, en vez de escogerle una fuente de paso.
+ * `por_horario` **también se atribuye**, y lo que destrabó la decisión fue la
+ * regla misma: el rótulo atribuye la afirmación que tiene **justo encima**, y
+ * encima está la cadencia, que la declaró el concesionario. La otra mitad —que
+ * sí hay servicio, y eso lo vimos nosotros— **va en la frase**, que es donde
+ * cabe entera; comprimir las dos en un renglón de una línea era lo que tenía
+ * atorado este estado.
+ *
+ * Y «Por horario» se iba de todas formas: nombra el **modo**, que es vocabulario
+ * nuestro y no del pasajero. Ninguno de los otros rótulos nombra su estado.
+ *
+ * ⚠ **Queda un caso donde la atribución dice más de lo que tiene encima**, y se
+ * escribe en vez de esconderse: cuando el concesionario **no declaró
+ * frecuencia**, el titular de este estado es «En servicio» y la frase «Hay
+ * unidades corriendo esta ruta» — las dos salen de lo que vio el GPS, no de una
+ * declaración. Ahí «Según el concesionario» le atribuye a él algo que medimos
+ * nosotros. Es el circuito de hoy en producción, no una esquina: Oasis–Centro
+ * tiene la frecuencia en `NULL` desde la `0031`. Está en la ficha, esperando
+ * decisión, y no se resolvió de paso.
  */
 
 export type ModoDeLaTarjeta =
@@ -78,14 +91,17 @@ export interface EnVivo {
 export function rotuloDeLaTarjeta(modo: ModoDeLaTarjeta, enVivo: EnVivo): string {
   switch (modo) {
     /*
-     * Los tres declarados comparten rótulo, y no es pereza: la fuente es la
+     * Los cuatro declarados comparten rótulo, y no es pereza: la fuente es la
      * misma persona. Darle a cada uno su variante —«arranque declarado»,
-     * «horario declarado»— insinuaría que hay tres fuentes distintas, y además
+     * «horario declarado»— insinuaría que hay cuatro fuentes distintas, y además
      * es por donde se volvió a colar la repetición del titular.
      */
     case "por_arrancar":
     case "fuera_de_horario":
     case "sin_evidencia":
+    /* Encima está la cadencia declarada; que haya servicio lo dice la frase.
+       Ver el encabezado, incluido el caso sin frecuencia declarada. */
+    case "por_horario":
       return SEGUN_EL_CONCESIONARIO;
 
     /* Del lado del teléfono. No hay servicio del cual decir nada, ni a quién
@@ -94,14 +110,6 @@ export function rotuloDeLaTarjeta(modo: ModoDeLaTarjeta, enVivo: EnVivo): string
       return "Sin conexión";
     case "cargando":
       return "Consultando…";
-
-    /*
-     * Sin resolver, y dicho arriba. La cadencia la declaró el concesionario y
-     * el servicio lo vimos nosotros: escogerle una fuente de paso sería
-     * atribuirle a alguien media afirmación.
-     */
-    case "por_horario":
-      return "Por horario";
 
     /*
      * EN VIVO nombra el instrumento, que es su fuente, y con sus números: hasta

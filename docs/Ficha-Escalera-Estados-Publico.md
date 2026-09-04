@@ -644,6 +644,7 @@ renglón agregaba —la atribución— venía enterrado detrás de ella.
 | `fuera_de_horario` | `Abre 05:00` | «**Fuera de horario**» | «Según el concesionario» |
 | `sin_evidencia`, con frecuencia | `Cada 20 min` | «**Frecuencia** declarada por el concesionario» | «Según el concesionario» |
 | `sin_evidencia`, sin frecuencia | `05:00 a 23:00` | «**Horario** declarado por el concesionario» | «Según el concesionario» |
+| `por_horario` | `Cada 20 min` | «**Por horario**» — nombraba el modo | «Según el concesionario» |
 
 Es la misma falta que ya se corrigió dos veces en esta pantalla —entre el
 titular y la frase el 28 de agosto, y entre el titular y el hilo de paradas en
@@ -663,11 +664,11 @@ habría quedado más limpia.
 
 | Familia | Fuente | Cómo la nombra el rótulo |
 |---|---|---|
-| **Declarado** — arranque, horario, frecuencia | el concesionario | «Según el concesionario» |
+| **Declarado** — arranque, horario, frecuencia, cadencia | el concesionario | «Según el concesionario» |
 | **Medido** — `en_vivo` | nuestro instrumento | «En vivo · ±3 min · 20.5 km/h declarados» |
 | **No se pudo preguntar** — sin conexión, consultando | nadie | dice qué pasó del lado del teléfono |
 
-**Los tres declarados comparten copia a propósito.** La fuente es la misma
+**Los cuatro declarados comparten copia a propósito.** La fuente es la misma
 persona; darle a cada uno su variante insinuaría que hay tres fuentes distintas,
 y es exactamente por donde se había colado la repetición del titular.
 
@@ -675,17 +676,45 @@ y es exactamente por donde se había colado la repetición del titular.
 afirmación sobre el servicio: colgarle un «según el concesionario» le atribuiría
 a él un silencio que es nuestro.
 
-### `por_horario` queda sin resolver, y se dice
+### `por_horario` — el quinto, resuelto el mismo día
 
-Su rótulo sigue siendo «Por horario», que nombra el modo en vez de la fuente. No
-se cambió porque **la fuente de ese estado es mixta**: la cadencia la declaró el
-concesionario, y que haya servicio lo vimos nosotros —una unidad en el corredor
-dentro de la ventana de confianza—. Ni «según el concesionario» ni un rótulo de
-instrumento le quedan sin decidir antes cuál de las dos mitades se está
-atribuyendo, y escogerle una de paso sería atribuirle a alguien media
-afirmación.
+Quedó fuera de la primera pasada porque su fuente parecía mixta: la cadencia la
+declaró el concesionario, y que haya servicio lo vimos nosotros —una unidad en
+el corredor dentro de la ventana de confianza—.
 
-Se deja enunciado en vez de resuelto a medias.
+**Lo destrabó la regla misma.** El rótulo atribuye la afirmación que tiene
+**justo encima**, y encima está la cadencia. La otra mitad —que sí hay
+servicio— **va en la frase**, que es donde cabe entera. Comprimir las dos en un
+renglón de una línea era el problema, no la falta de una respuesta.
+
+Y «Por horario» se iba de todas formas, con atribución o sin ella: **nombra el
+modo**, que es vocabulario nuestro y no del pasajero. Era el último rótulo que
+lo hacía, y ahora hay prueba de que ninguno lo vuelva a hacer.
+
+| Estado | Titular | Rótulo, antes | Rótulo, ahora |
+|---|---|---|---|
+| `por_horario` | `Cada 20 min` | «**Por horario**» | «Según el concesionario» |
+
+### ⚠ Lo que este arreglo NO cierra, y hay que decirlo
+
+**Con la frecuencia sin declarar, la atribución dice más de lo que tiene
+encima.** En ese caso el titular de `por_horario` es «En servicio» y la frase
+«Hay unidades corriendo esta ruta»: las dos salen de lo que vio el GPS, no de
+una declaración. «Según el concesionario» le atribuye ahí algo que medimos
+nosotros.
+
+**No es una esquina: es el circuito de producción de hoy.** Oasis–Centro tiene
+`declared_frequency_minutes` en `NULL` desde la `0031`, justo porque un 20
+heredado no era una declaración.
+
+Las dos salidas que se ven, y ninguna se tomó de paso:
+
+1. **Distinguir la rama**: con frecuencia declarada, «Según el concesionario»;
+   sin ella, un rótulo de la familia del instrumento — que hay que redactar, y
+   sin decir un tiempo.
+2. **Dejarlo así** y aceptar que en ese caso el rótulo atribuye de más.
+
+Queda como la decisión abierta de esta ficha.
 
 ### La valla
 
@@ -694,7 +723,8 @@ La escalera de siete ternarios anidados salió del JSX a
 leer si un renglón repite al de arriba**, y ésa es justo la comprobación que
 esta pantalla ya falló tres veces.
 
-Y la regla tiene prueba: para los tres estados declarados, el rótulo **no puede
+Y la regla tiene prueba: para los estados declarados, el rótulo **no puede
 contener** «horario», «frecuencia» ni «arranque» —los sustantivos que el titular
-ya dice— y **sí tiene que contener** «concesionario». Si alguien deshace
-cualquiera de las dos mitades, se cae ahí y no en producción.
+ya dice— y **sí tiene que contener** «concesionario». Una tercera prueba fija que
+**ningún rótulo nombra su modo**. Si alguien deshace cualquiera de las tres, se
+cae ahí y no en producción.

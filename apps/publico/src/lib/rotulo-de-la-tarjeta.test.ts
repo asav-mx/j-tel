@@ -13,13 +13,20 @@ const VIVO = {
   velocidadMedida: false,
 };
 
-const DECLARADOS: ModoDeLaTarjeta[] = ["por_arrancar", "fuera_de_horario", "sin_evidencia"];
+const DECLARADOS: ModoDeLaTarjeta[] = [
+  "por_arrancar",
+  "fuera_de_horario",
+  "sin_evidencia",
+  /* Entró el 4 de septiembre. Encima suya está la cadencia declarada; que haya
+     servicio —que eso sí lo vimos nosotros— lo dice la frase, no el rótulo. */
+  "por_horario",
+];
 
 describe("el rótulo dice de dónde sale la afirmación", () => {
   it("todo lo declarado se atribuye al concesionario, con la MISMA copia", () => {
     /*
-     * La fuente es la misma persona en los tres. Darle a cada uno su variante
-     * —«arranque declarado», «horario declarado»— insinuaría que hay tres
+     * La fuente es la misma persona en los cuatro. Darle a cada uno su variante
+     * —«arranque declarado», «horario declarado»— insinuaría que hay cuatro
      * fuentes distintas, y es por donde se coló la repetición del titular.
      */
     for (const modo of DECLARADOS) {
@@ -29,7 +36,7 @@ describe("el rótulo dice de dónde sale la afirmación", () => {
 
   it("NO REPITE LO QUE EL TITULAR YA DICE — la valla de esta regla", () => {
     /*
-     * Los tres sustantivos que el titular y la frase ya dicen en estos estados:
+     * Los sustantivos que el titular y la frase ya dicen en estos estados:
      * «Arranca 15 sep», «Abre 05:00», «05:00 a 23:00», «Cada 20 min». Si
      * alguno vuelve al rótulo, esto se cae — que es lo único que impide que la
      * corrección de hoy se deshaga sola dentro de tres pantallas.
@@ -82,6 +89,24 @@ describe("el rótulo dice de dónde sale la afirmación", () => {
     expect(rotuloDeLaTarjeta("en_vivo", { ...VIVO, hayProxima: false })).toBe(
       "En vivo · activa tu ubicación para el tiempo",
     );
+  });
+
+  it("NINGÚN RÓTULO NOMBRA SU MODO — eso es vocabulario nuestro, no del pasajero", () => {
+    /*
+     * «Por horario» era el último que lo hacía. Ninguno de los otros nombraba
+     * su estado, y por eso se iba de todas formas, con atribución o sin ella.
+     */
+    const todos: ModoDeLaTarjeta[] = [
+      "por_arrancar",
+      "fuera_de_horario",
+      "por_horario",
+      "sin_evidencia",
+    ];
+    for (const modo of todos) {
+      const r = rotuloDeLaTarjeta(modo, VIVO).toLowerCase();
+      expect(r, modo).not.toContain("por horario");
+      expect(r, modo).not.toContain("sin evidencia");
+    }
   });
 
   it("ningún estado se queda sin rótulo", () => {
