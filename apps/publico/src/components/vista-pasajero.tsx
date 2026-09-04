@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTema } from "@/lib/tema";
 import { useMiUbicacion } from "@/lib/ubicacion";
 import { iniciales, tinte } from "@/lib/color-ruta";
-import { rotuloDeLaTarjeta } from "@/lib/rotulo-de-la-tarjeta";
+import { minutosDesdeQueSeVio, rotuloDeLaTarjeta } from "@/lib/rotulo-de-la-tarjeta";
 import { useTinteDelMapa } from "@/lib/tinte-del-mapa";
 import { arranqueCorto, arranqueLargo } from "@/lib/fecha-arranque";
 import {
@@ -411,7 +411,10 @@ export function VistaPasajero({
      * confianza, que son las únicas de las que ya no se puede sostener nada.
      */
     for (const u of vivo.unidades) {
-      const min = Math.max(1, Math.round(u.antiguedad_seg / 60));
+      /* El MISMO redondeo que el rótulo de la tarjeta: hablan del mismo camión
+         en la misma pantalla, y «hace 6 min» arriba con «hace 7 min» abajo es
+         una contradicción que el pasajero sí ve. */
+      const min = minutosDesdeQueSeVio(u.antiguedad_seg);
       const cuerpo = u.fresco
         ? '<div style="width:30px;height:30px;background:var(--ambar);border:3px solid #fff;' +
           'border-radius:50%;box-shadow:0 3px 12px rgba(0,0,0,.4);display:flex;align-items:center;' +
@@ -491,6 +494,20 @@ export function VistaPasajero({
    * servicio no ha arrancado SIN decir cuándo: un día inventado manda a alguien
    * a la parada el día que no es, y en la pantalla no se ve nada raro.
    */
+  /*
+   * Hace cuántos minutos se vio la unidad MÁS RECIENTE de las publicadas.
+   *
+   * La más reciente y no cualquiera: el rótulo contesta «¿cuándo fue la última
+   * vez que se vio algo en esta ruta?», y tomar la más vieja de tres
+   * envejecería la respuesta sin razón. `null` cuando no hay ninguna —no pasa
+   * en POR HORARIO por construcción, porque ese estado exige una unidad en el
+   * corredor— y entonces el rótulo dice qué vimos sin inventar cuándo.
+   */
+  const vistoHaceMin = useMemo(() => {
+    const edades = (vivo?.unidades ?? []).map((u) => minutosDesdeQueSeVio(u.antiguedad_seg));
+    return edades.length ? Math.min(...edades) : null;
+  }, [vivo]);
+
   const arrancaCorto = vivo?.arranca_el ? arranqueCorto(vivo.arranca_el) : null;
   const arrancaLargo = vivo?.arranca_el ? arranqueLargo(vivo.arranca_el) : null;
   const pisoMin = Math.max(1, Math.round(forma.piso_rango_seg / 60));
@@ -717,19 +734,27 @@ export function VistaPasajero({
                  * distingue un circuito calibrado de uno que no lo está.
                  */
                 <>
-                  {cadaMin !== null ? (
-                    <>El servicio de esta ruta corre cada {cadaMin} minutos.</>
-                  ) : (
-                    /*
-                     * Hay evidencia de servicio y NO hay frecuencia declarada. Se
-                     * dice lo primero y se calla lo segundo: inventar una cadencia
-                     * para llenar el renglón es exactamente lo que este modo vino
-                     * a quitar.
-                     */
-                    <>Hay unidades corriendo esta ruta.</>
+                  {/*
+                    SIN CADENCIA DECLARADA, ESTA FRASE SE VA ENTERA.
+                    
+                    Decía «Hay unidades corriendo esta ruta», en presente, y en
+                    este estado eso promete de más: **no estamos viendo un camión
+                    ahorita** —si lo estuviéramos, el circuito estaría EN VIVO—,
+                    vimos uno dentro de la ventana de confianza. Cuándo lo vimos
+                    ya lo dice el rótulo, con su minuto y en pasado; repetirlo
+                    aquí sería la falta que el #376 acaba de quitar.
+                    
+                    Con cadencia sí hay algo que agregar, y no es nuestro: es lo
+                    que el concesionario declaró.
+                  */}
+                  {cadaMin !== null && (
+                    <>
+                      El servicio de esta ruta corre cada {cadaMin} minutos.
+                      {/* El espacio va explícito: pegado al texto lo come el formateador. */}
+                      {rangoActivo && " "}
+                    </>
                   )}
-                  {/* El espacio va explícito: pegado al texto lo puede comer el formateador. */}
-                  {rangoActivo && <>{" "}Verás el tiempo exacto en cuanto haya ubicación.</>}
+                  {rangoActivo && <>Verás el tiempo exacto en cuanto haya ubicación.</>}
                 </>
               ) : !conRango ? (
                 /*
@@ -764,11 +789,17 @@ export function VistaPasajero({
               <span className="p" />
               <span>
                 {rotuloDeLaTarjeta(modo, {
-                  conRango,
-                  hayProxima: proxima !== null,
-                  pisoMin,
-                  velocidadKmh: velocidad.kmh,
-                  velocidadMedida: velocidad.origen === "medida",
+                  /* De esto depende de QUIÉN es el titular en POR HORARIO, y
+                     por lo tanto quién firma el rótulo. Ver la regla en el lib. */
+                  hayFrecuenciaDeclarada: cadaMin !== null,
+                  vistoHaceMin,
+                  enVivo: {
+                    conRango,
+                    hayProxima: proxima !== null,
+                    pisoMin,
+                    velocidadKmh: velocidad.kmh,
+                    velocidadMedida: velocidad.origen === "medida",
+                  },
                 })}
               </span>
             </div>
