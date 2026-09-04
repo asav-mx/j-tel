@@ -26,6 +26,7 @@ import {
   type Sugerencia,
 } from "@/lib/buscar-lugar";
 import type { SalidaDelBuscador } from "@/lib/salida-del-buscador";
+import { useTinteDelMapa } from "@/lib/tinte-del-mapa";
 
 /**
  * «¿A dónde vas?» — el buscador honesto.
@@ -107,6 +108,12 @@ export function Buscador({
   const [picando, setPicando] = useState<"origen" | "destino" | null>(null);
 
   const contenedor = useRef<HTMLDivElement>(null);
+  /*
+   * El mapa se crea en un efecto asíncrono, así que «ya hay mapa» es un HECHO
+   * QUE OCURRE DESPUÉS del primer render — y hay efectos que dependen de él.
+   * Como referencia no serviría: una referencia no vuelve a correr nada.
+   */
+  const [mapaListo, setMapaListo] = useState(false);
   const mapa = useRef<import("leaflet").Map | null>(null);
   const L = useRef<typeof import("leaflet") | null>(null);
   const capaViaje = useRef<import("leaflet").LayerGroup | null>(null);
@@ -227,23 +234,19 @@ export function Buscador({
       capaViaje.current = leaflet.layerGroup().addTo(m);
       m.on("click", (e) => alPicar.current(e.latlng.lat, e.latlng.lng));
       mapa.current = m;
+      setMapaListo(true);
     })();
     return () => {
       montado = false;
       mapa.current?.remove();
       mapa.current = null;
+      setMapaListo(false);
     };
   }, [circuitos]);
 
-  /* Mismo teñido que la vista de la ruta, y a la CAPA DE TESELAS: aplicado al
-     contenedor invertiría también el color de cada ruta, que viene del dato. */
-  useEffect(() => {
-    const pane = contenedor.current?.querySelector<HTMLElement>(".leaflet-tile-pane");
-    if (!pane) return;
-    pane.style.filter = deNoche
-      ? "invert(1) hue-rotate(185deg) brightness(.82) contrast(.92) saturate(.7)"
-      : "saturate(.72) brightness(1.03)";
-  }, [deNoche, circuitos]);
+  /* El mismo teñido que la vista de la ruta, y ahora literalmente el mismo: una
+     sola copia en `lib/`. Ver ahí por qué depende de que YA HAYA MAPA. */
+  useTinteDelMapa(contenedor, deNoche, mapaListo);
 
   useEffect(() => {
     alPicar.current = (lat: number, lon: number) => {
