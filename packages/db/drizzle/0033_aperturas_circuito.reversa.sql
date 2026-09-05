@@ -1,0 +1,24 @@
+-- Marcha atrás de la 0033.
+--
+-- Devuelve el esquema al estado exacto anterior: la 0033 sólo agrega una tabla
+-- y no escribe en ninguna existente.
+--
+-- ⚠ LO QUE SE PIERDE: las aperturas ya contadas. **No se pueden reconstruir de
+-- ninguna otra fuente** — no hay bitácora de peticiones de donde derivarlas, y
+-- ésa es una consecuencia querida del diseño, no un descuido: lo único que se
+-- guarda de una apertura es esta fila.
+--
+-- Antes de correr esto, si el número importa, léelo y anótalo:
+--
+--   SELECT c.public_slug, o.local_date,
+--          count(*) AS aparatos_distinguibles,
+--          sum(o.open_count) AS crudo
+--     FROM circuit_opens o JOIN circuits c ON c.id = o.circuit_id
+--    GROUP BY 1, 2 ORDER BY 2 DESC, 1;
+--
+-- El código que lee la tabla deja de compilar: primero se revierte el
+-- despliegue, después la base. Con el código nuevo desplegado y la tabla fuera,
+-- el expediente del circuito truena — la app del pasajero no, porque la
+-- apertura se escribe sin bloquear la pantalla.
+
+DROP TABLE IF EXISTS circuit_opens;

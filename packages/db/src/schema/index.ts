@@ -1182,6 +1182,69 @@ export const circuits = pgTable(
   ],
 );
 
+/**
+ * **Aperturas de la app, por día y por circuito.** El contador anónimo.
+ *
+ * Una fila = un aparato distinguible que abrió esta ruta ese día. La rotación
+ * diaria de la huella es lo que impide que esto se vuelva otra cosa: **no se
+ * puede seguir a un aparato entre días**, así que de aquí no sale «cuántos
+ * volvieron» ni por accidente ni a propósito. Medir regresos sería otro
+ * producto, con su propio consentimiento.
+ *
+ * ## Nada de esto se guarda en el teléfono
+ *
+ * Ni cookie, ni `localStorage`, ni identificador que viaje. La huella la deriva
+ * el servidor de lo que la petición ya trae —IP y agente— con
+ * `huellaDeApertura`, y por eso el aparato no tiene que recordar nada para que
+ * su segunda apertura del día no cuente dos veces.
+ *
+ * ## Dos cifras, y sólo una se enseña
+ *
+ * `open_count` es el crudo: cuántas veces se abrió desde esa misma huella ese
+ * día. **No se enseña**, y no es un dato de reserva: es el detector. El
+ * `Procedimiento-Firewall-Publico` dejó escrito que el límite de tasa «no
+ * protege contra un raspado lento y distribuido», y **la distancia entre el
+ * crudo y las filas es la única señal que queda**: un guion inflando el crudo
+ * sin mover el conteo de filas es exactamente lo que se ve desde aquí.
+ *
+ * Presentar el crudo como uso sería el error que este contador vino a evitar.
+ * Guardarlo y callarlo es lo contrario: la pantalla enseña lo que se sostiene y
+ * el instrumento conserva con qué dudar de sí mismo.
+ */
+export const circuitOpens = pgTable(
+  "circuit_opens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    circuitId: uuid("circuit_id")
+      .notNull()
+      .references(() => circuits.id, { onDelete: "cascade" }),
+    /**
+     * El día CIVIL DEL CIRCUITO, no el del servidor. Es la misma fecha con la
+     * que rota la huella, así que si aquí se guardara otra, la unicidad de abajo
+     * dejaría de corresponder con lo que la huella distingue.
+     */
+    localDate: date("local_date").notNull(),
+    /** HMAC del día, la ruta y lo que la petición ya traía. Ver `huellaDeApertura`. */
+    fingerprint: text("fingerprint").notNull(),
+    /** El crudo. Se guarda, no se enseña — ver el encabezado. */
+    openCount: integer("open_count").notNull().default(1),
+    firstOpenAt: timestamp("first_open_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    lastOpenAt: timestamp("last_open_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    /* La deduplicación vive EN LA BASE y no en el código que inserta: es lo que
+       hace que dos peticiones simultáneas del mismo aparato no produzcan dos
+       filas, y lo que convierte «contar filas» en una definición y no en una
+       esperanza. */
+    uniqueIndex("circuit_opens_un_dia").on(table.circuitId, table.localDate, table.fingerprint),
+    index("circuit_opens_resumen_idx").on(table.circuitId, table.localDate),
+  ],
+);
+
 /** El trazado de un sentido. Uno por sentido: ida y vuelta no son espejo. */
 export const circuitPaths = pgTable(
   "circuit_paths",

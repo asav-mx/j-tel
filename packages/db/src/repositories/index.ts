@@ -66,6 +66,7 @@ import {
   clientCarrierAuthorizations,
   livePositions,
   circuits,
+  circuitOpens,
   circuitPaths,
   circuitStops,
   circuitStopVersions,
@@ -5591,6 +5592,75 @@ export class CircuitRepository {
       .from(circuits)
       .where(isNotNull(circuits.publishedAt))
       .orderBy(circuits.name);
+  }
+
+  /**
+   * Registra UNA apertura de la app, deduplicando por aparato y por día.
+   *
+   * **La deduplicación la hace la BASE, no este código**, y es deliberado:
+   * entre un `SELECT` y un `INSERT` cabe la otra petición del mismo aparato
+   * —dos pestañas, un reintento de red— y saldrían dos filas donde hubo un
+   * aparato. Con el índice único y `ON CONFLICT`, el segundo intento incrementa
+   * en vez de insertar, y «contar filas» sigue siendo una definición.
+   *
+   * El `open_count` que incrementa es el crudo, y **no se enseña**: es la señal
+   * de raspado. Ver el encabezado de la tabla.
+   */
+  async registrarApertura(entrada: {
+    circuitId: string;
+    localDate: string;
+    fingerprint: string;
+  }) {
+    await this.db
+      .insert(circuitOpens)
+      .values({
+        circuitId: entrada.circuitId,
+        localDate: entrada.localDate,
+        fingerprint: entrada.fingerprint,
+      })
+      .onConflictDoUpdate({
+        target: [circuitOpens.circuitId, circuitOpens.localDate, circuitOpens.fingerprint],
+        set: {
+          openCount: sql`${circuitOpens.openCount} + 1`,
+          lastOpenAt: new Date(),
+        },
+      });
+  }
+
+  /**
+   * El resumen por día de un circuito: cuántos aparatos distinguibles y cuántas
+   * veces en crudo.
+   *
+   * Devuelve **sólo los días que tienen filas**, y quien lo lee arma la serie:
+   * un día sin filas no es lo mismo antes y después de que el contador
+   * existiera, y esa distinción no la puede hacer una consulta. Ver
+   * `resumen-de-aperturas.ts`.
+   */
+  async resumenDeAperturas(circuitId: string, desde: string) {
+    return this.db
+      .select({
+        localDate: circuitOpens.localDate,
+        aparatos: count(),
+        crudo: sql<number>`sum(${circuitOpens.openCount})::int`,
+      })
+      .from(circuitOpens)
+      .where(and(eq(circuitOpens.circuitId, circuitId), gte(circuitOpens.localDate, desde)))
+      .groupBy(circuitOpens.localDate)
+      .orderBy(desc(circuitOpens.localDate));
+  }
+
+  /**
+   * El primer día con registro de este circuito. **Es lo que separa un cero de
+   * un hueco**: antes de esa fecha el contador no existía para esta ruta, y
+   * dibujar «0 aperturas» ahí afirmaría que nadie abrió cuando lo cierto es que
+   * nadie estaba contando. `null` si nunca se ha registrado ninguna.
+   */
+  async primerDiaConAperturas(circuitId: string): Promise<string | null> {
+    const [fila] = await this.db
+      .select({ dia: sql<string | null>`min(${circuitOpens.localDate})` })
+      .from(circuitOpens)
+      .where(eq(circuitOpens.circuitId, circuitId));
+    return fila?.dia ?? null;
   }
 
   /** Prende o apaga la publicación. Apagar no borra nada del circuito. */

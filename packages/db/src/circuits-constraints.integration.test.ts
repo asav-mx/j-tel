@@ -222,6 +222,66 @@ describe("la fecha de arranque, desde la 0032", () => {
   });
 });
 
+describe("el contador de aperturas, desde la 0033", () => {
+  const hoy = "2026-09-05";
+  const huella = () => `h-${Math.random().toString(16).slice(2)}`;
+
+  it("EL MISMO APARATO DOS VECES ES UNA FILA, y el crudo sube", async () => {
+    /*
+     * Es la definición entera del contador: «aparatos distinguibles» = filas.
+     * La deduplicación vive en el índice único de la base y no en el código que
+     * inserta, porque entre un SELECT y un INSERT cabe la otra petición del
+     * mismo aparato — dos pestañas, un reintento de red.
+     */
+    const h = huella();
+    await repos.circuits.registrarApertura({ circuitId: circuitoId, localDate: hoy, fingerprint: h });
+    await repos.circuits.registrarApertura({ circuitId: circuitoId, localDate: hoy, fingerprint: h });
+    await repos.circuits.registrarApertura({ circuitId: circuitoId, localDate: hoy, fingerprint: h });
+
+    const resumen = await repos.circuits.resumenDeAperturas(circuitoId, hoy);
+    const dia = resumen.find((r) => r.localDate === hoy);
+    expect(dia?.aparatos).toBe(1);
+    // El crudo se guarda y no se enseña: es la señal de raspado.
+    expect(dia?.crudo).toBe(3);
+  });
+
+  it("dos aparatos distintos el mismo día son dos filas", async () => {
+    const dia = "2026-09-06";
+    await repos.circuits.registrarApertura({ circuitId: circuitoId, localDate: dia, fingerprint: huella() });
+    await repos.circuits.registrarApertura({ circuitId: circuitoId, localDate: dia, fingerprint: huella() });
+    const resumen = await repos.circuits.resumenDeAperturas(circuitoId, dia);
+    expect(resumen.find((r) => r.localDate === dia)?.aparatos).toBe(2);
+  });
+
+  it("la misma huella en DÍAS distintos son dos filas — el día es parte de la llave", async () => {
+    /*
+     * En la vida real esto no pasa —la huella lleva el día adentro y rota con
+     * él—, y la llave lo sostiene igual: si algún día alguien quitara el día del
+     * HMAC, los dos días seguirían contándose por separado en vez de fundirse.
+     */
+    const h = huella();
+    await repos.circuits.registrarApertura({ circuitId: circuitoId, localDate: "2026-09-07", fingerprint: h });
+    await repos.circuits.registrarApertura({ circuitId: circuitoId, localDate: "2026-09-08", fingerprint: h });
+    const resumen = await repos.circuits.resumenDeAperturas(circuitoId, "2026-09-07");
+    expect(resumen.filter((r) => r.aparatos === 1).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("el primer día con registro es el que separa un cero de un hueco", async () => {
+    const primero = await repos.circuits.primerDiaConAperturas(circuitoId);
+    expect(primero).toBe(hoy);
+  });
+
+  it("un circuito sin ninguna apertura devuelve null, nunca una fecha inventada", async () => {
+    const nuevo = await repos.circuits.createCircuit({
+      concessionAccountId: concesionId,
+      name: `Sin aperturas ${Date.now()}`,
+      publicSlug: `sin-aperturas-${Date.now()}`,
+    });
+    expect(await repos.circuits.primerDiaConAperturas(nuevo.id)).toBeNull();
+    expect(await repos.circuits.resumenDeAperturas(nuevo.id, "2026-01-01")).toEqual([]);
+  });
+});
+
 describe("circuits_confianza_positiva", () => {
   it("rechaza el cero: sin ventana, POR HORARIO no existiría nunca", async () => {
     const quien = await violacion(() =>
