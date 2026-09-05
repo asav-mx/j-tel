@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   idPublicoDelDia,
   fechaLocalDelCircuito,
+  huellaDeApertura,
   enHorarioDeServicio,
   yaArrancoElServicio,
   antiguedadSegundos,
@@ -52,6 +53,69 @@ describe("id público del día", () => {
     const instante = new Date("2026-08-28T05:30:00.000Z");
     expect(fechaLocalDelCircuito(instante, JUAREZ)).toBe("2026-08-27");
     expect(fechaLocalDelCircuito(instante, "UTC")).toBe("2026-08-28");
+  });
+});
+
+describe("la huella de una apertura", () => {
+  const base = {
+    ip: "189.203.10.4",
+    agente: "Mozilla/5.0 (Linux; Android 11)",
+    fechaLocal: "2026-09-05",
+    circuitoId: "circuito-1",
+    secreto: LLAVE,
+  };
+
+  it("el mismo aparato, el mismo día y la misma ruta dan la misma huella", () => {
+    // Es lo que permite contar aparatos distinguibles en vez de peticiones.
+    expect(huellaDeApertura(base)).toBe(huellaDeApertura({ ...base }));
+  });
+
+  it("ROTA CADA DÍA: nadie puede seguir a un aparato entre días", () => {
+    /*
+     * No es una limitación pendiente de resolver: es la decisión. Medir
+     * regresos sería otro producto, con su propio consentimiento.
+     */
+    expect(huellaDeApertura({ ...base, fechaLocal: "2026-09-06" })).not.toBe(
+      huellaDeApertura(base),
+    );
+  });
+
+  it("no se puede cruzar entre rutas: el circuito entra al mensaje", () => {
+    expect(huellaDeApertura({ ...base, circuitoId: "circuito-2" })).not.toBe(
+      huellaDeApertura(base),
+    );
+  });
+
+  it("dos aparatos distintos dan huellas distintas", () => {
+    expect(huellaDeApertura({ ...base, ip: "189.203.10.5" })).not.toBe(huellaDeApertura(base));
+    expect(huellaDeApertura({ ...base, agente: "otro" })).not.toBe(huellaDeApertura(base));
+  });
+
+  it("sin la llave NO produce una huella recalculable: revienta", () => {
+    // Los insumos son adivinables —agentes comunes, rangos de IP públicos—, así
+    // que sin llave cualquiera podría deshacer el anonimato.
+    expect(() => huellaDeApertura({ ...base, secreto: "" })).toThrow(/llave/i);
+  });
+
+  it("con otra llave da otra huella", () => {
+    expect(huellaDeApertura({ ...base, secreto: "otra-llave" })).not.toBe(huellaDeApertura(base));
+  });
+
+  it("LOS SEPARADORES IMPORTAN: dos insumos distintos no colisionan por concatenación", () => {
+    /*
+     * Sin separador, `ip="a" agente="bc"` y `ip="ab" agente="c"` producirían el
+     * mismo mensaje y la misma huella — dos aparatos contados como uno, por
+     * construcción y sin que nada se rompa.
+     */
+    const uno = huellaDeApertura({ ...base, ip: "a", agente: "bc" });
+    const otro = huellaDeApertura({ ...base, ip: "ab", agente: "c" });
+    expect(uno).not.toBe(otro);
+  });
+
+  it("no devuelve la entrada: es opaca y de largo fijo", () => {
+    const h = huellaDeApertura(base);
+    expect(h).toMatch(/^[0-9a-f]{32}$/);
+    expect(h).not.toContain(base.ip);
   });
 });
 

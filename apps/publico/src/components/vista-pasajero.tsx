@@ -173,6 +173,35 @@ export function VistaPasajero({
     }
   }, [forma.circuito_id]);
 
+  /*
+   * LA APERTURA, una sola vez por vez que se abre la pantalla.
+   *
+   * Dispara y sigue: no espera la respuesta, no la lee y no cambia nada de lo
+   * que el pasajero ve. Si falla, falla en silencio — un contador no rompe una
+   * pantalla, y un pasajero parado en la banqueta no tiene por qué enterarse de
+   * que no pudimos contarlo.
+   *
+   * **No guarda nada en el teléfono**, y por eso no hay aquí ninguna marca de
+   * «ya lo mandé»: quien deduplica es el servidor, con una huella que deriva de
+   * lo que la petición ya trae y que rota cada día.
+   *
+   * La referencia sí hace falta, y es otra cosa: en desarrollo React monta dos
+   * veces, y ese segundo disparo no crearía un aparato de más —el servidor lo
+   * deduplica— pero sí inflaría el crudo, que es justamente la señal de raspado.
+   * Ensuciar el detector es peor que no tenerlo.
+   */
+  const aperturaMandada = useRef(false);
+  useEffect(() => {
+    if (aperturaMandada.current) return;
+    aperturaMandada.current = true;
+    void fetch(`/api/circuitos/${forma.circuito_id}/apertura`, {
+      method: "POST",
+      keepalive: true,
+    }).catch(() => {
+      /* Un contador no rompe una pantalla. */
+    });
+  }, [forma.circuito_id]);
+
   useEffect(() => {
     let t: ReturnType<typeof setInterval> | null = null;
     const arrancar = () => {

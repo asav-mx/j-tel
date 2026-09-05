@@ -33,6 +33,49 @@ export function idPublicoDelDia(unitId: string, fechaLocal: string, secreto: str
   return createHmac("sha256", secreto).update(`${unitId}:${fechaLocal}`).digest("hex").slice(0, 12);
 }
 
+/**
+ * La huella de una APERTURA de la app, para un día y un circuito.
+ *
+ * Contesta una sola pregunta —«¿cuántos aparatos distinguibles abrieron esta
+ * ruta hoy?»— y está construida para no poder contestar ninguna otra.
+ *
+ * **Rota cada día, como `idPublicoDelDia` y por la misma razón.** El día entra
+ * al mensaje, así que la huella de mañana no se parece a la de hoy: nadie puede
+ * seguir a un aparato entre días ni armar «cuántos volvieron». Eso no es una
+ * limitación que haya que resolver después — es la decisión, y medir regresos
+ * sería otro producto con su propio consentimiento, no una puerta trasera de
+ * éste.
+ *
+ * **El circuito también entra**, así que el mismo teléfono abriendo dos rutas
+ * cuenta en cada una y no se puede cruzar entre ellas.
+ *
+ * **HMAC y no un hash a secas.** Los insumos son adivinables —hay pocos agentes
+ * comunes y los rangos de IP son públicos—, así que sin la llave cualquiera con
+ * una lista de direcciones podría recalcular la huella y deshacer el anonimato.
+ *
+ * ⚠ **Lo que esta huella NO puede prometer, y por eso el rótulo lo dice:** que
+ * dos aparatos distintos den huellas distintas. Detrás de un NAT móvil —que en
+ * Juárez es el caso normal, no la excepción— media colonia sale con la misma IP,
+ * y con el mismo modelo de teléfono sale con el mismo agente. **Subcuenta a
+ * propósito**: es lo único que el servidor puede sostener sin guardar nada en el
+ * teléfono.
+ */
+export function huellaDeApertura(entrada: {
+  ip: string;
+  agente: string;
+  fechaLocal: string;
+  circuitoId: string;
+  secreto: string;
+}): string {
+  if (!entrada.secreto) {
+    throw new Error("huellaDeApertura necesita una llave: sin ella la huella no es opaca");
+  }
+  /* Los separadores no son adorno: sin ellos, dos insumos distintos pueden
+     concatenarse a la misma cadena y colisionar por construcción. */
+  const mensaje = [entrada.ip, entrada.agente, entrada.fechaLocal, entrada.circuitoId].join("\n");
+  return createHmac("sha256", entrada.secreto).update(mensaje).digest("hex").slice(0, 32);
+}
+
 /** La fecha civil del circuito, que es la que hace rotar el identificador. */
 export function fechaLocalDelCircuito(ahora: Date, zona: string): string {
   return localDateIso(ahora, zona);

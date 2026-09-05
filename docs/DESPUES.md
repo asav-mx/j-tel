@@ -2625,8 +2625,21 @@ camión. Pedir registro antes de haber dado algo de valor es la forma más rápi
 de que la app no se use. La cuenta se agrega **encima** de una app que ya tiene
 uso, no debajo de una que todavía no lo tiene.
 
-**Qué lo desbloquea.** Uso real medido: gente escaneando QRs y volviendo. Antes
-de eso no hay a quién ofrecerle una cuenta.
+**Qué lo desbloquea — corregido el 5 de septiembre de 2026.** Decía «uso real
+medido: gente escaneando QRs y **volviendo**», y esa frase ya no describe lo que
+el sistema mide ni lo que va a medir.
+
+El contador anónimo del arranque (`Ficha-Contador-Anonimo.md`) mide **aperturas,
+no regresos**, y no es una versión reducida en espera de la buena: la huella
+rota cada día precisamente para que un aparato no se pueda seguir entre días.
+**Los regresos no se pueden medir sin deshacer esa decisión.**
+
+Así que lo que desbloquea esto es lo que sí medimos: **aperturas sostenidas en
+el tiempo** — aparatos distinguibles abriendo la app día tras día, con la
+tendencia leída sobre días comparables y sabiendo que el número subcuenta detrás
+de un NAT. Si en algún momento hiciera falta medir regresos de verdad, **es su
+propia decisión, con su propio consentimiento, y no una puerta trasera del
+contador anónimo.**
 
 **Dónde toca.** Y qué del diseño de hoy la mantiene abierta: el endpoint público
 es **de solo lectura y sin estado**, así que una capa autenticada se pone al lado

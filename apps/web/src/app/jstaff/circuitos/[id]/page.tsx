@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { localDateIso, localDateTimeShort } from "@jtel/domain";
+import { addDaysIso, localDateIso, localDateTimeShort } from "@jtel/domain";
+import {
+  aperturasDeHoy,
+  DIAS_DEL_RESUMEN,
+  hayRegistro,
+  LO_QUE_CUENTA,
+  serieDeAperturas,
+  type DiaDeAperturas,
+} from "@/lib/resumen-de-aperturas";
 import { CircuitoEditor } from "@/components/circuito-editor";
 import { CircuitoUnidades } from "@/components/circuito-unidades";
 import { getRepos } from "@/lib/db";
@@ -82,13 +90,33 @@ export default async function ExpedienteDelCircuitoPage({
   const circuito = await repos.circuits.getCircuit(id);
   if (!circuito) notFound();
 
-  const [concesion, trazados, paradas, asignaciones, asignables] = await Promise.all([
-    repos.accounts.findById(circuito.concessionAccountId),
-    repos.circuits.getPaths(id),
-    repos.circuits.listStopsVigentes(id),
-    repos.circuits.listAssignments(id),
-    repos.circuits.listUnidadesAsignables(circuito.concessionAccountId),
-  ]);
+  /*
+   * Hoy EN LA ZONA DEL CIRCUITO, y una sola vez para los dos que lo usan: la
+   * lectura del arranque —que tiene que decir lo mismo que decide el endpoint—
+   * y la serie de aperturas, que se guardó con esa misma fecha.
+   *
+   * Con el reloj del servidor, un circuito de otra zona enseñaría la serie
+   * corrida un día y el renglón de «hoy» sería el de ayer, sin que nada se
+   * rompa.
+   */
+  const hoyLocal = localDateIso(new Date(), circuito.timeZone);
+
+  const [concesion, trazados, paradas, asignaciones, asignables, aperturas, primerDia] =
+    await Promise.all([
+      repos.accounts.findById(circuito.concessionAccountId),
+      repos.circuits.getPaths(id),
+      repos.circuits.listStopsVigentes(id),
+      repos.circuits.listAssignments(id),
+      repos.circuits.listUnidadesAsignables(circuito.concessionAccountId),
+      repos.circuits.resumenDeAperturas(id, addDaysIso(hoyLocal, -(DIAS_DEL_RESUMEN - 1))),
+      repos.circuits.primerDiaConAperturas(id),
+    ]);
+
+  const serie = serieDeAperturas({
+    hoyLocal,
+    filas: aperturas.map((a) => ({ localDate: a.localDate, aparatos: a.aparatos })),
+    primerDiaConRegistro: primerDia,
+  });
 
   const publicado = circuito.publishedAt !== null;
   const rangoEncendido = circuito.arrivalRangeEnabledAt !== null;
@@ -103,13 +131,6 @@ export default async function ExpedienteDelCircuitoPage({
     arrancaEl: circuito.serviceLaunchDate,
     zona: circuito.timeZone,
   });
-
-  /*
-   * Hoy EN LA ZONA DEL CIRCUITO, que es con la que el endpoint decide si el
-   * servicio ya arrancó. Con el reloj del servidor, la pantalla diría una cosa
-   * y la app haría otra durante las horas en que las dos fechas no coinciden.
-   */
-  const hoyLocal = localDateIso(new Date(), circuito.timeZone);
 
   return (
     <main className="min-h-screen bg-[var(--fondo)] px-4 pt-4 pb-16 sm:px-6">
@@ -156,6 +177,7 @@ export default async function ExpedienteDelCircuitoPage({
           rangoDesde={circuito.arrivalRangeEnabledAt}
           zona={circuito.timeZone}
           faltantes={faltantes}
+          aperturas={serie}
         />
 
         <LoQueDeclara
@@ -270,6 +292,7 @@ function IdentidadYPublicacion({
   rangoDesde,
   zona,
   faltantes,
+  aperturas,
 }: {
   circuitoId: string;
   nombre: string;
@@ -281,6 +304,7 @@ function IdentidadYPublicacion({
   rangoDesde: Date | null;
   zona: string;
   faltantes: ReturnType<typeof faltantesDelCircuito>;
+  aperturas: DiaDeAperturas[];
 }) {
   return (
     <Seccion
@@ -367,6 +391,13 @@ function IdentidadYPublicacion({
           textoBoton={rangoEncendido ? "Apagar el tiempo estimado" : "Encender el tiempo estimado"}
         />
       </div>
+
+      {/*
+        LA LECTURA VA AQUÍ Y NO EN UNA SECCIÓN PROPIA, porque contesta la
+        pregunta que esta sección ya hace: «y si ya lo ve alguien». Una sección
+        seis para cuatro renglones habría prometido un tablero que no existe.
+      */}
+      <Aperturas serie={aperturas} />
 
       {/*
         Lo que le falta se ENUNCIA, no se bloquea. Publicar sin trazado es
@@ -467,6 +498,72 @@ function Interruptor({
           {textoBoton}
         </button>
       </form>
+    </div>
+  );
+}
+
+/**
+ * El contador anónimo, leído. **Lo único de esta pantalla que no se configura.**
+ *
+ * Enseña UN número —aparatos distinguibles— con lo que ese número no es pegado
+ * al lado. El crudo se guarda y no sale: es la señal de raspado, no una cifra de
+ * uso, y presentarlo aquí sería exactamente el error que el contador vino a
+ * evitar.
+ *
+ * Y un día sin registro se dibuja como hueco, nunca como cero: antes de que el
+ * contador existiera para esta ruta, un «0» afirmaría que nadie abrió la app
+ * cuando lo cierto es que nadie estaba contando.
+ */
+function Aperturas({ serie }: { serie: DiaDeAperturas[] }) {
+  const hoy = aperturasDeHoy(serie);
+
+  return (
+    <div className="mt-4 border-t border-[var(--linea-tenue)] pt-3">
+      <h3 className={`${mono} text-[11px] tracking-[.11em] text-[var(--tenue)] uppercase`}>
+        Aperturas de la app
+      </h3>
+
+      {!hayRegistro(serie) ? (
+        /*
+          Se dice UNA vez, en vez de dibujar siete renglones de huecos que ocupan
+          espacio para no decir nada. Es el estado del día que esto se despliega.
+        */
+        <p className="mt-2 text-[12.5px] leading-snug text-[var(--tenue)]">
+          Todavía no se ha registrado ninguna apertura de este circuito.
+        </p>
+      ) : (
+        <>
+          <p className="mt-2 flex items-baseline gap-2">
+            <span className="text-[30px] leading-none font-extrabold tracking-[-.02em] text-[var(--acero)] tabular-nums">
+              {hoy === null ? "—" : hoy}
+            </span>
+            <span className={`${mono} text-[12.5px] text-[var(--tenue)]`}>hoy</span>
+          </p>
+
+          <ul className="mt-3 space-y-1">
+            {serie.slice(1).map((d) => (
+              <li key={d.fecha} className="flex flex-wrap gap-x-2 text-[12.5px] leading-snug">
+                <span className={`${mono} shrink-0 text-[var(--tenue)] tabular-nums`}>
+                  {d.fecha}
+                </span>
+                {d.aparatos === null ? (
+                  /* Hueco declarado: ese día no se estaba contando. */
+                  <span className="text-[var(--tenue)]">sin registro</span>
+                ) : (
+                  <span className={`${mono} text-[var(--acero)] tabular-nums`}>{d.aparatos}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {/*
+        El rótulo va pegado a la cifra y no al pie en chico. Las dos advertencias
+        son de la misma clase —el número no vale como personas ni como uso
+        limpio— y separarlas dejaría a la cifra sola con la mitad de su lectura.
+      */}
+      <p className="mt-2 text-[12px] leading-snug text-[var(--tenue)]">{LO_QUE_CUENTA}</p>
     </div>
   );
 }
