@@ -222,7 +222,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Los 30 s del recolector son un límite de la plataforma](#los-30-s-del-recolector-son-un-límite-de-la-plataforma) | Cuando llegue el fierro propio |
 | [La velocidad sin calibrar viaja al teléfono con el interruptor apagado](#la-velocidad-sin-calibrar-viaja-al-teléfono-con-el-interruptor-apagado) | Cuando los dos cachés se igualen |
 | [El buscador no entiende calle y número](#el-buscador-no-entiende-calle-y-número) | Cuando emparejar direcciones no exija sacar el destino del teléfono |
-| [¿Sigue siendo exacta «no se envía a ningún servidor»?](#sigue-siendo-exacta-no-se-envía-a-ningún-servidor) | **Pregunta abierta · después del 10** |
+| [¿Sigue siendo exacta «no se envía a ningún servidor»?](#sigue-siendo-exacta-no-se-envía-a-ningún-servidor) | ✅ **Contestada el 6 de septiembre**: la frase se retiró |
 | [El pasajero como usuario](#el-pasajero-como-usuario) | Cuando la app tenga uso real |
 | [Sensores más allá del GPS](#sensores-más-allá-del-gps) | Cuando exista la suite del concesionario |
 | [Mapas de demanda](#mapas-de-demanda) | Después de los sensores |
@@ -2727,11 +2727,18 @@ salida.
 
 **Es la misma forma que la fuga del interruptor del rango.** Ahí la condición
 estaba escrita en el titular y faltaba en otros cuatro lugares que también
-afirmaban un tiempo; aquí la regla está escrita en la vista de la ruta —«tu
-ubicación se usa solo en este teléfono»— y una pantalla nueva podría dejar de
-cumplirla sin contradecir ninguna línea existente. Por eso la puerta se cierra
-por construcción y no por disciplina: **no hay ninguna petición de red en el
-camino de la búsqueda**, así que no hay una que revisar.
+afirmaban un tiempo; aquí una pantalla nueva podría dejar de cumplir la regla
+sin contradecir ninguna línea existente. Por eso la puerta se cierra por
+construcción y no por disciplina: **no hay ninguna petición de red en el camino
+de la búsqueda**, así que no hay una que revisar.
+
+⚠ **Corregido el 6 de septiembre de 2026.** Este párrafo decía que la regla
+estaba escrita en la vista de la ruta, y citaba «tu ubicación se usa solo en este
+teléfono». **Esa frase ya no existe en la pantalla** —ver
+`Ficha-Textos-De-Privacidad.md`—, así que la regla vive hoy en los encabezados de
+los dos componentes y en esa ficha, no en algo que el pasajero lea. Es un
+guardián menos, y por eso el argumento de arriba —cerrar por construcción— pesa
+más que antes, no menos.
 
 **Lo que cuesta hoy, dicho en voz alta.** El límite se declara en la pantalla
 —«todavía no entendemos calle y número»— en vez de dejar que el pasajero crea que
@@ -2763,6 +2770,22 @@ es el único lugar por donde pasaría), `apps/publico/src/components/buscador.ts
 sirve las paradas de los circuitos publicados y serviría también el índice).
 
 ## ¿Sigue siendo exacta «no se envía a ningún servidor»?
+
+> ✅ **CONTESTADA el 6 de septiembre de 2026, y antes del arranque. La frase se
+> retiró.** No se escogió ninguna de las tres salidas de abajo: se tomó una
+> cuarta —**describir el para qué en vez de jurar el dónde**— porque las tres
+> suponían que la promesa se conservaba de alguna forma.
+>
+> Los textos quedaron en «Tu ubicación se usa para calcular cuándo llega tu
+> camión» y «A dónde vas y dónde estás se usan para contestarte». **El
+> comportamiento no cambió**: la petición que mandaría la ubicación sigue sin
+> existir. Con su costo escrito —la regla deja de estar donde el pasajero la
+> lee— y su valla, en `Ficha-Textos-De-Privacidad.md`.
+>
+> Lo que sigue abierto es sólo lo técnico: servir los mosaicos desde nuestro
+> propio origen, ahora **sin la urgencia de sostener una frase**.
+
+**Lo de abajo es el planteamiento original, y se conserva como quedó escrito.**
 
 **Qué es. Es una pregunta, no una tarea, y se anota como pregunta a propósito.**
 La app le dice al pasajero, en dos pantallas, que su ubicación *«se usa solo en
