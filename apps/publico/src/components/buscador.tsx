@@ -483,9 +483,10 @@ export function Buscador({
           Buscamos por nombre de parada y de ruta. <strong>Todavía no entendemos calle y
           número</strong> — para cualquier otro lugar, pícalo en el mapa.
         </p>
-        <p className="promesa">
-          A dónde vas y dónde estás se usan solo en este teléfono. No se envían a ningún servidor.
-        </p>
+        {/* Misma regla que en la vista de la ruta: el para qué, no el dónde. Ver
+            `docs/Ficha-Textos-De-Privacidad.md`. El destino sigue sin salir del
+            teléfono — la petición que lo mandaría no existe. */}
+        <p className="promesa">A dónde vas y dónde estás se usan para contestarte.</p>
       </div>
     </div>
   );
