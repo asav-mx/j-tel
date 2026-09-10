@@ -20,8 +20,33 @@ const sql = postgres(process.env.DATABASE_URL, { max: 1 });
 
 await sql.unsafe('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
 
+/*
+ * Las marchas atrás NO son migraciones, y hasta hoy se aplicaban.
+ *
+ * Este guion tomaba todo `.sql` de la carpeta en orden de nombre, y
+ * `0034_credenciales_gps.reversa.sql` ordena ANTES que
+ * `0034_credenciales_gps.sql` —punto, `r` antes que `s`—. O sea cada marcha
+ * atrás corría justo antes de la migración que deshace.
+ *
+ * **Nunca rompió por suerte, no por diseño.** Todas las reversas escritas hasta
+ * ahora son `DROP ... IF EXISTS` o `DROP COLUMN IF EXISTS`, así que correrlas
+ * contra una base donde su migración todavía no pasó es un no-op: Postgres
+ * avisa «skipping» y sigue. Los NOTICE estaban en el registro de cada corrida
+ * y nadie tenía por qué leerlos.
+ *
+ * La primera reversa que no es un DROP lo destapó: la 0034 renombra, y
+ * `ALTER TABLE ... RENAME COLUMN` **no tiene forma `IF EXISTS` en Postgres**.
+ * Falló con `column "gps_user_id" does not exist`, que es correcto — a esas
+ * alturas la columna todavía se llamaba como antes.
+ *
+ * El arreglo no es ponerle una guarda a la reversa. Una marcha atrás con
+ * `IF EXISTS` es peor que una sin él: corrida en el estado equivocado no hace
+ * nada y **se ve igual que una que funcionó**. El arreglo es que este guion
+ * construya la base con las migraciones y con nada más, que es lo que su propio
+ * encabezado dice que hace.
+ */
 const archivos = readdirSync(DIR)
-  .filter((f) => f.endsWith(".sql"))
+  .filter((f) => f.endsWith(".sql") && !f.endsWith(".reversa.sql"))
   .sort();
 
 if (archivos.length === 0) {

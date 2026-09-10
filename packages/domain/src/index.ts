@@ -509,11 +509,30 @@ export interface GpsPoint {
   latitude: number;
   longitude: number;
   timestamp: Date;
+  /**
+   * Velocidad en **kilómetros por hora**, y la unidad va escrita porque no
+   * estaba y eso ya casi cuesta.
+   *
+   * El campo nació sin unidad cuando había un solo proveedor: Umbrella manda
+   * km/h y el proveedor la pasa tal cual, así que la convención existía sin
+   * estar dicha en ninguna parte. **Traccar manda NUDOS** —está en su OpenAPI,
+   * `Position.speed`: «in knots»— y pasarla igual habría metido dos unidades
+   * distintas en la misma columna, con el mismo nombre, sin que nada truene.
+   * Es §D del Marco en su eje de la UNIDAD: cada valor correcto, la columna
+   * mintiendo. La conversión vive en `@jtel/gps-traccar`.
+   *
+   * Y conviene saber lo otro, porque cambia cuánto urge: **hoy nadie lee este
+   * campo.** Se escribe en `telemetry_points` y en `live_positions` y ningún
+   * consumidor del dominio, de la verificación ni de la app pública lo toca. O
+   * sea equivocarse aquí no rompe ninguna pantalla — sólo deja un dato
+   * envenenado esperando al primero que lo use.
+   */
   speed?: number;
   /**
    * Rumbo en grados (0 = norte, 90 = este). Umbrella lo manda como `azimuth` y
-   * hasta ahora se tiraba. La app del pasajero lo necesita para dibujar hacia
-   * dónde apunta el camión; el archivador no lo usa y no le estorba.
+   * Traccar como `course`; los dos en grados, así que aquí no hay conversión.
+   * La app del pasajero lo necesita para dibujar hacia dónde apunta el camión;
+   * el archivador no lo usa y no le estorba.
    */
   heading?: number;
   /** El APARATO que emitió el punto. Nunca la unidad — ver `unitId`. */

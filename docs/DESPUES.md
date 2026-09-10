@@ -188,7 +188,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [La contraseña del readonly es la misma que la del dueño](#la-contraseña-del-readonly-es-la-misma-que-la-del-dueño) | 🟡 🤝 Toca producción |
 | [La base de pruebas está atrasada](#la-base-de-pruebas-está-atrasada) | ✅ Cerrada el 4 de agosto · eran tres, no una |
 | [Las migraciones del repo crean una columna que el código no conoce](#las-migraciones-del-repo-crean-una-columna-que-el-código-no-conoce) | ✅ **Cerrada el 15 de agosto** — la `0018` está aplicada en producción |
-| [La `0027`, la `0028` y la `0029` no están en el journal del repo](#la-0027-la-0028-y-la-0029-no-están-en-el-journal-del-repo) | ✅ **Cerrada el 27 de agosto** — al día con la `0030`; la causa sigue viva |
+| [La `0027`, la `0028` y la `0029` no están en el journal del repo](#la-0027-la-0028-y-la-0029-no-están-en-el-journal-del-repo) | ✅ **Cerrada el 10 de septiembre** — la cuarta vez llegó (`0032`, `0033`) y con ella la valla; la causa ya no está viva |
 | [`demos/activate` cruza cuentas](#demosactivate-cruza-cuentas) | 🟡 Protegida; falta decidir qué hace |
 | [No hay configuración de ESLint](#no-hay-configuración-de-eslint) | 🟢 Junto con el corredor de pruebas |
 | ["Consolidación" significa dos cosas](#consolidación-significa-dos-cosas) | 🟢 Renombrar la de política |
@@ -2357,6 +2357,43 @@ verdadera —un paso que compare los `.sql` del directorio contra las entradas d
 journal y falle si difieren— cabe en `esquema.yml`, que ya recorre ese directorio, y
 **no está escrita**. La comprobación que se corrió a mano el 27 de agosto es
 exactamente la que ese paso automatizaría, y cabe en cinco líneas.
+
+---
+
+### La cuarta vez llegó, y con ella la valla
+
+✅ **Cerrada de verdad el 10 de septiembre de 2026 — la causa, no el síntoma.**
+
+**Llegó como estaba escrito.** El párrafo de arriba decía «la cuarta vez llegará
+igual», y llegó: la **`0032`** y la **`0033`** tampoco se anotaron, y el journal
+volvió a quedarse —esta vez en la `0031`— durante una semana. Se descubrió mirando,
+no por un rojo, que es exactamente lo que esa entrada predijo.
+
+**La valla existe ahora**, y es la que ese párrafo describe, con un cambio de lugar:
+vive en `packages/db/src/journal-al-dia.test.ts` y no en `esquema.yml`. La razón es
+que ahí corre en **`pruebas.yml`, en cada PR y sin base de datos** — comparar un
+directorio contra un JSON no necesita Postgres, y colgarlo del workflow que levanta
+uno lo haría más lento y más frágil sin comprobar nada más.
+
+Comprueba las dos direcciones y no sólo la que falló: una migración sin renglón, un
+renglón sin archivo, `idx` repetidos o desordenados, y que el orden del journal sea
+el orden real de aplicación.
+
+**Comprobada contra el caso de hoy**, que es la condición: quitándole al journal la
+`0032` y la `0033` —el estado exacto de esta mañana— dos pruebas se caen y el mensaje
+las nombra por su tag. Restauradas, verde.
+
+⚠ **Lo que la valla NO prueba, y va escrito en el archivo:** que ninguna migración
+esté aplicada en ninguna base. Eso lo contesta `verificar-migraciones-aplicadas.ts`
+preguntándole al catálogo de Postgres, y son preguntas distintas. Aquí sólo se
+comprueba que el índice del repo describe los archivos del repo.
+
+**Y un hallazgo del mismo día, del mismo directorio, que no es éste:** el aplicador
+de CI (`packages/db/ci/aplicar-migraciones.mjs`) estaba corriendo también las
+**marchas atrás**, porque tomaba todo `.sql` por orden de nombre y una `.reversa.sql`
+ordena antes que su migración. Nunca rompió porque las once reversas escritas hasta
+hoy son `DROP ... IF EXISTS`, o sea no-ops contra una base donde su migración todavía
+no pasó. Lo destapó la `0034`, que renombra. Arreglado en el mismo PR.
 
 ## `demos/activate` cruza cuentas
 

@@ -1,4 +1,5 @@
 import { createUmbrellaProvider } from "@jtel/gps-umbrella";
+import { createTraccarProvider } from "@jtel/gps-traccar";
 import type { Repositories } from "@jtel/db";
 
 export interface GpsBackendConfig {
@@ -17,6 +18,17 @@ export function buildProvider(
   switch (provider) {
     case "umbrella":
       return createUmbrellaProvider({ baseUrl, credentials: { userId, password } });
+    /*
+     * Compás — el camino propio, contra un Traccar nuestro. Entró por el corte
+     * de Umbrella del 5 de septiembre de 2026.
+     *
+     * Que esto sea un renglón es el punto: el recolector y el archivador pasan
+     * los dos por aquí, así que un carrier cambia de fuente de evidencia
+     * moviendo una columna, sin desplegar nada. Ver `gps_provider` en el
+     * esquema.
+     */
+    case "traccar":
+      return createTraccarProvider({ baseUrl, credentials: { userId, password } });
     default:
       throw new Error(`Proveedor GPS no soportado todavía: ${provider}`);
   }
