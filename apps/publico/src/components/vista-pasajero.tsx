@@ -869,9 +869,19 @@ export function VistaPasajero({
               pisoSeg={forma.piso_rango_seg}
             />
           )}
-          <p className="promesa">
-            Tu ubicación se usa solo en este teléfono. No se envía a ningún servidor.
-          </p>
+          {/*
+            DESCRIBE EL PARA QUÉ, NO JURA EL DÓNDE.
+
+            Decía «se usa solo en este teléfono. No se envía a ningún servidor»,
+            y esa frase era cierta de nuestras peticiones y más ancha que lo que
+            la pantalla entera sostiene: los mosaicos del mapa se piden a un
+            tercero y el mapa se encuadra a lo que el pasajero mira. Ver
+            `docs/Ficha-Textos-De-Privacidad.md`.
+
+            El comportamiento no cambió: la petición que mandaría la ubicación
+            sigue sin existir. Lo que cambió es qué se promete.
+          */}
+          <p className="promesa">Tu ubicación se usa para calcular cuándo llega tu camión.</p>
         </div>
       </div>
     </div>
