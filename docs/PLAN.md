@@ -1636,6 +1636,45 @@ sobre pantallas diseñadas. **No lo es para la mitad del producto.**
 
 ---
 
+### Frente — Que los avisos que importan lleguen a alguien
+
+**Decisión de Asav, 10 de septiembre de 2026.** Sale del corte de Umbrella y
+**entra como frente propio**. Sin diseñar hoy.
+
+**Qué pasa.** 🔴 **El sistema detectó el corte a los 34 minutos y después nadie del
+otro lado durante cinco días.** Lo que falló ese día no fue el proveedor: fue el
+tablero.
+
+Dos mitades, y son problemas distintos:
+
+1. **Un incidente abierto cinco días se ve igual que uno abierto cinco minutos.**
+   `watermark_lag` se abrió el 5 de septiembre a las 15:55Z con su umbral al lado,
+   el correo salió, y **no hubo un segundo aviso** — un incidente abierto no vuelve
+   a notificar nunca. Los tres anteriores se cerraron en horas, así que la forma
+   nunca se puso a prueba con algo que durara. **Detectar más seguido no lo
+   arregla:** lo que falta es que la EDAD de un incidente abierto escale sola.
+2. **Las cicatrices viejas entierran a las nuevas.** `archive_error` **no se
+   resuelve nunca** —no hay camino en el código que la cierre, mientras
+   `heartbeat_stale` y `watermark_lag` sí lo tienen— y desde el corte acumula
+   **144 filas al día**. El incidente que importaba fue **una fila entre 145** de
+   ese día. En toda la tabla, **798 de 816 filas están sin resolver**.
+
+**Lo que NO es.** No es construir el canal, que ya existe y está bien hecho. No es
+bajar el umbral. No es un tablero nuevo: primero hay que arreglar que el que existe
+se pueda leer.
+
+**Lo que hoy es incomprobable, y es la pregunta de fondo:** no hay dónde mirar si
+un aviso **llegó a un humano**. `ingest_alerts` registra que el incidente se abrió,
+no que alguien lo recibió ni que alguien lo vio.
+
+**No pide migración.** `ingest_alerts` ya tiene `resolved_at`, `severity` y
+`metadata`. Lo que falta no son columnas.
+
+**La ficha, con lo medido y las cuatro preguntas abiertas:**
+[`Ficha-Frente-Avisos-Que-Llegan.md`](Ficha-Frente-Avisos-Que-Llegan.md).
+
+---
+
 ### Frente — Que las pruebas de integración corran en CI
 
 **Se coloca al cerrar el Tramo 2.** **Sin construir hoy.**
