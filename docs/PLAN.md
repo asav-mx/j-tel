@@ -1702,6 +1702,34 @@ todas las capas a la vez: un paquete **`gps-umbrella`** · las columnas
 **`UMBRELLA_GPS_URL` · `UMBRELLA_GPS_USERID` · `UMBRELLA_GPS_PASSWORD`** · y el
 nombre **impreso en una pantalla de la cara del carrier**.
 
+> **Corregido el 10 de septiembre de 2026, y este frente dejó de ser hipotético.**
+> Umbrella cortó la transmisión el 5 de septiembre y el segundo proveedor entró
+> el 10, por Compás. Lo de arriba ya no describe el estado: se deja porque es el
+> diagnóstico original y lo que sigue dice qué queda vivo de él.
+>
+> **Cerrado:** las dos columnas. La **0034** las renombró a `gps_user_id` y
+> `gps_password_encrypted`, que es la capa donde el nombre de verdad mentía —
+> `gps_provider` decía desde el día uno que el proveedor es variable, y las
+> columnas de al lado juraban lo contrario.
+>
+> **Sigue vivo, y con su razón para no haberse tocado:**
+>
+> · Las **variables de ambiente**. Ésas sí son la credencial de UN proveedor
+>   concreto, no el lugar donde vive la credencial de un carrier cualquiera.
+>   Renombrarlas pide tocar el ambiente de Vercel, y hacerlo mal deja al sistema
+>   sin credencial.
+> · El **nombre impreso en la pantalla del carrier**, que no se tocó.
+> · El paquete **`gps-umbrella`**, que **no es deuda**: es el adaptador de
+>   Umbrella y llamarse así es correcto. Al lado vive `gps-traccar` con la misma
+>   forma.
+>
+> **Y una nota sobre el orden que este frente fija.** «Abstraer primero, conectar
+> después» se respetó, pero por suerte más que por método: la abstracción
+> —`GpsProvider` y `buildProvider`— ya existía desde antes, así que conectar el
+> segundo fue **un renglón en un `switch`**. Si no hubiera existido, el corte del
+> 5 de septiembre habría exigido las dos cosas a la vez y con prisa, que es
+> exactamente el escenario que este frente vino a evitar.
+
 **Por qué es del plan y no de higiene.** Rompe la regla de producto de §2 —*«¿esto
 tendría sentido para una planta en Bogotá cuyas rutas nunca hemos visto?»*—
 aplicada al otro lado: **un carrier con otro proveedor no cabe en este código sin

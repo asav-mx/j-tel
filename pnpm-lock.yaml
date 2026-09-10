@@ -202,6 +202,22 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
+  packages/gps-traccar:
+    dependencies:
+      '@jtel/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@jtel/gps-core':
+        specifier: workspace:*
+        version: link:../gps-core
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@22.20.0)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.0)
+
   packages/gps-umbrella:
     dependencies:
       '@jtel/domain':
@@ -239,6 +255,9 @@ importers:
       '@jtel/domain':
         specifier: workspace:*
         version: link:../domain
+      '@jtel/gps-traccar':
+        specifier: workspace:*
+        version: link:../gps-traccar
       '@jtel/gps-umbrella':
         specifier: workspace:*
         version: link:../gps-umbrella

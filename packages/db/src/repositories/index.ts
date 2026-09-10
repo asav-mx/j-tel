@@ -175,10 +175,10 @@ export class AccountRepository {
 export class CarrierRepository {
   constructor(private db: Database) {}
 
-  async createProfile(accountId: string, legalName: string, umbrellaUserId?: string) {
+  async createProfile(accountId: string, legalName: string, gpsUserId?: string) {
     const [profile] = await this.db
       .insert(carrierProfiles)
-      .values({ accountId, legalName, umbrellaUserId })
+      .values({ accountId, legalName, gpsUserId })
       .returning();
     return profile!;
   }
@@ -200,12 +200,12 @@ export class CarrierRepository {
     const values: Partial<typeof carrierProfiles.$inferInsert> = {
       gpsProvider: input.provider,
       gpsBaseUrl: input.baseUrl ?? null,
-      umbrellaUserId: input.userId,
+      gpsUserId: input.userId,
     };
 
     if (input.password && input.password.length > 0) {
       const { encryptSecret } = await import("../crypto.js");
-      values.umbrellaPasswordEncrypted = encryptSecret(input.password);
+      values.gpsPasswordEncrypted = encryptSecret(input.password);
     }
 
     await this.db
@@ -225,19 +225,19 @@ export class CarrierRepository {
     baseUrl: string | null;
   } | null> {
     const profile = await this.getProfileByAccountId(accountId);
-    if (!profile?.umbrellaUserId || !profile.umbrellaPasswordEncrypted) return null;
+    if (!profile?.gpsUserId || !profile.gpsPasswordEncrypted) return null;
 
     const { decryptSecret } = await import("../crypto.js");
     let password: string;
     try {
-      password = decryptSecret(profile.umbrellaPasswordEncrypted);
+      password = decryptSecret(profile.gpsPasswordEncrypted);
     } catch {
       return null;
     }
 
     return {
       provider: profile.gpsProvider ?? "umbrella",
-      userId: profile.umbrellaUserId,
+      userId: profile.gpsUserId,
       password,
       baseUrl: profile.gpsBaseUrl ?? null,
     };

@@ -131,13 +131,28 @@ export const carrierProfiles = pgTable("carrier_profiles", {
     .references(() => accounts.id, { onDelete: "cascade" })
     .unique(),
   legalName: text("legal_name").notNull(),
-  // Proveedor de GPS del carrier. Cada carrier puede usar uno distinto
-  // (umbrella hoy; a futuro otros o hardware propio).
+  // Proveedor de GPS del carrier. Cada carrier puede usar uno distinto:
+  // `umbrella` y `traccar` hoy, hardware propio después. Gobierna
+  // `buildProvider`, por donde pasan el recolector y el archivador.
   gpsProvider: text("gps_provider").notNull().default("umbrella"),
   gpsBaseUrl: text("gps_base_url"),
-  // Credenciales del proveedor. La contraseña se guarda cifrada (AES-256-GCM).
-  umbrellaUserId: text("umbrella_user_id"),
-  umbrellaPasswordEncrypted: text("umbrella_password_encrypted"),
+  /*
+   * Credenciales del proveedor, sea cual sea. El secreto se guarda cifrado
+   * (AES-256-GCM) y sólo se descifra en `getGpsCredentials`.
+   *
+   * Se llamaban `umbrella_user_id` y `umbrella_password_encrypted` hasta la
+   * **0034**, y el nombre era una afirmación falsa esperando al segundo
+   * proveedor: `gps_provider` decía desde el día uno que el proveedor es una
+   * variable del carrier, mientras las columnas de al lado juraban que la
+   * credencial es de Umbrella. Un carrier con `gps_provider = 'traccar'` habría
+   * guardado su token en una columna que dice Umbrella.
+   *
+   * Qué es el secreto depende del proveedor, y por eso el nombre no lo dice:
+   * para Umbrella es la contraseña; para Traccar puede ser la contraseña o un
+   * token de cuenta, que su API acepta igual.
+   */
+  gpsUserId: text("gps_user_id"),
+  gpsPasswordEncrypted: text("gps_password_encrypted"),
   /**
    * Cada cuántos segundos se sondea al proveedor de este carrier.
    *
