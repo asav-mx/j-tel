@@ -93,6 +93,12 @@ observado**, que es la ley de la Pieza 1.
 | # | Pieza | Estado |
 |---|---|---|
 | 1 | **Dónde vive el servidor.** Pide dirección estable y el 5027 abierto. **Traccar no puede vivir en Vercel**: los equipos se quedan conectados a un puerto TCP, y eso pide un proceso de larga vida | Asav contrata |
+
+> **Los pasos 1 a 3 ya están escritos, comando por comando**, en
+> [`Procedimiento-Traccar-Servidor.md`](Procedimiento-Traccar-Servidor.md) —
+> instalación, base propia, cortafuegos, y las tres comprobaciones de que está
+> oyendo. **Escrito y no corrido:** no hay máquina todavía. La llave SSH sí
+> está generada.
 | 2 | Levantar Traccar con su base propia y su certificado | Bloqueado por 1 |
 | 3 | **Un equipo apuntado y un punto que llegue** — la compuerta de verdad, y la regla del firmware manda aquí | Bloqueado por 2 |
 | 4 | El proveedor en el repo | ✅ Hecho |
