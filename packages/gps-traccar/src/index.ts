@@ -73,9 +73,11 @@ import type { GpsPoint } from "@jtel/domain";
  * al minuto porque su `login` sí falla y deja `No se obtuvo token` en
  * `ingest_alerts`; sin eso habría sido una tabla que dejó de crecer.
  *
- * Así que `login` llama a `/api/session` y revienta si la credencial no sirve.
- * Cuesta una petición por corrida y compra que el próximo corte se vea el
- * mismo día.
+ * Así que `login` llama al servidor y revienta si la credencial no sirve. Cuesta
+ * una petición por corrida y compra que el próximo corte se vea el mismo día.
+ *
+ * **Con qué ruta lo comprueba es lo que costó un defecto** — ver
+ * `RUTA_DE_COMPROBACION` abajo, que trae la medición contra el servidor real.
  */
 
 /** `Position` de la API de Traccar. Sólo los campos que se usan. */
@@ -104,6 +106,43 @@ interface TraccarDevice {
   uniqueId?: string;
   lastUpdate?: string | null;
 }
+
+/**
+ * Con qué ruta se comprueba que la credencial sirve.
+ *
+ * ## Era `/api/session`, y estaba mal — medido contra un Traccar real
+ *
+ * El 11 de septiembre de 2026, contra el servidor recién levantado (Traccar
+ * 6.15, Ubuntu 24.04), las tres formas de autorización dieron esto:
+ *
+ * | | `/api/session` | `/api/devices` | `/api/positions` |
+ * |---|---|---|---|
+ * | `Authorization: Bearer` | **404** | 200 | 200 |
+ * | `Authorization: Basic`  | **404** | 200 | 200 |
+ * | `?token=` en la URL     | 200 | — | — |
+ *
+ * `GET /api/session` **no pregunta «¿esta credencial sirve?»**: devuelve la
+ * sesión de la COOKIE, y contesta 404 cuando no hay ninguna. Que acepte
+ * `?token=` es otra cosa — ahí crea la sesión desde el token, y eso obliga a
+ * meter el secreto en la URL, donde termina en los registros de cualquier proxy
+ * que haya en medio.
+ *
+ * O sea el `login()` viejo **no podía entrar nunca**, ni con credencial buena.
+ * Y su prueba pasaba en verde: el servidor falso contestaba 200 a esa ruta
+ * porque yo la escribí contestando 200. **Ninguna prueba contra una respuesta
+ * que uno mismo inventa puede encontrar esto.** Lo encontró el fierro.
+ *
+ * ## Por qué `/api/devices` y no otra
+ *
+ * Acepta las dos formas de cabecera, contesta 401 con credencial mala —o sea el
+ * fallo sigue siendo ruidoso, que es la razón de que `login()` hable con el
+ * servidor— y **ya está en la lista de rutas que el proxy del paso 8 deja
+ * pasar.** Comprobar contra una cuarta ruta obligaría a abrir una cuarta puerta.
+ *
+ * Una lista vacía es una respuesta válida: lo que se comprueba es que autorizó,
+ * no que haya aparatos.
+ */
+const RUTA_DE_COMPROBACION = "/api/devices";
 
 /** Un nudo son 1.852 km/h, exacto por definición. */
 const KMH_POR_NUDO = 1.852;
@@ -192,12 +231,35 @@ export class TraccarGpsProvider implements GpsProvider {
   async login(credentials?: GpsCredentials): Promise<string> {
     const creds = credentials ?? this.config.credentials;
     try {
-      await this.pedir<unknown>("/api/session", creds);
+      /*
+       * La respuesta de la comprobación **es el catálogo**, así que se guarda en
+       * vez de tirarla: sin esto, cada corrida pediría `/api/devices` dos veces
+       * —una para comprobar y otra para el cruce `deviceId` → IMEI— y serían
+       * dos peticiones idénticas con segundos de diferencia.
+       */
+      const aparatos = await this.pedir<TraccarDevice[]>(RUTA_DE_COMPROBACION, creds);
+      this.guardarCatalogo(aparatos, Date.now());
     } catch (err) {
       const causa = err instanceof Error ? err.message : String(err);
       throw new Error(`No se obtuvo sesión de Traccar: ${causa}`);
     }
     return this.cabecera(creds);
+  }
+
+  private guardarCatalogo(aparatos: unknown, ahora: number) {
+    /*
+     * `Array.isArray` y no `?? []`: si la respuesta no es una lista —un error
+     * devuelto con 200, un proxy metiendo una página en medio— recorrerla
+     * lanzaría un `TypeError` desde dentro del recolector, lejos de aquí y sin
+     * decir qué contestó el servidor. Un catálogo vacío es una respuesta
+     * manejable; una excepción de tipos no.
+     */
+    const lista: TraccarDevice[] = Array.isArray(aparatos) ? aparatos : [];
+    const porId = new Map<number, string>();
+    for (const d of lista) {
+      if (typeof d?.id === "number" && d.uniqueId) porId.set(d.id, d.uniqueId);
+    }
+    this.catalogo = { alExpirar: ahora + this.catalogoTtlMs, porId };
   }
 
   /**
@@ -239,13 +301,8 @@ export class TraccarGpsProvider implements GpsProvider {
 
     const creds = this.credencialesDe(token);
     const aparatos = await this.pedir<TraccarDevice[]>("/api/devices", creds);
-    const porId = new Map<number, string>();
-    for (const d of aparatos ?? []) {
-      if (typeof d.id === "number" && d.uniqueId) porId.set(d.id, d.uniqueId);
-    }
-
-    this.catalogo = { alExpirar: ahora + this.catalogoTtlMs, porId };
-    return porId;
+    this.guardarCatalogo(aparatos, ahora);
+    return this.catalogo!.porId;
   }
 
   /**
