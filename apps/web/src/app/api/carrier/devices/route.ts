@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
 import { exigir } from "@/lib/guardia-api";
+import { validarImei } from "@/lib/imei";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -12,12 +13,16 @@ export async function POST(request: Request) {
   );
   if (!g.ok) return g.respuesta;
 
-  const imei = String(formData.get("imei") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim() || undefined;
 
-  if (!imei) {
-    return NextResponse.json({ error: "El IMEI es requerido" }, { status: 400 });
+  // Normaliza (fuera espacios y guiones) y valida largo y dígito verificador
+  // ANTES de guardar. Un IMEI mal tecleado no truena en ninguna otra parte:
+  // se registra, Traccar nunca lo recibe y la tabla no crece. Ver `@/lib/imei`.
+  const validacion = validarImei(String(formData.get("imei") ?? ""));
+  if (!validacion.ok) {
+    return NextResponse.json({ error: validacion.motivo }, { status: 400 });
   }
+  const imei = validacion.imei;
 
   const repos = getRepos();
   const carrier = await repos.accounts.findBySlug(carrierSlug);
