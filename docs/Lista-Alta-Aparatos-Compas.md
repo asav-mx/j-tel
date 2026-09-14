@@ -48,8 +48,49 @@ Por el panel, entrando **por el túnel SSH** (`http://localhost:8082`), que es l
 **Nada más hace falta.** Grupo, teléfono, modelo y contacto son opcionales y no
 los usa nuestro puente.
 
-**Comprobación de este paso:** el equipo aparece en la lista del panel. Todavía
-gris, porque no ha conectado.
+### ⚠ A2 · Que el usuario del repo VEA el aparato — sin esto no llega nada
+
+**Corregido el 14 de septiembre de 2026, con el primer FTC927.** Esta lista no lo
+decía y costó un diagnóstico: el aparato se dio de alta como administrador,
+Traccar recibía sus posiciones, y **nuestro proveedor veía cero aparatos**.
+
+La causa, comprobada contra el servidor y en el fuente de la 6.15.3: en Traccar
+**cada usuario sólo ve los aparatos a los que está ligado**, aunque sea
+administrador. `/api/devices` sin parámetros devuelve sólo los ligados, y en
+`/api/positions` ni siquiera sirve `all=true`: ahí manda el vínculo. Y Traccar
+**liga automáticamente el aparato a quien lo crea** (`BaseObjectResource.add`).
+
+Así que el alta se hace **como el usuario del repo**, no como administrador. El
+vínculo nace con el aparato y no depende de acordarse:
+
+```bash
+curl -s -u "repo@compas.local:$(cat /opt/traccar/.repopass)" \
+  -X POST http://127.0.0.1:8082/api/devices -H "Content-Type: application/json" \
+  -d '{"name":"<económico>","uniqueId":"<IMEI>"}'
+```
+
+Y después se liga también al administrador, **sólo para que se vea en el panel**
+—el dato no lo necesita—:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -u "admin@compas.local:$(cat /opt/traccar/.adminpass)" \
+  -X POST http://127.0.0.1:8082/api/permissions -H "Content-Type: application/json" \
+  -d '{"userId":<id del admin>,"deviceId":<id del aparato>}'
+```
+
+**Por qué es el error más caro de la lista:** no produce ninguna alerta. Traccar
+recibe, el equipo se ve verde, y `live_positions` no crece. Es el mismo síntoma
+que el IMEI mal tecleado.
+
+**Comprobación de este paso:** el equipo aparece en la lista del panel, todavía
+gris porque no ha conectado, **y** el usuario del repo lo ve:
+
+```bash
+curl -s -u "repo@compas.local:$(cat /opt/traccar/.repopass)" \
+  http://127.0.0.1:8082/api/devices | grep -c "<IMEI>"
+```
+
+Tiene que dar `1`.
 
 ---
 
@@ -112,11 +153,29 @@ captura; éste es evidencia.
 La tercera es la que cierra, porque es la nuestra y no la de Traccar:
 
 ```sql
-SELECT imei, recorded_at, latitude, longitude, unit_id
+SELECT imei, recorded_at, latitude, longitude
   FROM live_positions
- ORDER BY recorded_at DESC
- LIMIT 10;
+ WHERE imei = '<IMEI>';
 ```
+
+⚠ **En `live_positions` la unidad siempre va en nulo, y es correcto.** El
+recolector nunca la escribe: la resolución aparato → unidad la hace el
+archivador, contra la asignación vigente en el instante observado. **No se usa
+esta tabla para saber si falta la asignación.** Eso se ve en el histórico:
+
+```sql
+SELECT count(*) AS puntos, count(unit_id) AS con_unidad
+  FROM telemetry_points
+ WHERE imei = '<IMEI>'
+   AND recorded_at > now() - interval '1 hour';
+```
+
+Con asignación hecha, `con_unidad` sigue a `puntos`. El archivador corre cada
+10 minutos, así que hay que esperarlo.
+
+**Un equipo de escritorio, sin camión, no lleva B1 ni B3.** Lleva B2, y es
+obligatorio: el recolector sólo le pregunta a Traccar por los IMEI que están en
+nuestra tabla `devices`. Sin B2 el recolector ni siquiera pregunta.
 
 ⚠ **Que aparezca en línea no es que esté dado de alta.** Es el modo de falla del
 firmware nuevo: el equipo conecta, se ve verde, y no manda posición. **El punto
@@ -140,12 +199,14 @@ está bien que se vean, que para eso está la columna.
 
 ---
 
-## Los tres errores que va a haber, y cómo se ven
+## Los errores que va a haber, y cómo se ven
 
 | Error | Cómo se ve | Dónde se arregla |
 |---|---|---|
 | **IMEI distinto entre Traccar y nuestro sistema** | Traccar recibe, `live_positions` no crece. **Sin ningún error a la vista** | Corregir el que esté mal. Comparar contra la foto, no contra la memoria |
-| **Falta la asignación (B3)** | La posición **sí** llega, pero con `unit_id` en nulo | Hacer B3. Los puntos viejos se quedan sin unidad: la asignación no reescribe el pasado, y eso es la ley, no un defecto |
+| **El usuario del repo no está ligado al aparato (A2)** | Traccar recibe, el panel lo muestra verde, `live_positions` no crece. **Sin ningún error a la vista** | Ligarlo (A2). Mismo síntoma que el IMEI mal tecleado: descartar los dos |
+| **Falta el aparato en nuestro sistema (B2)** | Traccar recibe, `live_positions` no crece. El recolector ni siquiera pregunta por ese IMEI | Hacer B2 |
+| **Falta la asignación (B3)** | La posición **sí** llega a `live_positions`, pero en `telemetry_points` los puntos quedan con `unit_id` en nulo | Hacer B3. Los puntos viejos se quedan sin unidad: la asignación no reescribe el pasado, y eso es la ley, no un defecto |
 | **Dos equipos con el mismo IMEI capturado** | El segundo choca contra el índice único de `telemetry_points` | Uno de los dos está mal tecleado. La foto decide |
 
 ---
