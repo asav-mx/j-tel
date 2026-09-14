@@ -985,8 +985,9 @@ Primero la investigación de atribución (§5, C3), después la regla.
 
 **D4 · Re-verificación de las 300 congeladas**
 
-*Qué pasa:* 300 ocurrencias de Planta 47 con deadline corrido. El PR #124 está
-abierto a propósito como foto de referencia. La simulación del 30 de julio con el
+*Qué pasa:* 300 ocurrencias de Planta 47 con deadline corrido. El PR #124 fue la
+foto de referencia; **se cerró sin merge el 14 de septiembre de 2026** y la rama
+`sim/reverificacion-motor-actual` se conserva para reproducirla. La simulación del 30 de julio con el
 motor arreglado dio **139/160/1**, contra 91/209/0 con la ventana rota.
 
 *Recomendación:* **no re-verificar todavía.** Esperar a que el árbitro esté

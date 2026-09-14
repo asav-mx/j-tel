@@ -3,9 +3,17 @@
 **Qué decide.** Cómo llega nuestro código, que corre en Vercel, hasta el
 servidor de Traccar, **sin exponer el panel de administración**.
 
-**Estado: PROPUESTA. Nada construido, y el punto de parada es antes de
-construir.** Escrita el 11 de septiembre de 2026. Hay tres decisiones abajo que
-no tomé yo.
+**Estado: DECIDIDO Y CONSTRUIDO.** Se escribió como propuesta el 11 de
+septiembre de 2026, con tres decisiones abiertas. **Las tres las tomó Asav el 12
+de septiembre**, y el paso 8 ya estaba construido desde la noche del 11 —ver
+«Lo que se decidió» abajo—. Lo que sigue es la propuesta tal como se escribió,
+para que se lea con qué razones se decidió.
+
+> **Corregido el 14 de septiembre de 2026.** El documento se mergeó diciendo
+> todavía «propuesta, nada construido, tres decisiones que no tomé». Las tres
+> estaban contestadas y el paso 8 corriendo. Un documento que da por abierto
+> algo cerrado deja la decisión colgada aunque ya exista: por eso se corrige
+> aquí y no sólo en una conversación.
 
 Ver [`Procedimiento-Traccar-Servidor.md`](Procedimiento-Traccar-Servidor.md), que
 deja el 8082 en loopback a propósito, y [`Ficha-Compas.md`](Ficha-Compas.md).
@@ -75,7 +83,29 @@ loopback** y el **5027 sigue igual**.
 
 ---
 
-## Las tres decisiones que no tomé
+## Lo que se decidió
+
+Decisiones de Asav, **12 de septiembre de 2026**:
+
+| # | Decisión | Qué se resolvió | La razón |
+|---|---|---|---|
+| **1** | El nombre | **`compas.j-telemetry.com`** | Ya estaba puesto y funcionando |
+| **2** | Caddy o túnel de Cloudflare | **Caddy, y no se mueve** | «Ya se cobró anoche contra los escaneos»: en su primera hora pública el filtro de rutas contestó 62 respuestas 404, entre ellas a quien fue directo a `/console/` y `/server-status` |
+| **3** | ¿Un secreto compartido además del token? | **No** | «Un segundo secreto viviría en el mismo lugar que el token, así que agrega ceremonia, no protección» |
+
+**Y lo que la decisión 3 NO cubre**, para que no se lea de más: es sobre
+**nosotros llamando a Traccar**. Si algún día Traccar reenvía posiciones hacia
+nosotros (`forward.url`), la dirección se invierte y ahí **sí** hace falta un
+secreto en `forward.header`: no hay token suyo que reusar para autenticar a quien
+nos llama. No la contradice; es otra puerta.
+
+Una precisión sobre el texto de abajo: habla de **tres** rutas permitidas. Al
+construirlo fueron **dos** —`/api/devices` y `/api/positions`—, porque el #387
+dejó de usar `/api/session` y lo que no se usa no se abre.
+
+---
+
+## Las tres decisiones, como se plantearon
 
 ### 1 · El nombre
 
@@ -182,3 +212,6 @@ Sin desplegar, sin migración, sin PR.
 
 **Punto de parada aquí.** No construyo nada hasta que decidas el nombre, Caddy
 contra túnel, y el secreto compartido.
+
+> *Así se escribió. Se construyó la noche del 11 de septiembre, y las
+> decisiones quedaron tomadas el 12 — ver «Lo que se decidió» arriba.*
