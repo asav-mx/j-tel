@@ -448,6 +448,192 @@ que es como está diseñado. No es un misterio si pasa.
 
 ---
 
+## Paso 9 · Rotar la credencial — cambiar la cerradura sin improvisar
+
+**Para cuándo es.** Cuando la credencial se filtre, cuando se sospeche que se
+filtró, cuando alguien con acceso deje de tenerlo, o porque toca. **Decisión de
+Asav, 12 de septiembre de 2026:** esto va escrito antes de hacer falta,
+precisamente para que el día que haga falta no se invente.
+
+---
+
+### ⚠ Primero: qué credencial está de verdad en uso
+
+**Hay dos, y la que autentica NO es la que parece.**
+
+| | Existe | ¿La usa el repo? |
+|---|---|---|
+| **Token de cuenta** de `repo@compas.local` | sí, creado el 11 sep, vence el 11 sep 2027 | **NO** |
+| **Contraseña** de `repo@compas.local` | sí | **SÍ — es la que autentica** |
+
+**Por qué, y es un defecto conocido y no una preferencia:** `getGpsCredentials`
+devuelve `null` si `gps_user_id` viene vacío, y el proveedor sólo manda `Bearer`
+cuando el usuario está vacío. O sea **hoy la base no puede expresar un token
+puro**. Se guardó usuario y contraseña, que van por `Basic` y funcionan igual.
+
+Consecuencia directa para este paso: **rotar el token no cambia nada.** Quien
+rote sólo el token va a creer que cambió la cerradura y no habrá cambiado nada.
+Lo que hay que rotar es **la contraseña**.
+
+---
+
+### El orden, y por qué éste y no el contrario
+
+> **Primero la base de J-Tel, después Traccar.**
+
+Si se cambia primero en Traccar, todo lo que vaya entre un cambio y el otro
+falla: el recolector cada 30 s y el archivador cada 10 min. No se pierde dato
+—no hay nada que perder mientras no autentique— pero **se llena
+`ingest_alerts`**, y eso entierra lo que sí importa.
+
+Al revés el hueco no existe: Traccar acepta la contraseña vieja hasta que se
+cambia, así que J-Tel puede tener ya la nueva guardada y seguir entrando con la
+vieja **no** — ojo, tampoco. **Las dos direcciones tienen hueco.** Lo que sigue
+lo reduce al mínimo posible haciéndolas seguidas y comprobando al final.
+
+**Si el hueco importa** —porque hay camiones en la calle y no se quiere ni un
+minuto ciego— la salida es no rotar: **crear un usuario nuevo**, apuntar J-Tel a
+él, comprobar, y recién entonces borrar el viejo. Eso no tiene hueco, y es el
+camino recomendado si la rotación es planeada y no una emergencia.
+
+---
+
+### A · Rotación planeada, sin hueco (recomendada)
+
+**1. Usuario nuevo en Traccar**, desde el servidor:
+
+```bash
+umask 077
+head -c 18 /dev/urandom | base64 | tr -d "/+=" | head -c 24 > /opt/traccar/.repopass.nuevo
+
+curl -s -u "admin@compas.local:$(cat /opt/traccar/.adminpass)" \
+  -X POST http://127.0.0.1:8082/api/users -H "Content-Type: application/json" \
+  -d "{\"name\":\"compas-repo-2\",\"email\":\"repo2@compas.local\",\"password\":\"$(cat /opt/traccar/.repopass.nuevo)\",\"administrator\":true}"
+```
+
+**2. Comprobar que el usuario nuevo sirve, ANTES de tocar J-Tel:**
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" \
+  -u "repo2@compas.local:$(cat /opt/traccar/.repopass.nuevo)" \
+  http://127.0.0.1:8082/api/devices
+```
+
+Tiene que dar **200**. Si no, para: todavía no se ha roto nada.
+
+**3. Apuntar J-Tel al usuario nuevo.** Es `saveGpsCredentials` sobre el perfil
+del carrier, con `provider: "traccar"`, el `baseUrl` de siempre, `userId`
+`repo2@compas.local` y la contraseña nueva. La contraseña **se cifra al
+guardarse**; no se escribe a mano en la base.
+
+**4. Comprobar que el repo entró con la nueva.** No desde la base: **desde el
+registro de Caddy**, que es el único lugar donde se ve al repo llegando.
+
+```bash
+journalctl -u caddy --since "-3min" --no-pager -o cat | grep "handled request" | tail -5
+```
+
+Tienen que seguir apareciendo `/api/devices` y `/api/positions` con **200**.
+Espera al menos un minuto: el recolector sondea cada 30 s.
+
+⚠ **Y aquí va la trampa que este documento ya pagó una vez:** el archivador
+**no deja rastro de éxito cuando no hay puntos**. Si se mira sólo
+`ingest_alerts`, «funcionando» y «muerto» se ven idénticos. El registro de
+Caddy es la comprobación positiva; la ausencia de alertas no lo es.
+
+**5. Recién ahora, borrar el usuario viejo:**
+
+```bash
+ID=$(curl -s -u "admin@compas.local:$(cat /opt/traccar/.adminpass)" \
+     http://127.0.0.1:8082/api/users | python3 -c \
+     "import sys,json;print([u['id'] for u in json.load(sys.stdin) if u['email']=='repo@compas.local'][0])")
+
+curl -s -o /dev/null -w "%{http_code}\n" -X DELETE \
+  -u "admin@compas.local:$(cat /opt/traccar/.adminpass)" \
+  http://127.0.0.1:8082/api/users/$ID
+```
+
+**Borrar el usuario invalida su token también**, así que no hay que revocarlo
+aparte.
+
+**6. Limpiar**: `mv /opt/traccar/.repopass.nuevo /opt/traccar/.repopass`.
+
+---
+
+### B · Emergencia: la credencial se filtró
+
+**El orden cambia, porque ahora el hueco es preferible al acceso de un tercero.**
+
+**1. Cortar primero, preguntar después.** Borra el usuario del repo en Traccar
+(paso A5 con el id del usuario comprometido). Desde ese segundo, quien tenga la
+credencial ya no entra — y J-Tel tampoco. Es correcto: **es mejor un hueco que
+un extraño leyendo posiciones.**
+
+**2. Comprobar que cortó:**
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" \
+  -u "repo@compas.local:LA_QUE_SE_FILTRO" http://127.0.0.1:8082/api/devices
+```
+
+Tiene que dar **401**.
+
+**3. Reconstruir** con el camino A desde el paso 1.
+
+**4. Mirar quién usó la credencial filtrada**, que es lo que dice si hubo daño:
+
+```bash
+journalctl -u caddy --since "-7 days" --no-pager -o cat \
+  | grep "handled request" \
+  | python3 -c "
+import sys, json, collections
+c = collections.Counter()
+for l in sys.stdin:
+    try: d = json.loads(l)
+    except Exception: continue
+    if d.get('msg') != 'handled request': continue
+    c[d.get('request', {}).get('remote_ip', '?')] += 1
+for ip, n in c.most_common(20): print('%-18s %d' % (ip, n))
+"
+```
+
+**Lo que buscas es una dirección que no sea de Vercel** pidiendo `/api/devices`
+o `/api/positions` con 200. Ojo: **las direcciones de salida de Vercel
+rotan** — el 11 de septiembre era `44.203.255.244` y al día siguiente
+`98.93.70.169`. Así que «no la reconozco» no es «es un intruso»: hay que mirar
+a quién pertenece antes de concluir.
+
+⚠ **Lo que este registro NO puede decirte:** qué pasó antes de que Caddy
+existiera, ni nada del puerto 5027, que no pasa por él.
+
+---
+
+### Lo que NO hay que hacer, y por qué se va a querer hacer
+
+**No cambiar la contraseña del usuario existente «para ir rápido».** Se puede
+—`PUT /api/users/{id}` con el objeto completo— y deja un hueco en el que el
+repo falla, llenando `ingest_alerts` con ruido que después tapa lo que importa.
+El camino A no tiene hueco y cuesta un usuario más.
+
+**No rotar el token creyendo que eso cambia la cerradura.** Ver el aviso del
+principio: el token existe y **no se usa**.
+
+**No meter la credencial en la URL.** `/api/session?token=` funciona en Traccar
+y deja el secreto escrito en el registro de Caddy, que es justo lo que se está
+intentando proteger. Hay una prueba en el repo que exige que el secreto nunca
+viaje en la URL.
+
+---
+
+### Cuándo esto va a cambiar
+
+El día que `getGpsCredentials` acepte un `gps_user_id` vacío, el token pasa a
+ser la credencial y este paso se simplifica: generar uno nuevo, guardarlo,
+revocar el viejo con `POST /api/session/token/revoke`, sin crear ni borrar
+usuarios. **Ese cambio es de una línea en el motor y no está hecho.**
+
+---
+
 ## Lo que salió distinto al correrlo
 
 El 11 de septiembre de 2026, contra `68.183.113.44`. Se anota aquí porque este
