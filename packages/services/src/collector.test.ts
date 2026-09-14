@@ -210,3 +210,247 @@ describe("CollectorService · un carrier no tumba a los demás", () => {
     expect(r.anyOk).toBe(true); // no se responde 503 por culpa del roto
   });
 });
+
+describe("CollectorService · una sola pasada para las cuentas en Compás", () => {
+  const JB = { id: "cuenta-jb", name: "Juárez Bus" };
+  const ASAV = { id: "cuenta-asav", name: "asav" };
+  const TERCERA = { id: "cuenta-3", name: "Tercer cliente" };
+  const PROPIA = { id: "cuenta-propia", name: "Con Umbrella" };
+
+  /** Repos falsos con varias cuentas; `enCompas` dice cuáles apuntan a Compás. */
+  function reposPlataforma(opciones: {
+    cuentas: Array<{ id: string; name: string }>;
+    enCompas: string[];
+    aparatos: Array<{ id: string; imei: string; carrierAccountId: string }>;
+    createAvisoFalla?: string;
+  }) {
+    const guardado: Array<{ imei: string; carrierAccountId: string }> = [];
+    const avisos: Array<{ kind: string }> = [];
+    return {
+      guardado,
+      avisos,
+      repos: {
+        accounts: { listByType: async () => opciones.cuentas },
+        carriers: {
+          getProfileByAccountId: async (id: string) => ({
+            gpsProvider: opciones.enCompas.includes(id) ? "compas" : "umbrella",
+            gpsPollSeconds: 30,
+          }),
+        },
+        fleet: {
+          listDeviceOwners: async () => opciones.aparatos,
+          getDevicesForCarrier: async (id: string) =>
+            opciones.aparatos.filter((a) => a.carrierAccountId === id),
+        },
+        livePositions: {
+          upsertMany: async (filas: Array<{ imei: string; carrierAccountId: string }>) => {
+            guardado.push(...filas);
+            return filas;
+          },
+        },
+        ingestAlerts: {
+          findOpenByKind: async () => undefined,
+          resolveOpen: async () => {},
+          create: async (d: { kind: string }) => {
+            if (opciones.createAvisoFalla) throw new Error(opciones.createAvisoFalla);
+            avisos.push(d);
+            return d;
+          },
+        },
+      } as never,
+    };
+  }
+
+  /** Compás falso: todos los aparatos con posición, y cuenta cuántas veces lo llaman. */
+  function compasFalso(opciones: {
+    imeis: string[];
+    catalogo?: string[];
+    getDevicesFalla?: number;
+  }) {
+    const llamadas = { positions: 0, devices: 0 };
+    return {
+      llamadas,
+      compas: async () => ({
+        login: async () => "tok",
+        getLastLocations: async () => {
+          llamadas.positions += 1;
+          return opciones.imeis.map((imei) => ({
+            imei,
+            latitude: 31.7,
+            longitude: -106.4,
+            timestamp: new Date("2026-09-14T20:00:00Z"),
+          }));
+        },
+        getDevices: async () => {
+          llamadas.devices += 1;
+          if (opciones.getDevicesFalla && llamadas.devices <= opciones.getDevicesFalla) {
+            throw new Error("catálogo caído");
+          }
+          return (opciones.catalogo ?? opciones.imeis).map((imei) => ({ imei }));
+        },
+      }),
+    };
+  }
+
+  it("con TRES cuentas en Compás, Compás se llama una vez por sondeo y se duerme UNA vez, no una por cuenta", async () => {
+    const f = reposPlataforma({
+      cuentas: [JB, ASAV, TERCERA],
+      enCompas: [JB.id, ASAV.id, TERCERA.id],
+      aparatos: [
+        { id: "d1", imei: "111", carrierAccountId: JB.id },
+        { id: "d2", imei: "222", carrierAccountId: ASAV.id },
+        { id: "d3", imei: "333", carrierAccountId: TERCERA.id },
+      ],
+    });
+    const c = compasFalso({ imeis: ["111", "222", "333"] });
+    const sleep = vi.fn(async () => {});
+    const svc = new CollectorService(f.repos, config, {
+      ...sinEsperas,
+      sleep,
+      compas: c.compas,
+    } as never);
+
+    const r = await svc.collectAll();
+    expect(c.llamadas.positions).toBe(2); // dos sondeos, sin importar cuántas cuentas
+    expect(sleep).toHaveBeenCalledTimes(1); // con el bucle viejo eran tres
+    expect(r.compas?.sondeos.map((s) => s.offsetSeconds)).toEqual([0, 30]);
+    expect(r.carriers).toEqual([]);
+    expect(r.anyOk).toBe(true);
+  });
+
+  it("el muro: cada posición se escribe con la cuenta dueña según J-Tel, y el resumen la cuenta ahí", async () => {
+    const f = reposPlataforma({
+      cuentas: [JB, ASAV],
+      enCompas: [JB.id, ASAV.id],
+      aparatos: [
+        { id: "d1", imei: "111", carrierAccountId: JB.id },
+        { id: "d2", imei: "222", carrierAccountId: ASAV.id },
+      ],
+    });
+    const svc = new CollectorService(f.repos, config, {
+      ...sinEsperas,
+      windowSeconds: 30,
+      compas: compasFalso({ imeis: ["111", "222"] }).compas,
+    } as never);
+
+    const r = await svc.collectAll();
+    expect(f.guardado).toEqual([
+      expect.objectContaining({ imei: "111", carrierAccountId: JB.id }),
+      expect.objectContaining({ imei: "222", carrierAccountId: ASAV.id }),
+    ]);
+    expect(r.compas?.carriers).toEqual([
+      { carrierAccountId: JB.id, carrierName: "Juárez Bus", written: 1 },
+      { carrierAccountId: ASAV.id, carrierName: "asav", written: 1 },
+    ]);
+  });
+
+  it("lo que Compás trae y no es de una cuenta en Compás NO se escribe: ni sin dueño, ni de otro proveedor, ni en dos cuentas", async () => {
+    const f = reposPlataforma({
+      cuentas: [JB, ASAV, PROPIA],
+      enCompas: [JB.id, ASAV.id],
+      aparatos: [
+        { id: "d1", imei: "111", carrierAccountId: JB.id },
+        { id: "d2", imei: "444", carrierAccountId: PROPIA.id },
+        { id: "d3", imei: "555", carrierAccountId: JB.id },
+        { id: "d4", imei: "555", carrierAccountId: ASAV.id },
+      ],
+    });
+    const svc = new CollectorService(f.repos, config, {
+      ...sinEsperas,
+      windowSeconds: 30,
+      provider: async () => ({ login: async () => "t", getLastLocations: async () => [] }),
+      compas: compasFalso({ imeis: ["111", "999", "444", "555"] }).compas,
+    } as never);
+
+    await svc.collectAll();
+    expect(f.guardado.map((g) => g.imei)).toEqual(["111"]);
+  });
+
+  it("una cuenta con proveedor propio sigue con su sondeo, al mismo tiempo que la pasada", async () => {
+    const f = reposPlataforma({
+      cuentas: [JB, PROPIA],
+      enCompas: [JB.id],
+      aparatos: [
+        { id: "d1", imei: "111", carrierAccountId: JB.id },
+        { id: "d2", imei: "444", carrierAccountId: PROPIA.id },
+      ],
+    });
+    const svc = new CollectorService(f.repos, config, {
+      ...sinEsperas,
+      compas: compasFalso({ imeis: ["111"] }).compas,
+      provider: proveedor([{ puntos: [{ recordedAt: new Date("2026-09-14T20:00:00Z") }] }]),
+    } as never);
+
+    const r = await svc.collectAll();
+    expect(r.carriers.map((c) => c.carrierName)).toEqual(["Con Umbrella"]);
+    expect(r.carriers[0]!.ok).toBe(true);
+    expect(r.compas?.ok).toBe(true);
+  });
+
+  it("sin la conexión de plataforma en el ambiente, la pasada falla con el nombre de las variables y NO cae a otro proveedor", async () => {
+    const f = reposPlataforma({
+      cuentas: [JB],
+      enCompas: [JB.id],
+      aparatos: [{ id: "d1", imei: "111", carrierAccountId: JB.id }],
+    });
+    const svc = new CollectorService(f.repos, config, sinEsperas as never);
+
+    const r = await svc.collectAll();
+    expect(r.compas?.ok).toBe(false);
+    expect(r.compas?.sondeos[0]!.error).toContain("COMPAS_GPS_URL");
+    expect(f.guardado).toEqual([]);
+    expect(r.anyOk).toBe(false); // 503: esto sí hay que verlo
+  });
+
+  it("el cotejo corre una vez por ventana y abre el aviso del aparato sin dueño", async () => {
+    const f = reposPlataforma({
+      cuentas: [ASAV],
+      enCompas: [ASAV.id],
+      aparatos: [{ id: "d3", imei: "860693089187232", carrierAccountId: ASAV.id }],
+    });
+    const c = compasFalso({
+      imeis: ["860693089187232"],
+      catalogo: ["860693089187232", "860693086787513"],
+    });
+    const svc = new CollectorService(f.repos, config, { ...sinEsperas, compas: c.compas } as never);
+
+    const r = await svc.collectAll();
+    expect(c.llamadas.devices).toBe(1);
+    expect(r.compas?.cotejo).toMatchObject({ sinDueno: 1, avisosAbiertos: 1 });
+    expect(f.avisos.map((a) => a.kind)).toEqual(["aparato_sin_dueno"]);
+  });
+
+  it("si el catálogo falla en el primer sondeo, el cotejo se reintenta en el segundo y las posiciones ya quedaron", async () => {
+    const f = reposPlataforma({
+      cuentas: [JB],
+      enCompas: [JB.id],
+      aparatos: [{ id: "d1", imei: "111", carrierAccountId: JB.id }],
+    });
+    const c = compasFalso({ imeis: ["111"], getDevicesFalla: 1 });
+    const svc = new CollectorService(f.repos, config, { ...sinEsperas, compas: c.compas } as never);
+
+    const r = await svc.collectAll();
+    expect(f.guardado).toHaveLength(2);
+    expect(c.llamadas.devices).toBe(2);
+    expect(r.compas?.cotejo).toBeDefined();
+  });
+
+  it("desplegado antes de la 0035: el aviso no se puede escribir, y las posiciones se escriben igual", async () => {
+    const f = reposPlataforma({
+      cuentas: [JB],
+      enCompas: [JB.id],
+      aparatos: [{ id: "d1", imei: "111", carrierAccountId: JB.id }],
+      createAvisoFalla: 'invalid input value for enum ingest_alert_kind: "aparato_sin_dueno"',
+    });
+    const svc = new CollectorService(f.repos, config, {
+      ...sinEsperas,
+      compas: compasFalso({ imeis: ["111"], catalogo: ["111", "999"] }).compas,
+    } as never);
+
+    const r = await svc.collectAll();
+    expect(f.guardado).toHaveLength(2);
+    expect(r.compas?.ok).toBe(true);
+    expect(r.compas?.cotejo?.error).toContain("ingest_alert_kind");
+    expect(r.anyOk).toBe(true);
+  });
+});

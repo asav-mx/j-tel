@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
 import { exigirCron } from "@/lib/guardia-cron";
-import { getUmbrellaConfig } from "@/lib/umbrella-config";
+import { getGpsBackendConfig } from "@/lib/gps-config";
 import { ArchiverService } from "@jtel/services";
 
 // El archivado puede tardar (Umbrella limita a ~1 req/seg y paginamos).
@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   if (negada) return negada;
 
   const repos = getRepos();
-  const archiver = new ArchiverService(repos, getUmbrellaConfig());
+  const archiver = new ArchiverService(repos, getGpsBackendConfig());
 
   const summary = await archiver.archiveAll();
   // Dejamos rastro en los logs para poder diagnosticar (motivo exacto si un

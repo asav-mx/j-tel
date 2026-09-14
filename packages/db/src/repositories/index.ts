@@ -74,7 +74,7 @@ import {
   concessionCarriers,
   concessionProfiles,
 } from "../schema/index.js";
-import type { ComplianceFact } from "../schema/index.js";
+import type { ComplianceFact, IngestAlertKind } from "../schema/index.js";
 import type {
   CandidatasSnapshot,
   ContractPolicy,
@@ -176,9 +176,12 @@ export class CarrierRepository {
   constructor(private db: Database) {}
 
   async createProfile(accountId: string, legalName: string, gpsUserId?: string) {
+    // `compas` escrito aquí y no sólo como default de la columna: si el código
+    // se despliega antes de aplicar la 0035, la base todavía diría `umbrella`
+    // y la cuenta nacería ciega. Con el valor explícito, el orden no importa.
     const [profile] = await this.db
       .insert(carrierProfiles)
-      .values({ accountId, legalName, gpsUserId })
+      .values({ accountId, legalName, gpsUserId, gpsProvider: "compas" })
       .returning();
     return profile!;
   }
@@ -571,6 +574,25 @@ export class FleetRepository {
       where: eq(units.carrierAccountId, carrierAccountId),
       orderBy: (table, { asc }) => [asc(table.label)],
     });
+  }
+
+  /**
+   * Todos los aparatos de todas las cuentas, sólo con lo necesario para saber
+   * de quién es cada IMEI.
+   *
+   * Es la lectura del recolector de una sola pasada: Compás entrega las
+   * posiciones de toda la plataforma juntas y J-Tel las reparte. **A qué cuenta
+   * va cada posición lo decide esta tabla**, no el servidor GPS — que es el
+   * muro entre clientes.
+   */
+  async listDeviceOwners() {
+    return this.db
+      .select({
+        id: devices.id,
+        imei: devices.imei,
+        carrierAccountId: devices.carrierAccountId,
+      })
+      .from(devices);
   }
 
   async getDevicesForCarrier(carrierAccountId: string) {
@@ -5148,7 +5170,7 @@ export class IngestAlertRepository {
 
   async create(data: {
     carrierAccountId?: string | null;
-    kind: "heartbeat_stale" | "watermark_lag" | "archive_error" | "rate_limit";
+    kind: IngestAlertKind;
     severity?: string;
     message: string;
     metadata?: Record<string, unknown>;
@@ -5167,7 +5189,7 @@ export class IngestAlertRepository {
   }
 
   async findOpenByKind(
-    kind: "heartbeat_stale" | "watermark_lag" | "archive_error" | "rate_limit",
+    kind: IngestAlertKind,
     carrierAccountId?: string | null,
   ) {
     const conditions = [eq(ingestAlerts.kind, kind), isNull(ingestAlerts.resolvedAt)];
@@ -5181,7 +5203,7 @@ export class IngestAlertRepository {
   }
 
   async resolveOpen(
-    kind: "heartbeat_stale" | "watermark_lag" | "archive_error" | "rate_limit",
+    kind: IngestAlertKind,
     carrierAccountId?: string | null,
   ) {
     const conditions = [eq(ingestAlerts.kind, kind), isNull(ingestAlerts.resolvedAt)];
