@@ -1,6 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { canAccessCarrierAccount, canAccessClientAccount } from "@jtel/auth-rbac";
-import { decidir, type Audiencia, type Decision } from "@/lib/guardia-api";
+import { decidir, sesionUtilizable, type Audiencia, type Decision } from "@/lib/guardia-api";
+
+// Vive en `guardia-api.ts` desde el 14 de septiembre de 2026, que es cuando la
+// guardia de las APIs empezó a hacerse la misma pregunta. Se re-exporta para no
+// mover a quien ya la importaba de aquí.
+export { sesionUtilizable };
 import {
   destinoDeVuelta,
   ENCABEZADO_RUTA_COMPLETA,
@@ -25,10 +30,12 @@ import { getIdentidad, type Identidad } from "@/lib/auth";
  *
  * Ésta es la parte que hay que leer antes de tocar este archivo.
  *
- * Mientras el bypass de desarrollo viva, **`getIdentidad()` sigue devolviendo
- * alguien en producción**: si no hay sesión de Clerk cae a `JTEL_DEV_USER`, y
- * ahí `jstaff_admin` está puesto en Vercel — así que **un visitante anónimo
- * *es* `jstaff_admin`, con sus membresías**. Una guardia que preguntara «¿hay
+ * Mientras el bypass de desarrollo viva, **`getIdentidad()` puede devolver
+ * alguien sin sesión**. Hasta el 14 de septiembre de 2026 eso pasaba en
+ * producción: `JTEL_DEV_USER=jstaff_admin` estaba puesto en Vercel, así que
+ * **un visitante anónimo *era* `jstaff_admin`, con sus membresías**. Hoy la
+ * variable ya no está en Production y `identidad-dev.ts` la ignora ahí, pero
+ * esta guardia no se apoya en ninguna de las dos cosas. Una guardia que preguntara «¿hay
  * identidad?» pasaría a todo el mundo y se vería exactamente igual que una que
  * funciona.
  *
@@ -128,26 +135,6 @@ export async function destinoDeLaNegativa(motivo: MotivoDeNegativa): Promise<str
 
   if (!destino) return base;
   return `${base}&${PARAM_VOLVER}=${encodeURIComponent(destino)}`;
-}
-
-/**
- * ¿Esta identidad sirve para entrar?
- *
- * Se exporta porque **la portada la necesita sin redirigir**: la raíz no niega
- * el paso, elige qué cara enseñar —landing sin sesión, portada con ella—. Si
- * la portada llevara su propia copia de esta condición, las dos se separarían
- * a la primera vez que alguien corrigiera una y olvidara la otra, y la que se
- * quedaría vieja sería justo la que decide si se enseñan nombres de clientes.
- *
- * En producción: sesión de Clerk real. Fuera: vale el bypass, o no se puede
- * trabajar en local ni en CI.
- */
-export function sesionUtilizable(
-  identidad: Identidad,
-  entorno: { enProduccion?: boolean } = {},
-): boolean {
-  const enProduccion = entorno.enProduccion ?? process.env.NODE_ENV === "production";
-  return !enProduccion || identidad.sesionActiva;
 }
 
 /**

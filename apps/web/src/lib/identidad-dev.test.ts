@@ -76,20 +76,67 @@ describe("fuera de producción el bypass sigue abierto — es la herramienta de 
 });
 
 describe("el encabezado rechazado se ignora entero, nunca a medias", () => {
-  it("cae a la variable de servidor cuando existe, no al usuario pedido", () => {
+  /*
+   * Antes decía que el rechazado caía a la variable del servidor. Fuera de
+   * producción un encabezado nunca se rechaza, y en producción la variable ya
+   * no cuenta (14 sep 2026), así que ese camino dejó de existir. Lo que queda
+   * de la regla es lo que importaba: el usuario pedido no se acepta a medias.
+   */
+  it("el usuario pedido no se acepta, ni aunque haya variable puesta", () => {
     const r = resolverIdentidadDeDesarrollo(
       entorno({ pedido: "jstaff_admin", usuarioPorVariable: "tecma_admin" }),
     );
 
-    expect(r.userId).toBe("tecma_admin");
-    expect(r.origen).toBe("variable-dev");
+    expect(r.userId).not.toBe("jstaff_admin");
+    expect(r.userId).toBeNull();
     expect(r.encabezadoRechazado).toBe(true);
   });
 });
 
-describe("sin encabezado, manda el servidor", () => {
+/**
+ * La segunda pared — 14 de septiembre de 2026.
+ *
+ * `JTEL_DEV_USER=jstaff_admin` estaba puesta en Production, y la guardia de las
+ * APIs no pedía sesión: cualquier anónimo era el administrador de la
+ * plataforma. La variable ya se quitó de Vercel; esto hace que volver a
+ * ponerla no le dé identidad a nadie.
+ */
+describe("en producción, JTEL_DEV_USER no existe", () => {
+  it("el caso medido: la variable puesta y sin nada más, no hay nadie", () => {
+    const r = resolverIdentidadDeDesarrollo(entorno({ usuarioPorVariable: "jstaff_admin" }));
+
+    expect(r).toEqual({ userId: null, origen: "anonimo", encabezadoRechazado: false });
+  });
+
+  it("un encabezado rechazado tampoco cae a la variable", () => {
+    const r = resolverIdentidadDeDesarrollo(
+      entorno({ pedido: "tecma_admin", usuarioPorVariable: "jstaff_admin" }),
+    );
+
+    expect(r.userId).toBeNull();
+    expect(r.encabezadoRechazado).toBe(true);
+  });
+
+  it("el encabezado con el token correcto sí sigue valiendo: es un secreto elegido, no un default", () => {
+    const r = resolverIdentidadDeDesarrollo(
+      entorno({
+        pedido: "tecma_planta47",
+        token: "el-bueno",
+        secretoEsperado: "el-bueno",
+        usuarioPorVariable: "jstaff_admin",
+      }),
+    );
+
+    expect(r.userId).toBe("tecma_planta47");
+    expect(r.origen).toBe("encabezado-dev");
+  });
+});
+
+describe("sin encabezado, manda el servidor — fuera de producción", () => {
   it("la variable de entorno sigue mandando", () => {
-    const r = resolverIdentidadDeDesarrollo(entorno({ usuarioPorVariable: "jb_admin" }));
+    const r = resolverIdentidadDeDesarrollo(
+      entorno({ usuarioPorVariable: "jb_admin", enProduccion: false }),
+    );
 
     expect(r).toEqual({
       userId: "jb_admin",

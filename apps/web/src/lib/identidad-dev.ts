@@ -49,7 +49,7 @@ export type EntornoDeIdentidad = {
   enProduccion: boolean;
   /** `JTEL_DEV_TOKEN` del servidor. */
   secretoEsperado: string | undefined;
-  /** `JTEL_DEV_USER` del servidor. */
+  /** `JTEL_DEV_USER` del servidor. **Se ignora en producción.** */
   usuarioPorVariable: string | undefined;
 };
 
@@ -77,7 +77,20 @@ export function bypassPorEncabezadoPermitido(
 
 /** La decisión completa del bypass. */
 export function resolverIdentidadDeDesarrollo(e: EntornoDeIdentidad): Resuelto {
-  const porVariable = e.usuarioPorVariable;
+  /*
+   * En producción, `JTEL_DEV_USER` no existe para este código.
+   *
+   * Es la segunda pared. La primera es que las guardias exigen sesión de Clerk
+   * en producción. Hasta el 14 de septiembre de 2026 había una sola y le
+   * faltaba un tramo: la variable estaba puesta en Vercel con `jstaff_admin`, la
+   * guardia de las APIs no pedía sesión, y cualquier visitante anónimo era el
+   * administrador de la plataforma en las 44 rutas de API.
+   *
+   * Con esto, volver a poner la variable en Production no le da identidad a
+   * nadie. El encabezado con token sí sigue valiendo: es un secreto de servidor
+   * que se elige a propósito, no un default que se hereda.
+   */
+  const porVariable = e.enProduccion ? undefined : e.usuarioPorVariable;
 
   if (e.pedido) {
     if (bypassPorEncabezadoPermitido(e)) {

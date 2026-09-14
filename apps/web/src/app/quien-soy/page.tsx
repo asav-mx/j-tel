@@ -3,6 +3,7 @@ import { SignInButton, SignOutButton } from "@clerk/nextjs";
 import { getIdentidad, type OrigenDeIdentidad } from "@/lib/auth";
 import { getRepos } from "@/lib/db";
 import { CLERK_CONFIGURADO } from "@/lib/clerk-estado";
+import { sesionUtilizable } from "@/lib/guardia-pagina";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ const ORIGEN: Record<OrigenDeIdentidad, { titulo: string; lectura: string }> = {
   "variable-dev": {
     titulo: "Variable de entorno",
     lectura:
-      "La identidad la fija JTEL_DEV_USER en el servidor. No se puede cambiar desde el navegador, pero es la misma para todos los que entren.",
+      "La identidad la fija JTEL_DEV_USER en el servidor. Sólo fuera de producción: en producción esa variable se ignora desde el 14 de septiembre de 2026.",
   },
   anonimo: {
     titulo: "Nadie",
@@ -59,8 +60,43 @@ function Dato({ etiqueta, children }: { etiqueta: string; children: React.ReactN
   );
 }
 
+/**
+ * Lo único que ve quien llega sin sesión en producción.
+ *
+ * Hasta el 14 de septiembre de 2026 esta pantalla le enseñaba a cualquiera la
+ * identidad que el servidor le asignaba —`jstaff_admin`, por la variable de
+ * desarrollo— y la tabla de sus membresías con los nombres de las cuentas. Sin
+ * guardia, porque es la pantalla que explica por qué no se puede entrar.
+ *
+ * Sigue sin guardia por esa razón, pero sin sesión ya no hay nada que
+ * explicar de nadie: sin sesión no hay identidad que valga, y enseñar la que
+ * habría tocado es enseñar lo que la guardia protege.
+ */
+function SinSesion() {
+  return (
+    <main className="mx-auto max-w-[860px] px-5 py-9 pb-24">
+      <h1 className="mb-3 max-w-[24ch] font-[family-name:var(--fuente-archivo)] text-[32px] leading-[1.05] font-bold tracking-[-0.02em]">
+        No hay sesión.
+      </h1>
+      <p className="mb-8 max-w-[62ch] text-[var(--tenue)]">
+        Sin sesión no hay identidad que mostrar. Entra y esta pantalla te dirá con qué cuenta
+        entraste y qué puede alcanzar.
+      </p>
+      <Link
+        href="/entrar"
+        className="cursor-pointer rounded-sm border border-[var(--azul)] px-3.5 py-2 font-mono text-[11px] font-medium tracking-[0.11em] text-[var(--azul)] uppercase transition-colors hover:bg-[var(--hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--azul)]"
+      >
+        Entrar
+      </Link>
+    </main>
+  );
+}
+
 export default async function QuienSoyPage() {
   const id = await getIdentidad();
+  // Antes de leer las cuentas de las membresías: sin sesión en producción, ni
+  // se consultan.
+  if (!sesionUtilizable(id)) return <SinSesion />;
   const repos = getRepos();
 
   const membresías = await Promise.all(
@@ -75,7 +111,7 @@ export default async function QuienSoyPage() {
   return (
     <main className="mx-auto max-w-[860px] px-5 py-9 pb-24">
       <p className="mb-3 font-mono text-[10.5px] font-medium tracking-[0.17em] text-[var(--tenue)] uppercase">
-        Auth-RBAC · Paso 1 · identidad sin enforcement
+        Auth-RBAC · diagnóstico de identidad
       </p>
 
       <h1 className="mb-3 max-w-[24ch] font-[family-name:var(--fuente-archivo)] text-[32px] leading-[1.05] font-bold tracking-[-0.02em]">
@@ -85,7 +121,7 @@ export default async function QuienSoyPage() {
       <p className="mb-8 max-w-[62ch] text-[var(--tenue)]">
         {id.sesionActiva
           ? "La identidad viene de Clerk. Falta que esa identidad encuentre sus membresías en la base — mientras no las tenga, no hay nada que cerrar."
-          : "La app te está asumiendo una identidad para poder funcionar. Nada está protegido todavía: esta pantalla existe para comprobar que podemos entrar antes de empezar a cerrar."}
+          : "Fuera de producción la identidad sale del bypass de desarrollo. En producción esta pantalla no enseña nada sin sesión."}
       </p>
 
       {/* — Quién — */}
@@ -162,12 +198,11 @@ export default async function QuienSoyPage() {
           <p className="max-w-[62ch] text-[13.5px] text-[var(--tenue)]">
             {id.sesionActiva ? (
               <>
-                <b className="font-medium text-[var(--texto)]">Cero membresías, y es lo esperado.</b>{" "}
-                La columna <span className="font-mono text-[12px]">clerk_user_id</span> todavía
-                guarda los nombres del seed —{" "}
-                <span className="font-mono text-[12px]">tecma_admin</span> y compañía — no los
-                identificadores que emite Clerk. Mapear unos con otros es trabajo del paso
-                siguiente, y hasta que exista, una sesión real no encuentra a quién corresponde.
+                <b className="font-medium text-[var(--texto)]">Tu sesión no tiene membresías.</b>{" "}
+                No hay ninguna fila en{" "}
+                <span className="font-mono text-[12px]">user_memberships</span> con tu
+                identificador, así que no vas a poder abrir ninguna cuenta. Pide que te den de
+                alta.
               </>
             ) : (
               <>Este identificador no tiene ninguna fila en{" "}
@@ -212,21 +247,15 @@ export default async function QuienSoyPage() {
         )}
       </section>
 
-      {/* — Lo que esta pantalla NO responde — */}
+      {/* — Qué decide el paso — */}
       <div className="max-w-[66ch] border-l-2 border-[var(--acero)] py-1 pl-4">
         <p className="mb-3 text-[14px] text-[var(--texto)]">
-          <b className="font-medium">Nada de esto bloquea a nadie todavía.</b>
-        </p>
-        <p className="mb-3 text-[13.5px] text-[var(--tenue)]">
-          Las membresías se leen y se muestran, pero ninguna pantalla las consulta para decidir qué
-          enseñar. <span className="font-mono text-[12px]">/cliente</span> y{" "}
-          <span className="font-mono text-[12px]">/carrier</span> siguen abriéndose con el slug del
-          URL, igual que antes de este cambio. Cerrar{" "}
-          <span className="font-mono text-[12px]">/carrier</span> es el paso siguiente.
+          <b className="font-medium">En producción, estas membresías deciden qué abres.</b>
         </p>
         <p className="text-[13.5px] text-[var(--tenue)]">
-          Tampoco cubre las 26 rutas de API sin guardia ni el expediente por id — los dos van en su
-          propio carril.
+          Las páginas y las rutas de API exigen sesión de Clerk y, con ella, miden tu alcance
+          contra esta tabla. Fuera de producción el bypass de desarrollo ocupa el lugar de la
+          sesión.
         </p>
       </div>
 

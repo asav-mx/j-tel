@@ -1432,6 +1432,14 @@ puede probar contra una sesión real.
 está—, y **no iniciar sesión en Clerk** hasta que el mapeo exista. Una sesión real hoy
 entra sin membresías y se ve como un usuario sin permisos, no como un error.
 
+> **🔴 Corregido el 14 de septiembre de 2026.** Con la variable puesta, **las APIs
+> estaban abiertas**: `exigir()` preguntaba por membresías y nunca por sesión, así
+> que una petición anónima era `jstaff_admin`. Medido contra producción: 200 donde
+> debía haber 403. Asav quitó la variable de Production y Preview (queda sólo en
+> Development), `exigir()` exige ahora sesión en producción igual que las páginas,
+> e `identidad-dev.ts` ignora la variable en producción. Ver el PR de la guardia.
+
+
 **Qué lo desbloquea.** 🤝 [Crear la cuenta en Clerk y sus dos
 llaves](#trámites-que-solo-asav-puede-hacer).
 

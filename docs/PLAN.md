@@ -1223,6 +1223,14 @@ el bypass le da identidad a **todo el mundo**: un visitante anónimo de producci
 Clerk real** — el campo `sesionActiva` de `getIdentidad()` existe para eso. Por
 eso 1.a va antes que 1.b, y no al revés.
 
+> **🔴 Corregido el 14 de septiembre de 2026.** Con la variable puesta, **las APIs
+> estaban abiertas**: `exigir()` preguntaba por membresías y nunca por sesión, así
+> que una petición anónima era `jstaff_admin`. Medido contra producción: 200 donde
+> debía haber 403. Asav quitó la variable de Production y Preview (queda sólo en
+> Development), `exigir()` exige ahora sesión en producción igual que las páginas,
+> e `identidad-dev.ts` ignora la variable en producción. Ver el PR de la guardia.
+
+
 **Prueba de aceptación (ya escrita en el código):** `/quien-soy` debe decir
 `origen: clerk` con las membresías **pobladas**, no vacías.
 
