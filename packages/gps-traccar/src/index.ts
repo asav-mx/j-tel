@@ -144,6 +144,32 @@ interface TraccarDevice {
  */
 const RUTA_DE_COMPROBACION = "/api/devices";
 
+/**
+ * Cuánto se espera a Traccar en UNA petición antes de darla por perdida.
+ *
+ * ## Por qué hace falta, medido el 14 de septiembre de 2026
+ *
+ * El recolector corre en una función de Vercel con `maxDuration = 90` y hace
+ * varios sondeos seguidos dentro de la misma invocación: a 30 s de cadencia son
+ * 2 sondeos y la invocación dura ~32 s. **Sin tiempo máximo, una sola petición
+ * colgada —Traccar reiniciando, la red de DigitalOcean con un mal rato— detiene
+ * el sondeo sin fecha**: la invocación llega a los 90 s, Vercel la mata, los
+ * sondeos que faltaban no ocurren, y la del minuto siguiente arranca encima.
+ *
+ * Y el fallo no se ve como fallo: una función matada por tiempo no llega al
+ * `catch` de `unSondeo`, así que no queda su causa en el resumen.
+ *
+ * ## Por qué 10 s
+ *
+ * Una petición sana a este servidor tarda del orden de un segundo (registro de
+ * Caddy, 11 sep). Diez es un orden de magnitud de margen para una mala racha,
+ * y aun con dos peticiones por sondeo agotándolo, un sondeo se queda en ~20 s:
+ * debajo de la cadencia de 30 y de los 90 de la función.
+ *
+ * **No dice nada de la cadencia de 15 s**, que está pendiente de su costo.
+ */
+export const TIEMPO_MAXIMO_POR_PETICION_MS = 10_000;
+
 /** Un nudo son 1.852 km/h, exacto por definición. */
 const KMH_POR_NUDO = 1.852;
 
@@ -166,14 +192,16 @@ export class TraccarGpsProvider implements GpsProvider {
 
   constructor(
     private config: GpsProviderConfig,
-    opciones: { fetchImpl?: typeof fetch; catalogoTtlMs?: number } = {},
+    opciones: { fetchImpl?: typeof fetch; catalogoTtlMs?: number; tiempoMaximoMs?: number } = {},
   ) {
     this.baseUrl = config.baseUrl.replace(/\/+$/, "");
     this.fetchImpl = opciones.fetchImpl ?? fetch;
     this.catalogoTtlMs = opciones.catalogoTtlMs ?? 60_000;
+    this.tiempoMaximoMs = opciones.tiempoMaximoMs ?? TIEMPO_MAXIMO_POR_PETICION_MS;
   }
 
   private catalogoTtlMs: number;
+  private tiempoMaximoMs: number;
 
   /**
    * La cabecera de autorización.
@@ -191,12 +219,35 @@ export class TraccarGpsProvider implements GpsProvider {
   }
 
   private async pedir<T>(ruta: string, creds: GpsCredentials): Promise<T> {
-    const respuesta = await this.fetchImpl(`${this.baseUrl}${ruta}`, {
-      headers: {
-        Authorization: this.cabecera(creds),
-        Accept: "application/json",
-      },
-    });
+    /*
+     * El mismo reloj cubre la conexión, la respuesta Y la lectura del cuerpo:
+     * `AbortSignal.timeout` corta la petición entera, así que un servidor que
+     * contesta las cabeceras y se queda mudo en el cuerpo tampoco cuelga el
+     * sondeo.
+     */
+    const senal = AbortSignal.timeout(this.tiempoMaximoMs);
+    const sinRespuesta = () =>
+      new Error(`Traccar no contestó en ${this.tiempoMaximoMs / 1000} s en ${ruta}`);
+
+    let respuesta: Response;
+    try {
+      respuesta = await this.fetchImpl(`${this.baseUrl}${ruta}`, {
+        headers: {
+          Authorization: this.cabecera(creds),
+          Accept: "application/json",
+        },
+        signal: senal,
+      });
+    } catch (err) {
+      /*
+       * Se reescribe sólo el vencimiento, y con la ruta y los segundos en el
+       * mensaje: termina en `ingest_alerts`, y «This operation was aborted»
+       * no le dice a nadie qué se esperó ni cuánto. Cualquier otro fallo de
+       * red sube tal cual, con su causa.
+       */
+      if (senal.aborted) throw sinRespuesta();
+      throw err;
+    }
 
     if (!respuesta.ok) {
       /*
@@ -216,11 +267,16 @@ export class TraccarGpsProvider implements GpsProvider {
       );
     }
 
-    return (await respuesta.json()) as T;
+    try {
+      return (await respuesta.json()) as T;
+    } catch (err) {
+      if (senal.aborted) throw sinRespuesta();
+      throw err;
+    }
   }
 
   /**
-   * Comprueba la credencial contra `/api/session` y devuelve la cabecera ya
+   * Comprueba la credencial contra `RUTA_DE_COMPROBACION` y devuelve la cabecera ya
    * armada, que es lo que las demás llamadas necesitan.
    *
    * Devuelve la cabecera y no un token porque Traccar no emite uno: el
