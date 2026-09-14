@@ -92,18 +92,18 @@ observado**, que es la ley de la Pieza 1.
 
 | # | Pieza | Estado |
 |---|---|---|
-| 1 | **Dónde vive el servidor.** Pide dirección estable y el 5027 abierto. **Traccar no puede vivir en Vercel**: los equipos se quedan conectados a un puerto TCP, y eso pide un proceso de larga vida | Asav contrata |
+| 1 | **Dónde vive el servidor.** Pide dirección estable y el 5027 abierto. **Traccar no puede vivir en Vercel**: los equipos se quedan conectados a un puerto TCP, y eso pide un proceso de larga vida | ✅ **Hecho el 11 sep** — DigitalOcean, Ubuntu 24.04, 1 vCPU, 961 MB |
 
 > **Los pasos 1 a 3 ya están escritos, comando por comando**, en
 > [`Procedimiento-Traccar-Servidor.md`](Procedimiento-Traccar-Servidor.md) —
 > instalación, base propia, cortafuegos, y las tres comprobaciones de que está
 > oyendo. **Escrito y no corrido:** no hay máquina todavía. La llave SSH sí
 > está generada.
-| 2 | Levantar Traccar con su base propia y su certificado | Bloqueado por 1 |
-| 3 | **Un equipo apuntado y un punto que llegue** — la compuerta de verdad, y la regla del firmware manda aquí | Bloqueado por 2 |
+| 2 | Levantar Traccar con su base propia y su certificado | ✅ **Hecho el 11 sep** — `68.183.113.44`, y `compas.j-telemetry.com` con certificado de Let's Encrypt |
+| 3 | **Un equipo apuntado y un punto que llegue** — la compuerta de verdad, y la regla del firmware manda aquí | ⏳ **LO ÚNICO QUE FALTA.** Pendiente de que haya equipos |
 | 4 | El proveedor en el repo | ✅ Hecho |
 | 5 | Registrar el caso y las credenciales por carrier | ✅ Hecho — migración `0034` |
-| 6 | Alta de los aparatos nuevos. IMEI nuevos, `devices` nuevos, `device_assignments` nuevas. El modelo ya lo soporta | Captura, tras 3 |
+| 6 | Alta de los aparatos nuevos. IMEI nuevos, `devices` nuevos, `device_assignments` nuevas. El modelo ya lo soporta | Captura, tras 3 — ver [`Lista-Alta-Aparatos-Compas.md`](Lista-Alta-Aparatos-Compas.md) |
 
 ---
 

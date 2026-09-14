@@ -50,7 +50,6 @@ describe("la unidad de la velocidad", () => {
    */
   it("convierte la velocidad de Traccar a km/h, no la pasa tal cual", async () => {
     const fetchImpl = servidorFalso({
-      "/api/session": { id: 1 },
       "/api/devices": DOS_APARATOS,
       "/api/positions": [
         {
@@ -77,7 +76,6 @@ describe("la unidad de la velocidad", () => {
 
   it("el rumbo NO se convierte: los dos proveedores hablan grados", async () => {
     const fetchImpl = servidorFalso({
-      "/api/session": { id: 1 },
       "/api/devices": DOS_APARATOS,
       "/api/positions": [
         {
@@ -104,7 +102,6 @@ describe("el deviceId de Traccar no es el IMEI", () => {
    */
   it("resuelve el imei por el catálogo, nunca usa el deviceId", async () => {
     const fetchImpl = servidorFalso({
-      "/api/session": { id: 1 },
       "/api/devices": DOS_APARATOS,
       "/api/positions": [
         { deviceId: 9, fixTime: "2026-09-10T18:00:00Z", valid: true, latitude: 31.7, longitude: -106.4 },
@@ -119,7 +116,6 @@ describe("el deviceId de Traccar no es el IMEI", () => {
 
   it("descarta la posición de un aparato que no está en el catálogo", async () => {
     const fetchImpl = servidorFalso({
-      "/api/session": { id: 1 },
       "/api/devices": DOS_APARATOS,
       "/api/positions": [
         { deviceId: 404, fixTime: "2026-09-10T18:00:00Z", valid: true, latitude: 31.7, longitude: -106.4 },
@@ -134,7 +130,6 @@ describe("lo que no se midió no se escribe", () => {
   /** La valla del punto 3, que es §E: una posición inválida no es una posición. */
   it("tira las posiciones marcadas inválidas por el equipo", async () => {
     const fetchImpl = servidorFalso({
-      "/api/session": { id: 1 },
       "/api/devices": DOS_APARATOS,
       "/api/positions": [
         { deviceId: 7, fixTime: "2026-09-10T18:00:00Z", valid: false, latitude: 0, longitude: 0 },
@@ -150,7 +145,6 @@ describe("lo que no se midió no se escribe", () => {
 
   it("tira la posición sin hora utilizable", async () => {
     const fetchImpl = servidorFalso({
-      "/api/session": { id: 1 },
       "/api/devices": DOS_APARATOS,
       "/api/positions": [
         { deviceId: 7, valid: true, latitude: 31.7, longitude: -106.4 },
@@ -168,7 +162,6 @@ describe("lo que no se midió no se escribe", () => {
    */
   it("prefiere fixTime, cae a deviceTime, y NUNCA usa serverTime", async () => {
     const fetchImpl = servidorFalso({
-      "/api/session": { id: 1 },
       "/api/devices": DOS_APARATOS,
       "/api/positions": [
         {
@@ -201,7 +194,52 @@ describe("una credencial revocada falla ruidosa", () => {
    * — que es como se habría perdido el corte de Umbrella si su login no
    * fallara.
    */
-  it("login revienta si /api/session no autoriza", async () => {
+  /**
+   * La valla del defecto del 11 de septiembre de 2026.
+   *
+   * `login()` comprobaba contra `/api/session`, que en un Traccar real contesta
+   * **404 con cualquier cabecera de autorización** — sólo atiende cookie, o el
+   * token metido en la URL. O sea no podía entrar nunca.
+   *
+   * Y la prueba pasaba en verde porque el servidor falso contestaba 200 a esa
+   * ruta: **la había escrito yo contestando 200**. Ahora el falso se comporta
+   * como el de verdad, así que volver a apuntar `login()` ahí tumba esto.
+   */
+  it("login NO usa /api/session, que en un Traccar real da 404", async () => {
+    const vistas: string[] = [];
+    const fetchImpl = servidorFalso({ "/api/devices": DOS_APARATOS }, (u) => vistas.push(u));
+
+    const p = new TraccarGpsProvider(CONFIG, { fetchImpl });
+    await expect(p.login()).resolves.toContain("Basic ");
+
+    expect(vistas.some((u) => u.includes("/api/session"))).toBe(false);
+    expect(vistas.some((u) => u.includes("/api/devices"))).toBe(true);
+  });
+
+  /**
+   * El secreto no viaja en la URL. `/api/session?token=` sí funciona contra un
+   * Traccar real, y por eso hay que decir por qué NO se usa: una URL con el
+   * token dentro termina escrita en el registro de cualquier proxy que haya en
+   * medio, y en el paso 8 va a haber uno.
+   */
+  it("el secreto nunca viaja en la URL", async () => {
+    const vistas: string[] = [];
+    const fetchImpl = servidorFalso(
+      { "/api/devices": DOS_APARATOS, "/api/positions": [] },
+      (u) => vistas.push(u),
+    );
+
+    const p = new TraccarGpsProvider(
+      { baseUrl: CONFIG.baseUrl, credentials: { userId: "", password: "T0K3N-SECRETO" } },
+      { fetchImpl },
+    );
+    await p.getLastLocations(await p.login());
+
+    expect(vistas.length).toBeGreaterThan(0);
+    for (const u of vistas) expect(u).not.toContain("T0K3N-SECRETO");
+  });
+
+  it("login revienta si la comprobación no autoriza", async () => {
     const fetchImpl = vi.fn(async () =>
       new Response("Unauthorized", { status: 401 }),
     ) as unknown as typeof fetch;
@@ -260,7 +298,6 @@ describe("el histórico", () => {
     const urls: string[] = [];
     const fetchImpl = servidorFalso(
       {
-        "/api/session": { id: 1 },
         "/api/devices": DOS_APARATOS,
         "/api/positions?deviceId=7&from=2026-09-10T00%3A00%3A00.000Z&to=2026-09-10T01%3A00%3A00.000Z": [
           { deviceId: 7, fixTime: "2026-09-10T00:30:00Z", valid: true, latitude: 31.7, longitude: -106.4 },
@@ -288,7 +325,6 @@ describe("el histórico", () => {
     const urls: string[] = [];
     const fetchImpl = servidorFalso(
       {
-        "/api/session": { id: 1 },
         "/api/devices": DOS_APARATOS,
         "/api/positions?deviceId=9&from=2026-09-10T00%3A00%3A00.000Z&to=2026-09-10T01%3A00%3A00.000Z": [],
       },
@@ -312,7 +348,7 @@ describe("el catálogo de aparatos", () => {
   it("se cachea dentro de su ventana y se vuelve a pedir después", async () => {
     const urls: string[] = [];
     const fetchImpl = servidorFalso(
-      { "/api/session": { id: 1 }, "/api/devices": DOS_APARATOS, "/api/positions": [] },
+      { "/api/devices": DOS_APARATOS, "/api/positions": [] },
       (u) => urls.push(u),
     );
 
@@ -327,7 +363,7 @@ describe("el catálogo de aparatos", () => {
   it("con ttl cero lo vuelve a pedir cada vez, para que un alta se vea", async () => {
     const urls: string[] = [];
     const fetchImpl = servidorFalso(
-      { "/api/session": { id: 1 }, "/api/devices": DOS_APARATOS, "/api/positions": [] },
+      { "/api/devices": DOS_APARATOS, "/api/positions": [] },
       (u) => urls.push(u),
     );
 
@@ -336,14 +372,13 @@ describe("el catálogo de aparatos", () => {
     await p.getLastLocations(token);
     await p.getLastLocations(token);
 
-    expect(urls.filter((u) => u.endsWith("/api/devices"))).toHaveLength(2);
+    expect(urls.filter((u) => u.endsWith("/api/devices"))).toHaveLength(3); // 1 de login + 2
   });
 });
 
 describe("getDevices", () => {
   it("mapea uniqueId a imei y descarta los que no lo traen", async () => {
     const fetchImpl = servidorFalso({
-      "/api/session": { id: 1 },
       "/api/devices": [...DOS_APARATOS, { id: 11, name: "Sin identificador" }],
     });
     const p = new TraccarGpsProvider(CONFIG, { fetchImpl });
