@@ -3,6 +3,7 @@ import { getRepos } from "@/lib/db";
 import { exigir } from "@/lib/guardia-api";
 import { createContractSchema, contractPolicySchema, type EnforcementRules, parseOperationalScope, operationalScopeColumns } from "@jtel/domain";
 import { configApiBack } from "@/lib/config-api-back";
+import { mensajeContratoDuplicado } from "@/lib/contrato-duplicado";
 
 function back(
   request: Request,
@@ -444,14 +445,16 @@ export async function POST(request: Request) {
     scopeCols,
   );
   if (existing) {
-    const statusLabel =
-      existing.status === "active"
-        ? "activo"
-        : existing.status === "draft"
-          ? "borrador"
-          : existing.status;
+    // Cuántos servicios tiene decide si «Eliminar» existe: la pantalla sólo lo
+    // ofrece en un borrador sin servicios. Ver `mensajeContratoDuplicado`.
+    const servicios = (await repos.profiles.findForContract(existing.id)).length;
     return back(request, client.slug, resolved, {
-      error: `Ya existe un contrato ${statusLabel} para ${carrier.name} en este sitio («${existing.name}»). Actívalo, elimínalo si es borrador, o suspende el anterior.`,
+      error: mensajeContratoDuplicado({
+        status: existing.status,
+        nombre: existing.name,
+        carrier: carrier.name,
+        servicios,
+      }),
     });
   }
 
