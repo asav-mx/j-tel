@@ -445,6 +445,32 @@ que es como está diseñado. No es un misterio si pasa.
 > se usa no se abre. Comprobado desde fuera — las dos permitidas dan 200;
 > `/api/users`, `/api/server`, `/api/session`, `/api/commands` y la raíz `/` dan
 > **404**; y el 8082 sigue sin contestar.
+>
+> **🔴 Corregido el 14 de septiembre de 2026: filtraba por ruta y no por
+> método.** Un `POST` con credencial a `/api/devices` creaba aparatos. Ahora el
+> `Caddyfile` usa dos comparadores con `method` y `path`: `GET` en
+> `/api/positions`, y `GET` y `POST` en `/api/devices`. Todo lo demás, 404. El
+> archivo anterior quedó respaldado en el servidor como
+> `/etc/caddy/Caddyfile.<fecha>.respaldo`.
+>
+> **Cómo se comprueba, sin crear nada:** mandar a cada ruta un cuerpo inválido.
+> Si contesta 401 o un error de Traccar, la puerta dejó pasar; si contesta 404, la
+> puerta lo cortó.
+
+### La visibilidad del panel, verificada el 14 de septiembre de 2026
+
+Un aparato creado por el usuario del repo **no aparece en el mapa del
+administrador**: la lista principal del panel pide `/api/devices` sin «ver
+todos», y esa lista sólo trae los aparatos ligados a quien la pide.
+
+**Poner al administrador como supervisor del usuario del repo NO lo resuelve.**
+Se probó de forma reversible: con la supervisión puesta, la lista normal del
+administrador siguió sin el aparato; sólo apareció pidiéndola explícitamente con
+`?userId=` del repo. Se quitó la supervisión y se borró el aparato de prueba.
+
+Ligar al administrador aparato por aparato pasa por `/api/permissions`, que desde
+fuera está cerrado a propósito. **Para el alta por archivo queda por decidir cómo
+se liga**; no se abre esa ruta en la puerta.
 
 ---
 

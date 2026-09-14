@@ -53,6 +53,25 @@ token, por esa puerta **no puede crear usuarios, ni cambiar configuración del
 servidor, ni entrar al panel** — esas rutas no existen desde fuera. La superficie
 pública deja de ser «Traccar» y pasa a ser «tres lecturas».
 
+> **🔴 Corregido el 14 de septiembre de 2026 — «tres lecturas» era falso.** La
+> puerta se construyó filtrando por **ruta**, no por **método**. Un `POST` a
+> `/api/devices` con credencial llegaba a Traccar y **creaba aparatos**:
+> comprobado con un cuerpo inválido, que Traccar sí intentó interpretar, sin
+> crear nada. Nunca fueron sólo lecturas.
+>
+> **Arreglado el mismo día, en la puerta.** Caddy ahora filtra por ruta **y** por
+> método, y deja pasar exactamente lo que el repo usa:
+>
+> | Método | Ruta | Para qué |
+> |---|---|---|
+> | `GET` | `/api/positions` | el recolector y el archivador |
+> | `GET` | `/api/devices` | `login()` y el catálogo |
+> | `POST` | `/api/devices` | el alta por archivo, ligada al usuario del repo |
+>
+> Todo lo demás, 404: `POST` a posiciones, `PUT`, `DELETE`, `PATCH` y `HEAD` en
+> las dos, y cualquier otra ruta. Comprobado desde fuera después del cambio, y el
+> recolector de Vercel siguió entrando con 200.
+
 Es la misma regla del endpoint público del pasajero: *lo que no debe verse, no se
 envía.* Aquí, lo que no debe alcanzarse, no se enruta.
 
@@ -91,7 +110,19 @@ Decisiones de Asav, **12 de septiembre de 2026**:
 |---|---|---|---|
 | **1** | El nombre | **`compas.j-telemetry.com`** | Ya estaba puesto y funcionando |
 | **2** | Caddy o túnel de Cloudflare | **Caddy, y no se mueve** | «Ya se cobró anoche contra los escaneos»: en su primera hora pública el filtro de rutas contestó 62 respuestas 404, entre ellas a quien fue directo a `/console/` y `/server-status` |
-| **3** | ¿Un secreto compartido además del token? | **No** | «Un segundo secreto viviría en el mismo lugar que el token, así que agrega ceremonia, no protección» |
+| **3** | ¿Un secreto compartido además del token? | **No** | **Razón corregida el 14 sep**, ver abajo |
+
+**La decisión 3 no se reabrió, pero su razón cambió, y conviene no perder por
+qué.** La propuesta la sostenía en que detrás de la puerta sólo había lecturas, y
+eso era falso. La razón que queda, de Asav, 14 de septiembre de 2026:
+
+> **Un segundo secreto no protege de nada: si se filtra la credencial, se filtra
+> la que se usa. Lo que sí protege es limitar por método, que lo aplica la puerta
+> y no la disciplina.**
+
+O sea la defensa no está en tener más secretos sino en que la puerta no deje
+hacer más de lo que el repo necesita, aunque quien llame traiga la credencial
+buena.
 
 **Y lo que la decisión 3 NO cubre**, para que no se lea de más: es sobre
 **nosotros llamando a Traccar**. Si algún día Traccar reenvía posiciones hacia
@@ -164,6 +195,9 @@ que agregarlo, con su prueba.
 daño de un token filtrado es que alguien lea posiciones de camiones. Real, pero
 no catastrófico. **Tú decides si eso amerita el segundo secreto**, y si dices
 que sí lo construyo con su prueba.
+
+> *Así se escribió, y la premisa era falsa: no eran sólo lecturas. Ver la
+> corrección del 14 de septiembre arriba.*
 
 ---
 
