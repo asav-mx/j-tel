@@ -1,6 +1,7 @@
 import type { Repositories } from "@jtel/db";
 import {
   getProviderForCarrier,
+  tieneConexionGps,
   type GpsBackendConfig,
   type GpsProviderInstance,
 } from "./providers.js";
@@ -165,8 +166,12 @@ export class ArchiverService {
       chunks: 0,
     };
 
-    const creds = await this.repos.carriers.getGpsCredentials(carrierAccountId);
-    if (!creds) return { ...base, skipped: "sin credenciales GPS" };
+    // «¿Tiene conexión?» y no «¿tiene credenciales?»: una cuenta en Compás no
+    // guarda credencial y sí tiene de dónde leer. Con la pregunta vieja, el
+    // archivador se saltaría en silencio a todas las cuentas de Compás.
+    if (!(await tieneConexionGps(this.repos, carrierAccountId))) {
+      return { ...base, skipped: "sin conexión GPS" };
+    }
 
     const devices = await this.repos.fleet.getDevicesForCarrier(carrierAccountId);
     const imeis = devices.map((d) => d.imei).filter(Boolean);

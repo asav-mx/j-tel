@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
 import { exigirCron } from "@/lib/guardia-cron";
-import { getUmbrellaConfig } from "@/lib/umbrella-config";
+import { getGpsBackendConfig } from "@/lib/gps-config";
 import { GapBackfillService } from "@jtel/services";
 
 export const maxDuration = 300;
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const now = new Date();
   const from = new Date(now.getTime() - 36 * 60 * 60_000);
   const repos = getRepos();
-  const service = new GapBackfillService(repos, getUmbrellaConfig());
+  const service = new GapBackfillService(repos, getGpsBackendConfig());
   const summary = await service.run({
     from,
     to: now,

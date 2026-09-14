@@ -131,10 +131,18 @@ export const carrierProfiles = pgTable("carrier_profiles", {
     .references(() => accounts.id, { onDelete: "cascade" })
     .unique(),
   legalName: text("legal_name").notNull(),
-  // Proveedor de GPS del carrier. Cada carrier puede usar uno distinto:
-  // `umbrella` y `traccar` hoy, hardware propio después. Gobierna
-  // `buildProvider`, por donde pasan el recolector y el archivador.
-  gpsProvider: text("gps_provider").notNull().default("umbrella"),
+  // Proveedor de GPS del carrier. Gobierna `getProviderForCarrier`, por donde
+  // pasan el recolector y el archivador.
+  //
+  //   · `compas`   — la conexión de plataforma a Compás, el Traccar de J-Tel.
+  //                  No lleva credencial en la cuenta: vive en el ambiente.
+  //                  **Por omisión desde la 0035.**
+  //   · `traccar`  — un Traccar ajeno, con la credencial guardada aquí.
+  //   · `umbrella` — el de antes del corte del 5 de septiembre de 2026.
+  //
+  // Hasta la 0035 el valor por omisión era `umbrella`, y una cuenta creada el
+  // 14 de septiembre nació leyendo de un proveedor muerto sin que nada avisara.
+  gpsProvider: text("gps_provider").notNull().default("compas"),
   gpsBaseUrl: text("gps_base_url"),
   /*
    * Credenciales del proveedor, sea cual sea. El secreto se guarda cifrado
@@ -1557,7 +1565,16 @@ export const ingestAlertKindEnum = pgEnum("ingest_alert_kind", [
   "watermark_lag",
   "archive_error",
   "rate_limit",
+  // El cotejo entre Compás y J-Tel, desde la 0035. Ver `cotejarCompas` en
+  // `packages/services/src/collector.ts`.
+  "aparato_sin_dueno",
+  "aparato_otro_proveedor",
+  "aparato_fuera_de_compas",
+  "imei_en_dos_cuentas",
 ]);
+
+/** Los valores de `ingest_alert_kind`, para tipar sin repetir la lista. */
+export type IngestAlertKind = (typeof ingestAlertKindEnum.enumValues)[number];
 
 /** Alertas operativas de ingesta (no son notificaciones de cliente). */
 export const ingestAlerts = pgTable(

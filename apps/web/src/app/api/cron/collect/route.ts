@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
 import { exigirCron } from "@/lib/guardia-cron";
-import { getUmbrellaConfig } from "@/lib/umbrella-config";
+import { getGpsBackendConfig } from "@/lib/gps-config";
 import { CollectorService } from "@jtel/services";
 
 // La invocación cubre una ventana de un minuto haciendo varios sondeos dentro.
@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const negada = exigirCron(request, "cron/collect");
   if (negada) return negada;
 
-  const collector = new CollectorService(getRepos(), getUmbrellaConfig());
+  const collector = new CollectorService(getRepos(), getGpsBackendConfig());
   const summary = await collector.collectAll();
 
   console.log("[cron/collect]", JSON.stringify(summary));

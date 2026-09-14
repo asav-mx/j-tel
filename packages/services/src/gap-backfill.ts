@@ -11,7 +11,7 @@
 import type { Repositories } from "@jtel/db";
 import { clearUmbrellaTokenCache } from "@jtel/gps-umbrella";
 import type { GpsBackendConfig } from "./providers.js";
-import { getProviderForCarrier } from "./providers.js";
+import { getProviderForCarrier, tieneConexionGps } from "./providers.js";
 
 export type GapBackfillOptions = {
   from: Date;
@@ -65,8 +65,8 @@ export class GapBackfillService {
 
     for (const carrier of carriers) {
       result.carriers += 1;
-      const creds = await this.repos.carriers.getGpsCredentials(carrier.id);
-      if (!creds) continue;
+      // Conexión, no credencial: ver el mismo cambio en el archivador.
+      if (!(await tieneConexionGps(this.repos, carrier.id))) continue;
 
       const devices = await this.repos.fleet.getDevicesForCarrier(carrier.id);
       let imeis = devices.map((d) => d.imei).filter(Boolean);

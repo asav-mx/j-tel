@@ -33,7 +33,7 @@ vi.mock("@/lib/db", () => ({
   isDatabaseConfigured: () => true,
 }));
 
-vi.mock("@/lib/umbrella-config", () => ({ getUmbrellaConfig: () => ({}) }));
+vi.mock("@/lib/gps-config", () => ({ getGpsBackendConfig: () => ({}) }));
 
 vi.mock("@jtel/services", () => ({
   VerificationService: class {
