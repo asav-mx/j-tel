@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { TraccarGpsProvider, kmhDesdeNudos } from "./index.js";
+import { TIEMPO_MAXIMO_POR_PETICION_MS, TraccarGpsProvider, kmhDesdeNudos } from "./index.js";
 
 /**
  * Estas pruebas corren contra respuestas **con la forma que declara el OpenAPI
@@ -387,5 +387,91 @@ describe("getDevices", () => {
     expect(aparatos).toHaveLength(2);
     expect(aparatos.map((a) => a.imei)).toEqual(["352093081234567", "352093089999999"]);
     expect(aparatos[0]!.label).toBe("Bus 101");
+  });
+});
+
+describe("el tiempo máximo por petición", () => {
+  /**
+   * Un Traccar que acepta la conexión y no contesta nunca. El `fetch` falso sólo
+   * se rinde cuando le abortan la señal, que es exactamente lo que hace el de
+   * verdad: sin señal, esta promesa no termina jamás.
+   */
+  const colgado = (vistas?: RequestInit[]) =>
+    vi.fn((_url: string | URL | Request, init?: RequestInit) => {
+      vistas?.push(init ?? {});
+      return new Promise<Response>((_, rechazar) => {
+        init?.signal?.addEventListener("abort", () =>
+          rechazar(new DOMException("This operation was aborted", "AbortError")),
+        );
+      });
+    }) as unknown as typeof fetch;
+
+  it("por omisión son 10 segundos", () => {
+    expect(TIEMPO_MAXIMO_POR_PETICION_MS).toBe(10_000);
+  });
+
+  /**
+   * La mitad que ninguna prueba de comportamiento alcanza si falta: sin señal
+   * pasada al `fetch`, el reloj existe y no corta nada.
+   */
+  it("cada petición lleva su señal", async () => {
+    const vistas: RequestInit[] = [];
+    const fetchImpl = vi.fn(async (_u: string | URL | Request, init?: RequestInit) => {
+      vistas.push(init ?? {});
+      return new Response("[]", { status: 200, headers: { "content-type": "application/json" } });
+    }) as unknown as typeof fetch;
+
+    const p = new TraccarGpsProvider(CONFIG, { fetchImpl });
+    await p.getLastLocations(await p.login());
+
+    expect(vistas.length).toBeGreaterThan(0);
+    for (const init of vistas) expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("un servidor mudo corta a tiempo y dice qué ruta y cuánto se esperó", async () => {
+    const p = new TraccarGpsProvider(CONFIG, { fetchImpl: colgado(), tiempoMaximoMs: 50 });
+
+    const inicio = Date.now();
+    await expect(p.getDevices("Basic eDp5")).rejects.toThrow(
+      "Traccar no contestó en 0.05 s en /api/devices",
+    );
+    // Cortó por el reloj, no se quedó colgado.
+    expect(Date.now() - inicio).toBeLessThan(2_000);
+  });
+
+  it("login lo reporta como fallo de sesión, con la causa adentro", async () => {
+    const p = new TraccarGpsProvider(CONFIG, { fetchImpl: colgado(), tiempoMaximoMs: 50 });
+    await expect(p.login()).rejects.toThrow(/No se obtuvo sesión de Traccar: Traccar no contestó/);
+  });
+
+  /**
+   * El caso que el reloj de conexión solo no cubre: cabeceras 200 y el cuerpo
+   * que nunca termina de llegar.
+   */
+  it("también corta si contesta las cabeceras y se calla en el cuerpo", async () => {
+    const fetchImpl = vi.fn((_u: string | URL | Request, init?: RequestInit) =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          new Promise((_, rechazar) =>
+            init?.signal?.addEventListener("abort", () =>
+              rechazar(new DOMException("aborted", "AbortError")),
+            ),
+          ),
+      } as unknown as Response),
+    ) as unknown as typeof fetch;
+
+    const p = new TraccarGpsProvider(CONFIG, { fetchImpl, tiempoMaximoMs: 50 });
+    await expect(p.getDevices("Basic eDp5")).rejects.toThrow(/no contestó en 0.05 s/);
+  });
+
+  it("un fallo de red que NO es el reloj sube tal cual, con su causa", async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new TypeError("fetch failed: ECONNREFUSED");
+    }) as unknown as typeof fetch;
+
+    const p = new TraccarGpsProvider(CONFIG, { fetchImpl });
+    await expect(p.getDevices("Basic eDp5")).rejects.toThrow("ECONNREFUSED");
   });
 });
