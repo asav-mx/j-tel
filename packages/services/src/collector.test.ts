@@ -77,6 +77,29 @@ describe("CollectorService", () => {
     expect(r.carriers[0].sondeos).toHaveLength(3); // 60 / 20
   });
 
+  /**
+   * NO es el comportamiento deseado: es el de HOY, fijado para que el
+   * comentario de `collectCarrier` no vuelva a mentir.
+   *
+   * El cron corre cada minuto y la ventana es de 60 s, así que
+   * `floor(60 / 300)` da 0 y `Math.max(1, …)` lo sube a 1: con 300 en la base
+   * se sondea UNA vez por invocación, o sea cada minuto, igual que con 60. Nada
+   * avisa. El día que alguien haga que un valor mayor a 60 de verdad sondee más
+   * lento, esta prueba se cae — y ese día hay que corregir también el
+   * comentario.
+   */
+  it("hoy, un valor mayor a 60 NO sondea más lento: sondea una vez por minuto igual", async () => {
+    const f = repos({ pollSeconds: 300, escrituras: [] });
+    const svc = new CollectorService(f.repos, config, {
+      ...sinEsperas,
+      provider: proveedor([{ puntos: [{ recordedAt: new Date() }] }]),
+    } as never);
+
+    const r = await svc.collectAll();
+    expect(r.carriers[0].pollSeconds).toBe(300);
+    expect(r.carriers[0].sondeos).toHaveLength(1);
+  });
+
   it("si el segundo sondeo falla, lo que escribió el primero se conserva y la invocación NO falla", async () => {
     const f = repos({ escrituras: [] });
     const t0 = new Date("2026-08-26T19:59:00Z");

@@ -147,6 +147,14 @@ export class CollectorService {
     // La cadencia es del carrier, no del código: vive en
     // `carrier_profiles.gps_poll_seconds` y cambia sin desplegar, pero NO hay
     // pantalla que la edite — hoy sólo se mueve escribiendo en la base.
+    //
+    // Y la segunda mentira que la perilla no confiesa: un valor MAYOR A 60 no
+    // sondea más lento. El cron corre cada minuto y la ventana es de 60 s, así
+    // que `floor(60 / pollSeconds)` da 0 y `Math.max(1, …)` lo sube a 1 —
+    // sondea una vez por invocación, cada minuto, igual que con 60, y sin
+    // avisar. Para ir más lento hay que cambiar el calendario del cron o hacer
+    // que el recolector se salte invocaciones; esta columna sola no alcanza.
+    // Hay una prueba que fija este comportamiento de hoy.
     const perfil = await this.repos.carriers.getProfileByAccountId(carrierAccountId);
     const pollSeconds = Math.max(1, perfil?.gpsPollSeconds ?? 30);
     const sondeosPorVentana = Math.max(1, Math.floor(this.windowSeconds / pollSeconds));
