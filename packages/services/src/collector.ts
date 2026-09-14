@@ -144,8 +144,9 @@ export class CollectorService {
   }
 
   async collectCarrier(carrierAccountId: string, carrierName: string): Promise<CarrierCollectResult> {
-    // La cadencia es del carrier, no del código: otro proveedor, otra cadencia,
-    // se ajusta desde la pantalla sin desplegar.
+    // La cadencia es del carrier, no del código: vive en
+    // `carrier_profiles.gps_poll_seconds` y cambia sin desplegar, pero NO hay
+    // pantalla que la edite — hoy sólo se mueve escribiendo en la base.
     const perfil = await this.repos.carriers.getProfileByAccountId(carrierAccountId);
     const pollSeconds = Math.max(1, perfil?.gpsPollSeconds ?? 30);
     const sondeosPorVentana = Math.max(1, Math.floor(this.windowSeconds / pollSeconds));
