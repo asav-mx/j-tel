@@ -203,3 +203,76 @@ describe("contesta en el estilo de cada ruta", () => {
     expect(destino.searchParams.get("error")).toContain("tecma_admin");
   });
 });
+
+/**
+ * La pared que faltaba — medido el 14 de septiembre de 2026.
+ *
+ * Una petición anónima a `GET /api/jstaff/circuitos/<id>/paradas` en
+ * producción respondió 200. `exigir()` preguntaba por membresías y nunca por
+ * sesión, y con `JTEL_DEV_USER=jstaff_admin` puesta en Vercel, el anónimo
+ * traía las del administrador de la plataforma. Las páginas sí preguntaban.
+ *
+ * Todas las pruebas de arriba corren con `sesionActiva: false` y fuera de
+ * producción, que es donde el bypass es la herramienta de trabajo. Éstas fijan
+ * el otro lado.
+ */
+describe("en producción, sin sesión de Clerk no se pasa — tenga las membresías que tenga", () => {
+  const PRODUCCION = { enProduccion: true };
+
+  it("el caso medido: la identidad de la variable, con alcance global, NO pasa a J-Staff", async () => {
+    getIdentidad.mockResolvedValue(identidad("jstaff_admin", JSTAFF));
+
+    const g = await exigir(PETICION, { tipo: "jstaff" }, "json", PRODUCCION);
+
+    expect(g.ok).toBe(false);
+    if (g.ok) return;
+    expect(g.respuesta.status).toBe(401);
+    const cuerpo = await g.respuesta.json();
+    expect(cuerpo.detalle).toBe("Inicia sesión.");
+    // No le dice al anónimo qué identidad le habría tocado.
+    expect(cuerpo.detalle).not.toContain("jstaff_admin");
+  });
+
+  it("se niega ANTES de mirar la cuenta: sin sesión no se lee nada de nadie", async () => {
+    getIdentidad.mockResolvedValue(identidad("jb_admin", CARRIER_JB));
+
+    const g = await exigir(PETICION, { tipo: "carrier", slug: "juarez-bus" }, "json", PRODUCCION);
+
+    expect(g.ok).toBe(false);
+    expect(findBySlug).not.toHaveBeenCalled();
+  });
+
+  it("vale para los formularios también: 303 de vuelta con «Inicia sesión»", async () => {
+    getIdentidad.mockResolvedValue(identidad("jstaff_admin", JSTAFF));
+
+    const g = await exigir(
+      PETICION,
+      { tipo: "carrier-o-jstaff", slug: "juarez-bus" },
+      { redirigirA: "/carrier/gps" },
+      PRODUCCION,
+    );
+
+    expect(g.ok).toBe(false);
+    if (g.ok) return;
+    expect(g.respuesta.status).toBe(303);
+    const destino = new URL(g.respuesta.headers.get("location") ?? "");
+    expect(destino.searchParams.get("error")).toContain("Inicia sesión.");
+  });
+
+  it("con sesión real, las membresías deciden como siempre", async () => {
+    getIdentidad.mockResolvedValue({ ...identidad("user_3HQu", JSTAFF), origen: "clerk", sesionActiva: true });
+
+    const g = await exigir(PETICION, { tipo: "jstaff" }, "json", PRODUCCION);
+
+    expect(g.ok).toBe(true);
+  });
+
+  it("con sesión real pero sin alcance, sigue siendo 403 y no 401", async () => {
+    getIdentidad.mockResolvedValue({ ...identidad("user_2abc", CLIENTE_TECMA), origen: "clerk", sesionActiva: true });
+
+    const g = await exigir(PETICION, { tipo: "jstaff" }, "json", PRODUCCION);
+
+    expect(g.ok).toBe(false);
+    if (!g.ok) expect(g.respuesta.status).toBe(403);
+  });
+});

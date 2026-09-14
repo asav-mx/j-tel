@@ -60,11 +60,12 @@ function negar(
   request: Request,
   alFallar: AlFallar,
   detalle: string,
+  status: 401 | 403 = 403,
 ): { ok: false; respuesta: NextResponse } {
   if (alFallar === "json") {
     return {
       ok: false,
-      respuesta: NextResponse.json({ error: NEGADO, detalle }, { status: 403 }),
+      respuesta: NextResponse.json({ error: NEGADO, detalle }, { status }),
     };
   }
   // Absoluta contra el origen de la petición, como ya hacen las rutas.
@@ -94,6 +95,34 @@ async function perteneceA(
   return tipo === "client"
     ? canAccessClientAccount(identidad.memberships, cuenta.id)
     : canAccessCarrierAccount(identidad.memberships, cuenta.id);
+}
+
+/**
+ * ¿Esta identidad sirve para entrar?
+ *
+ * **La hacen las dos guardias, la de páginas y la de APIs.** Hasta el 14 de
+ * septiembre de 2026 sólo la hacía la de páginas, y `exigir()` preguntaba por
+ * membresías sin preguntar por sesión: con `JTEL_DEV_USER` puesta en
+ * producción, una petición anónima a cualquier API de J-Staff respondía 200.
+ * Medido esa tarde contra `www.j-telemetry.com`. Las pantallas estaban
+ * cerradas y las rutas que esas pantallas llaman, abiertas.
+ *
+ * Se exporta también porque **la portada la necesita sin redirigir**: la raíz
+ * no niega el paso, elige qué cara enseñar —landing sin sesión, portada con
+ * ella—. Si
+ * la portada llevara su propia copia de esta condición, las dos se separarían
+ * a la primera vez que alguien corrigiera una y olvidara la otra, y la que se
+ * quedaría vieja sería justo la que decide si se enseñan nombres de clientes.
+ *
+ * En producción: sesión de Clerk real. Fuera: vale el bypass, o no se puede
+ * trabajar en local ni en CI.
+ */
+export function sesionUtilizable(
+  identidad: Identidad,
+  entorno: { enProduccion?: boolean } = {},
+): boolean {
+  const enProduccion = entorno.enProduccion ?? process.env.NODE_ENV === "production";
+  return !enProduccion || identidad.sesionActiva;
 }
 
 export type Decision = { permitido: boolean; motivo: string };
@@ -146,6 +175,7 @@ export async function exigir(
   request: Request,
   audiencia: Audiencia,
   alFallar: AlFallar,
+  entorno: { enProduccion?: boolean } = {},
 ): Promise<Guardia> {
   let identidad: Identidad;
   try {
@@ -153,6 +183,13 @@ export async function exigir(
   } catch {
     // Sin poder saber quién pregunta, no se pasa. Ver la nota de arriba.
     return negar(request, alFallar, "No se pudo resolver la identidad.");
+  }
+
+  // Antes que las membresías, igual que en `decidirPagina`: sin sesión real no
+  // hay a quién medirle el alcance. Y el mensaje no dice quién «entró», porque
+  // sin sesión esa identidad no la eligió nadie.
+  if (!sesionUtilizable(identidad, entorno)) {
+    return negar(request, alFallar, "Inicia sesión.", 401);
   }
 
   let decision: Decision;
