@@ -33,7 +33,8 @@ en curso — no a media fase.
 - **Las 26 rutas de API están guardadas.** Las **65 páginas** no.
 - **`CRON_SECRET` sigue cayendo a un secreto publicado.** Verificado hoy.
 - **El árbitro tiene seis modos de falla conocidos**, ninguno arreglado.
-- **Las 300 siguen congeladas.** El #124 es la foto de referencia.
+- **Las 300 siguen congeladas.** La foto de referencia vive en la rama
+  `sim/reverificacion-motor-actual`; el #124 se cerró sin merge el 14 sep 2026.
 
 ---
 

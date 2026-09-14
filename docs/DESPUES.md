@@ -122,7 +122,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Cierre del turno](#cierre-del-turno) | **Construida contra el molde aprobado** |
 | [Ponderación de la cobertura por valor del tramo](#ponderación-de-la-cobertura-por-valor-del-tramo) | Hipótesis medible, sin caso todavía |
 | [Afinar la ventana derivada con el match observable](#afinar-la-ventana-derivada-con-el-match-observable) | **Sube: la deriva se midió y es rápida — arriba de solicitudes y quejas** |
-| [Las 300 congeladas — la foto de referencia](#las-300-congeladas--la-foto-de-referencia) | **PR #124 abierto a propósito** |
+| [Las 300 congeladas — la foto de referencia](#las-300-congeladas--la-foto-de-referencia) | **PR #124 cerrado el 14 sep** — la rama se conserva |
 | [Las tres rutas con falla real](#las-tres-rutas-con-falla-real) | Pide ojo humano sobre el KML |
 | [Dirección visual del producto](#dirección-visual-del-producto) | 🔴 **PENDIENTE DE ASAV — bloquea pantallas** |
 | [El resto de la cara del producto](#el-resto-de-la-cara-del-producto) | Después de la dirección visual |
@@ -853,9 +853,25 @@ que no se re-verifican antes que esto.
 
 ## Las 300 congeladas — la foto de referencia
 
-**Qué es.** El **PR #124 está abierto a propósito y sin mergear.** No es un pendiente
-olvidado: es la **foto de referencia reproducible** contra la que se mide si el motor
-mejoró.
+**Qué es.** La **foto de referencia reproducible** contra la que se mide si el motor
+mejoró: las 300 ocurrencias congeladas de Planta 47 y el guion que las juzga.
+
+> **Corregido el 14 de septiembre de 2026 — el PR #124 se cerró sin merge.** Estuvo
+> abierto a propósito 44 días. Se cerró por decisión de Asav: el código se va, la
+> lección se queda. **La foto sigue siendo reproducible**, porque la rama
+> `sim/reverificacion-motor-actual` **se conserva** con el guion y el documento
+> completo, y la lista congelada de las 300 ya estaba en `main`.
+>
+> **Lo que sólo vivía en el PR, y ahora está escrito:** la causa del −2 y el tamaño
+> de la palanca. La precisión de corredor se calcula sobre **todos los puntos de la
+> ventana**, mientras la cobertura de ruta se califica sobre el tramo observable
+> (#113). Ensanchar la ventana mete minutos del camión en la base y la diluye sin
+> aprender nada de cómo se manejó: **de los 160 no cumplidos, 137 caen sólo por
+> corredor**. La receta era simetrizar las dos métricas y volver a simular antes de
+> re-verificar. **Comprobado el 14 de septiembre: no se aplicó**, y el comentario
+> junto a `computeCorridorPrecisionPct` todavía trae el razonamiento a medias que la
+> simulación refutó. La entrada completa está en la bitácora de desarrollo en Notion:
+> «Planta 47: ensanchar la ventana diluye el corredor, y la receta nunca se aplicó».
 
 **Por qué no se re-verifica todavía.** Porque
 [la ventana derivada y el match observable no están afinados entre sí](#afinar-la-ventana-derivada-con-el-match-observable),
@@ -867,7 +883,9 @@ hecho, así que re-verificar en falso no es gratis.
 con historia. Y una decisión que no es técnica —
 [cómo se le cuenta a Tecma que su número cambia al re-verificar](#decisiones-de-producto-pendientes).
 
-**Dónde toca.** PR #124; `compliance_facts`; `compliance_fact_history`.
+**Dónde toca.** La rama `sim/reverificacion-motor-actual` (PR #124, cerrado);
+`compliance_facts`; `compliance_fact_history`; y `computeCorridorPrecisionPct` en
+`packages/verification/src/index.ts`, que es donde vive la palanca de las 137.
 
 ## Las tres rutas con falla real
 
