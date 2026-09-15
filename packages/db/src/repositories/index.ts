@@ -591,6 +591,7 @@ export class FleetRepository {
         id: devices.id,
         imei: devices.imei,
         carrierAccountId: devices.carrierAccountId,
+        retiredAt: devices.retiredAt,
       })
       .from(devices);
   }

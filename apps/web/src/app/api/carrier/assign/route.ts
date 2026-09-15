@@ -53,8 +53,20 @@ export async function POST(request: Request) {
   if (!unidades.some((u) => u.id === unitId)) {
     return NextResponse.json({ error: "Esa unidad no es de este carrier" }, { status: 403 });
   }
-  if (!equipos.some((d) => d.id === deviceId)) {
+  const equipo = equipos.find((d) => d.id === deviceId);
+  if (!equipo) {
     return NextResponse.json({ error: "Ese GPS no es de este carrier" }, { status: 403 });
+  }
+  // Un GPS dado de baja (0036) está fuera de servicio. Asignarlo le pondría a
+  // una unidad un aparato que nadie espera que transmita, y la unidad quedaría
+  // «con GPS» sin evidencia. Se le quita la baja primero, a propósito.
+  if (equipo.retiredAt) {
+    return NextResponse.json(
+      {
+        error: `Ese GPS está dado de baja (${equipo.retiredReason ?? "sin motivo"}). Quítale la baja antes de asignarlo.`,
+      },
+      { status: 409 },
+    );
   }
 
   await repos.fleet.assignDevice(unitId, deviceId, new Date());

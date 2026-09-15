@@ -2,6 +2,7 @@ import { getRepos } from "@/lib/db";
 import { AppNav, Card } from "@/components/ui";
 import { resolveAccountByType, withAccount } from "@/lib/account-context";
 import { exigirSesion } from "@/lib/guardia-pagina";
+import { fechaCompleta } from "@/lib/formato-tiempo";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,16 @@ export default async function CarrierAltaFlotaPage({
     assignments.map((a) => [a.unitId, a.device] as const),
   );
   const assignedDeviceIds = new Set(assignments.map((a) => a.deviceId));
-  const unassignedDevices = devices.filter((d) => !assignedDeviceIds.has(d.id));
+  /*
+   * Los dados de baja (0036) van aparte. No se cuentan, no se ofrecen para
+   * asignar y no son «GPS sin unidad»: están fuera de servicio. Tampoco se
+   * esconden — la fila existe, trajo datos, y el motor la sigue leyendo.
+   */
+  const activos = devices.filter((d) => !d.retiredAt);
+  const deBaja = devices
+    .filter((d) => d.retiredAt)
+    .sort((a, b) => (a.label ?? a.imei).localeCompare(b.label ?? b.imei, "es"));
+  const unassignedDevices = activos.filter((d) => !assignedDeviceIds.has(d.id));
 
   return (
     <main className="min-h-screen p-8">
@@ -118,7 +128,7 @@ export default async function CarrierAltaFlotaPage({
           </Card>
 
           <Card title="3. Asignar GPS → unidad">
-            {units.length === 0 || devices.length === 0 ? (
+            {units.length === 0 || activos.length === 0 ? (
               <p className="text-sm text-[var(--muted)]">
                 Primero registra al menos una unidad y un GPS.
               </p>
@@ -135,7 +145,11 @@ export default async function CarrierAltaFlotaPage({
                       <option key={u.id} value={u.id}>
                         {u.label}
                         {u.plateNumber ? ` · ${u.plateNumber}` : ""}
-                        {deviceByUnit.get(u.id) ? " (ya tiene GPS)" : ""}
+                        {deviceByUnit.get(u.id)?.retiredAt
+                          ? " (su GPS está dado de baja)"
+                          : deviceByUnit.get(u.id)
+                            ? " (ya tiene GPS)"
+                            : ""}
                       </option>
                     ))}
                   </select>
@@ -146,7 +160,7 @@ export default async function CarrierAltaFlotaPage({
                     <option value="" disabled>
                       Elige GPS…
                     </option>
-                    {devices.map((d) => (
+                    {activos.map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.label ? `${d.label} · ` : ""}
                         {d.imei}
@@ -184,7 +198,7 @@ export default async function CarrierAltaFlotaPage({
                       <p className="mt-1 font-mono text-xs text-[var(--muted)]">
                         GPS:{" "}
                         {gps
-                          ? `${gps.imei}${gps.label ? ` · ${gps.label}` : ""}`
+                          ? `${gps.imei}${gps.label ? ` · ${gps.label}` : ""}${gps.retiredAt ? " · dado de baja" : ""}`
                           : "sin asignar"}
                       </p>
                     </li>
@@ -194,12 +208,14 @@ export default async function CarrierAltaFlotaPage({
             )}
           </Card>
 
-          <Card title={`Dispositivos GPS (${devices.length})`}>
-            {devices.length === 0 ? (
-              <p className="text-sm text-[var(--muted)]">Sin GPS todavía.</p>
+          <Card title={`Dispositivos GPS (${activos.length})`}>
+            {activos.length === 0 ? (
+              <p className="text-sm text-[var(--muted)]">
+                {deBaja.length > 0 ? "Ningún GPS en servicio." : "Sin GPS todavía."}
+              </p>
             ) : (
               <ul className="max-h-96 space-y-2 overflow-y-auto text-sm">
-                {devices.map((d) => {
+                {activos.map((d) => {
                   const assigned = assignedDeviceIds.has(d.id);
                   return (
                     <li key={d.id} className="rounded border border-[var(--linea-tenue)] p-3">
@@ -217,6 +233,24 @@ export default async function CarrierAltaFlotaPage({
               <p className="mt-3 text-xs text-amber-200/80">
                 {unassignedDevices.length} GPS sin unidad — asígnalos en el paso 3.
               </p>
+            ) : null}
+            {deBaja.length > 0 ? (
+              <details className="mt-4 text-sm">
+                <summary className="cursor-pointer text-[var(--muted)]">
+                  Dados de baja ({deBaja.length}) — fuera de servicio, con su historia intacta
+                </summary>
+                <ul className="mt-2 max-h-72 space-y-2 overflow-y-auto">
+                  {deBaja.map((d) => (
+                    <li key={d.id} className="rounded border border-[var(--linea-tenue)] p-3">
+                      <p className="font-mono text-xs">{d.imei}</p>
+                      {d.label ? <p className="mt-0.5 text-[var(--muted)]">{d.label}</p> : null}
+                      <p className="mt-1 text-xs text-[var(--muted)]">
+                        Baja: {d.retiredAt ? fechaCompleta(d.retiredAt) : "—"} · {d.retiredReason}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             ) : null}
           </Card>
         </div>
