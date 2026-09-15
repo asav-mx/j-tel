@@ -4817,6 +4817,33 @@ export class TelemetryRepository {
    * índice `(carrier_account_id, unit_id, recorded_at DESC)`, no recortar la
    * ventana. Quien la llame debe saltársela si no hay unidades mudas.
    */
+  /**
+   * El último punto archivado de cada IMEI, sin importar a qué cuenta o unidad
+   * se archivó.
+   *
+   * Es la mitad de «la última señal» de un dispositivo (la otra es su posición
+   * viva): sin esto, un dispositivo con historia archivada y sin fila en
+   * `live_positions` saldría «nunca reportó». Va por el índice único
+   * `(imei, recorded_at)`, así que es un recorrido corto por IMEI.
+   */
+  async ultimoPuntoPorImei(imeis: string[]): Promise<Map<string, Date>> {
+    const porImei = new Map<string, Date>();
+    if (imeis.length === 0) return porImei;
+    const rows = await this.db
+      .select({
+        imei: telemetryPoints.imei,
+        ultimo: sql<Date>`max(${telemetryPoints.recordedAt})`,
+      })
+      .from(telemetryPoints)
+      .where(inArray(telemetryPoints.imei, imeis))
+      .groupBy(telemetryPoints.imei);
+    for (const r of rows) {
+      if (!r.ultimo) continue;
+      porImei.set(r.imei, r.ultimo instanceof Date ? r.ultimo : new Date(r.ultimo));
+    }
+    return porImei;
+  }
+
   async getLastPointPerUnit(carrierAccountId: string): Promise<Map<string, Date>> {
     const rows = await this.db
       .select({

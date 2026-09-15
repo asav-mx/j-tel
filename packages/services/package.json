@@ -16,6 +16,7 @@
     "test": "vitest run",
     "real-e2e": "tsx src/real-e2e.ts",
     "archive": "tsx src/archive-run.ts",
+    "escenario-flota-compas-revisar": "tsx src/escenario-flota-compas-revisar.ts",
     "backfill-telemetry": "tsx src/backfill-telemetry.ts",
     "gap-backfill": "tsx src/gap-backfill-run.ts",
     "calibrate": "tsx src/calibrate.ts",
