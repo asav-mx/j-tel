@@ -1,27 +1,32 @@
-# Trampas de medición
+# Trampas de medición, y lo que una pantalla puede afirmar
 
-**Qué es.** Trece lecciones de método, cada una con el caso que la enseñó. Son para
-cualquiera que vaya a decidir algo contra un número medido: una columna, un
-hallazgo, una consulta, una cifra en pantalla.
+**Qué es.** Lo que se rescató del skill `j-telemetry-ui` antes de borrarlo (#407),
+porque no era piel: compartía archivo con ella. Viene en **dos partes con estatus
+distinto**, y la diferencia importa:
 
-**De dónde salen.** Vivían dentro del skill `j-telemetry-ui`, en su sección
-«Trampas de medición», y **sólo ahí**. El skill se borró el 15 de septiembre de
-2026 porque la piel y el lenguaje viejos se rehacen, no se reforman (#407). Estas
-lecciones no son piel: compartían archivo con ella. Se rescatan aquí, **tal cual**,
-antes de borrarlo. Es lo mismo que casi pasa con las secciones D, E y F del Marco.
+- **Parte 1 · Trampas de medición.** Trece lecciones de método, cada una con el caso
+  que la enseñó, para quien vaya a decidir algo contra un número medido. Siguen
+  vigentes.
+- **Parte 2 · Candidatas al Marco. NO son ley.** Reglas sobre qué afirma una pantalla.
+  Eso es material del Marco, y dejarlas aquí como ley haría dos fuentes diciendo lo
+  mismo y divergiendo. Esperan su comparación contra el Marco.
 
-**Qué gobierna.** Nada visual. El skill nuevo, cuando exista, gobierna las
-pantallas; esto gobierna cómo se mide lo que se va a decidir. Si algo de aquí choca
-con el `Marco-Limpio-J-Telemetry-MAESTRO.md`, gana el Marco.
+**Por qué se rescataron.** Sólo vivían en el skill. El skill se borró el 15 de
+septiembre de 2026 porque la piel y el lenguaje viejos se rehacen, no se reforman.
+Es lo mismo que casi pasa con las secciones D, E y F del Marco.
 
-**Único cambio respecto del original:** el nombre de la ficha de datos no
-declarados es ahora un enlace a donde vive.
+**Qué gobierna.** Nada visual: las pantallas las gobierna el skill nuevo cuando
+exista. Si algo de aquí choca con el `Marco-Limpio-J-Telemetry-MAESTRO.md`, gana el
+Marco.
 
-La versión original sigue en la historia:
+**Se copiaron tal cual.** Los únicos cambios son dos: el nombre de la ficha de datos
+no declarados ahora es un enlace a donde vive, y los títulos de la Parte 2 bajaron un
+nivel para caber en su sección. La versión original sigue en la historia:
 `git show fe3b36d:.claude/skills/j-telemetry-ui/SKILL.md`.
 
 ---
 
+## Parte 1 · Trampas de medición
 
 Muchas decisiones de este producto se toman contra un número medido: si una columna se muestra, si un hallazgo es real, si una consulta se sostiene. **Un número mal medido decide igual de fuerte que uno bien medido**, y no se nota. Estas son las que ya cayeron, con el caso que las enseñó.
 
@@ -68,3 +73,120 @@ El mismo error puede fallar del otro lado: un `timestamptz` mal enlazado que se 
 **Un conteo que el lector no puede reconstruir con lo que le enseñas debajo.** "Rutas del alcance: 27" era correcto —veintisiete registros de ruta— y no cuadraba, porque en la tabla de abajo "Finca" salía dos veces y "Km 30" tres: son rutas distintas, con trazados distintos, que comparten nombre visible. Quien lee cuenta nombres y concluye que el sistema duplica o que el conteo miente. Es §D, eje de la UNIDAD.
 
 El arreglo no es deduplicar por nombre —eso borra rutas reales y da un número más bonito y más falso—: es contar en la unidad que las partes reconocen. Un contrato se contrata en **servicios al día**, y las rutas y turnos pasan a lectura al lado. La pregunta, antes de escribir el rótulo: **¿puede el lector reconstruir este número con lo que le voy a enseñar debajo?**
+
+---
+
+## Parte 2 · Candidatas al Marco — no son ley
+
+> **Rescatadas del skill descartado, pendientes de comparar contra el Marco; si el
+> Marco ya las dice, se quedan como nota; si no, se ratifican como pieza.**
+>
+> Mientras no se comparen, **nada se construye citándolas a ellas**: se cita el Marco,
+> o se pregunta. La comparación está anotada en `DESPUES.md`, «Reglas de lo que afirma
+> una pantalla, pendientes de comparar contra el Marco».
+
+**Qué entró y qué no.** Entraron las secciones del skill que dicen qué puede afirmar
+una pantalla: exactitud de números, fechas e intervalos; qué maquinaria no se enseña;
+qué nombra cada cosa según lo que el árbitro selló; cuándo aparece un mapa; y la
+audiencia de cada capa. **No entraron**, porque son piel o voz y las rehace el skill
+nuevo: la tesis «instrumento, no tablero» y su «todo número va con su lectura», los
+colores, la tipografía, los chips, los dos ritmos y las capas apagables del mapa. **Las
+nueve leyes** que el skill copiaba del Marco tampoco entraron: ya viven en el Marco.
+
+### Exactitud, no redondeo
+
+Los tableros redondean ("~94%", "unos 7 minutos"). Los instrumentos no.
+
+Escribe **94.2%**, **06:43:11**, **21.1%**, **7:14 min**. La precisión no es un detalle técnico: es la textura que separa medición de opinión. Un número redondeado se lee como estimación, y una estimación se discute.
+
+**Fechas completas en evidencia.** En cualquier contexto que sirva de evidencia (expediente, bitácora, historia del sello, lectura de hechos), toda hora lleva su fecha completa: `2026-07-24 05:40`, nunca solo `05:40`. Un turno nocturno cruza la medianoche, y una hora sin fecha no sostiene un caso.
+
+**Las duraciones se escriben como duraciones, nunca con formato de hora.** Un delta dice `10 min antes`, `2 h 14 min de retraso` — jamás `10:00 antes`, que se lee como hora del día. La regla completa: los instantes llevan fecha; los intervalos llevan unidad.
+
+### La maquinaria de identificación no se enseña
+
+Hay que separar dos clases de número, porque el original las confundía:
+
+**Medición del hecho — Sí va en cara cliente.** Cobertura de la ventana, margen contra el deadline, hueco máximo de señal: son evidencia del servicio, y van junto a su umbral. Un resultado sin su medida es una acusación sin prueba.
+
+**Maquinaria de identificación — NUNCA va en cara cliente.** Los puntajes de candidatas (`A—82 / B—39`), el razonamiento de eliminación, las unidades que se consideraron y se descartaron. Eso es cómo el motor decidió qué unidad era — y además revela la flota del carrier, así que también lo prohíbe la Ley 3 del Marco.
+
+La distinción: **qué se midió del servicio** es evidencia; **cómo se decidió qué unidad era** es cocina. La evidencia se muestra; la cocina vive en la bitácora técnica del expediente, y del lado carrier.
+
+### Cada cosa nombra solo lo que su evidencia sostiene
+
+Esta regla evita inventar evidencia que el árbitro no selló.
+
+- Un `no_cumplido` **nunca tiene unidad acreditada** — por diseño, el motor solo persiste la unidad observada cuando el veredicto salió `cumplido`. Entonces una tarjeta construida sobre `no_cumplido` **no puede nombrar unidad**.
+- Los hallazgos sobre **rutas** (camino candidato, catálogo desalineado, deriva) hablan de servicios, trazos y proporciones. No necesitan nombrar unidad, y no deben.
+- Los hallazgos sobre **unidades** (huecos de GPS recurrentes) sí la nombran, porque vienen de cumplidos sellados donde la unidad sí está acreditada y ahí la unidad es el sujeto.
+
+Cuando dudes si puedes mostrar un dato: pregunta si el árbitro lo selló. Si no lo selló, no lo muestres.
+
+#### Cuando se puede no traer el dato, no se trae
+
+Para que un dato confidencial no llegue a una cara que no le corresponde hay dos caminos, y **no valen lo mismo**:
+
+- **Filtrarlo** — se trae y luego se quita. Funciona hoy y se puede quitar mañana sin que nadie lo note. Un filtro es una promesa que alguien tiene que seguir cumpliendo.
+- **No traerlo nunca** — la ruta que lo cargaría no existe. No hay nada que recordar, nada que revisar, nada que se pueda olvidar de correr.
+
+**Lo segundo, siempre que se pueda.** Un filtro es la segunda mejor opción, no la normal.
+
+El caso que lo enseña: en el expediente, los pasos `candidata` del ledger nombran cada unidad que *no* sirvió la ruta. La proyección para la cara cliente **no lee ese paso** — arma el paso de la unidad desde `decision`, que solo describe a la ganadora. La garantía no depende de que un filtro siga ahí: depende de que el dato nunca entre.
+
+La prueba de fuego: **¿alguien podría borrar una línea y abrir la fuga sin que se rompa nada?** Si la respuesta es sí, todavía es un filtro. Si la línea que habría que borrar no existe, ya es estructura.
+
+Vale igual para las capas de mapa con audiencia declarada: la capa que no le toca a esa cara **no se construye**, no se construye apagada.
+
+#### Lo inferido no se presenta como declarado
+
+Identificar qué unidad cubrió una ruta es una **inferencia que acumula confianza**, no un dato
+que alguien declaró. Mientras el turno corre, esa asociación se está formando.
+
+- **En vivo:** la unidad se marca `probable`, con la etiqueta visible junto al identificador.
+  La pantalla declara además, en una línea: *"el sistema infiere qué unidad cubre cada ruta a
+  partir de su recorrido; se confirma al cierre"*.
+- **Al cierre:** la unidad pasa a `confirmada`, congelada junto con el resultado.
+
+Escribir "U-208" a secas en la torre afirma como hecho algo que el motor todavía está
+resolviendo. Es la misma falta que pintar un veredicto antes del cierre.
+
+#### Llegar es un hecho medido; cumplir es un veredicto
+
+Cuando una unidad entra a la geocerca, eso **se puede afirmar**: se midió. Pero no es un
+resultado — el resultado necesita el deadline, la cobertura y el cierre.
+
+Por eso la etiqueta de llegada en vivo dice **"Llegó 14:06" y va en acero**, nunca en verde ni
+con la palabra "cumplido". El verde llega al cierre, o no llega.
+
+#### El instrumento no dice más de lo que ve, y lo dice cuando no ve
+
+Si una unidad lleva veinte minutos sin señal, su llegada estimada se muestra como `—`, no como
+una hora calculada sobre datos viejos. **Un hueco declarado vale más que un número inventado.**
+
+### El mapa solo aparece cuando lo que muestra es confiable
+
+Un mapa comunica "esto es lo que está pasando ahora". Cuando eso deja de ser cierto, el mapa
+miente aunque cada píxel sea correcto.
+
+- **Con operación en curso:** mapa completo, unidades sobre sus rutas.
+- **Sin turno activo:** mapa **quieto** — ciudad, geocerca del destino, rutas del siguiente turno
+  insinuadas. Da continuidad y anticipa lo que viene, con su etiqueta: *"sin unidades en ruta"*.
+- **Cuenta nueva:** **sin mapa.** No hay geocercas ni rutas que dibujar; el espacio lo ocupa el
+  camino a la primera verificación.
+- **Sistema sin señal:** **sin mapa, ni siquiera con la última posición conocida.** Un camión
+  dibujado cerca de la planta se lee como "va llegando" aunque el dato sea de hace dos horas.
+  La ausencia del mapa es la declaración más honesta de que no hay nada que ver.
+
+La pantalla conserva su estructura en los cuatro casos: lo que cambia es qué ocupa el lugar del
+mapa, no el esqueleto de la vista.
+
+### Audiencia declarada por capa (ley del Marco, no preferencia)
+
+**Cada capa declara su audiencia: carrier · planta · corporativo · J-Staff.**
+
+Un mapa por capas apagables es un multiplicador de riesgo de confidencialidad: si las capas se prenden y apagan, tarde o temprano alguien prende una capa de carrier en una vista de planta. El Marco es tajante — el cliente jamás ve la operación interna del carrier, y el trazo se corta en la llegada.
+
+- **La audiencia la hace cumplir el código, no el diseño.** No es un filtro visual ni una decisión de quien arma la pantalla: la capa no existe para quien no le corresponde.
+- **Una capa sin audiencia declarada no se construye.**
+- Ejemplo: kilómetro muerto es capa de carrier y solo de carrier. Recorrido posterior a la geocerca no es capa de nadie del lado cliente.

@@ -197,6 +197,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Los 15 pendientes del 28-jul se quedan pendientes](#los-15-pendientes-del-28-jul-se-quedan-pendientes) | Decidido, no se toca |
 | [Dos mapas de producción salen en negro: CARTO ahora exige llave](#dos-mapas-de-producción-salen-en-negro-carto-ahora-exige-llave) | 🟡 Superficie visible rota |
 | [37 archivos apuntan a un skill que ya no existe](#37-archivos-apuntan-a-un-skill-que-ya-no-existe) | Cuando exista el skill nuevo |
+| [Reglas de lo que afirma una pantalla, pendientes de comparar contra el Marco](#reglas-de-lo-que-afirma-una-pantalla-pendientes-de-comparar-contra-el-marco) | Antes de escribir el skill nuevo |
 
 ### 5 · Trámites y decisiones abiertas
 
@@ -2988,3 +2989,32 @@ eran las trampas, o se borra. **Las fichas del Marco las revisa Asav.**
 
 Las copias de `corte-2026-08-03/` son un corte congelado: probablemente se dejan como
 están, igual que el resto de ese corte.
+
+## Reglas de lo que afirma una pantalla, pendientes de comparar contra el Marco
+
+**Qué es.** Siete reglas rescatadas del skill `j-telemetry-ui` antes de borrarlo (#407),
+en la Parte 2 de `docs/Trampas-De-Medicion.md`, **marcadas como candidatas y no como
+ley**: exactitud, no redondeo (con fechas completas en evidencia y los intervalos con
+unidad); la maquinaria de identificación no se enseña; cada cosa nombra sólo lo que su
+evidencia sostiene (con sus cuatro sub-reglas: no traer el dato en vez de filtrarlo, lo
+inferido no se presenta como declarado, llegar es un hecho y cumplir es un veredicto, el
+instrumento dice cuando no ve); el mapa sólo aparece cuando lo que muestra es confiable;
+y la audiencia declarada por capa.
+
+**Por qué se aplazó.** Son reglas sobre qué afirma una pantalla, y eso es material del
+Marco. Dejarlas como ley en `docs/` crearía dos fuentes diciendo lo mismo y divergiendo
+sin que nadie lo note: lo que ya pasó con el Maestro, que vivió en dos lugares mes y
+medio. Compararlas pide leer el Marco sección por sección, y esa lectura se hace una
+vez y con cuidado, no de pasada dentro de un borrado.
+
+**Qué lo desbloquea.** Compararlas contra
+`docs/marco-limpio/Marco-Limpio-J-Telemetry-MAESTRO.md` en `origin/main`, una por una:
+- **Si el Marco ya la dice**, se queda como nota en ese documento, con el apartado del
+  Marco que la contiene.
+- **Si no la dice**, se propone para ratificarla como pieza del Marco, y la ratifica
+  Asav.
+
+Tiene que pasar **antes de escribir el skill nuevo**, para que el skill cite al Marco y
+no a un rescate.
+
+**Dónde toca.** `docs/Trampas-De-Medicion.md`, Parte 2, y el Marco.
