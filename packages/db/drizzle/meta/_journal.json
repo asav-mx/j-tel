@@ -260,6 +260,13 @@
       "when": 1789516800000,
       "tag": "0036_baja_de_aparatos",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1789603200000,
+      "tag": "0037_marca_de_lectura_por_aparato",
+      "breakpoints": true
     }
   ]
 }

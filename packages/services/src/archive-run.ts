@@ -63,8 +63,6 @@ async function main() {
   const archiver = new ArchiverService(repos, config, {
     chunkHours: catchUp ? 1 : 2,
     maxChunksPerRun: catchUp ? 30 : 12,
-    // Lotes chicos: con muchos IMEIs Umbrella a veces responde vacío.
-    imeiBatchSize: catchUp ? 3 : 5,
   });
 
   console.log(catchUp ? "Catch-up archivando…" : "Archivando telemetría…");
