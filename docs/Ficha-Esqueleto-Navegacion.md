@@ -1,6 +1,10 @@
 Ficha — El esqueleto de navegación
 Documento de diseño subordinado al Marco Maestro. El Marco manda; esta ficha acomoda.
 
+REEMPLAZADA EN PARTE — 15 de septiembre de 2026
+La sección B (Las vistas por cara) la reemplaza docs/Mapa-De-La-Casa.md, ratificado ese día. Ahí están el menú vigente, las cinco casas y sus puertas, y los nombres en la opción B: nombres de cosa, con el producto como sello chico encima de su sección. Lo que la sección B dice —que cada entrada se nombra por la pregunta que responde, "jamás por un objeto"— ya no gobierna. Se lee como historia de cómo se pensó el menú en su momento.
+Todo lo demás de esta ficha sigue vigente y nada lo reemplaza: los dos planos (A), la anatomía del expediente (C), la regla que separa expediente de foja (D), la clasificación de los sustantivos (E), el retiro de "la ruta" como cosa navegable (F) y la validación contra el Marco (G). El mapa no los toca ni los contradice: la regla 2 del mapa —"el menú lista lugares, no fichas"— es la misma idea de los dos planos, dicha de otra forma.
+
 Qué define esta ficha
 Cómo se navega todo el sistema: qué tipos de pantalla existen, cómo se llega a cada cosa, y qué concepto de agrupación gobierna. No define apariencia (colores, tipografía, componentes): eso es la piel, que se viste encima de este esqueleto y se decide aparte.
 
