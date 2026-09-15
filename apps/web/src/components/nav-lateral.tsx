@@ -9,7 +9,10 @@ import { ENCABEZADO_RUTA } from "@/middleware";
 /**
  * La navegación lateral permanente — 230px, siempre presente.
  *
- * Del skill j-telemetry-ui, "La arquitectura de la plataforma": J-Telemetry no
+ * Nació del skill `j-telemetry-ui` (piel anterior, borrado el 15 de septiembre de
+ * 2026), sección "La arquitectura de la plataforma". El skill vigente es
+ * `jtel-diseno` y esta navegación todavía no se ha revisado contra él. La idea
+ * de origen: J-Telemetry no
  * es un conjunto de páginas sino una plataforma, y eso tiene que sentirse al
  * abrirla. De arriba abajo: identidad del producto, dónde estoy parado, las
  * secciones agrupadas por naturaleza, y quién soy.

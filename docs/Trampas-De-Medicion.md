@@ -15,8 +15,7 @@ distinto**, y la diferencia importa:
 septiembre de 2026 porque la piel y el lenguaje viejos se rehacen, no se reforman.
 Es lo mismo que casi pasa con las secciones D, E y F del Marco.
 
-**Qué gobierna.** Nada visual: las pantallas las gobierna el skill nuevo cuando
-exista. Si algo de aquí choca con el `Marco-Limpio-J-Telemetry-MAESTRO.md`, gana el
+**Qué gobierna.** Nada visual: las pantallas las gobierna el skill `jtel-diseno`. Si algo de aquí choca con el `Marco-Limpio-J-Telemetry-MAESTRO.md`, gana el
 Marco.
 
 **Se copiaron tal cual.** Los únicos cambios son dos: el nombre de la ficha de datos

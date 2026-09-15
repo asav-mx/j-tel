@@ -4,8 +4,10 @@ import "./landing-global.css";
 
 /**
  * El landing carga su propio peso de Archivo (800) y no lo comparte con el
- * producto. Es deliberado: el skill j-telemetry-ui declara al landing la única
- * excepción del lenguaje de producto, y un peso de titular de portada no tiene
+ * producto. Es deliberado: el skill de diseño declara al landing la única
+ * excepción del lenguaje de producto —lo decía `j-telemetry-ui` y lo sigue diciendo
+ * `jtel-diseno`, que lo reemplazó el 15 de septiembre de 2026—, y un peso de
+ * titular de portada no tiene
  * por qué estar disponible dentro de una pantalla que muestra resultados.
  *
  * **Comparte el archivo con el producto y aun así no comparte el peso.** El
