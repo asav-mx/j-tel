@@ -196,6 +196,8 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Documentación por marcar como superseded](#documentación-por-marcar-como-superseded) | Desbloqueado por el #130 |
 | [Los 15 pendientes del 28-jul se quedan pendientes](#los-15-pendientes-del-28-jul-se-quedan-pendientes) | Decidido, no se toca |
 | [Dos mapas de producción salen en negro: CARTO ahora exige llave](#dos-mapas-de-producción-salen-en-negro-carto-ahora-exige-llave) | 🟡 Superficie visible rota |
+| [37 archivos apuntan a un skill que ya no existe](#37-archivos-apuntan-a-un-skill-que-ya-no-existe) | Cuando exista el skill nuevo |
+| [Reglas de lo que afirma una pantalla, pendientes de comparar contra el Marco](#reglas-de-lo-que-afirma-una-pantalla-pendientes-de-comparar-contra-el-marco) | Antes de escribir el skill nuevo |
 
 ### 5 · Trámites y decisiones abiertas
 
@@ -2948,3 +2950,71 @@ asumía fondo oscuro.
 **Dónde toca.** `apps/web/src/components/cierre-mapa.tsx:59` y
 `apps/web/src/components/ruta-trazado-mapa.tsx:59`. **Nadie lo había reportado**,
 que es el dato incómodo: son superficies que alguien debería estar mirando.
+
+## 37 archivos apuntan a un skill que ya no existe
+
+**Qué es.** El skill `j-telemetry-ui` se borró el 15 de septiembre de 2026 (#407), y
+**37 archivos lo siguen nombrando** como lo que gobierna, la fuente de verdad o lo que
+reemplazó a otro documento. Un puntero a algo que ya no existe también afirma lo que no
+puede: quien lo lea va a buscar la regla ahí, o va a creer que la regla sigue en pie.
+
+**Por qué se aplazó.** Decisión de Asav: el #407 borra y rescata, y la limpieza va
+aparte. La mayoría de las referencias está en fichas del Marco, y **a qué se cambia cada
+una depende del skill nuevo**, que sale de las sesiones de rediseño y todavía no está
+escrito. Cambiarlas hoy sería apuntarlas a la nada o a una suposición.
+
+**Qué lo desbloquea.** Que exista el skill nuevo. Entonces cada referencia se decide una
+por una: se apunta al nuevo, se apunta a `docs/Trampas-De-Medicion.md` si lo que citaba
+eran las trampas, o se borra. **Las fichas del Marco las revisa Asav.**
+
+**Dónde toca.** Contado el 15 sep 2026 con `git grep -n "j-telemetry-ui"`:
+
+- **Código (comentarios), 6:** `apps/web/src/app/globals.css`,
+  `app/layout.tsx`, `app/landing/landing.module.css`, `app/landing/layout.tsx`,
+  `components/nav-lateral.tsx`, `lib/alertas/correo.ts`.
+- **Docs, 8:** `Bitacora-2026-08-02.md`, `Brief-Identidad-J-Tel.md` y
+  `Sistema-Diseno-Superficies-Internas.md` (los dos dicen «Reemplazado por: el skill»),
+  `Mapa-Producto-J-Telemetry.md`, este mismo `DESPUES.md` (la entrada «Dirección visual
+  del producto») y las tres copias de `corte-2026-08-03/`.
+- **`docs/marco-limpio/`, 23:** `Anexo-Estado-J-Telemetry.md`,
+  `Estructura-Cara-Carrier.md`, `Ficha-Cara-De-Producto.md`, `Ficha-Choferes.md`,
+  `Ficha-Concepto-Sandbox.md`, `Ficha-Correos-y-Alertas.md`,
+  `Ficha-Expediente-Contrato.md`, `Ficha-Expediente-Ruta.md`,
+  `Ficha-Expediente-Servicio.md`, `Ficha-Expediente-Sin-Atribucion.md` y su parte 2,
+  `Ficha-Expediente-Unidad.md`, `Ficha-Inicio-Corporativo.md`,
+  `Ficha-Inicio-Dos-Caras.md`, `Ficha-Monitoreo.md`, `Ficha-Monitoreo-Carrier.md`,
+  `Ficha-Oficina-Contrato.md`, `Ficha-Pendiente-Por-Evidencia-Pantalla.md`,
+  `Ficha-Reconciliacion.md` y su parte 2, `Ficha-Unidades-Explorador.md`,
+  `Ficha-Workbench.md`, `Plan-Choferes.md`.
+
+Las copias de `corte-2026-08-03/` son un corte congelado: probablemente se dejan como
+están, igual que el resto de ese corte.
+
+## Reglas de lo que afirma una pantalla, pendientes de comparar contra el Marco
+
+**Qué es.** Cinco reglas (nueve apartados) rescatadas del skill `j-telemetry-ui` antes de borrarlo (#407),
+en la Parte 2 de `docs/Trampas-De-Medicion.md`, **marcadas como candidatas y no como
+ley**: exactitud, no redondeo (con fechas completas en evidencia y los intervalos con
+unidad); la maquinaria de identificación no se enseña; cada cosa nombra sólo lo que su
+evidencia sostiene (con sus cuatro sub-reglas: no traer el dato en vez de filtrarlo, lo
+inferido no se presenta como declarado, llegar es un hecho y cumplir es un veredicto, el
+instrumento dice cuando no ve); el mapa sólo aparece cuando lo que muestra es confiable;
+y la audiencia declarada por capa.
+
+**Por qué se aplazó.** Son reglas sobre qué afirma una pantalla, y eso es material del
+Marco. Dejarlas como ley en `docs/` crearía dos fuentes diciendo lo mismo y divergiendo
+sin que nadie lo note: lo que ya pasó con el Maestro, que vivió en dos lugares mes y
+medio. Compararlas pide leer el Marco sección por sección, y esa lectura se hace una
+vez y con cuidado, no de pasada dentro de un borrado.
+
+**Qué lo desbloquea.** Compararlas contra
+`docs/marco-limpio/Marco-Limpio-J-Telemetry-MAESTRO.md` en `origin/main`, una por una:
+- **Si el Marco ya la dice**, se queda como nota en ese documento, con el apartado del
+  Marco que la contiene.
+- **Si no la dice**, se propone para ratificarla como pieza del Marco, y la ratifica
+  Asav.
+
+Tiene que pasar **antes de escribir el skill nuevo**, para que el skill cite al Marco y
+no a un rescate.
+
+**Dónde toca.** `docs/Trampas-De-Medicion.md`, Parte 2, y el Marco.
