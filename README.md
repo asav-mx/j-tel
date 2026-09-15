@@ -37,8 +37,11 @@ Abrir http://localhost:3000
 
 > **Seed y producción.** `pnpm db:seed` hace `TRUNCATE` de TODAS las tablas antes de
 > sembrar. Por eso exige `SEED_DATABASE_URL` (definida en `.env.example`) apuntando a
-> una base de desarrollo/demo: si falta, o si es idéntica a `DATABASE_URL`, el seed se
-> niega a correr. Nunca vacía producción por accidente.
+> una base de desarrollo propia: si falta, o si es **la misma base** —por host, puerto y
+> nombre, no por texto— que cualquier otra conexión del `.env` (producción, la de solo
+> lectura o la desechable), el seed se niega a correr. Sin otra conexión contra la cual
+> comparar, pide `--base <fragmento-del-host>`. Así corrió contra producción el 7 de
+> julio de 2026, antes de tener candado.
 
 ## Estructura
 
