@@ -112,3 +112,23 @@ describe("la guardia sigue siendo la primera puerta", () => {
     );
   });
 });
+
+describe("un GPS dado de baja (0036) no se asigna", () => {
+  it("se rechaza con 409, dice el motivo, y NO se escribe", async () => {
+    getDevicesForCarrier.mockResolvedValue([
+      {
+        id: "gps-umbrella",
+        retiredAt: new Date("2026-09-15T12:00:00Z"),
+        retiredReason: "Umbrella cortó el 5 sep 2026",
+      },
+    ]);
+
+    const r = await POST(
+      peticion({ carrierSlug: "juarez-bus", unitId: "unidad-propia", deviceId: "gps-umbrella" }),
+    );
+
+    expect(r.status).toBe(409);
+    expect((await r.json()).error).toContain("Umbrella cortó el 5 sep 2026");
+    expect(assignDevice).not.toHaveBeenCalled();
+  });
+});

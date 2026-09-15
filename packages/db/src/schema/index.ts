@@ -239,6 +239,26 @@ export const devices = pgTable("devices", {
     .references(() => accounts.id, { onDelete: "cascade" }),
   imei: text("imei").notNull(),
   label: text("label"),
+  /*
+   * La baja de un aparato, desde la 0036. **La fila no se borra.**
+   *
+   * Un aparato que trajo datos es historia: sus puntos, sus asignaciones y los
+   * veredictos que se juzgaron con ellos siguen apuntando aquí. Borrarlo
+   * arrastraría en cascada sus `device_assignments` y dejaría en null el
+   * `device_id` de `telemetry_points`, `evidence_points` y `live_positions` —
+   * reescribir la historia—. La baja sólo dice que ya no está en servicio:
+   *
+   *   · el cotejo con Compás deja de esperarlo, y avisa si vuelve a transmitir;
+   *   · la flota lo muestra aparte y no se puede asignar;
+   *   · **el motor lo sigue leyendo**, porque un servicio de antes de la baja
+   *     se juzga con los puntos que ese aparato trajo.
+   *
+   * Nació para los 82 aparatos de Umbrella, muertos desde el corte del 5 de
+   * septiembre de 2026. Las dos columnas van juntas: una baja sin motivo no es
+   * una baja, es una fila que alguien marcó sin decir por qué.
+   */
+  retiredAt: timestamp("retired_at", { withTimezone: true, mode: "date" }),
+  retiredReason: text("retired_reason"),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("devices_carrier_imei_idx").on(table.carrierAccountId, table.imei),
@@ -1571,6 +1591,8 @@ export const ingestAlertKindEnum = pgEnum("ingest_alert_kind", [
   "aparato_otro_proveedor",
   "aparato_fuera_de_compas",
   "imei_en_dos_cuentas",
+  // Desde la 0036: un aparato dado de baja que vuelve a transmitir a Compás.
+  "aparato_de_baja_transmite",
 ]);
 
 /** Los valores de `ingest_alert_kind`, para tipar sin repetir la lista. */

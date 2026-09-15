@@ -320,6 +320,7 @@ export class CollectorService {
             catalogo.map((d) => d.imei),
             aparatos,
             cuentas,
+            new Map(puntos.map((p) => [p.imei, p.timestamp])),
           ),
           nombres,
         );
