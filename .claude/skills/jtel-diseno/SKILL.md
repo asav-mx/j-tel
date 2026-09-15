@@ -22,6 +22,19 @@ De ahí salen las cuatro consecuencias que gobiernan cada decisión:
 3. **Aire.** Las cosas separadas se distinguen; las apretadas se vuelven una mancha.
 4. **Lo apagado se apaga.** El ojo tiene que ir solo a lo que está vivo, sin buscarlo.
 
+### Un número, o el número con su umbral: depende del momento
+
+«Un número por cosa» y «todo número con su umbral» no se contradicen: son **momentos distintos**, y cada superficie es de uno o del otro.
+
+| Momento | Dónde | Qué va |
+|---|---|---|
+| **El vistazo** | Listas, mapas, piezas | **Un solo número.** Ahí el ojo barre; dos cifras compiten y el vistazo se rompe |
+| **La decisión** | Un aviso, un veredicto, un renglón de cobro | **El número con su umbral:** `47.3 min · umbral 30 min`. Sin el umbral, quien lee tiene que calcular, y ésa es la trampa del Marco |
+
+La pregunta para saber de cuál es: **¿con este número alguien decide algo?** Si sí, lleva su umbral. Si sólo se mira, va solo.
+
+Decidido por ASAV el 15 de septiembre de 2026, a raíz del correo de avisos: ese correo es del segundo momento y se queda con su umbral.
+
 Esto no contradice la honestidad del Marco — la sirve. Un dato que nadie mira no protege a nadie. Lo que el Marco exige es que **nada afirme lo que no comprobó**; lo que este skill agrega es que además **se pueda ver de un vistazo**.
 
 ---
