@@ -90,7 +90,9 @@ export async function diagnosticarTorre(opts: {
   let edadMinutos: number | null = null;
   for (const carrierId of carrierIds) {
     const devices = await repos.fleet.getDevicesForCarrier(carrierId);
-    dispositivos += devices.length;
+    // Los dados de baja (0036) no son telemetría conectada: un carrier con sólo
+    // aparatos muertos no tiene este paso listo.
+    dispositivos += devices.filter((d) => !d.retiredAt).length;
     const edad = await repos.telemetry.latestPointAgeMinutes(carrierId);
     if (edad !== null) {
       edadMinutos = edadMinutos === null ? edad : Math.min(edadMinutos, edad);

@@ -29,13 +29,26 @@ import type { IngestAlertKind, Repositories } from "@jtel/db";
  *   · **en dos cuentas** — el mismo IMEI en dos cuentas. Sus posiciones no se
  *     escriben en ninguna: adivinar el dueño sería romper el muro entre
  *     clientes.
+ *   · **de baja y transmite** — el aparato está dado de baja y Compás tiene de
+ *     él una posición POSTERIOR a la baja. Volvió a servicio sin que nadie le
+ *     quitara la baja, o lo tiene quien no debería.
+ *
+ * ## Los dados de baja no cuentan como faltantes
+ *
+ * Un aparato dado de baja (0036) ya no se espera en Compás, así que no entra a
+ * «fuera de Compás». Sin esto, los 82 aparatos muertos de Umbrella dejaban la
+ * alarma gritando para siempre, y el aparato 83 —el real— no se habría visto.
  */
 
 export interface AparatoConDueno {
   id: string;
   imei: string | null;
   carrierAccountId: string;
+  /** Desde la 0036. Un aparato dado de baja no se reparte ni se espera en Compás. */
+  retiredAt?: Date | null;
 }
+
+const activo = (a: AparatoConDueno) => !a.retiredAt;
 
 export interface Reparto {
   /** IMEI → aparato. Sólo de cuentas en Compás, y sólo los de dueño único. */
@@ -51,7 +64,10 @@ export interface Reparto {
  */
 export function repartir(aparatos: AparatoConDueno[], cuentasCompas: Set<string>): Reparto {
   const porImeiTodos = new Map<string, AparatoConDueno[]>();
-  for (const a of aparatos) {
+  // Sólo los activos: la posición de un aparato dado de baja no se escribe en
+  // vivo —está fuera de servicio— y un IMEI de baja en una cuenta y activo en
+  // otra no es doble dueño, es un aparato que cambió de manos.
+  for (const a of aparatos.filter(activo)) {
     if (!a.imei) continue;
     const lista = porImeiTodos.get(a.imei) ?? [];
     lista.push(a);
@@ -80,6 +96,7 @@ export interface Cotejo {
   otroProveedor: Array<{ imei: string; carrierAccountId: string }>;
   fueraDeCompas: Array<{ imei: string; carrierAccountId: string }>;
   enDosCuentas: Array<{ imei: string; cuentas: string[] }>;
+  deBajaTransmite: Array<{ imei: string; carrierAccountId: string }>;
 }
 
 /**
@@ -93,13 +110,19 @@ export function cotejar(
   imeisEnCompas: Iterable<string>,
   aparatos: AparatoConDueno[],
   cuentasCompas: Set<string>,
+  /** IMEI → hora de su última posición en Compás. Sólo para la huella de los dados de baja. */
+  ultimaPosicion: Map<string, Date> = new Map(),
 ): Cotejo {
   const { enDosCuentas } = repartir(aparatos, cuentasCompas);
   const dobles = new Set(enDosCuentas.map((d) => d.imei));
 
   const duenoDe = new Map<string, string>();
-  for (const a of aparatos) {
+  for (const a of aparatos.filter(activo)) {
     if (a.imei && !dobles.has(a.imei)) duenoDe.set(a.imei, a.carrierAccountId);
+  }
+  const deBaja = new Map<string, AparatoConDueno>();
+  for (const a of aparatos) {
+    if (a.imei && a.retiredAt && !duenoDe.has(a.imei) && !dobles.has(a.imei)) deBaja.set(a.imei, a);
   }
 
   const enCompas = new Set(imeisEnCompas);
@@ -107,9 +130,25 @@ export function cotejar(
   const otroProveedor: Cotejo["otroProveedor"] = [];
   for (const imei of enCompas) {
     if (dobles.has(imei)) continue;
+    // Un dado de baja en el catálogo no es «sin dueño»: tiene dueño, y está fuera
+    // de servicio. Si transmite, lo dice su propia huella, abajo.
+    if (deBaja.has(imei)) continue;
     const cuenta = duenoDe.get(imei);
     if (!cuenta) sinDueno.push({ imei });
     else if (!cuentasCompas.has(cuenta)) otroProveedor.push({ imei, carrierAccountId: cuenta });
+  }
+
+  /*
+   * Posterior a la baja, no «tiene posición»: un aparato que transmitió y luego
+   * se dio de baja conserva su última posición en Compás, y compararla sin la
+   * fecha lo haría sonar para siempre por algo que pasó antes de la baja.
+   */
+  const deBajaTransmite: Cotejo["deBajaTransmite"] = [];
+  for (const [imei, a] of deBaja) {
+    const ultima = ultimaPosicion.get(imei);
+    if (ultima && a.retiredAt && ultima > a.retiredAt) {
+      deBajaTransmite.push({ imei, carrierAccountId: a.carrierAccountId });
+    }
   }
 
   const fueraDeCompas: Cotejo["fueraDeCompas"] = [];
@@ -125,6 +164,7 @@ export function cotejar(
     otroProveedor: otroProveedor.sort(porImei),
     fueraDeCompas: fueraDeCompas.sort(porImei),
     enDosCuentas,
+    deBajaTransmite: deBajaTransmite.sort(porImei),
   };
 }
 
@@ -189,6 +229,13 @@ function avisosDe(cotejo: Cotejo, nombres: Map<string, string>) {
           .map((d) => `${d.imei} (${d.cuentas.map((c) => nombres.get(c) ?? c).join(" y ")})`)
           .join(", ")}. Sus posiciones no se escriben en ninguna hasta que se aclare.`,
     },
+    {
+      kind: "aparato_de_baja_transmite" as const,
+      imeis: cotejo.deBajaTransmite.map((x) => x.imei),
+      lista: cotejo.deBajaTransmite,
+      mensaje: () =>
+        `${aparatos(cotejo.deBajaTransmite.length)} dados de baja volvieron a transmitir a Compás: ${porCuenta(cotejo.deBajaTransmite, nombres)}. Si volvió a servicio, quítale la baja; si no, alguien trae un aparato que no debería.`,
+    },
   ] satisfies Array<{ kind: IngestAlertKind; imeis: string[]; lista: unknown[]; mensaje: () => string }>;
 }
 
@@ -197,6 +244,7 @@ export interface ResumenCotejo {
   otroProveedor: number;
   fueraDeCompas: number;
   enDosCuentas: number;
+  deBajaTransmite: number;
   avisosAbiertos: number;
   avisosCerrados: number;
   /** Presente si escribir los avisos falló. El cotejo sí se hizo. */
@@ -227,6 +275,7 @@ export async function sincronizarAvisos(
     otroProveedor: cotejo.otroProveedor.length,
     fueraDeCompas: cotejo.fueraDeCompas.length,
     enDosCuentas: cotejo.enDosCuentas.length,
+    deBajaTransmite: cotejo.deBajaTransmite.length,
     avisosAbiertos: 0,
     avisosCerrados: 0,
   };

@@ -53,7 +53,7 @@ describe("repartir · el muro entre clientes", () => {
   });
 });
 
-describe("cotejar · las cuatro huellas", () => {
+describe("cotejar · las huellas", () => {
   it("el caso del 14 de septiembre: en Compás, y su cuenta lee de otro proveedor", () => {
     const c = cotejar(
       ["860693089187232", "860693086784395"],
@@ -84,7 +84,7 @@ describe("cotejar · las cuatro huellas", () => {
 
   it("un aparato de una cuenta con otro proveedor que Compás no tiene NO es huella: no se espera ahí", () => {
     const c = cotejar([], [{ id: "d1", imei: "111", carrierAccountId: OTRA }], new Set([JB]));
-    expect(c).toEqual({ sinDueno: [], otroProveedor: [], fueraDeCompas: [], enDosCuentas: [] });
+    expect(c).toEqual({ sinDueno: [], otroProveedor: [], fueraDeCompas: [], enDosCuentas: [], deBajaTransmite: [] });
   });
 
   it("todo en orden: ninguna huella", () => {
@@ -96,7 +96,7 @@ describe("cotejar · las cuatro huellas", () => {
       ],
       new Set([JB, ASAV]),
     );
-    expect(c).toEqual({ sinDueno: [], otroProveedor: [], fueraDeCompas: [], enDosCuentas: [] });
+    expect(c).toEqual({ sinDueno: [], otroProveedor: [], fueraDeCompas: [], enDosCuentas: [], deBajaTransmite: [] });
   });
 
   it("un IMEI en dos cuentas se cuenta UNA vez, como doble dueño, y no además en otra huella", () => {
@@ -149,7 +149,7 @@ const nombres = new Map([
   [JB, "Juárez Bus"],
   [ASAV, "asav"],
 ]);
-const vacio = { sinDueno: [], otroProveedor: [], fueraDeCompas: [], enDosCuentas: [] };
+const vacio = { sinDueno: [], otroProveedor: [], fueraDeCompas: [], enDosCuentas: [], deBajaTransmite: [] };
 
 describe("sincronizarAvisos · escribe sólo cuando algo cambia", () => {
   it("abre un aviso por huella, con los IMEIs y la cuenta en el texto", async () => {
@@ -215,5 +215,59 @@ describe("sincronizarAvisos · escribe sólo cuando algo cambia", () => {
     const r = await sincronizarAvisos(f.repos, { ...vacio, sinDueno: [{ imei: "111" }] }, nombres);
     expect(r.error).toContain("ingest_alert_kind");
     expect(r.sinDueno).toBe(1);
+  });
+});
+
+/**
+ * La baja de los 82 de Umbrella (0036).
+ *
+ * Sin esto, `aparato_fuera_de_compas` listaba a los muertos para siempre, y el
+ * aparato real que faltara se perdía en la lista.
+ */
+describe("cotejar · los dados de baja", () => {
+  const CORTE = new Date("2026-09-05T15:20:04Z");
+  const BAJA = new Date("2026-09-15T12:00:00Z");
+  const umbrella = { id: "d-u", imei: "861412043038798", carrierAccountId: JB, retiredAt: BAJA };
+
+  it("un aparato dado de baja NO cuenta como fuera de Compás", () => {
+    const c = cotejar([], [umbrella], new Set([JB]));
+    expect(c.fueraDeCompas).toEqual([]);
+  });
+
+  it("pero uno activo de la misma cuenta sí, y es el que tiene que verse", () => {
+    const c = cotejar(
+      [],
+      [umbrella, { id: "d-real", imei: "860693000000001", carrierAccountId: JB }],
+      new Set([JB]),
+    );
+    expect(c.fueraDeCompas).toEqual([{ imei: "860693000000001", carrierAccountId: JB }]);
+  });
+
+  it("si vuelve a transmitir DESPUÉS de la baja, lo dice su propia huella", () => {
+    const despues = new Date("2026-09-20T08:00:00Z");
+    const c = cotejar([umbrella.imei], [umbrella], new Set([JB]), new Map([[umbrella.imei, despues]]));
+    expect(c.deBajaTransmite).toEqual([{ imei: umbrella.imei, carrierAccountId: JB }]);
+    // Y no se cuenta además como sin dueño: tiene dueño, está fuera de servicio.
+    expect(c.sinDueno).toEqual([]);
+  });
+
+  it("una posición de ANTES de la baja no suena: es la última que dejó, no una nueva", () => {
+    const c = cotejar([umbrella.imei], [umbrella], new Set([JB]), new Map([[umbrella.imei, CORTE]]));
+    expect(c.deBajaTransmite).toEqual([]);
+    expect(c.sinDueno).toEqual([]);
+  });
+
+  it("su posición no se reparte en vivo: está fuera de servicio", () => {
+    const r = repartir([umbrella], new Set([JB]));
+    expect(r.porImei.has(umbrella.imei)).toBe(false);
+  });
+
+  it("de baja en una cuenta y activo en otra no es doble dueño: cambió de manos", () => {
+    const r = repartir(
+      [umbrella, { id: "d-nuevo", imei: umbrella.imei, carrierAccountId: ASAV }],
+      new Set([JB, ASAV]),
+    );
+    expect(r.enDosCuentas).toEqual([]);
+    expect(r.porImei.get(umbrella.imei)?.carrierAccountId).toBe(ASAV);
   });
 });
