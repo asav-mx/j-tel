@@ -87,8 +87,9 @@ type MejorPorRuta = {
 };
 
 async function main() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("Falta DATABASE_URL");
+  // Sólo lee: con el usuario de solo lectura, nunca con el dueño.
+  const url = process.env.DATABASE_URL_READONLY;
+  if (!url) throw new Error("Falta DATABASE_URL_READONLY");
   const db = createDb(url);
   const repos = createRepositories(db);
 

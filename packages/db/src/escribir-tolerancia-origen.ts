@@ -58,7 +58,8 @@ function valorDeFabrica(): number {
 const VALOR_DE_FABRICA = valorDeFabrica();
 
 const ejecutar = process.argv.includes("--ejecutar");
-const url = ejecutar ? process.env.DATABASE_URL : (process.env.DATABASE_URL_READONLY ?? process.env.DATABASE_URL);
+// La simulación lee con el usuario de solo lectura y no cae al dueño si falta.
+const url = ejecutar ? process.env.DATABASE_URL : process.env.DATABASE_URL_READONLY;
 if (!url) { console.error("Falta la URL de la base."); process.exit(1); }
 const db = postgres(url, { max: 1, connect_timeout: 20, idle_timeout: 5 });
 

@@ -12,6 +12,7 @@
  */
 import { existsSync } from "node:fs";
 import { createDb, createRepositories } from "./index.js";
+import { pedirAplicar } from "./permiso-de-escritura.js";
 
 for (const p of ["../../.env", ".env"]) {
   if (existsSync(p)) {
@@ -49,9 +50,18 @@ async function main() {
     process.exit(1);
   }
 
-  const db = createDb(
-    process.env.DATABASE_URL ?? "postgresql://jtel:jtel_dev@localhost:5432/jtel",
-  );
+  const destino = process.env.DATABASE_URL ?? "postgresql://jtel:jtel_dev@localhost:5432/jtel";
+  if (
+    !pedirAplicar({
+      guion: "trim-far",
+      queEscribe: `BORRA las ocurrencias con service_date >= hoy+${days} que no tengan hecho sellado.`,
+      url: destino,
+      alcance: { TRIM_DAYS: days, PLANT_GROUP_ID: plantGroupId, TRIM_ALL: trimAll },
+    })
+  ) {
+    process.exit(0);
+  }
+  const db = createDb(destino);
   const repos = createRepositories(db);
 
   console.log(

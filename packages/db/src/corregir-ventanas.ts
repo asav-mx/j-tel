@@ -273,8 +273,9 @@ export async function main() {
    * nunca, y pedir la de escritura para leer es dejar puesta una llave que no
    * se necesita.
    */
-  const url = process.env.DATABASE_URL_READONLY || process.env.DATABASE_URL;
-  if (!url) throw new Error("Falta DATABASE_URL_READONLY (o DATABASE_URL)");
+  // Sólo lee (imprime el SQL para pegarlo a mano): sin caer al dueño.
+  const url = process.env.DATABASE_URL_READONLY;
+  if (!url) throw new Error("Falta DATABASE_URL_READONLY");
 
   const cliente = postgres(url, { max: 1 });
   const db = drizzle(cliente, { schema }) as unknown as Database;

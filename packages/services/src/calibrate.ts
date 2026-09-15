@@ -48,7 +48,8 @@ async function main() {
     process.exit(1);
   }
 
-  const db = createDb(process.env.DATABASE_URL!);
+  // Sólo lee: con el usuario de solo lectura, nunca con el dueño.
+  const db = createDb(process.env.DATABASE_URL_READONLY!);
   const repos = createRepositories(db);
   const clients = await repos.accounts.listByType("client");
   const contracts = [];

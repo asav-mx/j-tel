@@ -7,7 +7,7 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { eq, sql } from "drizzle-orm";
-import { createDb, createRepositories, telemetryPoints } from "@jtel/db";
+import { createDb, createRepositories, telemetryPoints, pedirAplicar } from "@jtel/db";
 
 for (const p of ["../../.env", ".env"]) {
   if (existsSync(p)) {
@@ -30,6 +30,16 @@ async function main() {
   if (!oldUrl || !newUrl) {
     console.error("Faltan JRZ_OLD_MEMORY_DATABASE_URL o DATABASE_URL en .env");
     process.exit(1);
+  }
+
+  if (
+    !pedirAplicar({
+      guion: "import-jrz-memory",
+      queEscribe: "Copia la memoria GPS vieja a telemetry_points y mueve la marca de agua de cada carrier.",
+      url: newUrl,
+    })
+  ) {
+    process.exit(0);
   }
 
   const oldDb = createDb(oldUrl);

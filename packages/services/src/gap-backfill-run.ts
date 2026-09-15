@@ -5,7 +5,7 @@
  *     pnpm --filter @jtel/services run gap-backfill
  */
 import { existsSync } from "node:fs";
-import { createDb, createRepositories } from "@jtel/db";
+import { createDb, createRepositories, pedirAplicar } from "@jtel/db";
 import { GapBackfillService } from "./gap-backfill.js";
 
 for (const p of ["../../.env", ".env"]) {
@@ -41,6 +41,22 @@ function parseIso(name: string): Date {
 async function main() {
   const from = parseIso("FROM");
   const to = parseIso("TO");
+  if (
+    !pedirAplicar({
+      guion: "gap-backfill",
+      queEscribe: "Rellena huecos de telemetría en telemetry_points y mueve marcas de agua por IMEI.",
+      url: process.env.DATABASE_URL,
+      alcance: {
+        FROM: from.toISOString(),
+        TO: to.toISOString(),
+        CARRIER: process.env.CARRIER,
+        IMEI: process.env.IMEI,
+        MAX_GAPS: process.env.MAX_GAPS ?? 40,
+      },
+    })
+  ) {
+    process.exit(0);
+  }
   const db = createDb(process.env.DATABASE_URL!);
   const repos = createRepositories(db);
   const service = new GapBackfillService(repos, {
