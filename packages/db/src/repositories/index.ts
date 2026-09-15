@@ -58,6 +58,7 @@ import {
   telemetryPoints,
   telemetryWatermarks,
   telemetryImeiWatermarks,
+  telemetryArchiveMarks,
   groundTruthDays,
   occurrenceGroundTruth,
   carrierAportaciones,
@@ -4414,6 +4415,37 @@ export class TelemetryRepository {
       .onConflictDoUpdate({
         target: telemetryWatermarks.carrierAccountId,
         set: { lastRecordedAt, updatedAt: new Date() },
+      });
+  }
+
+  /**
+   * Hasta dónde ya se leyó cada aparato de la cuenta, por IMEI (0037).
+   * Un aparato que no aparece no se ha leído nunca con la marca por aparato.
+   */
+  async getArchiveMarks(carrierAccountId: string): Promise<Map<string, Date>> {
+    const filas = await this.db
+      .select({ imei: telemetryArchiveMarks.imei, readUntil: telemetryArchiveMarks.readUntil })
+      .from(telemetryArchiveMarks)
+      .where(eq(telemetryArchiveMarks.carrierAccountId, carrierAccountId));
+    return new Map(filas.map((f) => [f.imei, f.readUntil]));
+  }
+
+  /**
+   * Anota que el aparato ya se leyó hasta `readUntil`. **Sólo avanza**: si ya
+   * había una marca posterior, se queda la posterior. Dos corridas del cron
+   * empalmadas pueden terminar en cualquier orden, y la lenta no debe
+   * regresar la marca de la rápida.
+   */
+  async setArchiveMark(carrierAccountId: string, imei: string, readUntil: Date) {
+    await this.db
+      .insert(telemetryArchiveMarks)
+      .values({ carrierAccountId, imei, readUntil })
+      .onConflictDoUpdate({
+        target: [telemetryArchiveMarks.carrierAccountId, telemetryArchiveMarks.imei],
+        set: {
+          readUntil: sql`greatest(${telemetryArchiveMarks.readUntil}, excluded.read_until)`,
+          updatedAt: new Date(),
+        },
       });
   }
 

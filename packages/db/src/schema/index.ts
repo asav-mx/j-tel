@@ -1428,6 +1428,38 @@ export const circuitUnitAssignments = pgTable(
   ],
 );
 
+/**
+ * Hasta dónde le preguntó el archivador al proveedor por cada aparato (0037).
+ *
+ * **No es el último punto del aparato**: es el fin de la última ventana que el
+ * proveedor contestó para él, con puntos o sin ellos. Sólo avanza cuando esa
+ * lectura salió bien, así que un aparato que no contesta, o que se quedó sin
+ * leer porque la corrida se acabó, conserva su marca y la corrida siguiente lo
+ * retoma desde ahí.
+ *
+ * No es `telemetryImeiWatermarks`: ésa la mueve el relleno de huecos hasta el
+ * final de cada hueco revisado, y compartirla haría que el relleno le brincara
+ * ventanas al archivador.
+ */
+export const telemetryArchiveMarks = pgTable(
+  "telemetry_archive_marks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    carrierAccountId: uuid("carrier_account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    imei: text("imei").notNull(),
+    readUntil: timestamp("read_until", { withTimezone: true, mode: "date" }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("telemetry_archive_marks_carrier_imei_idx").on(
+      table.carrierAccountId,
+      table.imei,
+    ),
+  ],
+);
+
 /** Marca de agua por IMEI (Fase 5): relleno dirigido sin saltar huecos ajenos. */
 export const telemetryImeiWatermarks = pgTable(
   "telemetry_imei_watermarks",
