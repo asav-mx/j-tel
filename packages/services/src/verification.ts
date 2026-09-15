@@ -371,6 +371,17 @@ export class VerificationService {
       actorKind?: string;
       actorId?: string | null;
       actorIntent?: "decision" | "maintenance";
+      /**
+       * Los ids que quien llama le enseñó a una persona antes de que dijera que
+       * sí. Si el conjunto de servicios a re-juzgar ya no es exactamente ése
+       * —se generó uno, cambió un viaje—, **no se re-sella nada**.
+       *
+       * Existe porque re-sellar re-emite el juicio sobre la jornada de un
+       * cliente, y el Marco dice que el hecho no se reescribe nunca. Lo mínimo
+       * que se le debe a quien lo autoriza es que lo autorizado sea lo que se
+       * hace, no lo que haya en la base un minuto después.
+       */
+      esperadas?: string[];
     } = {},
   ) {
     const daysBack = opts.daysBack ?? 14;
@@ -390,6 +401,17 @@ export class VerificationService {
       // Solo servicios cuyo deadline ya pasó (o está en ventana de gracia).
       return o.expectedDeadline.getTime() <= now.getTime() + 60 * 60 * 1000;
     });
+
+    if (opts.esperadas) {
+      const autorizadas = new Set(opts.esperadas);
+      const iguales =
+        autorizadas.size === targets.length && targets.every((o) => autorizadas.has(o.id));
+      if (!iguales) {
+        throw new Error(
+          `Lo que se iba a re-sellar cambió entre la lista y la confirmación: se autorizaron ${autorizadas.size} servicios y hoy son ${targets.length}. No se re-selló nada; vuelve a pedir la lista.`,
+        );
+      }
+    }
 
     const results = [];
     for (const occ of targets) {
