@@ -189,7 +189,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [La base de pruebas está atrasada](#la-base-de-pruebas-está-atrasada) | ✅ Cerrada el 4 de agosto · eran tres, no una |
 | [Las migraciones del repo crean una columna que el código no conoce](#las-migraciones-del-repo-crean-una-columna-que-el-código-no-conoce) | ✅ **Cerrada el 15 de agosto** — la `0018` está aplicada en producción |
 | [La `0027`, la `0028` y la `0029` no están en el journal del repo](#la-0027-la-0028-y-la-0029-no-están-en-el-journal-del-repo) | ✅ **Cerrada el 10 de septiembre** — la cuarta vez llegó (`0032`, `0033`) y con ella la valla; la causa ya no está viva |
-| [`demos/activate` cruza cuentas](#demosactivate-cruza-cuentas) | 🟡 Protegida; falta decidir qué hace |
+| [`demos/activate` cruza cuentas](#demosactivate-cruza-cuentas) | ✅ Borrada el 14 sep 2026 |
 | [No hay configuración de ESLint](#no-hay-configuración-de-eslint) | 🟢 Junto con el corredor de pruebas |
 | ["Consolidación" significa dos cosas](#consolidación-significa-dos-cosas) | 🟢 Renombrar la de política |
 | [Los documentos llegan con la codificación rota](#los-documentos-llegan-con-la-codificación-rota) | 🟢 Revisar el traspaso, no el síntoma |
@@ -2437,6 +2437,14 @@ si debe desaparecer.
 
 **Dónde toca.** `apps/web/src/app/api/demos/activate`.
 
+> **✅ Decidido el 14 de septiembre de 2026: desaparece.** Salió del barrido de lo que
+> dejó el seed en producción. La ruta **no tenía botón en ninguna pantalla** y ponía en
+> `active` todos los contratos de todos los clientes: un contrato real en borrador o
+> suspendido habría quedado activo y el motor habría empezado a juzgarlo. Y el mismo día
+> se midió que las APIs aceptaban anónimos en producción (#398), así que «ya está
+> protegida» no fue cierto hasta ese PR. Asav decidió cerrar el camino antes de limpiar.
+> Si algún día hace falta activar una demo, se construye por cuenta y con la plantilla.
+
 ## No hay configuración de ESLint
 
 **Qué es.** 🟢 **No existe configuración de ESLint en ningún árbol** del monorepo.
@@ -2555,7 +2563,7 @@ frente de producto entero.
 |---|---|---|
 | 1 | [**Dirección visual**](#dirección-visual-del-producto) — qué significa *"tipo plataforma"* | **Ahora** |
 | 2 | Regla de cierre del pendiente por evidencia — con la planta y con legal | Hoy corre en modo demo |
-| 3 | Qué debe hacer [`demos/activate`](#demosactivate-cruza-cuentas) | Cuando toque |
+| 3 | ~~Qué debe hacer [`demos/activate`](#demosactivate-cruza-cuentas)~~ | ✅ Desaparece — 14 sep 2026 |
 | 4 | ¿`jornada-instrumento` quedó superseded por [Cierre del turno](#cierre-del-turno)? | Ola 3 |
 | 5 | Cómo se le cuenta a Tecma que **su número cambia** al re-verificar | **Antes de** [las 300 congeladas](#las-300-congeladas--la-foto-de-referencia) |
 | 6 | Qué contratos permiten que la planta modifique la política **sin acuerdo del carrier** | Con [auth-rbac](#la-política-como-acuerdo-vivo) |

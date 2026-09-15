@@ -125,8 +125,12 @@ const HONEYWELL_POLICY: ContractPolicy = {
 
 async function seed() {
   // Candado: el seed hace TRUNCATE de TODAS las tablas. Exige SEED_DATABASE_URL
-  // explícita y distinta de DATABASE_URL (producción). Ver seed-guard.ts.
-  const db = createDb(resolveSeedDatabaseUrl());
+  // en una base distinta —por identidad, no por texto— de todas las que el
+  // ambiente conoce. Ver seed-guard.ts.
+  const iBase = process.argv.indexOf("--base");
+  const db = createDb(
+    resolveSeedDatabaseUrl(process.env, iBase >= 0 ? process.argv[iBase + 1] : undefined),
+  );
   const repos = createRepositories(db);
 
   console.log("Limpiando datos previos...");

@@ -103,21 +103,28 @@ export function revisarDesechable(entrada: {
   objetivo: string | undefined;
   otras: ConexionConocida[];
   confirmacion?: string;
+  /**
+   * Cómo se llama la variable del objetivo, para los mensajes. `DATABASE_URL_TEST`
+   * para los escenarios; el seed apunta con `SEED_DATABASE_URL` y usa el mismo
+   * candado desde el 14 de septiembre de 2026, en vez de su comparación de texto.
+   */
+  nombreObjetivo?: string;
 }): Veredicto {
   const { objetivo, otras, confirmacion } = entrada;
+  const nombre = entrada.nombreObjetivo ?? "DATABASE_URL_TEST";
 
   if (!objetivo) {
     return {
       ok: false,
       motivo:
-        "DATABASE_URL_TEST no está definida. Este guion NO cae a DATABASE_URL: esa caída " +
+        `${nombre} no está definida. Este guion NO cae a DATABASE_URL: esa caída ` +
         "es justo el accidente que el candado existe para impedir.",
     };
   }
 
   const yo = identidadDeBase(objetivo);
   if (!yo) {
-    return { ok: false, motivo: "DATABASE_URL_TEST no se puede leer como una URL de Postgres." };
+    return { ok: false, motivo: `${nombre} no se puede leer como una URL de Postgres.` };
   }
 
   const conocidas = otras.filter((o) => o.url);
@@ -131,7 +138,7 @@ export function revisarDesechable(entrada: {
       return {
         ok: false,
         motivo:
-          `DATABASE_URL_TEST apunta a LA MISMA BASE que ${otra.nombre} ` +
+          `${nombre} apunta a LA MISMA BASE que ${otra.nombre} ` +
           `(${yo.host}:${yo.puerto}/${yo.base}). No se siembra ahí. ` +
           "Si las dos URLs se ven distintas, es por el usuario, la contraseña o el " +
           "sufijo -pooler: el candado compara host, puerto y base, no el texto.",

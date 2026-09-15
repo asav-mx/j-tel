@@ -1,3 +1,4 @@
+import { conexionesDelAmbiente, revisarDesechable } from "./candado-desechable.js";
 import { asc, eq } from "drizzle-orm";
 import { createDb } from "./index.js";
 import {
@@ -86,6 +87,21 @@ export async function sembrarEscenarioDosCarriers(
       "[escenario] La URL recibida no es DATABASE_URL_TEST. Este escenario solo se siembra " +
         "en la rama desechable — ver el #206.",
     );
+  }
+  /*
+   * Y que DATABASE_URL_TEST no sea producción. Hasta el 14 de septiembre de 2026
+   * esto sólo comprobaba que la URL recibida fuera la de la variable, nunca a
+   * dónde apuntaba la variable: con DATABASE_URL_TEST copiada del panel de
+   * producción, sembraba cuentas, membresías, contratos y servicios inventados
+   * ahí. Es el mismo candado de los otros escenarios. Sin `--base`: esto es una
+   * función de biblioteca, y si no hay contra qué comparar, no siembra.
+   */
+  const veredicto = revisarDesechable({
+    objetivo: test,
+    otras: conexionesDelAmbiente(process.env),
+  });
+  if (!veredicto.ok) {
+    throw new Error(`[escenario] ${veredicto.motivo}`);
   }
 
   const db = createDb(connectionString);

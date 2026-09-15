@@ -12,19 +12,33 @@
  * Todo lo que crea queda claramente etiquetado como "PRUEBA REAL" para poder
  * identificarlo (o borrarlo) fácilmente después.
  *
- * Ejecutar:  pnpm --filter @jtel/services run real-e2e
+ * ## Sólo en la base desechable, desde el 14 de septiembre de 2026
+ *
+ * Escribía en `DATABASE_URL`, que en el `.env` de cualquiera es producción, y
+ * sin ningún candado. Así nació el 8 de julio la cuenta PRUEBA REAL: un cliente,
+ * una planta, un contrato activo y veredictos sellados con la misma autoridad
+ * que los reales. Hasta hoy sólo fallaba porque Umbrella está muerto; adaptarlo
+ * a Compás lo habría revivido apuntando a producción.
+ *
+ * Ahora escribe únicamente en `DATABASE_URL_TEST`, detrás de
+ * `candado-desechable`: se niega si esa base es —por identidad, no por texto—
+ * cualquiera de las que el ambiente conoce.
+ *
+ * Ejecutar:  pnpm --filter @jtel/services run real-e2e [--base <fragmento-del-host>]
  */
 import { existsSync } from "node:fs";
 import { eq, inArray } from "drizzle-orm";
 import {
   accounts,
   complianceFacts,
+  conexionesDelAmbiente,
   createDb,
   createRepositories,
   geofences,
   ledgerEntries,
   evidencePoints,
   plants,
+  revisarDesechable,
   serviceContracts,
   serviceOccurrences,
   serviceProfiles,
@@ -89,8 +103,17 @@ function fmt(d: Date | null | undefined) {
 }
 
 async function main() {
-  const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl) throw new Error("Falta DATABASE_URL en .env");
+  // Antes que nada: ni una credencial de GPS se lee si el destino no es desechable.
+  const iBase = process.argv.indexOf("--base");
+  const veredicto = revisarDesechable({
+    objetivo: process.env.DATABASE_URL_TEST,
+    otras: conexionesDelAmbiente(process.env),
+    confirmacion: iBase >= 0 ? process.argv[iBase + 1] : undefined,
+  });
+  if (!veredicto.ok) {
+    throw new Error(`[real-e2e] ${veredicto.motivo}`);
+  }
+  const dbUrl = process.env.DATABASE_URL_TEST!;
 
   const baseUrl = normalizeUmbrellaBaseUrl(
     process.env.UMBRELLA_GPS_URL ??
