@@ -46,7 +46,6 @@ Abrir http://localhost:3000
 ## Estructura
 
 - `apps/web` — UI cliente, carrier, J-Staff + API
-- `apps/worker` — Job de verificación post-deadline
 - `packages/db` — Esquema Drizzle, repos, seeds
 - `packages/verification` — Motor puro de decisión
 - `packages/gps-umbrella` — Adaptador API Umbrella

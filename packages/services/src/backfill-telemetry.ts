@@ -8,7 +8,7 @@
  * Opcional: IMEI=8689... (un solo equipo). CARRIER=juarez (filtro por nombre).
  */
 import { existsSync } from "node:fs";
-import { createDb, createRepositories } from "@jtel/db";
+import { createDb, createRepositories, pedirAplicar } from "@jtel/db";
 import { clearUmbrellaTokenCache } from "@jtel/gps-umbrella";
 import { getProviderForCarrier } from "./providers.js";
 
@@ -72,6 +72,22 @@ async function main() {
   const carrierFilter = (process.env.CARRIER ?? "juarez").trim().toLowerCase();
   const imeiBatchSize = Math.max(1, Number(process.env.IMEI_BATCH ?? 3));
   const chunkHours = Math.max(0.25, Number(process.env.CHUNK_HOURS ?? 1));
+
+  if (
+    !pedirAplicar({
+      guion: "backfill-telemetry",
+      queEscribe: "Trae telemetría del proveedor y la escribe en telemetry_points (no mueve telemetry_watermarks).",
+      url,
+      alcance: {
+        FROM: from.toISOString(),
+        TO: to.toISOString(),
+        CARRIER: carrierFilter,
+        IMEI: onlyImei ?? undefined,
+      },
+    })
+  ) {
+    process.exit(0);
+  }
 
   const db = createDb(url);
   const repos = createRepositories(db);

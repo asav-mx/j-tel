@@ -193,6 +193,11 @@ no para quedarse.
 
 ## Deuda conocida
 
+> **✅ Cerrado el 15 de septiembre de 2026: `apps/worker` se borró.** Duplicaba al cron
+> `/api/cron/verify`, no estaba desplegado en ningún lado y, corrido a mano, sellaba
+> veredictos con el código de una laptop. `UMBRELLA_USER_ID` y `UMBRELLA_PASSWORD` salieron
+> del contrato con él. Lo de abajo queda como registro.
+
 **El worker lee otros nombres.** `apps/worker/src/run.ts` pide
 `UMBRELLA_USER_ID` y `UMBRELLA_PASSWORD`, mientras que el resto del repo usa
 `UMBRELLA_GPS_USERID` y `UMBRELLA_GPS_PASSWORD`. Mientras siga así, el worker

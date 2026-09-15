@@ -7,7 +7,7 @@
  *     pnpm --filter @jtel/services run label-residual
  */
 import { existsSync } from "node:fs";
-import { createDb, createRepositories } from "@jtel/db";
+import { createDb, createRepositories, pedirAplicar } from "@jtel/db";
 
 for (const p of ["../../.env", ".env"]) {
   if (existsSync(p)) {
@@ -45,6 +45,17 @@ async function main() {
   if (cause && !CAUSES.has(cause)) {
     console.error("CAUSE inválida. Usa:", [...CAUSES].join("|"));
     process.exit(1);
+  }
+
+  if (
+    !pedirAplicar({
+      guion: "label-residual",
+      queEscribe: "Escribe (o reemplaza) la etiqueta humana de verdad de terreno de un servicio en occurrence_ground_truth.",
+      url: process.env.DATABASE_URL,
+      alcance: { OCCURRENCE_ID: occurrenceId, VERDICT: verdict, CAUSE: cause, UNIT: unitId, RECORDED_BY: recordedBy },
+    })
+  ) {
+    process.exit(0);
   }
 
   const db = createDb(process.env.DATABASE_URL!);

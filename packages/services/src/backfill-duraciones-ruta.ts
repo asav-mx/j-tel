@@ -20,7 +20,7 @@
  */
 import { existsSync } from "node:fs";
 import { sql } from "drizzle-orm";
-import { createDb, createRepositories, type Database, type Repositories } from "@jtel/db";
+import { createDb, createRepositories, type Database, type Repositories, pedirAplicar } from "@jtel/db";
 import { measureBestTraversal, corridorKmFromMeters } from "./medicion-recorrido.js";
 import type { ContractPolicy } from "@jtel/domain";
 
@@ -135,6 +135,17 @@ async function main() {
 
   const diasArg = process.argv.find((a) => a.startsWith("--dias="));
   const dias = Math.max(1, Number(diasArg?.split("=")[1] ?? 120));
+
+  if (
+    !pedirAplicar({
+      guion: "backfill-duraciones-ruta",
+      queEscribe: "Mide recorridos con la telemetría guardada y los escribe en route_traversal_measurements.",
+      url,
+      alcance: { dias },
+    })
+  ) {
+    process.exit(0);
+  }
 
   const db = createDb(url);
   const repos = createRepositories(db);

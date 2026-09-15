@@ -35,7 +35,9 @@ async function main() {
   }
   const filter = contractEnv.toLowerCase();
 
-  const db = createDb(process.env.DATABASE_URL!);
+  // Sólo lee: con el usuario de solo lectura. Si el motor intentara escribir
+  // en esta «simulación», la base lo rechaza en vez de dejarlo pasar.
+  const db = createDb(process.env.DATABASE_URL_READONLY!);
   const repos = createRepositories(db);
 
   const clients = await repos.accounts.listByType("client");

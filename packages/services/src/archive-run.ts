@@ -9,7 +9,7 @@
  * Ejecutar:  pnpm --filter @jtel/services run archive
  */
 import { existsSync } from "node:fs";
-import { createDb, createRepositories } from "@jtel/db";
+import { createDb, createRepositories, pedirAplicar } from "@jtel/db";
 import { ArchiverService } from "./archiver.js";
 
 for (const p of ["../../.env", ".env"]) {
@@ -33,6 +33,17 @@ async function main() {
   if (!url) {
     console.error("Falta DATABASE_URL en el .env");
     process.exit(1);
+  }
+
+  if (
+    !pedirAplicar({
+      guion: "archive-run",
+      queEscribe: "Archiva telemetría del proveedor en telemetry_points y mueve la marca de agua de cada carrier.",
+      url,
+      alcance: { ARCHIVE_CATCHUP: process.env.ARCHIVE_CATCHUP === "1" },
+    })
+  ) {
+    process.exit(0);
   }
 
   const db = createDb(url);

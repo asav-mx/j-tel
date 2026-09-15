@@ -76,8 +76,9 @@ function recorrerCrudo(puntos: Punto[]) {
 }
 
 async function main() {
-  const url = process.env.DB_URL ?? process.env.DATABASE_URL_READONLY ?? process.env.DATABASE_URL;
-  if (!url) throw new Error("Falta DB_URL");
+  // Sólo lee: sin caer al dueño si falta la de solo lectura.
+  const url = process.env.DB_URL ?? process.env.DATABASE_URL_READONLY;
+  if (!url) throw new Error("Falta DATABASE_URL_READONLY (o DB_URL)");
 
   const carrierAccountId = process.argv[2];
   const fecha = process.argv[3];

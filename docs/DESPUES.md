@@ -1397,6 +1397,11 @@ variables y salir con código 1. Lo que falta es que **el código confíe en él
 traer cada uno su propio paracaídas, y **encadenarlo a CI** para que un despliegue sin
 variables *no despliegue*, en vez de desplegar en modo inseguro.
 
+> **✅ 15 sep 2026:** `apps/worker` se borró —duplicaba al cron `/api/cron/verify`, nadie lo
+> llamaba y sellaba veredictos con el código de quien lo corriera—, y con él las filas 1, 2 y
+> 4 de la tabla: `UMBRELLA_USER_ID` y `UMBRELLA_PASSWORD` salieron de `.env.example` y del
+> contrato de `verificar-env.mjs`.
+
 **Ojo con el bug del worker, que es tarea propia.** La fila 1 **cambia comportamiento en
 producción** —hoy el worker de GPS autentica con `undefined`—, así que se arregla sola, no
 mezclada con el barrido del patrón.

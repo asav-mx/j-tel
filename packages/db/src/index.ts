@@ -12,6 +12,7 @@ export type Database = ReturnType<typeof createDb>;
 export * from "./schema/index.js";
 export { createRepositories, type Repositories } from "./repositories/index.js";
 export { isEncryptionConfigured } from "./crypto.js";
+export { pedirAplicar, quiereAplicar, destinoLegible } from "./permiso-de-escritura.js";
 export { conexionesDelAmbiente, revisarDesechable } from "./candado-desechable.js";
 export {
   pairLedgerEntryWithFact,
