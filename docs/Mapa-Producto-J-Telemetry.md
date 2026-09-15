@@ -151,7 +151,9 @@ no herramienta interna.
    la operación; el juez, después de ella. Si un día una alerta "ayuda" al árbitro,
    el árbitro deja de ser confiable.
 2. **Proyección, no juicio:** nunca "va a incumplir". Y color: las alertas van en
-   acero — verde/ámbar/rojo son de veredictos (regla ya en el skill j-telemetry-ui).
+   acero — verde/ámbar/rojo son de veredictos (que esos tres son sólo de veredictos lo
+   sigue diciendo el skill `jtel-diseno`, ley 4 del color; el «acero» era de la piel
+   anterior y ya no existe).
 3. **Cada señal en su cara:** la planta nunca ve la flota del carrier, ni siquiera
    para explicar una sugerencia.
 4. **Orden por horizonte:** "ahora", "en 20 minutos", "en 3 semanas" — no por

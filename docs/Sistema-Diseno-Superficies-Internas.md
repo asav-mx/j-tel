@@ -1,7 +1,8 @@
 > ## ⚠ DOCUMENTO SUPERSEDED — no construir contra este documento
 >
-> **Reemplazado por:** el skill `j-telemetry-ui` (`.claude/skills/j-telemetry-ui/SKILL.md`),
-> que es el lenguaje visual vigente de J-Telemetry.
+> **Reemplazado por:** el skill `jtel-diseno` (`.claude/skills/jtel-diseno/SKILL.md`), que es
+> el lenguaje visual vigente de J-Tel. Antes lo reemplazó `j-telemetry-ui`, descartado y
+> borrado el 15 de septiembre de 2026.
 >
 > **Desde:** los tokens canónicos entraron a `main` en los PR #77 y #78, y el skill
 > con sus ediciones en el #79. Toda pantalla construida desde entonces usa esa paleta.

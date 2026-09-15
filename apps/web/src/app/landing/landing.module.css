@@ -1,11 +1,15 @@
 /*
  * Landing público de j-telemetry.com.
  *
- * El landing es la ÚNICA excepción del lenguaje de producto (skill
- * j-telemetry-ui): no trata datos ni resultados sellados, así que puede ser
- * todo lo expresivo que quiera. Lo que sí conserva es la identidad —las tres
- * fuentes, la paleta y el chip con borde—, porque es la primera vez que
- * alguien ve la marca.
+ * El landing es la ÚNICA excepción del lenguaje de producto (lo dice el skill
+ * `jtel-diseno`, como lo decía `j-telemetry-ui` antes de borrarse el 15 de
+ * septiembre de 2026): no trata datos ni resultados sellados, así que puede ser
+ * todo lo expresivo que quiera. Lo que sí conserva es la identidad —las
+ * fuentes, la paleta y el chip con borde—, porque es la primera vez que alguien
+ * ve la marca.
+ *
+ * ⚠ La paleta y las fuentes de abajo son de la identidad ANTERIOR. La vigente
+ * (tinta azul y cobre) todavía no llega aquí.
  *
  * Vive en su propio módulo y no toca los tokens del producto: las variables se
  * declaran sobre .pagina, no sobre :root, para que nada de aquí se filtre a

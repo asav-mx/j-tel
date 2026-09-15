@@ -1,6 +1,8 @@
 > ## ⚠ DOCUMENTO SUPERSEDED — no construir contra este documento
 >
-> **Reemplazado por:** el skill `j-telemetry-ui` para todas las superficies internas.
+> **Reemplazado por:** el skill `jtel-diseno` (`.claude/skills/jtel-diseno/SKILL.md`) para
+> todas las superficies. Antes lo reemplazó `j-telemetry-ui`, que a su vez se descartó y
+> se borró el 15 de septiembre de 2026.
 > Para la landing pública, el diseño vigente es el aprobado en sesión (dirección
 > "la parvada · ciudad de noche").
 >

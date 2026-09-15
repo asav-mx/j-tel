@@ -1,9 +1,15 @@
 /**
  * Cómo se ve un aviso — la única superficie de esta tarea que un humano lee,
- * así que pasa por el skill `j-telemetry-ui` igual que una pantalla.
+ * así que pasa por el skill de diseño igual que una pantalla.
  *
- * Dos reglas del skill mandan sobre este archivo, y las dos son fáciles de
- * romper sin darse cuenta:
+ * ⚠ Estas dos reglas venían del skill `j-telemetry-ui`, borrado el 15 de
+ * septiembre de 2026. El vigente es `jtel-diseno`: la primera sigue en él (ley 4
+ * del color), pero el «acero» y el «azul» ya no existen en su paleta; la segunda
+ * no la dice igual —pide «un número por cosa»— y hay que decidirla al migrar
+ * este correo. Mientras tanto el correo se queda como está.
+ *
+ * Dos reglas mandaban sobre este archivo, y las dos son fáciles de romper sin
+ * darse cuenta:
  *
  *  1. **Verde, ámbar y rojo son de los veredictos y de nadie más.** Un aviso de
  *     plataforma NO es un veredicto: es un estado operativo. Por eso este

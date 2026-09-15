@@ -2,7 +2,12 @@
 
 /*
  * Tokens del lenguaje de interfaz de J-Telemetry.
- * Fuente de verdad: skill j-telemetry-ui (el Marco manda sobre el skill).
+ *
+ * ⚠ ESTOS VALORES SON DE LA PIEL ANTERIOR. Venían del skill `j-telemetry-ui`,
+ * descartado y borrado el 15 de septiembre de 2026. El lenguaje vigente es el
+ * skill `jtel-diseno` (tinta azul, cobre como único color señal, nace claro), y
+ * estos tokens todavía NO lo siguen: se migran cuando se construya con él. No
+ * se toman como referencia para nada nuevo. El Marco manda sobre los dos.
  *
  * Reglas duras que estos tokens hacen cumplir:
  *  - Los tres colores de veredicto (--verde, --ambar, --rojo) NO se usan para

@@ -124,7 +124,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Afinar la ventana derivada con el match observable](#afinar-la-ventana-derivada-con-el-match-observable) | **Sube: la deriva se midió y es rápida — arriba de solicitudes y quejas** |
 | [Las 300 congeladas — la foto de referencia](#las-300-congeladas--la-foto-de-referencia) | **PR #124 cerrado el 14 sep** — la rama se conserva |
 | [Las tres rutas con falla real](#las-tres-rutas-con-falla-real) | Pide ojo humano sobre el KML |
-| [Dirección visual del producto](#dirección-visual-del-producto) | 🔴 **PENDIENTE DE ASAV — bloquea pantallas** |
+| [Dirección visual del producto](#dirección-visual-del-producto) | ✅ **Resuelta el 15 sep 2026** — skill `jtel-diseno`; las pantallas quedan desbloqueadas |
 | [El resto de la cara del producto](#el-resto-de-la-cara-del-producto) | Después de la dirección visual |
 | [Pendientes puntuales de v1](#pendientes-puntuales-de-v1) | En cola |
 
@@ -196,8 +196,8 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [Documentación por marcar como superseded](#documentación-por-marcar-como-superseded) | Desbloqueado por el #130 |
 | [Los 15 pendientes del 28-jul se quedan pendientes](#los-15-pendientes-del-28-jul-se-quedan-pendientes) | Decidido, no se toca |
 | [Dos mapas de producción salen en negro: CARTO ahora exige llave](#dos-mapas-de-producción-salen-en-negro-carto-ahora-exige-llave) | 🟡 Superficie visible rota |
-| [37 archivos apuntan a un skill que ya no existe](#37-archivos-apuntan-a-un-skill-que-ya-no-existe) | Cuando exista el skill nuevo |
-| [Reglas de lo que afirma una pantalla, pendientes de comparar contra el Marco](#reglas-de-lo-que-afirma-una-pantalla-pendientes-de-comparar-contra-el-marco) | Antes de escribir el skill nuevo |
+| [37 archivos apuntan a un skill que ya no existe](#37-archivos-apuntan-a-un-skill-que-ya-no-existe) | 🟡 Código y docs ✅ 15 sep · faltan las 23 fichas del Marco, las revisa Asav |
+| [Reglas de lo que afirma una pantalla, pendientes de comparar contra el Marco](#reglas-de-lo-que-afirma-una-pantalla-pendientes-de-comparar-contra-el-marco) | Antes de construir citándolas — `jtel-diseno` lo lista en «Pendiente» |
 
 ### 5 · Trámites y decisiones abiertas
 
@@ -913,6 +913,12 @@ reloj, y debajo el trazado.
 cambio de motor.
 
 ## Dirección visual del producto
+
+> **✅ Resuelta el 15 de septiembre de 2026.** La piel anterior se descartó entera y la
+> identidad nueva quedó ratificada en el skill `jtel-diseno`
+> (`.claude/skills/jtel-diseno/SKILL.md`): tinta azul, cobre como único color señal, piel
+> clara y oscura desde el inicio, y la pieza en vez del renglón. Con eso las pantallas
+> quedan desbloqueadas. Lo que sigue abajo es la historia de por qué bloqueaba.
 
 **Qué es.** 🔴 **PENDIENTE DE ASAV.** El homescreen del #138 **cumple la ficha** —sin
 cifras de juicio, alcance resuelto, seis puertas— **y aun así se ve como un directorio de
@@ -2953,6 +2959,17 @@ que es el dato incómodo: son superficies que alguien debería estar mirando.
 
 ## 37 archivos apuntan a un skill que ya no existe
 
+> **Estado, 15 de septiembre de 2026.** Ya existe el skill nuevo, `jtel-diseno`, y la
+> entrada se destrabó:
+> - **Código (6) y docs (4): arreglados.** Apuntan a `jtel-diseno`, y donde el código
+>   todavía implementa la piel anterior —tokens, fuentes, navegación, correo, landing— lo
+>   dicen: un comentario que llamara «fuente de verdad» al skill nuevo sobre valores que
+>   no lo siguen afirmaría lo que no es.
+> - **Las 3 copias de `corte-2026-08-03/` no se tocan:** es un corte congelado con fecha.
+> - **Las 23 fichas de `docs/marco-limpio/`: pendientes. Las revisa Asav.**
+> - Y este mismo archivo: la entrada «Dirección visual del producto» quedó marcada como
+>   resuelta.
+
 **Qué es.** El skill `j-telemetry-ui` se borró el 15 de septiembre de 2026 (#407), y
 **37 archivos lo siguen nombrando** como lo que gobierna, la fuente de verdad o lo que
 reemplazó a otro documento. Un puntero a algo que ya no existe también afirma lo que no
@@ -3014,7 +3031,9 @@ vez y con cuidado, no de pasada dentro de un borrado.
 - **Si no la dice**, se propone para ratificarla como pieza del Marco, y la ratifica
   Asav.
 
-Tiene que pasar **antes de escribir el skill nuevo**, para que el skill cite al Marco y
-no a un rescate.
+Iba a pasar antes de escribir el skill nuevo, y el skill se escribió primero (15 sep
+2026). `jtel-diseno` lo reconoce en su sección «Pendiente»: mientras no se comparen, no se
+construye nada citándolas. **Tiene que pasar antes de que una pantalla las necesite**, y
+las que sobrevivan entran al skill o al Marco.
 
 **Dónde toca.** `docs/Trampas-De-Medicion.md`, Parte 2, y el Marco.

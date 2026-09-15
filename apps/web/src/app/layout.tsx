@@ -7,8 +7,10 @@ import { TemaInicial } from "@/components/tema-inicial";
 import "./globals.css";
 
 /*
- * Las tres fuentes del skill j-telemetry-ui, con los pesos que el skill declara
- * para cada papel. Cada una expone una variable CSS; globals.css la recoge en el
+ * Las tres fuentes de la piel ANTERIOR (skill `j-telemetry-ui`, borrado el 15 de
+ * septiembre de 2026), con los pesos que ese skill declaraba para cada papel. El
+ * skill vigente, `jtel-diseno`, pide otras tres —Bricolage Grotesque, Inter y
+ * JetBrains Mono— y este archivo todavía no las carga. Cada una expone una variable CSS; globals.css la recoge en el
  * token --fuente-* correspondiente, que es lo que consumen los componentes.
  * Ningún componente debe nombrar una familia directamente.
  *
