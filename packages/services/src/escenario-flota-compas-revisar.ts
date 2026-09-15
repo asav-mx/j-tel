@@ -50,8 +50,8 @@ const ESPERADO = {
     "10254": "en_linea/en_movimiento",
     "10261": "en_linea/detenida",
     "10299": "en_linea/sin_velocidad",
-    "10288": "callada",
-    "10295": "callada",
+    "10288": "sin_senal",
+    "10295": "sin_senal",
     "10290": "desconectado",
     "10301": "sin_dispositivo",
     "10320": "sin_dispositivo",
@@ -96,7 +96,7 @@ for (const { unidad, estado, grupo } of flota.unidades) {
   const visto = estado.tipo === "en_linea" ? `en_linea/${estado.postura}` : estado.tipo;
   const ok = ESPERADO.unidades[unidad.label] === visto;
   if (!ok) fallas.push(`unidad ${unidad.label}: esperaba ${ESPERADO.unidades[unidad.label]}, vio ${visto}`);
-  console.log(`  ${ok ? "✓" : "✗"} ${unidad.label.padEnd(8)} ${visto.padEnd(24)} grupo: ${grupo ?? "(por decidir)"}`);
+  console.log(`  ${ok ? "✓" : "✗"} ${unidad.label.padEnd(8)} ${visto.padEnd(24)} grupo: ${grupo}`);
 }
 
 console.log("\nDISPOSITIVOS");
@@ -118,8 +118,7 @@ if (flota.unidades.length !== Object.keys(ESPERADO.unidades).length) {
 }
 
 console.log(
-  `\n  inactivas: ${flota.unidadesInactivas} · de baja montados: ${flota.anomalias.dispositivosDeBajaMontados.length}` +
-    ` · tiene contrato: ${flota.tieneContrato}`,
+  `\n  inactivas: ${flota.unidadesInactivas} · de baja montados: ${flota.anomalias.dispositivosDeBajaMontados.length}`,
 );
 if (fallas.length > 0) {
   console.error(`\n  ✗ ${fallas.length} diferencia(s):`);

@@ -13,8 +13,15 @@
  *
  * Los grupos, decididos el 15 de septiembre de 2026:
  *
- *   Unidades       EN LÍNEA · EN DESTINO · DESCONECTADO · SIN DISPOSITIVO
+ *   Unidades       EN LÍNEA · SIN SEÑAL · DESCONECTADO · SIN DISPOSITIVO
  *   Dispositivos   EN UNIDAD · EN BODEGA · DESCONECTADO · DE BAJA
+ *
+ * **Por qué no hay EN DESTINO todavía.** Se consideró sacarlo de la llegada que
+ * sella el árbitro y se descartó: el árbitro sella después del cierre, y para
+ * entonces el camión lleva horas en otra cosa. Mostrar esa llegada en una lista
+ * de «ahora» sería un hecho viejo presentado como estado actual —el caso 1 de la
+ * Pieza 1 §D—. La llegada sellada vive en la historia de la unidad, donde es
+ * verdad. El «en destino» real llega con la detección en vivo, junto con el mapa.
  */
 
 import { SIN_SENAL_MINUTOS } from "./senal.js";
@@ -226,23 +233,17 @@ export type EstadoDeUnidad =
     }
   | {
       /**
-       * Sólo servicio especial, el único donde el árbitro sella una llegada. Se
-       * muestra la hora de llegada, nunca la edad ni la posición posterior: la
-       * traza se corta al llegar (Pieza 5 §E).
+       * Montada, con su última señal de hace más de 15 min y menos de 24 h, o
+       * recién montada y sin reportar todavía.
+       *
+       * **No es desconectado, y juntarlos borraría la diferencia.** Sin señal es
+       * normal y se limpia solo —un túnel, un techo, una zona muerta—: pide
+       * esperar. Desconectado es que algo pasó y alguien tiene que actuar: pide
+       * hacer. Lleva su propia forma en el skill de diseño.
        */
-      tipo: "en_destino";
-      dispositivoId: string | null;
-      llegadaAt: Date;
-    }
-  | {
-      /**
-       * Montada, con señal de más de 15 min y menos de 24 h, o recién montada
-       * sin señal todavía. **Su grupo está por decidir**: no es EN LÍNEA (no
-       * está transmitiendo) ni DESCONECTADO (no lleva 24 h). Ver
-       * `grupoDeUnidad`.
-       */
-      tipo: "callada";
+      tipo: "sin_senal";
       dispositivoId: string;
+      /** `null` si recién se montó y todavía no reporta. */
       ultimaSenalAt: Date | null;
     }
   | {
@@ -258,21 +259,6 @@ export interface EntradaDeUnidad {
   dispositivos: Array<{ dispositivo: DispositivoDeFlota; desde: Date }>;
   /** La última señal de cada dispositivo, por IMEI. */
   senalPorImei: Map<string, UltimaSenal>;
-  /**
-   * La llegada vigente de la unidad a su destino, si la hay.
-   *
-   * **De dónde sale:** de la llegada que ya selló el árbitro
-   * (`compliance_facts.observed_arrival_at`, con la unidad acreditada). El
-   * árbitro sólo sella llegada en servicio especial —el único con una llegada
-   * final—, así que esto no necesita saber la modalidad del servicio, que es
-   * material del Marco pendiente y no se improvisa aquí. Una unidad en circuito
-   * no llega a destino: sirve su circuito.
-   *
-   * **Lo que falta decidir:** hasta cuándo sigue vigente una llegada sellada.
-   * Por eso esta función la recibe ya resuelta, y hoy nadie la pasa: ninguna
-   * unidad sale «en destino» hasta que eso se decida.
-   */
-  llegadaVigenteAt?: Date | null;
 }
 
 /**
@@ -298,10 +284,6 @@ export function estadoDeUnidad(entrada: EntradaDeUnidad, ahora: Date): EstadoDeU
   });
   const manda = candidatos[0]!;
 
-  if (entrada.llegadaVigenteAt) {
-    return { tipo: "en_destino", dispositivoId: manda.dispositivo.id, llegadaAt: entrada.llegadaVigenteAt };
-  }
-
   const senal = manda.senal;
   if (senal && ahora.getTime() - senal.at.getTime() <= SIN_SENAL_MINUTOS * MS_MIN) {
     const postura: PosturaEnLinea =
@@ -323,7 +305,7 @@ export function estadoDeUnidad(entrada: EntradaDeUnidad, ahora: Date): EstadoDeU
   if (estaDesconectado(senal?.at ?? null, manda.desde, ahora)) {
     return { tipo: "desconectado", dispositivoId: manda.dispositivo.id, ultimaSenalAt: senal?.at ?? null };
   }
-  return { tipo: "callada", dispositivoId: manda.dispositivo.id, ultimaSenalAt: senal?.at ?? null };
+  return { tipo: "sin_senal", dispositivoId: manda.dispositivo.id, ultimaSenalAt: senal?.at ?? null };
 }
 
 /**
@@ -339,45 +321,17 @@ export function estaDesconectado(ultimaSenalAt: Date | null, montadoDesde: Date,
   return ahora.getTime() - referencia.getTime() > DESCONECTADO_HORAS * MS_HORA;
 }
 
-export type GrupoDeUnidad = "en_linea" | "en_destino" | "desconectado" | "sin_dispositivo";
+export type GrupoDeUnidad = "en_linea" | "sin_senal" | "desconectado" | "sin_dispositivo";
 
-/**
- * Los grupos de unidades que existen para una cuenta, en su orden.
- *
- * **Sin contrato, EN DESTINO no aparece.** No es un grupo vacío: es un grupo que
- * no existe, porque sin contrato no hay servicio especial ni llegada que sellar.
- * Mostrarlo en cero afirmaría que se buscó y no hubo.
- */
-export function gruposDeUnidad(cuenta: { tieneContrato: boolean }): GrupoDeUnidad[] {
-  return cuenta.tieneContrato
-    ? ["en_linea", "en_destino", "desconectado", "sin_dispositivo"]
-    : ["en_linea", "desconectado", "sin_dispositivo"];
-}
+/** Los grupos de unidades, en su orden. */
+export const GRUPOS_DE_UNIDAD = ["en_linea", "sin_senal", "desconectado", "sin_dispositivo"] as const;
 
 /** Los grupos del inventario de dispositivos (Marco 6.6), en su orden. */
 export const GRUPOS_DE_DISPOSITIVO = ["en_unidad", "en_bodega", "desconectado", "de_baja"] as const;
 
-/**
- * El grupo en que se lista una unidad.
- *
- * Devuelve `null` para `callada` porque **ese grupo no está decidido**: los
- * cuatro grupos acordados no la cubren, y ponerla en EN LÍNEA afirmaría que
- * transmite, y en DESCONECTADO, que lleva un día sin hacerlo. Se decide antes de
- * construir una pantalla que la liste.
- */
-export function grupoDeUnidad(estado: EstadoDeUnidad): GrupoDeUnidad | null {
-  switch (estado.tipo) {
-    case "en_linea":
-      return "en_linea";
-    case "en_destino":
-      return "en_destino";
-    case "desconectado":
-      return "desconectado";
-    case "sin_dispositivo":
-      return "sin_dispositivo";
-    case "callada":
-      return null;
-  }
+/** El grupo en que se lista una unidad: uno por estado, sin huecos. */
+export function grupoDeUnidad(estado: EstadoDeUnidad): GrupoDeUnidad {
+  return estado.tipo;
 }
 
 // ── El estado de un dispositivo (el inventario, Marco 6.6) ───────────────
@@ -414,7 +368,7 @@ export function estadoDeDispositivo(
 // ── La flota completa ────────────────────────────────────────────────────
 
 export interface FlotaClasificada {
-  unidades: Array<{ unidad: UnidadDeFlota; estado: EstadoDeUnidad; grupo: GrupoDeUnidad | null }>;
+  unidades: Array<{ unidad: UnidadDeFlota; estado: EstadoDeUnidad; grupo: GrupoDeUnidad }>;
   dispositivos: Array<{ dispositivo: DispositivoDeFlota; estado: EstadoDeDispositivo }>;
   anomalias: UnionDeFlota["anomalias"];
 }
@@ -426,8 +380,6 @@ export function clasificarFlota(entrada: {
   posicionesVivas: PosicionViva[];
   /** El último punto archivado de cada IMEI. */
   ultimoArchivadoPorImei: Map<string, Date>;
-  /** Ver `EntradaDeUnidad.llegadaVigenteAt`: hoy no hay fuente. */
-  llegadaVigentePorUnidad?: Map<string, Date>;
   ahora: Date;
 }): FlotaClasificada {
   const { ahora } = entrada;
@@ -445,7 +397,6 @@ export function clasificarFlota(entrada: {
       {
         dispositivos: union.dispositivosPorUnidad.get(unidad.id) ?? [],
         senalPorImei,
-        llegadaVigenteAt: entrada.llegadaVigentePorUnidad?.get(unidad.id) ?? null,
       },
       ahora,
     );

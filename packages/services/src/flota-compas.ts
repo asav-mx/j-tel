@@ -8,14 +8,11 @@ import { clasificarFlota, type FlotaClasificada } from "@jtel/domain";
  * junta las filas. Existe antes que la pantalla: la pantalla sale del rediseño y
  * va a leer de aquí.
  *
- * **Lo que NO se lee todavía, a propósito: las llegadas selladas.** «En destino»
- * sale de la llegada que ya selló el árbitro, pero falta decidir hasta cuándo
- * sigue vigente una llegada. Hasta entonces no se pasa ninguna y ninguna unidad
- * sale «en destino». Ver `EntradaDeUnidad.llegadaVigenteAt`.
+ * **No lee llegadas selladas, a propósito.** Una llegada sellada es historia de
+ * la unidad, no su estado de ahora: el árbitro sella después del cierre. El «en
+ * destino» de una lista viva llega con la detección en vivo, junto con el mapa.
  */
 export interface FlotaCompas extends FlotaClasificada {
-  /** Sin contrato, el grupo EN DESTINO no existe (`gruposDeUnidad`). */
-  tieneContrato: boolean;
   /**
    * Las unidades marcadas inactivas no entran a la flota: no están en
    * operación. Se cuentan para que no desaparezcan en silencio.
@@ -24,16 +21,15 @@ export interface FlotaCompas extends FlotaClasificada {
 }
 
 export async function cargarFlotaCompas(
-  repos: Pick<Repositories, "fleet" | "livePositions" | "telemetry" | "contracts">,
+  repos: Pick<Repositories, "fleet" | "livePositions" | "telemetry">,
   carrierAccountId: string,
   ahora: Date,
 ): Promise<FlotaCompas> {
-  const [unidades, dispositivos, asignaciones, posicionesVivas, contratos] = await Promise.all([
+  const [unidades, dispositivos, asignaciones, posicionesVivas] = await Promise.all([
     repos.fleet.getUnitsForCarrier(carrierAccountId),
     repos.fleet.getDevicesForCarrier(carrierAccountId),
     repos.fleet.getActiveAssignmentsForCarrier(carrierAccountId),
     repos.livePositions.listForCarrier(carrierAccountId),
-    repos.contracts.findForCarrier(carrierAccountId),
   ]);
   const ultimoArchivadoPorImei = await repos.telemetry.ultimoPuntoPorImei(
     dispositivos.map((d) => d.imei),
@@ -67,7 +63,6 @@ export async function cargarFlotaCompas(
 
   return {
     ...flota,
-    tieneContrato: contratos.length > 0,
     unidadesInactivas: unidades.length - activas.length,
   };
 }

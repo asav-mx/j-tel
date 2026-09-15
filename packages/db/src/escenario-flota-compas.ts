@@ -35,8 +35,8 @@ import { accounts, deviceAssignments, devices, livePositions, telemetryPoints, u
  *   10254  en línea, en movimiento   42.7 km/h, rumbo 135, hace 14 s
  *   10261  en línea, detenida        0.8 km/h, hace 2.1 min
  *   10299  en línea, sin velocidad   el archivo (hace 5 min) llegó más lejos que la viva (hace 2 h)
- *   10288  callada                   hace 3.8 h  ← su grupo está por decidir
- *   10295  callada                   montada hace 2 h, nunca reportó  ← idem
+ *   10288  sin señal                 hace 3.8 h
+ *   10295  sin señal                 montada hace 2 h, todavía no reporta
  *   10290  desconectado              última señal hace 3 días
  *   10301  sin dispositivo
  *   10320  sin dispositivo           su único dispositivo está de baja pero sigue montado (anomalía)
@@ -48,9 +48,8 @@ import { accounts, deviceAssignments, devices, livePositions, telemetryPoints, u
  *   TK-ESC-009  de baja              con fecha y motivo, ya soltado
  *   TK-ESC-010  de baja              sin soltar de 10320 (la anomalía de arriba)
  *
- * **Lo que NO siembra: una unidad en destino.** Sale de una llegada sellada, y
- * falta decidir hasta cuándo sigue vigente; hasta entonces el cargador no lee
- * llegadas. La regla está probada en `flota.test.ts`.
+ * **No hay unidad en destino, porque el estado no existe todavía:** llega con la
+ * detección en vivo, junto con el mapa.
  */
 
 function archivosDeAmbiente(): string[] {

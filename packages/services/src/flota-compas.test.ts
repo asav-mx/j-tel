@@ -5,7 +5,7 @@ const AHORA = new Date("2026-09-15T18:00:00Z");
 const MIN = 60_000;
 
 /** Repos falsos: sólo lo que el cargador toca. */
-function repos(opciones: { contratos?: number; inactiva?: boolean } = {}) {
+function repos(opciones: { inactiva?: boolean } = {}) {
   const pedidosDeArchivo: string[][] = [];
   const r = {
     fleet: {
@@ -32,7 +32,6 @@ function repos(opciones: { contratos?: number; inactiva?: boolean } = {}) {
         return new Map([["222", new Date(AHORA.getTime() - 30 * MIN)]]);
       },
     },
-    contracts: { findForCarrier: async () => Array.from({ length: opciones.contratos ?? 0 }) },
   };
   return { repos: r as never, pedidosDeArchivo };
 }
@@ -51,11 +50,6 @@ describe("cargarFlotaCompas", () => {
     });
     // El archivo se consulta por los IMEI de la cuenta, todos juntos.
     expect(f.pedidosDeArchivo).toEqual([["111", "222"]]);
-  });
-
-  it("dice si la cuenta tiene contrato, que es lo que decide si EN DESTINO existe", async () => {
-    expect((await cargarFlotaCompas(repos().repos, "c1", AHORA)).tieneContrato).toBe(false);
-    expect((await cargarFlotaCompas(repos({ contratos: 2 }).repos, "c1", AHORA)).tieneContrato).toBe(true);
   });
 
   it("una unidad inactiva no entra a la flota, y se cuenta para que no desaparezca en silencio", async () => {

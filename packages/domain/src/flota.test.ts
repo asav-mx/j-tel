@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   DESCONECTADO_HORAS,
   GRUPOS_DE_DISPOSITIVO,
+  GRUPOS_DE_UNIDAD,
   VELOCIDAD_DETENIDA_KMH,
   clasificarFlota,
   estaDesconectado,
   estadoDeUnidad,
   grupoDeUnidad,
-  gruposDeUnidad,
   ultimaSenalDe,
   unirDispositivosConUnidades,
   type AsignacionDeFlota,
@@ -146,13 +146,18 @@ describe("estadoDeUnidad", () => {
     const justo = estadoDeUnidad({ dispositivos: montado(), senalPorImei: senales(hace(15 * MIN), 0) }, AHORA);
     expect(justo.tipo).toBe("en_linea");
     const pasado = estadoDeUnidad({ dispositivos: montado(), senalPorImei: senales(hace(15 * MIN + 1), 0) }, AHORA);
-    expect(pasado.tipo).toBe("callada");
+    expect(pasado.tipo).toBe("sin_senal");
   });
 
-  it("callada 3.8 h: su grupo NO está decidido y la función no lo inventa", () => {
+  it("3.8 h sin señal: SIN SEÑAL, que pide esperar — no DESCONECTADO, que pide hacer", () => {
     const e = estadoDeUnidad({ dispositivos: montado(), senalPorImei: senales(hace(3.8 * HORA), 0) }, AHORA);
-    expect(e.tipo).toBe("callada");
-    expect(grupoDeUnidad(e)).toBeNull();
+    expect(e).toEqual({ tipo: "sin_senal", dispositivoId: "1", ultimaSenalAt: hace(3.8 * HORA) });
+    expect(grupoDeUnidad(e)).toBe("sin_senal");
+  });
+
+  it("el corte de desconectado es 24 h exactas", () => {
+    const justo = estadoDeUnidad({ dispositivos: montado(), senalPorImei: senales(hace(24 * HORA), 0) }, AHORA);
+    expect(justo.tipo).toBe("sin_senal");
   });
 
   it("más de 24 h sin señal: DESCONECTADO", () => {
@@ -166,18 +171,9 @@ describe("estadoDeUnidad", () => {
     expect(e).toEqual({ tipo: "desconectado", dispositivoId: "1", ultimaSenalAt: null });
   });
 
-  it("montada hace 2 h y nunca reportó: todavía no tuvo un día para reportar, no está desconectada", () => {
+  it("montada hace 2 h y todavía no reporta: SIN SEÑAL, no desconectada — no tuvo un día para reportar", () => {
     const e = estadoDeUnidad({ dispositivos: montado("1", hace(2 * HORA)), senalPorImei: new Map() }, AHORA);
-    expect(e.tipo).toBe("callada");
-  });
-
-  it("con una llegada sellada vigente: EN DESTINO, con la hora de llegada y sin edad", () => {
-    const e = estadoDeUnidad(
-      { dispositivos: montado(), senalPorImei: senales(hace(MIN), 30), llegadaVigenteAt: hace(40 * MIN) },
-      AHORA,
-    );
-    expect(e).toEqual({ tipo: "en_destino", dispositivoId: "1", llegadaAt: hace(40 * MIN) });
-    expect(grupoDeUnidad(e)).toBe("en_destino");
+    expect(e).toEqual({ tipo: "sin_senal", dispositivoId: "1", ultimaSenalAt: null });
   });
 
   it("con dos dispositivos, manda el de señal más reciente", () => {
@@ -207,12 +203,9 @@ describe("estaDesconectado · 24 h desde la última señal o desde el montaje", 
   });
 });
 
-describe("gruposDeUnidad · sin contrato, EN DESTINO no existe", () => {
-  it("con contrato, los cuatro en su orden", () => {
-    expect(gruposDeUnidad({ tieneContrato: true })).toEqual(["en_linea", "en_destino", "desconectado", "sin_dispositivo"]);
-  });
-  it("sin contrato, el grupo no aparece — no es un grupo vacío", () => {
-    expect(gruposDeUnidad({ tieneContrato: false })).toEqual(["en_linea", "desconectado", "sin_dispositivo"]);
+describe("los grupos, en su orden", () => {
+  it("unidades: en línea, sin señal, desconectado, sin dispositivo — y no hay EN DESTINO todavía", () => {
+    expect([...GRUPOS_DE_UNIDAD]).toEqual(["en_linea", "sin_senal", "desconectado", "sin_dispositivo"]);
   });
   it("los del inventario, en su orden", () => {
     expect([...GRUPOS_DE_DISPOSITIVO]).toEqual(["en_unidad", "en_bodega", "desconectado", "de_baja"]);
@@ -259,7 +252,10 @@ describe("clasificarFlota · el inventario (Marco 6.6)", () => {
     expect(grupoDe("baja")).toMatchObject({ grupo: "de_baja", retiredReason: "Umbrella, sin datos desde el 5 sep" });
   });
 
-  it("sin fuente de llegadas, ninguna unidad sale en destino", () => {
-    expect(flota().unidades.map((u) => u.estado.tipo)).toEqual(["en_linea", "desconectado"]);
+  it("cada unidad sale en uno de los cuatro grupos, sin huecos", () => {
+    expect(flota().unidades.map((u) => [u.unidad.label, u.grupo])).toEqual([
+      ["10254", "en_linea"],
+      ["10301", "desconectado"],
+    ]);
   });
 });
