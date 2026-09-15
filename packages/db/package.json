@@ -20,6 +20,7 @@
     "trim-far": "tsx src/trim-far-occurrences.ts",
     "escenario-permiso": "tsx src/escenario-hilo-permiso.ts",
     "escenario-arranque": "tsx src/escenario-arranque.ts",
+    "escenario-flota-compas": "tsx src/escenario-flota-compas.ts",
     "studio": "drizzle-kit studio",
     "test": "TZ=UTC vitest run",
     "test:integration": "TZ=UTC vitest run --config vitest.integration.config.ts",
