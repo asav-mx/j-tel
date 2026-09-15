@@ -9,7 +9,7 @@ import { destinoLegible, quiereAplicar } from "./permiso-de-escritura.js";
  * en rojo.
  *
  * Regla de Asav del 14 de septiembre de 2026. Esta prueba lee los guiones de
- * `packages/*\/src` y `apps/worker/src` y exige que todo el que abra la base con
+ * `packages/*\/src` y exige que todo el que abra la base con
  * el usuario DUEÑO (`DATABASE_URL`) pase por una puerta explícita: `--aplicar`
  * (`pedirAplicar`), el sí tecleado del resello (`modoDeResello`), `--ejecutar`,
  * o el candado de las bases desechables. Los que
@@ -70,7 +70,7 @@ describe("el permiso de escribir", () => {
 
 describe("cobertura: quien abre la base como dueño pide permiso", () => {
   const paquetes = readdirSync(path.join(RAIZ, "packages")).map((p) => path.join(RAIZ, "packages", p, "src"));
-  const fuentes = [...paquetes, path.join(RAIZ, "apps", "worker", "src")]
+  const fuentes = paquetes
     .flatMap(archivos)
     .filter((f) => !f.includes(`${path.sep}repositories${path.sep}`));
 
@@ -81,7 +81,7 @@ describe("cobertura: quien abre la base como dueño pide permiso", () => {
   it("encuentra a los que abren como dueño (si da cero, no está mirando)", () => {
     const nombres = comoDueno.map((x) => x.rel);
     expect(nombres).toContain("packages/services/src/archive-run.ts");
-    expect(nombres).toContain("apps/worker/src/run.ts");
+    expect(nombres).toContain("packages/services/src/backfill-telemetry.ts");
   });
 
   it("cada uno pasa por una puerta explícita, o está exento con su motivo", () => {

@@ -5,9 +5,9 @@
  * corre sin pedirlo explícitamente.** El barrido de ese día encontró ocho
  * herramientas del repo que escribían con sólo correrlas —rellenos de GPS,
  * la copia de la memoria vieja, las duraciones de ruta, las etiquetas de
- * residuales, el recorte de servicios futuros, y el worker que sella
- * veredictos—, cada una contra el `DATABASE_URL` del `.env` de quien la
- * corriera, que es producción.
+ * residuales, el recorte de servicios futuros, y el worker que sellaba
+ * veredictos (borrado el 15 de septiembre)—, cada una contra el `DATABASE_URL`
+ * del `.env` de quien la corriera, que es producción.
  *
  * Ninguna fabricaba datos. Todas tocaban datos reales con un solo comando, y
  * un comando se corre por costumbre, por copiar la línea equivocada del
