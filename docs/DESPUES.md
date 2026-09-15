@@ -2992,7 +2992,7 @@ están, igual que el resto de ese corte.
 
 ## Reglas de lo que afirma una pantalla, pendientes de comparar contra el Marco
 
-**Qué es.** Siete reglas rescatadas del skill `j-telemetry-ui` antes de borrarlo (#407),
+**Qué es.** Cinco reglas (nueve apartados) rescatadas del skill `j-telemetry-ui` antes de borrarlo (#407),
 en la Parte 2 de `docs/Trampas-De-Medicion.md`, **marcadas como candidatas y no como
 ley**: exactitud, no redondeo (con fechas completas en evidencia y los intervalos con
 unidad); la maquinaria de identificación no se enseña; cada cosa nombra sólo lo que su
