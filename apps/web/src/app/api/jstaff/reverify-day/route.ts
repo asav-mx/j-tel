@@ -5,115 +5,84 @@ import { VerificationService } from "@jtel/services";
 
 export const maxDuration = 300;
 
-function wantsJson(request: Request, formData: FormData) {
-  const format = String(formData.get("format") ?? "").trim().toLowerCase();
-  if (format === "json") return true;
-  const accept = request.headers.get("accept") ?? "";
-  return accept.includes("application/json");
-}
-
-function redirectBack(request: Request, params: Record<string, string>) {
-  const url = new URL("/jstaff/soporte", request.url);
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value);
-  }
-  return NextResponse.redirect(url, 303);
-}
-
-function jsonOk(body: Record<string, unknown>, status = 200) {
-  return NextResponse.json(body, { status });
-}
-
-function jsonErr(error: string, status = 400) {
-  return NextResponse.json({ ok: false, error }, { status });
+function error(mensaje: string, status = 400) {
+  return NextResponse.json({ ok: false, error: mensaje }, { status });
 }
 
 /**
- * Re-verifica un día de un contrato con force (política / geocerca actual del perfil).
- * Por defecto reutiliza evidencia ya guardada (rápido; ideal tras cambiar geocerca).
- * keepEvidence=0 fuerza re-ingesta GPS.
+ * Re-sella un día de un contrato. **Re-emite el juicio** sobre la jornada de un
+ * cliente: el Marco dice que el hecho no se reescribe nunca, así que esto sólo
+ * pasa con la lista delante y un sí tecleado.
  *
- * Respuesta: redirect HTML por defecto, o JSON si Accept: application/json / format=json.
+ * Hasta el 15 de septiembre de 2026 bastaba un `window.confirm` genérico —«¿Re-
+ * verificar…?»— sin decir cuáles ni cuántos, y el formulario por rango podía
+ * tocar un mes de jornadas de un jalón. El guion `reverify-day.ts` ya pedía lista
+ * y sí desde el #401; la pantalla, que la aprieta cualquiera con acceso a
+ * J-Staff, era el camino fácil y seguía abierto.
+ *
+ * Ahora la ruta exige, además de J-Staff:
+ *   · `esperadas`: los ids que `/api/jstaff/reverify-day/plan` enseñó para ese
+ *     día. Si el día cambió desde la lista, el motor no re-sella nada.
+ *   · `confirmacion` = `RESELLAR <autorizados>`, lo que la persona tecleó con la
+ *     cifra de veredictos ya sellados de todo el rango.
+ * Y registra quién: el usuario de la sesión va al ledger.
  */
 export async function POST(request: Request) {
-  const formData = await request.formData();
-  const asJson = wantsJson(request, formData);
-
-  // Después de leer el cuerpo —formData solo se puede consumir una vez— y
-  // antes de tocar el motor. Contesta en el estilo que pidió la petición.
-  const g = await exigir(
-    request,
-    { tipo: "jstaff" },
-    asJson ? "json" : { redirigirA: "/jstaff/soporte" },
-  );
+  const g = await exigir(request, { tipo: "jstaff" }, "json");
   if (!g.ok) return g.respuesta;
 
-  const contractId = String(formData.get("contractId") ?? "").trim();
-  const serviceDate = String(formData.get("serviceDate") ?? "").trim();
-  const keepRaw = String(formData.get("keepEvidence") ?? "1").trim();
-  const keepEvidence = keepRaw !== "0" && keepRaw.toLowerCase() !== "false";
+  const body = (await request.json().catch(() => null)) as {
+    contractId?: string;
+    serviceDate?: string;
+    keepEvidence?: boolean;
+    esperadas?: unknown;
+    confirmacion?: string;
+    autorizados?: number;
+  } | null;
 
+  const contractId = String(body?.contractId ?? "").trim();
+  const serviceDate = String(body?.serviceDate ?? "").trim();
   if (!contractId || !/^\d{4}-\d{2}-\d{2}$/.test(serviceDate)) {
-    const msg = "Elige contrato y fecha (YYYY-MM-DD).";
-    return asJson ? jsonErr(msg) : redirectBack(request, { error: msg });
+    return error("Elige contrato y fecha (YYYY-MM-DD).");
+  }
+
+  const esperadas = body?.esperadas;
+  if (!Array.isArray(esperadas) || esperadas.length === 0 || !esperadas.every((x) => typeof x === "string")) {
+    return error("Falta la lista de lo que se va a re-sellar. Pide la lista primero; sin lista no hay nada que autorizar.");
+  }
+
+  const autorizados = Number(body?.autorizados);
+  if (!Number.isInteger(autorizados) || autorizados < 0 || String(body?.confirmacion ?? "").trim() !== `RESELLAR ${autorizados}`) {
+    return error("La confirmación no coincide con la cifra autorizada. No se re-selló nada.");
   }
 
   const repos = getRepos();
   const contract = await repos.contracts.findById(contractId);
-  if (!contract) {
-    const msg = "Contrato no encontrado.";
-    return asJson ? jsonErr(msg) : redirectBack(request, { error: msg });
-  }
+  if (!contract) return error("Contrato no encontrado.", 404);
 
   try {
     const service = new VerificationService(repos);
     const results = await service.reverifyContract(contractId, {
       serviceDate,
-      keepEvidence,
+      keepEvidence: body?.keepEvidence !== false,
       exclusiveUnits: true,
-      // TODO: reemplazar null con session.userId cuando se implemente autenticación J-Staff.
-      actorKind: "human",
-      actorId: null,
+      actorKind: "human:jstaff",
+      actorId: g.identidad.userId,
       actorIntent: "decision",
+      esperadas: esperadas as string[],
     });
 
-    const byStatus = new Map<string, number>();
-    let errors = 0;
-    for (const r of results) {
-      if ((r as { error?: string }).error) {
-        errors += 1;
-        continue;
-      }
-      const s = String((r as { status?: string }).status ?? "?");
-      byStatus.set(s, (byStatus.get(s) ?? 0) + 1);
-    }
-
-    const summary = [...byStatus.entries()]
-      .map(([k, n]) => `${k}:${n}`)
-      .join(", ");
-
-    if (asJson) {
-      return jsonOk({
-        ok: true,
-        day: serviceDate,
-        n: results.length,
-        summary: summary || "sin resultados",
-        keepEvidence,
-        errors,
-        byStatus: Object.fromEntries(byStatus),
-      });
-    }
-
-    return redirectBack(request, {
-      reverify: "ok",
-      n: String(results.length),
-      day: serviceDate,
-      summary: summary || "sin resultados",
-      ...(errors > 0 ? { errs: String(errors) } : {}),
+    return NextResponse.json({
+      ok: true,
+      dia: serviceDate,
+      resultados: (results as Array<{ occurrenceId: string; status?: string; error?: string }>).map((r) => ({
+        occurrenceId: r.occurrenceId,
+        status: r.status ?? null,
+        error: r.error ?? null,
+      })),
     });
   } catch (err) {
     console.error("[jstaff/reverify-day]", err);
-    const msg = err instanceof Error ? err.message : "Error al re-verificar.";
-    return asJson ? jsonErr(msg, 500) : redirectBack(request, { error: msg });
+    return error(err instanceof Error ? err.message : "Error al re-verificar.", 409);
   }
 }

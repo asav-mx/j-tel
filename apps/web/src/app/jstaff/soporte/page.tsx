@@ -29,13 +29,9 @@ export default async function JStaffSoportePage({
   const sp = searchParams ? await searchParams : undefined;
   const error = typeof sp?.error === "string" ? sp.error : null;
   const resync = typeof sp?.resync === "string" ? sp.resync : null;
-  const reverify = typeof sp?.reverify === "string" ? sp.reverify : null;
   const purge = typeof sp?.purge === "string" ? sp.purge : null;
   const purgeOne = typeof sp?.purge_one === "string" ? sp.purge_one : null;
   const status = typeof sp?.status === "string" ? sp.status : null;
-  const day = typeof sp?.day === "string" ? sp.day : null;
-  const n = typeof sp?.n === "string" ? sp.n : null;
-  const summary = typeof sp?.summary === "string" ? sp.summary : null;
   const purgedPlant = typeof sp?.plant === "string" ? sp.plant : null;
   const purgedProfiles = typeof sp?.profiles === "string" ? sp.profiles : null;
   const purgedOccs = typeof sp?.occs === "string" ? sp.occs : null;
@@ -147,11 +143,6 @@ export default async function JStaffSoportePage({
             cerrado usa «Re-verificar» abajo.
           </AvisoSistema>
         ) : null}
-        {reverify === "ok" ? (
-          <AvisoSistema lead="Listo.">
-            Día {day} re-verificado ({n} servicios). Resumen: {summary}.
-          </AvisoSistema>
-        ) : null}
         {purge === "ok" ? (
           <AvisoSistema lead="Purga lista.">
             Planta {purgedPlant}: {purgedProfiles} perfiles, {purgedOccs} ocurrencias,{" "}
@@ -165,11 +156,12 @@ export default async function JStaffSoportePage({
           </AvisoSistema>
         ) : null}
 
-        <Card title="Re-verificar resultados (rango)">
+        <Card title="Re-sellar resultados de un contrato">
           <p className="mb-4 text-sm text-[var(--muted)]">
-            Para después de corregir geocercas: recalcula cumplido / no cumplido con la geocerca
-            actual, <span className="text-[var(--texto)]">día por día</span>, sin volver a bajar GPS
-            (más estable; evita el error 500 por tiempo). Ideal para Tecma 47.
+            Para después de corregir una geocerca o un defecto del motor. Recalcula los veredictos
+            de un día o de un rango <span className="text-[var(--texto)]">con la geocerca y la
+            política actuales</span>. <strong className="text-[var(--texto)]">Reescribe veredictos
+            que el cliente ya recibió</strong>: primero enseña cuáles, y pide teclear la cifra.
           </p>
           {activeContracts.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">No hay contratos activos.</p>
@@ -181,46 +173,6 @@ export default async function JStaffSoportePage({
               }))}
             />
           )}
-        </Card>
-
-        <Card title="Re-verificar un solo día">
-          <p className="mb-4 text-sm text-[var(--muted)]">
-            Misma lógica, una sola fecha. Usa evidencia guardada por defecto.
-          </p>
-          <ConfirmForm
-            action="/api/jstaff/reverify-day"
-            method="post"
-            className="grid gap-3 md:grid-cols-2"
-            confirmTemplate="¿Re-verificar {serviceDate} del contrato elegido? Se recalcularán los hechos de ese día con la geocerca/política actual."
-            pendingLabel="Re-verificando día… (puede tardar)"
-          >
-            <input type="hidden" name="keepEvidence" value="1" />
-            <label className="block text-sm">
-              Contrato
-              <select name="contractId" required className={inputClass} defaultValue="">
-                <option value="" disabled>
-                  Elige contrato…
-                </option>
-                {activeContracts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} · {c.plantLabel}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-sm">
-              Fecha
-              <input name="serviceDate" type="date" required className={inputClass} />
-            </label>
-            <div className="md:col-span-2">
-              <button
-                type="submit"
-                className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90"
-              >
-                Re-verificar día
-              </button>
-            </div>
-          </ConfirmForm>
         </Card>
 
         <Card title="Borrar basura de prueba">
