@@ -26,12 +26,32 @@ más.
 
 ## Qué hay aquí
 
+Dos juegos, de dos pieles distintas, conviviendo mientras dure la mudanza.
+
+**La piel vigente** — los tres papeles del skill `jtel-diseno`. Los carga
+`app/casa/layout.tsx`, o sea **sólo el cascarón**:
+
+| Archivo | Familia | Pesos | Papel |
+|---|---|---|---|
+| `bricolage-variable.woff2` | Bricolage Grotesque | 700–800 | lo que identifica: números económicos, títulos, la marca |
+| `inter-variable.woff2` | Inter | 400–600 | lo que se lee de corrido |
+| `jetbrains-mono-variable.woff2` | JetBrains Mono | 400–500 | toda medición, con `tabular-nums` |
+
+**La piel anterior** — del skill `j-telemetry-ui`, borrado el 15 de septiembre de
+2026. Los carga el layout raíz y los usan las pantallas que todavía no se mudan.
+Salen del repo cuando el último cuarto termine de mudarse:
+
 | Archivo | Familia | Pesos | Tipo |
 |---|---|---|---|
 | `archivo-variable.woff2` | Archivo | 600–800 | variable |
 | `plex-sans-variable.woff2` | IBM Plex Sans | 400–500 | variable |
 | `plex-mono-400.woff2` | IBM Plex Mono | 400 | estático |
 | `plex-mono-500.woff2` | IBM Plex Mono | 500 | estático |
+
+**Por qué el cascarón carga las suyas y no el layout raíz:** así estrena
+tipografía sin agregarle un solo byte a las pantallas vivas, que no la usan. El
+día que no quede nada fuera del cascarón, las tres de arriba suben al layout
+raíz y las cuatro de abajo se borran.
 
 **Subset `latin`** — el mismo que pedía `subsets: ["latin"]`. Cubre el español
 completo: acentos, `ñ`, `¿`, `¡`. **Ningún glifo cambió** respecto de lo que se
@@ -62,5 +82,6 @@ navegador en los dos temas antes de commitear.**
 
 ## Licencias
 
-Archivo y IBM Plex se distribuyen bajo **SIL Open Font License 1.1**, que
-permite redistribuir los archivos dentro del proyecto.
+Las seis familias se distribuyen bajo **SIL Open Font License 1.1**, que
+permite redistribuir los archivos dentro del proyecto: Archivo, IBM Plex,
+Bricolage Grotesque, Inter y JetBrains Mono.
