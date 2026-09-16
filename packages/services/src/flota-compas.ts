@@ -25,6 +25,27 @@ export async function cargarFlotaCompas(
   carrierAccountId: string,
   ahora: Date,
 ): Promise<FlotaCompas> {
+  const { flota, unidadesInactivas } = await clasificarFlotaDeCuenta(repos, carrierAccountId, ahora, {
+    incluirInactivas: false,
+  });
+  return { ...flota, unidadesInactivas };
+}
+
+/**
+ * La misma lectura y la misma clasificación, con la opción de incluir las
+ * unidades inactivas.
+ *
+ * La usa el expediente de una unidad: una unidad inactiva no está en la flota
+ * de hoy, pero su expediente existe y su última señal es verdad. Que las dos
+ * pantallas lean de aquí es lo que impide que Flota en vivo y el expediente
+ * digan cosas distintas de la misma señal.
+ */
+export async function clasificarFlotaDeCuenta(
+  repos: Pick<Repositories, "fleet" | "livePositions" | "telemetry">,
+  carrierAccountId: string,
+  ahora: Date,
+  opciones: { incluirInactivas: boolean },
+): Promise<{ flota: FlotaClasificada; unidadesInactivas: number }> {
   const [unidades, dispositivos, asignaciones, posicionesVivas] = await Promise.all([
     repos.fleet.getUnitsForCarrier(carrierAccountId),
     repos.fleet.getDevicesForCarrier(carrierAccountId),
@@ -36,9 +57,10 @@ export async function cargarFlotaCompas(
   );
 
   const activas = unidades.filter((u) => u.active);
+  const aClasificar = opciones.incluirInactivas ? unidades : activas;
   const flota = clasificarFlota({
     ahora,
-    unidades: activas.map((u) => ({ id: u.id, label: u.label })),
+    unidades: aClasificar.map((u) => ({ id: u.id, label: u.label })),
     dispositivos: dispositivos.map((d) => ({
       id: d.id,
       imei: d.imei,
@@ -61,8 +83,5 @@ export async function cargarFlotaCompas(
     ultimoArchivadoPorImei,
   });
 
-  return {
-    ...flota,
-    unidadesInactivas: unidades.length - activas.length,
-  };
+  return { flota, unidadesInactivas: unidades.length - activas.length };
 }

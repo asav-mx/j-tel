@@ -13,6 +13,7 @@ import {
   index,
   doublePrecision,
 } from "drizzle-orm/pg-core";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 /*
  * Los defaults del circuito no se escriben aquí a mano: salen del dominio, que
@@ -120,6 +121,13 @@ export const accounts = pgTable("accounts", {
   slug: text("slug").notNull().unique(),
   clerkOrgId: text("clerk_org_id"),
   isDemo: boolean("is_demo").notNull().default(false),
+  /**
+   * El mercado de una cuenta de carrier: decide qué catálogo de documentos le
+   * aplica (0038). Sólo carriers — un CHECK en la base lo sostiene. Nulo es
+   * «todavía sin mercado», y la familia de documentos lo dice en vez de suponer
+   * uno.
+   */
+  marketId: uuid("market_id").references((): AnyPgColumn => markets.id, { onDelete: "restrict" }),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
@@ -824,6 +832,127 @@ export const driverAssignments = pgTable("driver_assignments", {
 }, (table) => [
   index("driver_assignments_driver_idx").on(table.driverId),
   index("driver_assignments_route_shift_idx").on(table.routeShiftId, table.validFrom),
+]);
+
+// ── El expediente: la familia de documentos (0038) ───────────────────────
+//
+// Marco, Pieza 6 §H y `docs/Ficha-Expedientes.md`, ratificada el 16 de
+// septiembre de 2026. Los CHECK, la llave compuesta que sostiene el muro entre
+// cuentas y los triggers que impiden editar en sitio viven en la migración;
+// aquí se declaran las tablas, las columnas y los índices.
+
+/**
+ * Un mercado: país + estado + municipio opcional.
+ *
+ * Existe porque **el catálogo de documentos no se hornea**: qué papel se exige,
+ * si vence y cada cuánto depende de la ley de cada lugar. Cada mercado define
+ * el suyo, como cada contrato define su tolerancia.
+ *
+ * `timeZone` decide el «hoy» de un vencimiento: un papel que vence el 30 es
+ * vigente todo el 30 en la hora del mercado, no en UTC.
+ */
+export const markets = pgTable("markets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  /** ISO 3166-1, dos letras: `MX`. */
+  countryCode: text("country_code").notNull(),
+  /** La clave del estado: `CHH`. */
+  stateCode: text("state_code").notNull(),
+  /** Sólo para la ley que es de una ciudad. Nulo = el estado entero. */
+  municipality: text("municipality"),
+  name: text("name").notNull(),
+  /** Zona IANA: `America/Ciudad_Juarez`. */
+  timeZone: text("time_zone").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+});
+
+/** Un tipo de papel del catálogo de un mercado. La regla vive aparte, versionada. */
+export const documentTypes = pgTable("document_types", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  marketId: uuid("market_id")
+    .notNull()
+    .references(() => markets.id, { onDelete: "restrict" }),
+  /** `unidad` o `chofer`. */
+  subject: text("subject").$type<"unidad" | "chofer">().notNull(),
+  /** Identificador estable dentro del mercado: `poliza_de_seguro`. */
+  clave: text("clave").notNull(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("document_types_mercado_clave_idx").on(table.marketId, table.subject, table.clave),
+]);
+
+/**
+ * La regla de un tipo, **una fila por versión**. La vigente es la más reciente.
+ *
+ * Cada campo nulo es «todavía no se carga», y la lectura dice «falta la regla»
+ * en vez de suponer. Cambiar una regla agrega una versión con su autor; no
+ * reescribe el pasado. La base rechaza el UPDATE.
+ */
+export const documentTypeRules = pgTable("document_type_rules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  documentTypeId: uuid("document_type_id")
+    .notNull()
+    .references(() => documentTypes.id, { onDelete: "restrict" }),
+  required: boolean("required"),
+  expires: boolean("expires"),
+  /** Días antes del vencimiento en que el papel pasa a «por vencer». Sólo si vence. */
+  warningDays: integer("warning_days"),
+  /** Cada cuántos meses se renueva, para calcular el vencimiento desde la emisión. Sólo si vence. */
+  periodicityMonths: integer("periodicity_months"),
+  actorKind: text("actor_kind").notNull(),
+  actorId: text("actor_id"),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => [
+  index("document_type_rules_tipo_idx").on(table.documentTypeId, table.createdAt),
+]);
+
+/**
+ * Una foja: un papel de una unidad **o** de un chofer, nunca de los dos.
+ *
+ * Renovar crea una foja nueva; la anterior queda en el historial. La llave hacia
+ * la unidad o el chofer va junto con la cuenta (llave compuesta en la
+ * migración): el papel de una cuenta no puede apuntar a la unidad de otra.
+ */
+export const documents = pgTable("documents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  carrierAccountId: uuid("carrier_account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  documentTypeId: uuid("document_type_id")
+    .notNull()
+    .references(() => documentTypes.id, { onDelete: "restrict" }),
+  unitId: uuid("unit_id"),
+  driverId: uuid("driver_id"),
+  actorKind: text("actor_kind").notNull(),
+  actorId: text("actor_id"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => [
+  index("documents_cuenta_idx").on(table.carrierAccountId),
+]);
+
+/**
+ * Las versiones de una foja. Corregir crea una versión nueva; la vigente es la
+ * más reciente, y las anteriores quedan con su autor.
+ *
+ * `expiryCalculated` dice que `expiresOn` no venía en el papel: se calculó
+ * desde la emisión con la periodicidad de la regla, y la pantalla lo dice.
+ */
+export const documentVersions = pgTable("document_versions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  documentId: uuid("document_id")
+    .notNull()
+    .references(() => documents.id, { onDelete: "cascade" }),
+  folio: text("folio"),
+  issuedOn: date("issued_on"),
+  expiresOn: date("expires_on"),
+  expiryCalculated: boolean("expiry_calculated").notNull().default(false),
+  actorKind: text("actor_kind").notNull(),
+  actorId: text("actor_id"),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => [
+  index("document_versions_foja_idx").on(table.documentId, table.createdAt),
 ]);
 
 /** Fila completa de un hecho de cumplimiento. La foto que archiva la Pieza 1 debe ser fiel a esto. */

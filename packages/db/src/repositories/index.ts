@@ -74,6 +74,14 @@ import {
   circuitUnitAssignments,
   concessionCarriers,
   concessionProfiles,
+  markets,
+  documentTypes,
+  documentTypeRules,
+  documents,
+  documentVersions,
+  drivers,
+  driverCredentials,
+  driverAssignments,
 } from "../schema/index.js";
 import type { ComplianceFact, IngestAlertKind } from "../schema/index.js";
 import type {
@@ -84,6 +92,7 @@ import type {
 } from "@jtel/domain";
 import { routeLengthKm } from "@jtel/domain";
 import { localDateIso, JTTEL_TZ, civilDatesInRange, addDaysIso } from "@jtel/domain";
+import { fechaDeVencimientoAGuardar, type ReglaDeTipo } from "@jtel/domain";
 
 function suggestProfileCodeFromName(name: string): string {
   return suggestProfileCode(name);
@@ -6342,6 +6351,382 @@ export class CircuitRepository {
   }
 }
 
+// ── El expediente: la familia de documentos (0038) ───────────────────────
+
+/** Quién escribe. Mismo par que las historias de turno y de política. */
+export interface ActorDelExpediente {
+  kind: string;
+  id: string | null;
+  nota?: string | null;
+}
+
+export type SujetoDeFoja = { unidadId: string } | { choferId: string };
+
+export interface DatosDeFoja {
+  folio: string | null;
+  emitidoEl: string | null;
+  /** La fecha impresa en el papel. Si falta, se calcula con la regla cuando se puede. */
+  venceElImpreso: string | null;
+}
+
+/** El papel no es del mercado de la cuenta, o no es de ese tipo de sujeto. */
+export class FojaFueraDeCatalogo extends Error {}
+
+function reglaDeFila(
+  r: { required: boolean | null; expires: boolean | null; warningDays: number | null; periodicityMonths: number | null } | undefined,
+): ReglaDeTipo | null {
+  if (!r) return null;
+  return {
+    obligatorio: r.required,
+    vence: r.expires,
+    diasDeAviso: r.warningDays,
+    periodicidadMeses: r.periodicityMonths,
+  };
+}
+
+/**
+ * Lecturas y escrituras de la familia de documentos, y las lecturas del
+ * expediente que no tenían dueño.
+ *
+ * **Nada de aquí edita en sitio**: las reglas, las fojas y sus versiones sólo se
+ * agregan, y la base rechaza el UPDATE (0038). Corregir es agregar una versión;
+ * renovar es capturar una foja nueva.
+ *
+ * **El muro entre cuentas se revisa dos veces.** Aquí, para dar un error que se
+ * entienda; y en la base, con la llave compuesta, para que un guion que se salte
+ * esta clase tampoco pueda cruzarlo.
+ */
+export class ExpedienteRepository {
+  constructor(private db: Database) {}
+
+  // ── Mercados ──
+
+  async mercadoDeCuenta(carrierAccountId: string) {
+    const [fila] = await this.db
+      .select({
+        id: markets.id,
+        name: markets.name,
+        countryCode: markets.countryCode,
+        stateCode: markets.stateCode,
+        municipality: markets.municipality,
+        timeZone: markets.timeZone,
+      })
+      .from(accounts)
+      .innerJoin(markets, eq(markets.id, accounts.marketId))
+      .where(eq(accounts.id, carrierAccountId));
+    return fila ?? null;
+  }
+
+  async mercadoPorLugar(countryCode: string, stateCode: string, municipality: string | null) {
+    const [fila] = await this.db
+      .select()
+      .from(markets)
+      .where(
+        and(
+          eq(markets.countryCode, countryCode),
+          eq(markets.stateCode, stateCode),
+          municipality === null ? isNull(markets.municipality) : eq(markets.municipality, municipality),
+        ),
+      );
+    return fila ?? null;
+  }
+
+  /** Sólo una cuenta de carrier puede tener mercado: la base lo sostiene con un CHECK. */
+  async asignarMercado(carrierAccountId: string, marketId: string | null) {
+    await this.db.update(accounts).set({ marketId, updatedAt: new Date() }).where(eq(accounts.id, carrierAccountId));
+  }
+
+  // ── El catálogo ──
+
+  /** Los tipos de un mercado para un sujeto, cada uno con su regla vigente o `null`. */
+  async catalogo(marketId: string, subject: "unidad" | "chofer") {
+    const tipos = await this.db
+      .select()
+      .from(documentTypes)
+      .where(and(eq(documentTypes.marketId, marketId), eq(documentTypes.subject, subject)))
+      .orderBy(documentTypes.createdAt, documentTypes.clave);
+    if (tipos.length === 0) return [];
+
+    const reglas = await this.db
+      .selectDistinctOn([documentTypeRules.documentTypeId])
+      .from(documentTypeRules)
+      .where(inArray(documentTypeRules.documentTypeId, tipos.map((t) => t.id)))
+      .orderBy(documentTypeRules.documentTypeId, desc(documentTypeRules.createdAt), desc(documentTypeRules.id));
+    const reglaPorTipo = new Map(reglas.map((r) => [r.documentTypeId, r]));
+
+    return tipos.map((tipo) => {
+      const fila = reglaPorTipo.get(tipo.id);
+      return {
+        tipo,
+        regla: reglaDeFila(fila),
+        reglaVersion: fila ? { id: fila.id, createdAt: fila.createdAt, actorKind: fila.actorKind, actorId: fila.actorId } : null,
+      };
+    });
+  }
+
+  async reglaVigente(documentTypeId: string): Promise<ReglaDeTipo | null> {
+    const [fila] = await this.db
+      .select()
+      .from(documentTypeRules)
+      .where(eq(documentTypeRules.documentTypeId, documentTypeId))
+      .orderBy(desc(documentTypeRules.createdAt), desc(documentTypeRules.id))
+      .limit(1);
+    return reglaDeFila(fila);
+  }
+
+  /** Cambiar una regla agrega una versión con su autor. La anterior se queda. */
+  async agregarVersionDeRegla(documentTypeId: string, regla: ReglaDeTipo, actor: ActorDelExpediente) {
+    const [fila] = await this.db
+      .insert(documentTypeRules)
+      .values({
+        documentTypeId,
+        required: regla.obligatorio,
+        expires: regla.vence,
+        warningDays: regla.diasDeAviso,
+        periodicityMonths: regla.periodicidadMeses,
+        actorKind: actor.kind,
+        actorId: actor.id,
+        note: actor.nota ?? null,
+      })
+      .returning();
+    return fila!;
+  }
+
+  async historialDeRegla(documentTypeId: string) {
+    return this.db
+      .select()
+      .from(documentTypeRules)
+      .where(eq(documentTypeRules.documentTypeId, documentTypeId))
+      .orderBy(desc(documentTypeRules.createdAt), desc(documentTypeRules.id));
+  }
+
+  // ── Las fojas ──
+
+  /**
+   * Captura un papel: una foja nueva con su primera versión. Renovar es esto
+   * mismo; la foja anterior queda en el historial.
+   *
+   * La fecha de vencimiento la decide `fechaDeVencimientoAGuardar`: la impresa
+   * gana, y sin ella se calcula con la regla vigente cuando se puede.
+   */
+  async capturarFoja(entrada: {
+    carrierAccountId: string;
+    documentTypeId: string;
+    sujeto: SujetoDeFoja;
+    datos: DatosDeFoja;
+    actor: ActorDelExpediente;
+  }) {
+    const { carrierAccountId, documentTypeId, sujeto, datos, actor } = entrada;
+    return this.db.transaction(async (tx) => {
+      const [tipo] = await tx.select().from(documentTypes).where(eq(documentTypes.id, documentTypeId));
+      const [cuenta] = await tx
+        .select({ marketId: accounts.marketId })
+        .from(accounts)
+        .where(eq(accounts.id, carrierAccountId));
+      if (!tipo || !cuenta) throw new FojaFueraDeCatalogo("El tipo de papel o la cuenta no existen.");
+      if (cuenta.marketId !== tipo.marketId) {
+        throw new FojaFueraDeCatalogo("El tipo de papel no es del mercado de la cuenta.");
+      }
+      const esDeUnidad = "unidadId" in sujeto;
+      if (tipo.subject !== (esDeUnidad ? "unidad" : "chofer")) {
+        throw new FojaFueraDeCatalogo(`El tipo «${tipo.name}» es de ${tipo.subject}, no de ${esDeUnidad ? "unidad" : "chofer"}.`);
+      }
+
+      const [reglaFila] = await tx
+        .select()
+        .from(documentTypeRules)
+        .where(eq(documentTypeRules.documentTypeId, documentTypeId))
+        .orderBy(desc(documentTypeRules.createdAt), desc(documentTypeRules.id))
+        .limit(1);
+      const fecha = fechaDeVencimientoAGuardar({
+        venceElImpreso: datos.venceElImpreso,
+        emitidoEl: datos.emitidoEl,
+        regla: reglaDeFila(reglaFila),
+      });
+
+      const [documento] = await tx
+        .insert(documents)
+        .values({
+          carrierAccountId,
+          documentTypeId,
+          unitId: esDeUnidad ? sujeto.unidadId : null,
+          driverId: esDeUnidad ? null : sujeto.choferId,
+          actorKind: actor.kind,
+          actorId: actor.id,
+        })
+        .returning();
+      const [version] = await tx
+        .insert(documentVersions)
+        .values({
+          documentId: documento!.id,
+          folio: datos.folio,
+          issuedOn: datos.emitidoEl,
+          expiresOn: fecha.venceEl,
+          expiryCalculated: fecha.calculado,
+          actorKind: actor.kind,
+          actorId: actor.id,
+          note: actor.nota ?? null,
+        })
+        .returning();
+      return { documento: documento!, version: version! };
+    });
+  }
+
+  /**
+   * Corrige una foja: una versión nueva. La anterior queda con su autor.
+   * Devuelve `null` si la foja no es de esta cuenta — no hay forma de saber que
+   * existe desde otra.
+   */
+  async corregirFoja(entrada: {
+    carrierAccountId: string;
+    documentId: string;
+    datos: DatosDeFoja;
+    actor: ActorDelExpediente;
+  }) {
+    const { carrierAccountId, documentId, datos, actor } = entrada;
+    return this.db.transaction(async (tx) => {
+      const [documento] = await tx
+        .select()
+        .from(documents)
+        .where(and(eq(documents.id, documentId), eq(documents.carrierAccountId, carrierAccountId)));
+      if (!documento) return null;
+      const [reglaFila] = await tx
+        .select()
+        .from(documentTypeRules)
+        .where(eq(documentTypeRules.documentTypeId, documento.documentTypeId))
+        .orderBy(desc(documentTypeRules.createdAt), desc(documentTypeRules.id))
+        .limit(1);
+      const fecha = fechaDeVencimientoAGuardar({
+        venceElImpreso: datos.venceElImpreso,
+        emitidoEl: datos.emitidoEl,
+        regla: reglaDeFila(reglaFila),
+      });
+      const [version] = await tx
+        .insert(documentVersions)
+        .values({
+          documentId,
+          folio: datos.folio,
+          issuedOn: datos.emitidoEl,
+          expiresOn: fecha.venceEl,
+          expiryCalculated: fecha.calculado,
+          actorKind: actor.kind,
+          actorId: actor.id,
+          note: actor.nota ?? null,
+        })
+        .returning();
+      return version!;
+    });
+  }
+
+  /**
+   * Todas las fojas de un sujeto, de la más reciente a la más vieja, cada una
+   * con TODAS sus versiones (la vigente primero).
+   *
+   * La foja vigente de un tipo es la capturada más recientemente; las demás son
+   * su historial. Filtra por cuenta: el sujeto de otra cuenta devuelve nada.
+   */
+  async fojasDeSujeto(carrierAccountId: string, sujeto: SujetoDeFoja) {
+    const fojas = await this.db
+      .select()
+      .from(documents)
+      .where(
+        and(
+          eq(documents.carrierAccountId, carrierAccountId),
+          "unidadId" in sujeto ? eq(documents.unitId, sujeto.unidadId) : eq(documents.driverId, sujeto.choferId),
+        ),
+      )
+      .orderBy(desc(documents.createdAt), desc(documents.id));
+    if (fojas.length === 0) return [];
+
+    const versiones = await this.db
+      .select()
+      .from(documentVersions)
+      .where(inArray(documentVersions.documentId, fojas.map((f) => f.id)))
+      .orderBy(desc(documentVersions.createdAt), desc(documentVersions.id));
+
+    return fojas.map((foja) => ({
+      foja,
+      versiones: versiones.filter((v) => v.documentId === foja.id),
+    }));
+  }
+
+  // ── Lecturas del expediente que no tenían dueño ──
+
+  async unidadDeCuenta(carrierAccountId: string, unitId: string) {
+    const [fila] = await this.db
+      .select()
+      .from(units)
+      .where(and(eq(units.id, unitId), eq(units.carrierAccountId, carrierAccountId)));
+    return fila ?? null;
+  }
+
+  async dispositivoDeCuenta(carrierAccountId: string, deviceId: string) {
+    const [fila] = await this.db
+      .select()
+      .from(devices)
+      .where(and(eq(devices.id, deviceId), eq(devices.carrierAccountId, carrierAccountId)));
+    return fila ?? null;
+  }
+
+  /** El chofer con sus credenciales, si no se han purgado. */
+  async choferDeCuenta(carrierAccountId: string, driverId: string) {
+    const [fila] = await this.db
+      .select({ chofer: drivers, credenciales: driverCredentials })
+      .from(drivers)
+      .leftJoin(driverCredentials, eq(driverCredentials.driverId, drivers.id))
+      .where(and(eq(drivers.id, driverId), eq(drivers.carrierAccountId, carrierAccountId)));
+    return fila ?? null;
+  }
+
+  /** Las unidades que ha traído un dispositivo, en orden de instalación. */
+  async asignacionesDeDispositivo(deviceId: string) {
+    return this.db
+      .select({
+        unitId: units.id,
+        etiqueta: units.label,
+        desde: deviceAssignments.validFrom,
+        hasta: deviceAssignments.validTo,
+      })
+      .from(deviceAssignments)
+      .innerJoin(units, eq(units.id, deviceAssignments.unitId))
+      .where(eq(deviceAssignments.deviceId, deviceId))
+      .orderBy(deviceAssignments.validFrom);
+  }
+
+  /** Las rutas × turnos de un chofer. Hoy nada escribe esta tabla. */
+  async asignacionesDeChofer(driverId: string) {
+    return this.db
+      .select({
+        routeShiftId: driverAssignments.routeShiftId,
+        ruta: routes.name,
+        turno: shifts.name,
+        desde: driverAssignments.validFrom,
+        hasta: driverAssignments.validTo,
+      })
+      .from(driverAssignments)
+      .innerJoin(routeShifts, eq(routeShifts.id, driverAssignments.routeShiftId))
+      .innerJoin(routes, eq(routes.id, routeShifts.routeId))
+      .innerJoin(shifts, eq(shifts.id, routeShifts.shiftId))
+      .where(eq(driverAssignments.driverId, driverId))
+      .orderBy(driverAssignments.validFrom);
+  }
+
+  /**
+   * ¿La cuenta tiene algún contrato que no sea borrador?
+   *
+   * Decide si la parte «servicios con veredicto» aplica: sin contrato, Vernier
+   * no está encendido y la parte no se dibuja (mapa, regla 4).
+   */
+  async tieneContratoEncendido(carrierAccountId: string): Promise<boolean> {
+    const [fila] = await this.db
+      .select({ id: serviceContracts.id })
+      .from(serviceContracts)
+      .where(and(eq(serviceContracts.carrierAccountId, carrierAccountId), ne(serviceContracts.status, "draft")))
+      .limit(1);
+    return Boolean(fila);
+  }
+}
+
 export function createRepositories(db: Database) {
   return {
     procedencia: new ProcedenciaRepository(db),
@@ -6369,6 +6754,7 @@ export function createRepositories(db: Database) {
     ingestAlerts: new IngestAlertRepository(db),
     livePositions: new LivePositionRepository(db),
     circuits: new CircuitRepository(db),
+    expedientes: new ExpedienteRepository(db),
   };
 }
 
