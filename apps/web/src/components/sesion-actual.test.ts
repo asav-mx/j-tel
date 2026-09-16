@@ -88,6 +88,10 @@ describe("donde ya hay otra identidad en pantalla, el distintivo se calla", () =
     // «Necesitas entrar» arriba y `tecma_admin · variable` en la esquina.
     // El encabezado trae el pathname sin query, así que el motivo no participa.
     ["/entrar", "la puerta dice que entres; el distintivo decía que ya eres alguien"],
+    // El cascarón: en celular tapaba «Lugares» y «Más» de la barra de abajo.
+    ["/casa/transportista", "tapaba la barra de abajo del celular"],
+    ["/jstaff/cascaron", "el muestrario es el mismo marco"],
+    ["/jstaff/cascaron/transportista/flota-en-vivo", "misma razón, ruta adentro"],
   ])("en %s no se pinta: %s", async (ruta) => {
     headers.mockImplementation(() => encabezadosDe(ruta));
     getIdentidad.mockResolvedValue({
@@ -103,6 +107,24 @@ describe("donde ya hay otra identidad en pantalla, el distintivo se calla", () =
     // Y se calla ANTES de consultar: un adorno que no se va a pintar no tiene
     // por qué costar una consulta a la base en cada pantalla.
     expect(getIdentidad).not.toHaveBeenCalled();
+  });
+});
+
+describe("callarse en el cascarón no calla lo que sólo empieza igual", () => {
+  it.each(["/casas", "/jstaff", "/jstaff/cascaron-viejo"])("en %s sí se pinta", async (ruta) => {
+    headers.mockImplementation(() => encabezadosDe(ruta));
+    getIdentidad.mockResolvedValue({
+      userId: "jstaff_admin",
+      origen: "variable-dev",
+      memberships: [],
+      clerkConfigurado: false,
+      sesionActiva: false,
+      encabezadoRechazado: false,
+    });
+
+    const html = renderToStaticMarkup(createElement("main", null, await SesionActual()));
+
+    expect(html).toContain("quien-soy");
   });
 });
 

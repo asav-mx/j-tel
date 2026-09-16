@@ -17,6 +17,13 @@ export const ORIGEN_CORTO: Record<OrigenDeIdentidad, string> = {
   anonimo: "sin identidad",
 };
 
+/** Las raíces que dibuja el cascarón: sus casas y su muestrario. */
+const RAICES_DEL_CASCARON = ["/casa", "/jstaff/cascaron"];
+
+function enCascaron(ruta: string): boolean {
+  return RAICES_DEL_CASCARON.some((raiz) => ruta === raiz || ruta.startsWith(`${raiz}/`));
+}
+
 /**
  * El distintivo, sin resguardo. Lo envuelve `SesionActual`.
  *
@@ -46,6 +53,13 @@ async function distintivo() {
    * y J-Staff, que todavía no tienen nav — cuando la tengan, se borra entero.
    */
   if (ruta.startsWith("/cliente")) return null;
+  /*
+   * Ni en el cascarón: ahí no era redundante, **estorbaba**. Fijo abajo a la
+   * derecha, en el celular tapaba «Lugares» y «Más» de la barra de abajo —
+   * botones que no se podían tocar (Marco 6.19). Se compara por segmento
+   * completo para que una ruta que sólo empiece igual no se calle con él.
+   */
+  if (enCascaron(ruta)) return null;
 
   const id = await getIdentidad();
 
