@@ -82,6 +82,34 @@ Los cuatro estados de una unidad:
 
 **Regla de extensión:** cuando haga falta un estado nuevo, se inventa una **forma** nueva, no un color nuevo. Si dos estados comparten forma y se distinguen sólo por color, está mal.
 
+### La vigencia de un papel — PROPUESTA, espera visto de ASAV
+
+Los papeles del expediente (Marco, Pieza 6 §H; `docs/Ficha-Expedientes.md` §4) tienen cinco estados. Todos parten del **cuadrado** —una hoja—, para que ninguna forma de papel se confunda con una de unidad, que son círculos y flechas.
+
+| Estado | Glifo | Por qué esa forma | Tinta |
+|---|---|---|---|
+| Vencido | Cuadrado hueco, **tachado** con una diagonal | La hoja sigue ahí, pero ya no vale | `--tinta` |
+| Por vencer | Cuadrado partido en diagonal, **mitad lleno** | Se está gastando | `--tinta` |
+| Falta | **Contorno punteado** de cuadrado | El lugar existe; la hoja no | `--tinta` |
+| Vigente | Cuadrado lleno | Hoja entera | `--tenue` |
+| Sin vencimiento | Cuadrado lleno con una **raya hueca** horizontal | Hoja entera sin fecha que corra | `--tenue` |
+
+- **Lo que pide hacer algo va en tinta; lo que está al día, en tenue.** Es la ley de «lo apagado se apaga»: el ojo va solo a los tres primeros.
+- **Ni cobre ni colores de veredicto.** Un papel vencido no es un servicio no cumplido, y la vigencia no es vida.
+- En el vistazo, el dato es **un número**: los días que faltan (`en 12 d`) o los que lleva vencido (`hace 3 d`). La fecha exacta va en el expediente.
+
+### Los tres estados de una parte del expediente — PROPUESTA, espera visto de ASAV
+
+Cada parte de un expediente declara uno de tres estados (`docs/Ficha-Expedientes.md` §3). Ninguno se esconde, y ninguno usa esqueleto: un esqueleto finge contenido que no va a llegar.
+
+| Estado | Cómo se ve |
+|---|---|
+| Con datos | El dato, con su edad si es algo vivo |
+| Vacía | Una frase corta en `--tenue` que dice qué falta: `Sin choferes asignados` |
+| Aún no disponible | Una frase corta en `--tenue` con de dónde va a llegar: `Aún no disponible · llega con Flota en vivo` |
+
+**La frontera:** «aún no disponible» sólo cuando nada alimenta esa parte. Decirlo de algo que la base ya tiene es una afirmación falsa (Marco 6.19).
+
 ---
 
 ## La edad: el número que nunca falta
