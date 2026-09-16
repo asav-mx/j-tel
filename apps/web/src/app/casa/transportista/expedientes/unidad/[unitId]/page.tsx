@@ -9,6 +9,7 @@ import { Pieza } from "@/components/casa/pieza";
 import { Encabezado, Familia, Parte, Renglon, SinCuenta, Titular } from "@/components/casa/expediente";
 import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
+import { relojDePagina } from "@/lib/casa/cronometro";
 import {
   datoDePapel,
   diaDe,
@@ -47,7 +48,9 @@ export default async function VerUnidad({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const casa = CASAS.transportista;
+  const reloj = await relojDePagina("ver-unidad");
   const cuenta = await cuentaDelCuarto(searchParams);
+  reloj.marca("guardia");
   if (!cuenta) {
     return (
       <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
@@ -61,6 +64,8 @@ export default async function VerUnidad({
 
   // La unidad de otra cuenta no existe desde aquí: `null`, y 404.
   const e = await cargarExpedienteDeUnidad(getRepos(), { carrierAccountId: carrier.id, unitId, ahora });
+  reloj.marca("datos");
+  reloj.fin();
   if (!e) notFound();
 
   const nombre = e.identidad.numeroEconomico.estado === "con_datos" ? e.identidad.numeroEconomico.valor : "Unidad";

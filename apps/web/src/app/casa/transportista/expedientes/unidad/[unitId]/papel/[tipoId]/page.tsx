@@ -8,6 +8,7 @@ import { Glifo } from "@/components/casa/glifo";
 import { AvisoDeError, Familia, Renglon, SinCuenta, Titular, Vacio } from "@/components/casa/expediente";
 import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
+import { relojDePagina } from "@/lib/casa/cronometro";
 import { correosDeAutores } from "@/lib/casa/autores";
 import { LARGO_FOLIO, LARGO_NOTA, type AccionDePapel } from "@/lib/casa/captura";
 import {
@@ -49,7 +50,9 @@ export default async function VerPapel({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const casa = CASAS.transportista;
+  const reloj = await relojDePagina("papel");
   const cuenta = await cuentaDelCuarto(searchParams);
+  reloj.marca("guardia");
   if (!cuenta) {
     return (
       <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
@@ -65,6 +68,8 @@ export default async function VerPapel({
   const ahora = new Date();
 
   const e = await cargarExpedienteDeUnidad(getRepos(), { carrierAccountId: carrier.id, unitId, ahora });
+  reloj.marca("datos");
+  reloj.fin();
   if (!e || e.documentos.estado !== "con_datos") notFound();
   const docs = e.documentos.valor;
   const papel = docs.papeles.find((p) => p.tipo.id === tipoId);
