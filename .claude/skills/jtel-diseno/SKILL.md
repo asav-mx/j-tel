@@ -109,11 +109,22 @@ Tinta azul profunda, cobre como único color señal, y verde sólo para el latid
 --papel     #FAFAFC   fondo de la aplicación
 --pieza     #FFFFFF   tarjetas y piezas
 --tinta     #1C2148   texto principal
---tenue     #757C9B   apoyo, etiquetas, lo secundario
+--tenue     #6A7192   apoyo, etiquetas, lo secundario
 --linea     #E4E5EE   separadores y bordes
---senal     #EE8A32   cobre — SÓLO donde hay vida
+--senal     #B05A0F   cobre — SÓLO donde hay vida
 --vivo      #1B9E6B   el latido de «en vivo»
 ```
+
+**Los dos valores que subieron, y por qué.** `--tenue` nació `#757C9B` y el
+cobre `#EE8A32`. Medidos sobre `--papel` daban **3.94:1** y **2.42:1** — por
+debajo del 4.5:1 que este mismo skill exige en su lista de entrega, y el cobre
+ni siquiera alcanzaba el 3:1 de lo que no es texto. En la pantalla de un
+coordinador a las siete de la mañana, con el sol de frente, eso no se lee: es la
+condición exacta para la que este skill eligió la forma sobre el color. Se
+bajaron en luz conservando el tono —el cobre sigue en 28°, el apoyo en 230°— y
+hoy dan **4.67:1** y **4.59:1**. El cobre de la piel clara es más oscuro que el
+de la oscura a propósito: cada piel tiene sus propios valores, no los mismos
+volteados.
 
 ### Piel oscura
 

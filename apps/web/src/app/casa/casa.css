@@ -30,28 +30,32 @@
  *
  * ---
  *
- * ⚠ **EL CONTRASTE DE LA PIEL CLARA, MEDIDO.** El skill pide en su lista de
- * entrega «contraste ≥ 4.5:1», y con sus propios valores la piel clara no llega
- * en dos casos. Los números, contra `--papel` / `--pieza`:
+ * **EL CONTRASTE DE LA PIEL CLARA, MEDIDO.** Los números contra
+ * `--papel` / `--pieza`, que es lo que hay que volver a correr si alguien toca
+ * un valor:
  *
  *   --tinta   14.81 / 15.44  ✔
- *   --tenue    3.94 /  4.11  ✘ por debajo de 4.5 para texto normal
- *   --vivo     3.28 /  3.41  — alcanza para texto grande y para marcas
- *   --senal    2.42 /  2.52  ✘ no alcanza ni el 3:1 de lo que no es texto
+ *   --tenue    4.59 /  4.78  ✔
+ *   --senal    4.67 /  4.87  ✔
+ *   --vivo     3.28 /  3.41  — alcanza para marcas y texto grande, no para
+ *                             texto chico; hoy sólo lo usa el punto del latido
  *
- * La piel oscura pasa todo (4.59 el más bajo). **No se tocaron los valores**:
- * son ley de diseño y los decide quien manda sobre el skill, no este archivo.
- * Lo que sí se hizo aquí es no apoyarse en ellos donde el contraste importa:
+ * `--tenue` y `--senal` **subieron el 16 de septiembre de 2026**: nacieron en
+ * `#757C9B` y `#EE8A32`, que daban 3.94 y 2.42, y el cobre ni siquiera llegaba
+ * al 3:1 de lo que no es texto. Con el sol de frente a las siete de la mañana
+ * eso no se lee — la condición exacta para la que el skill eligió la forma
+ * sobre el color. Se bajaron en luz conservando el tono; los decidió ASAV y el
+ * skill los trae con su razón.
+ *
+ * Lo que este archivo sigue haciendo aunque los números ya pasen, porque no
+ * dependía de ellos:
  *
  *   · el cobre **nunca carga significado solo** — marca el lugar activo con una
  *     barra, y la palabra cambia de `--tenue` a `--tinta` al mismo tiempo;
- *   · los anillos de foco son de `--tinta`, no de cobre. Además de verse, es lo
- *     que pide el propio skill: el cobre sólo donde hay vida, y un foco no es
- *     vida;
+ *   · los anillos de foco son de `--tinta`, no de cobre: el skill reserva el
+ *     cobre para donde hay vida, y un foco no es vida;
  *   · `--tenue` se usa para apoyo y etiquetas, nunca para lo único que hay que
  *     leer en una pantalla.
- *
- * Si algún día `--tenue` sube a 4.5:1 en claro, esta nota se borra.
  *
  * **No hay tokens de veredicto aquí.** El Marco reserva significado a cumplido,
  * no cumplido y pendiente, y el skill vigente no publica sus valores en la piel
@@ -65,9 +69,9 @@
   --papel: #fafafc; /* fondo de la aplicación */
   --pieza: #ffffff; /* tarjetas y piezas */
   --tinta: #1c2148; /* texto principal */
-  --tenue: #757c9b; /* apoyo, etiquetas, lo secundario */
+  --tenue: #6a7192; /* apoyo, etiquetas, lo secundario */
   --linea: #e4e5ee; /* separadores y bordes */
-  --senal: #ee8a32; /* cobre — SÓLO donde hay vida */
+  --senal: #b05a0f; /* cobre — SÓLO donde hay vida */
   --vivo: #1b9e6b; /* el latido de «en vivo» */
 
   /* — Tipografía: los tres papeles del skill —
@@ -84,7 +88,7 @@
    *   es que ningún componente escriba un color a mano: si falta un tinte, se
    *   agrega el token a las DOS pieles, nunca a una sola. */
   --roce: rgba(28, 33, 72, 0.04); /* el hover de algo tocable */
-  --t-senal: rgba(238, 138, 50, 0.12); /* fondo apenas teñido de lo vivo */
+  --t-senal: rgba(176, 90, 15, 0.12); /* fondo apenas teñido de lo vivo */
   --t-vivo: rgba(27, 158, 107, 0.12);
 
   color-scheme: light;
