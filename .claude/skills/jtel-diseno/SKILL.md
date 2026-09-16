@@ -84,15 +84,15 @@ Los cuatro estados de una unidad:
 
 ### La vigencia de un papel — PROPUESTA, espera visto de ASAV
 
-Los papeles del expediente (Marco, Pieza 6 §H; `docs/Ficha-Expedientes.md` §4) tienen cinco estados. Todos parten del **cuadrado** —una hoja—, para que ninguna forma de papel se confunda con una de unidad, que son círculos y flechas.
+Los papeles del expediente (Marco, Pieza 6 §H; `docs/Ficha-Expedientes.md` §4) tienen cinco estados. Son la **tercera familia de formas**: las unidades son flechas y círculos (se mueven), los dispositivos son cuadros (se instalan) y los papeles son **hojas** —rectángulo vertical con la esquina superior derecha doblada—. No usan el cuadrado: ya es del dispositivo, y en el cuarto de Expedientes las dos familias aparecen juntas; un cuadro lleno diría «vigente» y «en unidad» a la vez. Boceto: https://claude.ai/artifact/RcGFprV2kaHpSRoqqmvwnS
 
 | Estado | Glifo | Por qué esa forma | Tinta |
 |---|---|---|---|
-| Vencido | Cuadrado hueco, **tachado** con una diagonal | La hoja sigue ahí, pero ya no vale | `--tinta` |
-| Por vencer | Cuadrado partido en diagonal, **mitad lleno** | Se está gastando | `--tinta` |
-| Falta | **Contorno punteado** de cuadrado | El lugar existe; la hoja no | `--tinta` |
-| Vigente | Cuadrado lleno | Hoja entera | `--tenue` |
-| Sin vencimiento | Cuadrado lleno con una **raya hueca** horizontal | Hoja entera sin fecha que corra | `--tenue` |
+| Vencido | Hoja hueca, **tachada** con una sola diagonal | La hoja sigue ahí, pero ya no vale | `--tinta` |
+| Por vencer | Hoja hueca con la mitad inferior **llena en diagonal** | Se está gastando | `--tinta` |
+| Falta | **Contorno punteado** de hoja | El lugar existe; la hoja no | `--tinta` |
+| Vigente | Hoja llena | Hoja entera | `--tenue` |
+| Sin vencimiento | Hoja llena con una **raya hueca** horizontal | Hoja entera sin fecha que corra | `--tenue` |
 
 - **Lo que pide hacer algo va en tinta; lo que está al día, en tenue.** Es la ley de «lo apagado se apaga»: el ojo va solo a los tres primeros.
 - **Ni cobre ni colores de veredicto.** Un papel vencido no es un servicio no cumplido, y la vigencia no es vida.

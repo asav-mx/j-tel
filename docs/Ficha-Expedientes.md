@@ -16,7 +16,7 @@
 - **Tocar una pieza abre su expediente:** `Ver ‹unidad›`, `Ver ‹dispositivo›`, `Ver ‹chofer›`. El expediente **es** la ficha (6.30).
 - **La puerta de la casa sigue siendo Flota en vivo** ✓ decidido. Expedientes aparece en el menú el día que aterriza su pantalla; no se le presta la puerta.
 
-### Lo que se ve en el cuarto — ? espera visto
+### Lo que se ve en el cuarto — ✓ decidido (16 sep)
 
 Tres grupos de piezas, en este orden: **Unidades · Dispositivos · Choferes**. Dentro de cada grupo, primero lo que pide hacer algo.
 
@@ -59,7 +59,7 @@ La lista de abajo es de hoy, 16 de septiembre. Cada parte dice su fuente; al con
 | Actividad | Servicios con su veredicto sellado | `compliance_facts.observedUnitId` | con datos o vacía; **sólo con contrato** (sin contrato no aplica) |
 | Relaciones | Dispositivo que trae, y los que trajo | `device_assignments`, con sus fechas | con datos, o vacía |
 | Relaciones | Choferes | — (`driver_assignments` liga al chofer con ruta × turno, no con la unidad) | **aún no disponible** |
-| Documentos | Los papeles del catálogo (§5) | nueva, PR B | con datos, o `FALTA` por papel |
+| Documentos | Los papeles del catálogo de su mercado (§5) | nueva, PR B | con datos; `FALTA` si la regla dice obligatorio; aún no disponible mientras la regla no esté cargada |
 
 ### Ver ‹dispositivo›
 
@@ -69,7 +69,7 @@ La lista de abajo es de hoy, 16 de septiembre. Cada parte dice su fuente; al con
 | Identidad | Baja, con fecha y motivo | `devices.retiredAt`, `retiredReason` | con datos, sólo si está de baja |
 | Actividad | Última señal, con su edad | la misma fuente que la unidad (#411) | con datos, o vacía |
 | Relaciones | Unidad donde está, y las que ha traído | `device_assignments` | con datos, o vacía |
-| Documentos | — | — | **? espera visto:** propongo que **no aplica** (un dispositivo no lleva papeles), así que la familia no se dibuja |
+| Documentos | — | — | **no aplica** ✓ decidido (16 sep): un dispositivo no lleva papeles, así que la familia no se dibuja |
 
 ### Ver ‹chofer›
 
@@ -98,24 +98,39 @@ La lista de abajo es de hoy, 16 de septiembre. Cada parte dice su fuente; al con
 - **El vencido no tiene consecuencias automáticas** ✓: no toca el veredicto (6.32), ni la elegibilidad de la unidad, ni el estado de cuenta. Esas consecuencias son configuración de contrato y llegan después.
 - **La vigencia se calcula al leer, no se guarda.** Depende de hoy; guardarla sería guardar un dato que caduca solo.
 - **Fecha capturada o calculada** ✓: se captura la fecha de vencimiento cuando el papel la trae. Si el tipo tiene periodicidad y el papel no trae fecha, se calcula desde la de emisión, y la pantalla dice `calculado`.
-- **? espera visto — el día del vencimiento.** Propongo que un papel que «vence el 30 de septiembre» sea vigente **todo ese día** y esté vencido desde el 1 de octubre a las 00:00, **hora de Ciudad Juárez**, no UTC.
+- **El día del vencimiento** ✓ decidido (16 sep). Un papel que «vence el 30 de septiembre» es vigente **todo ese día** y está vencido desde el 1 de octubre a las 00:00, **hora de Ciudad Juárez**, no UTC.
 - **En el vistazo va un solo número** (skill): los días que faltan (`en 12 d`) o los que lleva vencido (`hace 3 d`). **La fecha exacta va en el expediente**, donde se decide.
 
-## 5. El catálogo
+## 5. El catálogo: configuración por mercado
 
-**✓ decidido (16 sep).** Cerrado: no hay tipo «otro».
+**✓ decidido (16 sep).** El catálogo **no se hornea en el código**. Qué papel se exige, si vence y cada cuánto depende de la ley de cada país y cada estado, así que son **reglas que viven como dato**, editables desde la pantalla. Es la misma ley del Marco que rige la verificación —«cada contrato define su tolerancia»—: aquí, **cada mercado define su catálogo**. Y cumple el 6.18: si cambia una ley local, alguien edita el valor en la pantalla, no un desarrollador.
 
-| Sujeto | Papel | ¿Obligatorio? | ¿Vence? · periodicidad |
-|---|---|---|---|
-| Unidad | Póliza de seguro | ? | ? |
-| Unidad | Tarjeta de circulación | ? | ? |
-| Unidad | Permiso de transporte de personal | ? | ? |
-| Unidad | Verificación vehicular | ? | ? |
-| Chofer | Licencia | ? | ? |
-| Chofer | Examen médico | ? | ? — espera al abogado |
-| Chofer | Antidoping | ? | ? — espera al abogado |
+Cada tipo de papel de un mercado lleva: sujeto (unidad o chofer), nombre, si es **obligatorio**, si **vence**, y su **periodicidad** (sólo si vence y se puede calcular desde la emisión).
 
-**? espera visto:** las dos columnas de la derecha. Sin «obligatorio» no se calcula `FALTA`, y sin «vence» no se sabe si es `SIN VENCIMIENTO`. Capacitación queda fuera del catálogo por decisión de ASAV, aunque la Pieza 5 §C la nombra.
+### Juárez nace con su catálogo lleno — ✓ decidido (16 sep)
+
+| Sujeto | Papel |
+|---|---|
+| Unidad | Póliza de seguro |
+| Unidad | Tarjeta de circulación |
+| Unidad | Permiso de transporte de personal |
+| Unidad | Verificación vehicular |
+| Chofer | Licencia |
+| Chofer | Examen médico |
+| Chofer | Antidoping |
+
+**Nacen los nombres, no los valores.** Obligatorio, vence y periodicidad los carga ASAV como configuración cuando exista la pantalla; no se hornean ni en código ni en la migración. Capacitación queda fuera por decisión de ASAV, aunque la Pieza 5 §C la nombra.
+
+### Lo que la configuración trae consigo — ? espera visto
+
+1. **Qué es un mercado.** Propongo **país + estado** (México · Chihuahua), con **municipio** opcional para la ley que sólo es de una ciudad: el permiso de transporte de personal puede ser municipal.
+2. **Cómo sabe una cuenta su mercado.** Propongo que **cada cuenta de carrier pertenezca a un mercado**, asignado en su alta. Un carrier que opere en dos estados es un caso que hoy no existe; se nombra y no se construye.
+3. **Quién edita el catálogo.** Es la ley de un mercado, no la preferencia de un carrier, así que propongo que lo edite **J-Staff**, igual que los actos de plataforma de 6.24. **El lugar en el mapa también espera visto:** propongo que viva dentro de «Cuentas y demos», sin cuarto nuevo.
+4. **Un tipo sin sus valores todavía.** Mientras «obligatorio» no esté cargado, `FALTA` no se puede calcular: esa parte dice **«aún no disponible · falta la regla del catálogo de Juárez»**, sin suponer que es obligatorio ni que no lo es. La vigencia de un papel capturado con su fecha sí se calcula, porque no depende de la regla.
+5. **Cambiar una regla no reescribe el pasado.** Cada cambio es una versión nueva, con autor y fecha en el ledger. La vigencia se calcula al leer, con la regla de hoy; la versión anterior queda para saber qué regla valía en una fecha.
+6. **Los 30 días de «por vencer»** siguen fijos, como se decidió: son preferencia de operación, no ley de un mercado. Si también deben ser configuración, es una línea.
+
+Fuera, con nombre: que un **contrato** exija un papel además de los del mercado (la planta que pide algo extra).
 
 ## 6. El papel: qué se guarda, cómo se corrige
 
@@ -125,7 +140,7 @@ La lista de abajo es de hoy, 16 de septiembre. Cada parte dice su fuente; al con
 - **Corregir crea una versión nueva de la misma foja** ✓. La anterior queda en su historial, con quién corrigió y cuándo (Marco 6.18: se corrige desde la pantalla).
 - **Nada se borra** en el expediente de una unidad (6.15).
 - **El chofer es la excepción que ya existe:** al darlo de baja se purga su capa 2 —credenciales, papeles y sus archivos— y queda el registro «purgado el ‹fecha›» (`Plan-Choferes.md`).
-- **? espera visto — quién captura.** La Pieza 4 pone la bitácora e inspecciones en Mantenimiento y el alta de choferes en Coordinador; la matriz fina es 6.29 y sigue abierta. Propongo, mientras tanto, que **cualquier usuario del carrier dueño** capture y corrija, y que cada acción quede con su autor en el ledger.
+- **Quién captura** ✓ decidido (16 sep). Mientras la matriz fina 6.29 siga abierta, **cualquier usuario del carrier dueño** captura y corrige, y cada acción queda con su autor en el ledger. La Pieza 4 pone la bitácora e inspecciones en Mantenimiento y el alta de choferes en Coordinador; la matriz lo afinará.
 
 ## 7. Los archivos
 
@@ -142,7 +157,7 @@ La lista de abajo es de hoy, 16 de septiembre. Cada parte dice su fuente; al con
 
 ## 8. Cómo se ve
 
-Las formas nuevas van al skill `jtel-diseno`, sección «Los glifos»: los cinco estados de vigencia y los tres estados de una parte. **? espera visto** de ASAV en el mismo PR que esta ficha.
+Las formas nuevas van al skill `jtel-diseno`, sección «Los glifos»: los cinco estados de vigencia y los tres estados de una parte. Los papeles son la **tercera familia de formas, las hojas**, porque el cuadrado ya es del dispositivo. Boceto en las dos pieles, junto a las otras dos familias: https://claude.ai/artifact/RcGFprV2kaHpSRoqqmvwnS. **? espera visto** de ASAV.
 
 ---
 
@@ -151,9 +166,10 @@ Las formas nuevas van al skill `jtel-diseno`, sección «Los glifos»: los cinco
 | PR | Qué lleva | Qué prueba | Quién mergea |
 |---|---|---|---|
 | **A** · docs | Esta ficha y los glifos del skill | — | ASAV |
-| **B** · lógica sin pantalla | Migración de fojas y sus versiones; catálogo; vigencia como función pura; carga del expediente completo de unidad, dispositivo y chofer, con el estado de cada parte; escenario en la base desechable | Pruebas de dominio y de integración contra la desechable | ASAV (migración) |
+| **B** · lógica sin pantalla | Migración de mercados, catálogo versionado (Juárez con sus siete nombres, sin valores) y fojas con sus versiones; vigencia como función pura; carga del expediente completo de unidad, dispositivo y chofer, con el estado de cada parte; escenario en la base desechable | Pruebas de dominio y de integración contra la desechable | ASAV (migración) |
 | **C** · archivos | Blob privado, subir y servir con guardia, huella, ledger de apertura | Contra el almacén desechable | ASAV (secreto) |
 | **D** · pantalla | El cuarto, `Ver ‹unidad›` y `Ver ‹dispositivo›` con sus cuatro familias; capturar, corregir y renovar papeles; la ruta en `casas.ts`, con guardia por cuenta | Revisión visual en las dos pieles, celular y computadora | Claude, tras la revisión visual de ASAV |
+| **D2** · el catálogo en pantalla | Editar el catálogo de un mercado desde J-Staff, con su historial | Revisión visual | Claude, tras la revisión visual de ASAV |
 | **E** · choferes | Alta mínima (`Plan-Choferes.md`), `Ver ‹chofer›`, la licencia | Revisión visual | según lo que toque |
 
 ## 10. Fuera, con nombre
@@ -167,9 +183,7 @@ Las formas nuevas van al skill `jtel-diseno`, sección «Los glifos»: los cinco
 
 ## 11. Lo que espera visto, junto
 
-1. Lo que se ve en el cuarto (§1).
-2. El dispositivo sin familia de documentos (§3, Ver ‹dispositivo›).
-3. El día del vencimiento, en hora de Ciudad Juárez (§4).
-4. Obligatorio, vence y periodicidad de cada papel (§5).
-5. Quién captura mientras la matriz 6.29 siga abierta (§6).
-6. Los glifos (§8, en el skill).
+1. Qué es un mercado, cómo lo sabe una cuenta y quién edita su catálogo, incluido su lugar en el mapa (§5, puntos 1 a 3).
+2. Un tipo sin sus valores dice «aún no disponible» (§5, punto 4).
+3. Las reglas versionadas (§5, punto 5).
+4. Los glifos: la familia de las hojas (§8, boceto publicado).
