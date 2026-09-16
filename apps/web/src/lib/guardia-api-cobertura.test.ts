@@ -16,6 +16,10 @@ const API = path.join(fileURLToPath(new URL("../app/api", import.meta.url)));
 
 /** Excepciones, con nombre y motivo. */
 const EXENTAS: Record<string, string> = {
+  "casa/cronometro/route.ts":
+    "No lee la base ni datos de ninguna cuenta: sólo escribe en los registros los tiempos que mide el " +
+    "navegador (números y rutas del cascarón). Pide sesión por su cuenta con sesionUtilizable; no hay " +
+    "audiencia de «cualquier sesión» en exigir(). Temporal, se quita al cerrar la lentitud (16 sep 2026).",
   "salud/route.ts":
     "Pública a propósito: la sondea el vigilante externo de GitHub sin credencial. " +
     "Devuelve el veredicto de salud agregado, no datos de ninguna cuenta.",
