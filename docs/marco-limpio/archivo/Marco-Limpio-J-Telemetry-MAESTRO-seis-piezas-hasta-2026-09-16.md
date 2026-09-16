@@ -1,4 +1,4 @@
-La única fuente de verdad. Siete piezas, derivadas del proyecto completo y verificadas una por una por ASAV. Reemplaza toda la documentación vieja (queda archivada). De aquí en adelante, esto es lo único que hay que cargar — ni conversaciones ni docs viejos. Aterrizado en contratos reales (Tecma 47, Honeywell MX07). Fecha: 6 de julio de 2026.
+La única fuente de verdad. Seis piezas, derivadas del proyecto completo y verificadas una por una por ASAV. Reemplaza toda la documentación vieja (queda archivada). De aquí en adelante, esto es lo único que hay que cargar — ni conversaciones ni docs viejos. Aterrizado en contratos reales (Tecma 47, Honeywell MX07). Fecha: 6 de julio de 2026.
 Contenido
 Pieza 1 — El dominio y las leyes intocables
 Pieza 2 — Las dos caras del producto
@@ -6,7 +6,6 @@ Pieza 3 — Las reglas de verificación
 Pieza 4 — Usuarios, roles y accesos
 Pieza 5 — La forma de la suite
 Pieza 6 — Compás, el cimiento de la evidencia · 14 de septiembre de 2026
-Pieza 7 — La modalidad del servicio · 16 de septiembre de 2026
 
 
 Pieza 1 — El dominio y las leyes intocables
@@ -583,82 +582,3 @@ El Maestro de cinco piezas queda archivado sin editar en `docs/marco-limpio/arch
 - **✎ Pieza 1 y sus ecos, con visto de ASAV (16 de septiembre):** Unidad y Chofer (Pieza 1.A), el renglón de choferes y unidades (Pieza 2, Lado 2) y el Chofer (Pieza 4) dejan de decir que la identidad rica —documentos, cumplimiento legal— «vive en jrz-pass», que está descartado; ahora vive en su expediente (§H). Los renglones de usuarios futuros (pasajero, aspiración de identidades) no hablan de documentos y quedan sin tocar.
 
 El Maestro anterior a esta enmienda queda archivado sin editar en `docs/marco-limpio/archivo/`.
-
-
----
-
-# Pieza 7 — La modalidad del servicio
-
-**Estado: RATIFICADA.** Redactada y verificada por ASAV el 16 de septiembre de 2026. Las nueve afirmaciones (7.1–7.9) quedaron ✓. La modalidad ha aparecido en Compás, en Expedientes, en el corte de traza y en las apps de pasajero; dejó de poder ser un pendiente suelto. Esta pieza la escribe, y enmienda la ley del corte de traza que hoy la contradice.
-
----
-
-## Por qué existe esta pieza
-
-El Marco asumió, sin decirlo, un solo tipo de servicio: el que tiene un inicio y un fin, llega a un destino, y el árbitro sella su llegada. Ese es **un** tipo. Hay otro que el Marco nombra de pasada —el circuito de transporte público— pero nunca definió, y los dos se comportan distinto en lo más básico: **qué significa una geocerca y si la traza se corta al pasar por ella.**
-
-El caso que lo obligó: una unidad da el turno de la mañana a una planta (llega, la traza corta, «llegó 06:08») y en la tarde corre un circuito que pasa por esa misma geocerca (no corta, va de paso). Misma unidad, misma geocerca, mismo día. Lo único que cambió es **qué servicio estaba dando en ese momento.** Sin nombrar la modalidad, el sistema no puede saber cuál de las dos cosas hacer.
-
----
-
-## A. La definición
-
-**7.1 La modalidad.** La clase de servicio que una unidad está ejecutando en un momento dado. Hay dos, y el sistema debe poder distinguirlas:
-
-- **Especial** — el servicio con inicio y fin: recoge personal, lo lleva a un destino, y ahí termina. Es lo que verifica Vernier. La maquila es especial.
-- **Circuito** (transporte público) — el servicio que recorre una ruta con paradas y no termina en ningún destino: da vueltas mientras el circuito está abierto. Sólo tiene apertura y cierre, no un fin al que llegar.
-
-**7.2 La modalidad es del servicio, no de la unidad ni del carrier ni del contrato.** Una misma unidad puede ser especial en la mañana y circuito en la tarde. Un mismo carrier puede operar las dos. Preguntar «¿esta unidad es especial o pública?» no tiene respuesta fija: la respuesta es «¿qué servicio está dando **ahora**?». La modalidad se resuelve por el servicio vigente de la unidad en el momento que se mira.
-
-**7.3 Qué significa una geocerca depende de la modalidad.** La misma geocerca, el mismo rol, significan cosas distintas según la modalidad del servicio que la cruza:
-
-- En **especial**, una geocerca de rol destino es **el fin del servicio**: llegar ahí es cumplir.
-- En **circuito**, una geocerca es **una parada**: la unidad pasa, marca su paso, y sigue. Ninguna parada es un fin.
-
----
-
-## B. La enmienda al corte de la traza
-
-**7.4 La traza se corta según la modalidad, no según la geocerca sola.** El Marco decía (Pieza 5 §E, regla de convivencia; Pieza 6, tabla F): «las trazas se cortan al llegar a la geocerca, en todas las caras y en todos los productos, sin excepción». Esa ley se precisa así, sin debilitarse:
-
-**La razón por la que la traza se corta es que la lectura cruda no contradiga un hecho sellado.** Donde el árbitro selló una llegada, mostrar la traza entrando y saliendo contradiría el sello; por eso se corta. De esa razón sale la regla completa:
-
-- **Especial** — hay sello (el árbitro juzga la llegada a destino). La traza **se corta** al llegar a la geocerca de destino, en todas las caras y en todos los productos, sin excepción. Esto no cambia: es la ley original, ahora con su porqué escrito.
-- **Circuito** — **no hay sello**: el motor sólo mide y reporta, no juzga una llegada. No hay hecho sellado que proteger, así que la traza **no se corta** al pasar por una parada. Recorre el circuito completo.
-
-**7.5 El corte recibe la modalidad como dato; no la adivina.** La función que dibuja o corta una traza pregunta «¿este tramo es especial o circuito?» y actúa según la respuesta. No infiere la modalidad de que una unidad tenga un circuito asignado (una unidad especial puede estar cargada como circuito por otras razones); la modalidad viene del servicio vigente, resuelta antes.
-
-**7.6 Las paradas de circuito no son geocercas de corte.** Una parada es un punto con nombre por el que la unidad pasa, no una frontera de evidencia que corte. Aunque una unidad de circuito cruce una geocerca que para otro servicio sería de destino, no corta: lo que manda es la modalidad de **su** servicio, no la geocerca que cruza.
-
----
-
-## C. Lo que esta pieza toca del Marco existente
-
-Ningún renglón de las Piezas 1 a 6 se borra. Se precisan dos:
-
-| Dónde | Decía | Ahora |
-|---|---|---|
-| Pieza 5 · §E · Regla de convivencia | «Las trazas se cortan en la llegada a la geocerca, en todas las caras y en todos los productos, sin excepción» | La razón es que la lectura cruda no contradiga un hecho sellado. En especial (con sello) se corta, sin excepción. En circuito (sin sello) no hay qué proteger y no se corta (7.4) |
-| Pieza 6 · tabla F · §E telemetría base | «las trazas se cortan al llegar a la geocerca, en todas las caras y en todos los productos» | igual: el corte es de la modalidad especial; el circuito no corta (7.4) |
-| Pieza 1.A · nuevo sustantivo | — | Modalidad (7.1): especial o circuito, la clase de servicio vigente de una unidad |
-
----
-
-## D. Lo que esta pieza deja abierto
-
-**7.7** Cómo se marca en los datos qué modalidad tiene un servicio, y de dónde la lee el corte de traza en cada momento. Es implementación; el corte la recibe como dato de entrada (7.5) hasta que exista.
-
-**7.8** El cumplimiento del circuito —qué significa «cumplir» cuando no hay un destino final, sino un horario por parada— queda para cuando se construya la verificación de transporte público. Esta pieza define la modalidad y el corte de traza; no el árbitro del circuito.
-
-**7.9** `corredor-prueba` es transporte especial cargado como circuito en los datos de hoy. Hay que corregirlo para que no mienta sobre su modalidad.
-
----
-
-## Registro de ratificación
-
-**16 de septiembre de 2026 — ASAV.** Las nueve afirmaciones (7.1–7.9) revisadas y ✓ sin cambio. La Pieza 7 entra al Maestro. La enmienda del corte de traza (secciones B y C) queda vigente: la traza se corta en modalidad especial (con sello) y no en circuito (sin sello). Con esto se desbloquea el corte por modalidad en C1 de Compás.
-
-- **✎ Una cita corregida** al subirla al Maestro (puntero, no fondo): la regla de convivencia se citaba como «Pieza 5 (:199)», número de línea de otra copia del Maestro; en el del repo vive en la **Pieza 5 §E**. Corregido en 7.4 y en la tabla C.
-- **Las Piezas 1 a 6 no se editan**, igual que hizo la Pieza 6 con su tabla F: la tabla C de esta pieza es la que precisa sus renglones. Donde la Pieza 5 §E y la tabla F de la Pieza 6 dicen «sin excepción», se lee con 7.4.
-
-El Maestro de seis piezas queda archivado sin editar en `docs/marco-limpio/archivo/`.
