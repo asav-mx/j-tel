@@ -6650,6 +6650,42 @@ export class ExpedienteRepository {
     }));
   }
 
+  /**
+   * Las fojas de TODAS las unidades de una cuenta, cada una con su versión
+   * vigente. Es la lectura del cuarto: resumir 80 unidades de una pasada, en
+   * vez de armar 80 expedientes.
+   */
+  async fojasVigentesDeUnidadesDeCuenta(carrierAccountId: string) {
+    const fojas = await this.db
+      .select()
+      .from(documents)
+      .where(and(eq(documents.carrierAccountId, carrierAccountId), isNotNull(documents.unitId)))
+      .orderBy(desc(documents.createdAt), desc(documents.id));
+    if (fojas.length === 0) return [];
+    const versiones = await this.db
+      .selectDistinctOn([documentVersions.documentId])
+      .from(documentVersions)
+      .where(inArray(documentVersions.documentId, fojas.map((f) => f.id)))
+      .orderBy(documentVersions.documentId, desc(documentVersions.createdAt), desc(documentVersions.id));
+    const vigentePorFoja = new Map(versiones.map((v) => [v.documentId, v]));
+    return fojas.map((foja) => ({ foja, version: vigentePorFoja.get(foja.id)! }));
+  }
+
+  /** Los choferes de una cuenta, con su nombre si las credenciales no se han purgado. */
+  async choferesDeCuenta(carrierAccountId: string) {
+    return this.db
+      .select({
+        id: drivers.id,
+        deactivatedAt: drivers.deactivatedAt,
+        nombre: driverCredentials.fullName,
+        licencia: driverCredentials.licenseNumber,
+      })
+      .from(drivers)
+      .leftJoin(driverCredentials, eq(driverCredentials.driverId, drivers.id))
+      .where(eq(drivers.carrierAccountId, carrierAccountId))
+      .orderBy(driverCredentials.fullName);
+  }
+
   // ── Lecturas del expediente que no tenían dueño ──
 
   async unidadDeCuenta(carrierAccountId: string, unitId: string) {

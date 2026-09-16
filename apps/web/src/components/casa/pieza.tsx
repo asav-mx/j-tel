@@ -33,6 +33,12 @@ import { Glifo, type EstadoGlifo } from "@/components/casa/glifo";
  * silenciosa es justo la mentira que esa regla vino a impedir: un punto de hace
  * tres horas dibujado igual que uno de hace diez segundos. Quien dibuje una
  * pieza viva tiene que decir de cuándo es.
+ *
+ * Lo que **no** es vivo —un papel, cuyo dato es una fecha y no una lectura— pasa
+ * `edad={null}` a la vista: es una decisión escrita, no un olvido.
+ *
+ * `apagada` baja la pieza a 60 %: lo que ya está al día suelta el peso para que
+ * el ojo vaya solo a lo que pide algo.
  */
 export function Pieza({
   estado,
@@ -43,8 +49,14 @@ export function Pieza({
   etiqueta,
   edad,
   ficha,
+  apagada = false,
 }: {
-  estado: EstadoGlifo;
+  /**
+   * La forma que dice el estado. Opcional: una pieza que liga a otra cosa sin
+   * afirmar su estado —una relación, un historial— va sin glifo. El skill: si
+   * no dice algo, no va.
+   */
+  estado?: EstadoGlifo;
   rumbo?: number;
   /** El número económico, el nombre de la ruta — lo que la identifica. */
   nombre: string;
@@ -54,16 +66,20 @@ export function Pieza({
   dato: string;
   /** Su palabra: la unidad, el estado, lo que sea que el número significa. */
   etiqueta: string;
-  /** La edad del último dato: `hace 14 s`, `06:41`. Obligatoria en lo vivo. */
-  edad: string;
+  /** La edad del último dato: `hace 14 s`, `06:41`. Obligatoria en lo vivo; `null` en lo que no lo es. */
+  edad: string | null;
   /** La ficha a la que se llega tocando. Sin ella, la pieza no es tocable. */
   ficha?: string;
+  /** Lo que ya está al día, a 60 %. */
+  apagada?: boolean;
 }) {
   const cuerpo = (
     <>
-      <span className="mt-[2px] flex-none">
-        <Glifo estado={estado} rumbo={rumbo} />
-      </span>
+      {estado && (
+        <span className="mt-[2px] flex-none">
+          <Glifo estado={estado} rumbo={rumbo} />
+        </span>
+      )}
 
       <span className="min-w-0 flex-1">
         <span
@@ -87,15 +103,18 @@ export function Pieza({
         </span>
         {/* La edad va abajo del dato y en tenue: acompaña siempre, sin competir
             con el número que la pieza vino a decir. */}
-        <span data-medida className="mt-1 block text-[11px] text-[var(--tenue)]">
-          {edad}
-        </span>
+        {edad !== null && (
+          <span data-medida className="mt-1 block text-[11px] text-[var(--tenue)]">
+            {edad}
+          </span>
+        )}
       </span>
     </>
   );
 
-  const forma =
-    "flex w-full items-start gap-4 rounded-lg border border-[var(--linea)] bg-[var(--pieza)] px-4 py-3.5 text-left";
+  const forma = `flex w-full items-start gap-4 rounded-lg border border-[var(--linea)] bg-[var(--pieza)] px-4 py-3.5 text-left${
+    apagada ? " opacity-60" : ""
+  }`;
 
   if (!ficha) return <div className={forma}>{cuerpo}</div>;
 

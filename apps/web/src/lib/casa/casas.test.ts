@@ -123,14 +123,20 @@ describe("regla 4 — lo que no aplica, no aparece", () => {
 });
 
 describe("un cuarto que no existe no se dibuja", () => {
-  it("hoy ninguna casa tiene lugares: el cascarón entró sin un solo cuarto", () => {
-    // Esta prueba se cae —a propósito— el día que aterrice el primer cuarto.
-    // Cuando eso pase, se cambia por la afirmación de que ESE lugar aparece y
-    // los demás no: la regla que cuida es que el menú liste lo construido, no
-    // que esté vacío para siempre.
-    for (const cara of CARAS) {
+  it("el menú lista lo construido: hoy, sólo Expedientes en la casa del transportista", () => {
+    // Esta prueba cambia cada vez que aterriza un cuarto. Lo que cuida no es la
+    // lista de hoy: es que el menú liste lo construido y nada más.
+    expect(menuDe(CASAS.transportista, TODO)).toEqual([
+      { sello: null, lugares: [{ nombre: "Expedientes", ruta: "/casa/transportista/expedientes", condicion: "siempre", hijos: undefined }] },
+    ]);
+    for (const cara of ["planta", "corporativo", "jstaff"] as const) {
       expect(menuDe(CASAS[cara], TODO), `casa ${cara}`).toEqual([]);
     }
+  });
+
+  it("la puerta del transportista sigue siendo Flota en vivo, aunque todavía no tenga cuarto", () => {
+    // El primer lugar del primer grupo. Construir Expedientes no le presta la puerta.
+    expect(CASAS.transportista.grupos[0]!.lugares[0]).toMatchObject({ nombre: "Flota en vivo", ruta: null });
   });
 
   it("un lugar con cuarto aparece aunque sus hermanos no lo tengan", () => {
