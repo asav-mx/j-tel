@@ -123,13 +123,26 @@ describe("regla 4 — lo que no aplica, no aparece", () => {
 });
 
 describe("un cuarto que no existe no se dibuja", () => {
-  it("el menú lista lo construido: hoy, sólo Expedientes en la casa del transportista", () => {
+  it("el menú lista lo construido: Expedientes en el transportista, Cuentas y demos en J-Staff", () => {
     // Esta prueba cambia cada vez que aterriza un cuarto. Lo que cuida no es la
     // lista de hoy: es que el menú liste lo construido y nada más.
     expect(menuDe(CASAS.transportista, TODO)).toEqual([
       { sello: null, lugares: [{ nombre: "Expedientes", ruta: "/casa/transportista/expedientes", condicion: "siempre", hijos: undefined }] },
     ]);
-    for (const cara of ["planta", "corporativo", "jstaff"] as const) {
+    expect(menuDe(CASAS.jstaff, TODO)).toEqual([
+      {
+        sello: null,
+        lugares: [
+          {
+            nombre: "Cuentas y demos",
+            ruta: "/casa/jstaff/cuentas-y-demos",
+            condicion: "siempre",
+            hijos: [{ nombre: "Catálogo de documentos", ruta: "/casa/jstaff/cuentas-y-demos/catalogo", condicion: "siempre" }],
+          },
+        ],
+      },
+    ]);
+    for (const cara of ["planta", "corporativo"] as const) {
       expect(menuDe(CASAS[cara], TODO), `casa ${cara}`).toEqual([]);
     }
   });

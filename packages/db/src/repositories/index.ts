@@ -6686,6 +6686,94 @@ export class ExpedienteRepository {
       .orderBy(driverCredentials.fullName);
   }
 
+  // ── El catálogo, visto desde J-Staff (D2) ──
+
+  /** Los mercados, con cuántas cuentas pertenecen a cada uno. */
+  async mercados() {
+    return this.db
+      .select({
+        id: markets.id,
+        name: markets.name,
+        countryCode: markets.countryCode,
+        stateCode: markets.stateCode,
+        municipality: markets.municipality,
+        timeZone: markets.timeZone,
+        // Nombres escritos a mano a propósito: dentro de una subconsulta, Drizzle
+        // escribe las columnas sin su tabla, y «market_id = id» se leía contra
+        // la misma `accounts` — contaba cero siempre.
+        cuentas: sql<number>`(SELECT count(*)::int FROM accounts cta WHERE cta.market_id = "markets"."id")`,
+      })
+      .from(markets)
+      .orderBy(markets.name);
+  }
+
+  /** Un tipo de papel con su mercado. */
+  async tipoDeDocumento(documentTypeId: string) {
+    const [fila] = await this.db
+      .select({ tipo: documentTypes, mercado: markets })
+      .from(documentTypes)
+      .innerJoin(markets, eq(markets.id, documentTypes.marketId))
+      .where(eq(documentTypes.id, documentTypeId));
+    return fila ?? null;
+  }
+
+  /**
+   * Lo que un tipo juzga en todo su mercado: cada unidad activa (o cada chofer
+   * activo) de las cuentas del mercado, con su foja vigente de ese tipo y la
+   * versión vigente de esa foja, o `null` si nunca se capturó.
+   *
+   * Es la lectura de «revisar el cambio»: la regla propuesta se aplica a esto
+   * antes de guardarla.
+   */
+  async sujetosDelTipo(documentTypeId: string) {
+    const fila = await this.tipoDeDocumento(documentTypeId);
+    if (!fila) return null;
+    const { tipo, mercado } = fila;
+
+    const sujetos =
+      tipo.subject === "unidad"
+        ? await this.db
+            .select({ id: units.id, cuenta: accounts.name, carrierAccountId: accounts.id })
+            .from(units)
+            .innerJoin(accounts, eq(accounts.id, units.carrierAccountId))
+            .where(and(eq(accounts.marketId, mercado.id), eq(units.active, true)))
+        : await this.db
+            .select({ id: drivers.id, cuenta: accounts.name, carrierAccountId: accounts.id })
+            .from(drivers)
+            .innerJoin(accounts, eq(accounts.id, drivers.carrierAccountId))
+            .where(and(eq(accounts.marketId, mercado.id), isNull(drivers.deactivatedAt)));
+
+    const fojas = await this.db
+      .select()
+      .from(documents)
+      .innerJoin(accounts, eq(accounts.id, documents.carrierAccountId))
+      .where(and(eq(documents.documentTypeId, documentTypeId), eq(accounts.marketId, mercado.id)))
+      .orderBy(desc(documents.createdAt), desc(documents.id));
+    const vigentePorSujeto = new Map<string, string>();
+    for (const f of fojas) {
+      const sujeto = f.documents.unitId ?? f.documents.driverId;
+      if (sujeto && !vigentePorSujeto.has(sujeto)) vigentePorSujeto.set(sujeto, f.documents.id);
+    }
+    const ids = [...vigentePorSujeto.values()];
+    const versiones = ids.length
+      ? await this.db
+          .selectDistinctOn([documentVersions.documentId])
+          .from(documentVersions)
+          .where(inArray(documentVersions.documentId, ids))
+          .orderBy(documentVersions.documentId, desc(documentVersions.createdAt), desc(documentVersions.id))
+      : [];
+    const versionPorFoja = new Map(versiones.map((v) => [v.documentId, v]));
+
+    return {
+      tipo,
+      mercado,
+      sujetos: sujetos.map((s) => {
+        const fojaId = vigentePorSujeto.get(s.id);
+        return { ...s, version: fojaId ? (versionPorFoja.get(fojaId) ?? null) : null };
+      }),
+    };
+  }
+
   // ── Lecturas del expediente que no tenían dueño ──
 
   async unidadDeCuenta(carrierAccountId: string, unitId: string) {

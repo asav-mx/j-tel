@@ -181,3 +181,25 @@ describe("el vencimiento calculado", () => {
     expect(diasCiviles("2026-09-16", "2026-09-15")).toBe(-1);
   });
 });
+
+describe("la regla vista desde el catálogo", () => {
+  it("qué le falta a una regla", async () => {
+    const { faltantesDeRegla } = await import("./expediente.js");
+    expect(faltantesDeRegla(null)).toEqual(["obligatorio", "vence"]);
+    expect(faltantesDeRegla(regla({ obligatorio: null, diasDeAviso: null }))).toEqual(["obligatorio", "dias_de_aviso"]);
+    expect(faltantesDeRegla(regla({ vence: false, diasDeAviso: null }))).toEqual([]);
+    expect(faltantesDeRegla(regla())).toEqual([]);
+  });
+
+  it("el efecto: antes y después, y cuántos pasan a pedir algo", async () => {
+    const { efectoDeRegla } = await import("./expediente.js");
+    const fojas = [foja("2026-09-10"), foja("2026-09-28"), foja("2027-06-01"), null, foja("2027-01-01", { venceCalculado: true })];
+    const e = efectoDeRegla({ actual: null, propuesta: regla({ periodicidadMeses: 6 }), fojas, hoy: HOY });
+    expect(e.antes).toMatchObject({ vencido: 1, falta_la_regla: 4 });
+    expect(e.despues).toMatchObject({ vencido: 1, por_vencer: 1, vigente: 2, falta: 1 });
+    // El vencido ya pedía algo (lo dice el papel): pasan el por vencer y el que falta.
+    expect(e.pasanAPedirAlgo).toBe(2);
+    expect(e.dejanDePedirAlgo).toBe(0);
+    expect(e.fechasCalculadasConservadas).toBe(1);
+  });
+});
