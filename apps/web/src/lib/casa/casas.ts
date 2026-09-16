@@ -320,3 +320,54 @@ export function cuentaEntradas(casa: Casa, alcance: Alcance): number {
     0,
   );
 }
+
+/**
+ * En qué cuenta está la casa — lo que el marco necesita para no perderla.
+ *
+ * La resuelve el cuarto con su guardia y se la entrega al marco ya decidida: el
+ * marco no vuelve a leer la dirección ni a comprobar alcance. Si lo hiciera,
+ * habría dos respuestas a «¿en qué cuenta estoy?» y tarde o temprano dirían
+ * cosas distintas.
+ *
+ * - `actual`: la cuenta resuelta, o `null` si no la hay (varias sin elegir, una
+ *   que no te alcanza, ninguna).
+ * - `enRuta`: el slug que las ligas arrastran. Sólo si vino en la dirección;
+ *   quien tiene una sola cuenta no lo necesita y sus ligas quedan limpias.
+ * - `elegibles`: las cuentas que tu alcance cubre. Con más de una hay selector.
+ */
+export type CuentaDeLaCasa = {
+  actual: { slug: string; nombre: string } | null;
+  enRuta: string | null;
+  elegibles: { slug: string; nombre: string }[];
+};
+
+/**
+ * Una ruta con la cuenta puesta, si hay cuenta que poner.
+ *
+ * Es la única forma de arrastrarla: la usan las pestañas, las ligas de los
+ * cuartos y el selector. Si cada quien pegara el `?account=` a su manera, uno
+ * se olvidaría del `&` y la cuenta se perdería justo en esa liga — que es la
+ * clase de defecto que obligó a escribir esto (16 sep 2026).
+ */
+export function conCuenta(ruta: string, cuenta?: string | null): string {
+  if (!cuenta) return ruta;
+  return `${ruta}${ruta.includes("?") ? "&" : "?"}account=${encodeURIComponent(cuenta)}`;
+}
+
+/**
+ * A qué cuarto se vuelve al cambiar de cuenta estando en esta ruta.
+ *
+ * Al cuarto, **no a la ficha**: la unidad 1042 de Juárez Bus no existe en la
+ * cuenta de ASAV, así que quedarse en su ficha con otra cuenta sería pedir algo
+ * que no hay. Se busca el lugar más hondo que contiene la ruta —un hijo gana a
+ * su padre— entre todos los construidos, sin filtrar por alcance: el alcance es
+ * de la cuenta nueva, y lo decide el cuarto al que se llega. Si la ruta no cae
+ * en ningún lugar, la puerta de la casa.
+ */
+export function cuartoDeLaRuta(casa: Casa, ruta: string): string {
+  const construidos = casa.grupos
+    .flatMap((grupo) => grupo.lugares.flatMap((lugar) => [lugar, ...(lugar.hijos ?? [])]))
+    .map((lugar) => lugar.ruta)
+    .filter((r): r is string => r !== null && estaEnLugar(ruta, r));
+  return construidos.sort((a, b) => b.length - a.length)[0] ?? casa.base;
+}

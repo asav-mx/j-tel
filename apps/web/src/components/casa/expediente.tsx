@@ -1,4 +1,6 @@
 import type { Parte as ParteDelDominio } from "@jtel/domain";
+import { SelectorDeCuenta } from "@/components/casa/selector-de-cuenta";
+import type { CuentaDeLaCasa } from "@/lib/casa/casas";
 import { aunNoDisponibleEnPalabras } from "@/lib/casa/expedientes";
 
 /**
@@ -125,19 +127,40 @@ export function AvisoDeError({ mensaje }: { mensaje: string }) {
 }
 
 /**
- * Cuando la cuenta no se puede resolver: sin membresía de carrier, o con varias
- * y sin decir cuál. No se dibuja ningún dato de nadie.
+ * Cuando la cuenta no se puede resolver: sin membresía de carrier, con varias y
+ * sin decir cuál, o con una en la dirección que no está a tu alcance. No se
+ * dibuja ningún dato de nadie.
+ *
+ * Con cuentas para elegir, se ofrece el selector aquí mismo. Antes esto pedía
+ * escribir `?account=` a mano, y un coordinador no edita la dirección (Asav, 16
+ * sep 2026). Sin ninguna, no hay qué elegir y se dice así.
  */
-export function SinCuenta() {
+export function SinCuenta({ elegibles }: { elegibles: CuentaDeLaCasa["elegibles"] }) {
+  if (elegibles.length === 0) {
+    return (
+      <div className="mx-auto max-w-xl py-16">
+        <h1 className="text-[26px] leading-tight" style={titular}>
+          No hay una cuenta de transportista que mostrar
+        </h1>
+        <p className="mt-4 text-[15px] leading-relaxed text-[var(--tenue)]">
+          Tu sesión no pertenece a ningún transportista.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-xl py-16">
       <h1 className="text-[26px] leading-tight" style={titular}>
-        No hay una cuenta de transportista que mostrar
+        Elige una cuenta
       </h1>
       <p className="mt-4 text-[15px] leading-relaxed text-[var(--tenue)]">
-        Tu sesión no pertenece a ningún transportista, o pertenece a varios. Si ves varias cuentas, abre este cuarto con
-        la cuenta en la dirección: <span data-medida>?account=</span> y su identificador.
+        Tu sesión alcanza {elegibles.length === 1 ? "una cuenta" : `${elegibles.length} cuentas`} de transportista.
+        Elige en cuál trabajar.
       </p>
+      <div className="mt-6">
+        <SelectorDeCuenta cara="transportista" elegibles={elegibles} actual={null} id="cuenta-del-cuarto" />
+      </div>
     </div>
   );
 }

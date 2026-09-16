@@ -43,10 +43,10 @@ export default async function CuartoDeExpedientes({
   const reloj = await relojDePagina("expedientes");
   const cuenta = await cuentaDelCuarto(searchParams);
   reloj.marca("guardia");
-  if (!cuenta) {
+  if (!cuenta.carrier) {
     return (
-      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
-        <SinCuenta />
+      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+        <SinCuenta elegibles={cuenta.casa.elegibles} />
       </Marco>
     );
   }
@@ -58,7 +58,7 @@ export default async function CuartoDeExpedientes({
   reloj.fin();
 
   return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
+    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
       <div className="mx-auto flex max-w-3xl flex-col gap-8">
         <Titular
           nombre="Expedientes"

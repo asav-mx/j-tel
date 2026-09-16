@@ -20,6 +20,7 @@ import type {
   ResumenDePapeles,
 } from "@jtel/domain";
 import type { EstadoGlifo } from "@/components/casa/glifo";
+import { conCuenta } from "@/lib/casa/casas";
 
 export const RAIZ_EXPEDIENTES = "/casa/transportista/expedientes";
 
@@ -31,11 +32,6 @@ export const rutas = {
     conCuenta(`${RAIZ_EXPEDIENTES}/unidad/${unidadId}/papel/${tipoId}${accion ? `?accion=${accion}` : ""}`, cuenta),
   dispositivo: (id: string, cuenta?: string | null) => conCuenta(`${RAIZ_EXPEDIENTES}/dispositivo/${id}`, cuenta),
 };
-
-function conCuenta(ruta: string, cuenta?: string | null): string {
-  if (!cuenta) return ruta;
-  return `${ruta}${ruta.includes("?") ? "&" : "?"}account=${encodeURIComponent(cuenta)}`;
-}
 
 // ── Papeles ──────────────────────────────────────────────────────────────
 

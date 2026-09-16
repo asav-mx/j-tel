@@ -51,10 +51,10 @@ export default async function VerUnidad({
   const reloj = await relojDePagina("ver-unidad");
   const cuenta = await cuentaDelCuarto(searchParams);
   reloj.marca("guardia");
-  if (!cuenta) {
+  if (!cuenta.carrier) {
     return (
-      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
-        <SinCuenta />
+      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+        <SinCuenta elegibles={cuenta.casa.elegibles} />
       </Marco>
     );
   }
@@ -72,7 +72,7 @@ export default async function VerUnidad({
   const placa = e.identidad.placa.estado === "con_datos" ? e.identidad.placa.valor : null;
 
   return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
+    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
       <div className="mx-auto flex max-w-3xl flex-col gap-7">
         <Migas pasos={[{ nombre: "Expedientes", ruta: rutas.cuarto(cuentaEnRuta) }, { nombre: `Ver ${nombre}` }]} />
         <Titular

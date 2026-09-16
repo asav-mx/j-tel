@@ -31,10 +31,10 @@ export default async function CuartoFlotaEnVivo({
   const reloj = await relojDePagina("flota");
   const cuenta = await cuentaDelCuarto(searchParams);
   reloj.marca("guardia");
-  if (!cuenta) {
+  if (!cuenta.carrier) {
     return (
-      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
-        <SinCuenta />
+      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+        <SinCuenta elegibles={cuenta.casa.elegibles} />
       </Marco>
     );
   }
@@ -46,7 +46,7 @@ export default async function CuartoFlotaEnVivo({
   reloj.fin();
 
   return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
+    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
       <FlotaEnVivo
         inicial={flotaParaPantalla(flota, { leida, cuenta: carrier.name, cuentaEnRuta })}
         slug={carrier.slug}
