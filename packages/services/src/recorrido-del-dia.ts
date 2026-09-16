@@ -20,15 +20,10 @@ import { kilometrosSinSaltos } from "./recorrido.js";
  * 05:30», «llegó a Planta 47 06:08») y las cifras del día. Función pura: quien
  * llama trae los puntos del día y las geocercas que la unidad puede visitar.
  *
- * **Lo que todavía NO hace, a propósito: cortar la traza.** Qué se corta
- * depende de la modalidad del servicio que la unidad está dando en ese tramo:
- * en especial (con sello) la geocerca de destino corta, para que la lectura
- * cruda no contradiga la llegada sellada; en circuito (sin sello) la unidad
- * pasa por paradas y la traza sigue. La modalidad todavía no existe como dato y
- * el Marco dice hoy «sin excepción»; la enmienda está en camino. Cuando entre,
- * el corte es una función encima de `visitas`: recibe «¿este tramo es especial
- * o circuito?» como entrada, no lo adivina. Todo lo de aquí abajo es igual para
- * las dos modalidades.
+ * **El corte de la traza va aparte, encima de las visitas** (`cortarPorModalidad`),
+ * porque depende de algo que el recorrido no sabe: la modalidad del servicio
+ * que la unidad daba en ese momento (Marco, Pieza 7). Todo lo demás de este
+ * módulo es igual para especial y para circuito.
  */
 
 /**
@@ -50,7 +45,7 @@ export type Lugar = {
  * Es una sola función a propósito, porque la van a hacer dos preguntas
  * distintas y no pueden contestar distinto:
  *
- *   1. El corte de la traza (cuando llegue la modalidad): ¿entró a un destino?
+ *   1. El corte de la traza (`cortarPorModalidad`): ¿entró a un destino?
  *   2. El estado de la unidad (cuando existan Lugares y el mapa en vivo):
  *      «desconectado» se parte según dónde quedó — en el patio está
  *      descansando, en el taller está fuera de servicio, en ruta está en
@@ -203,4 +198,98 @@ export function recorridoDelDia(entrada: {
       huecos: huecos.length,
     },
   };
+}
+
+/**
+ * La modalidad del servicio (Marco 7.1): especial, con inicio, fin y sello; o
+ * circuito, con paradas y sin sello.
+ */
+export type Modalidad = "especial" | "circuito";
+
+/** Un intervalo donde la traza no se dibuja: la unidad estaba adentro de un destino. */
+export type TrazaOculta = {
+  lugar: Lugar;
+  /** Primer punto adentro: «llegó» si `entradaObservada`, si no «adentro desde». */
+  desde: Date;
+  entradaObservada: boolean;
+  /** Primer punto afuera («salió»), o el último adentro si no se vio salir. */
+  hasta: Date;
+  salidaObservada: boolean;
+};
+
+export type TrazaCortada = {
+  /** Lo que se dibuja: los tramos observados, partidos además en cada corte. */
+  tramos: PuntoTraza[][];
+  /** Lo que no se dibuja, con sus horas, para que la pantalla y el playback lo digan. */
+  ocultos: TrazaOculta[];
+};
+
+/**
+ * Corta la traza según la modalidad (Marco 7.4).
+ *
+ * La traza se corta para que la lectura cruda no contradiga un hecho sellado.
+ * Por eso:
+ *
+ *   · **especial** — al llegar a una geocerca de rol **destino** la traza se
+ *     corta: queda la línea hasta el primer punto adentro («llegó 06:08»),
+ *     adentro no se dibuja nada, y sigue desde el primer punto afuera
+ *     («salió 06:52»).
+ *   · **circuito** — no hay sello que proteger: la traza no se corta, aunque
+ *     cruce esa misma geocerca (7.6).
+ *
+ * Base, caseta y otro no cortan en ninguna modalidad (decisión 1 del cuarto).
+ *
+ * **La modalidad entra como dato; no se adivina** (7.5). `modalidadEn` contesta
+ * «¿qué servicio daba la unidad en este instante?» y se consulta en la hora de
+ * entrada de cada visita: es la misma unidad en la misma geocerca la que en la
+ * mañana corta (turno a Planta 47) y en la tarde no (circuito). De dónde sale
+ * esa respuesta en los datos está abierto (7.7) y no se decide aquí.
+ *
+ * Si no se vio entrar (el día empezó adentro, o reapareció adentro tras un
+ * hueco), no hay punto de llegada que conservar: se oculta todo lo de adentro.
+ */
+export function cortarPorModalidad(
+  recorrido: Pick<RecorridoDelDia, "tramos" | "visitas">,
+  modalidadEn: (instante: Date) => Modalidad,
+): TrazaCortada {
+  const queCortan = recorrido.visitas.filter(
+    (v) => v.lugar.rol === "destino" && modalidadEn(v.entrada) === "especial",
+  );
+  const ocultos: TrazaOculta[] = queCortan.map((v) => ({
+    lugar: v.lugar,
+    desde: v.entrada,
+    entradaObservada: v.entradaObservada,
+    hasta: v.salida ?? v.ultimoAdentro,
+    salidaObservada: v.salida !== null,
+  }));
+
+  if (ocultos.length === 0) return { tramos: recorrido.tramos, ocultos };
+
+  // Un punto se oculta si cae adentro de una visita que corta. El de entrada se
+  // conserva sólo si se vio entrar: es el punto sobre la cerca donde termina la
+  // línea. El de salida ya está afuera y abre el tramo siguiente.
+  const oculto = (p: PuntoTraza) => {
+    const t = p.at.getTime();
+    return queCortan.some((v) => {
+      const desde = v.entrada.getTime();
+      const hasta = v.ultimoAdentro.getTime();
+      return v.entradaObservada ? t > desde && t <= hasta : t >= desde && t <= hasta;
+    });
+  };
+
+  const tramos: PuntoTraza[][] = [];
+  for (const tramo of recorrido.tramos) {
+    let actual: PuntoTraza[] = [];
+    for (const p of tramo) {
+      if (oculto(p)) {
+        if (actual.length > 0) tramos.push(actual);
+        actual = [];
+      } else {
+        actual.push(p);
+      }
+    }
+    if (actual.length > 0) tramos.push(actual);
+  }
+
+  return { tramos, ocultos };
 }

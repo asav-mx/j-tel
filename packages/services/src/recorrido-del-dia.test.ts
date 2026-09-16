@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { PuntoTraza } from "@jtel/domain";
-import { lugaresDelPunto, recorridoDelDia, visitasALugares, type Lugar } from "./recorrido-del-dia.js";
+import {
+  cortarPorModalidad,
+  lugaresDelPunto,
+  recorridoDelDia,
+  visitasALugares,
+  type Lugar,
+  type Modalidad,
+} from "./recorrido-del-dia.js";
 
 /*
  * El día del prototipo aprobado (cuarto de Compás, 16 sep 2026), en Juárez:
@@ -166,5 +173,90 @@ describe("recorridoDelDia · kilómetros", () => {
       visitas: [],
       cifras: { puntos: 0, kmMedidos: 0, saltosDescartados: 0, minutosConSenal: 0, huecos: 0 },
     });
+  });
+});
+
+describe("cortarPorModalidad · Marco 7.4", () => {
+  const horas = (tramos: PuntoTraza[][]) =>
+    tramos.map((t) =>
+      [t[0]!, t[t.length - 1]!].map((q) =>
+        q.at.toLocaleTimeString("es-MX", { timeZone: "America/Ciudad_Juarez", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }),
+      ),
+    );
+  const siempre = (m: Modalidad) => () => m;
+
+  it("especial: el día del prototipo se corta en Planta 47 — línea hasta 06:08, nada adentro, sigue 06:52", () => {
+    const r = recorridoDelDia({ puntos: DIA_PROTOTIPO, lugares: [BASE, PLANTA] });
+    const c = cortarPorModalidad(r, siempre("especial"));
+    expect(horas(c.tramos)).toEqual([
+      ["05:26", "05:38"],
+      ["06:01", "06:08"],
+      ["06:52", "07:00"],
+    ]);
+    expect(c.ocultos).toEqual([
+      { lugar: PLANTA, desde: hora("06:08"), entradaObservada: true, hasta: hora("06:52"), salidaObservada: true },
+    ]);
+    // Ningún punto dibujado cae adentro de la planta después de la llegada.
+    const dibujados = c.tramos.flat().filter((q) => lugaresDelPunto(q, [PLANTA]).length > 0);
+    expect(dibujados.map((q) => q.at)).toEqual([hora("06:08")]);
+  });
+
+  it("especial: la base no corta — sólo el rol destino", () => {
+    const r = recorridoDelDia({ puntos: DIA_PROTOTIPO, lugares: [BASE] });
+    const c = cortarPorModalidad(r, siempre("especial"));
+    expect(c.ocultos).toEqual([]);
+    expect(c.tramos).toBe(r.tramos);
+  });
+
+  it("circuito: la misma geocerca de destino no corta (7.6)", () => {
+    const r = recorridoDelDia({ puntos: DIA_PROTOTIPO, lugares: [BASE, PLANTA] });
+    const c = cortarPorModalidad(r, siempre("circuito"));
+    expect(c.ocultos).toEqual([]);
+    expect(c.tramos).toEqual(r.tramos);
+  });
+
+  it("la 101: especial en la mañana corta, circuito en la tarde no — misma unidad, misma geocerca", () => {
+    const puntos = [
+      ...serie("06:00", "06:04", AFUERA),
+      ...serie("06:06", "06:20", DENTRO_PLANTA),
+      ...serie("06:22", "06:30", AFUERA),
+      ...serie("15:00", "15:04", AFUERA),
+      ...serie("15:06", "15:10", DENTRO_PLANTA),
+      ...serie("15:12", "15:20", AFUERA),
+    ];
+    const r = recorridoDelDia({ puntos, lugares: [PLANTA] });
+    // El servicio vigente: turno especial hasta mediodía, circuito después.
+    const modalidadEn = (t: Date): Modalidad => (t < hora("12:00") ? "especial" : "circuito");
+    const c = cortarPorModalidad(r, modalidadEn);
+    expect(c.ocultos.map((o) => o.desde)).toEqual([hora("06:06")]);
+    expect(horas(c.tramos)).toEqual([
+      ["06:00", "06:06"],
+      ["06:22", "06:30"],
+      ["15:00", "15:20"],
+    ]);
+  });
+
+  it("si no se vio entrar, no queda punto de llegada: se oculta todo lo de adentro", () => {
+    const puntos = [...serie("06:00", "06:10", DENTRO_PLANTA), ...serie("06:12", "06:20", AFUERA)];
+    const c = cortarPorModalidad(recorridoDelDia({ puntos, lugares: [PLANTA] }), siempre("especial"));
+    expect(c.ocultos[0]).toMatchObject({ entradaObservada: false, salidaObservada: true, hasta: hora("06:12") });
+    expect(horas(c.tramos)).toEqual([["06:12", "06:20"]]);
+  });
+
+  it("si no se vio salir, lo oculto llega hasta el último punto adentro", () => {
+    const puntos = [...serie("06:00", "06:04", AFUERA), ...serie("06:06", "06:30", DENTRO_PLANTA)];
+    const c = cortarPorModalidad(recorridoDelDia({ puntos, lugares: [PLANTA] }), siempre("especial"));
+    expect(c.ocultos[0]).toMatchObject({ salidaObservada: false, hasta: hora("06:30") });
+    expect(horas(c.tramos)).toEqual([["06:00", "06:06"]]);
+  });
+
+  it("la modalidad se pregunta a la hora de entrada de cada visita, no una vez por día", () => {
+    const preguntas: Date[] = [];
+    const r = recorridoDelDia({ puntos: DIA_PROTOTIPO, lugares: [BASE, PLANTA] });
+    cortarPorModalidad(r, (t) => {
+      preguntas.push(t);
+      return "especial";
+    });
+    expect(preguntas).toEqual([hora("06:08")]);
   });
 });
