@@ -247,6 +247,19 @@ export type EstadoDeUnidad =
       ultimaSenalAt: Date | null;
     }
   | {
+      /**
+       * Montada y callada más de 24 h.
+       *
+       * **Va a partirse según dónde quedó, no según más tiempo.** Con Lugares y
+       * el mapa en vivo, una unidad callada en su patio está descansando, en el
+       * taller está fuera de servicio, en ruta está en servicio, y sólo fuera
+       * de todo lugar está desconectada de verdad — igual que «en bodega» para
+       * un dispositivo sale de dónde está y no de que alguien lo marque. No se
+       * construye todavía (no existen los roles patio ni taller). Cuando se
+       * construya, el lugar entra aquí como dato ya resuelto por
+       * `lugaresDelPunto` de `@jtel/services` —la misma pregunta que usa el
+       * recorrido—, no se calcula otra vez en este módulo.
+       */
       tipo: "desconectado";
       dispositivoId: string;
       /** `null` si nunca reportó. */

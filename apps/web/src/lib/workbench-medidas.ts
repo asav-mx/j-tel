@@ -13,33 +13,23 @@
  * justo lo que se decidió no hacer.
  */
 
+import { type PuntoTraza } from "@jtel/domain";
 import { SALTO_GPS_KMH } from "@jtel/services";
 import { haversineKm } from "@jtel/verification";
 
-export type PuntoTraza = {
-  lat: number;
-  lng: number;
-  at: Date;
-  /** Velocidad reportada por el equipo, km/h. Medida en producción: nunca nula. */
-  speed: number | null;
-};
-
-/**
- * Un hueco de evidencia: entre dos puntos consecutivos pasó más tiempo del
- * umbral. **No es una falta** — es que el sistema dejó de ver, y en este
- * producto no ver nunca equivale a incumplir (ley 7).
+/*
+ * Huecos y tramos se mudaron a `@jtel/domain` (huecos.ts) para que el cuarto de
+ * Compás parta la traza con la misma regla. Se reexportan para no mover a
+ * quien ya los importaba de aquí.
  */
-export type Hueco = {
-  desde: Date;
-  hasta: Date;
-  minutos: number;
-  /** Dónde se perdió la señal, para poder marcarlo en el mapa. */
-  lat: number;
-  lng: number;
-  /** Dónde reapareció. Un hueco tiene dos extremos y los dos importan. */
-  latFin: number;
-  lngFin: number;
-};
+export {
+  hayHuecoEntre,
+  huecosDeSenal,
+  ordenarPorTiempo,
+  partirEnHuecos,
+  type Hueco,
+  type PuntoTraza,
+} from "@jtel/domain";
 
 /**
  * Una parada: una corrida de puntos consecutivos con velocidad reportada en
@@ -69,37 +59,6 @@ export const PARADA_MINUTOS_POR_DEFECTO = 5;
 
 /** Velocidad, en km/h, en o por debajo de la cual el equipo se considera quieto. */
 export const PARADA_VELOCIDAD_KMH = 0;
-
-/** Los puntos ordenados por tiempo. Todo lo de este módulo lo asume. */
-export function ordenarPorTiempo(puntos: PuntoTraza[]): PuntoTraza[] {
-  return [...puntos].sort((a, b) => a.at.getTime() - b.at.getTime());
-}
-
-/**
- * Huecos de señal, definidos por el mismo umbral que usa el resto del producto.
- *
- * El umbral entra como parámetro y no como constante importada aquí adentro,
- * para que la prueba pueda fijarlo y la pantalla pueda declararlo.
- */
-export function huecosDeSenal(puntos: PuntoTraza[], umbralMinutos: number): Hueco[] {
-  const huecos: Hueco[] = [];
-  for (let i = 1; i < puntos.length; i += 1) {
-    const a = puntos[i - 1]!;
-    const b = puntos[i]!;
-    const minutos = (b.at.getTime() - a.at.getTime()) / 60_000;
-    if (minutos <= umbralMinutos) continue;
-    huecos.push({
-      desde: a.at,
-      hasta: b.at,
-      minutos: Math.round(minutos),
-      lat: a.lat,
-      lng: a.lng,
-      latFin: b.lat,
-      lngFin: b.lng,
-    });
-  }
-  return huecos;
-}
 
 /**
  * Paradas, como lugares con duración.
@@ -151,30 +110,6 @@ export function paradas(
   }
   cerrar();
   return salida;
-}
-
-/**
- * Parte la traza en tramos observados, cortando en cada hueco de señal.
- *
- * **Es la diferencia entre un instrumento y un dibujo.** Una polilínea que
- * atraviesa un hueco de dos horas dibuja una recta por donde el camión nunca
- * demostró haber pasado, y la dibuja igual de brillante que lo que sí se
- * observó. En un rango de varios días eso son diagonales limpias cruzando la
- * ciudad de noche — y quien mire un mapa de defensa no tiene por qué saber que
- * ese trazo no es evidencia.
- *
- * El hueco no desaparece: se sigue marcando con su capa en ámbar. Lo que
- * cambia es que ya no se afirma un camino dentro de él.
- */
-export function partirEnHuecos(puntos: PuntoTraza[], umbralMinutos: number): PuntoTraza[][] {
-  if (puntos.length === 0) return [];
-  const tramos: PuntoTraza[][] = [[puntos[0]!]];
-  for (let i = 1; i < puntos.length; i += 1) {
-    const minutos = (puntos[i]!.at.getTime() - puntos[i - 1]!.at.getTime()) / 60_000;
-    if (minutos > umbralMinutos) tramos.push([puntos[i]!]);
-    else tramos[tramos.length - 1]!.push(puntos[i]!);
-  }
-  return tramos;
 }
 
 /**
