@@ -111,7 +111,8 @@ export const CASAS: Record<Cara, Casa> = {
           // El segundo afluente: pólizas, permisos, exámenes, capacitaciones,
           // mantenimiento firmado, inspecciones. Aquí viven los choferes
           // mientras toda su sustancia sean sus papeles.
-          { nombre: "Expedientes", ruta: null, condicion: "siempre" },
+          // El primer cuarto construido (PR D, 16 sep 2026).
+          { nombre: "Expedientes", ruta: "/casa/transportista/expedientes", condicion: "siempre" },
         ],
       },
       {

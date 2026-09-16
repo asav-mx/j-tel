@@ -77,8 +77,20 @@ Los cuatro estados de una unidad:
 |---|---|---|
 | En movimiento | Flecha llena, **rotada al rumbo real** | La punta dice a dónde va. Información, no adorno |
 | Detenida | Círculo lleno | Presente pero sin dirección |
+| Sin señal | **Círculo hueco** | Presente pero callada: pide esperar. Distinto de la flecha hueca de desconectado, que pide hacer. Aprobado el 16 sep 2026 |
 | En destino | Anillo punteado | Está, pero ya no se le mira: la geocerca es la frontera de la evidencia |
-| Sin transmitir | Flecha hueca | La silueta de lo que había, vacía |
+| Sin transmitir | Flecha hueca | La silueta de lo que había, vacía. Es DESCONECTADO |
+
+### Los dispositivos: cuadros
+
+Ratificados el 16 de septiembre de 2026 (boceto de «las dos familias»). Un dispositivo se instala; por eso es una caja.
+
+| Estado | Glifo | Por qué esa forma | Tinta |
+|---|---|---|---|
+| En unidad | Cuadro lleno | Instalado y hablando | `--senal` |
+| En bodega | Cuadro hueco | Existe, espera camión | `--tenue` |
+| Desconectado | Cuadro cortado | Montado, y más de 24 h callado | `--tenue` a 60 % |
+| De baja | Cuadro tachado con una equis | Su historia queda; él ya no cuenta | `--tenue` a 60 % |
 
 **Regla de extensión:** cuando haga falta un estado nuevo, se inventa una **forma** nueva, no un color nuevo. Si dos estados comparten forma y se distinguen sólo por color, está mal.
 
@@ -91,8 +103,14 @@ Los papeles del expediente (Marco, Pieza 6 §H; `docs/Ficha-Expedientes.md` §4)
 | Vencido | Hoja hueca, **tachada** con una sola diagonal | La hoja sigue ahí, pero ya no vale | `--tinta` |
 | Por vencer | Hoja hueca con la mitad inferior **llena en diagonal** | Se está gastando | `--tinta` |
 | Falta | **Contorno punteado** de hoja | El lugar existe; la hoja no | `--tinta` |
+| Falta la fecha | Hoja hueca de **trazo continuo** | El papel está, pero no dice cuándo vence; pide algo | `--tinta` |
+| Falta la regla | Hoja hueca con **el doblez lleno y más grande** que en las demás hojas (a 22 px, con el de tamaño normal, sólo el color la separaba de «falta la fecha») | Espera su regla del catálogo; no pide nada al transportista, pero tampoco deja decir «al día» | `--tenue` |
 | Vigente | Hoja llena | Hoja entera | `--tenue` |
 | Sin vencimiento | Hoja llena con una **raya hueca** horizontal | Hoja entera sin fecha que corra | `--tenue` |
+
+**No capturado** —un papel opcional que nadie ha capturado— **no lleva pieza**: va en una línea al final, «Opcionales sin capturar: …», cada nombre tocable para capturarlo. Falta la fecha, falta la regla y no capturado, aprobados el 16 de septiembre de 2026.
+
+**Una pieza que liga sin afirmar un estado no lleva glifo.** Una relación —el dispositivo que una unidad trajo antes, la unidad donde estuvo un dispositivo— o una foja ya renovada se dibujan sin forma: ponerles una diría un estado que nadie juzgó.
 
 - **Lo que pide hacer algo va en tinta; lo que está al día, en tenue.** Es la ley de «lo apagado se apaga»: el ojo va solo a los tres primeros.
 - **Ni cobre ni colores de veredicto.** Un papel vencido no es un servicio no cumplido, y la vigencia no es vida.

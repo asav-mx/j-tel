@@ -21,6 +21,7 @@
     "escenario-permiso": "tsx src/escenario-hilo-permiso.ts",
     "escenario-arranque": "tsx src/escenario-arranque.ts",
     "escenario-flota-compas": "tsx src/escenario-flota-compas.ts",
+    "escenario-expedientes": "tsx src/escenario-expedientes.ts",
     "studio": "drizzle-kit studio",
     "test": "TZ=UTC vitest run",
     "test:integration": "TZ=UTC vitest run --config vitest.integration.config.ts",

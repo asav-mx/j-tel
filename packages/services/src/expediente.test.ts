@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  cargarCuartoDeExpedientes,
   cargarExpedienteDeChofer,
   cargarExpedienteDeDispositivo,
   cargarExpedienteDeUnidad,
@@ -238,5 +239,83 @@ describe("el expediente de un chofer", () => {
     const e = await cargarExpedienteDeChofer(repos({ catalogo }).repos, { carrierAccountId: "c1", driverId: "ch1", ahora: AHORA });
     if (e?.documentos.estado !== "con_datos") throw new Error("sin documentos");
     expect(e.documentos.valor.papeles.map((p) => p.tipo.clave)).toEqual(["licencia"]);
+  });
+});
+
+describe("el cuarto de Expedientes", () => {
+  const regla = (diasDeAviso: number) => ({ obligatorio: true, vence: true, diasDeAviso, periodicidadMeses: null });
+  const catalogo = [
+    { tipo: tipo("t1", "poliza_de_seguro", "Póliza de seguro"), regla: regla(30) },
+    { tipo: tipo("t2", "verificacion_vehicular", "Verificación vehicular"), regla: regla(15) },
+  ];
+  const vigenteDe = (id: string, unitId: string, documentTypeId: string, expiresOn: string | null, creada = "2026-09-01T00:00:00Z") => ({
+    foja: { id, unitId, documentTypeId, createdAt: new Date(creada) },
+    version: version(id, expiresOn, creada),
+  });
+
+  function reposDelCuarto(o: { mercado?: typeof CHIHUAHUA | null; fojas?: unknown[] } = {}) {
+    const base = repos({ mercado: o.mercado, catalogo }).repos as unknown as Record<string, Record<string, unknown>>;
+    base.expedientes!.fojasVigentesDeUnidadesDeCuenta = async () => o.fojas ?? [];
+    base.expedientes!.choferesDeCuenta = async () => [];
+    base.fleet!.getUnitsForCarrier = async () => [
+      { id: "u1", label: "10254", plateNumber: "ETD-41-92", active: true },
+      { id: "u2", label: "10118", plateNumber: null, active: true },
+      { id: "u3", label: "10099", plateNumber: null, active: false },
+    ];
+    base.fleet!.getDevicesForCarrier = async () => [
+      { id: "d1", imei: "111", label: "TK-FTC927-001", retiredAt: null, retiredReason: null },
+      { id: "d9", imei: "999", label: "Umbrella 9", retiredAt: new Date("2026-09-05T00:00:00Z"), retiredReason: "corte de Umbrella" },
+    ];
+    return base as never;
+  }
+
+  it("primero lo que pide algo; las inactivas al final", async () => {
+    const cuarto = await cargarCuartoDeExpedientes(
+      reposDelCuarto({
+        fojas: [
+          vigenteDe("f1", "u2", "t1", "2026-09-10"), // vencida para 10118
+          vigenteDe("f2", "u2", "t2", "2026-09-20"), // por vencer
+          vigenteDe("f3", "u1", "t1", "2027-06-01"),
+          vigenteDe("f4", "u1", "t2", "2027-06-01"),
+        ],
+      }),
+      { carrierAccountId: "c1", ahora: AHORA },
+    );
+    expect(cuarto.unidades.map((u) => u.numeroEconomico)).toEqual(["10118", "10254", "10099"]);
+    expect(cuarto.unidades[0]!.papeles).toMatchObject({ estado: "con_datos", valor: { pidenAlgo: 2, peor: "vencido" } });
+    expect(cuarto.unidades[1]!.papeles).toMatchObject({ estado: "con_datos", valor: { pidenAlgo: 0, estaAlDia: true } });
+    // La inactiva no tiene fojas y sus dos papeles faltan, pero no opera: no cuenta.
+    expect(cuarto.papelesQuePidenAlgo).toBe(2);
+    expect(cuarto.unidades[2]!.papeles).toMatchObject({ valor: { pidenAlgo: 2 } });
+    expect(cuarto.mercado).toEqual({ nombre: "Chihuahua", hoy: "2026-09-15" });
+  });
+
+  it("de una misma unidad y tipo, la foja capturada más recientemente es la vigente", async () => {
+    const cuarto = await cargarCuartoDeExpedientes(
+      reposDelCuarto({
+        fojas: [
+          vigenteDe("nueva", "u1", "t1", "2027-09-01", "2026-09-10T00:00:00Z"),
+          vigenteDe("vieja", "u1", "t1", "2026-09-01", "2025-09-10T00:00:00Z"),
+          vigenteDe("f4", "u1", "t2", "2027-06-01"),
+        ],
+      }),
+      { carrierAccountId: "c1", ahora: AHORA },
+    );
+    const u1 = cuarto.unidades.find((u) => u.id === "u1")!;
+    expect(u1.papeles).toMatchObject({ valor: { pidenAlgo: 0, estaAlDia: true } });
+  });
+
+  it("sin mercado: los papeles no están disponibles y no hay cuenta de pendientes", async () => {
+    const cuarto = await cargarCuartoDeExpedientes(reposDelCuarto({ mercado: null }), { carrierAccountId: "c1", ahora: AHORA });
+    expect(cuarto.unidades[0]!.papeles).toEqual({ estado: "aun_no_disponible", fuente: "mercado_de_la_cuenta" });
+    expect(cuarto.papelesQuePidenAlgo).toBeNull();
+    expect(cuarto.mercado).toBeNull();
+  });
+
+  it("los dispositivos de baja van aparte, no se esconden; los choferes vacíos lo dicen", async () => {
+    const cuarto = await cargarCuartoDeExpedientes(reposDelCuarto(), { carrierAccountId: "c1", ahora: AHORA });
+    expect(cuarto.dispositivos.enServicio.map((d) => [d.nombre, d.estado.grupo, d.unidad])).toEqual([["TK-FTC927-001", "en_unidad", "10254"]]);
+    expect(cuarto.dispositivos.deBaja.map((d) => d.nombre)).toEqual(["Umbrella 9"]);
+    expect(cuarto.choferes).toEqual({ estado: "vacia" });
   });
 });
