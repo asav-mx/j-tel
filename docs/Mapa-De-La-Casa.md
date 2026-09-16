@@ -39,7 +39,7 @@ Compra Compás aunque nunca tenga contrato. Vernier se enciende encima cuando lo
 - **Expedientes** — la puerta a los expedientes de las cosas del transportista: sus unidades, sus dispositivos, sus choferes, cada uno con sus cuatro familias —identidad, actividad, relaciones y documentos— (Marco 6.30–6.33). No es un archivero de papeles. La familia de documentos —el segundo afluente: pólizas, permisos, exámenes, capacitaciones, mantenimiento firmado, inspecciones— es la que hoy más falta, y es por donde se empieza. Aquí viven los **choferes**: hoy toda su sustancia es su expediente documental; cuando ganen actividad propia, su expediente crece sin cambiar de lugar. *(nuevo — construible ya, no depende del GPS)*
 - **Vernier** (con contrato) — servicios con veredicto, **justificaciones** (§D), reportes propios, su lado del estado de cuenta.
   - **Contratos y perfiles** — ruta × turno, KML, tolerancias, unidades posibles. *(existe)*
-- **Circuitos** (si opera público) — circuitos, paradas, tabla de horario, publicación a la app del pasajero. *(existe en parte; la modalidad es material de Marco pendiente)*
+- **Circuitos** (si opera público) — circuitos, paradas, tabla de horario, publicación a la app del pasajero. *(existe en parte; la modalidad la define la Pieza 7 del Marco; cómo se marca en los datos sigue abierto, 7.7)*
 
 Fichas (se llega tocando): **Ver ‹unidad›** (ubicación viva + historial + playback + dispositivo + documentos + ledger), **Ver ‹dispositivo›**, **Ver ‹chofer›**.
 
