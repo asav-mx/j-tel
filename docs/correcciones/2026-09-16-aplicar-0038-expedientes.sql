@@ -210,7 +210,7 @@ COMMENT ON TABLE document_versions IS
   'Las versiones de una foja. Corregir crea una version nueva; la vigente es la mas reciente. No se edita (0038).';
 
 INSERT INTO markets (country_code, state_code, municipality, name, time_zone)
-VALUES ('MX', 'CHH', 'Juárez', 'Ciudad Juárez, Chihuahua', 'America/Ciudad_Juarez')
+VALUES ('MX', 'CHH', NULL, 'Chihuahua', 'America/Ciudad_Juarez')
 ON CONFLICT (country_code, state_code, (coalesce(municipality, ''))) DO NOTHING;
 
 INSERT INTO document_types (market_id, subject, clave, name)
@@ -225,7 +225,7 @@ SELECT m.id, t.subject, t.clave, t.name
    ('chofer', 'examen_medico',               'Examen médico'),
    ('chofer', 'antidoping',                  'Antidoping')
  ) AS t(subject, clave, name)
- WHERE m.country_code = 'MX' AND m.state_code = 'CHH' AND m.municipality = 'Juárez'
+ WHERE m.country_code = 'MX' AND m.state_code = 'CHH' AND m.municipality IS NULL
 ON CONFLICT (market_id, subject, clave) DO NOTHING;
 
 
@@ -248,14 +248,14 @@ SELECT (SELECT count(*) FROM markets)             AS mercados,
 
 -- LO QUE DEBES VER:   1 · 7 · 0 · 0 · 0 · 0
 
--- 3b. El catálogo de Juárez: nombres sin reglas.
+-- 3b. El catálogo de Chihuahua: nombres sin reglas.
 SELECT m.name AS mercado, t.subject, t.clave, t.name
   FROM document_types t JOIN markets m ON m.id = t.market_id
  ORDER BY t.subject DESC, t.clave;
 
 -- LO QUE DEBES VER: 4 de unidad (permiso_transporte_personal,
 -- poliza_de_seguro, tarjeta_de_circulacion, verificacion_vehicular) y 3 de
--- chofer (antidoping, examen_medico, licencia), todos de «Ciudad Juárez, Chihuahua».
+-- chofer (antidoping, examen_medico, licencia), todos del mercado «Chihuahua».
 
 -- 3c. Los candados, leídos.
 SELECT conrelid::regclass AS tabla, conname, pg_get_constraintdef(oid) AS definicion

@@ -33,9 +33,21 @@
 -- **El catálogo es dato, no código** (ficha §5): cada mercado define el suyo,
 -- como cada contrato define su tolerancia, y se edita desde la pantalla (6.18).
 --
--- **Juárez nace con sus siete nombres y SIN reglas.** Obligatorio, vence, días
--- de aviso y periodicidad los carga ASAV desde la pantalla. Mientras un tipo no
--- tenga regla, la lectura dice «falta la regla» y no supone nada (ficha §5.4).
+-- **Chihuahua nace con sus siete nombres y SIN reglas.** Obligatorio, vence,
+-- días de aviso y periodicidad los carga ASAV desde la pantalla. Mientras un
+-- tipo no tenga regla, la lectura dice «falta la regla» y no supone nada
+-- (ficha §5.4).
+--
+-- **El mercado es estatal: MX · Chihuahua, sin municipio** (ASAV, 16 sep 2026).
+-- El transporte de personal es competencia del Estado —permiso de la Secretaría
+-- estatal, GPS obligatorio por ley estatal—; el municipio sólo regula tránsito.
+-- El mismo catálogo sirve para los 67 municipios. Un papel puramente municipal
+-- se agrega después como excepción.
+--
+-- **Su zona horaria es la de Ciudad Juárez**, como ratificó la ficha §4, aunque
+-- el resto del estado usa `America/Chihuahua` (una hora de diferencia parte del
+-- año). Hoy todas las cuentas operan en Juárez. Si llega un carrier de otra zona
+-- del estado, la zona pasa a la cuenta: es otra migración y otra decisión.
 --
 -- **Nada se edita en sitio.** Las reglas, las fojas y sus versiones rechazan el
 -- UPDATE con un trigger: corregir es agregar. El DELETE sí se permite, a
@@ -230,7 +242,7 @@ COMMENT ON TABLE document_versions IS
 --> statement-breakpoint
 
 INSERT INTO markets (country_code, state_code, municipality, name, time_zone)
-VALUES ('MX', 'CHH', 'Juárez', 'Ciudad Juárez, Chihuahua', 'America/Ciudad_Juarez')
+VALUES ('MX', 'CHH', NULL, 'Chihuahua', 'America/Ciudad_Juarez')
 ON CONFLICT (country_code, state_code, (coalesce(municipality, ''))) DO NOTHING;
 --> statement-breakpoint
 
@@ -246,5 +258,5 @@ SELECT m.id, t.subject, t.clave, t.name
    ('chofer', 'examen_medico',               'Examen médico'),
    ('chofer', 'antidoping',                  'Antidoping')
  ) AS t(subject, clave, name)
- WHERE m.country_code = 'MX' AND m.state_code = 'CHH' AND m.municipality = 'Juárez'
+ WHERE m.country_code = 'MX' AND m.state_code = 'CHH' AND m.municipality IS NULL
 ON CONFLICT (market_id, subject, clave) DO NOTHING;

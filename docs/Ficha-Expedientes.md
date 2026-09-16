@@ -107,7 +107,9 @@ La lista de abajo es de hoy, 16 de septiembre. Cada parte dice su fuente; al con
 
 Cada tipo de papel de un mercado lleva: sujeto (unidad o chofer), nombre, si es **obligatorio**, si **vence**, sus **días de aviso** para «por vencer» (sólo si vence), y su **periodicidad** (sólo si vence y se puede calcular desde la emisión).
 
-### Juárez nace con su catálogo lleno — ✓ decidido (16 sep)
+### Chihuahua nace con su catálogo lleno — ✓ decidido (16 sep)
+
+**El mercado es estatal: MX · Chihuahua, sin municipio** (ASAV, 16 sep). El transporte de personal es competencia del Estado —permiso de la Secretaría estatal, GPS obligatorio por ley estatal—; el municipio sólo regula tránsito. El mismo catálogo sirve para los 67 municipios; un papel puramente municipal se agrega después como excepción. Su zona horaria sigue siendo la de Ciudad Juárez (§4).
 
 | Sujeto | Papel |
 |---|---|

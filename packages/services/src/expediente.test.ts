@@ -10,12 +10,12 @@ import {
 const AHORA = new Date("2026-09-16T05:30:00Z");
 const MIN = 60_000;
 
-const JUAREZ = {
+const CHIHUAHUA = {
   id: "m1",
-  name: "Ciudad Juárez, Chihuahua",
+  name: "Chihuahua",
   countryCode: "MX",
   stateCode: "CHH",
-  municipality: "Juárez",
+  municipality: null,
   timeZone: "America/Ciudad_Juarez",
 };
 
@@ -42,7 +42,7 @@ const version = (documentId: string, expiresOn: string | null, creada: string) =
 });
 
 interface Opciones {
-  mercado?: typeof JUAREZ | null;
+  mercado?: typeof CHIHUAHUA | null;
   conContrato?: boolean;
   catalogo?: Array<{ tipo: ReturnType<typeof tipo>; regla: unknown }>;
   fojas?: unknown[];
@@ -68,7 +68,7 @@ function repos(o: Opciones = {}) {
               credenciales: { fullName: "Juan Pérez", licenseNumber: "CHH-123" },
             }
           : null,
-      mercadoDeCuenta: async () => (o.mercado === undefined ? JUAREZ : o.mercado),
+      mercadoDeCuenta: async () => (o.mercado === undefined ? CHIHUAHUA : o.mercado),
       catalogo: async (_m: string, subject: string) =>
         (o.catalogo ?? []).filter((c) => c.tipo.subject === subject),
       fojasDeSujeto: async () => o.fojas ?? [],

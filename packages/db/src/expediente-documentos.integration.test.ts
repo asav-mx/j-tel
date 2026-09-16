@@ -40,25 +40,25 @@ let cuentaB = "";
 let cliente = "";
 let unidadA = "";
 let unidadB = "";
-let juarez = "";
+let chihuahua = "";
 let poliza = "";
 let verificacion = "";
 let licencia = "";
 
 beforeAll(async () => {
-  const mercado = await repos.expedientes.mercadoPorLugar("MX", "CHH", "Juárez");
-  if (!mercado) throw new Error("La rama de prueba no tiene el mercado de Juárez: falta aplicar la 0038.");
-  juarez = mercado.id;
+  const mercado = await repos.expedientes.mercadoPorLugar("MX", "CHH", null);
+  if (!mercado) throw new Error("La rama de prueba no tiene el mercado de Chihuahua: falta aplicar la 0038.");
+  chihuahua = mercado.id;
 
   cuentaA = (await repos.accounts.create({ type: "carrier", name: `Carrier A ${marca}`, slug: `carrier-a-${marca}`, isDemo: true })).id;
   cuentaB = (await repos.accounts.create({ type: "carrier", name: `Carrier B ${marca}`, slug: `carrier-b-${marca}`, isDemo: true })).id;
   cliente = (await repos.accounts.create({ type: "client", name: `Cliente ${marca}`, slug: `cliente-${marca}`, isDemo: true })).id;
   unidadA = (await repos.fleet.createUnit(cuentaA, `A-${marca}`)).id;
   unidadB = (await repos.fleet.createUnit(cuentaB, `B-${marca}`)).id;
-  await repos.expedientes.asignarMercado(cuentaA, juarez);
+  await repos.expedientes.asignarMercado(cuentaA, chihuahua);
 
-  const deUnidad = await repos.expedientes.catalogo(juarez, "unidad");
-  const deChofer = await repos.expedientes.catalogo(juarez, "chofer");
+  const deUnidad = await repos.expedientes.catalogo(chihuahua, "unidad");
+  const deChofer = await repos.expedientes.catalogo(chihuahua, "chofer");
   poliza = deUnidad.find((c) => c.tipo.clave === "poliza_de_seguro")!.tipo.id;
   verificacion = deUnidad.find((c) => c.tipo.clave === "verificacion_vehicular")!.tipo.id;
   licencia = deChofer.find((c) => c.tipo.clave === "licencia")!.tipo.id;
@@ -82,10 +82,10 @@ async function rechazo(fn: () => Promise<unknown>): Promise<string | null> {
   }
 }
 
-describe("Juárez nace con su catálogo, sin reglas", () => {
+describe("Chihuahua nace con su catálogo, sin reglas", () => {
   it("siete nombres: cuatro de unidad y tres de chofer", async () => {
-    const deUnidad = await repos.expedientes.catalogo(juarez, "unidad");
-    const deChofer = await repos.expedientes.catalogo(juarez, "chofer");
+    const deUnidad = await repos.expedientes.catalogo(chihuahua, "unidad");
+    const deChofer = await repos.expedientes.catalogo(chihuahua, "chofer");
     expect(deUnidad.map((c) => c.tipo.clave).sort()).toEqual([
       "permiso_transporte_personal",
       "poliza_de_seguro",
@@ -98,12 +98,12 @@ describe("Juárez nace con su catálogo, sin reglas", () => {
 
 describe("el mercado es de las cuentas de carrier", () => {
   it("la cuenta sabe su mercado, con su zona horaria", async () => {
-    expect(await repos.expedientes.mercadoDeCuenta(cuentaA)).toMatchObject({ id: juarez, timeZone: "America/Ciudad_Juarez" });
+    expect(await repos.expedientes.mercadoDeCuenta(cuentaA)).toMatchObject({ id: chihuahua, timeZone: "America/Ciudad_Juarez" });
     expect(await repos.expedientes.mercadoDeCuenta(cuentaB)).toBeNull();
   });
 
   it("accounts_mercado_solo_carrier: un cliente no puede tener mercado", async () => {
-    expect(await rechazo(() => repos.expedientes.asignarMercado(cliente, juarez))).toBe("accounts_mercado_solo_carrier");
+    expect(await rechazo(() => repos.expedientes.asignarMercado(cliente, chihuahua))).toBe("accounts_mercado_solo_carrier");
   });
 });
 
@@ -273,7 +273,7 @@ describe("lo que tuvo papeles no se borra solo", () => {
   it("borrar la CUENTA entera sí arrastra fojas, versiones y unidades", async () => {
     const tmp = (await repos.accounts.create({ type: "carrier", name: `Tmp ${marca}`, slug: `tmp-${marca}`, isDemo: true })).id;
     const u = (await repos.fleet.createUnit(tmp, `T-${marca}`)).id;
-    await repos.expedientes.asignarMercado(tmp, juarez);
+    await repos.expedientes.asignarMercado(tmp, chihuahua);
     await repos.expedientes.capturarFoja({
       carrierAccountId: tmp,
       documentTypeId: poliza,
