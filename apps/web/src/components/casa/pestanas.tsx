@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { Grupo } from "@/lib/casa/casas";
+import { estaEnLugar, type Grupo } from "@/lib/casa/casas";
 
 /**
  * Las pestañas — la navegación del cascarón.
@@ -32,8 +32,10 @@ export function Pestanas({ grupos }: { grupos: Grupo[] }) {
   const ruta = usePathname();
 
   // Un lugar está activo si la ruta es la suya o cuelga de ella; así el padre
-  // sigue marcado mientras se navega su segundo nivel.
-  const estaEn = (href: string) => ruta === href || ruta.startsWith(`${href}/`);
+  // sigue marcado mientras se navega su segundo nivel. La regla vive en
+  // `casas.ts` y se comparte con el sello de la sección: dos copias de «estoy
+  // aquí» se separan en cuanto alguien toque una.
+  const estaEn = (href: string) => estaEnLugar(ruta, href);
 
   const lugares = grupos.flatMap((grupo) => grupo.lugares);
   const activo = lugares.find((lugar) => lugar.ruta !== null && estaEn(lugar.ruta));
@@ -103,7 +105,7 @@ export function Pestanas({ grupos }: { grupos: Grupo[] }) {
       )}
 
       {/* — Celular: la misma casa colapsada a cuatro pestañas abajo — */}
-      <BarraDeAbajo lugares={lugares} estaEn={estaEn} />
+      <BarraDeAbajo grupos={grupos} estaEn={estaEn} />
     </>
   );
 }
@@ -115,7 +117,8 @@ export function Pestanas({ grupos }: { grupos: Grupo[] }) {
  * Cuando hay más de cuatro lugares, las tres primeras se quedan y la cuarta es
  * «Más», que despliega el resto ahí mismo. Nada se esconde sin decirlo: un
  * lugar que existe pero no cabe sigue estando a un toque, con su nombre
- * completo.
+ * completo — **y con su sello encima**, que es lo único que en el teléfono
+ * enseña dos secciones juntas.
  *
  * ⚠ Este reparto **no lo ratificó nadie**: hoy ninguna casa tiene un solo
  * cuarto, así que no hay forma de verlo con lugares de verdad. El día que una
@@ -123,33 +126,57 @@ export function Pestanas({ grupos }: { grupos: Grupo[] }) {
  * caben, no cuál se queda fuera.
  */
 function BarraDeAbajo({
-  lugares,
+  grupos,
   estaEn,
 }: {
-  lugares: { nombre: string; ruta: string | null }[];
+  grupos: Grupo[];
   estaEn: (href: string) => boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
 
+  const lugares = grupos.flatMap((grupo) => grupo.lugares);
   if (lugares.length === 0) return null;
 
   const caben = lugares.length <= 4 ? lugares : lugares.slice(0, 3);
-  const resto = lugares.length <= 4 ? [] : lugares.slice(3);
+  const sobran = lugares.length <= 4 ? [] : lugares.slice(3);
+
+  /* Los que no cupieron, devueltos a su grupo: en la lista desplegada sí hay
+     sitio para el sello, y es el único lugar del teléfono donde se ven dos
+     secciones al mismo tiempo. Un grupo que no aportó ninguno desaparece, como
+     en las pestañas de computadora. */
+  const gruposDelResto = grupos
+    .map((grupo) => ({
+      sello: grupo.sello,
+      lugares: grupo.lugares.filter((lugar) => sobran.includes(lugar)),
+    }))
+    .filter((grupo) => grupo.lugares.length > 0);
 
   return (
     <>
-      {abierto && resto.length > 0 && (
-        <div className="fixed inset-x-0 bottom-[52px] z-20 border-t border-[var(--linea)] bg-[var(--pieza)] md:hidden">
-          {resto.map((lugar) => (
-            <Link
-              key={lugar.ruta}
-              href={lugar.ruta as string}
-              onClick={() => setAbierto(false)}
-              aria-current={estaEn(lugar.ruta as string) ? "page" : undefined}
-              className="block cursor-pointer border-b border-[var(--linea)] px-5 py-3 text-[15px] last:border-b-0"
-            >
-              {lugar.nombre}
-            </Link>
+      {abierto && sobran.length > 0 && (
+        <div className="fixed inset-x-0 bottom-[52px] z-20 max-h-[60dvh] overflow-y-auto border-t border-[var(--linea)] bg-[var(--pieza)] md:hidden">
+          {gruposDelResto.map((grupo, i) => (
+            <div key={grupo.sello ?? `grupo-${i}`}>
+              {grupo.sello !== null && (
+                <p
+                  data-medida
+                  className="border-b border-[var(--linea)] px-5 pb-1.5 pt-3 text-[10px] uppercase tracking-[0.16em] text-[var(--tenue)]"
+                >
+                  {grupo.sello}
+                </p>
+              )}
+              {grupo.lugares.map((lugar) => (
+                <Link
+                  key={lugar.ruta}
+                  href={lugar.ruta as string}
+                  onClick={() => setAbierto(false)}
+                  aria-current={estaEn(lugar.ruta as string) ? "page" : undefined}
+                  className="block cursor-pointer border-b border-[var(--linea)] px-5 py-3 text-[15px] hover:bg-[var(--roce)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--tinta)]"
+                >
+                  {lugar.nombre}
+                </Link>
+              ))}
+            </div>
           ))}
         </div>
       )}
@@ -168,11 +195,10 @@ function BarraDeAbajo({
             href={lugar.ruta as string}
             onClick={() => setAbierto(false)}
             aria-current={estaEn(lugar.ruta as string) ? "page" : undefined}
-            /* El lugar activo se marca con tinta y con una barra de cobre
-               arriba, no pintando la palabra de cobre: el cobre sobre la
-               superficie clara da 2.5:1, y una etiqueta de 12 px en ese
-               contraste se pierde con el sol de frente — que es justo la
-               condición para la que el skill eligió la forma sobre el color. */
+            /* El lugar activo se marca con la palabra en tinta **y** con una
+               barra de cobre arriba, nunca pintando la palabra de cobre: el
+               color no carga significado solo, y una etiqueta de 12 px es donde
+               peor aguanta que lo intente. */
             className={`relative flex flex-1 items-center justify-center px-1 text-center text-[12px] leading-tight ${
               estaEn(lugar.ruta as string)
                 ? "text-[var(--tinta)] before:absolute before:inset-x-3 before:top-0 before:h-0.5 before:bg-[var(--senal)] before:content-['']"
@@ -183,12 +209,12 @@ function BarraDeAbajo({
           </Link>
         ))}
 
-        {resto.length > 0 && (
+        {sobran.length > 0 && (
           <button
             type="button"
             onClick={() => setAbierto((v) => !v)}
             aria-expanded={abierto}
-            className="flex flex-1 cursor-pointer items-center justify-center px-1 text-[12px] text-[var(--tenue)]"
+            className="flex flex-1 cursor-pointer items-center justify-center px-1 text-[12px] text-[var(--tenue)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--tinta)]"
           >
             Más
           </button>

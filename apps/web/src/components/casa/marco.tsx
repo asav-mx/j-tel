@@ -1,5 +1,6 @@
 import { Pestanas } from "@/components/casa/pestanas";
 import { InterruptorPiel } from "@/components/casa/interruptor-piel";
+import { SelloDeLaSeccion } from "@/components/casa/sello-de-la-seccion";
 import { menuDe, type Alcance, type Casa } from "@/lib/casa/casas";
 
 /**
@@ -44,11 +45,17 @@ export function Marco({
   return (
     <div className="flex min-h-[100dvh] flex-col">
       <header className="flex items-center justify-between gap-4 px-5 pb-2 pt-4 md:px-6">
-        <span
-          style={{ fontFamily: "var(--letra-titular)", fontWeight: 800, letterSpacing: "-0.02em" }}
-          className="text-[17px]"
-        >
-          J-Tel
+        <span className="flex min-w-0 items-center gap-2">
+          <span
+            style={{ fontFamily: "var(--letra-titular)", fontWeight: 800, letterSpacing: "-0.02em" }}
+            className="flex-none text-[17px]"
+          >
+            J-Tel
+          </span>
+          {/* El sello de la sección, sólo en celular: ahí la barra de abajo no
+              tiene dónde ponerlo y la marca se caería entera. En computadora
+              cada sello ya vive encima de sus pestañas. */}
+          <SelloDeLaSeccion grupos={grupos} />
         </span>
         <InterruptorPiel />
       </header>

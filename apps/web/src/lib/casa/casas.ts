@@ -264,6 +264,36 @@ export function menuDe(casa: Casa, alcance: Alcance): Grupo[] {
     .filter((grupo) => grupo.lugares.length > 0);
 }
 
+/** ¿Esta ruta es la del lugar, o cuelga de él? */
+export function estaEnLugar(ruta: string, lugar: string | null): boolean {
+  if (lugar === null) return false;
+  return ruta === lugar || ruta.startsWith(`${lugar}/`);
+}
+
+/**
+ * El sello del lugar donde se está parado, o `null` si no hay ninguno.
+ *
+ * Lo pide el celular. En computadora los sellos van encima de sus pestañas y se
+ * ven los tres a la vez; en la barra de abajo no cabe ninguno, y sin esto la
+ * marca **desaparece por completo en el teléfono** — que es media razón de la
+ * opción B: el menú lista nombres de cosa y la marca se graba por repetición del
+ * sello. Un sello que no se repite no graba nada.
+ *
+ * Devuelve `null` cuando toca: en la puerta de la casa, donde todavía no se
+ * entró a ninguna sección, y en los grupos que el mapa dejó sin producto
+ * —Expedientes no es de nadie—. Inventarle un sello por simetría sería poner
+ * marca donde no la hay.
+ */
+export function selloActivo(grupos: Grupo[], ruta: string): string | null {
+  const grupo = grupos.find((g) =>
+    g.lugares.some(
+      (lugar) =>
+        estaEnLugar(ruta, lugar.ruta) || (lugar.hijos ?? []).some((hijo) => estaEnLugar(ruta, hijo.ruta)),
+    ),
+  );
+  return grupo?.sello ?? null;
+}
+
 /**
  * Cuántas entradas de primer nivel tiene una casa para una cuenta.
  *

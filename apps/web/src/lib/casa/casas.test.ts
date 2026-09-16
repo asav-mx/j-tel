@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   CASAS,
   cuentaEntradas,
+  estaEnLugar,
   menuDe,
+  selloActivo,
   type Alcance,
   type Cara,
   type Casa,
@@ -31,11 +33,28 @@ function conCuartos(casa: Casa): Casa {
       ...grupo,
       lugares: grupo.lugares.map((lugar) => ({
         ...lugar,
-        ruta: `${casa.base}/x`,
-        hijos: lugar.hijos?.map((hijo) => ({ ...hijo, ruta: `${casa.base}/x/y` })),
+        // Una ruta DISTINTA por lugar, sacada de su nombre. Antes todas eran la
+        // misma (`base/x`) y no se notaba, porque las pruebas de entonces sólo
+        // miraban nombres. En cuanto algo pregunta «¿dónde estoy?» —el sello de
+        // la sección— rutas repetidas hacen que siempre gane la primera.
+        ruta: `${casa.base}/${ranura(lugar.nombre)}`,
+        hijos: lugar.hijos?.map((hijo) => ({
+          ...hijo,
+          ruta: `${casa.base}/${ranura(lugar.nombre)}/${ranura(hijo.nombre)}`,
+        })),
       })),
     })),
   };
+}
+
+/** Un trozo de ruta estable a partir de un nombre, sólo para las pruebas. */
+function ranura(nombre: string): string {
+  return nombre
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 describe("regla 3 — dos niveles como máximo, y pocos lugares", () => {
@@ -162,5 +181,54 @@ describe("cada casa tiene una puerta, y responde una sola pregunta", () => {
     expect(CASAS.planta.pregunta).toBe("¿Qué pasó hoy?");
     expect(CASAS.corporativo.pregunta).toBe("¿Cómo vamos, y con quién?");
     expect(CASAS.jstaff.pregunta).toBe("¿Está sana la plataforma?");
+  });
+});
+
+describe("el sello de la sección, que es lo que el celular tenía perdido", () => {
+  // En computadora los tres sellos se ven a la vez encima de sus pestañas. En
+  // el teléfono no cabe ninguno, y sin esto «Compás» y «Vernier» no los vería
+  // nunca quien sólo usa el celular — que vacía media razón de la opción B.
+  const menu = menuDe(conCuartos(CASAS.transportista), TODO);
+  const rutaDe = (nombre: string) =>
+    menu.flatMap((g) => g.lugares).find((l) => l.nombre === nombre)!.ruta as string;
+
+  it("estando en un lugar, el sello es el de su grupo", () => {
+    expect(selloActivo(menu, rutaDe("Flota en vivo"))).toBe("Compás");
+    expect(selloActivo(menu, rutaDe("Circuitos"))).toBe("Transporte público");
+  });
+
+  it("el segundo nivel conserva el sello de su padre", () => {
+    // Dentro de «Contratos y perfiles» se sigue estando en Vernier: si el sello
+    // se apagara al bajar un nivel, parpadearía al navegar.
+    const cumplimiento = menu.flatMap((g) => g.lugares).find((l) => l.nombre === "Cumplimiento")!;
+    expect(selloActivo(menu, cumplimiento.hijos![0].ruta as string)).toBe("Vernier");
+  });
+
+  it("un grupo sin producto no inventa uno", () => {
+    // El mapa no le pone nombre de producto a Expedientes. Ponérselo por
+    // simetría sería marca donde no la hay.
+    expect(selloActivo(menu, rutaDe("Expedientes"))).toBeNull();
+  });
+
+  it("en la puerta de la casa todavía no hay sección, y no hay sello", () => {
+    expect(selloActivo(menu, "/casa/transportista")).toBeNull();
+  });
+});
+
+describe("«estoy aquí» es una sola regla", () => {
+  it("vale para la ruta exacta y para lo que cuelga de ella", () => {
+    // Así el padre sigue marcado mientras se navega su segundo nivel.
+    expect(estaEnLugar("/casa/planta/el-dia", "/casa/planta/el-dia")).toBe(true);
+    expect(estaEnLugar("/casa/planta/el-dia/10254", "/casa/planta/el-dia")).toBe(true);
+  });
+
+  it("no se deja engañar por un nombre que empieza igual", () => {
+    // «/el-dia-anterior» no cuelga de «/el-dia»: sin la barra, dos lugares
+    // distintos se marcarían activos al mismo tiempo.
+    expect(estaEnLugar("/casa/planta/el-dia-anterior", "/casa/planta/el-dia")).toBe(false);
+  });
+
+  it("un lugar sin cuarto nunca está activo", () => {
+    expect(estaEnLugar("/casa/planta", null)).toBe(false);
   });
 });
