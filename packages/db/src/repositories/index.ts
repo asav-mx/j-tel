@@ -16,6 +16,7 @@ import type { Database } from "../index.js";
 import { escribirEnLotes, filasPorSentencia } from "../lote-de-escritura.js";
 import { planDeVinculacion } from "../mapeo-identidades.js";
 import { routeWindowSizing } from "../ventana-ocurrencia.js";
+import { consultaUltimoPuntoPorImei } from "../ultimo-punto-por-imei.js";
 import {
   resumirUnidadDia,
   HUECO_MINUTOS_POR_DEFECTO,
@@ -4832,22 +4833,18 @@ export class TelemetryRepository {
    *
    * Es la mitad de «la última señal» de un dispositivo (la otra es su posición
    * viva): sin esto, un dispositivo con historia archivada y sin fila en
-   * `live_positions` saldría «nunca reportó». Va por el índice único
-   * `(imei, recorded_at)`, así que es un recorrido corto por IMEI.
+   * `live_positions` saldría «nunca reportó».
+   *
+   * La forma de la consulta es la que la hace barata; ver
+   * `consultaUltimoPuntoPorImei`.
    */
   async ultimoPuntoPorImei(imeis: string[]): Promise<Map<string, Date>> {
     const porImei = new Map<string, Date>();
     if (imeis.length === 0) return porImei;
-    const rows = await this.db
-      .select({
-        imei: telemetryPoints.imei,
-        ultimo: sql<Date>`max(${telemetryPoints.recordedAt})`,
-      })
-      .from(telemetryPoints)
-      .where(inArray(telemetryPoints.imei, imeis))
-      .groupBy(telemetryPoints.imei);
-    for (const r of rows) {
-      if (!r.ultimo) continue;
+    const filas = await this.db.execute<{ imei: string; ultimo: Date | string }>(
+      consultaUltimoPuntoPorImei(imeis),
+    );
+    for (const r of filas) {
       porImei.set(r.imei, r.ultimo instanceof Date ? r.ultimo : new Date(r.ultimo));
     }
     return porImei;

@@ -31,6 +31,7 @@
     "verificar-resumen": "tsx src/verificar-resumen-telemetria.ts",
     "verificar-conteos": "tsx src/verificar-conteos.ts",
     "medir-cadencia": "tsx src/medir-cadencia.ts",
+    "medir-ultimo-punto-por-imei": "tsx src/medir-ultimo-punto-por-imei.ts",
     "medir-pendientes": "tsx src/medir-pendientes.ts",
     "medir-ventana": "tsx src/medir-ventana.ts",
     "medir-ventana-congelada": "tsx src/medir-ventana-congelada.ts",
