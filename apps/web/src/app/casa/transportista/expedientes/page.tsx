@@ -5,6 +5,7 @@ import { Pieza } from "@/components/casa/pieza";
 import { Encabezado, Renglon, SinCuenta, Titular, Vacio } from "@/components/casa/expediente";
 import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
+import { relojDePagina } from "@/lib/casa/cronometro";
 import {
   aunNoDisponibleEnPalabras,
   datoDeResumen,
@@ -39,7 +40,9 @@ export default async function CuartoDeExpedientes({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const casa = CASAS.transportista;
+  const reloj = await relojDePagina("expedientes");
   const cuenta = await cuentaDelCuarto(searchParams);
+  reloj.marca("guardia");
   if (!cuenta) {
     return (
       <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
@@ -51,6 +54,8 @@ export default async function CuartoDeExpedientes({
   const { carrier, cuentaEnRuta } = cuenta;
   const ahora = new Date();
   const cuarto = await cargarCuartoDeExpedientes(getRepos(), { carrierAccountId: carrier.id, ahora });
+  reloj.marca("datos");
+  reloj.fin();
 
   return (
     <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>

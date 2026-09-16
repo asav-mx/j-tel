@@ -1,4 +1,6 @@
 import localFont from "next/font/local";
+import { Suspense } from "react";
+import { CronometroDelNavegador } from "@/components/casa/cronometro-del-navegador";
 import "@/app/casa/casa.css";
 
 /**
@@ -50,6 +52,10 @@ export function Cascaron({ children }: { children: React.ReactNode }) {
   return (
     <div className={`cascaron ${titular.variable} ${lectura.variable} ${medida.variable}`}>
       {children}
+      {/* Mide la lentitud como la vive quien usa la pantalla (16 sep 2026). Se quita al cerrarla. */}
+      <Suspense fallback={null}>
+        <CronometroDelNavegador />
+      </Suspense>
     </div>
   );
 }

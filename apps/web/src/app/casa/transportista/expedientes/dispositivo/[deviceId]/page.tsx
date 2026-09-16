@@ -8,6 +8,7 @@ import { Pieza } from "@/components/casa/pieza";
 import { Familia, Parte, Renglon, SinCuenta, Titular } from "@/components/casa/expediente";
 import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
+import { relojDePagina } from "@/lib/casa/cronometro";
 import { diaDe, edad, glifoDeDispositivo, rutas } from "@/lib/casa/expedientes";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,9 @@ export default async function VerDispositivo({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const casa = CASAS.transportista;
+  const reloj = await relojDePagina("ver-dispositivo");
   const cuenta = await cuentaDelCuarto(searchParams);
+  reloj.marca("guardia");
   if (!cuenta) {
     return (
       <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
@@ -40,6 +43,8 @@ export default async function VerDispositivo({
   const ahora = new Date();
 
   const e = await cargarExpedienteDeDispositivo(getRepos(), { carrierAccountId: carrier.id, deviceId, ahora });
+  reloj.marca("datos");
+  reloj.fin();
   if (!e) notFound();
 
   const imei = e.identidad.imei.estado === "con_datos" ? e.identidad.imei.valor : "";
