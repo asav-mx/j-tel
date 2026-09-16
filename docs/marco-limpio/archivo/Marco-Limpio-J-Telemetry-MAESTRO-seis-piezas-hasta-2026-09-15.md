@@ -16,9 +16,9 @@ Cliente corporativo: la empresa que contrata el servicio (ej. Tecma). Sus planta
 Planta (operadora): la instalación que recibe el servicio (ej. Tecma planta 47). Ve sólo lo suyo.
 Grupo de plantas / campus / parque industrial: un conjunto de plantas que pueden compartir un mismo servicio del mismo carrier (ej. plantas 3 y 24 en el campus Santos Dumont). Una planta puede pertenecer a un grupo o ir sola.
 Geocerca: la frontera física y de evidencia de un lugar. Tiene dueño (una planta, o un carrier) y un rol (destino, base del carrier, caseta…). No es un atributo suelto.
-Unidad: el vehículo. Tiene identidad estable propia; es evidencia de ejecución, no el servicio; puede cambiar de dispositivo. Su identidad rica (documentos, cumplimiento legal) vive en su expediente, dentro de J-Telemetry (Pieza 6 §H), igual que la del chofer.
+Unidad: el vehículo. Tiene identidad estable propia; es evidencia de ejecución, no el servicio; puede cambiar de dispositivo. Su identidad rica (documentos, cumplimiento legal) vive en jrz-pass, igual que la del chofer.
 Dispositivo (GPS): el aparato de rastreo puesto en una unidad en cierto momento. Es intercambiable. La evidencia entra por el dispositivo que la unidad traiga puesto en ese momento.
-Chofer: la persona que opera. Su identidad rica (documentos, cumplimiento legal) vive en su expediente, dentro de J-Telemetry (Pieza 6 §H); no bloquea nada.
+Chofer: la persona que opera. Su identidad rica (documentos, cumplimiento legal) vive en jrz-pass y se conecta después; no bloquea nada.
 Ruta (KML/KMZ): el recorrido que el cliente exige que se cumpla. Es política del cliente y un factor de verificación; no es activo del carrier ni del producto. Siempre vive dentro de un turno: la misma ruta (mismo nombre) puede existir en varios turnos, y su KML pertenece a la combinación ruta × turno. No es fija de por vida: cambia con la rotación de empleados, así que es modificable; los hechos pasados quedan atados a la versión vigente cuando ocurrieron.
 Turno: una variable propia del servicio, definida por cada cliente en su contrato (no es uniforme entre clientes). Un turno tiene su hora y su deadline; el deadline suele ser la hora en que el personal debe estar en sitio, que puede ser antes del inicio del turno (ej. estar a las 6:45 para una entrada de 7:00).
 Política / deadline: las reglas de tiempo y tolerancia — umbrales de temprano/a tiempo/tarde, gracia, y cuándo se genera la verificación.
@@ -183,7 +183,7 @@ Ve:
 Su flota: unidades, dispositivos, recorridos y kilómetros.
 Cargas de combustible/diésel, rendimiento histórico.
 Uso de unidades en horario no autorizado.
-Choferes y unidades con su cumplimiento (licencias, médicos, capacitación; antigüedad, cinturones, GPS…). (Identidad rica en su expediente, Pieza 6 §H.)
+Choferes y unidades con su cumplimiento (licencias, médicos, capacitación; antigüedad, cinturones, GPS…). (Identidad rica en jrz-pass.)
 Cuando hay contrato: el cumplimiento de sus servicios, con más detalle operativo que el cliente.
 
 Hace:
@@ -317,7 +317,7 @@ Admin carrier: ve toda su flota y operaciones; administra sus usuarios.
 Coordinador: organiza rutas, turnos, unidades, dispositivos y choferes.
 Despacho (opcional): monitoreo en vivo — puede no existir, porque el sistema lo hace en automático. (Ese es el punto del producto.)
 Mantenimiento: bitácora e inspecciones.
-Chofer: acceso mínimo (su identidad rica vive en su expediente, Pieza 6 §H).
+Chofer: acceso mínimo (su identidad rica vive en jrz-pass).
 
 
 Usuarios futuros (vía jrz-pass)
@@ -520,40 +520,6 @@ Ningún renglón de las Piezas 1 a 5 se borra. Estos se amplían:
 
 ---
 
-## H. El expediente — enmienda del 15 de septiembre de 2026
-
-**Estado: RATIFICADA.** Redactada y verificada por ASAV el 15 de septiembre de 2026. Enmienda a la Pieza 6: agrega un sustantivo (6.30–6.33) que el Marco ya usaba en dos sentidos sin definirlo. No es pieza nueva. Las cuatro afirmaciones quedaron ✓ sin cambio.
-
-**Por qué existe esta enmienda.** La palabra «expediente» aparece en el Marco en dos sentidos que nunca se separaron:
-
-- **Pieza 5 §C** la usa para los papeles: pólizas, permisos, exámenes, capacitaciones, mantenimiento firmado, inspecciones.
-- **Pieza 6** la usa para una forma de ver: «navegado por expedientes en vez de por mapa suelto», «expedientes de unidad y de aparato».
-
-Y el código ya la usa en los dos sentidos a la vez, lo que es exactamente la trampa de la UNIDAD (Pieza 1 §D caso 6): el lector cree que cuenta una cosa y el sistema cuenta otra. Esta enmienda lo resuelve nombrando el sentido grande, del que el documental es sólo una parte.
-
-**6.30 El expediente.** La vista completa de un id: todo lo que se sabe de esa cosa, reunido en un solo lugar. No es una carpeta de documentos — es la historia y las actividades de la cosa, y los documentos son una de sus partes.
-
-Cada sujeto del dominio tiene su expediente: una **unidad**, un **dispositivo**, un **chofer**, un **contrato**, una **ruta**. Se abre tocando esa cosa desde cualquier lugar donde aparezca (`docs/Mapa-De-La-Casa.md`, regla 2: a una ficha «se llega tocando una pieza»). El expediente **es** la ficha.
-
-**6.31 Qué reúne un expediente.** Según el sujeto, pero siempre las mismas familias:
-
-- **Identidad** — qué es esta cosa y sus datos estables. Para una unidad: placa, identidad; para un chofer: nombre, licencia.
-- **Actividad** — qué ha hecho y qué está haciendo. Para una unidad: dónde está, su historial con playback, sus servicios; para un chofer: qué unidades ha operado.
-- **Relaciones** — con qué otras cosas se liga. Una unidad con sus dispositivos y sus choferes; un dispositivo con las unidades que ha traído.
-- **Documentos** — los papeles del §C, con su vigencia: lo que vence, cuándo, y qué está vencido. Es la parte documental, no el todo.
-
-Cada familia trae lo que su evidencia sostiene, y nada más (Pieza 1 §E). Una familia sin datos se muestra vacía y lo dice; no se rellena ni se inventa.
-
-**6.32 El expediente no calcula veredictos.** Reúne y muestra; no juzga. Lo sellado por el árbitro se lee desde aquí, pero el expediente no lo recalcula (Pieza 1.C: «La verdad se calcula una vez y se guarda… Nadie recalcula su propia verdad»). Un expediente de unidad muestra sus servicios con el veredicto que ya tienen; no emite uno nuevo.
-
-**6.33 «Expediente» documental vs. de servicio.** El §C —los papeles— es la **familia de documentos** dentro del expediente de una cosa. Lo que el código hoy llama «expediente de servicio», «de contrato» o «de ruta» en el sentido de evidencia sellada es la **familia de actividad** de esos sujetos. No son dos cosas distintas peleando por un nombre: son familias distintas del mismo expediente. La palabra se queda; lo que se aclara es que un expediente tiene familias, y cada mención vieja apunta a una de ellas.
-
-**Qué cambia esto en el mapa de la casa.** El lugar «Expedientes» del menú del transportista no es un archivero de papeles: es **la puerta a los expedientes de sus cosas** — sus unidades, sus dispositivos, sus choferes — cada uno con sus cuatro familias. La familia de documentos es la que hoy más falta (no existe forma de subir ni de fechar un papel), así que es por donde se empieza a construir; pero el cuarto es el expediente completo, no sólo los papeles.
-
-Los choferes viven aquí porque hoy toda su sustancia es su expediente documental; cuando ganen actividad propia (jrz-pass, abordaje) su expediente crece, sin cambiar de lugar.
-
----
-
 ## Registro de ratificación
 
 **14 de septiembre de 2026 — ASAV.** Las 29 afirmaciones revisadas una por una. Resultado: 28 ✓ sin cambio, 1 ✎ corregida.
@@ -573,12 +539,3 @@ Esta pieza pasa a formar parte del Maestro con esta fecha. Los documentos viejos
 - **✎ Dos citas corregidas** (6.11 y 6.19): «no se dibuja lo que no se midió» vive en la Pieza 1 §E, no en 1.C.
 
 El Maestro de cinco piezas queda archivado sin editar en `docs/marco-limpio/archivo/`.
-
-**15 de septiembre de 2026 — ASAV.** Enmienda a la Pieza 6: **H. El expediente** (6.30–6.33).
-
-- **✓ 6.30 a 6.33** — las cuatro afirmaciones revisadas y sin cambio. Nombran el sentido grande de «expediente» —la vista completa de un id, con cuatro familias: identidad, actividad, relaciones y documentos— y resuelven los dos sentidos en que el Marco y el código ya usaban la palabra.
-- **El mapa de la casa se ajusta a esta definición:** «Expedientes» es la puerta a los expedientes completos de las cosas del transportista, no un archivero de papeles.
-- **✎ Tres citas corregidas** al subirla al Maestro (punteros mal puestos, no cambios de fondo): «Por qué existe» cita el 6.8 literal («de aparato», no «de dispositivo»); 6.30 apunta a la regla 2 del mapa de la casa, no a la Pieza 6; 6.32 apunta a la Pieza 1.C, porque el 6.9 habla de Compás y no de lo sellado.
-- **✎ Pieza 1 y sus ecos, con visto de ASAV (16 de septiembre):** Unidad y Chofer (Pieza 1.A), el renglón de choferes y unidades (Pieza 2, Lado 2) y el Chofer (Pieza 4) dejan de decir que la identidad rica —documentos, cumplimiento legal— «vive en jrz-pass», que está descartado; ahora vive en su expediente (§H). Los renglones de usuarios futuros (pasajero, aspiración de identidades) no hablan de documentos y quedan sin tocar.
-
-El Maestro anterior a esta enmienda queda archivado sin editar en `docs/marco-limpio/archivo/`.

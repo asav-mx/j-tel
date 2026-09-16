@@ -189,7 +189,7 @@ Y siempre: `prefers-reduced-motion` respetado.
 
 `Ver 10254` · `Ver Ruta Poniente` · `Ver TK-FTC927-003`
 
-No «expediente» (suena a archivo muerto, y es palabra de desarrollo). No «perfil» (el Marco ya define «perfil de servicio»; dos cosas con el mismo nombre es la trampa de la UNIDAD, Pieza 1 §D caso 6).
+«Expediente» sí se usa: es sustantivo del Marco (Pieza 6 §H, 6.30–6.33) — la vista completa de una cosa, con sus cuatro familias: identidad, actividad, relaciones y documentos. No es una carpeta de papeles. El título de la pantalla sigue siendo `Ver ‹x›`, como dice el mapa de la casa. No «perfil» (el Marco ya define «perfil de servicio»; dos cosas con el mismo nombre es la trampa de la UNIDAD, Pieza 1 §D caso 6).
 
 **Idioma:** español mexicano de operación. Los usuarios son coordinadores de transporte y gente de planta, no ingenieros. Nada de jerga técnica en las caras de cliente y carrier.
 
