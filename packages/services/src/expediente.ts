@@ -353,3 +353,152 @@ export async function cargarExpedienteDeChofer(
     documentos,
   };
 }
+
+// ── El cuarto: la puerta a los expedientes de la cuenta ──────────────────
+
+export interface UnidadDelCuarto {
+  id: string;
+  numeroEconomico: string;
+  placa: string | null;
+  activa: boolean;
+  /**
+   * El resumen de sus papeles. Aún no disponible si la cuenta no tiene
+   * mercado; vacío si el catálogo de su mercado no tiene papeles de unidad.
+   */
+  papeles: Parte<ResumenDePapeles>;
+}
+
+export interface DispositivoDelCuarto {
+  id: string;
+  nombre: string | null;
+  imei: string;
+  estado: EstadoDeDispositivo;
+  /** El número económico de la unidad donde está montado, si lo está. */
+  unidad: string | null;
+}
+
+export interface CuartoDeExpedientes {
+  mercado: { nombre: string; hoy: string } | null;
+  unidades: UnidadDelCuarto[];
+  /** En servicio primero; los de baja al final, sin esconderse. */
+  dispositivos: { enServicio: DispositivoDelCuarto[]; deBaja: DispositivoDelCuarto[] };
+  choferes: Parte<Array<{ id: string; nombre: string | null; licencia: string | null; activo: boolean }>>;
+  /**
+   * Cuántos papeles de la flota **activa** le piden algo al transportista.
+   * `null` sin mercado. Una unidad inactiva no opera: sus papeles faltantes se
+   * ven en su pieza, pero no inflan una alarma que tiene que poder llegar a
+   * cero (6.17).
+   */
+  papelesQuePidenAlgo: number | null;
+}
+
+const ORDEN_DEL_PEOR = [
+  "vencido",
+  "falta",
+  "falta_la_fecha",
+  "por_vencer",
+  "falta_la_regla",
+  "vigente",
+  "sin_vencimiento",
+  "no_capturado",
+];
+
+/**
+ * El cuarto de Expedientes de una cuenta, leído de una pasada.
+ *
+ * No arma un expediente por unidad: con 80 unidades serían cientos de consultas.
+ * Lee el catálogo una vez, las fojas vigentes de toda la cuenta una vez, y
+ * juzga cada unidad con la misma `estadoDePapel` que usa su expediente — así el
+ * cuarto y la ficha no pueden decir cosas distintas del mismo papel.
+ *
+ * El orden es el de la ficha §1: primero lo que pide hacer algo.
+ */
+export async function cargarCuartoDeExpedientes(
+  repos: ReposDelExpediente,
+  entrada: { carrierAccountId: string; ahora: Date },
+): Promise<CuartoDeExpedientes> {
+  const { carrierAccountId, ahora } = entrada;
+  const [mercado, flota, unidadesRaw, fojas, choferes] = await Promise.all([
+    repos.expedientes.mercadoDeCuenta(carrierAccountId),
+    clasificarFlotaDeCuenta(repos, carrierAccountId, ahora, { incluirInactivas: true }),
+    repos.fleet.getUnitsForCarrier(carrierAccountId),
+    repos.expedientes.fojasVigentesDeUnidadesDeCuenta(carrierAccountId),
+    repos.expedientes.choferesDeCuenta(carrierAccountId),
+  ]);
+
+  const hoy = mercado ? localDateIso(ahora, mercado.timeZone) : null;
+  const catalogo = mercado ? await repos.expedientes.catalogo(mercado.id, "unidad") : [];
+
+  // La foja vigente de cada (unidad, tipo): la capturada más recientemente.
+  // Las fojas llegan de la más reciente a la más vieja, así que gana la primera.
+  const vigente = new Map<string, (typeof fojas)[number]>();
+  for (const f of fojas) {
+    const llave = `${f.foja.unitId}|${f.foja.documentTypeId}`;
+    if (!vigente.has(llave)) vigente.set(llave, f);
+  }
+
+  const unidades: UnidadDelCuarto[] = unidadesRaw.map((u) => {
+    let papeles: Parte<ResumenDePapeles>;
+    if (!mercado || !hoy) papeles = aunNoDisponible("mercado_de_la_cuenta");
+    else if (catalogo.length === 0) papeles = { estado: "vacia" };
+    else {
+      const estados = catalogo.map(({ tipo, regla }) => {
+        const f = vigente.get(`${u.id}|${tipo.id}`);
+        return estadoDePapel({
+          regla,
+          foja: f
+            ? {
+                folio: f.version.folio,
+                emitidoEl: f.version.issuedOn,
+                venceEl: f.version.expiresOn,
+                venceCalculado: f.version.expiryCalculated,
+              }
+            : null,
+          hoy,
+        });
+      });
+      papeles = { estado: "con_datos", valor: resumirPapeles(estados) };
+    }
+    return { id: u.id, numeroEconomico: u.label, placa: u.plateNumber, activa: u.active, papeles };
+  });
+
+  const peso = (u: UnidadDelCuarto) => {
+    if (u.papeles.estado !== "con_datos") return { piden: 0, peor: ORDEN_DEL_PEOR.length };
+    const r = u.papeles.valor;
+    return { piden: r.pidenAlgo, peor: r.peor ? ORDEN_DEL_PEOR.indexOf(r.peor) : ORDEN_DEL_PEOR.length };
+  };
+  unidades.sort((a, b) => {
+    if (a.activa !== b.activa) return a.activa ? -1 : 1;
+    const pa = peso(a);
+    const pb = peso(b);
+    return pb.piden - pa.piden || pa.peor - pb.peor || a.numeroEconomico.localeCompare(b.numeroEconomico, "es", { numeric: true });
+  });
+
+  const etiquetaDeUnidad = new Map(unidadesRaw.map((u) => [u.id, u.label]));
+  const dispositivos = flota.flota.dispositivos.map(({ dispositivo, estado }): DispositivoDelCuarto => ({
+    id: dispositivo.id,
+    nombre: dispositivo.label,
+    imei: dispositivo.imei,
+    estado,
+    unidad: "unidadId" in estado ? (etiquetaDeUnidad.get(estado.unidadId) ?? null) : null,
+  }));
+  const porNombre = (a: DispositivoDelCuarto, b: DispositivoDelCuarto) =>
+    (a.nombre ?? a.imei).localeCompare(b.nombre ?? b.imei, "es", { numeric: true });
+
+  const papelesQuePidenAlgo = mercado
+    ? unidades.reduce((s, u) => s + (u.activa && u.papeles.estado === "con_datos" ? u.papeles.valor.pidenAlgo : 0), 0)
+    : null;
+
+  return {
+    mercado: mercado && hoy ? { nombre: mercado.name, hoy } : null,
+    unidades,
+    dispositivos: {
+      enServicio: dispositivos.filter((d) => d.estado.grupo !== "de_baja").sort(porNombre),
+      deBaja: dispositivos.filter((d) => d.estado.grupo === "de_baja").sort(porNombre),
+    },
+    choferes: parteDe(
+      choferes.map((c) => ({ id: c.id, nombre: c.nombre, licencia: c.licencia, activo: c.deactivatedAt === null })),
+    ),
+    papelesQuePidenAlgo,
+  };
+}

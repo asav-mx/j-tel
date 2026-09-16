@@ -5,30 +5,113 @@
  * daltónico, una pantalla mala, o el sol de Juárez a las siete de la mañana
  * bastan para que el color desaparezca. La forma sobrevive a todo eso.
  *
- * Por eso cada estado tiene su silueta propia, distinguible en blanco y negro:
+ * ## Tres familias, que no se cruzan
  *
- *   · en movimiento  flecha llena, **rotada al rumbo real** — la punta dice a
- *                    dónde va; es información, no adorno
- *   · detenida       círculo lleno — presente, pero sin dirección
+ * Cada cosa tiene su silueta base, para que ninguna forma de una se confunda
+ * con la de otra cuando aparecen juntas —y en el cuarto de Expedientes aparecen
+ * juntas—:
+ *
+ *   UNIDADES — se mueven: flechas y círculos
+ *   · en movimiento  flecha llena, **rotada al rumbo real**
+ *   · detenida       círculo lleno — presente, sin dirección
+ *   · sin señal      círculo hueco — presente pero callada; pide esperar
  *   · en destino     anillo punteado — está, pero ya no se le mira
- *   · sin transmitir flecha hueca — la silueta de lo que había, vacía
+ *   · sin transmitir flecha hueca — la silueta de lo que había; es DESCONECTADO
+ *
+ *   DISPOSITIVOS — se instalan: cuadros
+ *   · en unidad      cuadro lleno — instalado y hablando
+ *   · en bodega      cuadro hueco — existe, espera camión
+ *   · desconectado   cuadro cortado — montado, y más de 24 h callado
+ *   · de baja        cuadro tachado — su historia queda, él ya no cuenta
+ *
+ *   PAPELES — se vencen: hojas con la esquina doblada
+ *   · vencido         hoja hueca tachada con una diagonal
+ *   · por vencer      hoja a medio llenar, en diagonal
+ *   · falta           contorno punteado
+ *   · falta la fecha  hoja hueca de trazo continuo
+ *   · falta la regla  hoja hueca con el doblez lleno, en tenue
+ *   · vigente         hoja llena, en tenue
+ *   · sin vencimiento hoja llena con una raya hueca, en tenue
+ *
+ * Cuadros ratificados en el boceto de «las dos familias»; hojas el 16 de
+ * septiembre de 2026 (boceto y prototipo del PR D); SIN SEÑAL el mismo día.
  *
  * ⚠ **`en-destino` todavía no tiene quién lo produzca.** La clasificación de la
- * flota (#411) da EN LÍNEA · SIN SEÑAL · DESCONECTADO · SIN DISPOSITIVO, y deja
- * fuera «en destino» hasta que exista la detección en vivo. El glifo está aquí
- * porque el lenguaje lo define, no porque algo lo use: ningún cuarto puede
- * dibujarlo mientras nada sepa calcularlo.
+ * flota (#411) no calcula «en destino» hasta que exista la detección en vivo.
  */
 
-export type EstadoGlifo = "en-movimiento" | "detenida" | "en-destino" | "sin-transmitir";
+export type EstadoGlifo =
+  // Unidades
+  | "en-movimiento"
+  | "detenida"
+  | "sin-senal"
+  | "en-destino"
+  | "sin-transmitir"
+  // Dispositivos
+  | "dispositivo-en-unidad"
+  | "dispositivo-en-bodega"
+  | "dispositivo-desconectado"
+  | "dispositivo-de-baja"
+  // Papeles
+  | "papel-vencido"
+  | "papel-por-vencer"
+  | "papel-falta"
+  | "papel-falta-la-fecha"
+  | "papel-falta-la-regla"
+  | "papel-vigente"
+  | "papel-sin-vencimiento";
 
 /** Cómo se lee cada forma en voz alta, para quien no ve la pantalla. */
 const EN_PALABRAS: Record<EstadoGlifo, string> = {
   "en-movimiento": "En movimiento",
   detenida: "Detenida",
+  "sin-senal": "Sin señal",
   "en-destino": "En destino",
   "sin-transmitir": "Sin transmitir",
+  "dispositivo-en-unidad": "En unidad",
+  "dispositivo-en-bodega": "En bodega",
+  "dispositivo-desconectado": "Desconectado",
+  "dispositivo-de-baja": "De baja",
+  "papel-vencido": "Vencido",
+  "papel-por-vencer": "Por vencer",
+  "papel-falta": "Falta",
+  "papel-falta-la-fecha": "Falta la fecha",
+  "papel-falta-la-regla": "Falta la regla",
+  "papel-vigente": "Vigente",
+  "papel-sin-vencimiento": "Sin vencimiento",
 };
+
+/**
+ * El color de cada forma, que nunca es lo único que la distingue.
+ *
+ * - **Cobre** sólo donde hay vida: la unidad que se mueve, el dispositivo que
+ *   habla.
+ * - **Tinta** en los papeles que piden hacer algo: el ojo tiene que ir ahí.
+ * - **Tenue** en todo lo demás, y a 60 % lo que ya se apagó.
+ */
+function tintaDe(estado: EstadoGlifo): { color: string; opacidad: number } {
+  switch (estado) {
+    case "en-movimiento":
+    case "dispositivo-en-unidad":
+      return { color: "var(--senal)", opacidad: 1 };
+    case "papel-vencido":
+    case "papel-por-vencer":
+    case "papel-falta":
+    case "papel-falta-la-fecha":
+      return { color: "var(--tinta)", opacidad: 1 };
+    case "sin-transmitir":
+    case "en-destino":
+    case "dispositivo-desconectado":
+    case "dispositivo-de-baja":
+      return { color: "var(--tenue)", opacidad: 0.6 };
+    default:
+      return { color: "var(--tenue)", opacidad: 1 };
+  }
+}
+
+/** La hoja, en una caja de 40: vertical, con la esquina superior derecha doblada. */
+const HOJA = "M13 6 H24 L31 13 V32 A2 2 0 0 1 29 34 H13 A2 2 0 0 1 11 32 V8 A2 2 0 0 1 13 6 Z";
+const DOBLEZ = "M24 6 V13 H31";
 
 export function Glifo({
   estado,
@@ -44,44 +127,32 @@ export function Glifo({
   rumbo?: number;
   tamano?: number;
 }) {
-  const vivo = estado === "en-movimiento";
+  const { color, opacidad } = tintaDe(estado);
+  const familia = estado.startsWith("papel-") || estado.startsWith("dispositivo-") ? 40 : 24;
+  // Un id por instancia para el recorte de «por vencer»: dos glifos en la misma
+  // página con el mismo id se pisarían el recorte.
+  const recorte = `hoja-${estado}-${Math.round(rumbo)}-${tamano}`;
 
   return (
     <svg
       width={tamano}
       height={tamano}
-      viewBox="0 0 24 24"
+      viewBox={`0 0 ${familia} ${familia}`}
       role="img"
       aria-label={EN_PALABRAS[estado]}
-      /* Lo apagado suelta el color y baja de peso: el ojo tiene que ir solo a
-         lo que está vivo, sin buscarlo. */
-      style={{
-        color: vivo ? "var(--senal)" : "var(--tenue)",
-        opacity: estado === "sin-transmitir" || estado === "en-destino" ? 0.6 : 1,
-      }}
+      style={{ color, opacity: opacidad }}
     >
+      {/* ── Unidades ── */}
       {estado === "en-movimiento" && (
-        <path
-          d="M12 2 L20 21 L12 16.5 L4 21 Z"
-          fill="currentColor"
-          transform={`rotate(${rumbo} 12 12)`}
-        />
+        <path d="M12 2 L20 21 L12 16.5 L4 21 Z" fill="currentColor" transform={`rotate(${rumbo} 12 12)`} />
       )}
-
       {estado === "detenida" && <circle cx="12" cy="12" r="7" fill="currentColor" />}
-
-      {estado === "en-destino" && (
-        <circle
-          cx="12"
-          cy="12"
-          r="7"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeDasharray="3 3"
-        />
+      {estado === "sin-senal" && (
+        <circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" />
       )}
-
+      {estado === "en-destino" && (
+        <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="3 3" />
+      )}
       {estado === "sin-transmitir" && (
         <path
           d="M12 2 L20 21 L12 16.5 L4 21 Z"
@@ -90,6 +161,76 @@ export function Glifo({
           strokeWidth="1.75"
           strokeLinejoin="round"
         />
+      )}
+
+      {/* ── Dispositivos ── */}
+      {estado === "dispositivo-en-unidad" && <rect x="10" y="10" width="20" height="20" rx="3.5" fill="currentColor" />}
+      {estado === "dispositivo-en-bodega" && (
+        <rect x="10.5" y="10.5" width="19" height="19" rx="3.5" fill="none" stroke="currentColor" strokeWidth="2.4" />
+      )}
+      {estado === "dispositivo-desconectado" && (
+        <>
+          <path d="M13.5 10.5 h13 a3.5 3.5 0 0 1 3.5 3.5 v5.5 h-20 v-5.5 a3.5 3.5 0 0 1 3.5-3.5 Z" fill="currentColor" />
+          <path
+            d="M10.5 23.5 h19 v2.5 a3.5 3.5 0 0 1 -3.5 3.5 h-12 a3.5 3.5 0 0 1 -3.5-3.5 Z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+          />
+        </>
+      )}
+      {estado === "dispositivo-de-baja" && (
+        <>
+          <rect x="10.5" y="10.5" width="19" height="19" rx="3.5" fill="none" stroke="currentColor" strokeWidth="2.2" />
+          <line x1="13" y1="13" x2="27" y2="27" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+          <line x1="27" y1="13" x2="13" y2="27" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+        </>
+      )}
+
+      {/* ── Papeles ── */}
+      {(estado === "papel-vencido" || estado === "papel-por-vencer" || estado === "papel-falta-la-fecha") && (
+        <>
+          {estado === "papel-por-vencer" && (
+            <>
+              <defs>
+                <clipPath id={recorte}>
+                  <path d={HOJA} />
+                </clipPath>
+              </defs>
+              <polygon points="11,34 31,17 31,34" fill="currentColor" clipPath={`url(#${recorte})`} />
+            </>
+          )}
+          <path d={HOJA} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+          <path d={DOBLEZ} fill="none" stroke="currentColor" strokeWidth="1.8" />
+          {estado === "papel-vencido" && (
+            <line x1="14" y1="17" x2="28" y2="31" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+          )}
+        </>
+      )}
+      {estado === "papel-falta" && (
+        <path d={HOJA} fill="none" stroke="currentColor" strokeWidth="2.2" strokeDasharray="3.4 3" strokeLinejoin="round" />
+      )}
+      {estado === "papel-falta-la-regla" && (
+        /* El doblez es más grande que en las otras hojas a propósito: con el de
+           tamaño normal, a 22 px se distinguía de «falta la fecha» sólo por el
+           color. Medido en las capturas del PR D, 16 sep 2026. */
+        <>
+          <path
+            d="M13 6 H20 L31 17 V32 A2 2 0 0 1 29 34 H13 A2 2 0 0 1 11 32 V8 A2 2 0 0 1 13 6 Z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinejoin="round"
+          />
+          <path d="M20 6 V17 H31 Z" fill="currentColor" />
+        </>
+      )}
+      {(estado === "papel-vigente" || estado === "papel-sin-vencimiento") && (
+        <>
+          <path d={HOJA} fill="currentColor" />
+          <path d={DOBLEZ} fill="none" stroke="var(--pieza)" strokeWidth="1.8" />
+          {estado === "papel-sin-vencimiento" && <rect x="14" y="20.5" width="14" height="4" rx="1" fill="var(--pieza)" />}
+        </>
       )}
     </svg>
   );
