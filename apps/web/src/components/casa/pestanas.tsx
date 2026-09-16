@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { estaEnLugar, type Grupo } from "@/lib/casa/casas";
+import { conCuenta, estaEnLugar, type Grupo } from "@/lib/casa/casas";
 
 /**
  * Las pestañas — la navegación del cascarón.
@@ -24,12 +24,18 @@ import { estaEnLugar, type Grupo } from "@/lib/casa/casas";
  * nombres de cosa y la marca se graba por repetición del sello, sin estorbar el
  * camino de todos.
  *
+ * **Las ligas arrastran la cuenta.** Si se entró con `?account=`, cada pestaña
+ * la lleva; sin ella, quien había elegido Juárez Bus caía en «no hay cuenta» al
+ * tocar Expedientes (16 sep 2026). «Estoy aquí» se sigue midiendo contra la
+ * ruta pelona: la cuenta no cambia de lugar.
+ *
  * Lo que llega aquí ya viene filtrado por `menuDe`: lo que no aplica a la
  * cuenta y lo que todavía no tiene cuarto no llegan a este componente. Este
  * archivo no vuelve a decidir qué se ve — si lo hiciera, habría dos listas.
  */
-export function Pestanas({ grupos }: { grupos: Grupo[] }) {
+export function Pestanas({ grupos, cuenta }: { grupos: Grupo[]; cuenta: string | null }) {
   const ruta = usePathname();
+  const liga = (href: string) => conCuenta(href, cuenta);
 
   // Un lugar está activo si la ruta es la suya o cuelga de ella; así el padre
   // sigue marcado mientras se navega su segundo nivel. La regla vive en
@@ -64,7 +70,7 @@ export function Pestanas({ grupos }: { grupos: Grupo[] }) {
                 {grupo.lugares.map((lugar) => (
                   <Link
                     key={lugar.ruta}
-                    href={lugar.ruta as string}
+                    href={liga(lugar.ruta as string)}
                     aria-current={estaEn(lugar.ruta as string) ? "page" : undefined}
                     className={`-mb-px cursor-pointer border-b-2 px-3 py-2.5 text-[14px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--tinta)] ${
                       estaEn(lugar.ruta as string)
@@ -90,7 +96,7 @@ export function Pestanas({ grupos }: { grupos: Grupo[] }) {
           {hijos.map((hijo) => (
             <Link
               key={hijo.ruta}
-              href={hijo.ruta as string}
+              href={liga(hijo.ruta as string)}
               aria-current={estaEn(hijo.ruta as string) ? "page" : undefined}
               className={`cursor-pointer rounded px-2.5 py-1 text-[13px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--tinta)] ${
                 estaEn(hijo.ruta as string)
@@ -105,7 +111,7 @@ export function Pestanas({ grupos }: { grupos: Grupo[] }) {
       )}
 
       {/* — Celular: la misma casa colapsada a cuatro pestañas abajo — */}
-      <BarraDeAbajo grupos={grupos} estaEn={estaEn} />
+      <BarraDeAbajo grupos={grupos} estaEn={estaEn} liga={liga} />
     </>
   );
 }
@@ -128,9 +134,11 @@ export function Pestanas({ grupos }: { grupos: Grupo[] }) {
 function BarraDeAbajo({
   grupos,
   estaEn,
+  liga,
 }: {
   grupos: Grupo[];
   estaEn: (href: string) => boolean;
+  liga: (href: string) => string;
 }) {
   const [abierto, setAbierto] = useState(false);
 
@@ -168,7 +176,7 @@ function BarraDeAbajo({
               {grupo.lugares.map((lugar) => (
                 <Link
                   key={lugar.ruta}
-                  href={lugar.ruta as string}
+                  href={liga(lugar.ruta as string)}
                   onClick={() => setAbierto(false)}
                   aria-current={estaEn(lugar.ruta as string) ? "page" : undefined}
                   className="block cursor-pointer border-b border-[var(--linea)] px-5 py-3 text-[15px] hover:bg-[var(--roce)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--tinta)]"
@@ -192,7 +200,7 @@ function BarraDeAbajo({
         {caben.map((lugar) => (
           <Link
             key={lugar.ruta}
-            href={lugar.ruta as string}
+            href={liga(lugar.ruta as string)}
             onClick={() => setAbierto(false)}
             aria-current={estaEn(lugar.ruta as string) ? "page" : undefined}
             /* El lugar activo se marca con la palabra en tinta **y** con una

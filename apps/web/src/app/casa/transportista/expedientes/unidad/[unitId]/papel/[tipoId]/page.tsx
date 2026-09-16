@@ -53,10 +53,10 @@ export default async function VerPapel({
   const reloj = await relojDePagina("papel");
   const cuenta = await cuentaDelCuarto(searchParams);
   reloj.marca("guardia");
-  if (!cuenta) {
+  if (!cuenta.carrier) {
     return (
-      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
-        <SinCuenta />
+      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+        <SinCuenta elegibles={cuenta.casa.elegibles} />
       </Marco>
     );
   }
@@ -93,7 +93,7 @@ export default async function VerPapel({
     accion === "capturar" && !vigente ? "capturar" : accion && accion !== "capturar" && vigente ? accion : null;
 
   return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
+    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
       <div className="mx-auto flex max-w-3xl flex-col gap-7">
         <Migas
           pasos={[

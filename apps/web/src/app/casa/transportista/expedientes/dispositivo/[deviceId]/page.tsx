@@ -31,10 +31,10 @@ export default async function VerDispositivo({
   const reloj = await relojDePagina("ver-dispositivo");
   const cuenta = await cuentaDelCuarto(searchParams);
   reloj.marca("guardia");
-  if (!cuenta) {
+  if (!cuenta.carrier) {
     return (
-      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
-        <SinCuenta />
+      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+        <SinCuenta elegibles={cuenta.casa.elegibles} />
       </Marco>
     );
   }
@@ -52,7 +52,7 @@ export default async function VerDispositivo({
   const estado = e.actividad.ultimaSenal.estado === "con_datos" ? glifoDeDispositivo(e.actividad.ultimaSenal.valor.estado).palabra : null;
 
   return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
+    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
       <div className="mx-auto flex max-w-3xl flex-col gap-7">
         <Migas pasos={[{ nombre: "Expedientes", ruta: rutas.cuarto(cuentaEnRuta) }, { nombre: `Ver ${nombre}` }]} />
         <Titular nombre={nombre} bajo={[estado, carrier.name].filter(Boolean).join(" · ")} />

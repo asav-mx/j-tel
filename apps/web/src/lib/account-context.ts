@@ -60,7 +60,25 @@ export async function resolveAccountByType(
   type: "carrier" | "client" | "jstaff",
   searchParams?: SearchParamsInput,
 ) {
-  const repos = getRepos();
+  return (await resolverCuentaYElegibles(type, searchParams)).cuenta;
+}
+
+/**
+ * La cuenta resuelta **y** las cuentas que se podían elegir, de una sola lectura.
+ *
+ * Es la regla de `resolveAccountByType` —que delega aquí— más la lista que el
+ * selector de cuenta del cascarón ofrece cuando hay varias. Salen juntas a
+ * propósito: si fueran dos lecturas, el selector podría ofrecer una cuenta que
+ * la guardia después rechaza, y cada lectura más es otra consulta de
+ * membresías en pantallas que ya se sienten lentas.
+ *
+ * Con `?account=`, la cuenta tiene que estar entre las elegibles: eso es
+ * exactamente «existe, es del tipo pedido y está dentro de tu alcance».
+ */
+export async function resolverCuentaYElegibles(
+  type: "carrier" | "client" | "jstaff",
+  searchParams?: SearchParamsInput,
+) {
   const params = searchParams ? await searchParams : undefined;
   const slug = extractSlug(params);
 
@@ -70,20 +88,20 @@ export async function resolveAccountByType(
       ? canAccessCarrierAccount(memberships, accountId)
       : canAccessClientAccount(memberships, accountId);
 
-  if (slug) {
-    const account = await repos.accounts.findBySlug(slug);
-    if (!account || account.type !== type) return null;
-    return alcanza(account.id) ? account : null;
-  }
-
   /*
    * Con alcance global esto lee todas las cuentas del tipo. Es correcto —ese es
    * su alcance— pero también es por lo que no se elige una sola cuando hay
    * varias: J-Staff tiene que decir cuál está mirando, no heredarla del orden
    * de la tabla.
    */
-  const candidatas = (await repos.accounts.listByType(type)).filter((c) => alcanza(c.id));
-  return candidatas.length === 1 ? candidatas[0]! : null;
+  const elegibles = (await getRepos().accounts.listByType(type)).filter((c) => alcanza(c.id));
+
+  const cuenta = slug
+    ? (elegibles.find((c) => c.slug === slug) ?? null)
+    : elegibles.length === 1
+      ? elegibles[0]!
+      : null;
+  return { cuenta, elegibles };
 }
 
 export function withAccount(path: string, slug?: string | null) {

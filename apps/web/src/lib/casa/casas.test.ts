@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   CASAS,
+  conCuenta,
+  cuartoDeLaRuta,
   cuentaEntradas,
   estaEnLugar,
   menuDe,
@@ -253,5 +255,63 @@ describe("«estoy aquí» es una sola regla", () => {
 
   it("un lugar sin cuarto nunca está activo", () => {
     expect(estaEnLugar("/casa/planta", null)).toBe(false);
+  });
+});
+
+/*
+ * La cuenta al navegar (16 sep 2026). Se entraba con ?account=juarez-bus, se
+ * tocaba Expedientes y se caía en «no hay cuenta»: las pestañas ligaban a la
+ * ruta pelona. Estas dos reglas son las que el marco usa para no perderla.
+ */
+describe("conCuenta — arrastrar la cuenta", () => {
+  it("sin cuenta, la ruta queda limpia", () => {
+    expect(conCuenta("/casa/transportista/expedientes", null)).toBe("/casa/transportista/expedientes");
+    expect(conCuenta("/casa/transportista/expedientes")).toBe("/casa/transportista/expedientes");
+  });
+
+  it("con cuenta, la agrega", () => {
+    expect(conCuenta("/casa/transportista/expedientes", "juarez-bus")).toBe(
+      "/casa/transportista/expedientes?account=juarez-bus",
+    );
+  });
+
+  it("si la ruta ya trae parámetros, se suma con & y no con un segundo ?", () => {
+    expect(conCuenta("/x/papel/t?accion=renovar", "juarez-bus")).toBe("/x/papel/t?accion=renovar&account=juarez-bus");
+  });
+
+  it("escapa el slug", () => {
+    expect(conCuenta("/x", "a&b")).toBe("/x?account=a%26b");
+  });
+});
+
+describe("cuartoDeLaRuta — cambiar de cuenta lleva al cuarto, no a la ficha", () => {
+  const t = CASAS.transportista;
+
+  it("desde la ficha de una unidad, a Expedientes", () => {
+    expect(cuartoDeLaRuta(t, "/casa/transportista/expedientes/unidad/u-1042")).toBe("/casa/transportista/expedientes");
+  });
+
+  it("desde un papel, a Expedientes", () => {
+    expect(cuartoDeLaRuta(t, "/casa/transportista/expedientes/unidad/u-1042/papel/p-1")).toBe(
+      "/casa/transportista/expedientes",
+    );
+  });
+
+  it("desde el cuarto mismo, a él", () => {
+    expect(cuartoDeLaRuta(t, "/casa/transportista/flota")).toBe("/casa/transportista/flota");
+  });
+
+  it("un hijo gana a su padre", () => {
+    expect(cuartoDeLaRuta(CASAS.jstaff, "/casa/jstaff/cuentas-y-demos/catalogo/tipo-9")).toBe(
+      "/casa/jstaff/cuentas-y-demos/catalogo",
+    );
+  });
+
+  it("no confunde un prefijo de texto con un lugar", () => {
+    expect(cuartoDeLaRuta(t, "/casa/transportista/flotante")).toBe(t.base);
+  });
+
+  it("fuera de todo lugar, a la puerta de la casa", () => {
+    expect(cuartoDeLaRuta(t, "/casa/transportista")).toBe(t.base);
   });
 });
