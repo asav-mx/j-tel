@@ -268,3 +268,66 @@ export function fechaDeVencimientoAGuardar(entrada: {
   }
   return { venceEl: null, calculado: false };
 }
+
+// ── La regla, vista desde el catálogo ────────────────────────────────────
+
+/**
+ * Qué le falta a la regla de un tipo para poder juzgar cualquier papel suyo.
+ *
+ * Vacío = la regla está completa. Un tipo sin ninguna versión (`null`) le falta
+ * todo lo que decide: si es obligatorio y si vence. Los días de aviso sólo
+ * faltan si vence; a un papel que no vence no se le avisa nada.
+ */
+export function faltantesDeRegla(regla: ReglaDeTipo | null): PiezaDeRegla[] {
+  if (!regla) return ["obligatorio", "vence"];
+  const faltan: PiezaDeRegla[] = [];
+  if (regla.obligatorio === null) faltan.push("obligatorio");
+  if (regla.vence === null) faltan.push("vence");
+  if (regla.vence === true && regla.diasDeAviso === null) faltan.push("dias_de_aviso");
+  return faltan;
+}
+
+/**
+ * El efecto de cambiar una regla sobre los papeles que juzga: cuántos hay en
+ * cada estado hoy y con la regla propuesta, y cuántos pasan a pedir algo.
+ *
+ * **No recalcula fechas.** Una fecha de vencimiento calculada se guardó al
+ * capturar el papel con la periodicidad de entonces; cambiar la periodicidad no
+ * la reescribe (decidido el 16 sep 2026). Por eso aquí se juzga cada foja tal
+ * como está guardada.
+ */
+export function efectoDeRegla(entrada: {
+  actual: ReglaDeTipo | null;
+  propuesta: ReglaDeTipo;
+  /** Una por sujeto que el tipo juzga: su foja vigente, o `null` si no tiene. */
+  fojas: readonly (VersionDeFoja | null)[];
+  hoy: string;
+}): {
+  antes: Record<NombreDeEstadoDePapel, number>;
+  despues: Record<NombreDeEstadoDePapel, number>;
+  pasanAPedirAlgo: number;
+  dejanDePedirAlgo: number;
+  fechasCalculadasConservadas: number;
+} {
+  const vacio = (): Record<NombreDeEstadoDePapel, number> =>
+    Object.fromEntries(ORDEN_DE_ESTADOS.map((e) => [e, 0])) as Record<NombreDeEstadoDePapel, number>;
+  const antes = vacio();
+  const despues = vacio();
+  let pasanAPedirAlgo = 0;
+  let dejanDePedirAlgo = 0;
+  let fechasCalculadasConservadas = 0;
+  const cambiaPeriodicidad = (entrada.actual?.periodicidadMeses ?? null) !== entrada.propuesta.periodicidadMeses;
+
+  for (const foja of entrada.fojas) {
+    const a = estadoDePapel({ regla: entrada.actual, foja, hoy: entrada.hoy }).estado;
+    const d = estadoDePapel({ regla: entrada.propuesta, foja, hoy: entrada.hoy }).estado;
+    antes[a] += 1;
+    despues[d] += 1;
+    const pedia = ESTADOS_QUE_PIDEN_ALGO.includes(a);
+    const pide = ESTADOS_QUE_PIDEN_ALGO.includes(d);
+    if (!pedia && pide) pasanAPedirAlgo += 1;
+    if (pedia && !pide) dejanDePedirAlgo += 1;
+    if (cambiaPeriodicidad && foja?.venceCalculado) fechasCalculadasConservadas += 1;
+  }
+  return { antes, despues, pasanAPedirAlgo, dejanDePedirAlgo, fechasCalculadasConservadas };
+}

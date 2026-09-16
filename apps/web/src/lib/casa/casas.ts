@@ -192,7 +192,17 @@ export const CASAS: Record<Cara, Casa> = {
         lugares: [
           { nombre: "Compás · operación", ruta: null, condicion: "siempre" },
           { nombre: "Compuerta de atención", ruta: null, condicion: "siempre" },
-          { nombre: "Cuentas y demos", ruta: null, condicion: "siempre" },
+          {
+            // Su único lugar construido es el catálogo (D2, 16 sep 2026). Las altas
+            // y los demos siguen en el árbol viejo; entran a este menú cuando se
+            // muden, no antes.
+            nombre: "Cuentas y demos",
+            ruta: "/casa/jstaff/cuentas-y-demos",
+            condicion: "siempre",
+            hijos: [
+              { nombre: "Catálogo de documentos", ruta: "/casa/jstaff/cuentas-y-demos/catalogo", condicion: "siempre" },
+            ],
+          },
         ],
       },
     ],

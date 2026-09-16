@@ -265,6 +265,25 @@ describe("el muro entre cuentas", () => {
   });
 });
 
+describe("las lecturas del catálogo (D2)", () => {
+  it("cada mercado cuenta sus cuentas de verdad", async () => {
+    const mercado = (await repos.expedientes.mercados()).find((m) => m.id === chihuahua)!;
+    const [{ n }] = (await db.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM accounts WHERE market_id = ${chihuahua}`)) as unknown as [{ n: number }];
+    expect(Number(mercado.cuentas)).toBe(Number(n));
+    expect(Number(mercado.cuentas)).toBeGreaterThanOrEqual(1); // la cuenta A de esta prueba
+  });
+
+  it("los sujetos de un tipo: las unidades activas del mercado, cada una con su foja vigente", async () => {
+    const datos = await repos.expedientes.sujetosDelTipo(verificacion);
+    const deA = datos!.sujetos.filter((s) => s.carrierAccountId === cuentaA);
+    expect(deA.map((s) => s.id)).toEqual([unidadA]);
+    // La vigente es la renovación («V-2»), no la foja corregida de antes.
+    expect(deA[0]!.version?.folio).toBe("V-2");
+    // La cuenta B no tiene mercado: sus unidades no las juzga este catálogo.
+    expect(datos!.sujetos.some((s) => s.carrierAccountId === cuentaB)).toBe(false);
+  });
+});
+
 describe("lo que tuvo papeles no se borra solo", () => {
   it("borrar una unidad con fojas falla (6.15)", async () => {
     expect(await rechazo(() => db.delete(units).where(eq(units.id, unidadA)))).toBe("documents_unidad_de_su_cuenta");
