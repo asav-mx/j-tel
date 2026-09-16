@@ -1,6 +1,6 @@
 # Ficha — Expedientes
 
-**Estado: PROPUESTA.** Escrita el 16 de septiembre de 2026, en sesión de ASAV y Claude. Lo marcado **✓ decidido** ya tiene la palabra de ASAV; lo marcado **? espera visto** no se construye hasta tenerla.
+**Estado: RATIFICADA.** Escrita el 16 de septiembre de 2026, en sesión de ASAV y Claude, y ratificada por ASAV ese mismo día, punto por punto. Lo marcado ✓ lleva su fecha.
 
 **Qué la gobierna:** el Marco, Pieza 6 §H (6.30–6.33, el expediente) y Pieza 5 §C (los papeles); `docs/Mapa-De-La-Casa.md` (dónde vive el cuarto y cómo se llega); el skill `jtel-diseno` (cómo se ve). El Marco manda sobre los tres.
 
@@ -90,8 +90,8 @@ La lista de abajo es de hoy, 16 de septiembre. Cada parte dice su fuente; al con
 | Estado | Regla |
 |---|---|
 | **VENCIDO** | La fecha de vencimiento ya pasó |
-| **POR VENCER** | Vence dentro de **30 días** o menos (fijo por ahora; después, configuración) |
-| **VIGENTE** | Vence en más de 30 días |
+| **POR VENCER** | Vence dentro de los **días de aviso de su tipo** o menos |
+| **VIGENTE** | Vence después de los días de aviso de su tipo |
 | **SIN VENCIMIENTO** | El tipo de papel no vence |
 | **FALTA** | El papel es obligatorio y no hay ninguno capturado |
 
@@ -105,7 +105,7 @@ La lista de abajo es de hoy, 16 de septiembre. Cada parte dice su fuente; al con
 
 **✓ decidido (16 sep).** El catálogo **no se hornea en el código**. Qué papel se exige, si vence y cada cuánto depende de la ley de cada país y cada estado, así que son **reglas que viven como dato**, editables desde la pantalla. Es la misma ley del Marco que rige la verificación —«cada contrato define su tolerancia»—: aquí, **cada mercado define su catálogo**. Y cumple el 6.18: si cambia una ley local, alguien edita el valor en la pantalla, no un desarrollador.
 
-Cada tipo de papel de un mercado lleva: sujeto (unidad o chofer), nombre, si es **obligatorio**, si **vence**, y su **periodicidad** (sólo si vence y se puede calcular desde la emisión).
+Cada tipo de papel de un mercado lleva: sujeto (unidad o chofer), nombre, si es **obligatorio**, si **vence**, sus **días de aviso** para «por vencer» (sólo si vence), y su **periodicidad** (sólo si vence y se puede calcular desde la emisión).
 
 ### Juárez nace con su catálogo lleno — ✓ decidido (16 sep)
 
@@ -119,16 +119,16 @@ Cada tipo de papel de un mercado lleva: sujeto (unidad o chofer), nombre, si es 
 | Chofer | Examen médico |
 | Chofer | Antidoping |
 
-**Nacen los nombres, no los valores.** Obligatorio, vence y periodicidad los carga ASAV como configuración cuando exista la pantalla; no se hornean ni en código ni en la migración. Capacitación queda fuera por decisión de ASAV, aunque la Pieza 5 §C la nombra.
+**Nacen los nombres, no los valores.** Obligatorio, vence, días de aviso y periodicidad los carga ASAV como configuración cuando exista la pantalla; no se hornean ni en código ni en la migración. Capacitación queda fuera por decisión de ASAV, aunque la Pieza 5 §C la nombra.
 
-### Lo que la configuración trae consigo — ? espera visto
+### Lo que la configuración trae consigo — ✓ decidido (16 sep)
 
-1. **Qué es un mercado.** Propongo **país + estado** (México · Chihuahua), con **municipio** opcional para la ley que sólo es de una ciudad: el permiso de transporte de personal puede ser municipal.
-2. **Cómo sabe una cuenta su mercado.** Propongo que **cada cuenta de carrier pertenezca a un mercado**, asignado en su alta. Un carrier que opere en dos estados es un caso que hoy no existe; se nombra y no se construye.
-3. **Quién edita el catálogo.** Es la ley de un mercado, no la preferencia de un carrier, así que propongo que lo edite **J-Staff**, igual que los actos de plataforma de 6.24. **El lugar en el mapa también espera visto:** propongo que viva dentro de «Cuentas y demos», sin cuarto nuevo.
+1. **Qué es un mercado.** **País + estado** (México · Chihuahua), con **municipio** opcional para la ley que sólo es de una ciudad: el permiso de transporte de personal puede ser municipal.
+2. **Cómo sabe una cuenta su mercado.** **Cada cuenta de carrier pertenece a un mercado**, asignado en su alta. Un carrier que opere en dos estados es un caso que hoy no existe; se nombra y no se construye.
+3. **Quién edita el catálogo.** Es la ley de un mercado, no la preferencia de un carrier, así que lo edita **J-Staff**, igual que los actos de plataforma de 6.24. Vive dentro de «Cuentas y demos», sin cuarto nuevo; el mapa de la casa lo dice.
 4. **Un tipo sin sus valores todavía.** Mientras «obligatorio» no esté cargado, `FALTA` no se puede calcular: esa parte dice **«aún no disponible · falta la regla del catálogo de Juárez»**, sin suponer que es obligatorio ni que no lo es. La vigencia de un papel capturado con su fecha sí se calcula, porque no depende de la regla.
 5. **Cambiar una regla no reescribe el pasado.** Cada cambio es una versión nueva, con autor y fecha en el ledger. La vigencia se calcula al leer, con la regla de hoy; la versión anterior queda para saber qué regla valía en una fecha.
-6. **Los 30 días de «por vencer»** siguen fijos, como se decidió: son preferencia de operación, no ley de un mercado. Si también deben ser configuración, es una línea.
+6. **Los días de aviso son de cada tipo de papel**, no un número global ✓ (16 sep). Un permiso que tarda dos meses en renovarse necesita más aviso que una verificación de un día. Se cargan junto con la vigencia del tipo, desde la pantalla, y se versionan igual (punto 5). **Mientras un tipo no los tenga**, se aplica el punto 4: un papel no vencido muestra sus días (`en 12 d`) pero no se declara ni VIGENTE ni POR VENCER, porque cualquiera de los dos supondría la regla; dice «falta la regla». VENCIDO sí se declara, porque no depende de ella.
 
 Fuera, con nombre: que un **contrato** exija un papel además de los del mercado (la planta que pide algo extra).
 
@@ -157,7 +157,7 @@ Fuera, con nombre: que un **contrato** exija un papel además de los del mercado
 
 ## 8. Cómo se ve
 
-Las formas nuevas van al skill `jtel-diseno`, sección «Los glifos»: los cinco estados de vigencia y los tres estados de una parte. Los papeles son la **tercera familia de formas, las hojas**, porque el cuadrado ya es del dispositivo. Boceto en las dos pieles, junto a las otras dos familias: https://claude.ai/artifact/RcGFprV2kaHpSRoqqmvwnS. **? espera visto** de ASAV.
+Las formas nuevas van al skill `jtel-diseno`, sección «Los glifos»: los cinco estados de vigencia y los tres estados de una parte. Los papeles son la **tercera familia de formas, las hojas**, porque el cuadrado ya es del dispositivo. Boceto en las dos pieles, junto a las otras dos familias: https://claude.ai/artifact/RcGFprV2kaHpSRoqqmvwnS. ✓ aprobados por ASAV (16 sep): las tres siluetas se distinguen a 16 px.
 
 ---
 
@@ -181,9 +181,6 @@ Las formas nuevas van al skill `jtel-diseno`, sección «Los glifos»: los cinco
 - **Expedientes de contrato y de ruta** (6.30): viven del lado de Vernier.
 - **Alta de unidades** en el cascarón: hoy vive en el árbol viejo.
 
-## 11. Lo que espera visto, junto
+## 11. Lo que espera visto
 
-1. Qué es un mercado, cómo lo sabe una cuenta y quién edita su catálogo, incluido su lugar en el mapa (§5, puntos 1 a 3).
-2. Un tipo sin sus valores dice «aún no disponible» (§5, punto 4).
-3. Las reglas versionadas (§5, punto 5).
-4. Los glifos: la familia de las hojas (§8, boceto publicado).
+Nada. Todo lo de esta ficha quedó ratificado el 16 de septiembre de 2026. Lo que aparezca al construir se pregunta y se agrega aquí con su fecha.

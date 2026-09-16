@@ -82,9 +82,9 @@ Los cuatro estados de una unidad:
 
 **Regla de extensión:** cuando haga falta un estado nuevo, se inventa una **forma** nueva, no un color nuevo. Si dos estados comparten forma y se distinguen sólo por color, está mal.
 
-### La vigencia de un papel — PROPUESTA, espera visto de ASAV
+### La vigencia de un papel
 
-Los papeles del expediente (Marco, Pieza 6 §H; `docs/Ficha-Expedientes.md` §4) tienen cinco estados. Son la **tercera familia de formas**: las unidades son flechas y círculos (se mueven), los dispositivos son cuadros (se instalan) y los papeles son **hojas** —rectángulo vertical con la esquina superior derecha doblada—. No usan el cuadrado: ya es del dispositivo, y en el cuarto de Expedientes las dos familias aparecen juntas; un cuadro lleno diría «vigente» y «en unidad» a la vez. Boceto: https://claude.ai/artifact/RcGFprV2kaHpSRoqqmvwnS
+Los papeles del expediente (Marco, Pieza 6 §H; `docs/Ficha-Expedientes.md` §4) tienen cinco estados. Aprobados por ASAV el 16 de septiembre de 2026. Son la **tercera familia de formas**: las unidades son flechas y círculos (se mueven), los dispositivos son cuadros (se instalan) y los papeles son **hojas** —rectángulo vertical con la esquina superior derecha doblada—. No usan el cuadrado: ya es del dispositivo, y en el cuarto de Expedientes las dos familias aparecen juntas; un cuadro lleno diría «vigente» y «en unidad» a la vez. Boceto: https://claude.ai/artifact/RcGFprV2kaHpSRoqqmvwnS
 
 | Estado | Glifo | Por qué esa forma | Tinta |
 |---|---|---|---|
@@ -98,7 +98,7 @@ Los papeles del expediente (Marco, Pieza 6 §H; `docs/Ficha-Expedientes.md` §4)
 - **Ni cobre ni colores de veredicto.** Un papel vencido no es un servicio no cumplido, y la vigencia no es vida.
 - En el vistazo, el dato es **un número**: los días que faltan (`en 12 d`) o los que lleva vencido (`hace 3 d`). La fecha exacta va en el expediente.
 
-### Los tres estados de una parte del expediente — PROPUESTA, espera visto de ASAV
+### Los tres estados de una parte del expediente
 
 Cada parte de un expediente declara uno de tres estados (`docs/Ficha-Expedientes.md` §3). Ninguno se esconde, y ninguno usa esqueleto: un esqueleto finge contenido que no va a llegar.
 
