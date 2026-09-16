@@ -46,6 +46,8 @@ export function MapaFlota({
   const capaLugares = useRef<import("leaflet").LayerGroup | null>(null);
   const marcadores = useRef(new Map<string, import("leaflet").Marker>());
   const encuadrado = useRef(false);
+  /** Lo que hay que encuadrar la primera vez; se guarda hasta que el mapa tenga tamaño. */
+  const puntosDeEncuadre = useRef<Array<[number, number]>>([]);
   const [listo, setListo] = useState(false);
   /** Los elementos donde se monta cada glifo, por unidad. */
   const [anclas, setAnclas] = useState<Map<string, HTMLElement>>(new Map());
@@ -72,8 +74,13 @@ export function MapaFlota({
       setListo(true);
     });
     // En celular el mapa nace escondido detrás de «Lista»: al mostrarse hay que
-    // decirle a Leaflet su tamaño real, o pinta mosaicos a medias.
-    const observador = new ResizeObserver(() => mapa.current?.invalidateSize());
+    // decirle a Leaflet su tamaño real, o pinta mosaicos a medias. Y el primer
+    // encuadre espera a ese momento: calculado con tamaño cero, Leaflet se va
+    // al mapa del mundo entero (visto en las capturas de C2).
+    const observador = new ResizeObserver(() => {
+      mapa.current?.invalidateSize();
+      encuadrarSiSePuede();
+    });
     observador.observe(nodo);
     return () => {
       cancelado = true;
@@ -83,6 +90,18 @@ export function MapaFlota({
       marcadores.current.clear();
     };
   }, []);
+
+  function encuadrarSiSePuede() {
+    const m = mapa.current;
+    const mod = L.current;
+    const nodo = contenedor.current;
+    if (!m || !mod || !nodo || encuadrado.current) return;
+    if (nodo.clientWidth === 0 || nodo.clientHeight === 0) return;
+    if (puntosDeEncuadre.current.length === 0) return;
+    m.invalidateSize();
+    m.fitBounds(mod.latLngBounds(puntosDeEncuadre.current).pad(0.15), { maxZoom: 15 });
+    encuadrado.current = true;
+  }
 
   /* Los lugares: los destinos punteados, el resto con línea fina. */
   useEffect(() => {
@@ -97,9 +116,12 @@ export function MapaFlota({
           l.poligono.map((p) => [p.lat, p.lng] as [number, number]),
           { className: l.rol === "destino" ? "lugar-flota lugar-destino" : "lugar-flota", interactive: false },
         )
+        // El rótulo va arriba del polígono, no en su centro: adentro es justo
+        // donde están las unidades que llegaron, y se enciman.
         .bindTooltip(l.rol === "destino" ? `${l.nombre} · destino` : l.nombre, {
           permanent: true,
-          direction: "center",
+          direction: "top",
+          offset: [0, -6],
           className: "rotulo-lugar",
         })
         .addTo(capa);
@@ -152,14 +174,11 @@ export function MapaFlota({
     // El primer encuadre, sobre lo que hay: unidades y lugares. Después, quien
     // mira manda en el mapa; una lectura nueva no le mueve la cámara.
     if (!encuadrado.current) {
-      const puntos: Array<[number, number]> = [
+      puntosDeEncuadre.current = [
         ...conPosicion.map((u) => [u.posicion!.lat, u.posicion!.lng] as [number, number]),
         ...lugares.flatMap((l) => l.poligono.map((p) => [p.lat, p.lng] as [number, number])),
       ];
-      if (puntos.length > 0) {
-        m.fitBounds(mod.latLngBounds(puntos).pad(0.15), { maxZoom: 15 });
-        encuadrado.current = true;
-      }
+      encuadrarSiSePuede();
     }
   }, [unidades, lugares, listo]);
 

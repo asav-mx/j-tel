@@ -221,12 +221,14 @@
 }
 
 .cascaron .mapa-flota .rotulo-lugar {
-  background: transparent;
+  /* Sobre calles, un rótulo sin fondo no se lee: va en una pastilla de la pieza. */
+  background: var(--pieza);
   border: 0;
+  border-radius: 4px;
   box-shadow: none;
   color: var(--tenue);
   font-size: 12px;
-  padding: 0;
+  padding: 0 5px;
 }
 
 .cascaron .mapa-flota .rotulo-lugar::before {

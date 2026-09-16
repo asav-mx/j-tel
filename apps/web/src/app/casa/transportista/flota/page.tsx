@@ -5,6 +5,7 @@ import { SinCuenta } from "@/components/casa/expediente";
 import { FlotaEnVivo } from "@/components/casa/flota-en-vivo";
 import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
+import { relojDePagina } from "@/lib/casa/cronometro";
 import { flotaParaPantalla } from "@/lib/casa/flota";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,9 @@ export default async function CuartoFlotaEnVivo({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const casa = CASAS.transportista;
+  const reloj = await relojDePagina("flota");
   const cuenta = await cuentaDelCuarto(searchParams);
+  reloj.marca("guardia");
   if (!cuenta) {
     return (
       <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
@@ -39,6 +42,8 @@ export default async function CuartoFlotaEnVivo({
   const { carrier, cuentaEnRuta } = cuenta;
   const leida = new Date();
   const flota = await cargarFlotaEnVivo(getRepos(), carrier.id, leida);
+  reloj.marca("datos");
+  reloj.fin();
 
   return (
     <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
