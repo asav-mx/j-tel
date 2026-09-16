@@ -83,6 +83,11 @@ SELECT count(*) AS ya_en_juarez_bus
 -- o pasa todo, o nada. Las guardas van DENTRO del WHERE: mismo IMEI, mismo
 -- nombre, cuenta de origen ASAV, sin baja, y que el IMEI no exista ya en
 -- Juárez Bus. Revisa los dos números ANTES del COMMIT.
+--
+-- ⚠ NO PEGUES LA HOJA ENTERA. Corre este paso en dos tiempos: primero el
+--   BEGIN y el WITH, mira los números, y sólo entonces escribe tú el COMMIT o
+--   el ROLLBACK. Por eso los dos van comentados abajo: pegado de corrido, nada
+--   se confirma sin que lo hayas visto.
 -- ───────────────────────────────────────────────────────────────────
 
 BEGIN;
@@ -125,7 +130,7 @@ SELECT (SELECT count(*) FROM movidos)  AS movidos,
 -- LO QUE DEBES VER: movidos = 5, asignaciones_cerradas = 0.
 --
 -- Si cuadra:
-COMMIT;
+-- COMMIT;
 -- Si no (por ejemplo movidos < 5 porque alguno ya se había movido o cambió de
 -- nombre), en lugar del COMMIT:
 -- ROLLBACK;
