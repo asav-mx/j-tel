@@ -8,15 +8,16 @@ Lo que reemplaza docs/Mapa-De-La-Casa.md, ratificado ese día:
 · La sección B (LAS VISTAS) entera. El menú vigente, las cinco casas y sus puertas están en el mapa, con los nombres en la opción B: nombres de cosa, con el producto como sello chico encima de su sección.
 · De la sección G, la prohibición "Una pestaña nombrada como objeto de base de datos". El mapa ratifica lo contrario y da su razón: un coordinador sabe buscar "cumplimiento", no "Vernier".
 · De la sección D, la columna SE VE EN, que nombra vistas que ya no existen ("Estado de cuenta", "Hoy", "Flota", "Taller"). Lo que sobrevive de esa tabla es el corte —dónde se ve una función contra dónde se ejecuta—, no los nombres de los lugares.
+· La sección F, el asiento de Lenore en el marco superior "reservado aunque todavía no haga nada". La regla 4 del mapa lo prohíbe: lo que no aplica no aparece, ni apagado, ni con candado, ni "próximamente". Reservar un espacio vacío es justo el cuarto vacío que hace mentir a la casa. Lenore entra el día que tenga algo que decir, y ese día se le hace lugar. Decidido por ASAV el 15 de septiembre de 2026.
 
 LO QUE SOBREVIVE, Y ES LA RAZÓN DE QUE ESTA FICHA SIGA VIVA
 · La sección A, LA LEY DE ACCIÓN: una acción se ejecuta en un solo lugar, el expediente del sustantivo al que le pasa. Las vistas ven, agrupan y ligan; no son dueñas de nada. El mapa dice qué lugares hay y cómo se llega a ellos, pero no dice dónde se ejecuta una acción: ese hueco lo sigue tapando esta ficha, y sin ella cada pantalla nueva vuelve a decidir lo mismo.
 · El corolario: si una acción no tiene expediente donde vivir, falta un expediente — no sobra una vista.
 · La sección C (los expedientes y sus acciones), la sección E (cómo se desciende) y el resto de la sección G.
 
-DOS PUNTOS ABIERTOS, QUE NADIE HA RESUELTO
-· Sección F — el asiento de Lenore en el marco superior, "reservado aunque todavía no haga nada". La regla 4 del mapa dice lo contrario: lo que no aplica no aparece, ni apagado, ni con candado, ni "próximamente". No se construye ese asiento hasta que ASAV decida cuál de las dos gana.
-· Sección G — la prohibición del menú lateral ("la navegación es por pestañas arriba y ligas dentro del contenido"). El mapa no se pronuncia: pide dos niveles como máximo y cuatro pestañas abajo en celular, sin decir arriba o al costado. Mientras nadie lo decida, esta prohibición sigue en pie y el cascarón la respeta.
+LA PROHIBICIÓN DEL MENÚ LATERAL SIGUE EN PIE
+La sección G prohíbe el menú lateral: "la navegación es por pestañas arriba y ligas dentro del contenido". El mapa no se pronuncia —pide dos niveles como máximo y cuatro pestañas abajo en celular, sin decir arriba o al costado—, así que esta ficha es la única que manda ahí. ASAV la ratificó el 15 de septiembre de 2026: el cascarón navega por pestañas arriba, con el segundo nivel colgando de la pestaña activa, y le deja el ancho completo a la puerta de cada casa, que en el transportista es un mapa.
+Consecuencia anotada: apps/web/src/components/nav-lateral.tsx contradice esta prohibición y queda huérfano cuando el cascarón entre. Se retira al terminar de migrar los cuartos, no antes: hoy lo usan las pantallas vivas.
 
 
 Por qué existe
