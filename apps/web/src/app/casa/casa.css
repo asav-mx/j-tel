@@ -1,0 +1,152 @@
+/*
+ * La piel del cascarón — skill `jtel-diseno`, 15 de septiembre de 2026.
+ *
+ * ⚠ LO QUE HAY QUE LEER ANTES DE TOCAR ESTE ARCHIVO
+ *
+ * Dos de estos tokens —`--tenue` y `--linea`— **existen también en
+ * `globals.css` con otros valores**, porque los dos lenguajes usan la misma
+ * palabra para el mismo papel. Aquí se redefinen dentro de `.cascaron`, así que:
+ *
+ *   · dentro del cascarón mandan estos valores;
+ *   · fuera, las pantallas vivas siguen viendo los suyos, sin un pixel de
+ *     diferencia;
+ *   · y un componente que se use en los DOS lados cambia de color según dónde
+ *     esté. Por eso los componentes del cascarón viven en `components/casa/` y
+ *     no se comparten con los de afuera hasta que la mudanza termine.
+ *
+ * Cuando el último cuarto se mude, `globals.css` se borra y estos tokens suben
+ * a `:root`.
+ *
+ * ---
+ *
+ * **Nace clara.** La piel oscura es un interruptor, no un tema aparte: por eso
+ * los valores claros están sueltos sobre `.cascaron` —son el punto de partida,
+ * sin condición— y los oscuros viven detrás de `[data-tema="oscuro"]`.
+ *
+ * El atributo `data-tema` lo escribe `TemaInicial` en `<html>` antes del primer
+ * pintado, y lo cambia `InterruptorTema`. Se reusa a propósito, en vez de
+ * inventar un segundo interruptor: la preferencia de piel es una sola por
+ * persona, y tenerla en dos lugares es la forma segura de que se contradigan.
+ *
+ * ---
+ *
+ * ⚠ **EL CONTRASTE DE LA PIEL CLARA, MEDIDO.** El skill pide en su lista de
+ * entrega «contraste ≥ 4.5:1», y con sus propios valores la piel clara no llega
+ * en dos casos. Los números, contra `--papel` / `--pieza`:
+ *
+ *   --tinta   14.81 / 15.44  ✔
+ *   --tenue    3.94 /  4.11  ✘ por debajo de 4.5 para texto normal
+ *   --vivo     3.28 /  3.41  — alcanza para texto grande y para marcas
+ *   --senal    2.42 /  2.52  ✘ no alcanza ni el 3:1 de lo que no es texto
+ *
+ * La piel oscura pasa todo (4.59 el más bajo). **No se tocaron los valores**:
+ * son ley de diseño y los decide quien manda sobre el skill, no este archivo.
+ * Lo que sí se hizo aquí es no apoyarse en ellos donde el contraste importa:
+ *
+ *   · el cobre **nunca carga significado solo** — marca el lugar activo con una
+ *     barra, y la palabra cambia de `--tenue` a `--tinta` al mismo tiempo;
+ *   · los anillos de foco son de `--tinta`, no de cobre. Además de verse, es lo
+ *     que pide el propio skill: el cobre sólo donde hay vida, y un foco no es
+ *     vida;
+ *   · `--tenue` se usa para apoyo y etiquetas, nunca para lo único que hay que
+ *     leer en una pantalla.
+ *
+ * Si algún día `--tenue` sube a 4.5:1 en claro, esta nota se borra.
+ *
+ * **No hay tokens de veredicto aquí.** El Marco reserva significado a cumplido,
+ * no cumplido y pendiente, y el skill vigente no publica sus valores en la piel
+ * nueva. El cascarón no dibuja un solo veredicto, así que inventarle tres
+ * colores sería escribir ley de diseño de contrabando. Entran con el primer
+ * cuarto que muestre un veredicto, y los decide quien manda sobre el skill.
+ */
+
+.cascaron {
+  /* — Piel clara, la de nacimiento — */
+  --papel: #fafafc; /* fondo de la aplicación */
+  --pieza: #ffffff; /* tarjetas y piezas */
+  --tinta: #1c2148; /* texto principal */
+  --tenue: #757c9b; /* apoyo, etiquetas, lo secundario */
+  --linea: #e4e5ee; /* separadores y bordes */
+  --senal: #ee8a32; /* cobre — SÓLO donde hay vida */
+  --vivo: #1b9e6b; /* el latido de «en vivo» */
+
+  /* — Tipografía: los tres papeles del skill —
+   *   Nombres propios, distintos de los `--fuente-*` de la piel anterior, para
+   *   que nadie los confunda ni herede el que no es. Las familias las carga
+   *   `app/casa/layout.tsx` con next/font y las publica como `--letra-*-cargada`.
+   *   Ningún componente nombra una familia directamente. */
+  --letra-titular: var(--letra-titular-cargada), system-ui, sans-serif; /* lo que identifica */
+  --letra-lectura: var(--letra-lectura-cargada), system-ui, sans-serif; /* lo que se lee de corrido */
+  --letra-medida: var(--letra-medida-cargada), ui-monospace, SFMono-Regular, monospace; /* toda medición */
+
+  /* — Superficies derivadas —
+   *   Cada una tiene su gemela en la piel oscura, más abajo. La regla del skill
+   *   es que ningún componente escriba un color a mano: si falta un tinte, se
+   *   agrega el token a las DOS pieles, nunca a una sola. */
+  --roce: rgba(28, 33, 72, 0.04); /* el hover de algo tocable */
+  --t-senal: rgba(238, 138, 50, 0.12); /* fondo apenas teñido de lo vivo */
+  --t-vivo: rgba(27, 158, 107, 0.12);
+
+  color-scheme: light;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--letra-lectura);
+  min-height: 100dvh;
+}
+
+[data-tema="oscuro"] .cascaron {
+  /* — Piel oscura —
+   *   No es la clara con los fondos volteados: cada una tiene sus propios
+   *   valores, y el cobre y el verde suben de luminosidad para sostener el
+   *   contraste sobre fondo oscuro. */
+  --papel: #0b0d18;
+  --pieza: #141829;
+  --tinta: #edeef8;
+  --tenue: #7a81a0;
+  --linea: #232842;
+  --senal: #ffa24d;
+  --vivo: #2fcb8b;
+
+  --roce: rgba(237, 238, 248, 0.05);
+  --t-senal: rgba(255, 162, 77, 0.13);
+  --t-vivo: rgba(47, 203, 139, 0.13);
+
+  color-scheme: dark;
+}
+
+/*
+ * Toda medición alinea en columna. Va aquí y no en cada componente porque es
+ * ley del skill, no decisión de una pantalla: un número que baila entre
+ * renglones deja de leerse como lectura de instrumento.
+ */
+.cascaron [data-medida] {
+  font-family: var(--letra-medida);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * El latido de «en vivo» — la única animación que el cascarón trae de fábrica.
+ *
+ * El skill permite el movimiento que significa algo y prohíbe el de adorno.
+ * Éste significa que el sistema respira; si algo más se mueve aquí dentro, está
+ * de sobra.
+ */
+@keyframes latido-jtel {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.cascaron [data-latido] {
+  animation: latido-jtel 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cascaron [data-latido] {
+    animation: none;
+  }
+}

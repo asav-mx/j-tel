@@ -40,9 +40,19 @@ const DESTINO = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "app"
  * en el layout, no aquí.
  */
 const FAMILIAS = [
+  // — La piel anterior (skill `j-telemetry-ui`, borrado el 15 de septiembre de
+  //   2026). Siguen aquí porque las pantallas vivas todavía las usan; salen del
+  //   repo el día que el último cuarto termine de mudarse al cascarón. —
   { familia: "Archivo", pesos: [600, 700, 800], variable: true, nombre: "archivo" },
   { familia: "IBM Plex Sans", pesos: [400, 500], variable: true, nombre: "plex-sans" },
   { familia: "IBM Plex Mono", pesos: [400, 500], variable: false, nombre: "plex-mono" },
+
+  // — Los tres papeles del skill vigente `jtel-diseno`, con los pesos que ese
+  //   skill declara. Las carga `app/casa/layout.tsx`, no el layout raíz: así el
+  //   cascarón estrena tipografía sin agregarle un byte a las pantallas vivas. —
+  { familia: "Bricolage Grotesque", pesos: [700, 800], variable: true, nombre: "bricolage" },
+  { familia: "Inter", pesos: [400, 500, 600], variable: true, nombre: "inter" },
+  { familia: "JetBrains Mono", pesos: [400, 500], variable: true, nombre: "jetbrains-mono" },
 ];
 
 async function traer(url) {
