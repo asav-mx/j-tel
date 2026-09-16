@@ -27,6 +27,7 @@ export default defineConfig({
       "src/asignacion-circuito.integration.test.ts",
       "src/publicacion-circuito.integration.test.ts",
       "src/circuits-constraints.integration.test.ts",
+      "src/expediente-documentos.integration.test.ts",
     ],
     // Escriben en la misma rama desechable: en paralelo se pisan.
     fileParallelism: false,
