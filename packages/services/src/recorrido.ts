@@ -160,8 +160,16 @@ function intervaloMediano(puntos: PuntoObservado[]): number | null {
   return mediana(gaps) / 1000;
 }
 
-/** Kilómetros recorridos descartando saltos del equipo. */
-function kilometros(puntos: PuntoObservado[]): { km: number; saltos: number } {
+/**
+ * Kilómetros recorridos descartando saltos del equipo.
+ *
+ * Exportada para que el recorrido del día (`recorrido-del-dia.ts`) sume con la
+ * misma regla que el censo: dos pantallas que dan kilómetros distintos para la
+ * misma unidad destruyen la credibilidad de las dos.
+ */
+export function kilometrosSinSaltos(
+  puntos: Array<Pick<PuntoObservado, "recordedAt" | "latitude" | "longitude">>,
+): { km: number; saltos: number } {
   let km = 0;
   let saltos = 0;
   for (let i = 1; i < puntos.length; i++) {
@@ -234,7 +242,7 @@ export function construirCenso(entrada: EntradaCenso): Censo {
       actual.length > mejor.length ? actual : mejor,
     );
 
-    const { km, saltos } = kilometros(representante);
+    const { km, saltos } = kilometrosSinSaltos(representante);
 
     return {
       unitId: u.id,

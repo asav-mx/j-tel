@@ -12,6 +12,7 @@ export * from "./ingest-health.js";
 export * from "./gap-backfill.js";
 export * from "./salud.js";
 export * from "./recorrido.js";
+export * from "./recorrido-del-dia.js";
 export * from "./cierre.js";
 export * from "./cobertura.js";
 export * from "./medicion-recorrido.js";
