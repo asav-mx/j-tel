@@ -39,6 +39,13 @@ import { Glifo, type EstadoGlifo } from "@/components/casa/glifo";
  *
  * `apagada` baja la pieza a 60 %: lo que ya está al día suelta el peso para que
  * el ojo vaya solo a lo que pide algo.
+ *
+ * `alTocar` es la otra forma de tocar, la de Flota en vivo: la pieza señala su
+ * unidad en el mapa en vez de navegar (la ficha va en el mapa, «Ver 10254»).
+ * Es un botón de verdad, con `aria-pressed`, no un div con clic.
+ *
+ * `datoVivo` pone el dato en cobre. Sólo para un dato que está vivo ahora —la
+ * edad de lo que transmite—: el skill reserva el cobre para la vida.
  */
 export function Pieza({
   estado,
@@ -50,6 +57,9 @@ export function Pieza({
   edad,
   ficha,
   apagada = false,
+  alTocar,
+  seleccionada = false,
+  datoVivo = false,
 }: {
   /**
    * La forma que dice el estado. Opcional: una pieza que liga a otra cosa sin
@@ -72,6 +82,12 @@ export function Pieza({
   ficha?: string;
   /** Lo que ya está al día, a 60 %. */
   apagada?: boolean;
+  /** Tocar hace algo en la misma pantalla en vez de navegar. Excluye `ficha`. */
+  alTocar?: () => void;
+  /** Con `alTocar`: la pieza señalada ahora. */
+  seleccionada?: boolean;
+  /** El dato está vivo ahora: va en cobre. */
+  datoVivo?: boolean;
 }) {
   const cuerpo = (
     <>
@@ -92,7 +108,7 @@ export function Pieza({
       </span>
 
       <span className="flex-none text-right">
-        <span data-medida className="block text-[15px] leading-tight">
+        <span data-medida className={`block text-[15px] leading-tight${datoVivo ? " text-[var(--senal)]" : ""}`}>
           {dato}
         </span>
         <span
@@ -112,9 +128,25 @@ export function Pieza({
     </>
   );
 
-  const forma = `flex w-full items-start gap-4 rounded-lg border border-[var(--linea)] bg-[var(--pieza)] px-4 py-3.5 text-left${
+  // Un solo color de borde por pieza: dos clases de borde juntas quedan a merced
+  // del orden del CSS generado.
+  const borde = alTocar && seleccionada ? "border-[var(--tinta)]" : "border-[var(--linea)]";
+  const forma = `flex w-full items-start gap-4 rounded-lg border ${borde} bg-[var(--pieza)] px-4 py-3.5 text-left${
     apagada ? " opacity-60" : ""
   }`;
+
+  if (alTocar) {
+    return (
+      <button
+        type="button"
+        onClick={alTocar}
+        aria-pressed={seleccionada}
+        className={`${forma} cursor-pointer transition-colors hover:bg-[var(--roce)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--tinta)]`}
+      >
+        {cuerpo}
+      </button>
+    );
+  }
 
   if (!ficha) return <div className={forma}>{cuerpo}</div>;
 

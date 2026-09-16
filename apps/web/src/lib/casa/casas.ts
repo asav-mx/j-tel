@@ -100,7 +100,8 @@ export const CASAS: Record<Cara, Casa> = {
         sello: "Compás",
         lugares: [
           // La puerta de la casa: el primer lugar del primer grupo.
-          { nombre: "Flota en vivo", ruta: null, condicion: "siempre" },
+          // C2 del cuarto de Compás (16 sep 2026).
+          { nombre: "Flota en vivo", ruta: "/casa/transportista/flota", condicion: "siempre" },
           { nombre: "Dispositivos", ruta: null, condicion: "siempre" },
           { nombre: "Lugares", ruta: null, condicion: "siempre" },
         ],

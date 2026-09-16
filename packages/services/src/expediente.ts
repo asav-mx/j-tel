@@ -37,7 +37,7 @@ export const SERVICIOS_DEL_EXPEDIENTE = 8;
 
 type ReposDelExpediente = Pick<
   Repositories,
-  "expedientes" | "fleet" | "livePositions" | "telemetry" | "occurrences"
+  "expedientes" | "fleet" | "livePositions" | "telemetry" | "occurrences" | "geofences"
 >;
 
 // ── Los documentos, comunes a unidad y chofer ────────────────────────────

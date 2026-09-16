@@ -80,6 +80,7 @@ Los cuatro estados de una unidad:
 | Sin señal | **Círculo hueco** | Presente pero callada: pide esperar. Distinto de la flecha hueca de desconectado, que pide hacer. Aprobado el 16 sep 2026 |
 | En destino | Anillo punteado | Está, pero ya no se le mira: la geocerca es la frontera de la evidencia |
 | Sin transmitir | Flecha hueca | La silueta de lo que había, vacía. Es DESCONECTADO |
+| Sin dispositivo | Flecha hueca **punteada** | Ni siquiera hubo con qué transmitir. Distinta de la de desconectado: una pide revisar el dispositivo, la otra montarle uno. Decisión 7 del cuarto de Compás, 16 sep 2026 |
 
 ### Los dispositivos: cuadros
 
@@ -141,7 +142,7 @@ Esto es la Pieza 1 §D hecha regla de interfaz. Un punto de hace tres horas dibu
 **Dos precisiones:**
 
 - Una unidad que llegó a su destino **no está "sin señal"**. Su traza se corta al llegar porque así lo manda el Marco. Se muestra la hora de llegada, no la edad — y nunca en el grupo de las calladas.
-- Una geocerca corta la traza **según su rol**. Destino corta; paradero de circuito no. El corte lo decide el rol, no la geocerca por serlo.
+- La traza se corta **según la modalidad del servicio** (Marco, Pieza 7): en especial, la geocerca de destino corta; en circuito, ninguna corta, ni la misma geocerca de destino (es de paso). EN DESTINO sólo existe en especial.
 
 ---
 
@@ -305,7 +306,7 @@ Si aparece cualquiera de éstos, el lenguaje se disolvió:
 - [ ] ¿Lo apagado está apagado de verdad?
 - [ ] ¿Se ve bien en las **dos** pieles?
 - [ ] ¿Se puede entender sin leer una oración completa?
-- [ ] ¿Las trazas se cortan según el **rol** de la geocerca?
+- [ ] ¿Las trazas se cortan según la **modalidad** del servicio (Pieza 7)?
 - [ ] ¿El playback se detiene en los huecos en vez de deslizarse?
 - [ ] ¿Sólo aparecen los tres veredictos del Marco, con el detalle como motivo debajo?
 - [ ] ¿Ningún nombre de cliente, planta o ruta está horneado en el componente?

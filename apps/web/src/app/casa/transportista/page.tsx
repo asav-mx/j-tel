@@ -1,29 +1,28 @@
+import { redirect } from "next/navigation";
 import { exigirSesion } from "@/lib/guardia-pagina";
-import { Marco } from "@/components/casa/marco";
-import { CasaVacia } from "@/components/casa/casa-vacia";
-import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
+import { CASAS } from "@/lib/casa/casas";
+import { RUTA_FLOTA } from "@/lib/casa/flota";
 
 /**
  * La casa del transportista — cimiento: Compás.
  *
  * Compra Compás aunque nunca tenga contrato; Vernier se enciende encima cuando
- * lo consigue. Su puerta responde «¿dónde está mi flota?».
+ * lo consigue. Su puerta responde «¿dónde está mi flota?», y desde C2 esa
+ * pregunta tiene cuarto: Flota en vivo, el primer lugar del primer grupo. La
+ * casa ya no se dibuja vacía; lleva a su puerta, con la cuenta si venía.
  *
- * **La guardia es `exigirSesion` y no la fina**, por la misma razón que la de
- * `/carrier`: es la pregunta que se contesta sin leer un dato de nadie. La
- * guardia por cuenta —`{ tipo: "carrier", slug }`— necesita saber de qué cuenta
- * se habla, y esta pantalla todavía no lo sabe porque no lee nada. El primer
- * cuarto que traiga cuenta trae también su guardia fina; hasta entonces, pedir
- * sesión es exactamente lo que se puede comprobar, y pedir menos sería dejar
- * abierto lo que ya se cerró en el resto del producto.
+ * La guardia sigue siendo `exigirSesion`: aquí no se lee un dato de nadie. La
+ * guardia por cuenta la pone el cuarto al que se llega.
  */
-export default async function CasaTransportista() {
+export default async function CasaTransportista({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await exigirSesion();
-
-  const casa = CASAS.transportista;
-  return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
-      <CasaVacia casa={casa} />
-    </Marco>
-  );
+  const params = await searchParams;
+  const cuenta = typeof params.account === "string" && params.account ? params.account : null;
+  // La puerta sale del menú, no de una constante suelta: si cambia el orden, cambia aquí.
+  const puerta = CASAS.transportista.grupos[0]?.lugares[0]?.ruta ?? RUTA_FLOTA;
+  redirect(cuenta ? `${puerta}?account=${encodeURIComponent(cuenta)}` : puerta);
 }

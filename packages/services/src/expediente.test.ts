@@ -97,7 +97,9 @@ function repos(o: Opciones = {}) {
       ],
     },
     telemetry: { ultimoPuntoPorImei: async () => new Map<string, Date>() },
+    geofences: { lugaresDeCarrier: async () => [] },
     occurrences: {
+      especialesVigentesDeCarrier: async () => [],
       ultimosServiciosDeUnidad: async (unitId: string) => {
         pedidosDeServicios.push(unitId);
         return [];

@@ -55,6 +55,10 @@ const ESPERADO = {
     "10290": "desconectado",
     "10301": "sin_dispositivo",
     "10320": "sin_dispositivo",
+    // C2: servicio especial vigente y adentro de la planta.
+    "6284": "en_destino",
+    // Adentro de la MISMA planta, sin servicio especial: de paso (Marco 7.3).
+    "9385": "en_linea/en_movimiento",
   } as Record<string, string>,
   dispositivos: {
     "TK-ESC-001": "en_unidad",
@@ -67,6 +71,8 @@ const ESPERADO = {
     "TK-ESC-008": "en_bodega",
     "TK-ESC-009": "de_baja",
     "TK-ESC-010": "de_baja",
+    "TK-ESC-011": "en_unidad",
+    "TK-ESC-012": "en_unidad",
   } as Record<string, string>,
   unidadesInactivas: 1,
   dispositivosDeBajaMontados: 1,

@@ -123,10 +123,11 @@ describe("regla 4 — lo que no aplica, no aparece", () => {
 });
 
 describe("un cuarto que no existe no se dibuja", () => {
-  it("el menú lista lo construido: Expedientes en el transportista, Cuentas y demos en J-Staff", () => {
+  it("el menú lista lo construido: Flota en vivo y Expedientes en el transportista, Cuentas y demos en J-Staff", () => {
     // Esta prueba cambia cada vez que aterriza un cuarto. Lo que cuida no es la
     // lista de hoy: es que el menú liste lo construido y nada más.
     expect(menuDe(CASAS.transportista, TODO)).toEqual([
+      { sello: "Compás", lugares: [{ nombre: "Flota en vivo", ruta: "/casa/transportista/flota", condicion: "siempre", hijos: undefined }] },
       { sello: null, lugares: [{ nombre: "Expedientes", ruta: "/casa/transportista/expedientes", condicion: "siempre", hijos: undefined }] },
     ]);
     expect(menuDe(CASAS.jstaff, TODO)).toEqual([
@@ -147,9 +148,12 @@ describe("un cuarto que no existe no se dibuja", () => {
     }
   });
 
-  it("la puerta del transportista sigue siendo Flota en vivo, aunque todavía no tenga cuarto", () => {
-    // El primer lugar del primer grupo. Construir Expedientes no le presta la puerta.
-    expect(CASAS.transportista.grupos[0]!.lugares[0]).toMatchObject({ nombre: "Flota en vivo", ruta: null });
+  it("la puerta del transportista es Flota en vivo, y desde C2 tiene cuarto", () => {
+    // El primer lugar del primer grupo. Construir Expedientes antes no le prestó la puerta.
+    expect(CASAS.transportista.grupos[0]!.lugares[0]).toMatchObject({
+      nombre: "Flota en vivo",
+      ruta: "/casa/transportista/flota",
+    });
   });
 
   it("un lugar con cuarto aparece aunque sus hermanos no lo tengan", () => {

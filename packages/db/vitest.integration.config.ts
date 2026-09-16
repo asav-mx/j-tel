@@ -29,6 +29,7 @@ export default defineConfig({
       "src/circuits-constraints.integration.test.ts",
       "src/expediente-documentos.integration.test.ts",
       "src/ultimo-punto-por-imei.integration.test.ts",
+      "src/flota-en-vivo.integration.test.ts",
     ],
     // Escriben en la misma rama desechable: en paralelo se pisan.
     fileParallelism: false,

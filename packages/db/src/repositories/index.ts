@@ -506,6 +506,42 @@ export class GeofenceRepository {
     return rows.length > 0;
   }
 
+  /**
+   * Los lugares que la flota de un carrier puede visitar, para el cuarto de
+   * Compás (decisión 1 del 16 de septiembre de 2026): las geocercas **propias
+   * del carrier**, con cualquier rol, y las de las **plantas de sus contratos**
+   * —la planta del contrato, o el campus y sus plantas miembro—.
+   *
+   * Los contratos en borrador no cuentan: todavía no son operación.
+   */
+  async lugaresDeCarrier(carrierAccountId: string) {
+    const filas = await this.db.execute<{
+      id: string;
+      name: string;
+      role: "destino" | "base" | "caseta" | "otro";
+      polygon: Array<{ lat: number; lng: number }>;
+    }>(sql`
+      WITH contratos AS (
+        SELECT plant_id, plant_group_id
+          FROM service_contracts
+         WHERE carrier_account_id = ${carrierAccountId}
+           AND status <> 'draft'
+      ),
+      plantas AS (
+        SELECT plant_id AS id FROM contratos WHERE plant_id IS NOT NULL
+        UNION
+        SELECT p.id FROM plants p JOIN contratos c ON c.plant_group_id = p.plant_group_id
+      )
+      SELECT g.id, g.name, g.role, g.polygon
+        FROM geofences g
+       WHERE g.owner_carrier_account_id = ${carrierAccountId}
+          OR g.owner_plant_id IN (SELECT id FROM plantas)
+          OR g.owner_plant_group_id IN (SELECT plant_group_id FROM contratos WHERE plant_group_id IS NOT NULL)
+       ORDER BY g.name
+    `);
+    return [...filas];
+  }
+
   /** Verifica que la geocerca pertenezca al cliente (planta o campus). */
   async belongsToClient(geofenceId: string, clientAccountId: string): Promise<boolean> {
     const g = await this.findById(geofenceId);
@@ -2323,6 +2359,54 @@ export type ConteoPorEstado = {
 
 export class OccurrenceRepository {
   constructor(private db: Database) {}
+
+  /**
+   * El servicio especial vigente de cada unidad de un carrier en `ahora` — la
+   * mitad «especial» del servicio vigente (Marco 7.7, reglas aprobadas el 16 de
+   * septiembre de 2026).
+   *
+   * Una unidad da un servicio especial ahora si es **unidad posible de un
+   * perfil** con una **ocurrencia cuya ventana de evidencia incluye `ahora`**.
+   * La ventana es la de `trips`, la misma con la que el motor juzga: EN DESTINO
+   * no puede encenderse con otra ventana que la del sello que protege.
+   *
+   * Sólo lo que el árbitro va a sellar: contrato activo y cliente que no es
+   * cuenta de ejemplo. Donde no habrá sello no hay nada que proteger (7.4).
+   *
+   * El filtro por `expected_deadline` a ±1 día es para el índice: una ventana
+   * de evidencia dura horas, no días.
+   */
+  async especialesVigentesDeCarrier(carrierAccountId: string, ahora: Date) {
+    const desde = new Date(ahora.getTime() - 24 * 3_600_000);
+    const hasta = new Date(ahora.getTime() + 24 * 3_600_000);
+    return this.db
+      .select({
+        unitId: serviceProfileUnits.unitId,
+        occurrenceId: serviceOccurrences.id,
+        expectedGeofenceId: serviceOccurrences.expectedGeofenceId,
+        ventanaDesde: trips.evidenceWindowStart,
+        ventanaHasta: trips.evidenceWindowEnd,
+      })
+      .from(serviceOccurrences)
+      .innerJoin(trips, eq(trips.serviceOccurrenceId, serviceOccurrences.id))
+      .innerJoin(serviceContracts, eq(serviceContracts.id, serviceOccurrences.contractId))
+      .innerJoin(accounts, eq(accounts.id, serviceContracts.clientAccountId))
+      .innerJoin(
+        serviceProfileUnits,
+        eq(serviceProfileUnits.serviceProfileId, serviceOccurrences.serviceProfileId),
+      )
+      .where(
+        and(
+          eq(serviceContracts.carrierAccountId, carrierAccountId),
+          eq(serviceContracts.status, "active"),
+          eq(accounts.isDemo, false),
+          gte(serviceOccurrences.expectedDeadline, desde),
+          lte(serviceOccurrences.expectedDeadline, hasta),
+          lte(trips.evidenceWindowStart, ahora),
+          gte(trips.evidenceWindowEnd, ahora),
+        ),
+      );
+  }
 
   /** Horizonte operativo por defecto (días hacia adelante desde hoy). */
   static readonly ROLLING_DAYS = 30;

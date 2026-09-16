@@ -157,12 +157,15 @@ export function glifoDeUnidad(e: EstadoDeUnidad): { glifo: EstadoGlifo; rumbo?: 
       if (e.postura === "en_movimiento") return { glifo: "en-movimiento", rumbo: e.rumbo ?? 0, palabra: "En movimiento" };
       // Sin velocidad no se afirma rumbo; el círculo lleno dice «presente».
       return { glifo: "detenida", palabra: e.postura === "detenida" ? "Detenida" : "En línea" };
+    case "en_destino":
+      return { glifo: "en-destino", palabra: "En destino" };
     case "sin_senal":
       return { glifo: "sin-senal", palabra: "Sin señal" };
     case "desconectado":
       return { glifo: "sin-transmitir", palabra: "Desconectada" };
     case "sin_dispositivo":
-      return { glifo: "sin-transmitir", palabra: "Sin dispositivo" };
+      // Punteada, no la de desconectada: ni siquiera hubo con qué transmitir (decisión 7).
+      return { glifo: "sin-dispositivo", palabra: "Sin dispositivo" };
   }
 }
 
