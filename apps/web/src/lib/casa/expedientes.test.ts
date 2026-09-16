@@ -65,6 +65,12 @@ describe("unidades y dispositivos, cada uno en su familia", () => {
     expect(glifoDeUnidad({ tipo: "desconectado", dispositivoId: "d", ultimaSenalAt: null }).glifo).toBe("sin-transmitir");
   });
 
+  it("sin dispositivo es la flecha punteada, no la de desconectada (decisión 7); en destino es el anillo punteado", () => {
+    expect(glifoDeUnidad({ tipo: "sin_dispositivo" }).glifo).toBe("sin-dispositivo");
+    const destino = { lugarId: "p", lugarNombre: "Planta 47", llegadaAt: AHORA, entradaObservada: true };
+    expect(glifoDeUnidad({ tipo: "en_destino", dispositivoId: "d", destino, ultimaSenalAt: AHORA }).glifo).toBe("en-destino");
+  });
+
   it("en línea sin velocidad no afirma rumbo", () => {
     const g = glifoDeUnidad({ tipo: "en_linea", dispositivoId: "d", postura: "sin_velocidad", ultimaSenalAt: AHORA, velocidadKmh: null, rumbo: null });
     expect(g.glifo).toBe("detenida");

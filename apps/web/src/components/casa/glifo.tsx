@@ -17,6 +17,8 @@
  *   · sin señal      círculo hueco — presente pero callada; pide esperar
  *   · en destino     anillo punteado — está, pero ya no se le mira
  *   · sin transmitir flecha hueca — la silueta de lo que había; es DESCONECTADO
+ *   · sin dispositivo flecha hueca **punteada** — ni siquiera hubo con qué
+ *                    transmitir (decisión 7 del cuarto de Compás, 16 sep 2026)
  *
  *   DISPOSITIVOS — se instalan: cuadros
  *   · en unidad      cuadro lleno — instalado y hablando
@@ -36,8 +38,8 @@
  * Cuadros ratificados en el boceto de «las dos familias»; hojas el 16 de
  * septiembre de 2026 (boceto y prototipo del PR D); SIN SEÑAL el mismo día.
  *
- * ⚠ **`en-destino` todavía no tiene quién lo produzca.** La clasificación de la
- * flota (#411) no calcula «en destino» hasta que exista la detección en vivo.
+ * `en-destino` lo produce la detección en vivo de Flota en vivo (C2): servicio
+ * especial vigente y última posición dentro de un destino (Marco 7.7).
  */
 
 export type EstadoGlifo =
@@ -47,6 +49,7 @@ export type EstadoGlifo =
   | "sin-senal"
   | "en-destino"
   | "sin-transmitir"
+  | "sin-dispositivo"
   // Dispositivos
   | "dispositivo-en-unidad"
   | "dispositivo-en-bodega"
@@ -68,6 +71,7 @@ const EN_PALABRAS: Record<EstadoGlifo, string> = {
   "sin-senal": "Sin señal",
   "en-destino": "En destino",
   "sin-transmitir": "Sin transmitir",
+  "sin-dispositivo": "Sin dispositivo",
   "dispositivo-en-unidad": "En unidad",
   "dispositivo-en-bodega": "En bodega",
   "dispositivo-desconectado": "Desconectado",
@@ -100,7 +104,7 @@ function tintaDe(estado: EstadoGlifo): { color: string; opacidad: number } {
     case "papel-falta-la-fecha":
       return { color: "var(--tinta)", opacidad: 1 };
     case "sin-transmitir":
-    case "en-destino":
+    case "sin-dispositivo":
     case "dispositivo-desconectado":
     case "dispositivo-de-baja":
       return { color: "var(--tenue)", opacidad: 0.6 };
@@ -153,13 +157,14 @@ export function Glifo({
       {estado === "en-destino" && (
         <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="3 3" />
       )}
-      {estado === "sin-transmitir" && (
+      {(estado === "sin-transmitir" || estado === "sin-dispositivo") && (
         <path
           d="M12 2 L20 21 L12 16.5 L4 21 Z"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.75"
           strokeLinejoin="round"
+          strokeDasharray={estado === "sin-dispositivo" ? "2 2" : undefined}
         />
       )}
 

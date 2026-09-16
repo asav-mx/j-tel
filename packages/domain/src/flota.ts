@@ -13,15 +13,17 @@
  *
  * Los grupos, decididos el 15 de septiembre de 2026:
  *
- *   Unidades       EN LÍNEA · SIN SEÑAL · DESCONECTADO · SIN DISPOSITIVO
+ *   Unidades       EN LÍNEA · EN DESTINO · SIN SEÑAL · DESCONECTADO · SIN DISPOSITIVO
  *   Dispositivos   EN UNIDAD · EN BODEGA · DESCONECTADO · DE BAJA
  *
- * **Por qué no hay EN DESTINO todavía.** Se consideró sacarlo de la llegada que
- * sella el árbitro y se descartó: el árbitro sella después del cierre, y para
- * entonces el camión lleva horas en otra cosa. Mostrar esa llegada en una lista
- * de «ahora» sería un hecho viejo presentado como estado actual —el caso 1 de la
- * Pieza 1 §D—. La llegada sellada vive en la historia de la unidad, donde es
- * verdad. El «en destino» real llega con la detección en vivo, junto con el mapa.
+ * **EN DESTINO es detección en vivo, no la llegada sellada.** Se consideró
+ * sacarlo del sello y se descartó: el árbitro sella después del cierre, y
+ * mostrar esa llegada en una lista de «ahora» sería un hecho viejo presentado
+ * como estado actual (Pieza 1 §D, caso 1). Aquí entra ya resuelto por quien
+ * llama (`enDestinoPorUnidad`): la unidad da un servicio **especial** vigente
+ * (Marco 7.7) y su última posición está dentro de una geocerca de destino. En
+ * circuito, o sin servicio, no hay sello que proteger y no hay EN DESTINO
+ * (7.3, 7.4). Este módulo no calcula geometría ni lee servicios.
  */
 
 import { SIN_SENAL_MINUTOS } from "./senal.js";
@@ -82,6 +84,20 @@ export interface AsignacionDeFlota {
   deviceId: string;
   validFrom: Date;
   validTo: Date | null;
+}
+
+/**
+ * Que una unidad está en su destino, ya detectado (C2 del cuarto de Compás).
+ *
+ * La hora es la del **primer punto medido adentro**. Si no se vio entrar —el
+ * día empezó adentro, o reapareció adentro tras un hueco— `entradaObservada`
+ * es falso y la pantalla dice «adentro desde», no «llegó».
+ */
+export interface EnDestino {
+  lugarId: string;
+  lugarNombre: string;
+  llegadaAt: Date;
+  entradaObservada: boolean;
 }
 
 /** La posición viva de un dispositivo (`live_positions`). */
@@ -233,6 +249,19 @@ export type EstadoDeUnidad =
     }
   | {
       /**
+       * Da un servicio especial vigente y su última posición está dentro de un
+       * destino. **Nunca es SIN SEÑAL por callarse ahí:** la traza se corta al
+       * llegar porque así lo manda el Marco, y el silencio posterior es la ley
+       * funcionando, no una unidad callada (Pieza 1 §D, caso 1). Se muestra la
+       * hora de llegada, no la edad.
+       */
+      tipo: "en_destino";
+      dispositivoId: string;
+      destino: EnDestino;
+      ultimaSenalAt: Date;
+    }
+  | {
+      /**
        * Montada, con su última señal de hace más de 15 min y menos de 24 h, o
        * recién montada y sin reportar todavía.
        *
@@ -272,6 +301,8 @@ export interface EntradaDeUnidad {
   dispositivos: Array<{ dispositivo: DispositivoDeFlota; desde: Date }>;
   /** La última señal de cada dispositivo, por IMEI. */
   senalPorImei: Map<string, UltimaSenal>;
+  /** Si la unidad está en su destino ahora (servicio especial vigente). */
+  enDestino?: EnDestino | null;
 }
 
 /**
@@ -298,6 +329,19 @@ export function estadoDeUnidad(entrada: EntradaDeUnidad, ahora: Date): EstadoDeU
   const manda = candidatos[0]!;
 
   const senal = manda.senal;
+
+  // En destino manda sobre en línea y sin señal, pero no sobre desconectado: un
+  // servicio vigente dura horas, y más de un día callado ya no es la ley
+  // funcionando.
+  if (entrada.enDestino && senal && !estaDesconectado(senal.at, manda.desde, ahora)) {
+    return {
+      tipo: "en_destino",
+      dispositivoId: manda.dispositivo.id,
+      destino: entrada.enDestino,
+      ultimaSenalAt: senal.at,
+    };
+  }
+
   if (senal && ahora.getTime() - senal.at.getTime() <= SIN_SENAL_MINUTOS * MS_MIN) {
     const postura: PosturaEnLinea =
       senal.speed === null
@@ -334,10 +378,10 @@ export function estaDesconectado(ultimaSenalAt: Date | null, montadoDesde: Date,
   return ahora.getTime() - referencia.getTime() > DESCONECTADO_HORAS * MS_HORA;
 }
 
-export type GrupoDeUnidad = "en_linea" | "sin_senal" | "desconectado" | "sin_dispositivo";
+export type GrupoDeUnidad = "en_linea" | "en_destino" | "sin_senal" | "desconectado" | "sin_dispositivo";
 
-/** Los grupos de unidades, en su orden. */
-export const GRUPOS_DE_UNIDAD = ["en_linea", "sin_senal", "desconectado", "sin_dispositivo"] as const;
+/** Los grupos de unidades, en su orden: primero lo vivo, al final lo apagado. */
+export const GRUPOS_DE_UNIDAD = ["en_linea", "en_destino", "sin_senal", "desconectado", "sin_dispositivo"] as const;
 
 /** Los grupos del inventario de dispositivos (Marco 6.6), en su orden. */
 export const GRUPOS_DE_DISPOSITIVO = ["en_unidad", "en_bodega", "desconectado", "de_baja"] as const;
@@ -393,6 +437,8 @@ export function clasificarFlota(entrada: {
   posicionesVivas: PosicionViva[];
   /** El último punto archivado de cada IMEI. */
   ultimoArchivadoPorImei: Map<string, Date>;
+  /** Las unidades que están en su destino ahora, ya detectadas. Sin él, ninguna. */
+  enDestinoPorUnidad?: Map<string, EnDestino>;
   ahora: Date;
 }): FlotaClasificada {
   const { ahora } = entrada;
@@ -410,6 +456,7 @@ export function clasificarFlota(entrada: {
       {
         dispositivos: union.dispositivosPorUnidad.get(unidad.id) ?? [],
         senalPorImei,
+        enDestino: entrada.enDestinoPorUnidad?.get(unidad.id) ?? null,
       },
       ahora,
     );

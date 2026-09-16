@@ -194,6 +194,56 @@ describe("estadoDeUnidad", () => {
   });
 });
 
+describe("estadoDeUnidad · EN DESTINO (C2, Marco 7.7)", () => {
+  const montado = [{ dispositivo: dispositivo("1"), desde: hace(30 * 24 * HORA) }];
+  const senal = (at: Date, speed: number | null = 0) => new Map([["imei-1", { at, speed, heading: null }]]);
+  const destino = {
+    lugarId: "p47",
+    lugarNombre: "Planta 47",
+    llegadaAt: hace(33 * MIN),
+    entradaObservada: true,
+  };
+
+  it("en su destino con señal fresca: EN DESTINO, con la hora de llegada — no EN LÍNEA", () => {
+    const e = estadoDeUnidad({ dispositivos: montado, senalPorImei: senal(hace(20_000)), enDestino: destino }, AHORA);
+    expect(e).toEqual({ tipo: "en_destino", dispositivoId: "1", destino, ultimaSenalAt: hace(20_000) });
+    expect(grupoDeUnidad(e)).toBe("en_destino");
+  });
+
+  it("callada 40 min adentro: sigue EN DESTINO, nunca con las calladas (Pieza 1 §D, caso 1)", () => {
+    const e = estadoDeUnidad({ dispositivos: montado, senalPorImei: senal(hace(40 * MIN)), enDestino: destino }, AHORA);
+    expect(e.tipo).toBe("en_destino");
+  });
+
+  it("más de 24 h callada: DESCONECTADO manda aunque la última posición esté adentro", () => {
+    const e = estadoDeUnidad({ dispositivos: montado, senalPorImei: senal(hace(25 * HORA)), enDestino: destino }, AHORA);
+    expect(e.tipo).toBe("desconectado");
+  });
+
+  it("sin detección (circuito, o sin servicio): la misma señal es EN LÍNEA", () => {
+    const e = estadoDeUnidad({ dispositivos: montado, senalPorImei: senal(hace(20_000)), enDestino: null }, AHORA);
+    expect(e.tipo).toBe("en_linea");
+  });
+
+  it("sin señal alguna no hay en destino que afirmar", () => {
+    const e = estadoDeUnidad({ dispositivos: montado, senalPorImei: new Map(), enDestino: destino }, AHORA);
+    expect(e.tipo).not.toBe("en_destino");
+  });
+
+  it("clasificarFlota lo toma de enDestinoPorUnidad", () => {
+    const f = clasificarFlota({
+      unidades: [{ id: "u1", label: "6284" }],
+      dispositivos: [dispositivo("1")],
+      asignaciones: [asignacion("u1", "1")],
+      posicionesVivas: [{ imei: "imei-1", recordedAt: hace(20_000), speed: 0, heading: null }],
+      ultimoArchivadoPorImei: new Map(),
+      enDestinoPorUnidad: new Map([["u1", destino]]),
+      ahora: AHORA,
+    });
+    expect(f.unidades[0]!.grupo).toBe("en_destino");
+  });
+});
+
 describe("estaDesconectado · 24 h desde la última señal o desde el montaje", () => {
   it("salió de bodega hace 2 h con su última señal de hace una semana: no está desconectado", () => {
     expect(estaDesconectado(hace(7 * 24 * HORA), hace(2 * HORA), AHORA)).toBe(false);
@@ -204,8 +254,8 @@ describe("estaDesconectado · 24 h desde la última señal o desde el montaje", 
 });
 
 describe("los grupos, en su orden", () => {
-  it("unidades: en línea, sin señal, desconectado, sin dispositivo — y no hay EN DESTINO todavía", () => {
-    expect([...GRUPOS_DE_UNIDAD]).toEqual(["en_linea", "sin_senal", "desconectado", "sin_dispositivo"]);
+  it("unidades: primero lo vivo — en línea, en destino — y al final lo apagado", () => {
+    expect([...GRUPOS_DE_UNIDAD]).toEqual(["en_linea", "en_destino", "sin_senal", "desconectado", "sin_dispositivo"]);
   });
   it("los del inventario, en su orden", () => {
     expect([...GRUPOS_DE_DISPOSITIVO]).toEqual(["en_unidad", "en_bodega", "desconectado", "de_baja"]);

@@ -154,3 +154,88 @@
     animation: none;
   }
 }
+
+/*
+ * El mapa de Flota en vivo.
+ *
+ * El tinte va sobre la CAPA DE MOSAICOS y nunca sobre el contenedor: aplicado
+ * al contenedor teñiría también los glifos, y el cobre de una unidad que
+ * transmite dejaría de ser el cobre que dice «vivo». Es el mismo criterio de
+ * `.mapa-circuito` en `globals.css`, con valores propios de la piel nueva.
+ *
+ * En la piel clara el fondo baja de saturación para que las calles no compitan
+ * con las unidades; en la oscura se invierte y se enfría hacia la tinta azul.
+ */
+.cascaron .mapa-flota {
+  background: var(--papel);
+  font-family: var(--letra-lectura);
+}
+
+.cascaron .mapa-flota .leaflet-tile-pane {
+  filter: saturate(0.25) brightness(1.03) contrast(0.95);
+}
+
+[data-tema="oscuro"] .cascaron .mapa-flota .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(200deg) brightness(0.78) contrast(0.9) saturate(0.35);
+}
+
+/* Los controles de Leaflet no son mosaicos: el tinte no los alcanza, se visten con los tokens. */
+.cascaron .mapa-flota .leaflet-bar a {
+  background: var(--pieza);
+  color: var(--tinta);
+  border-color: var(--linea);
+}
+
+.cascaron .mapa-flota .leaflet-bar a:hover {
+  background: var(--roce);
+}
+
+.cascaron .mapa-flota.leaflet-container .leaflet-control-attribution {
+  background: var(--pieza);
+  color: var(--tenue);
+}
+
+.cascaron .mapa-flota.leaflet-container .leaflet-control-attribution a {
+  color: var(--tenue);
+}
+
+/* La marca decorativa de Leaflet en la atribución: no dice nada. Ver `.mapa-circuito`. */
+.cascaron .mapa-flota.leaflet-container .leaflet-attribution-flag {
+  display: none !important;
+}
+
+/*
+ * Los lugares. Leaflet escribe el color como atributo del SVG, y un atributo no
+ * sabe leer `var()`: las propiedades de CSS sí, y le ganan al atributo.
+ */
+.cascaron .mapa-flota .lugar-flota {
+  stroke: var(--tenue);
+  stroke-width: 1.5;
+  fill: var(--tinta);
+  fill-opacity: 0.04;
+}
+
+.cascaron .mapa-flota .lugar-destino {
+  stroke-dasharray: 6 4;
+  fill-opacity: 0.07;
+}
+
+.cascaron .mapa-flota .rotulo-lugar {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--tenue);
+  font-size: 12px;
+  padding: 0;
+}
+
+.cascaron .mapa-flota .rotulo-lugar::before {
+  display: none;
+}
+
+/* El ícono de Leaflet trae fondo y borde blancos por omisión. */
+.cascaron .mapa-flota .marcador-flota {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
