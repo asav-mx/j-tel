@@ -7,6 +7,8 @@ description: Lenguaje visual y reglas de interfaz de J-Telemetry (repo asav-mx/j
 
 Escrito el 15 de septiembre de 2026, en sesión de ASAV y Claude, después de descartar por completo la piel anterior. El `Marco-Limpio-J-Telemetry-MAESTRO.md` manda sobre este documento: si algo aquí choca con el Marco, gana el Marco.
 
+**Su documento hermano:** `docs/Mapa-De-La-Casa.md` — la navegación, la organización y el flujo. Este skill dice **cómo se ve** una pantalla; el mapa dice **qué pantallas hay y cómo se llega a ellas**. Antes de inventar un lugar, una entrada de menú o un camino, se lee el mapa. El Marco manda sobre los dos.
+
 ---
 
 ## La regla que gobierna todo
