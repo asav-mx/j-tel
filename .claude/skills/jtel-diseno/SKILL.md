@@ -188,6 +188,7 @@ volteados.
 ### Las leyes del color
 
 1. **El cobre sólo aparece donde hay vida.** Un dato fresco, una unidad transmitiendo, un valor que cambia ahora. Nunca en bordes, botones inertes, encabezados ni decoración. Si el cobre está en todos lados, deja de significar.
+   **Vida es cambio frente al usuario, no sólo el tiempo real.** El cobre marca el dato que está cambiando mientras alguien lo mira. En un playback, la velocidad que corre con la reproducción va en cobre; el recorrido ya dibujado, el marcador y la hora del recuerdo detenido van en tinta. Al pausar deja de cambiar y suelta el cobre. Y cuando el playback alcanza el ahora, el marcador pasa a cobre porque ya no es recuerdo. Decidido por ASAV el 16 de septiembre de 2026, al revisar C3 contra su prototipo v5.
 2. **Lo apagado suelta el color** y baja a 60% de opacidad. Una unidad que llegó o se calló se va a gris. El contraste hace la jerarquía.
 3. **El verde es del latido, no de un veredicto.** Marca que el sistema respira.
 4. **Los colores de veredicto viven aparte y no se tocan.** El Marco reserva significado a cumplido, no cumplido y pendiente. Esos tres nunca se usan para nada más, y el cobre nunca se usa para un veredicto.

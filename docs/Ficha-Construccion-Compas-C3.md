@@ -9,7 +9,7 @@ en sesión de diseño con prototipos. Esta ficha entra al repo por PR (en
 su playback honesto. Es lo que reemplaza a Umbrella del todo.
 
 **Prototipo aprobado (referencia visual obligada):**
-https://claude.ai/artifact/Gcn3C3eYgUGMN7oHsRZ8oZ (v3). La pantalla construida
+https://claude.ai/artifact/A9QgcfdRt9i86SPp1Rp7FB (v5). La pantalla construida
 debe poder ponerse junto al prototipo sin que ASAV note diferencias de
 comportamiento. Gobierna `.claude/skills/jtel-diseno/SKILL.md`; sobre él, el
 Marco (en particular Pieza 1 §D/§E y Pieza 7).
@@ -184,7 +184,7 @@ Marco (en particular Pieza 1 §D/§E y Pieza 7).
    inmutable para ventanas cerradas. Pruebas de que los intocables
    sobreviven cualquier simplificación. *Mergea Asav.*
 3. **PR C3-c · la pantalla** — Ver ‹unidad› → Recorridos y playback según el
-   prototipo v3: panel de periodo con atajos de tiempo y con los servicios de
+   prototipo v5: panel de periodo con atajos de tiempo y con los servicios de
    la unidad en el periodo (leídos de sus ocurrencias, con las horas de ese
    día), brocha, cinta, playback con altos, velocidad auto, cruce al ahora,
    las dos pieles, 375/768/1024/1440. *Revisión visual de Asav contra el
@@ -197,7 +197,7 @@ Marco (en particular Pieza 1 §D/§E y Pieza 7).
 ## Puntos de alto (modo «avanza y detente»)
 
 - Al terminar C3-a: enseñar las pruebas del turno nocturno antes de seguir.
-- Antes de C3-c: confirmar contra el prototipo v3 cualquier duda visual, no
+- Antes de C3-c: confirmar contra el prototipo v5 cualquier duda visual, no
   interpretarla.
 - Antes de cada merge: lo de siempre — `pruebas` y `esquema` en verde, y
   ningún nombre de cuenta, cliente o turno horneado en el código.

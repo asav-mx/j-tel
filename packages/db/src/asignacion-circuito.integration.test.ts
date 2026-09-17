@@ -256,3 +256,27 @@ describe("universo de unidades asignables", () => {
     await repos.circuits.linkCarrierToConcession(concesionId, carrierId);
   });
 });
+
+describe("circuitosDeUnidadEntre y la concesión (recorrido C3)", () => {
+  it("el carrier ligado a una concesión vigente cuenta como ligado a servicios declarados", async () => {
+    // Un minuto adelante: la liga nace con la hora del servidor de la base, que puede ir adelantada del reloj local.
+    const enUnMinuto = new Date(Date.now() + 60_000);
+    expect(await repos.expedientes.ligadoAServiciosDeclarados(carrierId, enUnMinuto)).toBe(true);
+    expect(await repos.expedientes.ligadoAServiciosDeclarados(carrierAjenoId, enUnMinuto)).toBe(false);
+  });
+
+  it("la unidad sale con su circuito y el horario de servicio del circuito, sólo del carrier que pregunta", async () => {
+    const ahora = new Date();
+    const hace = new Date(ahora.getTime() - 3_600_000);
+    const dentro = new Date(ahora.getTime() + 3_600_000);
+    const filas = await repos.expedientes.circuitosDeUnidadEntre(carrierId, unidad2, hace, dentro);
+    expect(filas.map((f) => f.nombre)).toContain(`Circuito A ${marca}`);
+    expect(filas[0]).toMatchObject({ inicioLocal: expect.stringMatching(/^\d{2}:\d{2}/), zona: expect.any(String) });
+    expect(await repos.expedientes.circuitosDeUnidadEntre(carrierAjenoId, unidad2, hace, dentro)).toEqual([]);
+  });
+
+  it("antes de que existiera la asignación, no hay circuito", async () => {
+    const antes = new Date("2020-01-01T00:00:00Z");
+    expect(await repos.expedientes.circuitosDeUnidadEntre(carrierId, unidad2, antes, new Date("2020-01-02T00:00:00Z"))).toEqual([]);
+  });
+});

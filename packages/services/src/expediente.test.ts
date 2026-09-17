@@ -115,10 +115,17 @@ describe("el expediente de una unidad nace entero", () => {
     expect(e?.identidad.numeroEconomico).toEqual({ estado: "con_datos", valor: "10254" });
     expect(e?.identidad.placa).toEqual({ estado: "vacia" });
     expect(e?.actividad.ultimaSenal).toMatchObject({ estado: "con_datos", valor: { grupo: "en_linea" } });
-    expect(e?.actividad.recorridos).toEqual({ estado: "aun_no_disponible", fuente: "flota_en_vivo" });
+    expect(e?.actividad.recorridos).toEqual({ estado: "con_datos", valor: { primerDispositivoDesde: new Date("2026-09-01T00:00:00Z") } });
     expect(e?.relaciones.dispositivos).toMatchObject({ estado: "con_datos", valor: [{ imei: "111", vigente: true }] });
     expect(e?.relaciones.choferes).toEqual({ estado: "aun_no_disponible", fuente: "asignacion_de_choferes" });
     expect(e?.documentos).toEqual({ estado: "vacia" });
+  });
+
+  it("sin dispositivo nunca, la puerta a Recorridos y playback queda vacía: no hay nada medido que ver", async () => {
+    const r = repos();
+    (r.repos as { fleet: { asignacionesDeUnidad: () => Promise<unknown[]> } }).fleet.asignacionesDeUnidad = async () => [];
+    const e = await cargarExpedienteDeUnidad(r.repos, { carrierAccountId: "c1", unitId: "u1", ahora: AHORA });
+    expect(e?.actividad.recorridos).toEqual({ estado: "vacia" });
   });
 
   it("la unidad de otra cuenta no existe desde aquí", async () => {

@@ -6974,6 +6974,132 @@ export class ExpedienteRepository {
       .limit(1);
     return Boolean(fila);
   }
+
+  /**
+   * ¿El carrier está ligado a algo que declare servicios? Un contrato de
+   * especial que el árbitro sella (activo, cliente real) o una concesión de
+   * circuito vigente.
+   *
+   * Decide si en el recorrido (C3) existe la sección «Servicios de esta
+   * unidad»: sin ninguno de los dos, la sección no existe para él — ni vacía
+   * ni con mensaje. Los filtros del contrato son los mismos que dan los botones
+   * (`especialesDeUnidadQueEmpiezanEntre`), para que la sección no aparezca
+   * donde ningún botón podría salir.
+   */
+  async ligadoAServiciosDeclarados(carrierAccountId: string, ahora: Date): Promise<boolean> {
+    const [contrato] = await this.db
+      .select({ id: serviceContracts.id })
+      .from(serviceContracts)
+      .innerJoin(accounts, eq(accounts.id, serviceContracts.clientAccountId))
+      .where(
+        and(
+          eq(serviceContracts.carrierAccountId, carrierAccountId),
+          eq(serviceContracts.status, "active"),
+          eq(accounts.isDemo, false),
+        ),
+      )
+      .limit(1);
+    if (contrato) return true;
+    const [concesion] = await this.db
+      .select({ id: concessionCarriers.id })
+      .from(concessionCarriers)
+      .where(
+        and(
+          eq(concessionCarriers.carrierAccountId, carrierAccountId),
+          lte(concessionCarriers.validFrom, ahora),
+          or(isNull(concessionCarriers.validTo), gt(concessionCarriers.validTo, ahora)),
+        ),
+      )
+      .limit(1);
+    return Boolean(concesion);
+  }
+
+  /**
+   * Los servicios especiales de una unidad que **empiezan** entre dos
+   * instantes, con el nombre del cliente y de la ruta — los botones de
+   * «Servicios de esta unidad» del recorrido (C3, decisión 2).
+   *
+   * Las horas son las de `trips` de cada ocurrencia: lo declarado para ese día,
+   * congelado al generarse, nunca el perfil vigente hoy. Un nocturno de 22:00 a
+   * 06:00 sale en el día en que empieza, con su ventana de dos días.
+   *
+   * Mismos filtros que `especialesDeUnidadEnVentana` (contrato activo, cliente
+   * real, unidad posible del perfil): el botón no puede ofrecer un servicio que
+   * el corte de la traza no reconoce.
+   */
+  async especialesDeUnidadQueEmpiezanEntre(
+    carrierAccountId: string,
+    unitId: string,
+    desde: Date,
+    hasta: Date,
+  ) {
+    return this.db
+      .select({
+        ocurrenciaId: serviceOccurrences.id,
+        cliente: accounts.name,
+        ruta: routes.name,
+        ventanaDesde: trips.evidenceWindowStart,
+        ventanaHasta: trips.evidenceWindowEnd,
+      })
+      .from(serviceOccurrences)
+      .innerJoin(trips, eq(trips.serviceOccurrenceId, serviceOccurrences.id))
+      .innerJoin(serviceContracts, eq(serviceContracts.id, serviceOccurrences.contractId))
+      .innerJoin(accounts, eq(accounts.id, serviceContracts.clientAccountId))
+      .innerJoin(routeShifts, eq(routeShifts.id, serviceOccurrences.routeShiftId))
+      .innerJoin(routes, eq(routes.id, routeShifts.routeId))
+      .innerJoin(
+        serviceProfileUnits,
+        eq(serviceProfileUnits.serviceProfileId, serviceOccurrences.serviceProfileId),
+      )
+      .where(
+        and(
+          eq(serviceContracts.carrierAccountId, carrierAccountId),
+          eq(serviceProfileUnits.unitId, unitId),
+          eq(serviceContracts.status, "active"),
+          eq(accounts.isDemo, false),
+          gte(serviceOccurrences.expectedDeadline, new Date(desde.getTime() - 24 * 3_600_000)),
+          lte(serviceOccurrences.expectedDeadline, new Date(hasta.getTime() + 48 * 3_600_000)),
+          gte(trips.evidenceWindowStart, desde),
+          lte(trips.evidenceWindowStart, hasta),
+        ),
+      )
+      .orderBy(trips.evidenceWindowStart);
+  }
+
+  /**
+   * Los circuitos a los que la unidad estuvo asignada en algún momento entre
+   * dos instantes, con el horario de servicio **que el circuito tiene hoy**.
+   *
+   * Ojo: la asignación tiene historia, el horario no — vive en columnas de
+   * `circuits` que se sobrescriben. Quien llama decide para qué día sirve ese
+   * horario; ver `serviciosDeUnidadEnDia`.
+   */
+  async circuitosDeUnidadEntre(
+    carrierAccountId: string,
+    unitId: string,
+    desde: Date,
+    hasta: Date,
+  ) {
+    return this.db
+      .select({
+        circuitoId: circuits.id,
+        nombre: circuits.name,
+        inicioLocal: circuits.serviceStartLocal,
+        finLocal: circuits.serviceEndLocal,
+        zona: circuits.timeZone,
+      })
+      .from(circuitUnitAssignments)
+      .innerJoin(circuits, eq(circuits.id, circuitUnitAssignments.circuitId))
+      .where(
+        and(
+          eq(circuitUnitAssignments.carrierAccountId, carrierAccountId),
+          eq(circuitUnitAssignments.unitId, unitId),
+          lte(circuitUnitAssignments.validFrom, hasta),
+          or(isNull(circuitUnitAssignments.validTo), gt(circuitUnitAssignments.validTo, desde)),
+        ),
+      )
+      .orderBy(circuits.name);
+  }
 }
 
 export function createRepositories(db: Database) {

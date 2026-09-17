@@ -241,3 +241,36 @@
   border: 0;
   cursor: pointer;
 }
+
+/*
+ * El recorrido (C3). Todo lo histórico va en tinta: el cobre es del ahora, no
+ * del recuerdo (ficha C3, decisión 6). La línea «futura» es lo que el playback
+ * todavía no recorre, apagada; la «hecha» se dibuja mientras se recorre.
+ * Nada cruza un hueco: sólo los dos puntos huecos en sus extremos.
+ */
+.cascaron .mapa-flota .ruta-futura {
+  stroke: var(--tenue);
+  stroke-width: 2;
+  stroke-opacity: 0.38;
+  fill: none;
+}
+
+.cascaron .mapa-flota .ruta-hecha {
+  stroke: var(--tinta);
+  stroke-width: 3;
+  stroke-opacity: 1;
+  fill: none;
+}
+
+.cascaron .mapa-flota .punto-hueco {
+  stroke: var(--tinta);
+  stroke-width: 2;
+  stroke-opacity: 1;
+  fill: var(--pieza);
+  fill-opacity: 1;
+}
+
+.cascaron .mapa-flota .marcador-recorrido {
+  background: transparent;
+  border: 0;
+}

@@ -27,8 +27,6 @@
  * no es «aún no disponible», es otra cosa.
  */
 export type FuentePendiente =
-  /** Recorridos y playback: llegan con Flota en vivo. */
-  | "flota_en_vivo"
   /** Qué choferes lleva una unidad, y qué unidades operó un chofer. */
   | "asignacion_de_choferes"
   /** La cuenta no tiene mercado todavía, así que no hay catálogo que aplicarle. */
