@@ -45,6 +45,9 @@ editar en `docs/archivo/`.
 - C1 — recorrido del día con huecos (#424) y corte de traza por modalidad
   (#426).
 - C2 — Flota en vivo con mapa (#428).
+- C3 — Recorridos y playback en Ver ‹unidad›: recorrido por ventana (#431),
+  el dato servido con simplificación y caché de lo cerrado (#432), y la
+  pantalla contra el prototipo v5 (#433).
 
 **Infraestructura / motor:**
 
@@ -67,14 +70,7 @@ expediente (§H, 6.30–6.33), Pieza 7 (la modalidad del servicio).
    IMEI empieza raro, 860573…). Asignar cada uno a su unidad el mismo día en
    `/carrier/flota/alta?account=juarez-bus`. En cuanto rueden, Compás acumula
    historia real.
-2. **C3 — recorrido y playback.** El renglón «Recorridos y playback» de
-   Ver ‹unidad› / Ver ‹dispositivo› se vuelve la puerta al mapa con el
-   recorrido de un día y el playback honesto (se detiene en los huecos). Es
-   lo que reemplaza a Umbrella del todo. Partir: decisiones de diseño con
-   Opus, construcción con Fable. Prototipo antes de construir. Cada cuarto
-   nuevo del transportista debe pasarle la cuenta al marco (aprendizaje del
-   #429).
-3. **C4 — Dispositivos y sus acciones.** El inventario, y asignar / soltar /
+2. **C4 — Dispositivos y sus acciones.** El inventario, y asignar / soltar /
    dar de baja desde la pantalla nueva. Reemplaza el alta vieja de
    `/carrier/flota/alta`.
 
@@ -122,6 +118,14 @@ cuando la prueba convenza.
   Un carrier con contrato y concesión ve los dos registros, uno por
   modalidad (Pieza 7). Es un cuarto/parte propio del piso de flota — se
   diseña en su momento, con prototipo; no entra a C3.
+- **Recorrido desde Ver ‹dispositivo›.** C3 lo construyó desde la unidad; la
+  ficha lo pide también desde el dispositivo, leyendo por las asignaciones
+  vigentes en cada instante.
+- **Historia del horario de servicio del circuito** (mejora futura, no
+  urgente; Asav, 16-sep). Hoy el horario vive en columnas de `circuits` que
+  se sobrescriben al editarlo, así que el recorrido ofrece el botón de
+  circuito sólo el día de hoy y en días pasados dice que ese horario no quedó
+  guardado. Guardar su historia (con migración) daría los botones del pasado.
 
 ## Decisiones grandes pendientes con papá / negocio
 
