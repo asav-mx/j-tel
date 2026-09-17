@@ -8,11 +8,12 @@ acciones sobre un dispositivo desde la pantalla nueva: dar de alta, asignar,
 soltar y dar de baja (6.18, 6.25). Reemplaza el alta vieja de
 `/carrier/flota/alta`.
 
-**Prototipo (por revisar, todavía NO aprobado):**
-https://claude.ai/artifact/FGi58hto8teEYappBAQw1Z (v1). Sus ocho supuestos
-están a la vista en su columna «Para decidir». Hasta que ASAV lo apruebe no se
-escribe C4-b ni C4-c. Gobierna `.claude/skills/jtel-diseno/SKILL.md`; sobre
-él, el Marco (Pieza 6 §A, §C y §E).
+**Prototipo (referencia visual obligada):**
+https://claude.ai/artifact/FGi58hto8teEYappBAQw1Z (v1). ASAV dio paso a C4-b y
+C4-c el 17 de septiembre, confirmando de forma explícita tres de sus ocho
+supuestos (abajo, 6 a 8); los otros cinco quedan como los dibuja su columna
+«Para decidir». Gobierna `.claude/skills/jtel-diseno/SKILL.md`; sobre él, el
+Marco (Pieza 6 §A, §C y §E).
 
 ---
 
@@ -31,6 +32,17 @@ escribe C4-b ni C4-c. Gobierna `.claude/skills/jtel-diseno/SKILL.md`; sobre
    sin nombrar la otra cuenta: moverlo es cosa de J-Staff (6.14).
 5. **Las acciones sólo las usan coordinador y admin** (`fleet.manage`).
    Provisional hasta la 6.29.
+
+Y del prototipo, el 17 de septiembre:
+
+6. **Asignar a una unidad que ya trae dispositivo se permite, con aviso.** El
+   que traía queda en bodega y su historia lo dice.
+7. **Soltar pide motivo obligatorio.** Las sugerencias sólo llenan el texto.
+8. **Quitar la baja no lleva botón en C4.** Queda como **pendiente con
+   nombre**: hoy una baja por error sólo se deshace con SQL, y eso choca con
+   6.18 («una corrección normal de captura no requiere un desarrollador ni un
+   guion»). Mientras no exista, la pantalla de baja avisa que no se deshace
+   desde ahí.
 
 ---
 
@@ -76,8 +88,11 @@ que cambió de cuenta (6.14; los FTC927 003–007 el 16 sep) mostraría a su cue
 nueva el número económico y las fechas de las unidades de la cuenta anterior.
 El enlace a esa unidad no abre (`unidadDeCuenta` sí filtra), pero el nombre ya
 se vio. No se sabe si hoy pasa con datos reales: hace falta leer en producción
-si esos cinco tuvieron asignaciones en ASAV. Se corrige antes de C4-c, que
-agrega la historia con quién y por qué.
+si esos cinco tuvieron asignaciones en ASAV.
+
+**ASAV, 17 sep:** se arregla **primero, en su propio PR**, antes de C4-b. Rompe
+el muro entre cuentas de la Pieza 1, y aunque hoy las dos cuentas son suyas, el
+riesgo ya está en producción. Las fugas entre cuentas no se posponen.
 
 ---
 
