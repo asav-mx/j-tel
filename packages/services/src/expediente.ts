@@ -172,7 +172,11 @@ export interface ExpedienteDeUnidad {
   actividad: {
     /** Vacía si la unidad no tiene dispositivo, o si el suyo nunca reportó. */
     ultimaSenal: Parte<{ grupo: GrupoDeUnidad; estado: EstadoDeUnidad; at: Date }>;
-    recorridos: Parte<never>;
+    /**
+     * La puerta a Recorridos y playback (C3). Con datos si la unidad ha traído
+     * dispositivo alguna vez; vacía si nunca: no habría nada medido que ver.
+     */
+    recorridos: Parte<{ primerDispositivoDesde: Date }>;
     /** No viene si la cuenta no tiene contrato encendido: sin Vernier, no aplica. */
     servicios?: Parte<Awaited<ReturnType<Repositories["occurrences"]["ultimosServiciosDeUnidad"]>>>;
   };
@@ -207,7 +211,10 @@ export async function cargarExpedienteDeUnidad(
 
   const actividad: ExpedienteDeUnidad["actividad"] = {
     ultimaSenal,
-    recorridos: aunNoDisponible("flota_en_vivo"),
+    recorridos:
+      asignaciones.length > 0
+        ? { estado: "con_datos", valor: { primerDispositivoDesde: asignaciones[0]!.desde } }
+        : { estado: "vacia" },
   };
   if (conContrato) {
     actividad.servicios = parteDe(await repos.occurrences.ultimosServiciosDeUnidad(unitId, SERVICIOS_DEL_EXPEDIENTE));

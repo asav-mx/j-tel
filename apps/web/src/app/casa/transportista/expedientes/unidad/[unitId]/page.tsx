@@ -106,8 +106,21 @@ export default async function VerUnidad({
               );
             }}
           />
-          {/* Mapa y playback se encienden con Flota en vivo; este renglón será su puerta. */}
-          <Parte pregunta="Recorridos y playback" parte={e.actividad.recorridos} vacia="" conDatos={() => null} />
+          <Parte
+            pregunta="Recorridos y playback"
+            parte={e.actividad.recorridos}
+            vacia="Sin dispositivo, nunca: no hay recorrido medido"
+            conDatos={() => (
+              <Pieza
+                nombre="Recorridos y playback"
+                apoyo="el mapa de un periodo"
+                dato="hoy"
+                etiqueta="abre en"
+                edad={null}
+                ficha={rutas.recorrido(e.unidad.id, cuentaEnRuta)}
+              />
+            )}
+          />
           {e.actividad.servicios && (
             <Parte
               pregunta="Servicios con veredicto"

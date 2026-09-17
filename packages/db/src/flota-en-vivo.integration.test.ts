@@ -249,3 +249,32 @@ describe("especialesDeUnidadEnVentana (recorrido C3, misma regla que Flota en vi
     ).toEqual([]);
   });
 });
+
+describe("especialesDeUnidadQueEmpiezanEntre (botones del recorrido C3)", () => {
+  it("trae el servicio que empieza en el rango, con cliente, ruta y la ventana de su viaje", async () => {
+    const filas = await repos.expedientes.especialesDeUnidadQueEmpiezanEntre(carrierId, unidadEspecial, min(-80), min(-60));
+    expect(filas).toHaveLength(1);
+    expect(filas[0]).toMatchObject({ cliente: `Cliente ${marca}`, ruta: "Ruta a", ventanaDesde: min(-71), ventanaHasta: min(49) });
+  });
+
+  it("un servicio que empezó antes del rango no sale, aunque siga abierto dentro de él", async () => {
+    expect(await repos.expedientes.especialesDeUnidadQueEmpiezanEntre(carrierId, unidadEspecial, min(-60), min(60))).toEqual([]);
+  });
+
+  it("cliente de ejemplo y contrato suspendido no ofrecen botón", async () => {
+    expect(await repos.expedientes.especialesDeUnidadQueEmpiezanEntre(carrierId, unidadClienteDemo, min(-60), min(60))).toEqual([]);
+    expect(await repos.expedientes.especialesDeUnidadQueEmpiezanEntre(carrierId, unidadContratoSuspendido, min(-60), min(60))).toEqual([]);
+  });
+});
+
+describe("ligadoAServiciosDeclarados (sección reservada del recorrido C3)", () => {
+  it("un carrier con contrato activo de cliente real está ligado", async () => {
+    expect(await repos.expedientes.ligadoAServiciosDeclarados(carrierId, AHORA)).toBe(true);
+  });
+
+  it("un carrier sin contratos ni concesión no lo está", async () => {
+    const solo = await repos.accounts.create({ type: "carrier", name: `Solo ${marca}`, slug: `solo-${marca}` });
+    ids.cuentas.push(solo.id);
+    expect(await repos.expedientes.ligadoAServiciosDeclarados(solo.id, AHORA)).toBe(false);
+  });
+});

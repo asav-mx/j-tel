@@ -126,12 +126,20 @@ export function Glifo({
    */
   rumbo = 0,
   tamano = 18,
+  tinta,
 }: {
   estado: EstadoGlifo;
   rumbo?: number;
   tamano?: number;
+  /**
+   * La tinta, cuando el color no lo pone el estado sino el tiempo: el marcador
+   * del playback va en `tinta` porque es recuerdo, y sólo al alcanzar el ahora
+   * pasa a `senal` (ficha C3, decisión 6). La forma sigue siendo del estado.
+   */
+  tinta?: "tinta" | "senal";
 }) {
-  const { color, opacidad } = tintaDe(estado);
+  const propia = tintaDe(estado);
+  const { color, opacidad } = tinta ? { color: `var(--${tinta})`, opacidad: 1 } : propia;
   const familia = estado.startsWith("papel-") || estado.startsWith("dispositivo-") ? 40 : 24;
   // Un id por instancia para el recorte de «por vencer»: dos glifos en la misma
   // página con el mismo id se pisarían el recorte.

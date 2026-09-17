@@ -30,6 +30,8 @@ export const rutas = {
   unidad: (id: string, cuenta?: string | null) => conCuenta(`${RAIZ_EXPEDIENTES}/unidad/${id}`, cuenta),
   papel: (unidadId: string, tipoId: string, cuenta?: string | null, accion?: "capturar" | "corregir" | "renovar") =>
     conCuenta(`${RAIZ_EXPEDIENTES}/unidad/${unidadId}/papel/${tipoId}${accion ? `?accion=${accion}` : ""}`, cuenta),
+  /** Recorridos y playback de una unidad (C3). Sin ventana, la pantalla abre en «Hoy». */
+  recorrido: (id: string, cuenta?: string | null) => conCuenta(`${RAIZ_EXPEDIENTES}/unidad/${id}/recorrido`, cuenta),
   dispositivo: (id: string, cuenta?: string | null) => conCuenta(`${RAIZ_EXPEDIENTES}/dispositivo/${id}`, cuenta),
 };
 
@@ -181,7 +183,6 @@ export function glifoDeDispositivo(e: EstadoDeDispositivo): { glifo: EstadoGlifo
 // ── Lo que todavía no tiene fuente ───────────────────────────────────────
 
 const LLEGA_CON: Record<FuentePendiente, string> = {
-  flota_en_vivo: "Aún no disponible · llega con Flota en vivo",
   asignacion_de_choferes: "Aún no disponible · llega con la asignación de choferes",
   mercado_de_la_cuenta: "Aún no disponible · la cuenta no tiene mercado",
 };

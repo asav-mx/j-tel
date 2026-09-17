@@ -14,6 +14,7 @@ export * from "./salud.js";
 export * from "./recorrido.js";
 export * from "./recorrido-del-dia.js";
 export * from "./recorrido-servido.js";
+export { serviciosDeUnidadEnDia, type ServicioDeclarado, type ServiciosDelDia } from "./servicios-de-unidad.js";
 export * from "./cierre.js";
 export * from "./cobertura.js";
 export * from "./medicion-recorrido.js";
