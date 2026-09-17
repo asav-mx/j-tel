@@ -37,6 +37,7 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 - Migración a Compás cerrada; marca de lectura por aparato (#408 / 0037).
 - Los 8 FTC927 configurados; los 7 movidos a Juárez Bus (#419), el 002 en el Jeep (ASAV).
 - Velocidad: consulta de última señal 3.3 s → 1 ms (#423), cronómetro de lentitud (#427).
+- Muro entre cuentas **dentro del motor**: verificación, reverificación y el backfill de duraciones leen la evidencia filtrando por la cuenta del servicio que juzgan. Medido en producción el 17-sep-2026 antes de cerrar: cero IMEIs con puntos en más de una cuenta, así que no movió ningún veredicto ya sellado. Lo cuida una prueba-guardia que pone en rojo cualquier lectura sin cuenta que se escriba mañana.
 
 **El Marco: 7 piezas.** Pieza 6 (Compás, el cimiento), enmienda del expediente (§H, 6.30–6.33), Pieza 7 (la modalidad del servicio).
 
@@ -64,7 +65,6 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 
 ## Pendientes con nombre (anotados para no perderse)
 
-- **Del motor, no de presentación — el motor sin muro entre cuentas.** La verificación (y la reverificación) todavía lee puntos por IMEI de cualquier cuenta (`getForImeis`); las pantallas ya leen con la cuenta desde el #435. Hoy no muerde porque las dos cuentas con esos IMEI son de Asav, pero con dos transportistas reales un veredicto podría sellarse con evidencia de la cuenta equivocada. Es más grave que la fuga de pantalla que ya se cerró. Se decide con una lectura en producción de los IMEI con puntos en más de una cuenta, porque filtrar puede cambiar una reverificación.
 - **El evento de cambio de cuenta.** Hoy mover un dispositivo entre cuentas no deja fecha, así que no se puede decir «sin registro en esta cuenta». Cuando se construya (J-Staff), que sea un evento con fecha, y que el 6.14 lo diga al enmendarse.
 - **Quitar la baja desde la pantalla (6.18).** Hoy sólo con SQL. Necesita su propia conversación: reactivar debe ser un evento encima, no un borrado, para no perder fecha y motivo (6.15).
 - **El estado de una unidad y de un dispositivo debe derivar del lugar** (patio, taller, en servicio, en bodega) cuando existan Lugares y el mapa en vivo. Requiere roles nuevos de geocerca que hoy no existen.

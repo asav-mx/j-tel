@@ -4769,11 +4769,20 @@ export class TelemetryRepository {
   /**
    * Puntos para un conjunto de IMEIs en una ventana, **de cualquier cuenta**.
    *
-   * ⚠ Sin muro entre cuentas. Hoy sólo lo usan el motor (verificación y
-   * reverificación) y los guiones de medición. Las pantallas leen con
-   * `getForImeisDeCuenta`. Si el motor debe filtrar por cuenta se decide con
-   * una lectura en producción de los IMEI que tienen puntos en más de una
-   * cuenta: filtrarlo puede cambiar una reverificación (17 sep 2026).
+   * ⚠ Sin muro entre cuentas, y **ninguna ruta de veredicto la usa**. Desde el
+   * 17 de septiembre de 2026, verificación, reverificación y el backfill de
+   * duraciones leen con `getForImeisDeCuenta`; las pantallas ya lo hacían
+   * desde el #435. Su único llamador es `medir-ventana-vs-ruta.ts`, un guion
+   * de diagnóstico que no escribe nada y que mira a propósito más ancho que la
+   * ventana del viaje.
+   *
+   * Se dejó sin muro porque ver los puntos de cualquier cuenta es justamente
+   * lo que permite MEDIR el muro — por ejemplo, cuántos IMEIs tienen puntos en
+   * más de una cuenta (medido en producción el 17 sep 2026: cero).
+   *
+   * **No la llames desde el motor.** Lo vigila la prueba
+   * `packages/services/src/guardia-muro-cuenta.test.ts`: cualquier archivo del
+   * camino del veredicto que la nombre nace en rojo.
    */
   async getForImeis(imeis: string[], from: Date, to: Date) {
     if (imeis.length === 0) return [];

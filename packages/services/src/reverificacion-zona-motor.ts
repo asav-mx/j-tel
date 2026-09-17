@@ -114,7 +114,14 @@ export async function reverificarConEvidenciaCorregida(
     evidenceMarginMinutesAfter: policy.evidenceMarginMinutesAfter ?? 30,
   });
 
-  const memoryPoints = await repos.telemetry.getForImeis(imeis, windowStart, windowEnd);
+  // Con el muro de cuenta: los aparatos candidatos salen de este carrier, y la
+  // evidencia que los juzga también. Ver `getForImeisDeCuenta` (Pieza 1.C).
+  const memoryPoints = await repos.telemetry.getForImeisDeCuenta(
+    contract.carrierAccountId,
+    imeis,
+    windowStart,
+    windowEnd,
+  );
 
   const imeiToUnit = new Map<string, string>();
   for (const p of memoryPoints) {

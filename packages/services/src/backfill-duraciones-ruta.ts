@@ -98,7 +98,15 @@ async function medirYGuardar(repos: Repositories, fila: Fila): Promise<number | 
   const hasta = new Date(
     fila.expectedDeadline.getTime() + BUSQUEDA_HORAS_DESPUES * 3_600_000,
   );
-  const puntos = await repos.telemetry.getForImeis(imeis, desde, hasta);
+  // Con muro de cuenta: estas mediciones dimensionan la ventana derivada, así
+  // que son entrada del motor. La cuenta es la misma de la que salieron los
+  // IMEIs unas líneas arriba.
+  const puntos = await repos.telemetry.getForImeisDeCuenta(
+    occ.profile.contract.carrierAccountId,
+    imeis,
+    desde,
+    hasta,
+  );
   if (puntos.length === 0) return null;
 
   const medido = measureBestTraversal(
