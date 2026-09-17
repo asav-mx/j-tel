@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { digitoVerificadorCuadra, normalizarImei, validarImei } from "./imei";
+import { digitoVerificadorCuadra, normalizarImei, validarImei } from "./imei.js";
 
 /** Los cuatro FTC927 reales de Compás, 14 de septiembre de 2026. */
 const REALES = ["860693082402380", "860573080597409", "860693089187232", "860693086784395"];

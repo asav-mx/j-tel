@@ -267,9 +267,19 @@ export const devices = pgTable("devices", {
    */
   retiredAt: timestamp("retired_at", { withTimezone: true, mode: "date" }),
   retiredReason: text("retired_reason"),
+  /** Quién dio la baja (id de usuario). Nulo en las bajas por hoja SQL (0039). */
+  retiredBy: text("retired_by"),
+  /**
+   * El consecutivo global del nombre (Marco 6.3), desde la 0039. Lo entrega
+   * `devices_consecutivo_seq`: se asigna una vez y nunca se reutiliza, aunque
+   * la inserción que lo pidió falle. Nulo en los dispositivos que no nacieron
+   * con nombre generado (los de Umbrella).
+   */
+  consecutivo: integer("consecutivo"),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("devices_carrier_imei_idx").on(table.carrierAccountId, table.imei),
+  uniqueIndex("devices_consecutivo_unico").on(table.consecutivo),
 ]);
 
 export const deviceAssignments = pgTable("device_assignments", {
@@ -282,10 +292,31 @@ export const deviceAssignments = pgTable("device_assignments", {
     .references(() => devices.id, { onDelete: "cascade" }),
   validFrom: timestamp("valid_from", { withTimezone: true, mode: "date" }).notNull(),
   validTo: timestamp("valid_to", { withTimezone: true, mode: "date" }),
+  /** Quién asignó (id de usuario). Nulo en lo anterior a la 0039. */
+  asignadaPor: text("asignada_por"),
+  /** Quién cerró: al soltar, reasignar o dar de baja. Nulo si fue un guion. */
+  cerradaPor: text("cerrada_por"),
+  /**
+   * Por qué terminó. Lo escribe quien suelta, o el sistema cuando la cierra
+   * otra acción (`MOTIVO_SISTEMA`). Se escribe al cerrar, no al abrir.
+   */
+  motivoCierre: text("motivo_cierre"),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 }, (table) => [
   index("device_assignments_unit_valid_idx").on(table.unitId, table.validFrom),
   index("device_assignments_device_valid_idx").on(table.deviceId, table.validFrom),
+  /**
+   * Un dispositivo en una sola unidad a la vez, y una unidad con un solo
+   * dispositivo (0039). Sin estos candados dos clics simultáneos dejaban dos
+   * asignaciones vigentes, y el archivador tomaría cualquiera para decidir de
+   * qué unidad es un punto.
+   */
+  uniqueIndex("device_assignments_dispositivo_una_vigente")
+    .on(table.deviceId)
+    .where(sql`${table.validTo} IS NULL`),
+  uniqueIndex("device_assignments_unidad_una_vigente")
+    .on(table.unitId)
+    .where(sql`${table.validTo} IS NULL`),
 ]);
 
 export const routes = pgTable("routes", {
