@@ -7093,6 +7093,11 @@ export class ExpedienteRepository {
         etiqueta: units.label,
         desde: deviceAssignments.validFrom,
         hasta: deviceAssignments.validTo,
+        // Quién y por qué (0039, C4). Lo anterior a la 0039 viene en null: no
+        // quedó registrado, y la pantalla lo dice así.
+        asignadaPor: deviceAssignments.asignadaPor,
+        cerradaPor: deviceAssignments.cerradaPor,
+        motivoCierre: deviceAssignments.motivoCierre,
       })
       .from(deviceAssignments)
       .innerJoin(units, eq(units.id, deviceAssignments.unitId))

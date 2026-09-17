@@ -93,6 +93,12 @@ export default async function CuartoDeDispositivos({
             <span>
               Dado de alta: <b data-medida>{recienDado.nombre ?? recienDado.imei}</b>, en bodega.
             </span>
+            <Link
+              href={rutasDeDispositivos.ver(recienDado.id, cuentaEnRuta, { desde: "dispositivos", accion: "asignar" })}
+              className="underline decoration-[var(--linea)] underline-offset-4"
+            >
+              Asignarlo a una unidad
+            </Link>
           </p>
         )}
 

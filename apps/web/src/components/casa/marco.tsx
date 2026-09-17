@@ -52,11 +52,19 @@ export function Marco({
   casa,
   alcance,
   cuenta,
+  lugar,
   children,
 }: {
   casa: Casa;
   alcance: Alcance;
   cuenta?: CuentaDeLaCasa;
+  /**
+   * El lugar donde se está, cuando no es el de la ruta. Una ficha con dos
+   * puertas —Ver ‹dispositivo› vive bajo Expedientes y se llega también desde
+   * Dispositivos— marcaba la pestaña de la ruta mientras las migas decían la
+   * otra: dos respuestas a «¿dónde estoy?» en la misma pantalla (C4-c).
+   */
+  lugar?: string;
   children: React.ReactNode;
 }) {
   const grupos = menuDe(casa, alcance);
@@ -78,7 +86,7 @@ export function Marco({
           {/* El sello de la sección, sólo en celular: ahí la barra de abajo no
               tiene dónde ponerlo y la marca se caería entera. En computadora
               cada sello ya vive encima de sus pestañas. */}
-          <SelloDeLaSeccion grupos={grupos} />
+          <SelloDeLaSeccion grupos={grupos} lugar={lugar} />
         </span>
         {cuenta?.actual && (
           <span className="order-last flex w-full min-w-0 items-center md:order-none md:ml-auto md:w-auto">
@@ -96,7 +104,7 @@ export function Marco({
           promete y no tiene. `menuDe` ya quitó lo que no aplica y lo que aún no
           se construye, así que quedarse sin nada es un estado legítimo, no un
           error — hoy es el de las cuatro casas. */}
-      {grupos.length > 0 && <Pestanas grupos={grupos} cuenta={cuenta?.enRuta ?? null} />}
+      {grupos.length > 0 && <Pestanas grupos={grupos} cuenta={cuenta?.enRuta ?? null} lugar={lugar} />}
 
       {/* El padding de abajo en celular deja libre la barra de pestañas fija. */}
       <main className="flex-1 px-5 pb-[68px] pt-5 md:px-6 md:pb-8">{children}</main>

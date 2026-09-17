@@ -19,8 +19,9 @@ import { selloActivo, type Grupo } from "@/lib/casa/casas";
  * No aparece cuando no toca: en la puerta de la casa, y en los lugares que el
  * mapa dejó sin producto. La regla 4 vale también para la marca.
  */
-export function SelloDeLaSeccion({ grupos }: { grupos: Grupo[] }) {
-  const sello = selloActivo(grupos, usePathname());
+export function SelloDeLaSeccion({ grupos, lugar }: { grupos: Grupo[]; lugar?: string }) {
+  const enRuta = usePathname();
+  const sello = selloActivo(grupos, lugar ?? enRuta);
 
   if (sello === null) return null;
 
