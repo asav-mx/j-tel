@@ -7,18 +7,23 @@ import {
   type GeofenceRole,
   type Hueco,
   type PuntoTraza,
+  type Ventana,
 } from "@jtel/domain";
 import { pointInPolygon } from "@jtel/verification";
 import { kilometrosSinSaltos } from "./recorrido.js";
 
 /**
- * El recorrido de una unidad en un día — C1 del cuarto de Compás, lógica sin
- * pantalla.
+ * El recorrido de una unidad en una ventana de tiempo — C1/C3 del cuarto de
+ * Compás, lógica sin pantalla.
  *
- * Es lo que C3 va a pintar en Ver ‹unidad› con su playback: los tramos
- * observados, los huecos entre ellos, las visitas a lugares («salió de la base
- * 05:30», «llegó a Planta 47 06:08») y las cifras del día. Función pura: quien
- * llama trae los puntos del día y las geocercas que la unidad puede visitar.
+ * Es lo que C3 pinta en Ver ‹unidad› con su playback: los tramos observados,
+ * los huecos entre ellos, las visitas a lugares («salió de la base 05:30»,
+ * «llegó a Planta 47 06:08») y las cifras del periodo. Función pura: quien
+ * llama trae los puntos y las geocercas que la unidad puede visitar; el día es
+ * sólo el caso donde la ventana es una medianoche a la siguiente
+ * (`ventanaDelDia`) — la regla y los umbrales son los mismos para cualquier
+ * ventana, incluida una que cruce medianoche (turno nocturno) o dure minutos
+ * (la brocha del playback acotando).
  *
  * **El corte de la traza va aparte, encima de las visitas** (`cortarPorModalidad`),
  * porque depende de algo que el recorrido no sabe: la modalidad del servicio
@@ -91,7 +96,7 @@ export type Visita = {
   salida: Date | null;
 };
 
-export type CifrasDelDia = {
+export type CifrasDelPeriodo = {
   puntos: number;
   /** Sólo dentro de los tramos: lo que pasó dentro de un hueco no se midió. */
   kmMedidos: number;
@@ -101,11 +106,11 @@ export type CifrasDelDia = {
   huecos: number;
 };
 
-export type RecorridoDelDia = {
+export type RecorridoPorVentana = {
   tramos: PuntoTraza[][];
   huecos: Hueco[];
   visitas: Visita[];
-  cifras: CifrasDelDia;
+  cifras: CifrasDelPeriodo;
 };
 
 /**
@@ -163,14 +168,30 @@ export function visitasALugares(
   return visitas.sort((a, b) => a.entrada.getTime() - b.entrada.getTime());
 }
 
-/** El recorrido de un día: tramos, huecos, visitas y cifras. */
-export function recorridoDelDia(entrada: {
+/**
+ * El recorrido en una ventana: tramos, huecos, visitas y cifras.
+ *
+ * **`ventana` acota lo que se reporta, no lo que hay que traer.** Quien llama
+ * puede pasar puntos de más (por ejemplo, con margen para que un hueco que
+ * empieza justo antes de la ventana se calcule bien más adelante); esta
+ * función descarta lo que cae fuera de `[ventana.desde, ventana.hasta]`
+ * (los dos extremos incluidos) antes de partir tramos, huecos y visitas. El
+ * día es sólo la ventana que arma `ventanaDelDia`: misma regla, sin caso
+ * especial para la medianoche.
+ */
+export function recorridoPorVentana(entrada: {
+  ventana: Ventana;
   puntos: PuntoTraza[];
   lugares: Lugar[];
   umbralHuecoMinutos?: number;
-}): RecorridoDelDia {
+}): RecorridoPorVentana {
   const umbral = entrada.umbralHuecoMinutos ?? SIN_SENAL_MINUTOS;
-  const puntos = ordenarPorTiempo(entrada.puntos);
+  const desde = entrada.ventana.desde.getTime();
+  const hasta = entrada.ventana.hasta.getTime();
+  const puntos = ordenarPorTiempo(entrada.puntos).filter((q) => {
+    const t = q.at.getTime();
+    return t >= desde && t <= hasta;
+  });
   const tramos = partirEnHuecos(puntos, umbral);
   const huecos = huecosDeSenal(puntos, umbral);
 
@@ -249,7 +270,7 @@ export type TrazaCortada = {
  * hueco), no hay punto de llegada que conservar: se oculta todo lo de adentro.
  */
 export function cortarPorModalidad(
-  recorrido: Pick<RecorridoDelDia, "tramos" | "visitas">,
+  recorrido: Pick<RecorridoPorVentana, "tramos" | "visitas">,
   modalidadEn: (instante: Date) => Modalidad,
 ): TrazaCortada {
   const queCortan = recorrido.visitas.filter(
