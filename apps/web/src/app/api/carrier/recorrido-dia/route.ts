@@ -89,7 +89,7 @@ export async function GET(request: Request) {
   const diaFin = new Date(diaInicio);
   diaFin.setUTCDate(diaFin.getUTCDate() + 1);
 
-  const puntos = await repos.telemetry.getForImeis(imeis, diaInicio, diaFin);
+  const puntos = await repos.telemetry.getForImeisDeCuenta(carrier.id, imeis, diaInicio, diaFin);
   if (puntos.length === 0) {
     return NextResponse.json({
       ok: true,

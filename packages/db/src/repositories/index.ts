@@ -4624,7 +4624,38 @@ export class TelemetryRepository {
     return row?.primero ? new Date(row.primero) : null;
   }
 
-  /** Puntos de la memoria propia para un conjunto de IMEIs en una ventana. */
+  /**
+   * Puntos de UNA cuenta para un conjunto de IMEIs en una ventana — la lectura
+   * de las pantallas.
+   *
+   * **El IMEI no es el muro; la cuenta sí** (Pieza 1.C). Un dispositivo que
+   * cambió de cuenta (6.14) conserva su IMEI, y sus puntos de antes del cambio
+   * se quedaron archivados en la cuenta anterior. Leer sólo por IMEI le dibuja
+   * a la cuenta nueva los recorridos de la anterior. Por eso la cuenta es
+   * obligatoria aquí, y no un filtro que quien llama se acuerde de poner.
+   */
+  async getForImeisDeCuenta(carrierAccountId: string, imeis: string[], from: Date, to: Date) {
+    if (imeis.length === 0) return [];
+    return this.db.query.telemetryPoints.findMany({
+      where: and(
+        eq(telemetryPoints.carrierAccountId, carrierAccountId),
+        inArray(telemetryPoints.imei, imeis),
+        gte(telemetryPoints.recordedAt, from),
+        lte(telemetryPoints.recordedAt, to),
+      ),
+      orderBy: (p, { asc }) => [asc(p.recordedAt)],
+    });
+  }
+
+  /**
+   * Puntos para un conjunto de IMEIs en una ventana, **de cualquier cuenta**.
+   *
+   * ⚠ Sin muro entre cuentas. Hoy sólo lo usan el motor (verificación y
+   * reverificación) y los guiones de medición. Las pantallas leen con
+   * `getForImeisDeCuenta`. Si el motor debe filtrar por cuenta se decide con
+   * una lectura en producción de los IMEI que tienen puntos en más de una
+   * cuenta: filtrarlo puede cambiar una reverificación (17 sep 2026).
+   */
   async getForImeis(imeis: string[], from: Date, to: Date) {
     if (imeis.length === 0) return [];
     return this.db.query.telemetryPoints.findMany({
@@ -6927,8 +6958,16 @@ export class ExpedienteRepository {
     return fila ?? null;
   }
 
-  /** Las unidades que ha traído un dispositivo, en orden de instalación. */
-  async asignacionesDeDispositivo(deviceId: string) {
+  /**
+   * Las unidades **de esta cuenta** que ha traído un dispositivo, en orden de
+   * instalación.
+   *
+   * La cuenta va en la consulta, no en quien llama. Un dispositivo que cambió
+   * de cuenta (6.14) conserva sus asignaciones viejas, y esas unidades son de la
+   * cuenta anterior: sin este filtro, la cuenta nueva veía sus números
+   * económicos y sus fechas (Pieza 1.C, el muro entre cuentas; 17 sep 2026).
+   */
+  async asignacionesDeDispositivo(carrierAccountId: string, deviceId: string) {
     return this.db
       .select({
         unitId: units.id,
@@ -6938,7 +6977,7 @@ export class ExpedienteRepository {
       })
       .from(deviceAssignments)
       .innerJoin(units, eq(units.id, deviceAssignments.unitId))
-      .where(eq(deviceAssignments.deviceId, deviceId))
+      .where(and(eq(deviceAssignments.deviceId, deviceId), eq(units.carrierAccountId, carrierAccountId)))
       .orderBy(deviceAssignments.validFrom);
   }
 

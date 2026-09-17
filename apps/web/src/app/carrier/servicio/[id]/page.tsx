@@ -166,7 +166,7 @@ export default async function CarrierServicioPage({
 
   const imeis = suggestions.flatMap((s) => unitIdToImeis.get(s.unitId) ?? []);
   if (imeis.length > 0) {
-    const telem = await repos.telemetry.getForImeis(imeis, loadFrom, loadTo);
+    const telem = await repos.telemetry.getForImeisDeCuenta(carrier.id, imeis, loadFrom, loadTo);
     for (const p of telem) {
       const unitId = p.unitId ?? imeiToUnitId.get(p.imei);
       if (!unitId) continue;
