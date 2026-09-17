@@ -175,7 +175,7 @@ export async function clasificarFlotaDeCuenta(
   if (ventanaDesdePorUnidad.size > 0 && lugares.some((l) => l.rol === "destino")) {
     const imeis = [...ventanaDesdePorUnidad.keys()].flatMap(imeisDeUnidad);
     const desde = new Date(Math.min(...[...ventanaDesdePorUnidad.values()].map((d) => d.getTime())));
-    const archivados = imeis.length > 0 ? await repos.telemetry.getForImeis(imeis, desde, ahora) : [];
+    const archivados = imeis.length > 0 ? await repos.telemetry.getForImeisDeCuenta(carrierAccountId, imeis, desde, ahora) : [];
     for (const [unitId, ventanaDesde] of ventanaDesdePorUnidad) {
       const suyos = new Set(imeisDeUnidad(unitId));
       const puntos: PuntoTraza[] = archivados

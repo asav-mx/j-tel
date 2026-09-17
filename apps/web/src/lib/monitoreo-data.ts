@@ -457,7 +457,7 @@ export async function loadMonitoreo(opts: {
     const imeis = [...imeiToUnitId.keys()];
     if (imeis.length === 0) continue;
 
-    const telem = await repos.telemetry.getForImeis(imeis, windowStart, windowEnd);
+    const telem = await repos.telemetry.getForImeisDeCuenta(carrierId, imeis, windowStart, windowEnd);
     for (const p of telem) {
       const unitId = imeiToUnitId.get(p.imei);
       if (!unitId) continue;

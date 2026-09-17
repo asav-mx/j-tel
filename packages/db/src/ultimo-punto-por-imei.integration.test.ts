@@ -123,6 +123,17 @@ describe("ultimoPuntoPorImei", () => {
     expect(aMapa(nueva)).toEqual(aMapa(vieja));
   });
 
+  it("getForImeisDeCuenta: los puntos que el IMEI dejó en otra cuenta no se leen (el muro, no el IMEI)", async () => {
+    const desde = t("2026-08-01T00:00:00Z");
+    const hasta = t("2026-09-30T00:00:00Z");
+    const deCarrier = await repos.telemetry.getForImeisDeCuenta(carrierId, [IMEI_B], desde, hasta);
+    expect(deCarrier.map((p) => p.recordedAt.toISOString())).toEqual(["2026-09-01T06:00:00.000Z"]);
+    const delOtro = await repos.telemetry.getForImeisDeCuenta(otroCarrierId, [IMEI_B], desde, hasta);
+    expect(delOtro.map((p) => p.recordedAt.toISOString())).toEqual(["2026-09-14T22:15:00.000Z"]);
+    // Y la lectura sin muro, la que queda para el motor, sí trae los dos.
+    expect(await repos.telemetry.getForImeis([IMEI_B], desde, hasta)).toHaveLength(2);
+  });
+
   it("la base de prueba tiene los puntos donde la prueba cree", async () => {
     // Guarda contra un falso verde: si el insert no hubiera llegado, las
     // pruebas de arriba de «no aparece» pasarían por la razón equivocada.

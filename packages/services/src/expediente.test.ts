@@ -73,9 +73,9 @@ function repos(o: Opciones = {}) {
       catalogo: async (_m: string, subject: string) =>
         (o.catalogo ?? []).filter((c) => c.tipo.subject === subject),
       fojasDeSujeto: async () => o.fojas ?? [],
-      asignacionesDeDispositivo: async () => [
-        { unitId: "u1", etiqueta: "10254", desde: new Date("2026-09-01T00:00:00Z"), hasta: null },
-      ],
+      // Como la consulta real: las unidades de la cuenta que pregunta, nada más.
+      asignacionesDeDispositivo: async (cuenta: string) =>
+        cuenta === "c1" ? [{ unitId: "u1", etiqueta: "10254", desde: new Date("2026-09-01T00:00:00Z"), hasta: null }] : [],
       asignacionesDeChofer: async () => o.asignacionesDeChofer ?? [],
       tieneContratoEncendido: async () => o.conContrato ?? false,
     },

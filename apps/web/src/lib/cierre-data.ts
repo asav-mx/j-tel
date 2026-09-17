@@ -181,7 +181,7 @@ export async function loadCierre(opts: {
     }
     if (imeiToUnit.size === 0) continue;
 
-    const telem = await repos.telemetry.getForImeis([...imeiToUnit.keys()], desde, hasta);
+    const telem = await repos.telemetry.getForImeisDeCuenta(carrierId, [...imeiToUnit.keys()], desde, hasta);
     for (const p of telem) {
       const unitId = p.unitId ?? imeiToUnit.get(p.imei);
       if (!unitId) continue;

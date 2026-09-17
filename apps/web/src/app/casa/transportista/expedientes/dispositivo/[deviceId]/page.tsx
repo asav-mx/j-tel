@@ -100,7 +100,7 @@ export default async function VerDispositivo({
           <Parte
             pregunta="Unidades"
             parte={e.relaciones.unidades}
-            vacia="Nunca ha estado en una unidad"
+            vacia="Nunca ha estado en una unidad de esta cuenta"
             conDatos={(lista) => (
               <div className="flex flex-col gap-2">
                 {[...lista].reverse().map((u) => (

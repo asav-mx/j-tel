@@ -275,7 +275,7 @@ export async function cargarExpedienteDeDispositivo(
 
   const [flota, asignaciones] = await Promise.all([
     clasificarFlotaDeCuenta(repos, carrierAccountId, ahora, { incluirInactivas: true }),
-    repos.expedientes.asignacionesDeDispositivo(deviceId),
+    repos.expedientes.asignacionesDeDispositivo(carrierAccountId, deviceId),
   ]);
   const enFlota = flota.flota.dispositivos.find((d) => d.dispositivo.id === deviceId);
   const at = enFlota?.estado.ultimaSenalAt ?? null;
