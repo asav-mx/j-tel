@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { apoyoDeInventario, puertaDe, rutasDeDispositivos, senalViva, textoDeRuta } from "./dispositivos";
+import { apoyoDeInventario, puertaDe, quienYPorQue, rutasDeDispositivos, senalViva, textoDeRuta } from "./dispositivos";
 
 const AHORA = new Date("2026-09-17T13:42:00Z");
 
@@ -34,6 +34,22 @@ describe("el cobre del inventario", () => {
 
   it("en bodega no es vida aunque acabe de hablar", () => {
     expect(senalViva({ grupo: "en_bodega", ultimaSenalAt: AHORA }, AHORA)).toBe(false);
+  });
+});
+
+describe("quién y por qué en la historia", () => {
+  const correo = (id: string) => `${id}@jtel.mx`;
+  const a = { vigente: false, asignadaPor: null, cerradaPor: null, motivoCierre: null };
+
+  it("la vigente dice quién la abrió; sin registro, lo dice", () => {
+    expect(quienYPorQue({ ...a, vigente: true, asignadaPor: "asav" }, correo)).toBe("asignó asav@jtel.mx");
+    expect(quienYPorQue({ ...a, vigente: true }, correo)).toBe("asignación sin registro de quién");
+  });
+
+  it("la cerrada dice por qué y quién; el motivo del sistema sin quién (alta vieja) lo dice también", () => {
+    expect(quienYPorQue({ ...a, cerradaPor: "asav", motivoCierre: "Entró a taller" }, correo)).toBe("Entró a taller · asav@jtel.mx");
+    expect(quienYPorQue({ ...a, motivoCierre: "Se asignó a la unidad 10254" }, correo)).toBe("Se asignó a la unidad 10254 · sin registro de quién");
+    expect(quienYPorQue(a, correo)).toBe("cierre sin registro de quién ni por qué");
   });
 });
 

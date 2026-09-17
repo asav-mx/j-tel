@@ -249,18 +249,41 @@ export async function cargarExpedienteDeUnidad(
 // ── Dispositivo ──────────────────────────────────────────────────────────
 
 export interface ExpedienteDeDispositivo {
-  dispositivo: { id: string };
+  dispositivo: {
+    id: string;
+    /**
+     * Su estado del inventario aunque nunca haya reportado: las acciones de
+     * Ver ‹dispositivo› (C4-c) dependen de si está montado o de baja, no de
+     * si tiene señal. `null` sólo si la clasificación no lo encontró.
+     */
+    estado: EstadoDeDispositivo | null;
+  };
   identidad: {
     nombre: Parte<string>;
     imei: Parte<string>;
-    /** Sólo si está de baja. */
-    baja?: Parte<{ at: Date; motivo: string | null }>;
+    /** Sólo si está de baja. `por` es null en las bajas anteriores a la 0039. */
+    baja?: Parte<{ at: Date; motivo: string | null; por: string | null }>;
   };
   actividad: {
     ultimaSenal: Parte<{ estado: EstadoDeDispositivo; at: Date }>;
   };
   relaciones: {
-    unidades: Parte<Array<{ unitId: string; etiqueta: string; desde: Date; hasta: Date | null; vigente: boolean }>>;
+    /**
+     * Quién abrió y cerró cada asignación, y por qué se cerró (0039). Null en
+     * lo anterior a la 0039: no quedó registrado.
+     */
+    unidades: Parte<
+      Array<{
+        unitId: string;
+        etiqueta: string;
+        desde: Date;
+        hasta: Date | null;
+        vigente: boolean;
+        asignadaPor: string | null;
+        cerradaPor: string | null;
+        motivoCierre: string | null;
+      }>
+    >;
   };
   // Sin `documentos`: un dispositivo no lleva papeles (ficha §3, decidido el 16 sep).
 }
@@ -285,11 +308,14 @@ export async function cargarExpedienteDeDispositivo(
     imei: parteDe(dispositivo.imei),
   };
   if (dispositivo.retiredAt) {
-    identidad.baja = { estado: "con_datos", valor: { at: dispositivo.retiredAt, motivo: dispositivo.retiredReason } };
+    identidad.baja = {
+      estado: "con_datos",
+      valor: { at: dispositivo.retiredAt, motivo: dispositivo.retiredReason, por: dispositivo.retiredBy ?? null },
+    };
   }
 
   return {
-    dispositivo: { id: dispositivo.id },
+    dispositivo: { id: dispositivo.id, estado: enFlota?.estado ?? null },
     identidad,
     actividad: {
       ultimaSenal: enFlota && at ? { estado: "con_datos", valor: { estado: enFlota.estado, at } } : { estado: "vacia" },
@@ -302,6 +328,9 @@ export async function cargarExpedienteDeDispositivo(
           desde: a.desde,
           hasta: a.hasta,
           vigente: a.desde <= ahora && (a.hasta === null || a.hasta > ahora),
+          asignadaPor: a.asignadaPor ?? null,
+          cerradaPor: a.cerradaPor ?? null,
+          motivoCierre: a.motivoCierre ?? null,
         })),
       ),
     },

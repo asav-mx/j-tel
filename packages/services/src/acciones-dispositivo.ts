@@ -99,11 +99,14 @@ export async function darDeAltaDispositivo(
 export async function asignarDispositivo(
   repos: Repositories,
   datos: { carrierId: string; deviceId: string; unitId: string; por: string; ahora: Date },
-): Promise<ResultadoDeAccion<{ unidadAnteriorId: string | null }>> {
+): Promise<ResultadoDeAccion<{ unidadAnteriorId: string | null; dispositivoDesplazadoId: string | null }>> {
   const d = await dispositivoConUnidad(repos, datos.carrierId, datos.deviceId);
   if (!d) return falla("dispositivo_no_encontrado");
   const unidad = await repos.expedientes.unidadDeCuenta(datos.carrierId, datos.unitId);
   if (!unidad) return falla("unidad_no_encontrada");
+  // El que la unidad traía y va a quedar en bodega (decisión 6 de la ficha).
+  // La unidad ya es de la cuenta, así que sus asignaciones también.
+  const desplazado = (await repos.fleet.asignacionesDeUnidad(unidad.id)).find((a) => a.hasta === null) ?? null;
 
   const procede = procedeAsignar(
     { retiredAt: d.dispositivo.retiredAt, unidadVigenteId: d.unidadVigenteId },
@@ -117,7 +120,11 @@ export async function asignarDispositivo(
     if (esChoqueDeCandado(e)) return falla("cambio_simultaneo");
     throw e;
   }
-  return { ok: true, unidadAnteriorId: d.unidadVigenteId };
+  return {
+    ok: true,
+    unidadAnteriorId: d.unidadVigenteId,
+    dispositivoDesplazadoId: desplazado && desplazado.deviceId !== d.dispositivo.id ? desplazado.deviceId : null,
+  };
 }
 
 export async function soltarDispositivo(

@@ -15,8 +15,15 @@ vi.mock("@/lib/guardia-api", () => ({ exigir: (...a: unknown[]) => exigir(...a) 
 vi.mock("@/lib/db", () => ({
   getRepos: () => ({ accounts: { findBySlug: (s: string) => findBySlug(s) } }),
 }));
+const asignarDispositivo = vi.fn();
+const soltarDispositivo = vi.fn();
+const darDeBajaDispositivo = vi.fn();
+
 vi.mock("@jtel/services", () => ({
   darDeAltaDispositivo: (...a: unknown[]) => darDeAltaDispositivo(...a),
+  asignarDispositivo: (...a: unknown[]) => asignarDispositivo(...a),
+  soltarDispositivo: (...a: unknown[]) => soltarDispositivo(...a),
+  darDeBajaDispositivo: (...a: unknown[]) => darDeBajaDispositivo(...a),
 }));
 
 const { POST } = await import("./route");
@@ -72,6 +79,48 @@ describe("dar de alta", () => {
     expect(d.searchParams.get("accion")).toBe("alta");
     expect(d.searchParams.get("error")).toContain("otra cuenta");
     expect(d.searchParams.get("imei")).toBe("860693089187232");
+  });
+});
+
+describe("las tres de Ver ‹dispositivo› (C4-c)", () => {
+  const FICHA = "/casa/transportista/expedientes/dispositivo/d1";
+
+  beforeEach(() => {
+    asignarDispositivo.mockReset();
+    soltarDispositivo.mockReset();
+    darDeBajaDispositivo.mockReset();
+  });
+
+  it("asignar: quién sale de la sesión, y vuelve a la ficha por la misma puerta nombrando al desplazado", async () => {
+    asignarDispositivo.mockResolvedValue({ ok: true, unidadAnteriorId: null, dispositivoDesplazadoId: "d5" });
+    const d = destino(
+      await mandar({ account: "juarez-bus", accion: "asignar", deviceId: "d1", unitId: "u1", desde: "dispositivos", por: "user_falso" }),
+    );
+    expect(asignarDispositivo.mock.calls[0]![1]).toMatchObject({ carrierId: "cuenta-jb", deviceId: "d1", unitId: "u1", por: "user_coordinador" });
+    expect(d.pathname).toBe(FICHA);
+    expect(Object.fromEntries(d.searchParams)).toEqual({ desde: "dispositivos", hecho: "asignado", desplazado: "d5", account: "juarez-bus" });
+  });
+
+  it("soltar sin motivo: vuelve al panel con el aviso", async () => {
+    soltarDispositivo.mockResolvedValue({ ok: false, error: "motivo_vacio", mensaje: "Escribe el motivo." });
+    const d = destino(await mandar({ account: "juarez-bus", accion: "soltar", deviceId: "d1", motivo: " " }));
+    expect(d.pathname).toBe(FICHA);
+    expect(d.searchParams.get("accion")).toBe("soltar");
+    expect(d.searchParams.get("error")).toBe("Escribe el motivo.");
+  });
+
+  it("dar de baja con éxito: el hecho, sin texto que la pantalla vaya a repetir", async () => {
+    darDeBajaDispositivo.mockResolvedValue({ ok: true, unidadSoltadaId: "u1" });
+    const d = destino(await mandar({ account: "juarez-bus", accion: "baja", deviceId: "d1", motivo: "Se quemó" }));
+    expect(darDeBajaDispositivo.mock.calls[0]![1]).toMatchObject({ motivo: "Se quemó", por: "user_coordinador" });
+    expect(d.searchParams.get("hecho")).toBe("baja");
+  });
+
+  it("un dispositivo de otra cuenta vuelve al cuarto: su ficha sería un 404 y el aviso no se vería", async () => {
+    soltarDispositivo.mockResolvedValue({ ok: false, error: "dispositivo_no_encontrado", mensaje: "Ese dispositivo no es de esta cuenta." });
+    const d = destino(await mandar({ account: "juarez-bus", accion: "soltar", deviceId: "ajeno", motivo: "x" }));
+    expect(d.pathname).toBe("/casa/transportista/dispositivos");
+    expect(d.searchParams.get("error")).toBe("Ese dispositivo no es de esta cuenta.");
   });
 });
 

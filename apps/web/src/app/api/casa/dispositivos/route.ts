@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { darDeAltaDispositivo } from "@jtel/services";
+import { asignarDispositivo, darDeAltaDispositivo, darDeBajaDispositivo, soltarDispositivo } from "@jtel/services";
 import { getRepos } from "@/lib/db";
 import { exigir } from "@/lib/guardia-api";
-import { rutasDeDispositivos } from "@/lib/casa/dispositivos";
+import { accionDeFicha, puertaDe, rutasDeDispositivos } from "@/lib/casa/dispositivos";
 
 /**
  * Las acciones sobre dispositivos desde la casa nueva (C4).
@@ -54,7 +54,46 @@ export async function POST(request: Request) {
     return volver(request, rutasDeDispositivos.cuarto(cuenta, { hecho: "alta", dispositivo: r.deviceId }));
   }
 
-  return volver(request, cuarto, { error: "Esa acción no existe." });
+  // ── Las tres de Ver ‹dispositivo› (C4-c) ──
+  const enFicha = accionDeFicha(accion);
+  const deviceId = String(form.get("deviceId") ?? "").trim();
+  if (!enFicha || !deviceId) return volver(request, cuarto, { error: "Esa acción no existe." });
+
+  const desde = puertaDe(form.get("desde"));
+  const ficha = (params: Parameters<typeof rutasDeDispositivos.ver>[2] = {}) =>
+    rutasDeDispositivos.ver(deviceId, cuenta, { desde, ...params });
+  // Si el dispositivo no es de esta cuenta, su ficha es un 404 y el aviso no se
+  // vería nunca: se vuelve al cuarto, que sí lo dibuja.
+  const alFallar = (error: string, mensaje: string, params: Parameters<typeof rutasDeDispositivos.ver>[2], extra = {}) =>
+    error === "dispositivo_no_encontrado"
+      ? volver(request, cuarto, { error: mensaje })
+      : volver(request, ficha(params), { error: mensaje, ...extra });
+  const ahora = new Date();
+  // La guardia ya exigió sesión; sin un quién no se escribe una historia que
+  // prometió guardar quién.
+  const por = g.identidad.userId;
+  if (!por) return volver(request, cuarto, { error: "Inicia sesión." });
+
+  if (enFicha === "asignar") {
+    const r = await asignarDispositivo(repos, {
+      carrierId: carrier.id,
+      deviceId,
+      unitId: String(form.get("unitId") ?? "").trim(),
+      por,
+      ahora,
+    });
+    if (!r.ok) return alFallar(r.error, r.mensaje, { accion: "asignar" });
+    return volver(request, ficha({ hecho: "asignado", desplazado: r.dispositivoDesplazadoId }));
+  }
+
+  // Soltar y dar de baja piden motivo; si falla, el motivo regresa con el aviso.
+  const motivo = String(form.get("motivo") ?? "");
+  const r =
+    enFicha === "soltar"
+      ? await soltarDispositivo(repos, { carrierId: carrier.id, deviceId, motivo, por, ahora })
+      : await darDeBajaDispositivo(repos, { carrierId: carrier.id, deviceId, motivo, por, ahora });
+  if (!r.ok) return alFallar(r.error, r.mensaje, { accion: enFicha }, { motivo: motivo.slice(0, 600) });
+  return volver(request, ficha({ hecho: enFicha === "soltar" ? "soltado" : "baja" }));
 }
 
 function volver(request: Request, ruta: string, extra: Record<string, string> = {}) {

@@ -190,6 +190,17 @@ describe("soltar y dar de baja", () => {
     expect(await repos.fleet.soltarDispositivo(a.id, { at, por: "user_taller", motivo: "otra vez" })).toBeNull();
   });
 
+  it("la historia que lee Ver ‹dispositivo› trae quién abrió, quién cerró y por qué (C4-c)", async () => {
+    const unidad = (await repos.fleet.createUnit(carrierId, `U-${marca}-historia`)).id;
+    const a = await alta();
+    await repos.fleet.assignDevice(unidad, a.id, new Date(Date.now() - 60_000), "user_instalo");
+    await repos.fleet.soltarDispositivo(a.id, { at: new Date(), por: "user_taller", motivo: "entró a taller" });
+
+    expect(await repos.expedientes.asignacionesDeDispositivo(carrierId, a.id)).toMatchObject([
+      { unitId: unidad, asignadaPor: "user_instalo", cerradaPor: "user_taller", motivoCierre: "entró a taller" },
+    ]);
+  });
+
   it("la baja de uno montado lo suelta en la misma escritura, y la segunda baja no pisa el motivo", async () => {
     const unidad = (await repos.fleet.createUnit(carrierId, `U-${marca}-baja`)).id;
     const a = await alta();

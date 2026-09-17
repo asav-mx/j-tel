@@ -34,6 +34,8 @@ function repos(estado: Estado, opciones: { choqueAlAsignar?: boolean; altaRespon
         escrituras.push(["alta", datos]);
         return opciones.altaResponde ?? { ok: true, dispositivo: { id: "nuevo", label: "TK-FTC927-009" } };
       },
+      asignacionesDeUnidad: async (unitId: string) =>
+        [...estado.vigentes].filter(([, u]) => u === unitId).map(([deviceId]) => ({ deviceId, hasta: null })),
       assignDevice: async (...args: unknown[]) => {
         if (opciones.choqueAlAsignar) throw Object.assign(new Error("duplicate key"), { code: "23505" });
         escrituras.push(["asignar", ...args]);
@@ -105,11 +107,20 @@ describe("darDeAltaDispositivo", () => {
 describe("asignarDispositivo", () => {
   const base = { carrierId: "jb", por: "user_1", ahora: AHORA };
 
-  it("de bodega a una unidad: escribe con la hora de ahora y quién", async () => {
+  it("de bodega a una unidad ocupada: escribe con la hora de ahora y quién, y dice cuál quedó en bodega", async () => {
     const f = repos(flota());
     const r = await asignarDispositivo(f.repos, { ...base, deviceId: "d-bodega", unitId: "u-10254" });
-    expect(r).toEqual({ ok: true, unidadAnteriorId: null });
+    expect(r).toEqual({ ok: true, unidadAnteriorId: null, dispositivoDesplazadoId: "d-montado" });
     expect(f.escrituras).toEqual([["asignar", "u-10254", "d-bodega", AHORA, "user_1"]]);
+  });
+
+  it("de una unidad a otra libre: dice de dónde salió y no desplaza a nadie", async () => {
+    const f = repos({
+      ...flota(),
+      unidades: [...flota().unidades, { id: "u-10301", carrier: "jb", active: true }],
+    });
+    const r = await asignarDispositivo(f.repos, { ...base, deviceId: "d-montado", unitId: "u-10301" });
+    expect(r).toEqual({ ok: true, unidadAnteriorId: "u-10254", dispositivoDesplazadoId: null });
   });
 
   it("un id de otra cuenta responde igual que uno inexistente, y no escribe", async () => {

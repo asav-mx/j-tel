@@ -221,6 +221,14 @@ describe("el expediente de un dispositivo", () => {
     expect(e && "documentos" in e).toBe(false);
   });
 
+  it("trae su estado de inventario, y quién y por qué en cada asignación; lo anterior a la 0039 en null", async () => {
+    const e = await cargarExpedienteDeDispositivo(repos().repos, { carrierAccountId: "c1", deviceId: "d1", ahora: AHORA });
+    expect(e?.dispositivo.estado).toMatchObject({ grupo: "en_unidad", unidadId: "u1" });
+    expect(e?.relaciones.unidades).toMatchObject({
+      valor: [{ asignadaPor: null, cerradaPor: null, motivoCierre: null }],
+    });
+  });
+
   it("el dispositivo de otra cuenta no existe desde aquí", async () => {
     expect(await cargarExpedienteDeDispositivo(repos().repos, { carrierAccountId: "c2", deviceId: "d1", ahora: AHORA })).toBeNull();
   });

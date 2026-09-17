@@ -20,6 +20,17 @@ export type AccionDeDispositivo = "alta" | "asignar" | "soltar" | "baja";
 /** De dónde se llegó a Ver ‹dispositivo›: tiene dos puertas, y se vuelve a la que se usó. */
 export type Puerta = "dispositivos" | "expedientes";
 
+/** Lo que acaba de pasar en Ver ‹dispositivo›. Sólo nombra la acción: la frase se arma con la base. */
+export type HechoDeFicha = "asignado" | "soltado" | "baja";
+
+export function hechoDeFicha(valor: unknown): HechoDeFicha | null {
+  return valor === "asignado" || valor === "soltado" || valor === "baja" ? valor : null;
+}
+
+export function accionDeFicha(valor: unknown): Exclude<AccionDeDispositivo, "alta"> | null {
+  return valor === "asignar" || valor === "soltar" || valor === "baja" ? valor : null;
+}
+
 function conParams(ruta: string, params: Record<string, string | null | undefined>, cuenta?: string | null) {
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v) q.set(k, v);
@@ -38,11 +49,22 @@ export const rutasDeDispositivos = {
   ver: (
     id: string,
     cuenta?: string | null,
-    params: { desde?: Puerta; accion?: Exclude<AccionDeDispositivo, "alta">; hecho?: string } = {},
+    params: {
+      desde?: Puerta;
+      accion?: Exclude<AccionDeDispositivo, "alta">;
+      hecho?: HechoDeFicha;
+      /** Con `hecho=asignado`: el dispositivo que la unidad traía y quedó en bodega. */
+      desplazado?: string | null;
+    } = {},
   ) =>
     conParams(
       `${RAIZ_EXPEDIENTES}/dispositivo/${id}`,
-      { desde: params.desde === "dispositivos" ? "dispositivos" : null, accion: params.accion, hecho: params.hecho },
+      {
+        desde: params.desde === "dispositivos" ? "dispositivos" : null,
+        accion: params.accion,
+        hecho: params.hecho,
+        desplazado: params.desplazado,
+      },
       cuenta,
     ),
 };
@@ -80,6 +102,26 @@ export const SUGERENCIAS = {
   soltar: ["Entró a taller", "Se cambia de unidad", "Falla del dispositivo"],
   baja: ["Se quemó", "Se perdió", "Se devolvió al proveedor"],
 } as const;
+
+/** `07:42` en la zona dada, a 24 h. */
+export function horaDe(instante: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone }).format(instante);
+}
+
+/**
+ * Quién y por qué de una asignación, en una línea corta. Lo anterior a la 0039
+ * no guardó nada y lo dice: «sin registro», nunca un nombre inventado.
+ *
+ * `correo` traduce el id de la sesión a algo legible (`correosDeAutores`).
+ */
+export function quienYPorQue(
+  a: { vigente: boolean; asignadaPor: string | null; cerradaPor: string | null; motivoCierre: string | null },
+  correo: (id: string) => string,
+): string {
+  if (a.vigente) return a.asignadaPor ? `asignó ${correo(a.asignadaPor)}` : "asignación sin registro de quién";
+  if (!a.motivoCierre && !a.cerradaPor) return "cierre sin registro de quién ni por qué";
+  return [a.motivoCierre ?? "sin motivo", a.cerradaPor ? correo(a.cerradaPor) : "sin registro de quién"].join(" · ");
+}
 
 /** Un texto que viene en la dirección, recortado. Nunca se usa para afirmar un dato. */
 export function textoDeRuta(valor: unknown, largo = 300): string | null {

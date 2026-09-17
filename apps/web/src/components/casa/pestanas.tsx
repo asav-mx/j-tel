@@ -33,8 +33,10 @@ import { conCuenta, estaEnLugar, type Grupo } from "@/lib/casa/casas";
  * cuenta y lo que todavía no tiene cuarto no llegan a este componente. Este
  * archivo no vuelve a decidir qué se ve — si lo hiciera, habría dos listas.
  */
-export function Pestanas({ grupos, cuenta }: { grupos: Grupo[]; cuenta: string | null }) {
-  const ruta = usePathname();
+export function Pestanas({ grupos, cuenta, lugar }: { grupos: Grupo[]; cuenta: string | null; lugar?: string }) {
+  // `lugar` gana a la ruta cuando la ficha tiene dos puertas: ver `Marco`.
+  const enRuta = usePathname();
+  const ruta = lugar ?? enRuta;
   const liga = (href: string) => conCuenta(href, cuenta);
 
   // Un lugar está activo si la ruta es la suya o cuelga de ella; así el padre
