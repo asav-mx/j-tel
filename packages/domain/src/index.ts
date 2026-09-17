@@ -779,6 +779,8 @@ export * from "./identidad.js";
 export * from "./operational-scope.js";
 export * from "./senal.js";
 export * from "./huecos.js";
+export * from "./paradas.js";
+export * from "./simplificar-traza.js";
 export * from "./flota.js";
 export * from "./expediente.js";
 export * from "./ventana-observacion.js";
