@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
 import { exigir } from "@/lib/guardia-api";
-import { validarImei } from "@/lib/imei";
+import { validarImei } from "@jtel/domain";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
   // Normaliza (fuera espacios y guiones) y valida largo y dígito verificador
   // ANTES de guardar. Un IMEI mal tecleado no truena en ninguna otra parte:
-  // se registra, Traccar nunca lo recibe y la tabla no crece. Ver `@/lib/imei`.
+  // se registra, Traccar nunca lo recibe y la tabla no crece. Ver `imei.ts` en `@jtel/domain`.
   const validacion = validarImei(String(formData.get("imei") ?? ""));
   if (!validacion.ok) {
     return NextResponse.json({ error: validacion.motivo }, { status: 400 });

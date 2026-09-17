@@ -5,8 +5,11 @@ import {
   computeEvidenceWindow,
   contractPolicySchema,
   suggestProfileCode,
+  MOTIVO_SISTEMA,
+  nombreDeDispositivo,
 } from "@jtel/domain";
 import type {
+  PrefijoDeModelo,
   OperationalScope,
   OperationalUnit,
   RouteDurationSample,
@@ -583,26 +586,142 @@ export class FleetRepository {
     return device!;
   }
 
-  async assignDevice(unitId: string, deviceId: string, validFrom: Date = new Date()) {
-    // Cierra asignaciones abiertas del mismo GPS o de la misma unidad
-    await this.db
-      .update(deviceAssignments)
-      .set({ validTo: validFrom })
-      .where(
-        and(
-          isNull(deviceAssignments.validTo),
-          or(
-            eq(deviceAssignments.deviceId, deviceId),
-            eq(deviceAssignments.unitId, unitId),
-          ),
-        ),
-      );
+  /**
+   * Da de alta un dispositivo con el nombre que genera el sistema (Marco 6.3,
+   * C4): marca + modelo + consecutivo global de `devices_consecutivo_seq`.
+   *
+   * El IMEI se busca en **todas** las cuentas antes de pedir número. El índice
+   * único global quedó para después (decisión del 16 sep 2026), pero un IMEI
+   * dado de alta en dos cuentas detiene su posición en vivo y abre
+   * `imei_en_dos_cuentas`: moverlo de cuenta es cosa de J-Staff (6.14), no un
+   * alta nueva. Buscar antes también evita gastar un número en un alta que el
+   * índice de la cuenta iba a rechazar — la secuencia no regresa.
+   *
+   * Si dos altas del mismo IMEI corren a la vez, el índice por cuenta rechaza
+   * la segunda y ese número queda sin usar: un hueco, nunca una repetición.
+   */
+  async darDeAltaDispositivo(datos: {
+    carrierAccountId: string;
+    imei: string;
+    prefijo: PrefijoDeModelo;
+  }): Promise<
+    | { ok: true; dispositivo: typeof devices.$inferSelect }
+    | { ok: false; error: "imei_ya_en_la_cuenta" | "imei_en_otra_cuenta" }
+  > {
+    return this.db.transaction(async (tx) => {
+      const [ya] = await tx
+        .select({ carrierAccountId: devices.carrierAccountId })
+        .from(devices)
+        .where(eq(devices.imei, datos.imei))
+        .limit(1);
+      if (ya) {
+        return {
+          ok: false as const,
+          error: ya.carrierAccountId === datos.carrierAccountId ? "imei_ya_en_la_cuenta" : "imei_en_otra_cuenta",
+        };
+      }
 
-    const [assignment] = await this.db
-      .insert(deviceAssignments)
-      .values({ unitId, deviceId, validFrom })
+      const [fila] = await tx.execute<{ n: number }>(sql`SELECT nextval('devices_consecutivo_seq')::integer AS n`);
+      const consecutivo = Number(fila!.n);
+      const [dispositivo] = await tx
+        .insert(devices)
+        .values({
+          carrierAccountId: datos.carrierAccountId,
+          imei: datos.imei,
+          consecutivo,
+          label: nombreDeDispositivo(datos.prefijo, consecutivo),
+        })
+        .returning();
+      return { ok: true as const, dispositivo: dispositivo! };
+    });
+  }
+
+  /**
+   * Asigna un dispositivo a una unidad, cerrando lo que estorbe — todo en una
+   * transacción.
+   *
+   * Cierra la asignación abierta del mismo dispositivo (se va de su unidad) y
+   * la de la misma unidad (suelta a su dispositivo), cada una con el motivo que
+   * escribe el sistema (`MOTIVO_SISTEMA`): quien asignó no tecleó «soltar el
+   * 005», pero eso fue lo que le pasó al 005 y su historia lo dice.
+   *
+   * Los candados de la 0039 (`…_una_vigente`) son la garantía de fondo: si otra
+   * asignación entra entre el cierre y la apertura, la base rechaza la segunda
+   * en vez de dejar dos vigentes.
+   *
+   * `por` es opcional sólo por los guiones y el alta vieja, que no traen
+   * sesión; la pantalla nueva siempre lo manda.
+   */
+  async assignDevice(
+    unitId: string,
+    deviceId: string,
+    validFrom: Date = new Date(),
+    por: string | null = null,
+  ) {
+    return this.db.transaction(async (tx) => {
+      const [unidad] = await tx.select({ label: units.label }).from(units).where(eq(units.id, unitId));
+      const [dispositivo] = await tx
+        .select({ label: devices.label, imei: devices.imei })
+        .from(devices)
+        .where(eq(devices.id, deviceId));
+      const nombreUnidad = unidad?.label ?? unitId;
+      const nombreDispositivo = dispositivo?.label ?? dispositivo?.imei ?? deviceId;
+
+      await tx
+        .update(deviceAssignments)
+        .set({ validTo: validFrom, cerradaPor: por, motivoCierre: MOTIVO_SISTEMA.dispositivoReasignado(nombreUnidad) })
+        .where(and(isNull(deviceAssignments.validTo), eq(deviceAssignments.deviceId, deviceId)));
+
+      await tx
+        .update(deviceAssignments)
+        .set({ validTo: validFrom, cerradaPor: por, motivoCierre: MOTIVO_SISTEMA.unidadRecibioOtro(nombreDispositivo) })
+        .where(and(isNull(deviceAssignments.validTo), eq(deviceAssignments.unitId, unitId)));
+
+      const [assignment] = await tx
+        .insert(deviceAssignments)
+        .values({ unitId, deviceId, validFrom, asignadaPor: por })
+        .returning();
+      return assignment!;
+    });
+  }
+
+  /**
+   * Suelta un dispositivo de su unidad: cierra su asignación vigente con quién
+   * y por qué. Devuelve la asignación cerrada, o null si no estaba montado.
+   */
+  async soltarDispositivo(deviceId: string, datos: { at: Date; por: string; motivo: string }) {
+    const [cerrada] = await this.db
+      .update(deviceAssignments)
+      .set({ validTo: datos.at, cerradaPor: datos.por, motivoCierre: datos.motivo })
+      .where(and(isNull(deviceAssignments.validTo), eq(deviceAssignments.deviceId, deviceId)))
       .returning();
-    return assignment!;
+    return cerrada ?? null;
+  }
+
+  /**
+   * Da de baja un dispositivo (Marco 6.5): fecha, motivo y quién. La fila no se
+   * borra. Si estaba montado, se suelta en la misma transacción: «de baja y
+   * montado» es la anomalía que la flota ya acusa, y no se escribe una.
+   *
+   * Devuelve null si ya estaba de baja — la condición va en el `WHERE`, así que
+   * dos bajas simultáneas no se pisan el motivo.
+   */
+  async darDeBajaDispositivo(deviceId: string, datos: { at: Date; por: string; motivo: string }) {
+    return this.db.transaction(async (tx) => {
+      const [dispositivo] = await tx
+        .update(devices)
+        .set({ retiredAt: datos.at, retiredReason: datos.motivo, retiredBy: datos.por })
+        .where(and(eq(devices.id, deviceId), isNull(devices.retiredAt)))
+        .returning();
+      if (!dispositivo) return null;
+
+      const [soltada] = await tx
+        .update(deviceAssignments)
+        .set({ validTo: datos.at, cerradaPor: datos.por, motivoCierre: MOTIVO_SISTEMA.baja(datos.motivo) })
+        .where(and(isNull(deviceAssignments.validTo), eq(deviceAssignments.deviceId, deviceId)))
+        .returning();
+      return { dispositivo, soltada: soltada ?? null };
+    });
   }
 
   async resolveUnitAtTime(deviceId: string, at: Date) {
