@@ -171,6 +171,40 @@ describe("carrier-o-jstaff — la puerta de las credenciales GPS", () => {
   });
 });
 
+describe("carrier-maneja-flota — las acciones sobre dispositivos (C4)", () => {
+  const AUD = { tipo: "carrier-maneja-flota" as const, slug: "juarez-bus" };
+  const DESPACHO_JB = [{ ...CARRIER_JB[0]!, clerkUserId: "jb_despacho", role: "despacho" }];
+
+  beforeEach(() => {
+    findBySlug.mockResolvedValue({ id: "cuenta-jb", type: "carrier", slug: "juarez-bus" });
+  });
+
+  it("el admin del carrier actúa", async () => {
+    getIdentidad.mockResolvedValue(identidad("jb_admin", CARRIER_JB));
+    expect((await exigir(PETICION, AUD, "json")).ok).toBe(true);
+  });
+
+  it("despacho pertenece a la cuenta y no actúa", async () => {
+    getIdentidad.mockResolvedValue(identidad("jb_despacho", DESPACHO_JB));
+    const g = await exigir(PETICION, AUD, "json");
+    expect(g.ok).toBe(false);
+    if (g.ok) return;
+    expect((await g.respuesta.json()).detalle).toContain("coordinador o admin");
+  });
+
+  it("un admin de otra cuenta no actúa", async () => {
+    getIdentidad.mockResolvedValue(identidad("jb_admin", CARRIER_JB));
+    findBySlug.mockResolvedValue({ id: "cuenta-otra", type: "carrier", slug: "juarez-bus" });
+    expect((await exigir(PETICION, AUD, "json")).ok).toBe(false);
+  });
+
+  it("un slug que no es de carrier no deja pasar ni al admin de plataforma", async () => {
+    getIdentidad.mockResolvedValue(identidad("jstaff_admin", JSTAFF));
+    findBySlug.mockResolvedValue({ id: "cuenta-tecma", type: "client", slug: "juarez-bus" });
+    expect((await exigir(PETICION, AUD, "json")).ok).toBe(false);
+  });
+});
+
 describe("contesta en el estilo de cada ruta", () => {
   beforeEach(() => {
     getIdentidad.mockResolvedValue(identidad("tecma_admin", CLIENTE_TECMA));

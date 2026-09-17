@@ -6,9 +6,39 @@ import {
   canAccessCarrierAccount,
   canAccessPlant,
   hasPermission,
+  puedeManejarFlota,
   tieneAlcanceGlobal,
   type UserMembership,
 } from "./index.js";
+
+describe("puedeManejarFlota — quién actúa sobre los dispositivos (C4)", () => {
+  const fila = (role: string, accountId: string, scopeType: UserMembership["scopeType"] = "account"): UserMembership => ({
+    accountId,
+    clerkUserId: "u",
+    role,
+    scopeType,
+  });
+
+  it("coordinador y admin de la cuenta, sí", () => {
+    expect(puedeManejarFlota([fila("coordinador", "jb")], "jb")).toBe(true);
+    expect(puedeManejarFlota([fila("admin", "jb")], "jb")).toBe(true);
+    expect(puedeManejarFlota([fila("coordinador", "jb", "fleet")], "jb")).toBe(true);
+  });
+
+  it("despacho y mantenimiento alcanzan la cuenta y no actúan", () => {
+    expect(puedeManejarFlota([fila("despacho", "jb")], "jb")).toBe(false);
+    expect(puedeManejarFlota([fila("mantenimiento", "jb")], "jb")).toBe(false);
+  });
+
+  it("el permiso de una cuenta no se presta a otra", () => {
+    expect(puedeManejarFlota([fila("coordinador", "otro"), fila("despacho", "jb")], "jb")).toBe(false);
+  });
+
+  it("por la compuerta, sólo con el permiso: admin de plataforma sí, soporte no", () => {
+    expect(puedeManejarFlota([fila("admin_plataforma", "jtel", "global")], "jb")).toBe(true);
+    expect(puedeManejarFlota([fila("soporte", "jtel", "global")], "jb")).toBe(false);
+  });
+});
 
 const plantMembership: UserMembership = {
   accountId: "acc-1",

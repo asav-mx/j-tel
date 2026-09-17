@@ -125,11 +125,17 @@ describe("regla 4 — lo que no aplica, no aparece", () => {
 });
 
 describe("un cuarto que no existe no se dibuja", () => {
-  it("el menú lista lo construido: Flota en vivo y Expedientes en el transportista, Cuentas y demos en J-Staff", () => {
+  it("el menú lista lo construido: Flota en vivo, Dispositivos y Expedientes en el transportista, Cuentas y demos en J-Staff", () => {
     // Esta prueba cambia cada vez que aterriza un cuarto. Lo que cuida no es la
     // lista de hoy: es que el menú liste lo construido y nada más.
     expect(menuDe(CASAS.transportista, TODO)).toEqual([
-      { sello: "Compás", lugares: [{ nombre: "Flota en vivo", ruta: "/casa/transportista/flota", condicion: "siempre", hijos: undefined }] },
+      {
+        sello: "Compás",
+        lugares: [
+          { nombre: "Flota en vivo", ruta: "/casa/transportista/flota", condicion: "siempre", hijos: undefined },
+          { nombre: "Dispositivos", ruta: "/casa/transportista/dispositivos", condicion: "siempre", hijos: undefined },
+        ],
+      },
       { sello: null, lugares: [{ nombre: "Expedientes", ruta: "/casa/transportista/expedientes", condicion: "siempre", hijos: undefined }] },
     ]);
     expect(menuDe(CASAS.jstaff, TODO)).toEqual([

@@ -173,3 +173,27 @@ export function requirePermission(
     throw new Error(`Permiso denegado: ${permission}`);
   }
 }
+
+/**
+ * ¿Puede esta identidad **actuar** sobre la flota de este carrier? — dar de
+ * alta, asignar, soltar y dar de baja dispositivos (Marco 6.25, C4).
+ *
+ * Alcance y permiso en **la misma membresía**: permisos = rol × alcance (Pieza
+ * 4). No basta con alcanzar la cuenta por una fila y tener `fleet.manage` por
+ * otra: un coordinador de otro carrier que además ve éste como despacho no
+ * maneja la flota de éste.
+ *
+ * Coordinador y admin, provisional hasta la 6.29 (decisión del 16 sep 2026).
+ * Despacho y mantenimiento alcanzan la cuenta y no actúan: la pantalla ni les
+ * dibuja los botones (regla 4 del mapa de la casa).
+ *
+ * El alcance global cuenta con su propio rol: `admin_plataforma` (`*`) actúa
+ * por la compuerta; `soporte` y `comercial` no, porque no tienen el permiso.
+ */
+export function puedeManejarFlota(memberships: UserMembership[], carrierAccountId: string): boolean {
+  return memberships.some((m) => {
+    if (!hasPermission(m, "fleet.manage")) return false;
+    if (m.scopeType === "global") return true;
+    return m.accountId === carrierAccountId && (m.scopeType === "account" || m.scopeType === "fleet");
+  });
+}
