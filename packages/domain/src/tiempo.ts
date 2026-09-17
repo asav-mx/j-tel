@@ -139,6 +139,32 @@ export function addDaysIso(fechaIso: string, days: number): string {
 }
 
 /**
+ * Un periodo de tiempo real, en instantes: `[desde, hasta]` inclusive.
+ *
+ * Es el vocabulario común para "un rango que se observa" — recorrido, playback,
+ * cifras de un periodo. El día es un caso particular (`ventanaDelDia`), nunca
+ * el tipo base: una ventana puede cruzar medianoche (turno nocturno) o durar
+ * unos minutos (la brocha acotando el playback).
+ */
+export type Ventana = { desde: Date; hasta: Date };
+
+/**
+ * La ventana de un día civil completo, en una zona: medianoche a medianoche.
+ *
+ * `hasta` es el último milisegundo de ese día (`23:59:59.999`), no la
+ * medianoche siguiente — para que un punto exactamente a esa hora no quede
+ * fuera de ningún día. Usa `instanteZonificado`, nunca `new Date("...T00:00:00")`
+ * (ver su comentario): un turno de madrugada en Juárez calculado con el reloj
+ * del proceso cae en el día equivocado sin que nada se vea roto.
+ */
+export function ventanaDelDia(fechaIso: string, timeZone: string = JTTEL_TZ): Ventana {
+  return {
+    desde: instanteZonificado(fechaIso, 0, timeZone),
+    hasta: new Date(instanteZonificado(fechaIso, 1440, timeZone).getTime() - 1),
+  };
+}
+
+/**
  * Formatea un timestamp como "HH:MM" (24h) en la zona indicada.
  * Para UI: deadlines, llegadas, ventanas, tooltips del mapa.
  */
