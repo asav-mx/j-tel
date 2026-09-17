@@ -265,13 +265,16 @@ export type TrazaCortada = {
  * entrada de cada visita: es la misma unidad en la misma geocerca la que en la
  * mañana corta (turno a Planta 47) y en la tarde no (circuito). De dónde sale
  * esa respuesta en los datos está abierto (7.7) y no se decide aquí.
+ * `null` es «sin servicio declarado en ese instante»: no hay sello que
+ * proteger, así que tampoco corta (regla 3 de 7.7) — sin fingir que era
+ * circuito.
  *
  * Si no se vio entrar (el día empezó adentro, o reapareció adentro tras un
  * hueco), no hay punto de llegada que conservar: se oculta todo lo de adentro.
  */
 export function cortarPorModalidad(
   recorrido: Pick<RecorridoPorVentana, "tramos" | "visitas">,
-  modalidadEn: (instante: Date) => Modalidad,
+  modalidadEn: (instante: Date) => Modalidad | null,
 ): TrazaCortada {
   const queCortan = recorrido.visitas.filter(
     (v) => v.lugar.rol === "destino" && modalidadEn(v.entrada) === "especial",

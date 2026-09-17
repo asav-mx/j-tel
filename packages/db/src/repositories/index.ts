@@ -2408,6 +2408,50 @@ export class OccurrenceRepository {
       );
   }
 
+  /**
+   * Los tramos de servicio especial de UNA unidad que tocan una ventana: la
+   * pregunta de `especialesVigentesDeCarrier` hecha para un periodo en vez de
+   * un instante, para cortar el recorrido (C3) con la misma regla que enciende
+   * EN DESTINO en Flota en vivo. Los mismos filtros, a propósito: si Flota dice
+   * que la unidad está en destino de un especial, el recorrido de ese momento
+   * tiene que cortarse ahí, y al revés.
+   *
+   * Las horas son las de `trips` de cada ocurrencia —lo declarado para ese
+   * día—, nunca las del perfil vigente hoy.
+   */
+  async especialesDeUnidadEnVentana(
+    carrierAccountId: string,
+    unitId: string,
+    desde: Date,
+    hasta: Date,
+  ) {
+    return this.db
+      .select({
+        ventanaDesde: trips.evidenceWindowStart,
+        ventanaHasta: trips.evidenceWindowEnd,
+      })
+      .from(serviceOccurrences)
+      .innerJoin(trips, eq(trips.serviceOccurrenceId, serviceOccurrences.id))
+      .innerJoin(serviceContracts, eq(serviceContracts.id, serviceOccurrences.contractId))
+      .innerJoin(accounts, eq(accounts.id, serviceContracts.clientAccountId))
+      .innerJoin(
+        serviceProfileUnits,
+        eq(serviceProfileUnits.serviceProfileId, serviceOccurrences.serviceProfileId),
+      )
+      .where(
+        and(
+          eq(serviceContracts.carrierAccountId, carrierAccountId),
+          eq(serviceProfileUnits.unitId, unitId),
+          eq(serviceContracts.status, "active"),
+          eq(accounts.isDemo, false),
+          gte(serviceOccurrences.expectedDeadline, new Date(desde.getTime() - 24 * 3_600_000)),
+          lte(serviceOccurrences.expectedDeadline, new Date(hasta.getTime() + 24 * 3_600_000)),
+          lte(trips.evidenceWindowStart, hasta),
+          gte(trips.evidenceWindowEnd, desde),
+        ),
+      );
+  }
+
   /** Horizonte operativo por defecto (días hacia adelante desde hoy). */
   static readonly ROLLING_DAYS = 30;
 

@@ -218,3 +218,34 @@ describe("lugaresDeCarrier (decisión 1)", () => {
     expect(lugares).toHaveLength(5);
   });
 });
+
+describe("especialesDeUnidadEnVentana (recorrido C3, misma regla que Flota en vivo)", () => {
+  const de = (unidad: string, desde: number, hasta: number) =>
+    repos.occurrences.especialesDeUnidadEnVentana(carrierId, unidad, min(desde), min(hasta));
+
+  it("una ventana que toca la del servicio lo trae, con las horas de su viaje", async () => {
+    expect(await de(unidadEspecial, 40, 300)).toEqual([{ ventanaDesde: min(-71), ventanaHasta: min(49) }]);
+  });
+
+  it("los bordes cuentan: tocar el primer instante del servicio basta; un minuto antes no", async () => {
+    expect(await de(unidadEspecial, -100, -71)).toHaveLength(1);
+    expect(await de(unidadEspecial, -100, -72)).toEqual([]);
+  });
+
+  it("un servicio que ya cerró sigue contando para el pasado — la vigente de ahora no lo vería", async () => {
+    expect(await de(unidadVentanaCerrada, -60, 0)).toEqual([{ ventanaDesde: min(-120), ventanaHasta: min(-10) }]);
+  });
+
+  it("cliente de ejemplo, contrato suspendido y borrador no cortan, igual que en Flota en vivo", async () => {
+    expect(await de(unidadClienteDemo, -60, 60)).toEqual([]);
+    expect(await de(unidadContratoSuspendido, -60, 60)).toEqual([]);
+    expect(await de(unidadEspecial, -650, -450)).toEqual([]);
+  });
+
+  it("es de la unidad y del carrier: otra unidad u otro carrier no ven el servicio", async () => {
+    expect(await de(unidadVentanaCerrada, 40, 300)).toEqual([]);
+    expect(
+      await repos.occurrences.especialesDeUnidadEnVentana(ids.cuentas[1]!, unidadEspecial, min(40), min(300)),
+    ).toEqual([]);
+  });
+});
