@@ -44,6 +44,10 @@ import { Glifo, type EstadoGlifo } from "@/components/casa/glifo";
  * unidad en el mapa en vez de navegar (la ficha va en el mapa, «Ver 10254»).
  * Es un botón de verdad, con `aria-pressed`, no un div con clic.
  *
+ * **La flecha ›** sale sola con `ficha` (aprobada por ASAV con el prototipo de
+ * C4, como PR aparte): distingue a simple vista lo que lleva a otra pantalla de
+ * lo que no, sin depender del hover. Con `alTocar` no va, porque no se navega.
+ *
  * `datoVivo` pone el dato en cobre. Sólo para un dato que está vivo ahora —la
  * edad de lo que transmite—: el skill reserva el cobre para la vida.
  */
@@ -125,6 +129,19 @@ export function Pieza({
           </span>
         )}
       </span>
+
+      {/* La flecha: lo que lleva a otro lado se distingue sin pasar el mouse,
+          que en el celular no existe. Sólo con `ficha`: una pieza que señala en
+          la misma pantalla (`alTocar`) no va a ningún lado y no la lleva. */}
+      {ficha && !alTocar && (
+        <span
+          aria-hidden="true"
+          className="-ml-1 flex-none self-center text-[20px] leading-none text-[var(--tenue)]"
+          style={{ fontFamily: "var(--letra-lectura)" }}
+        >
+          ›
+        </span>
+      )}
     </>
   );
 
