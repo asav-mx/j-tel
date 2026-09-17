@@ -102,7 +102,8 @@ export const CASAS: Record<Cara, Casa> = {
           // La puerta de la casa: el primer lugar del primer grupo.
           // C2 del cuarto de Compás (16 sep 2026).
           { nombre: "Flota en vivo", ruta: "/casa/transportista/flota", condicion: "siempre" },
-          { nombre: "Dispositivos", ruta: null, condicion: "siempre" },
+          // C4-b: el inventario (6.6) y el alta (17 sep 2026).
+          { nombre: "Dispositivos", ruta: "/casa/transportista/dispositivos", condicion: "siempre" },
           { nombre: "Lugares", ruta: null, condicion: "siempre" },
         ],
       },

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { canAccessCarrierAccount, canAccessClientAccount, isJStaff } from "@jtel/auth-rbac";
+import { canAccessCarrierAccount, canAccessClientAccount, isJStaff, puedeManejarFlota } from "@jtel/auth-rbac";
 import { getIdentidad, type Identidad } from "@/lib/auth";
 import { getRepos } from "@/lib/db";
 
@@ -34,7 +34,13 @@ export type Audiencia =
   | { tipo: "cliente-por-id"; accountId: string }
   | { tipo: "carrier"; slug: string }
   /** El carrier dueño, o J-Staff operando de su parte. */
-  | { tipo: "carrier-o-jstaff"; slug: string };
+  | { tipo: "carrier-o-jstaff"; slug: string }
+  /**
+   * Quien **actúa** sobre la flota del carrier: alta, asignar, soltar, baja
+   * (C4). Pertenecer a la cuenta no basta — despacho pertenece y no actúa.
+   * Ver `puedeManejarFlota`.
+   */
+  | { tipo: "carrier-maneja-flota"; slug: string };
 
 /**
  * Cómo contestar cuando se niega el paso.
@@ -168,6 +174,16 @@ export async function decidir(identidad: Identidad, audiencia: Audiencia): Promi
           (await perteneceA(identidad, audiencia.slug, "carrier")),
         motivo: "No perteneces a ese carrier ni eres J-Staff.",
       };
+
+    case "carrier-maneja-flota": {
+      // La cuenta se busca por el slug y el permiso se mide contra su id, en la
+      // misma membresía que la alcanza.
+      const cuenta = audiencia.slug ? await getRepos().accounts.findBySlug(audiencia.slug) : null;
+      return {
+        permitido: Boolean(cuenta && cuenta.type === "carrier" && puedeManejarFlota(identidad.memberships, cuenta.id)),
+        motivo: "Dar de alta, asignar, soltar y dar de baja dispositivos es de coordinador o admin de ese carrier.",
+      };
+    }
   }
 }
 

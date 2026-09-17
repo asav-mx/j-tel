@@ -167,7 +167,8 @@ export function glifoDeUnidad(e: EstadoDeUnidad): { glifo: EstadoGlifo; rumbo?: 
   }
 }
 
-export function glifoDeDispositivo(e: EstadoDeDispositivo): { glifo: EstadoGlifo; palabra: string } {
+/** Sólo lee el grupo: el resumen de Dispositivos lo pide por grupo, sin un dispositivo en la mano. */
+export function glifoDeDispositivo<E extends Pick<EstadoDeDispositivo, "grupo">>(e: E): { glifo: EstadoGlifo; palabra: string } {
   switch (e.grupo) {
     case "en_unidad":
       return { glifo: "dispositivo-en-unidad", palabra: "En unidad" };
