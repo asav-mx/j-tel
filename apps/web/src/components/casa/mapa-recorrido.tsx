@@ -45,14 +45,18 @@ export function MapaRecorrido({
   clave,
   pedazos,
   huecos,
+  cambios,
   lugares,
   progreso,
   marcador,
 }: {
   /** Cambia con cada periodo leído: es lo que pide un encuadre nuevo. */
   clave: string;
-  pedazos: Pedazo[];
+  /** `sinUnidad`: lo que un dispositivo midió en bodega, punteado (Ver ‹dispositivo›). */
+  pedazos: Array<Pedazo & { sinUnidad?: boolean }>;
   huecos: Array<{ lat: number; lng: number; latFin: number; lngFin: number }>;
+  /** Dónde cambió de etapa un dispositivo: a una unidad (lleno) o a bodega (hueco). */
+  cambios?: Array<{ lat: number; lng: number; aBodega: boolean }>;
   lugares: LugarDelRecorrido[];
   progreso: { seg: number; t: number };
   marcador: Marcador | null;
@@ -129,14 +133,29 @@ export function MapaRecorrido({
         .bindTooltip(l.nombre, { permanent: true, direction: "top", offset: [0, -6], className: "rotulo-lugar" })
         .addTo(c);
     }
+    const forma = (p: { sinUnidad?: boolean }) => (p.sinUnidad ? " ruta-sin-unidad" : "");
     for (const p of pedazos) {
       mod
-        .polyline(p.puntos.map((q) => [q.lat, q.lng] as [number, number]), { className: "ruta-futura", interactive: false })
+        .polyline(p.puntos.map((q) => [q.lat, q.lng] as [number, number]), { className: `ruta-futura${forma(p)}`, interactive: false })
         .addTo(c);
     }
-    hechas.current = pedazos.map(() =>
-      mod.polyline([], { className: "ruta-hecha", interactive: false }).addTo(c),
+    hechas.current = pedazos.map((p) =>
+      mod.polyline([], { className: `ruta-hecha${forma(p)}`, interactive: false }).addTo(c),
     );
+    for (const k of cambios ?? []) {
+      mod
+        .marker([k.lat, k.lng], {
+          icon: mod.divIcon({
+            className: `marcador-cambio${k.aBodega ? " a-bodega" : ""}`,
+            html: "<span></span>",
+            iconSize: [14, 14],
+            iconAnchor: [7, 7],
+          }),
+          keyboard: false,
+          interactive: false,
+        })
+        .addTo(c);
+    }
     for (const h of huecos) {
       for (const [lat, lng] of [
         [h.lat, h.lng],

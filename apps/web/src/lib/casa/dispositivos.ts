@@ -67,6 +67,12 @@ export const rutasDeDispositivos = {
       },
       cuenta,
     ),
+  /**
+   * Recorridos y playback del dispositivo. La puerta va en `puerta`, no en
+   * `desde`: ahí la dirección lleva la ventana (`desde`/`hasta`).
+   */
+  recorrido: (id: string, cuenta?: string | null, puerta?: Puerta) =>
+    conParams(`${RAIZ_EXPEDIENTES}/dispositivo/${id}/recorrido`, { puerta: puerta === "dispositivos" ? "dispositivos" : null }, cuenta),
 };
 
 /** Lee `?desde=` sin confiar en él: cualquier otra cosa es la puerta de siempre. */

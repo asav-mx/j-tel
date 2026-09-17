@@ -77,6 +77,14 @@ import {
  * La 6284 y la 9385 están en la misma geocerca a propósito: es la Pieza 7 en
  * pantalla. Una da un servicio especial y está EN DESTINO; la otra no, y sigue
  * EN LÍNEA.
+ *
+ *   RECORRIDO DEL DISPOSITIVO (Ver ‹dispositivo› → Recorridos, ventana «Ayer»)
+ *   TK-ESC-013  ayer: 10301 hasta las 07:42 (con un hueco), soltado a taller,
+ *               en bodega con puntos 08:05–09:20, montado en 10330 a las 11:10;
+ *               la 10330 daba un especial 12:00–15:00 y se corta en la planta.
+ *   TK-ESC-014  ayer: sin unidad y sin puntos hasta las 11:10, montado en 10310
+ *               (inactiva) con un hueco a media tarde.
+ *   10330       unidad nueva, trae al 013 desde ayer (en línea, hace 47 s).
  */
 
 function archivosDeAmbiente(): string[] {
@@ -125,7 +133,7 @@ const PLANTA_ADENTRO: [number, number] = [31.7418, -106.3925];
 const DIA = 24 * HORA;
 
 async function limpiar(db: ReturnType<typeof createDb>) {
-  const imeis = Array.from({ length: 12 }, (_, i) => imei(i + 1));
+  const imeis = Array.from({ length: 14 }, (_, i) => imei(i + 1));
   // `live_positions` y `telemetry_points` no cuelgan del carrier por IMEI: se
   // borran por su IMEI de fixture antes de soltar la cuenta.
   await db.delete(livePositions).where(inArray(livePositions.imei, imeis));
@@ -155,12 +163,13 @@ async function sembrar(db: ReturnType<typeof createDb>) {
     { n: 109, label: "10310", active: false },
     { n: 110, label: "6284", active: true },
     { n: 111, label: "9385", active: true },
+    { n: 112, label: "10330", active: true },
   ];
   await db.insert(units).values(
     unidades.map((u) => ({ id: id(u.n), carrierAccountId: CARRIER, label: u.label, active: u.active })),
   );
 
-  const dispositivos = Array.from({ length: 12 }, (_, i) => ({
+  const dispositivos = Array.from({ length: 14 }, (_, i) => ({
     id: id(201 + i),
     carrierAccountId: CARRIER,
     imei: imei(i + 1),
@@ -327,10 +336,136 @@ async function sembrar(db: ReturnType<typeof createDb>) {
     source: "traccar",
   });
 
+  await sembrarRecorridoDeAyer(db, ahora);
+
   console.log(`[${SLUG}] sembrado a las ${new Date(ahora).toISOString()} — las edades valen desde ahí.`);
   console.log(`[${SLUG}] cuenta: ${CARRIER} (${SLUG})`);
   console.log(`[${SLUG}] revisar:      pnpm --filter @jtel/services escenario-flota-compas-revisar`);
   console.log(`[${SLUG}] al terminar:  pnpm --filter @jtel/db escenario-flota-compas --limpiar`);
+}
+
+/**
+ * Un instante de Juárez: `fecha` y `hh:mm` en la zona, a UTC. La base guarda
+ * instantes; sembrar «07:42» sin zona lo pondría a la hora del reloj de quien
+ * siembra.
+ */
+function enJuarez(fecha: string, hhmm: string): Date {
+  const supuesto = new Date(`${fecha}T${hhmm}:00Z`);
+  const partes = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Ciudad_Juarez",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(supuesto)
+      .map((p) => [p.type, p.value]),
+  );
+  const leido = Date.parse(`${partes.year}-${partes.month}-${partes.day}T${partes.hour}:${partes.minute}:00Z`);
+  return new Date(supuesto.getTime() - (leido - supuesto.getTime()));
+}
+
+/** El día de ayer en Juárez, «2026-09-16». */
+function ayerEnJuarez(ahora: number): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Ciudad_Juarez" }).format(new Date(ahora - DIA));
+}
+
+/**
+ * El día de ayer de TK-ESC-013 y TK-ESC-014 (ver arriba). Un punto por minuto
+ * en línea recta entre esquinas: lo que importa aquí son las etapas, no la calle.
+ */
+async function sembrarRecorridoDeAyer(db: ReturnType<typeof createDb>, ahora: number) {
+  const f = ayerEnJuarez(ahora);
+  const h = (hhmm: string) => enJuarez(f, hhmm);
+  const QUIEN = "coordinador-del-escenario";
+
+  await db.insert(deviceAssignments).values([
+    {
+      unitId: id(107),
+      deviceId: id(213),
+      validFrom: new Date(h("00:00").getTime() - 3 * DIA),
+      validTo: h("07:42"),
+      cerradaPor: QUIEN,
+      motivoCierre: "Escenario: falla de alimentación, a taller",
+    },
+    { unitId: id(112), deviceId: id(213), validFrom: h("11:10"), validTo: null, asignadaPor: QUIEN },
+    { unitId: id(109), deviceId: id(214), validFrom: h("11:10"), validTo: null, asignadaPor: QUIEN },
+  ]);
+
+  type Esquina = [number, number];
+  const tramo = (n: number, unidad: number | null, desde: string, hasta: string, de: Esquina, a: Esquina, speed = 38) => {
+    const t0 = h(desde).getTime();
+    const minutos = Math.round((h(hasta).getTime() - t0) / MIN);
+    return Array.from({ length: minutos + 1 }, (_, i) => {
+      const k = minutos === 0 ? 0 : i / minutos;
+      return {
+        carrierAccountId: CARRIER,
+        imei: imei(n),
+        deviceId: id(200 + n),
+        unitId: unidad === null ? null : id(unidad),
+        latitude: de[0] + k * (a[0] - de[0]),
+        longitude: de[1] + k * (a[1] - de[1]),
+        speed,
+        recordedAt: new Date(t0 + i * MIN),
+        source: "traccar",
+      };
+    });
+  };
+
+  const BASE: Esquina = [31.7012, -106.4730];
+  const CRUCE: Esquina = [31.7150, -106.4500];
+  const TALLER: Esquina = [31.7350, -106.4400];
+  const BANCO: Esquina = [31.7280, -106.4200];
+  const CERCA: Esquina = [31.7398, -106.3955];
+  const ADENTRO: Esquina = [31.7425, -106.3915];
+  const SALIDA: Esquina = [31.7470, -106.3860];
+  const LEJOS: Esquina = [31.7600, -106.3700];
+
+  const puntos = [
+    // 013 en la 10301: sale de la base, hueco de 19 min, llega al taller.
+    ...tramo(13, 107, "05:20", "06:31", BASE, CRUCE),
+    ...tramo(13, 107, "06:50", "07:41", CRUCE, TALLER),
+    // 013 en bodega: del taller al banco, y ahí se queda.
+    ...tramo(13, null, "08:05", "08:35", TALLER, BANCO, 30),
+    ...tramo(13, null, "08:40", "09:20", BANCO, BANCO, 0).filter((_, i) => i % 5 === 0),
+    // 013 en la 10330: del banco a la planta (especial 12:00–15:00), adentro, y sale.
+    ...tramo(13, 112, "11:24", "12:47", BANCO, CERCA),
+    ...tramo(13, 112, "12:48", "13:21", ADENTRO, ADENTRO, 0).filter((_, i) => i % 3 === 0),
+    ...tramo(13, 112, "13:22", "15:30", SALIDA, LEJOS),
+    // 014 en la 10310, con un hueco de media hora.
+    ...tramo(14, 109, "11:24", "12:10", CRUCE, TALLER),
+    ...tramo(14, 109, "12:40", "14:00", TALLER, BANCO),
+  ];
+  for (let i = 0; i < puntos.length; i += 200) await db.insert(telemetryPoints).values(puntos.slice(i, i + 200));
+
+  // El especial de la 10330, ayer: la misma planta del escenario.
+  await db.insert(serviceProfileUnits).values({ serviceProfileId: id(308), unitId: id(112) });
+  await db.insert(serviceOccurrences).values({
+    id: id(310),
+    serviceProfileId: id(308),
+    contractId: id(304),
+    routeShiftId: id(307),
+    serviceDate: f,
+    expectedDeadline: h("13:00"),
+    expectedGeofenceId: id(302),
+  });
+  await db.insert(trips).values({ serviceOccurrenceId: id(310), evidenceWindowStart: h("12:00"), evidenceWindowEnd: h("15:00") });
+
+  // La 10330 sigue viva hoy, donde terminó.
+  await db.insert(livePositions).values({
+    imei: imei(13),
+    carrierAccountId: CARRIER,
+    deviceId: id(213),
+    latitude: LEJOS[0],
+    longitude: LEJOS[1],
+    speed: 0,
+    heading: null,
+    recordedAt: new Date(ahora - 47_000),
+    collectedAt: new Date(ahora - 47_000),
+  });
 }
 
 const args = process.argv.slice(2);
