@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   createDb,
   createRepositories,
   FojaFueraDeCatalogo,
   accounts,
+  deviceAssignments,
+  devices,
   documents,
   documentTypeRules,
   documentVersions,
@@ -262,6 +264,27 @@ describe("el muro entre cuentas", () => {
     ).toBeNull();
     expect((await repos.expedientes.fojasDeSujeto(cuentaA, { unidadId: unidadA }))[0]!.versiones.length).toBe(antes);
     expect(await repos.expedientes.fojasDeSujeto(cuentaB, { unidadId: unidadA })).toEqual([]);
+  });
+
+  it("un dispositivo que cambió de cuenta no le enseña a la nueva las unidades de la anterior (6.14)", async () => {
+    // Estuvo en la unidad de A, se movió a B como lo hace la hoja del #419
+    // (cierra la asignación y cambia la cuenta), y B lo montó en la suya.
+    const d = await repos.fleet.createDevice(cuentaA, `9${Date.now().toString().slice(-13)}`, `TK-MURO-${marca}`);
+    await repos.fleet.assignDevice(unidadA, d.id, new Date("2026-09-10T12:00:00Z"));
+    await db
+      .update(deviceAssignments)
+      .set({ validTo: new Date("2026-09-16T12:00:00Z") })
+      .where(and(eq(deviceAssignments.deviceId, d.id), isNull(deviceAssignments.validTo)));
+    await db.update(devices).set({ carrierAccountId: cuentaB }).where(eq(devices.id, d.id));
+    const unidadNueva = (await repos.fleet.createUnit(cuentaB, `B2-${marca}`)).id;
+    await repos.fleet.assignDevice(unidadNueva, d.id, new Date("2026-09-17T13:00:00Z"));
+
+    const deB = await repos.expedientes.asignacionesDeDispositivo(cuentaB, d.id);
+    expect(deB.map((a) => a.etiqueta)).toEqual([`B2-${marca}`]);
+
+    // La historia de A sigue siendo de A: no se borró, sólo no cruza.
+    const deA = await repos.expedientes.asignacionesDeDispositivo(cuentaA, d.id);
+    expect(deA.map((a) => a.etiqueta)).toEqual([`A-${marca}`]);
   });
 });
 

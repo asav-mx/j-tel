@@ -257,7 +257,8 @@ export async function loadServiceDetail(
             .map(([imei]) => imei)
         : [...imeiToUnitId.keys()];
     if (imeis.length > 0) {
-      const telem = await repos.telemetry.getForImeis(
+      const telem = await repos.telemetry.getForImeisDeCuenta(
+        contract.carrierAccountId,
         imeis,
         trip.evidenceWindowStart,
         trip.evidenceWindowEnd,

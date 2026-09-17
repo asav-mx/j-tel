@@ -110,7 +110,7 @@ describe("enDestinoAhora", () => {
 });
 
 function reposDeDestino(opciones: { especial: boolean }) {
-  const pedidosDePuntos: Array<{ imeis: string[]; desde: Date }> = [];
+  const pedidosDePuntos: Array<{ cuenta: string; imeis: string[]; desde: Date }> = [];
   const ahora = T("06:41");
   const r = {
     fleet: {
@@ -146,8 +146,8 @@ function reposDeDestino(opciones: { especial: boolean }) {
     },
     telemetry: {
       ultimoPuntoPorImei: async () => new Map<string, Date>(),
-      getForImeis: async (imeis: string[], desde: Date) => {
-        pedidosDePuntos.push({ imeis, desde });
+      getForImeisDeCuenta: async (cuenta: string, imeis: string[], desde: Date) => {
+        pedidosDePuntos.push({ cuenta, imeis, desde });
         return [
           { imei: "111", recordedAt: T("06:00"), speed: 30, latitude: AFUERA.lat, longitude: AFUERA.lng },
           { imei: "111", recordedAt: T("06:08"), speed: 12, latitude: ADENTRO.lat, longitude: ADENTRO.lng },
@@ -171,8 +171,8 @@ describe("cargarFlotaEnVivo · EN DESTINO sólo con servicio especial (Marco 7.7
       destino: { lugarNombre: "Planta 47", llegadaAt: T("06:08"), entradaObservada: true },
     });
     expect(de("9385").grupo).toBe("en_linea");
-    // Los puntos se piden sólo de la unidad con servicio especial, desde su ventana.
-    expect(f.pedidosDePuntos).toEqual([{ imeis: ["111"], desde: T("05:30") }]);
+    // Los puntos se piden sólo de la unidad con servicio especial, desde su ventana, y de su cuenta.
+    expect(f.pedidosDePuntos).toEqual([{ cuenta: "c1", imeis: ["111"], desde: T("05:30") }]);
     // En el mapa, la de destino va en su punto de llegada.
     expect(flota.posicionPorUnidad.get("u6284")).toEqual(ADENTRO);
     expect(flota.lugares.map((l) => l.nombre)).toEqual(["Planta 47"]);
