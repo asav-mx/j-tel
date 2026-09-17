@@ -24,7 +24,7 @@ function repos(estado: Estado, opciones: { choqueAlAsignar?: boolean; altaRespon
         estado.dispositivos.find((d) => d.id === id && d.carrier === carrier) ?? null,
       unidadDeCuenta: async (carrier: string, id: string) =>
         estado.unidades.find((u) => u.id === id && u.carrier === carrier) ?? null,
-      asignacionesDeDispositivo: async (id: string) => {
+      asignacionesDeDispositivo: async (_carrier: string, id: string) => {
         const u = estado.vigentes.get(id);
         return u ? [{ unitId: u, etiqueta: u, desde: new Date(0), hasta: null }] : [];
       },

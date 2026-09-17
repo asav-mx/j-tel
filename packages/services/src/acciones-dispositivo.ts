@@ -69,7 +69,7 @@ function esChoqueDeCandado(e: unknown): boolean {
 async function dispositivoConUnidad(repos: Repositories, carrierId: string, deviceId: string) {
   const dispositivo = await repos.expedientes.dispositivoDeCuenta(carrierId, deviceId);
   if (!dispositivo) return null;
-  const asignaciones = await repos.expedientes.asignacionesDeDispositivo(deviceId);
+  const asignaciones = await repos.expedientes.asignacionesDeDispositivo(carrierId, deviceId);
   const vigente = asignaciones.find((a) => a.hasta === null) ?? null;
   return { dispositivo, unidadVigenteId: vigente?.unitId ?? null };
 }
