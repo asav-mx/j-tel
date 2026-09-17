@@ -256,6 +256,21 @@ export default async function VerDispositivo({
               );
             }}
           />
+          <Parte
+            pregunta="Recorridos y playback"
+            parte={e.actividad.ultimaSenal}
+            vacia="Nunca ha reportado: no hay recorrido medido"
+            conDatos={() => (
+              <Pieza
+                nombre="Recorridos y playback"
+                apoyo="el mapa de un periodo, por unidad"
+                dato="hoy"
+                etiqueta="abre en"
+                edad={null}
+                ficha={rutasDeDispositivos.recorrido(deviceId, cuentaEnRuta, puerta)}
+              />
+            )}
+          />
         </Familia>
 
         <Familia nombre="Relaciones">

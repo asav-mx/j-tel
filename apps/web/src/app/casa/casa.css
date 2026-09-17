@@ -274,3 +274,36 @@
   background: transparent;
   border: 0;
 }
+
+/*
+ * Ver ‹dispositivo›: lo que el aparato midió sin unidad va punteado, la misma
+ * línea en otra forma (el color no carga el estado). El cambio de etapa se
+ * marca con el cuadro del dispositivo: lleno al entrar a una unidad, hueco al
+ * quedar en bodega.
+ */
+.cascaron .mapa-flota .ruta-sin-unidad {
+  stroke-dasharray: 0.5 7;
+  stroke-linecap: round;
+}
+
+.cascaron .mapa-flota .ruta-hecha.ruta-sin-unidad {
+  stroke-width: 3.5;
+}
+
+.cascaron .mapa-flota .marcador-cambio {
+  background: transparent;
+  border: 0;
+}
+
+.cascaron .mapa-flota .marcador-cambio span {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--tinta);
+}
+
+.cascaron .mapa-flota .marcador-cambio.a-bodega span {
+  background: var(--pieza);
+  border: 2.2px solid var(--tinta);
+}

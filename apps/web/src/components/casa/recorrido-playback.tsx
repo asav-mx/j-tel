@@ -4,6 +4,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Glifo, type EstadoGlifo } from "@/components/casa/glifo";
+import { usePlayback } from "@/components/casa/use-playback";
 import { edad, rutas } from "@/lib/casa/expedientes";
 import type { LugarDelRecorrido, Marcador } from "@/components/casa/mapa-recorrido";
 import {
@@ -15,7 +16,6 @@ import {
   etiquetaDelPeriodo,
   hhmm,
   hhmmss,
-  incluyeAhora,
   instanteDelPanel,
   mover,
   panelDe,
@@ -28,7 +28,6 @@ import {
   siguienteVelocidad,
   tiempoConSenal,
   vacioDe,
-  velocidadAuto,
   type AsignacionDeLaUnidad,
   type Pausa,
   type Pedazo,
@@ -53,11 +52,9 @@ type ServiciosJson =
       circuitosSinHorario: string[];
     };
 
-type Alto = null | { tipo: "pausa"; indice: number } | { tipo: "fin" } | { tipo: "ahora" };
-
-const titular = { fontFamily: "var(--letra-titular)", fontWeight: 700, letterSpacing: "-0.01em" } as const;
-const foco = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--senal)]";
-const borde = "border border-[var(--linea)] bg-[var(--pieza)]";
+export const titular = { fontFamily: "var(--letra-titular)", fontWeight: 700, letterSpacing: "-0.01em" } as const;
+export const foco = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--senal)]";
+export const borde = "border border-[var(--linea)] bg-[var(--pieza)]";
 
 /**
  * Recorridos y playback (ficha C3, prototipo v5).
@@ -146,103 +143,8 @@ export function RecorridoPlayback({
   }, [datos, lugares]);
 
   /* ── El playback ── */
-  const [seg, setSeg] = useState(0);
-  const [t, setTEstado] = useState(0);
-  /** El instante del playback, compartido entre el bucle de cuadros y la cinta: el render llega tarde. */
-  const tRef = useRef(0);
-  const setT = useCallback((v: number) => {
-    tRef.current = v;
-    setTEstado(v);
-  }, []);
-  const [tocando, setTocando] = useState(false);
-  const [alto, setAlto] = useState<Alto>(null);
-  const [velManual, setVelManual] = useState<number | null>(null);
-  const velAuto = useMemo(() => velocidadAuto(pedazos), [pedazos]);
-  const multiplicador = velManual ?? velAuto;
-
-  const estado = useRef({ seg, multiplicador, pedazos, periodo, leida: datos?.leida ?? 0 });
-  estado.current = { seg, multiplicador, pedazos, periodo, leida: datos?.leida ?? 0 };
-
-  // Cambiar de periodo regresa todo al principio y la velocidad a auto.
-  useEffect(() => {
-    setSeg(0);
-    setT(pedazos[0]?.t0 ?? 0);
-    setTocando(false);
-    setAlto(null);
-    setVelManual(null);
-  }, [pedazos, setT]);
-
-  useEffect(() => {
-    if (!tocando) return;
-    let cuadro = 0;
-    let previo: number | null = null;
-    const paso = (ahora: number) => {
-      const e = estado.current;
-      const dt = previo === null ? 0 : (ahora - previo) * e.multiplicador;
-      previo = ahora;
-      const pedazo = e.pedazos[e.seg];
-      if (!pedazo) return;
-      const siguiente = tRef.current + dt;
-      if (siguiente >= pedazo.t1) {
-        setT(pedazo.t1);
-        setTocando(false);
-        if (e.seg < e.pedazos.length - 1) setAlto({ tipo: "pausa", indice: e.seg });
-        else setAlto(incluyeAhora(e.periodo, e.leida) ? { tipo: "ahora" } : { tipo: "fin" });
-        return;
-      }
-      setT(siguiente);
-      cuadro = requestAnimationFrame(paso);
-    };
-    cuadro = requestAnimationFrame(paso);
-    return () => cancelAnimationFrame(cuadro);
-  }, [tocando, setT]);
-
-  const reiniciar = useCallback(() => {
-    setAlto(null);
-    setSeg(0);
-    setT(estado.current.pedazos[0]?.t0 ?? 0);
-  }, [setT]);
-
-  const continuar = useCallback(() => {
-    const e = estado.current;
-    const sig = e.seg + 1;
-    if (!e.pedazos[sig]) return;
-    setAlto(null);
-    setSeg(sig);
-    setT(e.pedazos[sig]!.t0);
-    setTocando(true);
-  }, [setT]);
-
-  const tocar = useCallback(() => {
-    if (pedazos.length === 0) return;
-    if (tocando) {
-      setTocando(false);
-      return;
-    }
-    if (alto?.tipo === "pausa") return continuar();
-    if (alto?.tipo === "fin" || alto?.tipo === "ahora") reiniciar();
-    setTocando(true);
-  }, [pedazos.length, tocando, alto, continuar, reiniciar]);
-
-  const buscar = useCallback((i: number, instante: number) => {
-    const p = estado.current.pedazos[i];
-    if (!p) return;
-    setAlto(null);
-    setSeg(i);
-    setT(Math.min(Math.max(instante, p.t0), p.t1));
-  }, [setT]);
-
-  useEffect(() => {
-    const tecla = (ev: KeyboardEvent) => {
-      const destino = (ev.target as HTMLElement | null)?.tagName;
-      if (ev.code === "Space" && destino !== "BUTTON" && destino !== "INPUT" && destino !== "A") {
-        ev.preventDefault();
-        tocar();
-      }
-    };
-    document.addEventListener("keydown", tecla);
-    return () => document.removeEventListener("keydown", tecla);
-  }, [tocar]);
+  const { seg, t, tocando, alto, velManual, setVelManual, velAuto, tocar, continuar, reiniciar, buscar, textoPlay } =
+    usePlayback(pedazos, periodo, datos?.leida ?? 0);
 
   /* ── El marcador ── */
   const pedazo = pedazos[seg];
@@ -257,13 +159,6 @@ export function RecorridoPlayback({
     : null;
 
   const ultimoPunto = pedazos.length ? pedazos[pedazos.length - 1]!.t1 : null;
-  const textoPlay = tocando
-    ? "Pausa"
-    : alto?.tipo === "fin" || alto?.tipo === "ahora"
-      ? "Volver a empezar"
-      : alto?.tipo === "pausa"
-        ? "Continuar"
-        : "Reproducir";
 
   const leida = datos?.leida ?? Date.parse(leidaIso);
 
@@ -385,7 +280,7 @@ export function RecorridoPlayback({
 
 /* ─── La barra del periodo y su panel ───────────────────────────────────── */
 
-function BarraDePeriodo({
+export function BarraDePeriodo({
   periodo,
   acotado,
   leida,
@@ -401,7 +296,8 @@ function BarraDePeriodo({
   reloj: number;
   leyendo: boolean;
   slug: string;
-  unitId: string;
+  /** Sin unidad (Ver ‹dispositivo›) no hay atajos de servicio: los servicios son de una unidad. */
+  unitId?: string;
   elegir: (p: Periodo, o?: { acotado?: boolean; deServicio?: boolean }) => void;
 }) {
   const [abierto, setAbierto] = useState(false);
@@ -476,7 +372,7 @@ function PanelDePeriodo({
   periodo: Periodo;
   reloj: number;
   slug: string;
-  unitId: string;
+  unitId?: string;
   cerrar: () => void;
   elegir: (p: Periodo, o?: { deServicio?: boolean }) => void;
 }) {
@@ -486,6 +382,7 @@ function PanelDePeriodo({
   const [servicios, setServicios] = useState<ServiciosJson | null>(null);
 
   useEffect(() => {
+    if (!unitId) return;
     const control = new AbortController();
     const q = new URLSearchParams({ account: slug, unidad: unitId, dia });
     fetch(`/api/casa/recorrido/servicios?${q}`, { signal: control.signal, cache: "no-store" })
@@ -615,8 +512,13 @@ function PanelDePeriodo({
         </button>
       </div>
       <p className="mt-2.5 text-[11.5px] leading-snug text-[var(--tenue)]">
-        El periodo no se parte en días: un turno que cruza la medianoche se ve completo. Los servicios son los de{" "}
-        <em>esta</em> unidad ese día, con las horas que se declararon entonces, no las vigentes hoy.
+        El periodo no se parte en días: un turno que cruza la medianoche se ve completo.
+        {unitId && (
+          <>
+            {" "}
+            Los servicios son los de <em>esta</em> unidad ese día, con las horas que se declararon entonces, no las vigentes hoy.
+          </>
+        )}
       </p>
     </div>
   );
@@ -657,7 +559,7 @@ const Cifras = memo(function Cifras({ r }: { r: RecorridoJson }) {
 
 /* ─── Los avisos sobre el mapa ──────────────────────────────────────────── */
 
-function Aviso({
+export function Aviso({
   glifo,
   titulo,
   rango,
@@ -696,7 +598,7 @@ function Aviso({
   );
 }
 
-function AvisoDePausa({ pausa, continuaEn, alContinuar }: { pausa: Pausa; continuaEn: number; alContinuar: () => void }) {
+export function AvisoDePausa({ pausa, continuaEn, alContinuar }: { pausa: Pausa; continuaEn: number; alContinuar: () => void }) {
   if (pausa.tipo === "hueco") {
     return (
       <Aviso

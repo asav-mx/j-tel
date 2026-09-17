@@ -65,6 +65,13 @@ describe("las rutas", () => {
     expect(rutasDeDispositivos.ver("d1", "jb", { desde: "dispositivos" })).toBe("/casa/transportista/expedientes/dispositivo/d1?desde=dispositivos&account=jb");
   });
 
+  it("el recorrido lleva la puerta en `puerta`: `desde` es de la ventana", () => {
+    expect(rutasDeDispositivos.recorrido("d1")).toBe("/casa/transportista/expedientes/dispositivo/d1/recorrido");
+    expect(rutasDeDispositivos.recorrido("d1", "jb", "dispositivos")).toBe(
+      "/casa/transportista/expedientes/dispositivo/d1/recorrido?puerta=dispositivos&account=jb",
+    );
+  });
+
   it("la puerta no se cree lo que venga en la dirección", () => {
     expect(puertaDe("dispositivos")).toBe("dispositivos");
     expect(puertaDe("https://otro.sitio")).toBe("expedientes");
