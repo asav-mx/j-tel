@@ -641,7 +641,9 @@ export class VerificationService {
     if (input.imeis.length === 0) return;
 
     // (3) SOLO telemetría propia (Neon). Nunca Umbrella en vivo.
-    const points = await this.repos.telemetry.getForImeis(
+    // (4) Y solo de la cuenta de ESTE contrato: el IMEI no es el muro.
+    const points = await this.repos.telemetry.getForImeisDeCuenta(
+      input.carrierAccountId,
       input.imeis,
       input.windowEnd,
       extendedEnd,
@@ -991,8 +993,20 @@ export class VerificationService {
        *
        * Si un día la memoria no alcanza una ventana, lo que se arregla es el
        * archivador — no que el árbitro salga a suplirlo.
+       *
+       * Y LEE CON EL MURO DE CUENTA. El IMEI no es el muro; la cuenta sí
+       * (Pieza 1.C). Un aparato que cambió de cuenta (6.14) conserva su IMEI,
+       * y sus puntos de antes del cambio siguen archivados en la cuenta
+       * anterior: leer sólo por IMEI podría sellar un veredicto con el
+       * recorrido de OTRO transportista — un hecho falso pero creíble, que es
+       * el daño que no se ve revisando el diff. Se midió en producción el 17
+       * de septiembre de 2026: cero IMEIs con puntos en más de una cuenta, así
+       * que poner el muro no movió ningún veredicto ya sellado. Se pone ahora,
+       * con el campo vacío, para que no haya que ponerlo con dos
+       * transportistas reales dentro.
        */
-      const memoryPoints = await this.repos.telemetry.getForImeis(
+      const memoryPoints = await this.repos.telemetry.getForImeisDeCuenta(
+        contract.carrierAccountId,
         imeis,
         trip.evidenceWindowStart,
         trip.evidenceWindowEnd,

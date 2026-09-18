@@ -400,7 +400,7 @@ describe("cambio de política no toca hechos definitivos", () => {
         getUnitsForCarrier: vi.fn().mockResolvedValue([{ id: "unit-1" }]),
         resolveUnitAtTime: vi.fn().mockResolvedValue({ unitId: "unit-1" }),
       },
-      telemetry: { getForImeis: vi.fn().mockResolvedValue([]) },
+      telemetry: { getForImeisDeCuenta: vi.fn().mockResolvedValue([]) },
       routes: { getKmlVersionForDate: vi.fn().mockResolvedValue(null), getActiveVariantVersionsForDate: vi.fn().mockResolvedValue([]) },
       carriers: { getGpsCredentials: vi.fn().mockResolvedValue(null) },
       notifications: { create: vi.fn() },
@@ -527,7 +527,7 @@ describe("actorIntent: decision vs maintenance (force:true)", () => {
         getUnitsForCarrier: vi.fn().mockResolvedValue([{ id: "unit-1" }]),
         resolveUnitAtTime: vi.fn().mockResolvedValue(null),
       },
-      telemetry: { getForImeis: vi.fn().mockResolvedValue([]) },
+      telemetry: { getForImeisDeCuenta: vi.fn().mockResolvedValue([]) },
       routes: {
         getKmlVersionForDate: vi.fn().mockResolvedValue(null),
         getActiveVariantVersionsForDate: vi.fn().mockResolvedValue([]),
@@ -680,7 +680,7 @@ describe("perdedor exclusivo sin alternativa", () => {
           .mockResolvedValue([{ id: "unit-other" }, { id: "unit-winner" }]),
         resolveUnitAtTime: vi.fn().mockResolvedValue({ unitId: "unit-other" }),
       },
-      telemetry: { getForImeis: vi.fn().mockResolvedValue([]) },
+      telemetry: { getForImeisDeCuenta: vi.fn().mockResolvedValue([]) },
       routes: { getKmlVersionForDate: vi.fn().mockResolvedValue(null), getActiveVariantVersionsForDate: vi.fn().mockResolvedValue([]) },
       carriers: { getGpsCredentials: vi.fn().mockResolvedValue(null) },
       notifications: { create: vi.fn() },
@@ -900,13 +900,15 @@ describe("Tarea 3 — contexto llegada fuera de ventana", () => {
         resolveUnitAtTime: vi.fn().mockResolvedValue({ unitId: "unit-1" }),
       },
       telemetry: {
-        getForImeis: vi.fn().mockImplementation((_imeis: string[], from: Date) => {
-          // Ventana extendida empieza en windowEnd (12:30).
-          if (from.getTime() >= windowEnd.getTime()) {
-            return Promise.resolve(opts.extendedPoints);
-          }
-          return Promise.resolve(inWindow);
-        }),
+        getForImeisDeCuenta: vi
+          .fn()
+          .mockImplementation((_cuenta: string, _imeis: string[], from: Date) => {
+            // Ventana extendida empieza en windowEnd (12:30).
+            if (from.getTime() >= windowEnd.getTime()) {
+              return Promise.resolve(opts.extendedPoints);
+            }
+            return Promise.resolve(inWindow);
+          }),
       },
       routes: { getKmlVersionForDate: vi.fn().mockResolvedValue(null), getActiveVariantVersionsForDate: vi.fn().mockResolvedValue([]) },
       notifications: { create: vi.fn() },
@@ -1000,6 +1002,29 @@ describe("Tarea 3 — contexto llegada fuera de ventana", () => {
       .find((e) => e.action === "contexto_calibracion");
     expect(ctx).toBeUndefined();
   });
+
+  /**
+   * El muro de cuenta, del lado del comportamiento. La otra mitad —que nadie
+   * escriba mañana una lectura sin cuenta— la vigila `guardia-muro-cuenta.test.ts`.
+   *
+   * Las DOS lecturas del motor pasan por aquí: la de la ventana del veredicto y
+   * la de la ventana extendida del contexto de llegada tardía. Ninguna puede
+   * traer puntos de otra cuenta: el IMEI no es el muro (Pieza 1.C).
+   */
+  it("las dos lecturas de evidencia van filtradas por la cuenta del contrato", async () => {
+    const { repos } = buildRepos({ extendedPoints: [] });
+
+    const service = new VerificationService(repos as never);
+    await service.verifyOccurrence("occ-tardia");
+
+    const llamadas = repos.telemetry.getForImeisDeCuenta.mock.calls;
+    expect(llamadas.length).toBe(2);
+    for (const [cuenta] of llamadas) {
+      expect(cuenta).toBe("carrier-1");
+    }
+    // Y no queda una puerta sin muro en el objeto de repositorios del motor.
+    expect("getForImeis" in repos.telemetry).toBe(false);
+  });
 });
 
 describe("sin evidencia posible — el servicio sale de la cola de reintento", () => {
@@ -1075,7 +1100,7 @@ describe("sin evidencia posible — el servicio sale de la cola de reintento", (
         resolveUnitAtTime: vi.fn().mockResolvedValue(null),
       },
       telemetry: {
-        getForImeis: vi.fn().mockResolvedValue([]),
+        getForImeisDeCuenta: vi.fn().mockResolvedValue([]),
         getMemoryHorizon: vi.fn().mockResolvedValue(opciones.horizonte),
         // El archivador ya pasó de esta ventana de junio: si no hay puntos,
         // es que la unidad no transmitió, no que falte esperar.
@@ -1304,7 +1329,7 @@ describe("la puerta al proveedor está cerrada en el motor", () => {
       },
       // Memoria propia VACÍA: el caso que antes salía a buscar a Umbrella.
       telemetry: {
-        getForImeis: vi.fn().mockResolvedValue([]),
+        getForImeisDeCuenta: vi.fn().mockResolvedValue([]),
         getMemoryHorizon: vi.fn().mockResolvedValue(null),
         getWatermark: vi.fn().mockResolvedValue({
           lastRecordedAt: new Date("2026-08-02T00:00:00Z"),
