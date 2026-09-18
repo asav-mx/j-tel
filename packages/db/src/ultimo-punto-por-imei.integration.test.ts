@@ -130,8 +130,11 @@ describe("ultimoPuntoPorImei", () => {
     expect(deCarrier.map((p) => p.recordedAt.toISOString())).toEqual(["2026-09-01T06:00:00.000Z"]);
     const delOtro = await repos.telemetry.getForImeisDeCuenta(otroCarrierId, [IMEI_B], desde, hasta);
     expect(delOtro.map((p) => p.recordedAt.toISOString())).toEqual(["2026-09-14T22:15:00.000Z"]);
-    // Y la lectura sin muro, la que queda para el motor, sí trae los dos.
-    expect(await repos.telemetry.getForImeis([IMEI_B], desde, hasta)).toHaveLength(2);
+    // Control: en la tabla sí están los dos. Sin esto, un insert que no llegó
+    // dejaría las dos comprobaciones de arriba en verde por la razón equivocada
+    // — «no se ve el de la otra cuenta» porque no existe, no porque haya muro.
+    const enLaTabla = await db.select().from(telemetryPoints).where(eq(telemetryPoints.imei, IMEI_B));
+    expect(enLaTabla).toHaveLength(2);
   });
 
   it("la base de prueba tiene los puntos donde la prueba cree", async () => {
