@@ -1022,8 +1022,6 @@ describe("Tarea 3 — contexto llegada fuera de ventana", () => {
     for (const [cuenta] of llamadas) {
       expect(cuenta).toBe("carrier-1");
     }
-    // Y no queda una puerta sin muro en el objeto de repositorios del motor.
-    expect("getForImeis" in repos.telemetry).toBe(false);
   });
 });
 

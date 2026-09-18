@@ -175,7 +175,16 @@ async function medirOcurrencia(
 
   const busquedaInicio = new Date(deadline.getTime() - BUSQUEDA_HORAS_ANTES * 3_600_000);
   const busquedaFin = new Date(deadline.getTime() + BUSQUEDA_HORAS_DESPUES * 3_600_000);
-  const puntosAmplios = await repos.telemetry.getForImeis(imeis, busquedaInicio, busquedaFin);
+  // Con muro de cuenta: los IMEIs salieron de este carrier tres líneas arriba,
+  // y su evidencia también. Ancho en el TIEMPO —ése es el punto del guion—, no
+  // ancho en cuentas: los puntos que un aparato dejó en otra cuenta no son de
+  // esta ruta ni de este contrato.
+  const puntosAmplios = await repos.telemetry.getForImeisDeCuenta(
+    contract.carrierAccountId,
+    imeis,
+    busquedaInicio,
+    busquedaFin,
+  );
   if (puntosAmplios.length === 0) return null;
 
   const porImei = new Map<string, typeof puntosAmplios>();

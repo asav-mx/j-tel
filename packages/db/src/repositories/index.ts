@@ -4744,50 +4744,32 @@ export class TelemetryRepository {
   }
 
   /**
-   * Puntos de UNA cuenta para un conjunto de IMEIs en una ventana — la lectura
-   * de las pantallas.
+   * Puntos de UNA cuenta para un conjunto de IMEIs en una ventana — **la única
+   * forma de leer `telemetry_points` por IMEI**.
    *
    * **El IMEI no es el muro; la cuenta sí** (Pieza 1.C). Un dispositivo que
    * cambió de cuenta (6.14) conserva su IMEI, y sus puntos de antes del cambio
    * se quedaron archivados en la cuenta anterior. Leer sólo por IMEI le dibuja
-   * a la cuenta nueva los recorridos de la anterior. Por eso la cuenta es
-   * obligatoria aquí, y no un filtro que quien llama se acuerde de poner.
+   * a la cuenta nueva los recorridos de la anterior — y en el motor, sella un
+   * hecho falso pero creíble con el recorrido de otro transportista.
+   *
+   * Hasta el 18 de septiembre de 2026 existía a su lado una gemela sin cuenta.
+   * Las pantallas la dejaron en el #435, el motor en el #441, y ahí se borró:
+   * mientras la puerta siga en la pared alguien la vuelve a abrir sin querer, y
+   * no rompe nada al hacerlo. Por eso la cuenta es obligatoria —parámetro, no
+   * filtro que quien llama se acuerde de poner— y por eso ya no hay una
+   * variante que lo permita.
+   *
+   * Lo vigila `packages/services/src/guardia-muro-cuenta.test.ts`, que además
+   * de exigir el muro en el camino del veredicto pone en rojo cualquier
+   * lectura sin cuenta que se reintroduzca en el repositorio o en cualquier
+   * paquete.
    */
   async getForImeisDeCuenta(carrierAccountId: string, imeis: string[], from: Date, to: Date) {
     if (imeis.length === 0) return [];
     return this.db.query.telemetryPoints.findMany({
       where: and(
         eq(telemetryPoints.carrierAccountId, carrierAccountId),
-        inArray(telemetryPoints.imei, imeis),
-        gte(telemetryPoints.recordedAt, from),
-        lte(telemetryPoints.recordedAt, to),
-      ),
-      orderBy: (p, { asc }) => [asc(p.recordedAt)],
-    });
-  }
-
-  /**
-   * Puntos para un conjunto de IMEIs en una ventana, **de cualquier cuenta**.
-   *
-   * ⚠ Sin muro entre cuentas, y **ninguna ruta de veredicto la usa**. Desde el
-   * 17 de septiembre de 2026, verificación, reverificación y el backfill de
-   * duraciones leen con `getForImeisDeCuenta`; las pantallas ya lo hacían
-   * desde el #435. Su único llamador es `medir-ventana-vs-ruta.ts`, un guion
-   * de diagnóstico que no escribe nada y que mira a propósito más ancho que la
-   * ventana del viaje.
-   *
-   * Se dejó sin muro porque ver los puntos de cualquier cuenta es justamente
-   * lo que permite MEDIR el muro — por ejemplo, cuántos IMEIs tienen puntos en
-   * más de una cuenta (medido en producción el 17 sep 2026: cero).
-   *
-   * **No la llames desde el motor.** Lo vigila la prueba
-   * `packages/services/src/guardia-muro-cuenta.test.ts`: cualquier archivo del
-   * camino del veredicto que la nombre nace en rojo.
-   */
-  async getForImeis(imeis: string[], from: Date, to: Date) {
-    if (imeis.length === 0) return [];
-    return this.db.query.telemetryPoints.findMany({
-      where: and(
         inArray(telemetryPoints.imei, imeis),
         gte(telemetryPoints.recordedAt, from),
         lte(telemetryPoints.recordedAt, to),
