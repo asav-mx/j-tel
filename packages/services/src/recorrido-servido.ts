@@ -10,6 +10,7 @@ import {
   ventanaDelDia,
   type GradoDeTrazo,
   type Hueco,
+  type Salto,
   type Parada,
   type PuntoTraza,
   type Ventana,
@@ -64,9 +65,11 @@ export type RecorridoServido = {
   puntosMedidos: number;
   /** Puntos que van en `tramos`. */
   puntosDibujados: number;
-  /** Lo que se dibuja: tramos observados, cortados por modalidad y simplificados. */
+  /** Lo que se dibuja: tramos observados, partidos en huecos y saltos, cortados por modalidad y simplificados. */
   tramos: PuntoTraza[][];
   huecos: Hueco[];
+  /** Saltos del GPS: los dos puntos se dibujan, la línea entre ellos no. */
+  saltos: Salto[];
   visitas: Array<Omit<Visita, "lugar"> & { lugar: LugarBreve }>;
   /** Lo que no se dibuja por el corte en destino de un especial, con sus horas. */
   ocultos: Array<Omit<TrazaOculta, "lugar"> & { lugar: LugarBreve }>;
@@ -248,6 +251,7 @@ export async function cargarRecorridoDeUnidad(
     puntosDibujados: dibujo.puntosDibujados,
     tramos: dibujo.tramos,
     huecos: recorrido.huecos,
+    saltos: recorrido.saltos,
     visitas: recorrido.visitas.map((v) => ({ ...v, lugar: breve(v.lugar) })),
     ocultos: cortada.ocultos.map((o) => ({ ...o, lugar: breve(o.lugar) })),
     paradas,

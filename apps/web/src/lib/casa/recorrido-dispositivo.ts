@@ -2,7 +2,7 @@ import { gradoParaVentana } from "@jtel/domain";
 import { conCuenta } from "@/lib/casa/casas";
 import type { Puerta } from "@/lib/casa/dispositivos";
 import { RAIZ_EXPEDIENTES } from "@/lib/casa/expedientes";
-import { duracion, hhmm, pausasEntre, pedazosDe, sello, diaCorto, type Pausa, type Pedazo, type Periodo, type RecorridoJson } from "@/lib/casa/recorrido";
+import { FORMA_DEL_RECORRIDO, duracion, hhmm, pausasEntre, pedazosDe, sello, diaCorto, type Pausa, type Pedazo, type Periodo, type RecorridoJson } from "@/lib/casa/recorrido";
 
 /**
  * Recorridos y playback en Ver ‹dispositivo› — lo que la pantalla decide, sin DOM.
@@ -14,7 +14,7 @@ import { duracion, hhmm, pausasEntre, pedazosDe, sello, diaCorto, type Pausa, ty
  */
 
 type Iso = string;
-type Contenido = Pick<RecorridoJson, "tramos" | "huecos" | "visitas" | "ocultos" | "paradas" | "cifras" | "simplificado">;
+type Contenido = Pick<RecorridoJson, "tramos" | "huecos" | "saltos" | "visitas" | "ocultos" | "paradas" | "cifras" | "simplificado">;
 
 export type EtapaJson =
   | ({
@@ -87,7 +87,8 @@ export function pausasDelDispositivo(pedazos: PedazoDeEtapa[], r: Pick<Recorrido
     }
     const etapa = r.etapas[a.etapa]!;
     const ocultos = conContenido(etapa) ? etapa.ocultos : [];
-    pausas.push(pausasEntre([a, b], { ocultos })[0]!);
+    const saltos = conContenido(etapa) ? etapa.saltos : [];
+    pausas.push(pausasEntre([a, b], { ocultos, saltos })[0]!);
   }
   return pausas;
 }
@@ -95,6 +96,11 @@ export function pausasDelDispositivo(pedazos: PedazoDeEtapa[], r: Pick<Recorrido
 /** Los huecos de todas las etapas, para los círculos del mapa. */
 export function huecosDelDispositivo(r: Pick<RecorridoDeDispositivoJson, "etapas">): RecorridoJson["huecos"] {
   return r.etapas.flatMap((e) => (conContenido(e) ? e.huecos : []));
+}
+
+/** Los saltos de todas las etapas, para sus marcas en el mapa. */
+export function saltosDelDispositivo(r: Pick<RecorridoDeDispositivoJson, "etapas">): RecorridoJson["saltos"] {
+  return r.etapas.flatMap((e) => (conContenido(e) ? e.saltos : []));
 }
 
 /** Suma de lo que duraron los huecos de todas las etapas. */
@@ -215,6 +221,8 @@ export function peticionDelRecorridoDeDispositivo(slug: string, deviceId: string
     desde: ventana.desde.toISOString(),
     hasta: ventana.hasta.toISOString(),
     grado: String(gradoParaVentana(ventana)),
+    // La misma forma que Ver ‹unidad›: sirven la misma traza (ver `FORMA_DEL_RECORRIDO`).
+    forma: String(FORMA_DEL_RECORRIDO),
   });
   return `/api/casa/recorrido/dispositivo?${q}`;
 }

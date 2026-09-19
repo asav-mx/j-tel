@@ -7,6 +7,7 @@ import {
   paradas as paradasDeLaTraza,
   type GradoDeTrazo,
   type Hueco,
+  type Salto,
   type Parada,
   type PuntoTraza,
   type Ventana,
@@ -62,6 +63,7 @@ import {
 type Contenido = {
   tramos: PuntoTraza[][];
   huecos: Hueco[];
+  saltos: Salto[];
   visitas: RecorridoServido["visitas"];
   ocultos: RecorridoServido["ocultos"];
   paradas: Parada[];
@@ -230,6 +232,7 @@ export async function cargarRecorridoDeDispositivo(
       const contenido: Contenido = {
         tramos: dibujo.tramos,
         huecos: recorrido.huecos,
+        saltos: recorrido.saltos,
         visitas: recorrido.visitas.map((v) => ({ ...v, lugar: breve(v.lugar) })),
         ocultos: cortada.ocultos.map((o) => ({ ...o, lugar: breve(o.lugar) })),
         paradas: lasParadas,
