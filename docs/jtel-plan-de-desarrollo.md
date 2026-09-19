@@ -30,15 +30,21 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 - C1 — recorrido del día con huecos (#424) y corte de traza por modalidad (#426).
 - C2 — Flota en vivo con mapa (#428).
 - C3 — recorrido y playback en Ver ‹unidad› (#431, #432, #433).
-- C4 — acciones y candados (#434), el cuarto Dispositivos (#436), asignar/soltar/dar de baja (#437). Actúan coordinador y admin del carrier; el admin de plataforma de J-Staff también, en cualquier cuenta (soporte y comercial no) — **provisional hasta la 6.29**. C4-e: dar de alta y corregir unidades desde la casa nueva, con su VIN (único por cuenta), y ningún nombre repetido en una cuenta, en el código y en la base (0040). La 2101 duplicada de juarez-bus se corrigió el 18-sep (conservada la del camión con su historia).
+- C4 — acciones y candados (#434), el cuarto Dispositivos (#436), asignar/soltar/dar de baja (#437). Actúan coordinador y admin del carrier; el admin de plataforma de J-Staff también, en cualquier cuenta (soporte y comercial no) — **provisional hasta la 6.29**. C4-e (#444): dar de alta y corregir unidades desde la casa nueva, con su VIN (único por cuenta), y ningún nombre repetido en una cuenta, en el código y en la base (0040). La 2101 duplicada de juarez-bus se corrigió el 18-sep (conservada la del camión con su historia).
 - Recorrido y playback en Ver ‹dispositivo›, partido por unidad (#439).
-- Una traza rota se dibuja rota: el salto del GPS (más de 300 km/h) parte la traza sin borrar puntos y se declara con su rombo; los huecos de un camión estacionado se dicen en una pastilla; la línea se lee sobre un halo (4.78:1 y 4.59:1 medidos). Marcas de la traza ratificadas como familia propia en el skill (18 sep).
+- Una traza rota se dibuja rota (#443): el salto del GPS (más de 300 km/h) parte la traza sin borrar puntos y se declara con su rombo; los huecos de un camión estacionado se dicen en una pastilla; la línea se lee sobre un halo (4.78:1 y 4.59:1 medidos). Marcas de la traza ratificadas como familia propia en el skill (18 sep).
+
+**Servicios especiales — Vernier V1:**
+- El cuarto con la lista por ventana y el acta de cada ocurrencia, la familia del sello (hexágonos, `--sello-ok`, `--ladrillo`) y la barra de ventana compartida con C3 («Esta semana» reemplaza a «Últimos 7 días» también en Compás) (#445). El menú lee el contrato de verdad.
+- El filtro: cada fila de chips con su rótulo, y los turnos sólo con un contrato elegido (#448).
+- Los cuartos viejos del carrier (`cumplimiento`, `historial`, `reportes`) siguen vivos hasta el apagado de la piel vieja.
 
 **Infraestructura / motor:**
 - Migración a Compás cerrada; marca de lectura por aparato (#408 / 0037).
 - Los 8 FTC927 configurados; los 7 movidos a Juárez Bus (#419), el 002 en el Jeep (ASAV).
 - Velocidad: consulta de última señal 3.3 s → 1 ms (#423), cronómetro de lentitud (#427).
 - Muro entre cuentas **dentro del motor**: verificación, reverificación y el backfill de duraciones leen la evidencia filtrando por la cuenta del servicio que juzgan (#441). Medido en producción el 17-sep-2026 antes de cerrar: cero IMEIs con puntos en más de una cuenta, así que no movió ningún veredicto ya sellado. El 18-sep se borró la lectura sin cuenta del repositorio: ya no existe la puerta, no sólo está cerrada. Lo cuida una prueba-guardia que barre todos los paquetes y pone en rojo cualquier lectura sin cuenta que se reintroduzca.
+- La pausa de la verificación de un contrato (#447 / 0041): se pausa y se reanuda como evento, con quién, desde cuándo vale y motivo; lo sellado no se toca y lo no medido durante la pausa jamás se genera hacia atrás. **En uso:** los cuatro contratos quedaron pausados el 19-sep, con vigencia desde el 18-sep (se registró después y los eventos no se editan, así que no vale desde el 5). Los dos de Tecma, por el corte del proveedor de GPS; PRUEBA REAL y Honeywell, porque nunca operaron de verdad. Al pausar se borraron 1095 ocurrencias sin hecho.
 
 **El Marco: 7 piezas.** Pieza 6 (Compás, el cimiento), enmienda del expediente (§H, 6.30–6.33), Pieza 7 (la modalidad del servicio).
 
@@ -47,20 +53,19 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 ## Lo que sigue, en orden
 
 ### Ahora
-1. **Instalar los 7 FTC en camiones de Juárez Bus.** Probar el 005 primero (prueba de 5 min al cielo: si no reporta en su ficha, no instalarlo — su IMEI empieza raro, `860573…`, y no tiene un solo punto en su historia). Asignar cada uno a su unidad **el mismo día** en la pantalla nueva: el cuarto Dispositivos (`/casa/transportista/dispositivos?account=juarez-bus`) o Ver ‹dispositivo› → «Asignar a una unidad». Es la mejor prueba del cuarto recién construido. El alta vieja (`/carrier/flota/alta`) queda sólo de respaldo si algo falla en el patio. Lo que llegue antes de asignar se guarda sin unidad para siempre.
-2. **C4-d — apagar el alta vieja** de `/carrier/flota/alta`, ya con los 7 rodando.
-3. **Migrar Vernier** a la casa nueva. Es el cuarto más grande que queda del transportista, ya funciona en la piel vieja.
-   - **Vernier V1 — Servicios especiales** (`docs/Ficha-Construccion-Vernier-V1.md`, PR `feat/vernier-v1`, merge de Asav): el cuarto con la lista por ventana y el acta de cada ocurrencia, la familia del sello (hexágonos, `--sello-ok`, `--ladrillo`) y la barra de ventana compartida con C3 («Esta semana» reemplaza a «Últimos 7 días» también en Compás). El menú lee el contrato de verdad: la constante que habría escondido el cuarto (`ALCANCE_SIN_CUARTOS`) ya no existe. Once decisiones del 18-sep corrigieron la ficha y el prototipo (registro al final de la ficha).
-   - Los cuartos viejos del carrier (`cumplimiento`, `historial`, `reportes`) siguen vivos; se decide apagarlos cuando este cuarto ruede.
+1. **A · El archivero de Expedientes.** El cuarto deja de ser lista y se vuelve tablero + cajones: un buscador que atraviesa todo, «Piden atención» como bandeja del día, y cajones de Unidades · Equipos · Choferes con filas compactas. La pestaña Dispositivos muere; sus acciones se mudan al cajón Equipos. Prototipo aprobado el 19-sep; la ficha de construcción llega antes del código. Los lugares propios del carrier (base, taller) serán cajón cuando exista su fuente; los destinos de las plantas no viven aquí porque no son suyos.
+2. **B · La suite de transporte público.** La terminal de operación del carrier (tiempos de parada por ubicación, y con el tiempo conteo de pasajeros) y la app del pasajero rumbo a producto. Es donde hoy ruedan los GPS propios. Sesión de diseño con prototipo antes de construir, como Vernier.
 
 ### Después
-4. **Medir la lentitud como la vive el usuario** con el cronómetro (#427), y quitar las precargas en ráfaga si hace falta.
-5. **Migrar Planta y Corporativo** a la casa nueva.
-6. **Migrar el alta de cuentas de J-Staff** al UI nuevo — cuando se acerque el primer cliente real, no antes.
-7. **Protomaps auto-hospedado en Cloudflare R2** (extracto regional) antes de las 80 unidades — decidido el 16-sep; convierte la mensualidad en centavos. Hoy en OpenStreetMap directo.
+3. **C · Los pasillos.** Cómo se camina: el paso entre casas para quien tiene varias llaves, toda pieza abre su expediente desde cualquier pantalla, y el apagado de la piel vieja.
+4. **D · Migrar Planta y Corporativo** — cuando los Teltonika devuelvan la evidencia y las pausas se reanuden (oct–nov). Antes serían pantallas vacías.
+5. Higiene entre tramos: la lentitud de Servicios especiales (EXPLAIN pendiente), las cifras en cero, Protomaps antes de las 80 unidades.
+
+### La muerte de la piel vieja — 30 de noviembre de 2026
+La piel vieja se apaga el 30-nov: las direcciones redirigen a la casa nueva y nada de datos se toca. Antes: (1) inventario medido contra el código de todo lo que sólo ella sabe hacer, en un PR de documento; (2) cada cosa del inventario recibe destino en la casa nueva o muerte declarada. Cada «hazlo en la vieja» de aquí a esa fecha es tiempo prestado.
 
 ### Condición, no fecha
-8. **Los 80+ GPS y el alta por lote.** NO es una fecha: se hace SÓLO cuando el cuarto de Compás funcione y Asav lo haya visto trabajar con los 8. Umbrella se deja cuando la prueba convenza.
+6. **Los 80+ GPS y el alta por lote.** NO es una fecha: se hace SÓLO cuando el cuarto de Compás funcione y Asav lo haya visto trabajar con los 8. Umbrella se deja cuando la prueba convenza.
    - **Decidido (17-sep):** se compran Teltonika nuevos; no se redirigen los 82 Meitrack de Umbrella. Razón: 37 son 3G (red muriendo), ~20 ya callados, cinco modelos por validar contra el árbitro, dos protocolos que mantener. Un solo modelo probado vale más que cinco por validar.
    - Pendiente sin prisa: mandar `0000,A10` por SMS al chip del 10249 (656 551 7725). Si contesta, evaluar redirigir sólo los 42 de 4G como puente mientras llegan los Teltonika.
 
@@ -87,9 +92,12 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 - **Congelar las unidades posibles con el hecho.** Hoy el acta las muestra «según el perfil hoy», porque el perfil sólo guarda el conjunto vigente. Es decisión de motor.
 - **Evidencia de lo que sí se hizo en un no cumplido** (Vernier, pendiente con nombre del 18-sep).
 - **Ligar «Servicios con veredicto» de Ver ‹unidad› al acta** de cada ocurrencia, con el hexágono. PR chico después de Vernier V1.
-- **La pausa de la verificación de un contrato** (0041, PR `feat/pausa-verificacion`, merge de Asav tras el SQL en Neon). Primer uso, después del merge y desde J-Staff → Contratos: desde el 5 sep, «Sin telemetría: el proveedor anterior se desconectó».
 - **`service_contracts.status = 'suspended'`** es una etiqueta comercial que ningún proceso lee, y la pausa de la verificación sí detiene al motor: dos cosas que se llaman casi igual y sólo una hace algo. Cuando se trabaje el tramo de contratos, se decide si se retira o se conecta. Mientras, J-Staff la muestra como «estado comercial», nunca junto a la pausa sin distinguirla.
 - **La lentitud de Servicios especiales**: 97–99 % en «datos» (cronómetro, 19 sep). Espera los EXPLAIN que corre Asav (`docs/correcciones/2026-09-19-medir-lentitud-servicios-especiales.sql`) y las líneas nuevas del cronómetro (#446) antes de optimizar.
+- **Corregir las geocercas mal trazadas.** Hoy sólo se puede en la piel vieja: necesita destino en la casa nueva antes del 30-nov.
+- **El hueco de navegación entre casas.** Quien tiene varias llaves no tiene cómo pasar de una casa a otra: del transportista a J-Staff no hay paso dentro del producto, hoy se entra escribiendo la dirección (visto el 18-sep). Se cierra con C · Los pasillos.
+- **C4-d — apagar el alta vieja** de `/carrier/flota/alta`. Espera a que los 7 FTC estén rodando; hoy van 4.
+- **Migrar el alta de cuentas de J-Staff** a la casa nueva. Cuando se acerque el primer cliente real, no antes.
 - Cuadrar el dispositivo que no coincide: la hoja de Umbrella tiene 81 renglones (el 9181 repetido) pero en la base se dieron de baja 82.
 
 ---
