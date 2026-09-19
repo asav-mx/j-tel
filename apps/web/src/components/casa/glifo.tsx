@@ -5,7 +5,7 @@
  * daltónico, una pantalla mala, o el sol de Juárez a las siete de la mañana
  * bastan para que el color desaparezca. La forma sobrevive a todo eso.
  *
- * ## Tres familias de sujetos, que no se cruzan — y una de marcas
+ * ## Tres familias de sujetos, que no se cruzan — la del sello, y una de marcas
  *
  * Cada cosa tiene su silueta base, para que ninguna forma de una se confunda
  * con la de otra cuando aparecen juntas —y en el cuarto de Expedientes aparecen
@@ -34,6 +34,14 @@
  *   · falta la regla  hoja hueca con el doblez lleno, en tenue
  *   · vigente         hoja llena, en tenue
  *   · sin vencimiento hoja llena con una raya hueca, en tenue
+ *
+ *   SELLOS — el veredicto de un hecho: hexágonos (Vernier V1, 18 sep 2026)
+ *   · cumplido          hexágono lleno, en `--sello-ok`
+ *   · pendiente         hexágono de contorno punteado, en tinta
+ *   · no cumplido       hexágono hueco tachado con una diagonal, en `--ladrillo`
+ *   La forma carga el estado; el color acompaña. `--sello-ok` y `--ladrillo`
+ *   son exclusivos de esta familia. El timing (temprano, a tiempo, tarde) NO
+ *   lleva glifo: el hexágono es del veredicto, y el timing va en palabras.
  *
  *   MARCAS DE LA TRAZA — no son sujetos: «aquí la medición se interrumpe»
  *   · hueco          círculo hueco — nadie midió (la misma forma que SIN SEÑAL)
@@ -67,6 +75,10 @@ export type EstadoGlifo =
   | "papel-falta-la-regla"
   | "papel-vigente"
   | "papel-sin-vencimiento"
+  // Sellos: el veredicto de un hecho
+  | "sello-cumplido"
+  | "sello-pendiente"
+  | "sello-no-cumplido"
   // Marcas de la traza (no son sujetos)
   | "salto";
 
@@ -89,6 +101,9 @@ const EN_PALABRAS: Record<EstadoGlifo, string> = {
   "papel-falta-la-regla": "Falta la regla",
   "papel-vigente": "Vigente",
   "papel-sin-vencimiento": "Sin vencimiento",
+  "sello-cumplido": "Cumplido",
+  "sello-pendiente": "Pendiente de evidencia",
+  "sello-no-cumplido": "No cumplido",
   salto: "Salto del GPS",
 };
 
@@ -99,9 +114,18 @@ const EN_PALABRAS: Record<EstadoGlifo, string> = {
  *   habla.
  * - **Tinta** en los papeles que piden hacer algo: el ojo tiene que ir ahí.
  * - **Tenue** en todo lo demás, y a 60 % lo que ya se apagó.
+ * - **Los sellos** con sus colores exclusivos: `--sello-ok` el cumplido,
+ *   `--ladrillo` el no cumplido, tinta el pendiente. Ninguno es cobre: nada
+ *   sellado está vivo.
  */
 function tintaDe(estado: EstadoGlifo): { color: string; opacidad: number } {
   switch (estado) {
+    case "sello-cumplido":
+      return { color: "var(--sello-ok)", opacidad: 1 };
+    case "sello-pendiente":
+      return { color: "var(--tinta)", opacidad: 1 };
+    case "sello-no-cumplido":
+      return { color: "var(--ladrillo)", opacidad: 1 };
     case "en-movimiento":
     case "dispositivo-en-unidad":
       return { color: "var(--senal)", opacidad: 1 };
@@ -123,6 +147,8 @@ function tintaDe(estado: EstadoGlifo): { color: string; opacidad: number } {
 /** La hoja, en una caja de 40: vertical, con la esquina superior derecha doblada. */
 const HOJA = "M13 6 H24 L31 13 V32 A2 2 0 0 1 29 34 H13 A2 2 0 0 1 11 32 V8 A2 2 0 0 1 13 6 Z";
 const DOBLEZ = "M24 6 V13 H31";
+/** El hexágono del sello, en una caja de 24, con los lados de arriba y abajo planos. */
+const HEXAGONO = "20.5,12 16.25,19.36 7.75,19.36 3.5,12 7.75,4.64 16.25,4.64";
 
 export function Glifo({
   estado,
@@ -181,6 +207,25 @@ export function Glifo({
           strokeLinejoin="round"
           strokeDasharray={estado === "sin-dispositivo" ? "2 2" : undefined}
         />
+      )}
+
+      {/* ── Sellos (Vernier V1, 18 sep 2026) ── */}
+      {estado === "sello-cumplido" && <polygon points={HEXAGONO} fill="currentColor" />}
+      {estado === "sello-pendiente" && (
+        <polygon
+          points={HEXAGONO}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeDasharray="3.2 2.6"
+          strokeLinejoin="round"
+        />
+      )}
+      {estado === "sello-no-cumplido" && (
+        <>
+          <polygon points={HEXAGONO} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+          <line x1="5.8" y1="18.4" x2="18.2" y2="5.6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </>
       )}
 
       {/* ── Marcas de la traza (ratificadas el 18 sep 2026) ──

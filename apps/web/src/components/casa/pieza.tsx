@@ -50,6 +50,15 @@ import { Glifo, type EstadoGlifo } from "@/components/casa/glifo";
  *
  * `datoVivo` pone el dato en cobre. Sólo para un dato que está vivo ahora —la
  * edad de lo que transmite—: el skill reserva el cobre para la vida.
+ *
+ * `apoyoQueEnvuelve` deja que el apoyo baje de renglón en celular en vez de
+ * cortarse con «…». Lo pide Servicios especiales (prototipo de Vernier V1): su
+ * apoyo lleva el motivo del sello, y cortado a media palabra a 375 px deja de
+ * decir por qué.
+ *
+ * `datoNoCumplido` pone el dato en `--ladrillo`: la hora del sello de un no
+ * cumplido (ficha Vernier §2). Es el único uso del ladrillo fuera del glifo, y
+ * el ladrillo es exclusivo del sello: no sirve para nada más.
  */
 export function Pieza({
   estado,
@@ -64,6 +73,8 @@ export function Pieza({
   alTocar,
   seleccionada = false,
   datoVivo = false,
+  datoNoCumplido = false,
+  apoyoQueEnvuelve = false,
 }: {
   /**
    * La forma que dice el estado. Opcional: una pieza que liga a otra cosa sin
@@ -92,6 +103,10 @@ export function Pieza({
   seleccionada?: boolean;
   /** El dato está vivo ahora: va en cobre. */
   datoVivo?: boolean;
+  /** El dato es la hora del sello de un no cumplido: va en ladrillo. */
+  datoNoCumplido?: boolean;
+  /** En celular el apoyo baja de renglón en vez de cortarse. */
+  apoyoQueEnvuelve?: boolean;
 }) {
   const cuerpo = (
     <>
@@ -108,11 +123,22 @@ export function Pieza({
         >
           {nombre}
         </span>
-        <span className="mt-1 block truncate text-[13px] text-[var(--tenue)]">{apoyo}</span>
+        <span
+          className={`mt-1 block truncate text-[13px] text-[var(--tenue)]${
+            apoyoQueEnvuelve ? " max-sm:overflow-visible max-sm:whitespace-normal" : ""
+          }`}
+        >
+          {apoyo}
+        </span>
       </span>
 
       <span className="flex-none text-right">
-        <span data-medida className={`block text-[15px] leading-tight${datoVivo ? " text-[var(--senal)]" : ""}`}>
+        <span
+          data-medida
+          className={`block text-[15px] leading-tight${
+            datoVivo ? " text-[var(--senal)]" : datoNoCumplido ? " text-[var(--ladrillo)]" : ""
+          }`}
+        >
           {dato}
         </span>
         <span

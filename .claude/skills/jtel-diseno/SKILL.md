@@ -117,9 +117,26 @@ Los papeles del expediente (Marco, Pieza 6 §H; `docs/Ficha-Expedientes.md` §4)
 - **Ni cobre ni colores de veredicto.** Un papel vencido no es un servicio no cumplido, y la vigencia no es vida.
 - En el vistazo, el dato es **un número**: los días que faltan (`en 12 d`) o los que lleva vencido (`hace 3 d`). La fecha exacta va en el expediente.
 
+### Los sellos: el veredicto de un hecho (hexágonos)
+
+Ratificados por ASAV el 18 de septiembre de 2026 con Vernier V1 (`docs/Ficha-Construccion-Vernier-V1.md` §4). Son la **cuarta familia de formas**: las unidades son flechas y círculos (se mueven), los dispositivos cuadros (se instalan), los papeles hojas (se vencen) y los veredictos **hexágonos** (se sellan). Ninguna otra familia usa el hexágono.
+
+| Veredicto | Glifo | Por qué esa forma | Color |
+|---|---|---|---|
+| Cumplido | Hexágono **lleno** | El sello entero | `--sello-ok` |
+| Pendiente de evidencia | Hexágono de **contorno punteado** | El lugar del sello existe; la evidencia no alcanzó | `--tinta` |
+| No cumplido | Hexágono **hueco tachado** con una diagonal | Se juzgó, y no se cumplió | `--ladrillo` |
+
+- **Los dos colores nuevos son exclusivos del sello.** `--sello-ok` y `--ladrillo` no se usan en ningún otro lugar de la plataforma: ni en bordes, ni en avisos, ni en papeles. Una prueba de fuente lo vigila (`lib/casa/vernier-guardia.test.ts`).
+- **`--sello-ok` es un verde sobrio**, deliberadamente distinto de `--vivo`: el latido sigue siendo lo único que brilla. Un cumplido no está vivo; está sellado.
+- **`--ladrillo`** tiñe también la palabra «No cumplido» y la hora del sello de un no cumplido en la pieza. Nada más.
+- **El timing no lleva glifo.** Temprano, a tiempo y tarde van en palabras junto al veredicto —`Cumplido · tarde`—, y su cifra con su umbral en el acta. El hexágono es del veredicto; una segunda forma para el timing se leería como un cuarto veredicto.
+- **Cero cobre donde sólo hay sellos.** Nada sellado está vivo.
+- La forma carga el estado; el color acompaña. Sin color, lleno / punteado / tachado siguen distinguiendo los tres.
+
 ### Las marcas de la traza: «aquí la medición se interrumpe»
 
-Ratificadas por ASAV el 18 de septiembre de 2026. **No son sujetos, y no entran a la tabla de sujetos** (la flecha es de la unidad, el cuadro del dispositivo, la hoja del papel; el hexágono queda reservado para los veredictos). No dicen qué *es* una cosa: dicen **dónde la traza deja de afirmar un camino**. Por eso son su propia familia, y las dos se leen juntas:
+Ratificadas por ASAV el 18 de septiembre de 2026. **No son sujetos, y no entran a la tabla de sujetos** (la flecha es de la unidad, el cuadro del dispositivo, la hoja del papel, el hexágono del veredicto). No dicen qué *es* una cosa: dicen **dónde la traza deja de afirmar un camino**. Por eso son su propia familia, y las dos se leen juntas:
 
 | Marca | Forma | Qué dice | Dónde |
 |---|---|---|---|
@@ -177,6 +194,8 @@ Tinta azul profunda, cobre como único color señal, y verde sólo para el latid
 --linea     #E4E5EE   separadores y bordes
 --senal     #B05A0F   cobre — SÓLO donde hay vida
 --vivo      #1B9E6B   el latido de «en vivo»
+--sello-ok  #2E6A4E   el sello de un cumplido — SÓLO ahí
+--ladrillo  #A93636   el sello de un no cumplido — SÓLO ahí
 ```
 
 **Los dos valores que subieron, y por qué.** `--tenue` nació `#757C9B` y el
@@ -200,7 +219,11 @@ volteados.
 --linea     #232842
 --senal     #FFA24D
 --vivo      #2FCB8B
+--sello-ok  #7FBFA0
+--ladrillo  #FF8177
 ```
+
+Los dos del sello, medidos contra `--pieza` / `--papel` (18 sep 2026): clara `--sello-ok` 6.39 / 6.13 y `--ladrillo` 6.43 / 6.16; oscura 8.27 / 9.09 y 7.26 / 7.98.
 
 ### Las leyes del color
 
@@ -208,7 +231,7 @@ volteados.
    **Vida es cambio frente al usuario, no sólo el tiempo real.** El cobre marca el dato que está cambiando mientras alguien lo mira. En un playback, la velocidad que corre con la reproducción va en cobre; el recorrido ya dibujado, el marcador y la hora del recuerdo detenido van en tinta. Al pausar deja de cambiar y suelta el cobre. Y cuando el playback alcanza el ahora, el marcador pasa a cobre porque ya no es recuerdo. Decidido por ASAV el 16 de septiembre de 2026, al revisar C3 contra su prototipo v5.
 2. **Lo apagado suelta el color** y baja a 60% de opacidad. Una unidad que llegó o se calló se va a gris. El contraste hace la jerarquía.
 3. **El verde es del latido, no de un veredicto.** Marca que el sistema respira.
-4. **Los colores de veredicto viven aparte y no se tocan.** El Marco reserva significado a cumplido, no cumplido y pendiente. Esos tres nunca se usan para nada más, y el cobre nunca se usa para un veredicto.
+4. **Los colores de veredicto viven aparte y no se tocan.** El Marco reserva significado a cumplido, no cumplido y pendiente. Sus colores —`--sello-ok` y `--ladrillo`; el pendiente va en tinta— nunca se usan para nada más, y el cobre nunca se usa para un veredicto.
 5. **Las dos pieles se diseñan juntas.** Ninguna pantalla se da por terminada sin verse en las dos. La piel clara no es la oscura con los fondos volteados: cada una tiene sus propios valores.
 
 **Por qué el cobre, y por qué no el morado de Juárez Bus:** Juárez Bus es un cliente de J-Tel, no J-Tel. Si la plataforma se viste de sus colores, el siguiente transportista abre su cuenta y ve los colores de su competencia. El cobre guarda el parentesco de temperatura con el ámbar del logo familiar sin ser su marca.
