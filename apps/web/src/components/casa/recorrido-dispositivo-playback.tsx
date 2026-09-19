@@ -13,8 +13,10 @@ import {
   acotar,
   diaCorto,
   duracion,
+  glifoDePausa,
   hhmm,
   hhmmss,
+  nombreDePausa,
   posicionEn,
   rutaDelRecorrido,
   sello,
@@ -33,6 +35,7 @@ import {
   quienDeEtapa,
   reglaDeEtapa,
   rutaDeRecorridoDeDispositivo,
+  saltosDelDispositivo,
   textoDelCambio,
   type EtapaJson,
   type PausaDelDispositivo,
@@ -126,6 +129,7 @@ export function RecorridoDispositivoPlayback({
   const pedazos = useMemo(() => (datos ? pedazosDelDispositivo(datos.r) : []), [datos]);
   const pausas = useMemo(() => (datos ? pausasDelDispositivo(pedazos, datos.r) : []), [datos, pedazos]);
   const huecos = useMemo(() => (datos ? huecosDelDispositivo(datos.r) : []), [datos]);
+  const saltos = useMemo(() => (datos ? saltosDelDispositivo(datos.r) : []), [datos]);
   const cambios = useMemo(
     () =>
       pausas.flatMap((p, i) => {
@@ -154,7 +158,7 @@ export function RecorridoDispositivoPlayback({
     ? alto?.tipo === "ahora"
       ? { lat: pos.lat, lng: pos.lng, glifo: estadoActual?.glifo ?? "dispositivo-en-unidad", rumbo: 0, tinta: "senal" }
       : pausa && pausa.tipo !== "cambio"
-        ? { lat: pos.lat, lng: pos.lng, glifo: pausa.tipo === "destino" ? "en-destino" : "sin-senal", rumbo: 0, tinta: "tinta" }
+        ? { lat: pos.lat, lng: pos.lng, glifo: glifoDePausa(pausa), rumbo: 0, tinta: "tinta" }
         : { lat: pos.lat, lng: pos.lng, glifo: "en-movimiento", rumbo: pos.rumbo, tinta: "tinta" }
     : null;
   const ultimoPunto = pedazos.length ? pedazos[pedazos.length - 1]!.t1 : null;
@@ -200,6 +204,7 @@ export function RecorridoDispositivoPlayback({
             clave={datos.clave}
             pedazos={pedazos}
             huecos={huecos}
+            saltos={saltos}
             cambios={cambios}
             lugares={lugaresVisitados}
             progreso={{ seg, t }}
@@ -302,6 +307,9 @@ const Cifras = memo(function Cifras({ r }: { r: RecorridoDeDispositivoJson }) {
     [r.cifras.huecos > 0 ? `${r.cifras.huecos} · ${duracion(duracionDeHuecos(r))}` : "0", "huecos · duración", "huecos"],
     [String(r.unidades), r.unidades === 1 ? "unidad en el periodo" : "unidades en el periodo", "unidades"],
   ];
+  // Sólo cuando los hay: cero saltos no es un dato que alguien mire.
+  const saltos = saltosDelDispositivo(r).length;
+  if (saltos > 0) cifras.push([String(saltos), saltos === 1 ? "salto del GPS" : "saltos del GPS", "saltos"]);
   return (
     <div className="mb-3.5 flex flex-wrap items-stretch gap-2.5">
       {cifras.map(([n, e, k]) => (
@@ -459,9 +467,9 @@ function CintaDeEtapas({
                         {pausa && pausa.tipo !== "cambio" && (
                           <div
                             className="grid w-[26px] flex-none place-items-center"
-                            title={`${pausa.tipo === "hueco" ? "Sin señal" : `En ${pausa.lugar}`} · ${duracion(pausa.hasta - pausa.desde)}`}
+                            title={nombreDePausa(pausa)}
                           >
-                            <Glifo estado={pausa.tipo === "hueco" ? "sin-senal" : "en-destino"} tamano={14} />
+                            <Glifo estado={glifoDePausa(pausa)} tamano={14} />
                           </div>
                         )}
                         <button

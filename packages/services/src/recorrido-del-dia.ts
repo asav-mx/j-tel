@@ -3,10 +3,13 @@ import {
   hayHuecoEntre,
   huecosDeSenal,
   ordenarPorTiempo,
+  partirEnCortes,
   partirEnHuecos,
+  saltosDeGps,
   type GeofenceRole,
   type Hueco,
   type PuntoTraza,
+  type Salto,
   type Ventana,
 } from "@jtel/domain";
 import { pointInPolygon } from "@jtel/verification";
@@ -107,8 +110,11 @@ export type CifrasDelPeriodo = {
 };
 
 export type RecorridoPorVentana = {
+  /** Lo que se dibuja: partido en cada hueco y en cada salto. */
   tramos: PuntoTraza[][];
   huecos: Hueco[];
+  /** Pares medidos que se contradicen: la línea entre ellos no se dibuja. */
+  saltos: Salto[];
   visitas: Visita[];
   cifras: CifrasDelPeriodo;
 };
@@ -192,24 +198,31 @@ export function recorridoPorVentana(entrada: {
     const t = q.at.getTime();
     return t >= desde && t <= hasta;
   });
-  const tramos = partirEnHuecos(puntos, umbral);
+  // Las cifras se cuentan sobre lo OBSERVADO, partido sólo en huecos: durante
+  // un salto el equipo sí transmitía, así que sus minutos cuentan con señal y
+  // `kilometrosSinSaltos` ya descarta el salto de la suma. Lo que se DIBUJA se
+  // parte además en cada salto (`partirEnCortes`).
+  const observados = partirEnHuecos(puntos, umbral);
+  const tramos = partirEnCortes(puntos, umbral);
   const huecos = huecosDeSenal(puntos, umbral);
+  const saltos = saltosDeGps(puntos, umbral);
 
   let kmMedidos = 0;
   let saltosDescartados = 0;
   let minutosConSenal = 0;
-  for (const tramo of tramos) {
-    const { km, saltos } = kilometrosSinSaltos(
+  for (const tramo of observados) {
+    const { km, saltos: descartados } = kilometrosSinSaltos(
       tramo.map((p) => ({ recordedAt: p.at, latitude: p.lat, longitude: p.lng })),
     );
     kmMedidos += km;
-    saltosDescartados += saltos;
+    saltosDescartados += descartados;
     minutosConSenal += (tramo[tramo.length - 1]!.at.getTime() - tramo[0]!.at.getTime()) / 60_000;
   }
 
   return {
     tramos,
     huecos,
+    saltos,
     visitas: visitasALugares(puntos, entrada.lugares, umbral),
     cifras: {
       puntos: puntos.length,

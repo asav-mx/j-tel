@@ -22,17 +22,18 @@
  */
 
 import { haversineKm } from "@jtel/verification";
-import { instanteZonificado } from "@jtel/domain";
+import { SALTO_GPS_KMH, esSaltoGps, instanteZonificado } from "@jtel/domain";
 
 export { instanteZonificado };
 
 /**
  * Velocidad implícita por encima de la cual un tramo es un salto del equipo y
- * no movimiento real. Mismo valor que usa `apps/web/src/lib/autopsia.ts`; los
+ * no movimiento real. Vive en `@jtel/domain` desde el 18 sep 2026, junto a la
+ * regla del hueco, porque ahora también parte la traza que se dibuja. Los
  * kilómetros que salen de aquí van marcados como aproximados justamente porque
  * el tramo descartado deja un hueco en la suma y no hay regla para rellenarlo.
  */
-export const SALTO_GPS_KMH = 300;
+export { SALTO_GPS_KMH };
 
 /**
  * Ventana de observación a partir de una fecha civil y un rango de horas.
@@ -175,15 +176,14 @@ export function kilometrosSinSaltos(
   for (let i = 1; i < puntos.length; i++) {
     const a = puntos[i - 1]!;
     const b = puntos[i]!;
-    const tramo = haversineKm(a.latitude, a.longitude, b.latitude, b.longitude);
-    const horas = (b.recordedAt.getTime() - a.recordedAt.getTime()) / 3_600_000;
     // Dos lecturas del mismo instante no son un tramo: no suman ni son salto.
-    if (horas <= 0) continue;
-    if (tramo / horas > SALTO_GPS_KMH) {
+    if (b.recordedAt.getTime() <= a.recordedAt.getTime()) continue;
+    // La misma regla que parte la traza que se dibuja (`partirEnCortes`).
+    if (esSaltoGps({ at: a.recordedAt, lat: a.latitude, lng: a.longitude }, { at: b.recordedAt, lat: b.latitude, lng: b.longitude })) {
       saltos++;
       continue;
     }
-    km += tramo;
+    km += haversineKm(a.latitude, a.longitude, b.latitude, b.longitude);
   }
   return { km, saltos };
 }

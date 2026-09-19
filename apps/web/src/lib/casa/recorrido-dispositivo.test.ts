@@ -13,7 +13,7 @@ import {
 const h = (hhmm: string) => `2026-09-16T${hhmm}:00-06:00`;
 const t = (hhmm: string) => Date.parse(h(hhmm));
 const punto = (hhmm: string) => ({ lat: 31.7, lng: -106.4, at: h(hhmm), speed: 30 });
-const vacio = { huecos: [], visitas: [], ocultos: [], paradas: [], simplificado: false, cifras: { puntos: 0, kmMedidos: 0, saltosDescartados: 0, minutosConSenal: 0, huecos: 0 } };
+const vacio = { huecos: [], saltos: [], visitas: [], ocultos: [], paradas: [], simplificado: false, cifras: { puntos: 0, kmMedidos: 0, saltosDescartados: 0, minutosConSenal: 0, huecos: 0 } };
 
 const U54: EtapaJson = {
   tipo: "unidad",

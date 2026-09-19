@@ -62,7 +62,9 @@ export type EstadoGlifo =
   | "papel-falta-la-fecha"
   | "papel-falta-la-regla"
   | "papel-vigente"
-  | "papel-sin-vencimiento";
+  | "papel-sin-vencimiento"
+  // Cortes de la traza
+  | "salto";
 
 /** Cómo se lee cada forma en voz alta, para quien no ve la pantalla. */
 const EN_PALABRAS: Record<EstadoGlifo, string> = {
@@ -83,6 +85,7 @@ const EN_PALABRAS: Record<EstadoGlifo, string> = {
   "papel-falta-la-regla": "Falta la regla",
   "papel-vigente": "Vigente",
   "papel-sin-vencimiento": "Sin vencimiento",
+  salto: "Salto del GPS",
 };
 
 /**
@@ -174,6 +177,14 @@ export function Glifo({
           strokeLinejoin="round"
           strokeDasharray={estado === "sin-dispositivo" ? "2 2" : undefined}
         />
+      )}
+
+      {/* ── Cortes de la traza ──
+          El salto del GPS: dos puntos medidos que se contradicen. Rombo hueco,
+          una forma que ninguna familia usa: no es un estado de la unidad (ella
+          sí transmitía) ni un silencio (eso es el círculo hueco del hueco). */}
+      {estado === "salto" && (
+        <path d="M12 3.5 L20.5 12 L12 20.5 L3.5 12 Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
       )}
 
       {/* ── Dispositivos ── */}

@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Glifo, type EstadoGlifo } from "@/components/casa/glifo";
-import { recorridoHasta, type Pedazo } from "@/lib/casa/recorrido";
+import { duracion, huecosQuietosPorLugar, recorridoHasta, type Pedazo, type RecorridoJson } from "@/lib/casa/recorrido";
 
 /**
  * El mapa de Recorridos y playback (C3).
@@ -13,8 +13,13 @@ import { recorridoHasta, type Pedazo } from "@/lib/casa/recorrido";
  * por modalidad y simplificados, huecos con sus dos extremos, los lugares que
  * la unidad visitó. Aquí no se recalcula nada.
  *
- * - **Nada cruza un hueco**, ni punteado: un pedazo termina, el siguiente
- *   empieza, y en medio sólo quedan dos círculos huecos.
+ * - **Nada cruza un corte**, ni punteado: un pedazo termina, el siguiente
+ *   empieza, y en medio sólo quedan sus dos marcas — círculos huecos para un
+ *   hueco (nadie midió), rombos huecos para un salto del GPS (lo medido se
+ *   contradice). Ningún punto se borra; lo que se niega es la línea.
+ * - **Un hueco sin desplazamiento también se declara.** Sus dos círculos caen
+ *   en el mismo lugar y la línea se ve continua; por eso lleva una pastilla con
+ *   cuántos hubo ahí, en la capa de rótulos, que el marcador no tapa.
  * - **La cámara no persigue** (decisión 8): el recorrido se encuadra completo
  *   una vez por periodo, y después quien mira manda. Además de calma, es costo:
  *   un playback sin movimientos de cámara no pide un solo mosaico nuevo.
@@ -25,6 +30,12 @@ import { recorridoHasta, type Pedazo } from "@/lib/casa/recorrido";
  */
 
 const JUAREZ: [number, number] = [31.69, -106.42];
+
+/** Las marcas son HTML de Leaflet, no React: la misma forma que `Glifo`, escrita a mano. */
+const ROMBO =
+  '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3.5 L20.5 12 L12 20.5 L3.5 12 Z" stroke-width="2.5" stroke-linejoin="round"/></svg>';
+const CIRCULO =
+  '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>';
 
 export type LugarDelRecorrido = {
   id: string;
@@ -45,6 +56,7 @@ export function MapaRecorrido({
   clave,
   pedazos,
   huecos,
+  saltos,
   cambios,
   lugares,
   progreso,
@@ -54,7 +66,9 @@ export function MapaRecorrido({
   clave: string;
   /** `sinUnidad`: lo que un dispositivo midió en bodega, punteado (Ver ‹dispositivo›). */
   pedazos: Array<Pedazo & { sinUnidad?: boolean }>;
-  huecos: Array<{ lat: number; lng: number; latFin: number; lngFin: number }>;
+  huecos: RecorridoJson["huecos"];
+  /** Saltos del GPS: los dos puntos se marcan, la línea entre ellos no existe. */
+  saltos: Array<{ lat: number; lng: number; latFin: number; lngFin: number }>;
   /** Dónde cambió de etapa un dispositivo: a una unidad (lleno) o a bodega (hueco). */
   cambios?: Array<{ lat: number; lng: number; aBodega: boolean }>;
   lugares: LugarDelRecorrido[];
@@ -134,6 +148,13 @@ export function MapaRecorrido({
         .addTo(c);
     }
     const forma = (p: { sinUnidad?: boolean }) => (p.sinUnidad ? " ruta-sin-unidad" : "");
+    // El halo va debajo de todo: la línea se lee contra él, no contra la avenida
+    // que tenga abajo (que en el mapa es casi del mismo tono que `--tenue`).
+    for (const p of pedazos) {
+      mod
+        .polyline(p.puntos.map((q) => [q.lat, q.lng] as [number, number]), { className: `ruta-halo${forma(p)}`, interactive: false })
+        .addTo(c);
+    }
     for (const p of pedazos) {
       mod
         .polyline(p.puntos.map((q) => [q.lat, q.lng] as [number, number]), { className: `ruta-futura${forma(p)}`, interactive: false })
@@ -163,6 +184,30 @@ export function MapaRecorrido({
       ] as Array<[number, number]>) {
         mod.circleMarker([lat, lng], { radius: 6, className: "punto-hueco", interactive: false }).addTo(c);
       }
+    }
+    for (const x of saltos) {
+      for (const [lat, lng] of [
+        [x.lat, x.lng],
+        [x.latFin, x.lngFin],
+      ] as Array<[number, number]>) {
+        mod
+          .marker([lat, lng], {
+            icon: mod.divIcon({ className: "marca-salto", html: ROMBO, iconSize: [16, 16], iconAnchor: [8, 8] }),
+            keyboard: false,
+            interactive: false,
+          })
+          .addTo(c);
+      }
+    }
+    // En la capa de rótulos (encima de los marcadores): el del playback no la tapa.
+    for (const q of huecosQuietosPorLugar(huecos)) {
+      mod
+        .tooltip({ permanent: true, direction: "top", offset: [0, -9], className: "rotulo-hueco", interactive: false })
+        .setLatLng([q.lat, q.lng])
+        .setContent(
+          `${CIRCULO}<span>${q.n === 1 ? "1 hueco" : `${q.n} huecos`}</span><span class="sr-only"> · ${duracion(q.ms)} sin señal, sin moverse</span>`,
+        )
+        .addTo(c);
     }
     puntosDeEncuadre.current = [
       ...pedazos.flatMap((p) => p.puntos.map((q) => [q.lat, q.lng] as [number, number])),

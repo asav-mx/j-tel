@@ -248,10 +248,34 @@
  * todavía no recorre, apagada; la «hecha» se dibuja mientras se recorre.
  * Nada cruza un hueco: sólo los dos puntos huecos en sus extremos.
  */
+/*
+ * La línea «futura» nació al 38 %. No se distinguía dónde terminaba un tramo:
+ * un corte honesto se veía como línea continua (18 sep 2026). Va sólida en
+ * `--tenue`, y **sobre un halo** del color de la pieza: medida contra los
+ * mosaicos, sin halo, bajaba a 1:1 justo sobre las avenidas —que es por donde
+ * van los camiones—, porque el mapa las pinta casi del mismo tono. Con el halo
+ * se lee contra `--pieza`, la pareja que el skill ya fija arriba de 4.5:1. La
+ * «hecha» se distingue por tinta y grosor, no por transparencia.
+ */
+.cascaron .mapa-flota .ruta-halo {
+  stroke: var(--pieza);
+  stroke-width: 6;
+  stroke-opacity: 1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+/* Lo punteado lleva halo punteado: una banda continua debajo lo haría leerse como línea. */
+.cascaron .mapa-flota .ruta-halo.ruta-sin-unidad {
+  stroke-dasharray: 0.5 7;
+  stroke-width: 7;
+}
+
 .cascaron .mapa-flota .ruta-futura {
   stroke: var(--tenue);
   stroke-width: 2;
-  stroke-opacity: 0.38;
+  stroke-opacity: 1;
   fill: none;
 }
 
@@ -273,6 +297,40 @@
 .cascaron .mapa-flota .marcador-recorrido {
   background: transparent;
   border: 0;
+}
+
+/* El salto del GPS: rombo hueco en cada extremo. La línea entre ellos no existe. */
+.cascaron .mapa-flota .marca-salto {
+  background: transparent;
+  border: 0;
+}
+
+.cascaron .mapa-flota .marca-salto path {
+  stroke: var(--tinta);
+  fill: var(--pieza);
+}
+
+/*
+ * Los huecos sin desplazamiento: sus círculos caen en el mismo punto y la línea
+ * se ve continua, así que se dicen en una pastilla. Va en la capa de rótulos,
+ * encima de los marcadores, para que el del playback no la tape.
+ */
+.cascaron .mapa-flota .rotulo-hueco {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--pieza);
+  border: 1px solid var(--linea);
+  border-radius: 4px;
+  box-shadow: none;
+  color: var(--tinta);
+  font-family: var(--letra-medida);
+  font-size: 12px;
+  padding: 0 5px;
+}
+
+.cascaron .mapa-flota .rotulo-hueco::before {
+  display: none;
 }
 
 /*
