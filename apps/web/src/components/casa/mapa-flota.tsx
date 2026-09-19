@@ -201,14 +201,14 @@ export function MapaFlota({
         const ancla = anclas.get(u.id);
         if (!ancla) return null;
         return createPortal(
-          // Apagada: el marcador baja, el nombre no. Al 60 % el nombre quedaba
-          // mezclado con el mapa de abajo; en tenue sobre su fondo opaco se lee
+          // Apagada: el nombre va en tenue y el glifo ya lleva su forma apagada;
+          // nada baja su opacidad. Al 60 % se mezclaban con el mapa de abajo
           // (skill, ley 2 del color: se apaga hasta el mínimo legible).
           <span className="flex flex-col items-center">
             <span
               className={`grid h-8 w-8 place-items-center rounded-full bg-[var(--pieza)]${
                 u.id === seleccion ? " ring-2 ring-[var(--tinta)]" : ""
-              }${u.apagada ? " opacity-60" : ""}`}
+              }`}
             >
               <Glifo estado={u.glifo} rumbo={u.rumbo ?? 0} tamano={22} />
             </span>
