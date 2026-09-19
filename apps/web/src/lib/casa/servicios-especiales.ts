@@ -135,33 +135,40 @@ const minutoDelDia = (v: OcurrenciaDeLaLista["ventana"]) => {
 };
 
 /**
- * Los turnos que hay en la ventana (con el contrato elegido), con su ventana
- * de llegada. Salen de las ocurrencias, no de una lista fija: un turno de otra
- * cuenta o de otro número de turnos se ve igual. Si el mismo turno trae
- * ventanas distintas en la ventana elegida —cambió su hora, o dos contratos lo
- * comparten con distinta tolerancia—, el chip lo dice en vez de elegir una.
+ * De qué contrato son los turnos que se pueden elegir, o `null` si ninguno.
+ *
+ * La fila de turnos sólo existe con un contrato elegido (Asav, 19 sep 2026):
+ * con «Todos los contratos», «T1» es ambiguo —cada cliente define sus turnos—
+ * y lo ambiguo no se filtra. Una cuenta con un solo contrato no tiene fila de
+ * contratos: ese contrato ya está elegido, y su fila de turnos sí aparece.
+ */
+export function contratoDeLosTurnos(contratos: Array<{ id: string }>, contratoId: string | null): string | null {
+  if (contratoId) return contratoId;
+  return contratos.length === 1 ? contratos[0]!.id : null;
+}
+
+/**
+ * Los turnos de ese contrato que hay en la ventana, con su ventana de llegada
+ * sellada. Salen de las ocurrencias, no de una lista fija: un turno de otra
+ * cuenta o de otro número de turnos se ve igual. El nombre va limpio: el
+ * contrato ya está elegido y repetirlo no distingue nada. Si el mismo turno
+ * trae ventanas distintas en la ventana elegida —cambió su hora—, el chip lo
+ * dice en vez de elegir una.
  */
 export function turnosDeLaVentana(ocurrencias: OcurrenciaDeLaLista[], contratoId: string | null): ChipDeTurno[] {
-  const porTurno = new Map<string, { nombre: string; contrato: string; ventanas: Set<string>; orden: number }>();
+  if (!contratoId) return [];
+  const porTurno = new Map<string, { nombre: string; ventanas: Set<string>; orden: number }>();
   for (const o of ocurrencias) {
-    if (contratoId && o.contrato.id !== contratoId) continue;
-    const t = porTurno.get(o.turno.id) ?? {
-      nombre: o.turno.nombre,
-      contrato: o.contrato.nombre,
-      ventanas: new Set<string>(),
-      orden: Infinity,
-    };
+    if (o.contrato.id !== contratoId) continue;
+    const t = porTurno.get(o.turno.id) ?? { nombre: o.turno.nombre, ventanas: new Set<string>(), orden: Infinity };
     t.ventanas.add(ventanaEnPalabras(o.ventana));
     t.orden = Math.min(t.orden, minutoDelDia(o.ventana));
     porTurno.set(o.turno.id, t);
   }
-  const nombres = [...porTurno.values()].map((t) => t.nombre);
   return [...porTurno.entries()]
     .map(([id, t]) => ({
       id,
-      // Dos turnos con el mismo nombre (de dos clientes) no pueden verse iguales:
-      // el contrato los separa.
-      nombre: nombres.filter((n) => n === t.nombre).length > 1 ? `${t.nombre} · ${t.contrato}` : t.nombre,
+      nombre: t.nombre,
       ventana: t.ventanas.size === 1 ? [...t.ventanas][0]! : "ventanas distintas",
       orden: t.orden,
     }))

@@ -6,6 +6,7 @@ import {
   VEREDICTOS,
   bloques,
   conteos,
+  contratoDeLosTurnos,
   hayFilaDeContratos,
   laLista,
   loQueSeCuenta,
@@ -149,25 +150,32 @@ describe("los chips", () => {
     expect(palabraDelConteo("pendiente_evidencia", 2)).toBe("pendiente de evidencia");
   });
 
-  it("los turnos salen de lo que hay en la ventana, en el orden del día, con su ventana sellada", () => {
-    expect(turnosDeLaVentana(MUESTRA, null).map((t) => `${t.nombre} · ${t.ventana}`)).toEqual([
+  it("los turnos son los del contrato elegido, en el orden del día, con su ventana sellada y el nombre limpio", () => {
+    expect(turnosDeLaVentana(MUESTRA, "cA").map((t) => `${t.nombre} · ${t.ventana}`)).toEqual([
       "T1 · 06:45–06:50",
       "T2 · 14:45–14:50",
     ]);
-    expect(turnosDeLaVentana(MUESTRA, "cA").map((t) => t.id)).toEqual(["t1", "t2"]);
+  });
+
+  it("con «Todos los contratos» no hay turnos que elegir: un turno sin contrato es ambiguo", () => {
+    expect(turnosDeLaVentana(MUESTRA, null)).toEqual([]);
+    expect(contratoDeLosTurnos([{ id: "cA" }, { id: "cB" }], null)).toBeNull();
+  });
+
+  it("con un solo contrato, ése ya está elegido y su fila de turnos existe", () => {
+    expect(contratoDeLosTurnos([{ id: "cA" }], null)).toBe("cA");
+    expect(contratoDeLosTurnos([{ id: "cA" }, { id: "cB" }], "cB")).toBe("cB");
   });
 
   it("un turno con dos ventanas distintas lo dice, no elige una", () => {
-    const chips = turnosDeLaVentana([oc({ id: "a" }), oc({ id: "b", ventana: { desde: "06:45", hasta: "06:55" } })], null);
+    const chips = turnosDeLaVentana([oc({ id: "a" }), oc({ id: "b", ventana: { desde: "06:45", hasta: "06:55" } })], "cA");
     expect(chips[0]!.ventana).toBe("ventanas distintas");
   });
 
-  it("dos turnos con el mismo nombre se separan por su contrato", () => {
-    const chips = turnosDeLaVentana(
-      [oc({ id: "a" }), oc({ id: "b", turno: { id: "otro", nombre: "T1" }, contrato: { id: "cB", nombre: "Contrato B" } })],
-      null,
-    );
-    expect(chips.map((c) => c.nombre).sort()).toEqual(["T1 · Contrato A", "T1 · Contrato B"]);
+  it("dos contratos con un turno del mismo nombre: cada uno sólo ve el suyo, sin repetir el contrato", () => {
+    const dos = [oc({ id: "a" }), oc({ id: "b", turno: { id: "otro", nombre: "T1" }, contrato: { id: "cB", nombre: "Contrato B" } })];
+    expect(turnosDeLaVentana(dos, "cA").map((c) => `${c.id} ${c.nombre}`)).toEqual(["t1 T1"]);
+    expect(turnosDeLaVentana(dos, "cB").map((c) => `${c.id} ${c.nombre}`)).toEqual(["otro T1"]);
   });
 
   it("con un solo contrato, la fila de contratos no existe (§6, prueba 6)", () => {
