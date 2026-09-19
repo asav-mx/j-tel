@@ -34,9 +34,9 @@ export async function POST(request: Request) {
     console.log(
       `[cronometro] navegador carga hacia=${ruta(d.hacia)} primerByte=${ms(d.primerByte)}ms listo=${ms(d.listo)}ms completo=${ms(d.completo)}ms despliegue=${despliegue}`,
     );
-  } else if (d.tipo === "navegacion") {
+  } else if (d.tipo === "navegacion" || d.tipo === "ventana") {
     console.log(
-      `[cronometro] navegador navegacion desde=${ruta(d.desde)} hacia=${ruta(d.hacia)} clicAPantalla=${ms(d.ms)}ms despliegue=${despliegue}`,
+      `[cronometro] navegador ${d.tipo} desde=${ruta(d.desde)} hacia=${ruta(d.hacia)} clicAPantalla=${ms(d.ms)}ms despliegue=${despliegue}`,
     );
   }
   return new NextResponse(null, { status: 204 });

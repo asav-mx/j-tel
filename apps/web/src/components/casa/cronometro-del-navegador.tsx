@@ -4,6 +4,17 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 /**
+ * Una navegación que no empieza en un enlace: la ventana de Servicios
+ * especiales cambia con botones (‹ ›, los atajos) y `router.push`, y el clic en
+ * un botón no lo ve el oyente de enlaces. Quien navega así la anuncia antes de
+ * empujar la ruta, y el cronómetro la mide igual que un clic.
+ */
+let anunciada: { desde: string; hacia: string; t: number; tipo: string } | null = null;
+export function anunciarNavegacion(hacia: string, tipo: string) {
+  anunciada = { desde: location.pathname, hacia, t: performance.now(), tipo };
+}
+
+/**
  * El cronómetro del cascarón — la mitad del navegador.
  *
  * La mitad del servidor (`lib/casa/cronometro.ts`) dice cuánto tardó el render.
@@ -12,7 +23,9 @@ import { useEffect, useRef } from "react";
  *   · **carga**: una página abierta de cero — hasta el primer byte, hasta que
  *     el documento está listo y hasta que terminó de cargar todo;
  *   · **navegación**: del clic en un enlace del cascarón a que la pantalla
- *     nueva quedó dibujada (dos cuadros después del cambio de ruta).
+ *     nueva quedó dibujada (dos cuadros después del cambio de ruta);
+ *   · **ventana**: lo mismo cuando la navegación la anuncia un botón
+ *     (`anunciarNavegacion`), como el cambio de ventana de Servicios especiales.
  *
  * Se manda con `sendBeacon` a `/api/casa/cronometro`, que sólo escribe la línea
  * en los registros. Números y rutas; nada más. Se quita cuando la lentitud esté
@@ -21,7 +34,7 @@ import { useEffect, useRef } from "react";
 export function CronometroDelNavegador() {
   const ruta = usePathname();
   const busqueda = useSearchParams();
-  const clic = useRef<{ desde: string; hacia: string; t: number } | null>(null);
+  const clic = useRef<{ desde: string; hacia: string; t: number; tipo?: string } | null>(null);
   const primera = useRef(true);
 
   const enviar = (datos: Record<string, string | number>) => {
@@ -68,11 +81,15 @@ export function CronometroDelNavegador() {
       primera.current = false;
       return;
     }
-    const c = clic.current;
+    // La anunciada por un botón gana: es más reciente que cualquier clic en enlace.
+    const c = anunciada ?? clic.current;
     if (!c || c.hacia !== ruta) return;
     clic.current = null;
+    anunciada = null;
     requestAnimationFrame(() =>
-      requestAnimationFrame(() => enviar({ tipo: "navegacion", desde: c.desde, hacia: c.hacia, ms: Math.round(performance.now() - c.t) })),
+      requestAnimationFrame(() =>
+        enviar({ tipo: c.tipo ?? "navegacion", desde: c.desde, hacia: c.hacia, ms: Math.round(performance.now() - c.t) }),
+      ),
     );
   }, [ruta, busqueda]);
 

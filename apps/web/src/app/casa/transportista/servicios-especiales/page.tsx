@@ -58,6 +58,7 @@ export default async function ServiciosEspeciales({
   const ahora = Date.now();
 
   const zona = await zonaDeLaCuenta(repos, carrier.id);
+  reloj.marca("zona");
   let periodo: Periodo = periodoDeLaDireccion(texto(direccion.desde), texto(direccion.hasta), ahora, {
     zona,
     porOmision: ATAJO_POR_OMISION,
@@ -68,12 +69,14 @@ export default async function ServiciosEspeciales({
     periodo = periodoDeLaDireccion(undefined, undefined, ahora, { zona, porOmision: ATAJO_POR_OMISION });
   }
 
-  const cuarto = await cargarServiciosEspeciales(repos, {
-    carrierAccountId: carrier.id,
-    desde: new Date(periodo.desde),
-    hasta: new Date(periodo.hasta),
-  });
-  reloj.marca("datos");
+  const cuarto = await cargarServiciosEspeciales(
+    repos,
+    { carrierAccountId: carrier.id, desde: new Date(periodo.desde), hasta: new Date(periodo.hasta) },
+    reloj,
+  );
+  // Cuántos días pidió la ventana: sin esto, una lista lenta de «Este mes» y
+  // una de «Ayer» se ven iguales en el registro.
+  reloj.dato("diasDeVentana", (periodo.hasta - periodo.desde) / 86_400_000);
   reloj.fin();
 
   const dia = localDateIso(new Date(periodo.desde), zona);

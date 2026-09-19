@@ -128,9 +128,19 @@ function lecturaEmparejada<T extends { action: string; createdAt: Date }>(
  * de aquí: son lentes sobre esta misma lista, y los conteos cuentan lo que la
  * lista muestra (ficha §2).
  */
+/**
+ * Lo que el cronómetro de la página quiere saber del cargador: cuánto tardó
+ * cada lectura y cuántas filas trajo. Opcional: sin él, el cargador no cambia.
+ */
+export type MedidorDelCargador = {
+  marca: (tramo: string) => void;
+  dato: (nombre: string, valor: number) => void;
+};
+
 export async function cargarServiciosEspeciales(
   repos: ReposDeVernier,
   entrada: { carrierAccountId: string; desde: Date; hasta: Date },
+  medir?: MedidorDelCargador,
 ): Promise<CuartoDeServiciosEspeciales> {
   const { carrierAccountId, desde, hasta } = entrada;
   const [contratos, zonaMercado, filas] = await Promise.all([
@@ -138,8 +148,12 @@ export async function cargarServiciosEspeciales(
     repos.vernier.zonaDelMercado(carrierAccountId),
     repos.vernier.ocurrenciasSelladas(carrierAccountId, desde, hasta),
   ]);
+  medir?.marca("ocurrencias");
+  medir?.dato("ocurrencias", filas.length);
   const zona = zonaDelCuarto(zonaMercado, contratos);
   const pasos = await repos.vernier.pasosDelSello(filas.map((f) => f.ocurrenciaId));
+  medir?.marca("ledger");
+  medir?.dato("entradasDelLedger", [...pasos.values()].reduce((n, l) => n + l.length, 0));
 
   const ocurrencias = filas.map((f): OcurrenciaDeLaLista => {
     const hecho = hechoDe(f as FilaConHecho);
@@ -166,6 +180,7 @@ export async function cargarServiciosEspeciales(
     };
   });
 
+  medir?.marca("motivos");
   return { zona, contratos: contratos.map((c) => ({ id: c.id, nombre: c.nombre })), ocurrencias };
 }
 

@@ -126,6 +126,21 @@ describe("la lista lee el motivo del sello vigente", () => {
     expect(llamadas.every((l) => (LECTURAS as readonly string[]).includes(l))).toBe(true);
   });
 
+  it("el cronómetro (#427) recibe tramos y tamaños, y la lista es la misma con él o sin él", async () => {
+    const respuestas = {
+      ocurrenciasSelladas: () => [fila(), fila({ ocurrenciaId: "o2" })],
+      pasosDelSello: () => new Map([["o1", [{ action: "verificacion_automatica", createdAt: new Date(SELLO.getTime() + 40), evidenciaIndisponible: false, decision: null, cobertura: null }]]]),
+    };
+    const eventos: string[] = [];
+    const conMedidor = await cargarServiciosEspeciales(espia(respuestas).repos, { carrierAccountId: CUENTA, desde: new Date(0), hasta: new Date() }, {
+      marca: (t) => eventos.push(t),
+      dato: (n, v) => eventos.push(`${n}=${v}`),
+    });
+    const sinMedidor = await cargarServiciosEspeciales(espia(respuestas).repos, { carrierAccountId: CUENTA, desde: new Date(0), hasta: new Date() });
+    expect(eventos).toEqual(["ocurrencias", "ocurrencias=2", "ledger", "entradasDelLedger=1", "motivos"]);
+    expect(conMedidor).toEqual(sinMedidor);
+  });
+
   it("sin entrada del ledger después del sello: no se deduce", async () => {
     const { repos } = espia({
       ocurrenciasSelladas: () => [fila()],
