@@ -1,4 +1,4 @@
-La única fuente de verdad. Nueve piezas, derivadas del proyecto completo y verificadas una por una por ASAV. Reemplaza toda la documentación vieja (queda archivada). De aquí en adelante, esto es lo único que hay que cargar — ni conversaciones ni docs viejos. Aterrizado en contratos reales (Tecma 47, Honeywell MX07). Fecha: 6 de julio de 2026.
+La única fuente de verdad. Siete piezas, derivadas del proyecto completo y verificadas una por una por ASAV. Reemplaza toda la documentación vieja (queda archivada). De aquí en adelante, esto es lo único que hay que cargar — ni conversaciones ni docs viejos. Aterrizado en contratos reales (Tecma 47, Honeywell MX07). Fecha: 6 de julio de 2026.
 Contenido
 Pieza 1 — El dominio y las leyes intocables
 Pieza 2 — Las dos caras del producto
@@ -7,8 +7,6 @@ Pieza 4 — Usuarios, roles y accesos
 Pieza 5 — La forma de la suite
 Pieza 6 — Compás, el cimiento de la evidencia · 14 de septiembre de 2026
 Pieza 7 — La modalidad del servicio · 16 de septiembre de 2026
-Pieza 8 — La app del pasajero de transporte público · 19 de septiembre de 2026
-Pieza 9 — El circuito: medir primero, juzgar después · 19 de septiembre de 2026
 
 
 Pieza 1 — El dominio y las leyes intocables
@@ -650,7 +648,7 @@ Ningún renglón de las Piezas 1 a 6 se borra. Se precisan dos:
 
 **7.7** Cómo se marca en los datos qué modalidad tiene un servicio, y de dónde la lee el corte de traza en cada momento. Es implementación; el corte la recibe como dato de entrada (7.5) hasta que exista.
 
-**7.8 — CERRADO por la Pieza 9** (19 de septiembre de 2026). Decía: «El cumplimiento del circuito —qué significa «cumplir» cuando no hay un destino final, sino un horario por parada— queda para cuando se construya la verificación de transporte público.» Ya tiene respuesta: **la promesa del circuito es la frecuencia de paso** (9.1), y se mide parada por parada antes de juzgarse (9.3). Sigue siendo cierto que esta pieza define la modalidad y el corte de traza, no el árbitro del circuito: ese árbitro es la etapa 2 de la Pieza 9, y sigue abierto ahí (9.12).
+**7.8** El cumplimiento del circuito —qué significa «cumplir» cuando no hay un destino final, sino un horario por parada— queda para cuando se construya la verificación de transporte público. Esta pieza define la modalidad y el corte de traza; no el árbitro del circuito.
 
 **7.9** `corredor-prueba` es transporte especial cargado como circuito en los datos de hoy. Hay que corregirlo para que no mienta sobre su modalidad.
 
@@ -664,169 +662,3 @@ Ningún renglón de las Piezas 1 a 6 se borra. Se precisan dos:
 - **Las Piezas 1 a 6 no se editan**, igual que hizo la Pieza 6 con su tabla F: la tabla C de esta pieza es la que precisa sus renglones. Donde la Pieza 5 §E y la tabla F de la Pieza 6 dicen «sin excepción», se lee con 7.4.
 
 El Maestro de seis piezas queda archivado sin editar en `docs/marco-limpio/archivo/`.
-
-
----
-
-# Pieza 8 — La app del pasajero de transporte público
-
-**Estado: RATIFICADA.** Redactada el 19 de septiembre de 2026 con las ideas de ASAV. Cumple la mitad pública de la ley 6.28 («las apps del pasajero merecen su propia pieza»). La app del pasajero de transporte **especial** sigue prevista y fuera de esta pieza.
-
----
-
-## Por qué existe esta pieza
-
-La app ya existe, despublicada, y demostró que el motor funciona en una ruta. Lo que no tenía era su ley: qué promete, qué lee, qué nunca muestra, y qué es cuando el dato no alcanza. Sin eso, cada pantalla nueva vuelve a discutir lo mismo. Tres fichas ya vividas se elevan aquí a ley: la escalera de estados (28-ago), «toda pantalla necesita su propia salida» (4-sep) y el contador anónimo de aperturas.
-
----
-
-## A. Qué es
-
-**8.1 La app es un lector.** Vive en el nivel ④ de la casa: lee de Compás y de la data organizada, **nunca escribe, nunca juzga, nunca pasa por el árbitro**. Es la cara pública de la promesa del transportista, no un instrumento de vigilancia.
-
-**8.2 La promesa publicada es el corazón.** Cada parada de un circuito publicado tiene su **tabla de paso** (sus horarios, o su frecuencia — «pasa cada N minutos» — según cómo el circuito publique). Esa tabla es **lo esperado**. La app la muestra siempre, aunque no haya ninguna unidad en vivo: la promesa vale por sí sola, como el horario impreso en un poste.
-
-**8.3 Esperado y observado, separados también aquí** (ley 1.C del Marco). La app muestra dos cosas y nunca las funde:
-- **La promesa:** «pasa cada 15 min» / la tabla de la parada.
-- **Lo medido:** la unidad en vivo y su rango de llegada («entre 4 y 7 min»), gobernado por la escalera de estados.
-
-La confianza del pasajero se construye de las dos: saber a qué hora pasa, y **ver venir** la unidad que va a pasar.
-
-**8.3b La llegada se estima hasta el pasajero, no sólo hasta la parada.** Además del rango de llegada a la parada, la app estima cuánto tarda la unidad en llegar **a donde está el pasajero**, cuando el pasajero está sobre el corredor de la ruta. **El cálculo ocurre en el teléfono** ✓ (ASAV, 19-sep), con las posiciones publicadas de las unidades: para esta función la ubicación no necesita salir del aparato, y no sale. La estimación es un rango y la escalera de estados (8.9) la gobierna igual: cuando el dato no alcanza, se degrada, no se inventa.
-
-## B. Qué lee, y qué nunca muestra
-
-**8.4 Sólo circuitos publicados.** El interruptor de publicación por circuito ya existe y manda: lo no publicado no existe para la app. Y **fuera del corredor no se publica** (ley vigente): una unidad que se sale de su corredor desaparece de la app, sin drama y sin explicación al pasajero.
-
-**8.5 La unidad se muestra; su historia no.** El pasajero ve la unidad en vivo (su número económico incluido — «viene la 2120» es parte de la confianza) **sólo mientras está en servicio del circuito que mira**. Nunca: su historial de recorridos, su traza de ayer, dónde duerme, ni ninguna unidad fuera de servicio. La app enseña el presente del servicio, no la vida del camión.
-
-**8.6 El chofer no existe en la app.** Ni nombre, ni foto, ni «tu conductor es…». El paso por parada se atribuye al chofer **en su expediente, del lado del carrier** (Pieza 9); el pasajero nunca lo ve. Un pasajero molesto con un chofer reclama al carrier, no lo caza por la app.
-
-**8.7 La app no sabe quién eres.** Sin cuenta, sin registro, sin identificación del pasajero. La única medición sobre el pasajero es el **contador anónimo de aperturas**, ya construido, que cuenta aperturas y no personas. Las cuentas de pasajero — pensando en una cartera de pago (8.14) — son futuro declarado, y cuando lleguen serán **opcionales**: mirar la app jamás exigirá identificarse.
-
-## C. La forma
-
-**8.8 Dos vistas: Rutas y Mapa** (decisión de ASAV, 19-sep). La app abre en la ciudad con el conmutador arriba:
-- **Rutas** — la lista de circuitos publicados. Abrir una ruta muestra sus paradas, cada una con su tabla de paso y su próximo paso estimado, y las unidades en servicio.
-- **Mapa** — los circuitos sobre la ciudad; tocar uno lo enfoca con sus paradas y sus unidades en vivo.
-
-La estructura es de la app de la ciudad, no de una cuenta: el pasajero no elige carrier, elige ruta.
-
-**8.8b No hay tercera vista; hay un atajo.** Se evaluó una tercera vista y dos bastan: lo que el pasajero de todos los días necesita no es otra pantalla sino llegar en un toque a **su parada**. La app permite **guardar una parada** (o más de una), y las guardadas aparecen hasta arriba de Rutas, con su próximo paso ya visible. La parada guardada **vive en el teléfono**, no en el servidor (8.7): guardarla no identifica a nadie. Si con el uso real aparece la necesidad de una tercera vista, se enmienda con evidencia, no antes.
-
-**8.8c Cada ruta tiene su color, y es identidad.** En México las rutas se conocen por su color, y la app lo respeta: cada circuito registra su color (parte de su identidad, Pieza 9.8) y la app lo usa para pintar su trazado, sus paradas y sus piezas. Dos reglas del skill lo acotan: el color de ruta es **identidad, nunca estado** — jamás significa «bien» o «mal», y no puede ser el único portador de una diferencia (el nombre siempre acompaña) —, y sobre el mapa debe cumplir el contraste mínimo de 3:1 en las dos pieles, con el halo de la traza si hace falta. Los colores reservados de la plataforma (el cobre de lo vivo, el verde del latido, el ladrillo, el verde sello) no se les asignan a rutas.
-
-**8.9 La escalera de estados gobierna la honestidad** (ficha del 28-ago, ahora ley): cuando el dato vivo no alcanza, la app degrada por su escalera declarada y jamás inventa una llegada. El cuarto estado no emite veredictos: un camión con dato viejo se queda en el mapa como dato viejo, no como acusación.
-
-**8.10 Toda pantalla tiene su salida** (ficha del 4-sep, ahora ley): ninguna pantalla de la app es un callejón; siempre hay un camino de regreso visible.
-
-## D. Lo que esta pieza deja abierto
-
-**8.11** El nombre público de la app y su distribución (PWA hoy; tiendas después) — decisión de negocio.
-**8.12** La app del pasajero de transporte **especial** («mi ruta, mi unidad, a qué hora pasa por mí»): prevista, con su propia pieza cuando toque.
-**8.13** Avisos al pasajero (notificaciones de «tu ruta abrió» o «se cayó el servicio»): esperan a que el servicio real ruede semanas; un aviso sobre un servicio inestable enseña a desinstalar.
-**8.15 Guardar las posiciones de los pasajeros: decidido que sí, con condiciones** (ASAV, 19-sep). ASAV quiere, a futuro, conservar posiciones de pasajeros para entender la demanda real: de dónde a dónde viaja la gente, qué paradas faltan, qué ruta pide más unidades. Es data que hoy nadie tiene en la ciudad y es parte de la visión del producto. Se hará **en su propia pieza**, redactada con el abogado, y esta pieza fija desde hoy las condiciones que esa pieza no podrá aflojar, porque diseñarlas después sería un parche:
-
-- **Nunca por defecto, nunca en silencio.** Se activa con consentimiento explícito, informado y revocable; la app completa funciona sin él, y negarse no degrada ninguna función (el ETA del 8.3b no lo necesita: se calcula en el teléfono).
-- **Se guarda el viaje, no la persona.** Lo que se conserva son recorridos con identificador rotatorio, no una identidad seguida en el tiempo. Un perfil permanente de una persona no es un objetivo de este producto.
-- **Se recorta en los extremos.** El origen y el destino reales se truncan antes de guardarse: la demanda se entiende por zona y por parada, no por domicilio.
-- **Con fecha de caducidad.** Todo dato crudo de posición de pasajero vive un plazo declarado y luego se borra; lo que sobrevive es el agregado. Lo que no se guarda no se pierde, no se filtra y no se puede pedir.
-- **Nunca se cruza con el carrier ni con el chofer.** La demanda es del sistema, no un instrumento para vigilar a nadie.
-- **Se declara en palabras claras dentro de la app**, no sólo en un documento legal que nadie lee — la misma ley que rige todas las pantallas de J-Tel: nada afirma lo que no se comprobó, y nada esconde lo que sí se hace.
-
-**8.14** Las cuentas de pasajero y la **cartera de pago** (visión de ASAV, 19-sep): merecen su propia pieza cuando toquen — mueven dinero y identidad, las dos cosas más delicadas de la casa. Nada de esta pieza se diseña de forma que las estorbe: la app anónima de hoy es el piso, no el techo.
-
----
-
-## Registro de ratificación
-
-**19 de septiembre de 2026 — ASAV.** Afirmaciones 8.1–8.15 revisadas y ✓. La pieza entra al Maestro. Cuatro aportaciones de ASAV en esta sesión quedaron como ley: el ETA hasta el pasajero calculado en su propio teléfono (8.3b), la parada guardada en vez de una tercera vista (8.8b), el color de ruta como identidad (8.8c), y la decisión de conservar posiciones de pasajeros a futuro, con sus seis condiciones y su propia pieza redactada con abogado (8.15).
-
-- **✎ Una frase borrada** al subirla al Maestro (redacción, no fondo): el encabezado decía «Estado: RATIFICADA» y tres renglones después «Espera la ratificación de ASAV, afirmación por afirmación», frase que sobró del borrador y que este registro contradice. Ninguna afirmación se tocó.
-- **La ley 6.28 queda cumplida a la mitad.** Pedía pieza propia para las dos apps del pasajero; ésta es la de transporte **público**. La de transporte **especial** sigue prevista y sin pieza: vive aquí como 8.12. El 6.28 no se edita — las piezas anteriores no se reescriben; se lee con esta.
-- **Las Piezas 1 a 7 no se editan por esta pieza.** Donde la Pieza 4 anota al pasajero como «usuario a futuro», se lee con 8.7: hoy no hay cuenta de pasajero, y cuando la haya será opcional.
-
-El Maestro de siete piezas queda archivado sin editar en `docs/marco-limpio/archivo/`.
-
-
----
-
-# Pieza 9 — El circuito: medir primero, juzgar después
-
-**Estado: RATIFICADA.** Redactada el 19 de septiembre de 2026 con las ideas de ASAV. Resuelve el 7.8 («qué significa cumplir cuando no hay un destino final») y da su ley a la terminal de operación del carrier.
-
----
-
-## Por qué existe esta pieza
-
-La Pieza 7 definió la modalidad circuito y dejó abierto, a propósito, qué significa cumplirla. ASAV lo contestó el 19-sep: **la promesa del circuito es la frecuencia.** Un pasajero confía cuando sabe que su camión pasa cuando la tabla dice, y lo ve venir. Esta pieza escribe esa respuesta como ley, y ordena en qué orden se construye — porque la maquila ya enseñó el camino: primero existió el metro (Compás midiendo), después el juez (Vernier sellando). El circuito recorre el mismo camino y no se lo salta.
-
----
-
-## A. Qué es cumplir en un circuito
-
-**9.1 La promesa del circuito es la frecuencia de paso.** Cumplir un circuito es que **el paso por cada parada sostenga la tabla publicada** — sus horarios, o su frecuencia — mientras el circuito está abierto. No hay destino que alcanzar ni llegada que selle nada: hay una promesa que se sostiene o se agujera, parada por parada, hora por hora.
-
-**9.1b El adelanto daña igual que el retraso.** Un camión que pasa **antes** de su hora deja al pasajero plantado igual que uno que pasa después — peor, porque el pasajero llegó a tiempo y el camión ya no estaba. La promesa es una **banda con dos orillas**, y la medición registra la desviación en los dos sentidos: adelantado y atrasado son los dos nombres del mismo daño. Ninguna pantalla trata el adelanto como mérito.
-
-**9.1c La promesa puede variar por franja horaria.** La flota en servicio no es fija: sube en horas pico y baja cuando está tranquilo, y la tabla publicada puede prometer frecuencias distintas por franja («cada 10 min de 6 a 9; cada 20 el resto del día»). **Lo medido se compara contra la promesa vigente de esa franja**, nunca contra un promedio del día: juzgar la hora pico con la tabla del valle — o al revés — es la afirmación falsa del alcance (Marco §D).
-
-**9.2 El paso por parada es el hecho atómico.** Unidad ‹n› pasó por la parada ‹p› a las ‹hh:mm:ss›. De ahí se deriva todo lo demás: la frecuencia real, los huecos de servicio, las vueltas. Cada paso **se atribuye a la unidad y — cuando exista la asignación — al chofer**: es la familia de actividad de sus expedientes (6.30–6.31). La operación del circuito alimenta los expedientes; no vive aparte de ellos.
-
-**9.2b La torre del circuito.** Mientras el circuito está abierto, la terminal funciona como torre de control: por cada parada y cada unidad muestra **en vivo** su desviación contra la promesa vigente — adelantada, en banda, atrasada — para que el operador corrija por radio antes de que el hueco llegue al pasajero. Dos límites que no se cruzan: **la torre muestra y el humano decide** — J-Tel no maneja camiones ni ordena velocidades —, y la torre **vive del lado del carrier**: el pasajero nunca ve «adelantado/atrasado», ve su tabla y su unidad venir (Pieza 8). La velocidad se mide y se muestra como contexto del ritmo; nunca como orden.
-
-**9.3 Dos etapas, y el orden es ley: primero el metro, después el juez.**
-- **Etapa 1 — medir (esta pieza la habilita):** la terminal del carrier muestra lo medido, con el vocabulario de la medición — «se sostuvo», «se agujeró», «sin datos» — y sin sellar nada. Territorio de Compás.
-- **Etapa 2 — juzgar (fuera de esta pieza):** sellar cumplimiento del circuito como hechos, con las leyes del árbitro (la verdad se calcula una vez, sin evidencia no es incumplimiento, alarmas que llegan a cero). **No se construye hasta que la medición haya rodado con servicio real y ASAV la ratifique.** Qué producto le pone el sello — Vernier u otro nombre — se decide entonces, no ahora.
-
-Una pantalla de la etapa 1 que diga «cumplió» o «no cumplió» se pasó de etapa: se detiene y se corrige.
-
-## B. Lo que la terminal mide (etapa 1)
-
-**9.4 El conjunto medido, todo derivado del paso por parada y de la traza:**
-- **Puntualidad de paso** por parada contra su tabla.
-- **La frecuencia real** (el tiempo entre pasos) y sus **huecos de servicio**: tramos donde ninguna unidad pasó por una parada en más de lo prometido.
-- **Vueltas completadas** por unidad y por circuito.
-- **Kilómetros del día** por unidad.
-- **Apertura y cierre reales** del circuito contra su horario.
-- **Cobertura del corredor**: cuánto del recorrido fue dentro del corredor (la regla «fuera del corredor no se publica» ya lo mide para la app).
-- **Demanda por parada**: las aperturas anónimas de la app cerca de cada parada — **declarada como lo que es, un indicio**, no un conteo de pasajeros.
-
-**9.5 El ausentismo del chofer se mide cuando exista quién.** Que un chofer no se presentó o llegó tarde requiere choferes dados de alta y la asignación chofer ↔ servicio, que hoy nada escribe. Hasta entonces, esa parte de la terminal declara **aún no disponible · llega con el alta de choferes** — y **jamás se infiere del GPS** quién faltó: el GPS mide camiones, no personas.
-
-**9.6 El dinero queda fuera hasta el estado de cuenta.** El ROI tiene mitad física y mitad de pesos. La terminal muestra la física — kilómetros, vueltas, horas de servicio — y ni un peso: la ley de «cero dinero en pantallas» sigue hasta que exista el estado de cuenta, y entonces el ROI se arma solo, con esta mitad ya medida.
-
-**9.7 El conteo de pasajeros es futuro declarado.** Requiere sensor o abordaje (jrz-pass); ninguna pantalla lo estima desde otra cosa. Cuando exista su fuente, ya tiene lugar: la actividad del circuito y de la parada.
-
-## C. Los sujetos nuevos
-
-**9.8 El circuito y la concesión son sujetos con expediente** (extienden 6.30). Se abren tocándolos, como todo:
-- **Circuito** — Identidad: su trazado, **su color** (en México una ruta se conoce por su color; la app y la terminal lo usan como identidad, nunca como estado — Pieza 8.8c), sus paradas con sus tablas, su horario de servicio. Actividad: los pasos, las vueltas, los huecos, el km. Relaciones: sus unidades en servicio, sus choferes asignados, su concesión. Documentos: no aplica (los papeles son de la concesión).
-- **Concesión** — Identidad: quién la otorga, su vigencia, sus circuitos. Documentos: los papeles del permiso, con las reglas de vigencia del archivero (§4 de la ficha de Expedientes).
-- **La parada es parte del circuito**, no sujeto propio. Si algún día gana vida propia (obras, quejas, demanda), su expediente crece desde ahí sin mudarse.
-
-**9.8b La parada tiene ficha, no expediente.** Se abre tocándola y muestra su nombre, ubicación, tabla prometida por franja, lo medido y su demanda. Tres límites: no es sujeto con expediente; no lleva papeles — viven en la concesión; y **nunca recibe veredicto propio**: lo medido en una parada es el cumplimiento del circuito en esa parada, en vocabulario de etapa 1 — se sostuvo, se agujeró, sin datos — sin sello hasta que exista el árbitro del 9.12.
-
-**9.9 La terminal es la cara de operación del cuarto Circuitos** (sello «Transporte público», Mapa). Abrir una ruta abre **su expediente** — la estructura Rutas/Mapa que ASAV pidió es exactamente la gramática de la casa: el cuarto lista los circuitos, tocar uno abre su expediente, y el mapa vivo es su parte de actividad. No se inventa una pantalla nueva; se llena una que la casa ya sabe hacer.
-
-**9.10 Comparar circuitos llega después de medir.** «Cuáles son los mejores y cuáles requieren mejora» es la pregunta correcta y se contesta con esta data — pero la comparación se dibuja cuando haya semanas de medición real, no el día uno. Comparar dos circuitos con tres días de datos es la afirmación falsa del alcance (Marco §D).
-
-## D. Lo que esta pieza deja abierto
-
-**9.11** La detección del paso por parada (radio, permanencia, doble sentido) — implementación; se calibra con los camiones reales.
-**9.12** El árbitro del circuito completo (etapa 2): sus hechos, sus sellos, su producto.
-**9.13** `corredor-prueba` sigue pendiente de corregirse (7.9).
-
----
-
-## Registro de ratificación
-
-**19 de septiembre de 2026 — ASAV.** Afirmaciones 9.1–9.13 revisadas y ✓ sin cambio. La pieza entra al Maestro y resuelve el 7.8. Tres afirmaciones nacieron de ASAV en esta sesión: el adelanto daña igual que el retraso (9.1b), la promesa varía por franja horaria (9.1c) y la torre del circuito (9.2b).
-
-- **Añadida el mismo día: 9.8b** (ASAV, 19-sep), antes de que la pieza entrara al Maestro. **El 9.8 no se enmienda** —la parada sigue siendo parte del circuito, no sujeto propio—; el 9.8b escribe lo que sí existe: su ficha, y los tres límites que la mantienen en su sitio. **Por qué es afirmación y no renglón del mapa de la casa:** una pantalla futura puede argumentar que el mapa no es ley; de una afirmación numerada no se escapa nadie. El detalle de los dos primeros límites —qué muestra la ficha, dónde viven los papeles— vive en el mapa; el tercero es el que tenía que ser citable. **La redacción del 9.8b es de ASAV, palabra por palabra.**
-
-- **✎ Una frase borrada** al subirla al Maestro (redacción, no fondo): el encabezado decía «Estado: RATIFICADA» y tres renglones después «Espera la ratificación de ASAV, afirmación por afirmación», frase que sobró del borrador y que este registro contradice. Ninguna afirmación se tocó.
-- **✎ El 7.8 se cierra en su lugar, por orden de ASAV.** A diferencia de las Piezas 6 y 7 —que no editaron nada anterior y precisaron con su propia tabla—, ésta sí toca un renglón de la Pieza 7: el 7.8 deja de estar abierto y queda marcado **CERRADO por la Pieza 9**, con su texto viejo citado adentro para que nadie pierda qué decía. Razón: un pendiente que ya tiene respuesta y sigue diciéndose abierto es una afirmación falsa del Marco contra sí mismo. El resto de la Pieza 7 no se toca; el 7.9 sigue abierto y esta pieza lo hereda como 9.13.
-- **Las Piezas 1 a 6 no se editan.** Donde la Pieza 3 habla del árbitro y del sello, se lee con 9.3: el circuito hoy está en la etapa de medir, y la etapa de juzgar no existe hasta que ASAV la ratifique.
-
-El Maestro de siete piezas queda archivado sin editar en `docs/marco-limpio/archivo/`.

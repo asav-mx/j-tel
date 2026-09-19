@@ -43,9 +43,17 @@ Compra Compás aunque nunca tenga contrato. Vernier se enciende encima cuando lo
 - **Vernier** (con contrato) — servicios con veredicto, **justificaciones** (§D), reportes propios, su lado del estado de cuenta.
   - **Servicios especiales** — los servicios de modalidad especial con su veredicto, por ventana de tiempo; se toca uno y se abre su acta. *(construido: Vernier V1, `docs/Ficha-Construccion-Vernier-V1.md`)*
   - **Contratos y perfiles** — ruta × turno, KML, tolerancias, unidades posibles. *(existe en la piel vieja; sin cuarto en la casa nueva, no se dibuja)*
-- **Circuitos** (si opera público) — circuitos, paradas, tabla de horario, publicación a la app del pasajero. *(existe en parte; la modalidad la define la Pieza 7 del Marco; cómo se marca en los datos sigue abierto, 7.7)*
+- **Circuitos** (si opera público) — circuitos, paradas, tabla de horario, publicación a la app del pasajero. Su cara de operación es **la terminal del circuito** (9.9): mide la frecuencia de paso contra la tabla publicada —adelanto y retraso pesan igual (9.1b), contra la promesa de su franja horaria (9.1c)— y **no sella nada**: una pantalla de aquí que diga «cumplió» se pasó de etapa (9.3). **El circuito y la concesión son sujetos con expediente** (9.8); **la parada no lo es** —es parte del circuito—, pero **sí tiene su ficha, `Ver ‹parada›`**, a la que se llega tocándola (regla 2). Y **cada circuito registra su color**: en México una ruta se conoce por su color, así que el color es **identidad del circuito, nunca estado** —jamás «bien» o «mal», nunca el único portador de una diferencia (el nombre siempre acompaña)— y cumple 3:1 en las dos pieles (8.8c). *(existe en parte; la modalidad la define la Pieza 7 y el cumplimiento la Pieza 9; cómo se marca la modalidad en los datos sigue abierto, 7.7, y la detección del paso por parada también, 9.11)*
 
-Fichas (se llega tocando): **Ver ‹unidad›** (ubicación viva + historial + playback + dispositivo + documentos + ledger), **Ver ‹dispositivo›**, **Ver ‹chofer›**, **Ver ‹ruta› · ‹turno› · ‹fecha›** — el acta de una ocurrencia: veredicto + identidad + evidencia + justificación (Vernier V1).
+Fichas (se llega tocando): **Ver ‹unidad›** (ubicación viva + historial + playback + dispositivo + documentos + ledger + lo que mide de ella el circuito), **Ver ‹dispositivo›**, **Ver ‹chofer›**, **Ver ‹parada›**, **Ver ‹ruta› · ‹turno› · ‹fecha›** — el acta de una ocurrencia: veredicto + identidad + evidencia + justificación (Vernier V1).
+
+**Ver ‹parada›** (su ley es el **9.8b**) — todo lo que se quiere ver de una parada de un vistazo: su nombre, su ubicación en el mapa, **su tabla prometida por franja** (9.1c), su cumplimiento medido, sus huecos (9.4) y su demanda —las aperturas anónimas cerca de ella, el indicio que son y no un conteo de pasajeros (9.4, 9.7)—. Tres límites, y ninguno es negociable:
+
+1. **La parada no es sujeto con expediente.** Es parte del circuito (9.8, sin enmienda). Tener ficha no es tener expediente: se llega tocándola, como a cualquier pieza, y lo que muestra sale del circuito del que es parada. *(El detalle vive aquí; la ley es el 9.8b.)*
+2. **No lleva papeles.** Los permisos y derechos de vía viven en la **concesión**, con las reglas de vigencia del archivero. La ficha de una parada no tiene cajón de documentos.
+3. **Nunca recibe veredicto propio — ley, no costumbre (9.8b).** Lo medido en una parada es **el cumplimiento del circuito en esa parada**, dicho con esas palabras en pantalla y en el vocabulario de la etapa 1: «se sostuvo», «se agujeró», «sin datos» (9.3). Sin sello hasta que exista el árbitro (9.12). Este límite es **afirmación numerada del Marco** a propósito: un renglón del mapa se puede discutir, una afirmación no.
+
+**Lo que se mide de una unidad en el circuito no crea ficha nueva.** Sus vueltas, sus pasos en banda, sus adelantos y atrasos (9.1b), sus kilómetros y su entrada y salida del corredor (9.4) viven en la familia **Actividad** del expediente de la unidad **que ya existe** (6.30–6.33), junto a lo que esa unidad hace en especial. Una unidad es una sola, dé el servicio que dé: abrir `Ver ‹unidad›` enseña su vida completa, no una por modalidad.
 
 Pendientes con nombre: uso fuera de horario y ubicaciones que frecuenta (§E); lo preventivo (§A presente); la planeación (§A futuro); cuenta y usuarios (Pieza 4); Diésel y Taller.
 
@@ -87,10 +95,10 @@ Pendiente con nombre: la matriz de permisos fina (6.29).
 
 ### 5 · Pasajero — dos apps, dos cocinas
 
-- **Público** — la app de la ciudad: llegada estimada, mi parada, planear el viaje. *(existe despublicada; espera su pieza de Marco, 6.28)*
-- **Especial** — la app del empleado: mi ruta, mi unidad en vivo, a qué hora pasa. *(nuevo; previsto en 6.28)*
+- **Público** — la app de la ciudad: **Rutas y Mapa**, nada más (8.8), con la **parada guardada** como atajo, viviendo en el teléfono y no en el servidor (8.8b), y el color de cada ruta como su identidad (8.8c). Es un **lector**: nunca escribe, nunca juzga (8.1). Muestra la tabla publicada aunque no haya unidad en vivo (8.2), separa siempre la promesa de lo medido (8.3), estima la llegada hasta donde está el pasajero **calculándolo en su propio teléfono** (8.3b) y **no sabe quién eres**: sin cuenta y sin registro (8.7). *(existe despublicada; **ya tiene su ley: la Pieza 8 del Marco**, ratificada el 19 de septiembre de 2026)*
+- **Especial** — la app del empleado: mi ruta, mi unidad en vivo, a qué hora pasa. *(nuevo; sigue sin pieza propia — el 6.28 quedó cumplido sólo a la mitad, y esta app vive como pendiente con nombre en 8.12)*
 
-Cada app merece su propia pieza del Marco antes de construirse.
+Cada app merece su propia pieza del Marco antes de construirse. La pública ya la tiene (Pieza 8); la de especial, no.
 
 ---
 
