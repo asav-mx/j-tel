@@ -48,6 +48,12 @@ describe("el choque con otro chofer de la cuenta", () => {
       mensaje: "Ya hay un chofer llamado «Ramón Medina» en esta cuenta.",
     });
   });
+  it("la licencia repetida se dice como la tiene el otro chofer, no como se tecleó", () => {
+    expect(choqueDeChofer({ nombre: "Otra Persona", licencia: "CHIH1" }, otros)).toEqual({
+      error: "licencia_repetida",
+      mensaje: "La licencia CHIH-1 ya es de otro chofer de esta cuenta.",
+    });
+  });
   it("no choca consigo mismo", () => {
     expect(choqueDeChofer({ nombre: "Ramón Medina", licencia: "CHIH-1" }, otros, "a")).toBeNull();
   });

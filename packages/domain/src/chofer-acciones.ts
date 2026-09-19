@@ -119,7 +119,9 @@ export function choqueDeChofer(
   if (conNombre) return { error: "nombre_repetido", mensaje: palabrasDeChoferRepetido(conNombre.nombre!) };
   const licencia = licenciaComparable(identidad.licencia);
   const conLicencia = ajenos.find((c) => c.licencia !== null && licenciaComparable(c.licencia) === licencia);
-  if (conLicencia) return { error: "licencia_repetida", mensaje: palabrasDeLicenciaRepetida(identidad.licencia) };
+  // La licencia como la tiene el otro chofer: «chih10002» tecleado choca con
+  // «CHIH-100 02», y es ésa la que se reconoce (revisión visual, 19 sep 2026).
+  if (conLicencia) return { error: "licencia_repetida", mensaje: palabrasDeLicenciaRepetida(conLicencia.licencia!) };
   return null;
 }
 

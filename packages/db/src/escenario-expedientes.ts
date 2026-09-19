@@ -11,6 +11,8 @@ import {
   devices,
   documentTypeRules,
   documentTypes,
+  driverCredentials,
+  drivers,
   documentVersions,
   documents,
   livePositions,
@@ -24,6 +26,7 @@ import {
  *   pnpm --filter @jtel/db escenario-expedientes               # siembra, con reglas
  *   pnpm --filter @jtel/db escenario-expedientes --sin-reglas  # el catálogo sin reglas
  *   pnpm --filter @jtel/db escenario-expedientes --flota       # y la flota del archivero
+ *   pnpm --filter @jtel/db escenario-expedientes --choferes    # y los choferes (Choferes V1)
  *   pnpm --filter @jtel/db escenario-expedientes --limpiar     # borra
  *
  * Luego se abre `/casa/transportista/expedientes?account=escenario-expedientes`.
@@ -68,6 +71,17 @@ import {
  *   TK-EXP-006  en bodega, reportó hace 9 d (espera camión: no pide nada)
  *   TK-EXP-007  en 10300, hace 40 s
  *   La 10254 lleva VIN, para buscarla por él.
+ *
+ *   CON --choferes (Choferes V1, ficha §6)
+ *   El mercado gana sus papeles de chofer: «Licencia» (vence, aviso de 30 d),
+ *   «Examen médico» y «Antidoping» (obligatorios: esperan al abogado y no
+ *   deben contar).
+ *   Ana Ruiz     licencia vigente                  → al día
+ *   Beto Luna    licencia vencida hace 4 d          → pide algo
+ *   Carlos Paz   licencia por vencer en 10 d        → pide algo
+ *   Dora Vela    licencia capturada sin fecha       → pide algo (falta la fecha)
+ *   Y una segunda cuenta, `escenario-expedientes-sin-catalogo`, SIN mercado,
+ *   con Eva Soto: sin catálogo no hay contra qué juzgar sus papeles.
  */
 
 function archivosDeAmbiente(): string[] {
@@ -100,6 +114,8 @@ const SLUG = "escenario-expedientes";
 const id = (n: number) => `e5000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const CARRIER = id(1);
 const MERCADO = id(2);
+/** La cuenta sin mercado de `--choferes`: el chofer «sin catálogo cargado». */
+const SIN_CATALOGO = id(3);
 const imei = (n: number) => `FIXTURE-EXP-${String(n).padStart(3, "0")}`;
 const ACTOR = { actorKind: "escenario", actorId: SLUG };
 
@@ -111,7 +127,7 @@ async function limpiar(db: ReturnType<typeof createDb>) {
   const imeis = Array.from({ length: 7 }, (_, i) => imei(i + 1));
   await db.delete(livePositions).where(inArray(livePositions.imei, imeis));
   // Fojas, versiones, unidades, dispositivos y asignaciones caen con la cuenta.
-  await db.delete(accounts).where(eq(accounts.id, CARRIER));
+  await db.delete(accounts).where(inArray(accounts.id, [CARRIER, SIN_CATALOGO]));
   // El catálogo de prueba no cuelga de ninguna cuenta: reglas, tipos y mercado, en ese orden.
   const tipos = await db.select({ id: documentTypes.id }).from(documentTypes).where(eq(documentTypes.marketId, MERCADO));
   if (tipos.length) await db.delete(documentTypeRules).where(inArray(documentTypeRules.documentTypeId, tipos.map((t) => t.id)));
@@ -120,7 +136,7 @@ async function limpiar(db: ReturnType<typeof createDb>) {
   console.log(`[${SLUG}] borrado.`);
 }
 
-async function sembrar(db: ReturnType<typeof createDb>, conReglas: boolean, conFlota: boolean) {
+async function sembrar(db: ReturnType<typeof createDb>, conReglas: boolean, conFlota: boolean, conChoferes: boolean) {
   await limpiar(db);
   const ahora = Date.now();
   const hace = (ms: number) => new Date(ahora - ms);
@@ -276,7 +292,38 @@ async function sembrar(db: ReturnType<typeof createDb>, conReglas: boolean, conF
     await db.insert(livePositions).values([viva(6, hace(9 * DIA), 0, 0), viva(7, hace(40_000), 31.2, 90)]);
   }
 
-  console.log(`[${SLUG}] sembrado ${conReglas ? "con" : "SIN"} reglas${conFlota ? ", con la flota del archivero (84)" : ""}; hoy en Juárez: ${hoy}.`);
+  if (conChoferes) {
+    const C = { licencia: id(21), examen: id(22), antidoping: id(23) };
+    await db.insert(documentTypes).values([
+      { id: C.licencia, marketId: MERCADO, subject: "chofer", clave: "licencia", name: "Licencia" },
+      { id: C.examen, marketId: MERCADO, subject: "chofer", clave: "examen_medico", name: "Examen médico" },
+      { id: C.antidoping, marketId: MERCADO, subject: "chofer", clave: "antidoping", name: "Antidoping" },
+    ]);
+    if (conReglas) {
+      await db.insert(documentTypeRules).values([
+        { documentTypeId: C.licencia, required: true, expires: true, warningDays: 30, ...ACTOR },
+        { documentTypeId: C.examen, required: true, expires: true, warningDays: 30, ...ACTOR },
+        { documentTypeId: C.antidoping, required: true, expires: true, warningDays: 30, ...ACTOR },
+      ]);
+    }
+    const chofer = async (n: number, cuenta: string, nombre: string, licencia: string, vence: string | null | undefined) => {
+      await db.insert(drivers).values({ id: id(400 + n), carrierAccountId: cuenta });
+      await db.insert(driverCredentials).values({ driverId: id(400 + n), carrierAccountId: cuenta, fullName: nombre, licenseNumber: licencia });
+      if (vence === undefined) return;
+      const docId = id(450 + n);
+      await db.insert(documents).values({ id: docId, carrierAccountId: cuenta, documentTypeId: C.licencia, driverId: id(400 + n), ...ACTOR, createdAt: hace(60 * DIA) });
+      await db.insert(documentVersions).values({ documentId: docId, folio: licencia, issuedOn: null, expiresOn: vence, expiryCalculated: false, note: null, ...ACTOR, createdAt: hace(60 * DIA) });
+    };
+    await chofer(1, CARRIER, "Ana Ruiz", "CHIH-100 01", dia(200));
+    await chofer(2, CARRIER, "Beto Luna", "CHIH-100 02", dia(-4));
+    await chofer(3, CARRIER, "Carlos Paz", "CHIH-100 03", dia(10));
+    await chofer(4, CARRIER, "Dora Vela", "CHIH-100 04", null);
+
+    await db.insert(accounts).values({ id: SIN_CATALOGO, type: "carrier", name: "Escenario sin catálogo", slug: `${SLUG}-sin-catalogo` });
+    await chofer(5, SIN_CATALOGO, "Eva Soto", "CHIH-100 05", undefined);
+  }
+
+  console.log(`[${SLUG}] sembrado ${conReglas ? "con" : "SIN"} reglas${conFlota ? ", con la flota del archivero (84)" : ""}${conChoferes ? ", con choferes" : ""}; hoy en Juárez: ${hoy}.`);
   console.log(`[${SLUG}] abrir:        /casa/transportista/expedientes?account=${SLUG}`);
   console.log(`[${SLUG}] al terminar:  pnpm --filter @jtel/db escenario-expedientes --limpiar`);
 }
@@ -303,6 +350,6 @@ console.log(
 const db = createDb(process.env.DATABASE_URL_TEST!);
 
 if (args.includes("--limpiar")) await limpiar(db);
-else await sembrar(db, !args.includes("--sin-reglas"), args.includes("--flota"));
+else await sembrar(db, !args.includes("--sin-reglas"), args.includes("--flota"), args.includes("--choferes"));
 
 process.exit(0);
