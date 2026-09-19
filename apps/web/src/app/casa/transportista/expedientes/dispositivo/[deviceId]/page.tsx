@@ -298,7 +298,8 @@ export default async function VerDispositivo({
                       apagada={!u.vigente}
                       ficha={rutas.unidad(u.unitId, cuentaEnRuta)}
                     />
-                    <p className={`px-4 text-[12.5px] text-[var(--tenue)]${u.vigente ? "" : " opacity-60"}`}>
+                    {/* Ya va en tenue: bajarla más la dejaba debajo del 4.5:1 (skill, ley 2 del color). */}
+                    <p className="px-4 text-[12.5px] text-[var(--tenue)]">
                       {quienYPorQue(u, correo)}
                     </p>
                   </div>

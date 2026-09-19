@@ -201,17 +201,20 @@ export function MapaFlota({
         const ancla = anclas.get(u.id);
         if (!ancla) return null;
         return createPortal(
-          <span className={`flex flex-col items-center${u.apagada ? " opacity-60" : ""}`}>
+          // Apagada: el marcador baja, el nombre no. Al 60 % el nombre quedaba
+          // mezclado con el mapa de abajo; en tenue sobre su fondo opaco se lee
+          // (skill, ley 2 del color: se apaga hasta el mínimo legible).
+          <span className="flex flex-col items-center">
             <span
               className={`grid h-8 w-8 place-items-center rounded-full bg-[var(--pieza)]${
                 u.id === seleccion ? " ring-2 ring-[var(--tinta)]" : ""
-              }`}
+              }${u.apagada ? " opacity-60" : ""}`}
             >
               <Glifo estado={u.glifo} rumbo={u.rumbo ?? 0} tamano={22} />
             </span>
             <span
               data-medida
-              className="mt-0.5 rounded bg-[var(--pieza)] px-1 text-[11.5px] leading-[16px] text-[var(--tinta)]"
+              className={`mt-0.5 rounded bg-[var(--pieza)] px-1 text-[11.5px] leading-[16px] ${u.apagada ? "text-[var(--tenue)]" : "text-[var(--tinta)]"}`}
             >
               {u.nombre}
             </span>
