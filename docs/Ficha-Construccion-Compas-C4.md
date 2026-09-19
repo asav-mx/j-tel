@@ -66,6 +66,7 @@ Y del prototipo, el 17 de septiembre:
 | **C4-b** | El cuarto Dispositivos: inventario por grupos, la entrada del menú y el alta. | Devin, tras revisión visual de Asav |
 | **C4-c** | Las acciones en Ver ‹dispositivo›: rutas con `fleet.manage`, paneles de asignar, soltar y dar de baja, y la historia con quién y por qué. | **Asav**: la ruta es guardia. |
 | **C4-d** | Apagar el alta vieja de `/carrier/flota/alta`, ya con los 7 FTC rodando. | Asav |
+| **C4-e** | Dar de alta y corregir unidades desde la casa nueva; el VIN de la unidad (único por cuenta); ningún nombre repetido en una cuenta —unidades y dispositivos en servicio—, en el código y en la base (0040). Las rutas viejas pasan por la misma regla mientras vivan. | **Asav**: trae migración. Primero la hoja `docs/correcciones/2026-09-18-aplicar-0040-unidades-vin-y-nombres-unicos.sql` en Neon. |
 
 ---
 

@@ -56,7 +56,9 @@ export const PALABRAS_DE_UNIDAD: Record<Exclude<ErrorDeUnidad, "nombre_repetido"
   vin_invalido: "El VIN tiene 17 letras y números, sin I, O ni Q. Revisa que esté completo.",
 };
 
-export const palabrasDeNombreRepetido = (nombre: string) => `Ya hay una unidad ${nombre} en esta cuenta.`;
+// Entre comillas: «Ya hay una unidad Unidad 101» se leía mal con los nombres
+// que ya traen la palabra (visto en la revisión del 18 sep 2026).
+export const palabrasDeNombreRepetido = (nombre: string) => `Ya hay una unidad llamada «${nombre}» en esta cuenta.`;
 export const palabrasDeVinRepetido = (vin: string) => `El VIN ${vin} ya es de otra unidad de esta cuenta.`;
 
 /**

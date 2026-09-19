@@ -41,7 +41,7 @@ describe("dar de alta una unidad", () => {
   it("otra 2101 en juarez-bus se rechaza, en palabras y sin escribir nada", async () => {
     const { repos: r, escrituras } = repos(JUAREZ_BUS);
     const res = await darDeAltaUnidad(r, { carrierId: "jb", nombre: " 2101 ", placa: "", vin: "" });
-    expect(res).toEqual({ ok: false, error: "nombre_repetido", mensaje: "Ya hay una unidad 2101 en esta cuenta." });
+    expect(res).toEqual({ ok: false, error: "nombre_repetido", mensaje: "Ya hay una unidad llamada «2101» en esta cuenta." });
     expect(escrituras).toEqual([]);
   });
 
@@ -73,7 +73,7 @@ describe("dar de alta una unidad", () => {
   it("si dos altas corren a la vez, el candado de la base lo dice en las mismas palabras", async () => {
     const { repos: r } = repos(JUAREZ_BUS, { choque: "units_nombre_unico_por_cuenta" });
     const res = await darDeAltaUnidad(r, { carrierId: "jb", nombre: "2104", placa: "", vin: "" });
-    expect(res).toEqual({ ok: false, error: "nombre_repetido", mensaje: "Ya hay una unidad 2104 en esta cuenta." });
+    expect(res).toEqual({ ok: false, error: "nombre_repetido", mensaje: "Ya hay una unidad llamada «2104» en esta cuenta." });
   });
 });
 

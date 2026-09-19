@@ -80,7 +80,7 @@ describe("dos unidades no se llaman igual en la misma cuenta", () => {
   it("dar de alta otra 2101 choca, aunque venga con espacios o en otra caja", () => {
     expect(choqueDeIdentidad(identidad("2101"), cuenta)).toEqual({
       error: "nombre_repetido",
-      mensaje: "Ya hay una unidad 2101 en esta cuenta.",
+      mensaje: "Ya hay una unidad llamada «2101» en esta cuenta.",
     });
     expect(choqueDeIdentidad(identidad("JEEP"), cuenta)?.error).toBe("nombre_repetido");
   });
