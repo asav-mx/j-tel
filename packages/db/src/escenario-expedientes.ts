@@ -23,6 +23,7 @@ import {
  *
  *   pnpm --filter @jtel/db escenario-expedientes               # siembra, con reglas
  *   pnpm --filter @jtel/db escenario-expedientes --sin-reglas  # el catálogo sin reglas
+ *   pnpm --filter @jtel/db escenario-expedientes --flota       # y la flota del archivero
  *   pnpm --filter @jtel/db escenario-expedientes --limpiar     # borra
  *
  * Luego se abre `/casa/transportista/expedientes?account=escenario-expedientes`.
@@ -56,6 +57,17 @@ import {
  *   TK-EXP-001  en 10254, hace 14 s   · TK-EXP-002  en 10288, hace 3.8 h
  *   TK-EXP-003  en 10261, hace 3 d    · TK-EXP-004  en bodega, nunca reportó
  *   TK-EXP-005  de baja
+ *
+ *   CON --flota (el archivero, ficha V2 §8: «con las 84 unidades sembradas»)
+ *   79 unidades más, 10300 a 10378, hasta sumar 84 con sus cuatro papeles
+ *   vigentes. Las que terminan en 5 traen además el «Seguro de equipaje
+ *   (escenario)», un tipo optativo que vence y **no tiene días de aviso**: su
+ *   papel no se puede declarar vigente ni por vencer, y la unidad queda «sin
+ *   juzgar» junto a las que están al día. Es lo único que deja ver las tres
+ *   secciones del cajón en una misma cuenta.
+ *   TK-EXP-006  en bodega, reportó hace 9 d (espera camión: no pide nada)
+ *   TK-EXP-007  en 10300, hace 40 s
+ *   La 10254 lleva VIN, para buscarla por él.
  */
 
 function archivosDeAmbiente(): string[] {
@@ -96,7 +108,7 @@ const HORA = 60 * MIN;
 const DIA = 24 * HORA;
 
 async function limpiar(db: ReturnType<typeof createDb>) {
-  const imeis = Array.from({ length: 5 }, (_, i) => imei(i + 1));
+  const imeis = Array.from({ length: 7 }, (_, i) => imei(i + 1));
   await db.delete(livePositions).where(inArray(livePositions.imei, imeis));
   // Fojas, versiones, unidades, dispositivos y asignaciones caen con la cuenta.
   await db.delete(accounts).where(eq(accounts.id, CARRIER));
@@ -108,7 +120,7 @@ async function limpiar(db: ReturnType<typeof createDb>) {
   console.log(`[${SLUG}] borrado.`);
 }
 
-async function sembrar(db: ReturnType<typeof createDb>, conReglas: boolean) {
+async function sembrar(db: ReturnType<typeof createDb>, conReglas: boolean, conFlota: boolean) {
   await limpiar(db);
   const ahora = Date.now();
   const hace = (ms: number) => new Date(ahora - ms);
@@ -220,7 +232,51 @@ async function sembrar(db: ReturnType<typeof createDb>, conReglas: boolean) {
   });
   await db.insert(livePositions).values([viva(1, hace(14_000), 42.7, 135), viva(2, hace(3.8 * HORA), 0, 0), viva(3, hace(3 * DIA), 0, 0)]);
 
-  console.log(`[${SLUG}] sembrado ${conReglas ? "con" : "SIN"} reglas; hoy en Juárez: ${hoy}.`);
+  if (conFlota) {
+    const EQUIPAJE = id(16);
+    await db.insert(documentTypes).values({ id: EQUIPAJE, marketId: MERCADO, subject: "unidad", clave: "seguro_de_equipaje", name: "Seguro de equipaje (escenario)" });
+    if (conReglas) {
+      // Optativo y vence, pero sin días de aviso: lo capturado queda sin juzgar.
+      await db.insert(documentTypeRules).values({ documentTypeId: EQUIPAJE, required: false, expires: true, warningDays: null, ...ACTOR });
+    }
+    await db.update(units).set({ vin: "3HGCM82633A004352" }).where(eq(units.id, id(101)));
+
+    const extra = Array.from({ length: 79 }, (_, i) => ({
+      id: id(1000 + i),
+      carrierAccountId: CARRIER,
+      label: String(10300 + i),
+      plateNumber: i % 9 === 4 ? null : `ETD-${50 + Math.floor(i / 10)}-${String(10 + i).padStart(2, "0")}`,
+    }));
+    await db.insert(units).values(extra);
+
+    // Las fojas de golpe: 79 unidades × 4 papeles son cientos de filas.
+    const docs: Array<typeof documents.$inferInsert> = [];
+    const vers: Array<typeof documentVersions.$inferInsert> = [];
+    let k = 5000;
+    const papel = (unidadId: string, tipo: string, folio: string, vence: number) => {
+      const docId = id(++k);
+      docs.push({ id: docId, carrierAccountId: CARRIER, documentTypeId: tipo, unitId: unidadId, ...ACTOR, createdAt: hace(40 * DIA) });
+      vers.push({ documentId: docId, folio, issuedOn: dia(vence - 365), expiresOn: dia(vence), expiryCalculated: false, note: null, ...ACTOR, createdAt: hace(40 * DIA) });
+    };
+    extra.forEach((u, i) => {
+      papel(u.id, T.poliza, `GNP-7${i}`, 100 + (i % 200));
+      papel(u.id, T.tarjeta, `CHH-7${i}`, 90 + (i % 150));
+      papel(u.id, T.permiso, `SCT-7${i}`, 120 + (i % 180));
+      papel(u.id, T.verificacion, `V-7${i}`, 40 + (i % 120));
+      if (u.label.endsWith("5")) papel(u.id, EQUIPAJE, `EQ-7${i}`, 200);
+    });
+    await db.insert(documents).values(docs);
+    await db.insert(documentVersions).values(vers);
+
+    await db.insert(devices).values([
+      { id: id(206), carrierAccountId: CARRIER, imei: imei(6), label: "TK-EXP-006" },
+      { id: id(207), carrierAccountId: CARRIER, imei: imei(7), label: "TK-EXP-007" },
+    ]);
+    await db.insert(deviceAssignments).values({ unitId: id(1000), deviceId: id(207), validFrom: hace(20 * DIA) });
+    await db.insert(livePositions).values([viva(6, hace(9 * DIA), 0, 0), viva(7, hace(40_000), 31.2, 90)]);
+  }
+
+  console.log(`[${SLUG}] sembrado ${conReglas ? "con" : "SIN"} reglas${conFlota ? ", con la flota del archivero (84)" : ""}; hoy en Juárez: ${hoy}.`);
   console.log(`[${SLUG}] abrir:        /casa/transportista/expedientes?account=${SLUG}`);
   console.log(`[${SLUG}] al terminar:  pnpm --filter @jtel/db escenario-expedientes --limpiar`);
 }
@@ -247,6 +303,6 @@ console.log(
 const db = createDb(process.env.DATABASE_URL_TEST!);
 
 if (args.includes("--limpiar")) await limpiar(db);
-else await sembrar(db, !args.includes("--sin-reglas"));
+else await sembrar(db, !args.includes("--sin-reglas"), args.includes("--flota"));
 
 process.exit(0);

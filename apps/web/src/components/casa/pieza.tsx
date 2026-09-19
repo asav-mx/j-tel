@@ -124,14 +124,16 @@ export function Pieza({
       )}
 
       {compacta ? (
-        <span className="flex min-w-0 flex-1 items-baseline gap-2.5 self-center">
+        // Si nombre y apoyo no caben en el renglón, el apoyo baja en vez de
+        // cortarse: «en bo…» a 375 px ya no dice dónde está.
+        <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 self-center">
           <span
             className="flex-none text-[16px] leading-tight"
             style={{ fontFamily: "var(--letra-titular)", fontWeight: 700, letterSpacing: "-0.01em" }}
           >
             {nombre}
           </span>
-          <span className="min-w-0 truncate text-[13px] text-[var(--tenue)]">{apoyo}</span>
+          <span className="max-w-full truncate text-[13px] text-[var(--tenue)]">{apoyo}</span>
         </span>
       ) : (
         <span className="min-w-0 flex-1">
