@@ -800,21 +800,12 @@ Una pantalla de la etapa 1 que diga «cumplió» o «no cumplió» se pasó de e
 
 ## C. Los sujetos nuevos
 
-**9.8 El circuito, la parada y la concesión son sujetos con expediente** (extienden 6.30). Se abren tocándolos, como todo:
+**9.8 El circuito y la concesión son sujetos con expediente** (extienden 6.30). Se abren tocándolos, como todo:
 - **Circuito** — Identidad: su trazado, **su color** (en México una ruta se conoce por su color; la app y la terminal lo usan como identidad, nunca como estado — Pieza 8.8c), sus paradas con sus tablas, su horario de servicio. Actividad: los pasos, las vueltas, los huecos, el km. Relaciones: sus unidades en servicio, sus choferes asignados, su concesión. Documentos: no aplica (los papeles son de la concesión).
-- **Parada** — Identidad: su nombre, su ubicación, de qué circuito o circuitos es parada, y **su tabla de paso prometida** (sus horarios, o su frecuencia, por franja horaria — 9.1c). Actividad: los pasos por ella (9.2), la frecuencia real y sus huecos (9.4), y su **demanda** —las aperturas anónimas de la app cerca de la parada, declarada como el indicio que es y jamás como conteo de pasajeros (9.4, 9.7)—. Relaciones: su circuito o sus circuitos, y la concesión de cada uno. Documentos: no aplica (los papeles son de la concesión, 9.8b).
 - **Concesión** — Identidad: quién la otorga, su vigencia, sus circuitos. Documentos: los papeles del permiso, con las reglas de vigencia del archivero (§4 de la ficha de Expedientes).
+- **La parada es parte del circuito**, no sujeto propio. Si algún día gana vida propia (obras, quejas, demanda), su expediente crece desde ahí sin mudarse.
 
-**9.8b Lo que se construye con ladrillo es de la concesión; lo que se mide es de la parada** (enmienda de ASAV, 19-sep). La parada dejó de ser sólo parte del circuito y ganó vista propia —su cumplimiento, su demanda, sus horarios prometidos—, pero sus papeles no se mudaron con ella:
-
-- **Lo que se construye con ladrillo es de la concesión.** Los permisos, los derechos de vía y los papeles del mobiliario se otorgan sobre el ladrillo, y se otorgan a quien tiene la concesión. Ahí viven, con las reglas de vigencia del archivero (§4 de la ficha de Expedientes). Una parada no tiene cajón de papeles propio.
-- **Lo que se mide es de la parada.** Los pasos, los huecos y la demanda ocurren en ella y son suyos.
-
-Esta regla decide, para cualquier sujeto nuevo, en qué expediente cae un papel: se pregunta **quién responde por él ante quien lo otorgó**, no dónde está clavado.
-
-**Y el cumplimiento de una parada se dice en el vocabulario de la etapa 1.** Su vista muestra si su tabla **se sostuvo, se agujeró o no tiene datos** (9.3). No dice «cumplió» ni «no cumplió»: no hay sello sobre una parada hasta que exista la etapa 2, y una vista que lo diga se pasó de etapa.
-
-**9.9 La terminal es la cara de operación del cuarto Circuitos** (sello «Transporte público», Mapa). Abrir una ruta abre **su expediente** — la estructura Rutas/Mapa que ASAV pidió es exactamente la gramática de la casa: el cuarto lista los circuitos, tocar uno abre su expediente, tocar una de sus paradas abre el de la parada (9.8), y el mapa vivo es su parte de actividad. No se inventa una pantalla nueva; se llena una que la casa ya sabe hacer.
+**9.9 La terminal es la cara de operación del cuarto Circuitos** (sello «Transporte público», Mapa). Abrir una ruta abre **su expediente** — la estructura Rutas/Mapa que ASAV pidió es exactamente la gramática de la casa: el cuarto lista los circuitos, tocar uno abre su expediente, y el mapa vivo es su parte de actividad. No se inventa una pantalla nueva; se llena una que la casa ya sabe hacer.
 
 **9.10 Comparar circuitos llega después de medir.** «Cuáles son los mejores y cuáles requieren mejora» es la pregunta correcta y se contesta con esta data — pero la comparación se dibuja cuando haya semanas de medición real, no el día uno. Comparar dos circuitos con tres días de datos es la afirmación falsa del alcance (Marco §D).
 
@@ -828,9 +819,7 @@ Esta regla decide, para cualquier sujeto nuevo, en qué expediente cae un papel:
 
 ## Registro de ratificación
 
-**19 de septiembre de 2026 — ASAV.** Afirmaciones 9.1–9.13 revisadas y ✓. La pieza entra al Maestro y resuelve el 7.8. Tres afirmaciones nacieron de ASAV en esta sesión: el adelanto daña igual que el retraso (9.1b), la promesa varía por franja horaria (9.1c) y la torre del circuito (9.2b).
-
-- **Enmienda del mismo día — la parada se vuelve sujeto (ASAV, 19-sep).** El 9.8 decía: «**La parada es parte del circuito**, no sujeto propio. Si algún día gana vida propia (obras, quejas, demanda), su expediente crece desde ahí sin mudarse.» Ese día llegó antes de que la pieza entrara al Maestro: la parada **es sujeto con expediente**, con su cumplimiento, su demanda y sus horarios prometidos, y entra al 9.8 como el tercero. Lo que no se mudó con ella son sus papeles, y de ahí nació el **9.8b**: lo que se construye con ladrillo es de la concesión, lo que se mide es de la parada. La frase vieja queda citada aquí para que no se pierda qué decía.
+**19 de septiembre de 2026 — ASAV.** Afirmaciones 9.1–9.13 revisadas y ✓ sin cambio. La pieza entra al Maestro y resuelve el 7.8. Tres afirmaciones nacieron de ASAV en esta sesión: el adelanto daña igual que el retraso (9.1b), la promesa varía por franja horaria (9.1c) y la torre del circuito (9.2b).
 
 - **✎ Una frase borrada** al subirla al Maestro (redacción, no fondo): el encabezado decía «Estado: RATIFICADA» y tres renglones después «Espera la ratificación de ASAV, afirmación por afirmación», frase que sobró del borrador y que este registro contradice. Ninguna afirmación se tocó.
 - **✎ El 7.8 se cierra en su lugar, por orden de ASAV.** A diferencia de las Piezas 6 y 7 —que no editaron nada anterior y precisaron con su propia tabla—, ésta sí toca un renglón de la Pieza 7: el 7.8 deja de estar abierto y queda marcado **CERRADO por la Pieza 9**, con su texto viejo citado adentro para que nadie pierda qué decía. Razón: un pendiente que ya tiene respuesta y sigue diciéndose abierto es una afirmación falsa del Marco contra sí mismo. El resto de la Pieza 7 no se toca; el 7.9 sigue abierto y esta pieza lo hereda como 9.13.

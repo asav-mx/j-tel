@@ -13,7 +13,7 @@ Este archivo es sólo el puntero. **La ley no se edita aquí**: dos copias de la
 - **La promesa del circuito es la frecuencia de paso** (9.1) — y el adelanto daña igual que el retraso (9.1b), medido contra la promesa vigente de su franja horaria, no contra el promedio del día (9.1c).
 - **El paso por parada es el hecho atómico** (9.2), atribuido a la unidad y —cuando exista la asignación— al chofer. La torre del circuito muestra la desviación en vivo; el humano decide (9.2b).
 - **Primero el metro, después el juez** (9.3): la terminal mide y no sella. Una pantalla de la etapa 1 que diga «cumplió» se pasó de etapa.
-- **Circuito, parada y concesión son sujetos con expediente** (9.8), y la terminal es la cara de operación del cuarto Circuitos (9.9). Dónde cae un papel lo decide el 9.8b: **lo que se construye con ladrillo es de la concesión; lo que se mide es de la parada.**
+- **Circuito y concesión son sujetos con expediente** (9.8), y la terminal es la cara de operación del cuarto Circuitos (9.9).
 
 ## Qué resuelve y qué deja abierto
 
