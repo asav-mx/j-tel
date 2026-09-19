@@ -15,6 +15,7 @@ import {
   VEREDICTOS,
   bloques,
   conteos,
+  contratoDeLosTurnos,
   fechaCorta,
   hayFilaDeContratos,
   laLista,
@@ -52,6 +53,23 @@ function Chip({
     >
       {children}
     </button>
+  );
+}
+
+/**
+ * Una fila de chips con su rótulo a la izquierda, en mono y mayúsculas chicas,
+ * como los títulos de sección (Asav, 19 sep 2026): CONTRATO, TURNO. El rótulo
+ * tiene ancho fijo para que las dos filas empiecen sus chips en la misma
+ * columna; en celular los chips bajan de renglón junto a él.
+ */
+function FilaDeChips({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+  return (
+    <div role="group" aria-label={rotulo} className="flex items-baseline gap-3">
+      <span data-medida aria-hidden="true" className="w-[64px] flex-none text-[10.5px] uppercase tracking-[0.2em] text-[var(--tenue)]">
+        {rotulo}
+      </span>
+      <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">{children}</div>
+    </div>
   );
 }
 
@@ -108,7 +126,10 @@ export function ListaDeServiciosEspeciales({
   const cuenta = useMemo(() => conteos(base), [base]);
   const lista = useMemo(() => laLista(base, f.veredicto), [base, f.veredicto]);
   const grupos = useMemo(() => bloques(lista, diaDeLaVentana), [lista, diaDeLaVentana]);
-  const turnos = useMemo(() => turnosDeLaVentana(ocurrencias, f.contratoId), [ocurrencias, f.contratoId]);
+  const turnos = useMemo(
+    () => turnosDeLaVentana(ocurrencias, contratoDeLosTurnos(contratos, f.contratoId)),
+    [ocurrencias, contratos, f.contratoId],
+  );
 
   const elegir = (p: Periodo) => {
     const ruta = rutaDelCuarto(cuentaEnRuta, p);
@@ -145,31 +166,36 @@ export function ListaDeServiciosEspeciales({
           </p>
         ))}
 
-      {hayFilaDeContratos(contratos) && (
-        <div role="group" aria-label="Contratos" className="mb-2 flex flex-wrap gap-1.5">
-          <Chip activo={f.contratoId === null} alTocar={() => poner({ contratoId: null, turnoId: null })}>
-            Todos los contratos
-          </Chip>
-          {contratos.map((c) => (
-            <Chip key={c.id} activo={f.contratoId === c.id} alTocar={() => poner({ contratoId: c.id, turnoId: null })}>
-              {c.nombre}
-            </Chip>
-          ))}
-        </div>
-      )}
+      {(hayFilaDeContratos(contratos) || turnos.length > 0) && (
+        <div className="mb-4 flex flex-col gap-2">
+          {hayFilaDeContratos(contratos) && (
+            <FilaDeChips rotulo="Contrato">
+              <Chip activo={f.contratoId === null} alTocar={() => poner({ contratoId: null, turnoId: null })}>
+                Todos los contratos
+              </Chip>
+              {contratos.map((c) => (
+                <Chip key={c.id} activo={f.contratoId === c.id} alTocar={() => poner({ contratoId: c.id, turnoId: null })}>
+                  {c.nombre}
+                </Chip>
+              ))}
+            </FilaDeChips>
+          )}
 
-      {turnos.length > 0 && (
-        <div role="group" aria-label="Turnos" className="mb-4 flex flex-wrap gap-1.5">
-          {turnos.map((t) => (
-            <Chip
-              key={t.id}
-              medida
-              activo={f.turnoId === t.id}
-              alTocar={() => poner({ turnoId: f.turnoId === t.id ? null : t.id })}
-            >
-              {t.nombre} · {t.ventana}
-            </Chip>
-          ))}
+          {/* Sólo con un contrato elegido: con «Todos», un turno es ambiguo y no se filtra. */}
+          {turnos.length > 0 && (
+            <FilaDeChips rotulo="Turno">
+              {turnos.map((t) => (
+                <Chip
+                  key={t.id}
+                  medida
+                  activo={f.turnoId === t.id}
+                  alTocar={() => poner({ turnoId: f.turnoId === t.id ? null : t.id })}
+                >
+                  {t.nombre} · {t.ventana}
+                </Chip>
+              ))}
+            </FilaDeChips>
+          )}
         </div>
       )}
 
