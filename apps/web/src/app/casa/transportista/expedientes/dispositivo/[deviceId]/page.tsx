@@ -10,7 +10,7 @@ import { Pieza } from "@/components/casa/pieza";
 import { AvisoDeError, Familia, Parte, Renglon, SinCuenta, Titular } from "@/components/casa/expediente";
 import { PanelAsignar, PanelMotivo } from "@/components/casa/paneles-de-dispositivo";
 import { clases } from "@/components/casa/formulario";
-import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
+import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 import { correosDeAutores } from "@/lib/casa/autores";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
 import { relojDePagina } from "@/lib/casa/cronometro";
@@ -68,7 +68,7 @@ export default async function VerDispositivo({
   reloj.marca("guardia");
   if (!cuenta.carrier) {
     return (
-      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+      <Marco casa={casa} alcance={ALCANCE_SIN_CUENTA} cuenta={cuenta.casa}>
         <SinCuenta elegibles={cuenta.casa.elegibles} />
       </Marco>
     );
@@ -126,7 +126,7 @@ export default async function VerDispositivo({
   const comunes = { cuenta: carrier.slug, deviceId, desde: puerta, nombre, cancelar: esta(), error };
 
   return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa} lugar={puerta === "dispositivos" ? RAIZ_DISPOSITIVOS : undefined}>
+    <Marco casa={casa} alcance={cuenta.alcance} cuenta={cuenta.casa} lugar={puerta === "dispositivos" ? RAIZ_DISPOSITIVOS : undefined}>
       <div className="mx-auto flex max-w-3xl flex-col gap-7">
         <Migas pasos={[regreso, { nombre: `Ver ${nombre}` }]} />
         <Titular

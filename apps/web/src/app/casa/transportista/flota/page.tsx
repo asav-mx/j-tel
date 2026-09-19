@@ -3,7 +3,7 @@ import { getRepos } from "@/lib/db";
 import { Marco } from "@/components/casa/marco";
 import { SinCuenta } from "@/components/casa/expediente";
 import { FlotaEnVivo } from "@/components/casa/flota-en-vivo";
-import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
+import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
 import { relojDePagina } from "@/lib/casa/cronometro";
 import { flotaParaPantalla } from "@/lib/casa/flota";
@@ -33,7 +33,7 @@ export default async function CuartoFlotaEnVivo({
   reloj.marca("guardia");
   if (!cuenta.carrier) {
     return (
-      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+      <Marco casa={casa} alcance={ALCANCE_SIN_CUENTA} cuenta={cuenta.casa}>
         <SinCuenta elegibles={cuenta.casa.elegibles} />
       </Marco>
     );
@@ -46,7 +46,7 @@ export default async function CuartoFlotaEnVivo({
   reloj.fin();
 
   return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+    <Marco casa={casa} alcance={cuenta.alcance} cuenta={cuenta.casa}>
       <FlotaEnVivo
         inicial={flotaParaPantalla(flota, { leida, cuenta: carrier.name, cuentaEnRuta })}
         slug={carrier.slug}

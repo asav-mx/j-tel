@@ -5,7 +5,7 @@ import { Marco } from "@/components/casa/marco";
 import { Migas } from "@/components/casa/migas";
 import { Pieza } from "@/components/casa/pieza";
 import { Encabezado, Titular, Vacio } from "@/components/casa/expediente";
-import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
+import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 import { faltantesEnPalabras, reglaEnPalabras, rutasDelCatalogo } from "@/lib/casa/regla";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +52,7 @@ export default async function Catalogo({
   };
 
   return (
-    <Marco casa={CASAS.jstaff} alcance={ALCANCE_SIN_CUARTOS}>
+    <Marco casa={CASAS.jstaff} alcance={ALCANCE_SIN_CUENTA}>
       <div className="mx-auto flex max-w-3xl flex-col gap-7">
         <Migas pasos={[{ nombre: "Cuentas y demos" }, { nombre: "Catálogo de documentos" }]} />
         <Titular nombre="Catálogo de documentos" bajo="La ley de cada mercado · la carga J-Staff" />

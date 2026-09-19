@@ -1,13 +1,6 @@
-import {
-  JTTEL_TZ,
-  addDaysIso,
-  gradoParaVentana,
-  instanteZonificado,
-  localDateIso,
-  ventanaDelDia,
-  type GradoDeTrazo,
-} from "@jtel/domain";
+import { JTTEL_TZ, gradoParaVentana, type GradoDeTrazo } from "@jtel/domain";
 import { conCuenta } from "@/lib/casa/casas";
+import type { Periodo } from "@/lib/casa/periodo";
 import { rutas } from "@/lib/casa/expedientes";
 
 /**
@@ -197,48 +190,26 @@ export function nombreDePausa(p: Pausa): string {
 
 /* ─── La ventana ────────────────────────────────────────────────────────── */
 
-export type Periodo = { desde: number; hasta: number };
-
-const diaDe = (t: number) => localDateIso(new Date(t), ZONA);
-const inicioDelDia = (t: number) => ventanaDelDia(diaDe(t), ZONA).desde.getTime();
-
-export type Atajo = { nombre: string; periodo: Periodo };
-
-/** Los atajos de tiempo llano. Ninguno horneado: todos salen de `ahora`. */
-export function atajosDeTiempo(ahora: number): Atajo[] {
-  const hoy = diaDe(ahora);
-  const inicioHoy = inicioDelDia(ahora);
-  const ayer = ventanaDelDia(addDaysIso(hoy, -1), ZONA);
-  return [
-    { nombre: "Hoy", periodo: { desde: inicioHoy, hasta: ahora } },
-    { nombre: "Ayer", periodo: { desde: ayer.desde.getTime(), hasta: ayer.hasta.getTime() } },
-    { nombre: "Últimos 7 días", periodo: { desde: ventanaDelDia(addDaysIso(hoy, -6), ZONA).desde.getTime(), hasta: ahora } },
-    { nombre: "Este mes", periodo: { desde: instanteZonificado(`${hoy.slice(0, 8)}01`, 0, ZONA).getTime(), hasta: ahora } },
-  ];
-}
-
-/** Las flechas ‹ ›: mueven el tamaño de la ventana vigente, no «un día». */
-export function mover(p: Periodo, sentido: -1 | 1): Periodo {
-  const ancho = p.hasta - p.desde + 1;
-  return { desde: p.desde + sentido * ancho, hasta: p.hasta + sentido * ancho };
-}
-
-/** Quitar el acote regresa al día completo que contiene el inicio. */
-export function diaQueContiene(t: number): Periodo {
-  const v = ventanaDelDia(diaDe(t), ZONA);
-  return { desde: v.desde.getTime(), hasta: v.hasta.getTime() };
-}
-
-/** Un día y una hora del panel («2026-09-14», «06:00»), en la zona, a instante. */
-export function instanteDelPanel(fecha: string, hora: string): number | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !/^\d{2}:\d{2}$/.test(hora)) return null;
-  const [h, m] = hora.split(":").map(Number);
-  return instanteZonificado(fecha, h! * 60 + m!, ZONA).getTime();
-}
-
-export function panelDe(t: number): { fecha: string; hora: string } {
-  return { fecha: diaDe(t), hora: hhmm(t) };
-}
+/*
+ * La ventana y cómo se dice viven en `periodo.ts` desde el 18 sep 2026: es la
+ * misma pieza para C3 y para Vernier. Se reexportan aquí para que C3 no cambie
+ * sus importaciones; la zona de C3 sigue siendo la del despliegue.
+ */
+export {
+  atajosDeTiempo,
+  diaCorto,
+  diaQueContiene,
+  etiquetaDelPeriodo,
+  hhmm,
+  hhmmss,
+  instanteDelPanel,
+  mover,
+  panelDe,
+  periodoDeLaDireccion,
+  sello,
+  type Atajo,
+  type Periodo,
+} from "@/lib/casa/periodo";
 
 /** La brocha: fracciones de un pedazo a periodo, o `null` si no alcanza para acotar. */
 export function acotar(pedazo: Pedazo, a: number, b: number): Periodo | null {
@@ -293,59 +264,7 @@ export function peticionDelRecorrido(slug: string, unitId: string, p: Periodo): 
   return `/api/casa/recorrido?${q}`;
 }
 
-/** Lee la ventana de la dirección; si no viene o no sirve, es «Hoy». */
-export function periodoDeLaDireccion(desde: string | undefined, hasta: string | undefined, ahora: number): Periodo {
-  const a = desde ? Date.parse(desde) : Number.NaN;
-  const z = hasta ? Date.parse(hasta) : Number.NaN;
-  if (Number.isFinite(a) && Number.isFinite(z) && z > a) return { desde: a, hasta: z };
-  return atajosDeTiempo(ahora)[0]!.periodo;
-}
-
 /* ─── Cómo se dice ──────────────────────────────────────────────────────── */
-
-const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
-const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-
-const partes = new Intl.DateTimeFormat("en-US", {
-  timeZone: ZONA,
-  year: "numeric",
-  month: "numeric",
-  day: "numeric",
-  weekday: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-  hourCycle: "h23",
-});
-const SEMANA_EN: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-
-function leer(t: number) {
-  const p = Object.fromEntries(partes.formatToParts(new Date(t)).map((x) => [x.type, x.value]));
-  return {
-    dia: Number(p.day),
-    mes: Number(p.month),
-    semana: SEMANA_EN[p.weekday!]!,
-    hh: p.hour!,
-    mm: p.minute!,
-    ss: p.second!,
-  };
-}
-
-export const hhmm = (t: number) => {
-  const p = leer(t);
-  return `${p.hh}:${p.mm}`;
-};
-export const hhmmss = (t: number) => {
-  const p = leer(t);
-  return `${p.hh}:${p.mm}:${p.ss}`;
-};
-/** «dom 14 sep» */
-export const diaCorto = (t: number) => {
-  const p = leer(t);
-  return `${DIAS[p.semana]} ${p.dia} ${MESES[p.mes - 1]}`;
-};
-/** «sáb 14 sep 10:18:30» */
-export const sello = (t: number) => `${diaCorto(t)} ${hhmmss(t)}`;
 
 /** «41:40», «2 h 05 min», «12 s» — como lectura de instrumento, sin «~». */
 export function duracion(ms: number): string {
@@ -356,19 +275,6 @@ export function duracion(ms: number): string {
   if (h) return `${h} h ${String(m).padStart(2, "0")} min`;
   if (m) return `${m}:${String(g).padStart(2, "0")}`;
   return `${g} s`;
-}
-
-/** Cómo se nombra el periodo en su botón. */
-export function etiquetaDelPeriodo(p: Periodo, leida: number): string {
-  const mismoDia = diaDe(p.desde) === diaDe(p.hasta);
-  const hastaAhora = Math.abs(p.hasta - leida) <= MINUTO;
-  const desdeMedianoche = hhmm(p.desde) === "00:00";
-  if (mismoDia && hastaAhora && desdeMedianoche) return `${diaCorto(p.desde)} · hasta ahora`;
-  if (mismoDia && desdeMedianoche && p.hasta - p.desde >= 24 * 60 * MINUTO - 2 * MINUTO) {
-    return `${diaCorto(p.desde)} · todo el día`;
-  }
-  if (mismoDia) return `${diaCorto(p.desde)} · ${hhmm(p.desde)}–${hhmm(p.hasta)}`;
-  return `${diaCorto(p.desde)} ${hhmm(p.desde)} → ${diaCorto(p.hasta)} ${hhmm(p.hasta)}${hastaAhora ? " (ahora)" : ""}`;
 }
 
 /* ─── El playback ───────────────────────────────────────────────────────── */

@@ -86,13 +86,13 @@ describe("regla 3 — dos niveles como máximo, y pocos lugares", () => {
 });
 
 describe("regla 4 — lo que no aplica, no aparece", () => {
-  it("sin contrato no hay Cumplimiento, y sin público no hay Circuitos", () => {
+  it("sin contrato no hay Servicios especiales, y sin público no hay Circuitos", () => {
     const menu = menuDe(conCuartos(CASAS.transportista), PELADO);
     const nombres = menu.flatMap((grupo) => grupo.lugares.map((lugar) => lugar.nombre));
 
     expect(nombres).toContain("Flota en vivo");
     expect(nombres).toContain("Expedientes");
-    expect(nombres).not.toContain("Cumplimiento");
+    expect(nombres).not.toContain("Servicios especiales");
     expect(nombres).not.toContain("Circuitos");
   });
 
@@ -100,7 +100,7 @@ describe("regla 4 — lo que no aplica, no aparece", () => {
     const menu = menuDe(conCuartos(CASAS.transportista), TODO);
     const nombres = menu.flatMap((grupo) => grupo.lugares.map((lugar) => lugar.nombre));
 
-    expect(nombres).toContain("Cumplimiento");
+    expect(nombres).toContain("Servicios especiales");
     expect(nombres).toContain("Circuitos");
   });
 
@@ -116,16 +116,16 @@ describe("regla 4 — lo que no aplica, no aparece", () => {
 
   it("el segundo nivel se filtra igual que el primero", () => {
     const menu = menuDe(conCuartos(CASAS.transportista), TODO);
-    const cumplimiento = menu
+    const servicios = menu
       .flatMap((grupo) => grupo.lugares)
-      .find((lugar) => lugar.nombre === "Cumplimiento");
+      .find((lugar) => lugar.nombre === "Servicios especiales");
 
-    expect(cumplimiento?.hijos?.map((hijo) => hijo.nombre)).toEqual(["Contratos y perfiles"]);
+    expect(servicios?.hijos?.map((hijo) => hijo.nombre)).toEqual(["Contratos y perfiles"]);
   });
 });
 
 describe("un cuarto que no existe no se dibuja", () => {
-  it("el menú lista lo construido: Flota en vivo, Dispositivos y Expedientes en el transportista, Cuentas y demos en J-Staff", () => {
+  it("el menú lista lo construido: Flota en vivo, Dispositivos, Expedientes y Servicios especiales en el transportista, Cuentas y demos en J-Staff", () => {
     // Esta prueba cambia cada vez que aterriza un cuarto. Lo que cuida no es la
     // lista de hoy: es que el menú liste lo construido y nada más.
     expect(menuDe(CASAS.transportista, TODO)).toEqual([
@@ -137,6 +137,13 @@ describe("un cuarto que no existe no se dibuja", () => {
         ],
       },
       { sello: null, lugares: [{ nombre: "Expedientes", ruta: "/casa/transportista/expedientes", condicion: "siempre", hijos: undefined }] },
+      {
+        sello: "Vernier",
+        lugares: [
+          // «Contratos y perfiles» está declarado pero sin cuarto: no se dibuja.
+          { nombre: "Servicios especiales", ruta: "/casa/transportista/servicios-especiales", condicion: "con-contrato", hijos: [] },
+        ],
+      },
     ]);
     expect(menuDe(CASAS.jstaff, TODO)).toEqual([
       {
@@ -184,7 +191,7 @@ describe("un cuarto que no existe no se dibuja", () => {
 describe("los nombres son de cosa, no de producto (opción B)", () => {
   it("ninguna entrada del menú se llama como el producto", () => {
     // El producto va como sello encima de su sección, nunca como entrada: un
-    // coordinador sabe buscar «cumplimiento», no «Vernier».
+    // coordinador sabe buscar lo que hace, no «Vernier».
     const productos = ["Compás", "Vernier"];
 
     for (const cara of CARAS) {
@@ -231,8 +238,8 @@ describe("el sello de la sección, que es lo que el celular tenía perdido", () 
   it("el segundo nivel conserva el sello de su padre", () => {
     // Dentro de «Contratos y perfiles» se sigue estando en Vernier: si el sello
     // se apagara al bajar un nivel, parpadearía al navegar.
-    const cumplimiento = menu.flatMap((g) => g.lugares).find((l) => l.nombre === "Cumplimiento")!;
-    expect(selloActivo(menu, cumplimiento.hijos![0].ruta as string)).toBe("Vernier");
+    const servicios = menu.flatMap((g) => g.lugares).find((l) => l.nombre === "Servicios especiales")!;
+    expect(selloActivo(menu, servicios.hijos![0].ruta as string)).toBe("Vernier");
   });
 
   it("un grupo sin producto no inventa uno", () => {

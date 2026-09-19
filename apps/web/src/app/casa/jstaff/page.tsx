@@ -1,7 +1,7 @@
 import { exigirEnPagina } from "@/lib/guardia-pagina";
 import { Marco } from "@/components/casa/marco";
 import { CasaVacia } from "@/components/casa/casa-vacia";
-import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
+import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 
 /**
  * La casa de J-Staff — el operador de la plataforma.
@@ -21,7 +21,7 @@ export default async function CasaJStaff() {
 
   const casa = CASAS.jstaff;
   return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
+    <Marco casa={casa} alcance={ALCANCE_SIN_CUENTA}>
       <CasaVacia casa={casa} />
     </Marco>
   );

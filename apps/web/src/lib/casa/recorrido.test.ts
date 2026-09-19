@@ -49,12 +49,15 @@ function pedazo(desde: string, minutos: number, cada = 1): Pedazo {
 }
 
 describe("la ventana", () => {
-  it("atajos: Hoy, Ayer, Últimos 7 días y Este mes, en el día civil de Juárez", () => {
+  it("atajos: Hoy, Ayer, Esta semana y Este mes, en el día civil de Juárez", () => {
+    // «Últimos 7 días» dejó de existir el 18 sep 2026 (Vernier V1, decisión 7):
+    // la misma palabra significa lo mismo en toda la casa. La semana arranca
+    // el lunes: el 15 sep 2026 es martes, así que empieza el 14.
     const a = atajosDeTiempo(LEIDA);
-    expect(a.map((x) => x.nombre)).toEqual(["Hoy", "Ayer", "Últimos 7 días", "Este mes"]);
+    expect(a.map((x) => x.nombre)).toEqual(["Hoy", "Ayer", "Esta semana", "Este mes"]);
     expect(a[0]!.periodo).toEqual({ desde: j("2026-09-15T00:00:00"), hasta: LEIDA });
     expect(a[1]!.periodo).toEqual({ desde: j("2026-09-14T00:00:00"), hasta: j("2026-09-15T00:00:00") - 1 });
-    expect(a[2]!.periodo.desde).toBe(j("2026-09-09T00:00:00"));
+    expect(a[2]!.periodo).toEqual({ desde: j("2026-09-14T00:00:00"), hasta: LEIDA });
     expect(a[3]!.periodo.desde).toBe(j("2026-09-01T00:00:00"));
   });
 
@@ -104,7 +107,8 @@ describe("la ventana", () => {
   it("la petición lleva el grado escrito, para que lo cerrado pueda guardarse", () => {
     const dia = new URL(`https://x${peticionDelRecorrido("jb", "u1", atajosDeTiempo(LEIDA)[1]!.periodo)}`);
     expect(dia.searchParams.get("grado")).toBe("0");
-    const semana = new URL(`https://x${peticionDelRecorrido("jb", "u1", atajosDeTiempo(LEIDA)[2]!.periodo)}`);
+    const sieteDias = { desde: j("2026-09-09T00:00:00"), hasta: LEIDA };
+    const semana = new URL(`https://x${peticionDelRecorrido("jb", "u1", sieteDias)}`);
     expect(semana.searchParams.get("grado")).toBe("1");
   });
 
@@ -130,7 +134,7 @@ describe("cómo se dice", () => {
     expect(etiquetaDelPeriodo({ desde: j("2026-09-14T22:00:00"), hasta: j("2026-09-15T06:00:00") }, LEIDA)).toBe(
       "lun 14 sep 22:00 → mar 15 sep 06:00",
     );
-    expect(etiquetaDelPeriodo(atajosDeTiempo(LEIDA)[2]!.periodo, LEIDA)).toBe("mié 9 sep 00:00 → mar 15 sep 18:04 (ahora)");
+    expect(etiquetaDelPeriodo(atajosDeTiempo(LEIDA)[2]!.periodo, LEIDA)).toBe("lun 14 sep 00:00 → mar 15 sep 18:04 (ahora)");
   });
 
   it("sello y duración, sin redondeos con «~»", () => {

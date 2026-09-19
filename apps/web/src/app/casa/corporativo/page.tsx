@@ -1,7 +1,7 @@
 import { exigirSesion } from "@/lib/guardia-pagina";
 import { Marco } from "@/components/casa/marco";
 import { CasaVacia } from "@/components/casa/casa-vacia";
-import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
+import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 
 /**
  * La casa del corporativo — cimiento: Vernier.
@@ -18,7 +18,7 @@ export default async function CasaCorporativo() {
 
   const casa = CASAS.corporativo;
   return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS}>
+    <Marco casa={casa} alcance={ALCANCE_SIN_CUENTA}>
       <CasaVacia casa={casa} />
     </Marco>
   );
