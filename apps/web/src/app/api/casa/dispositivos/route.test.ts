@@ -63,7 +63,7 @@ describe("dar de alta", () => {
       prefijo: "TK-FTC927",
     });
     const d = destino(r);
-    expect(d.pathname).toBe("/casa/transportista/dispositivos");
+    expect(d.pathname).toBe("/casa/transportista/expedientes/dispositivos");
     expect(d.searchParams.get("hecho")).toBe("alta");
     expect(d.searchParams.get("dispositivo")).toBe("d9");
     expect(d.searchParams.get("account")).toBe("juarez-bus");
@@ -119,7 +119,7 @@ describe("las tres de Ver ‹dispositivo› (C4-c)", () => {
   it("un dispositivo de otra cuenta vuelve al cuarto: su ficha sería un 404 y el aviso no se vería", async () => {
     soltarDispositivo.mockResolvedValue({ ok: false, error: "dispositivo_no_encontrado", mensaje: "Ese dispositivo no es de esta cuenta." });
     const d = destino(await mandar({ account: "juarez-bus", accion: "soltar", deviceId: "ajeno", motivo: "x" }));
-    expect(d.pathname).toBe("/casa/transportista/dispositivos");
+    expect(d.pathname).toBe("/casa/transportista/expedientes/dispositivos");
     expect(d.searchParams.get("error")).toBe("Ese dispositivo no es de esta cuenta.");
   });
 });

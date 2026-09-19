@@ -105,8 +105,9 @@ export const CASAS: Record<Cara, Casa> = {
           // La puerta de la casa: el primer lugar del primer grupo.
           // C2 del cuarto de Compás (16 sep 2026).
           { nombre: "Flota en vivo", ruta: "/casa/transportista/flota", condicion: "siempre" },
-          // C4-b: el inventario (6.6) y el alta (17 sep 2026).
-          { nombre: "Dispositivos", ruta: "/casa/transportista/dispositivos", condicion: "siempre" },
+          // Dispositivos fue lugar del menú del 17 al 19 sep 2026 (C4-b). Ahora
+          // es un cajón del archivero de Expedientes (ficha V2 §4): el mismo
+          // inventario estaba dos veces.
           { nombre: "Lugares", ruta: null, condicion: "siempre" },
         ],
       },
@@ -116,7 +117,8 @@ export const CASAS: Record<Cara, Casa> = {
           // El segundo afluente: pólizas, permisos, exámenes, capacitaciones,
           // mantenimiento firmado, inspecciones. Aquí viven los choferes
           // mientras toda su sustancia sean sus papeles.
-          // El primer cuarto construido (PR D, 16 sep 2026).
+          // El primer cuarto construido (PR D, 16 sep 2026). Desde el 19-sep, un
+          // archivero: tablero y cajones de Unidades · Dispositivos · Choferes.
           { nombre: "Expedientes", ruta: "/casa/transportista/expedientes", condicion: "siempre" },
         ],
       },

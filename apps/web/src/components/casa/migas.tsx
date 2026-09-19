@@ -9,7 +9,7 @@ import Link from "next/link";
  * habría callejones sin salida en unas pantallas y no en otras.
  *
  * Registra el descenso, que es distinto de la jerarquía de la URL: se llega a
- * una unidad desde Flota en vivo o desde Dispositivos, y el regreso tiene que
+ * una unidad desde Flota en vivo o desde el cajón Dispositivos, y el regreso tiene que
  * devolver a donde se venía, no a un padre teórico. Por eso los pasos los pone
  * quien navega, no el enrutador.
  *

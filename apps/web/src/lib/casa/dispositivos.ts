@@ -12,12 +12,23 @@ import { RAIZ_EXPEDIENTES } from "@/lib/casa/expedientes";
  * https://claude.ai/artifact/FGi58hto8teEYappBAQw1Z
  */
 
-export const RAIZ_DISPOSITIVOS = "/casa/transportista/dispositivos";
+/**
+ * El cajón Dispositivos del archivero de Expedientes. Hasta el 19-sep fue un
+ * lugar propio del menú; la dirección vieja redirige aquí (ficha del archivero §4).
+ */
+export const RAIZ_DISPOSITIVOS = `${RAIZ_EXPEDIENTES}/dispositivos`;
+
+/** La dirección del lugar que ya no existe. Sólo la usa su redirección. */
+export const RAIZ_DISPOSITIVOS_VIEJA = "/casa/transportista/dispositivos";
 
 /** Las acciones que abren un panel en su pantalla (`?accion=`). */
 export type AccionDeDispositivo = "alta" | "asignar" | "soltar" | "baja";
 
-/** De dónde se llegó a Ver ‹dispositivo›: tiene dos puertas, y se vuelve a la que se usó. */
+/**
+ * De dónde se llegó a Ver ‹dispositivo›: tiene dos puertas, y se vuelve a la que
+ * se usó. `dispositivos` es el cajón; `expedientes`, el tablero (su «Piden
+ * atención» y su buscador).
+ */
 export type Puerta = "dispositivos" | "expedientes";
 
 /** Lo que acaba de pasar en Ver ‹dispositivo›. Sólo nombra la acción: la frase se arma con la base. */

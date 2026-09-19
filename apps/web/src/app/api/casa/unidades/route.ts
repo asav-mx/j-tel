@@ -3,6 +3,7 @@ import { corregirUnidad, darDeAltaUnidad } from "@jtel/services";
 import { getRepos } from "@/lib/db";
 import { exigir } from "@/lib/guardia-api";
 import { rutas } from "@/lib/casa/expedientes";
+import { rutaDelCajon } from "@/lib/casa/archivero";
 
 /**
  * Dar de alta y corregir una unidad desde la casa nueva (C4-e).
@@ -24,7 +25,8 @@ export async function POST(request: Request) {
   const cuenta = String(form.get("account") ?? "").trim();
   const accion = String(form.get("accion") ?? "");
 
-  const cuarto = rutas.cuarto(cuenta || null);
+  // El alta vive en el cajón Unidades del archivero (ficha V2 §3): ahí regresa.
+  const cuarto = rutaDelCajon("unidades", cuenta || null);
   const g = await exigir(request, { tipo: "carrier-maneja-flota", slug: cuenta }, { redirigirA: cuarto });
   if (!g.ok) return g.respuesta;
 

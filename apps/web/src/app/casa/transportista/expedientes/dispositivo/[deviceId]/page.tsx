@@ -16,7 +16,6 @@ import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
 import { relojDePagina } from "@/lib/casa/cronometro";
 import { diaDe, edad, glifoDeDispositivo, rutas } from "@/lib/casa/expedientes";
 import {
-  RAIZ_DISPOSITIVOS,
   SUGERENCIAS,
   accionDeFicha,
   hechoDeFicha,
@@ -116,19 +115,23 @@ export default async function VerDispositivo({
 
   const esta = (params: Parameters<typeof rutasDeDispositivos.ver>[2] = {}) =>
     rutasDeDispositivos.ver(deviceId, cuentaEnRuta, { desde: puerta, ...params });
+  // Desde el cajón se regresa por él; desde el tablero, al tablero.
   const regreso =
     puerta === "dispositivos"
-      ? { nombre: "Dispositivos", ruta: rutasDeDispositivos.cuarto(cuentaEnRuta) }
-      : { nombre: "Expedientes", ruta: rutas.cuarto(cuentaEnRuta) };
+      ? [
+          { nombre: "Expedientes", ruta: rutas.cuarto(cuentaEnRuta) },
+          { nombre: "Dispositivos", ruta: rutasDeDispositivos.cuarto(cuentaEnRuta) },
+        ]
+      : [{ nombre: "Expedientes", ruta: rutas.cuarto(cuentaEnRuta) }];
 
   const fraseDelHecho = armarHecho({ hecho, grupo, vigente, unidades, desplazadoId, cuarto });
   const error = textoDeRuta(sp.error);
   const comunes = { cuenta: carrier.slug, deviceId, desde: puerta, nombre, cancelar: esta(), error };
 
   return (
-    <Marco casa={casa} alcance={cuenta.alcance} cuenta={cuenta.casa} lugar={puerta === "dispositivos" ? RAIZ_DISPOSITIVOS : undefined}>
+    <Marco casa={casa} alcance={cuenta.alcance} cuenta={cuenta.casa}>
       <div className="mx-auto flex max-w-3xl flex-col gap-7">
-        <Migas pasos={[regreso, { nombre: `Ver ${nombre}` }]} />
+        <Migas pasos={[...regreso, { nombre: `Ver ${nombre}` }]} />
         <Titular
           nombre={nombre}
           bajo={[

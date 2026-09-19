@@ -54,9 +54,11 @@ describe("quién y por qué en la historia", () => {
 });
 
 describe("las rutas", () => {
-  it("el cuarto, con su panel o su hecho, y la cuenta al final", () => {
-    expect(rutasDeDispositivos.cuarto()).toBe("/casa/transportista/dispositivos");
-    expect(rutasDeDispositivos.cuarto("juarez-bus", { accion: "alta" })).toBe("/casa/transportista/dispositivos?accion=alta&account=juarez-bus");
+  it("el cajón del archivero, con su panel o su hecho, y la cuenta al final", () => {
+    expect(rutasDeDispositivos.cuarto()).toBe("/casa/transportista/expedientes/dispositivos");
+    expect(rutasDeDispositivos.cuarto("juarez-bus", { accion: "alta" })).toBe(
+      "/casa/transportista/expedientes/dispositivos?accion=alta&account=juarez-bus",
+    );
   });
 
   it("la ficha vive en Expedientes y sólo escribe la puerta cuando no es la de siempre", () => {
