@@ -610,7 +610,7 @@ export function AvisoDePausa({ pausa, continuaEn, alContinuar }: { pausa: Pausa;
         glifo={<Glifo estado="salto" tamano={16} tinta="tinta" />}
         titulo="Salto del GPS"
         rango={`${sello(pausa.desde)} → ${sello(pausa.hasta)} · ${pausa.km.toFixed(1)} km en ${duracion(pausa.hasta - pausa.desde)}`}
-        porque="La línea no se dibuja: los dos puntos se midieron, pero ningún camión recorre eso en ese tiempo."
+        porque="La señal no se cortó: es el mismo tramo medido. Pero ningún camión recorre eso en ese tiempo, así que entre los dos puntos no se dibuja camino."
         accion={`Continuar en ${hhmm(continuaEn)}`}
         alTocar={alContinuar}
       />

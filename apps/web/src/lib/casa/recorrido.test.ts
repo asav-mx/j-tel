@@ -10,7 +10,10 @@ import {
   mover,
   panelDe,
   glifoDePausa,
-  huecosQuietosPorLugar,
+  HUECO_QUIETO_METROS,
+  HUECOS_ENCIMADOS_PX,
+  huecosQuietos,
+  juntarEncimados,
   nombreDePausa,
   pausasEntre,
   pedazosDe,
@@ -203,7 +206,7 @@ describe("las pausas entre pedazos", () => {
       km: 10.2,
     });
     expect(glifoDePausa(pausa!)).toBe("salto");
-    expect(nombreDePausa(pausa!)).toBe("Salto del GPS · 10.2 km en 12:00");
+    expect(nombreDePausa(pausa!)).toBe("Salto del GPS · 10.2 km en 12:00 · la señal siguió");
   });
 
   it("cada pausa tiene su propia forma: círculo hueco, anillo punteado, rombo", () => {
@@ -262,7 +265,7 @@ describe("la ventana vacía (regla 11): dice qué se pudo medir, no si trabajó"
 
 describe("los huecos que no dejan corte visible", () => {
   // El Jeep, 18 sep 2026: estacionado, reportando cada hora. Cuatro huecos con
-  // 0 m entre sus extremos, en dos lugares a unos 10 m uno del otro.
+  // 0 m entre sus extremos, en dos lugares a unos 13 m uno del otro.
   const hueco = (desde: string, hasta: string, lat: number, lng: number, latFin = lat, lngFin = lng) => ({
     desde: `2026-09-18T${desde}:00.000Z`,
     hasta: `2026-09-18T${hasta}:00.000Z`,
@@ -272,29 +275,47 @@ describe("los huecos que no dejan corte visible", () => {
     latFin,
     lngFin,
   });
-
-  it("los cuatro del Jeep son un solo lugar: 4 huecos, 3 h 29 min", () => {
-    const quietos = huecosQuietosPorLugar([
-      hueco("17:14", "18:13", 31.6863, -106.35356),
-      hueco("18:13", "19:13", 31.6863, -106.35356),
-      hueco("19:13", "19:44", 31.6863, -106.35356),
-      hueco("19:56", "20:54", 31.68636, -106.35368),
-    ]);
-    expect(quietos).toHaveLength(1);
-    expect(quietos[0]!.n).toBe(4);
-    expect(quietos[0]!.ms).toBe((59 + 60 + 31 + 58) * 60_000);
+  const JEEP = [
+    hueco("17:14", "18:13", 31.6863, -106.35356),
+    hueco("18:13", "19:13", 31.6863, -106.35356),
+    hueco("19:13", "19:44", 31.6863, -106.35356),
+    hueco("19:56", "20:54", 31.68636, -106.35368),
+  ];
+  /** Una proyección de juguete: `pxPorMetro` píxeles por cada metro del terreno. */
+  const proyeccion = (pxPorMetro: number) => (lat: number, lng: number) => ({
+    x: lng * 111_320 * Math.cos((31.69 * Math.PI) / 180) * pxPorMetro,
+    y: -lat * 110_540 * pxPorMetro,
   });
 
-  it("un hueco que sí se movió no lleva pastilla: la línea ya se ve rota", () => {
+  it("los umbrales son constantes con nombre, no números sueltos", () => {
+    expect(HUECO_QUIETO_METROS).toBe(50);
+    expect(HUECOS_ENCIMADOS_PX).toBe(14);
+  });
+
+  it("un hueco que sí se movió no es quieto: la línea ya se ve rota", () => {
     // 12.9 km entre sus extremos, como el de la unidad 6867faeb el 26 ago.
-    expect(huecosQuietosPorLugar([hueco("21:49", "22:39", 31.69, -106.42, 31.8, -106.4)])).toEqual([]);
+    expect(huecosQuietos([hueco("21:49", "22:39", 31.69, -106.42, 31.8, -106.4)])).toEqual([]);
+    expect(huecosQuietos(JEEP)).toHaveLength(4);
   });
 
-  it("dos lugares distintos son dos pastillas", () => {
-    const quietos = huecosQuietosPorLugar([
-      hueco("10:00", "11:00", 31.69, -106.42),
-      hueco("12:00", "13:00", 31.75, -106.42),
-    ]);
-    expect(quietos.map((q) => q.n)).toEqual([1, 1]);
+  it("de lejos, los cuatro del Jeep se enciman: una pastilla, 4 huecos, 3 h 28 min", () => {
+    const juntos = juntarEncimados(huecosQuietos(JEEP), proyeccion(0.5)); // 13 m ≈ 6.5 px
+    expect(juntos).toHaveLength(1);
+    expect(juntos[0]!.n).toBe(4);
+    expect(juntos[0]!.ms).toBe((59 + 60 + 31 + 58) * 60_000);
+  });
+
+  it("de cerca, los dos lugares quedan separados a simple vista: cada uno con su pastilla", () => {
+    const separados = juntarEncimados(huecosQuietos(JEEP), proyeccion(4)); // 13 m ≈ 52 px
+    expect(separados.map((g) => g.n)).toEqual([3, 1]);
+  });
+
+  it("se encadena: A toca a B y B toca a C es una sola mancha, aunque A y C no se toquen", () => {
+    // Tres marcas en fila a 10 px: A–C quedan a 20 px (> 14), pero en pantalla son una sola mancha.
+    const x = new Map([[1, 0], [2, 10], [3, 20]]);
+    const enFila = [1, 2, 3].map((lat) => ({ lat, lng: 0, ms: 1 }));
+    const juntos = juntarEncimados(enFila, (lat) => ({ x: x.get(lat)!, y: 0 }));
+    expect(juntos).toHaveLength(1);
+    expect(juntos[0]!.n).toBe(3);
   });
 });

@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Glifo, type EstadoGlifo } from "@/components/casa/glifo";
-import { duracion, huecosQuietosPorLugar, recorridoHasta, type Pedazo, type RecorridoJson } from "@/lib/casa/recorrido";
+import { duracion, huecosQuietos, juntarEncimados, recorridoHasta, type HuecoQuieto, type Pedazo, type RecorridoJson } from "@/lib/casa/recorrido";
 
 /**
  * El mapa de Recorridos y playback (C3).
@@ -79,6 +79,9 @@ export function MapaRecorrido({
   const mapa = useRef<import("leaflet").Map | null>(null);
   const L = useRef<typeof import("leaflet") | null>(null);
   const capa = useRef<import("leaflet").LayerGroup | null>(null);
+  /** Las pastillas de huecos quietos: se vuelven a juntar con cada zoom. */
+  const capaDePastillas = useRef<import("leaflet").LayerGroup | null>(null);
+  const quietos = useRef<HuecoQuieto[]>([]);
   const hechas = useRef<import("leaflet").Polyline[]>([]);
   const pin = useRef<import("leaflet").Marker | null>(null);
   const encuadreDe = useRef<string | null>(null);
@@ -102,6 +105,9 @@ export function MapaRecorrido({
         .addTo(m);
       mod.control.zoom({ position: "bottomright" }).addTo(m);
       capa.current = mod.layerGroup().addTo(m);
+      capaDePastillas.current = mod.layerGroup().addTo(m);
+      // Lo que se encima depende del zoom: los mismos 10 m son una marca de lejos y dos de cerca.
+      m.on("zoomend", () => dibujarPastillas());
       mapa.current = m;
       setListo(true);
     });
@@ -129,6 +135,28 @@ export function MapaRecorrido({
     m.invalidateSize();
     m.fitBounds(mod.latLngBounds(puntosDeEncuadre.current).pad(0.12), { maxZoom: 16 });
     encuadreDe.current = clave;
+  }
+
+  /**
+   * Las pastillas de los huecos quietos, juntando sólo lo que se encima en la
+   * pantalla con el zoom de ahora. Van en la capa de rótulos, encima de los
+   * marcadores: el del playback no las tapa.
+   */
+  function dibujarPastillas() {
+    const m = mapa.current;
+    const mod = L.current;
+    const p = capaDePastillas.current;
+    if (!m || !mod || !p) return;
+    p.clearLayers();
+    for (const q of juntarEncimados(quietos.current, (lat, lng) => m.latLngToLayerPoint([lat, lng]))) {
+      mod
+        .tooltip({ permanent: true, direction: "top", offset: [0, -9], className: "rotulo-hueco", interactive: false })
+        .setLatLng([q.lat, q.lng])
+        .setContent(
+          `${CIRCULO}<span>${q.n === 1 ? "1 hueco" : `${q.n} huecos`}</span><span class="sr-only"> · ${duracion(q.ms)} sin señal, sin moverse</span>`,
+        )
+        .addTo(p);
+    }
   }
 
   /* El periodo: lugares, línea futura, línea hecha vacía, extremos de huecos. */
@@ -199,21 +227,13 @@ export function MapaRecorrido({
           .addTo(c);
       }
     }
-    // En la capa de rótulos (encima de los marcadores): el del playback no la tapa.
-    for (const q of huecosQuietosPorLugar(huecos)) {
-      mod
-        .tooltip({ permanent: true, direction: "top", offset: [0, -9], className: "rotulo-hueco", interactive: false })
-        .setLatLng([q.lat, q.lng])
-        .setContent(
-          `${CIRCULO}<span>${q.n === 1 ? "1 hueco" : `${q.n} huecos`}</span><span class="sr-only"> · ${duracion(q.ms)} sin señal, sin moverse</span>`,
-        )
-        .addTo(c);
-    }
+    quietos.current = huecosQuietos(huecos);
     puntosDeEncuadre.current = [
       ...pedazos.flatMap((p) => p.puntos.map((q) => [q.lat, q.lng] as [number, number])),
       ...lugares.flatMap((l) => l.poligono.map((q) => [q.lat, q.lng] as [number, number])),
     ];
     encuadrarSiSePuede();
+    dibujarPastillas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clave, listo]);
 

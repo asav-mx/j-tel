@@ -5,7 +5,7 @@
  * daltónico, una pantalla mala, o el sol de Juárez a las siete de la mañana
  * bastan para que el color desaparezca. La forma sobrevive a todo eso.
  *
- * ## Tres familias, que no se cruzan
+ * ## Tres familias de sujetos, que no se cruzan — y una de marcas
  *
  * Cada cosa tiene su silueta base, para que ninguna forma de una se confunda
  * con la de otra cuando aparecen juntas —y en el cuarto de Expedientes aparecen
@@ -35,6 +35,10 @@
  *   · vigente         hoja llena, en tenue
  *   · sin vencimiento hoja llena con una raya hueca, en tenue
  *
+ *   MARCAS DE LA TRAZA — no son sujetos: «aquí la medición se interrumpe»
+ *   · hueco          círculo hueco — nadie midió (la misma forma que SIN SEÑAL)
+ *   · salto          rombo hueco — se midió, pero los dos puntos se contradicen
+ *
  * Cuadros ratificados en el boceto de «las dos familias»; hojas el 16 de
  * septiembre de 2026 (boceto y prototipo del PR D); SIN SEÑAL el mismo día.
  *
@@ -63,7 +67,7 @@ export type EstadoGlifo =
   | "papel-falta-la-regla"
   | "papel-vigente"
   | "papel-sin-vencimiento"
-  // Cortes de la traza
+  // Marcas de la traza (no son sujetos)
   | "salto";
 
 /** Cómo se lee cada forma en voz alta, para quien no ve la pantalla. */
@@ -179,10 +183,11 @@ export function Glifo({
         />
       )}
 
-      {/* ── Cortes de la traza ──
+      {/* ── Marcas de la traza (ratificadas el 18 sep 2026) ──
           El salto del GPS: dos puntos medidos que se contradicen. Rombo hueco,
-          una forma que ninguna familia usa: no es un estado de la unidad (ella
-          sí transmitía) ni un silencio (eso es el círculo hueco del hueco). */}
+          una forma que ninguna familia de sujetos usa: no es un estado de la
+          unidad (ella sí transmitía) ni un silencio (eso es el círculo hueco
+          del hueco, que aquí se dibuja con `sin-senal`). */}
       {estado === "salto" && (
         <path d="M12 3.5 L20.5 12 L12 20.5 L3.5 12 Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
       )}

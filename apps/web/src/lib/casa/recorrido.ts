@@ -106,8 +106,22 @@ export function pausasEntre(pedazos: Pedazo[], r: Pick<RecorridoJson, "ocultos" 
   return pausas;
 }
 
-/** Metros dentro de los cuales un hueco «no se movió»: la deriva del GPS de un camión estacionado. */
+/**
+ * Metros dentro de los cuales un hueco «no se movió»: la deriva del GPS de un
+ * camión estacionado. Aprobado por ASAV el 18 sep 2026. Un hueco cuyos dos
+ * extremos quedan más cerca que esto no deja corte visible en la línea —la de
+ * antes y la de después se tocan—, así que se declara con una pastilla.
+ */
 export const HUECO_QUIETO_METROS = 50;
+
+/**
+ * Píxeles en pantalla dentro de los cuales dos marcas de hueco caen una encima
+ * de la otra: el diámetro de la marca (radio 6 más el trazo). Una pastilla
+ * junta **sólo** lo que se encima así; si a simple vista quedan separados,
+ * cada uno lleva la suya (ASAV, 18 sep 2026). Por eso se mide en la pantalla y
+ * no en el terreno: los mismos 10 m son una sola marca de lejos y dos de cerca.
+ */
+export const HUECOS_ENCIMADOS_PX = 14;
 
 function metrosEntre(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const k = Math.PI / 180;
@@ -117,34 +131,55 @@ function metrosEntre(a: { lat: number; lng: number }, b: { lat: number; lng: num
   return 2 * 6_371_000 * Math.asin(Math.sqrt(x));
 }
 
+export type HuecoQuieto = { lat: number; lng: number; ms: number };
+
 /**
- * Los huecos que no dejan corte visible, juntos por lugar.
+ * Los huecos que no dejan corte visible.
  *
  * Un hueco con desplazamiento se ve solo: la línea se interrumpe y quedan sus
  * dos círculos, lejos uno del otro. Uno **sin** desplazamiento —el camión
  * estacionado que reporta cada hora— no: sus dos extremos caen en el mismo
- * punto, la línea de antes y la de después se tocan, y el mapa se ve continuo
- * aunque la cinta diga «4 huecos». Así se vio el Jeep el 18 sep 2026: sus
- * ocho círculos quedaban además debajo del marcador del playback.
- *
- * Por eso éstos se declaran con una marca propia, una por lugar, que dice
- * cuántos huecos hubo ahí. Se agrupan contra el primero de cada lugar.
+ * punto y el mapa se ve continuo aunque la cinta diga «4 huecos». Así se vio el
+ * Jeep el 18 sep 2026: sus ocho círculos quedaban además debajo del marcador
+ * del playback.
  */
-export function huecosQuietosPorLugar(
-  huecos: RecorridoJson["huecos"],
-  metros: number = HUECO_QUIETO_METROS,
+export function huecosQuietos(huecos: RecorridoJson["huecos"], metros: number = HUECO_QUIETO_METROS): HuecoQuieto[] {
+  return huecos
+    .filter((h) => metrosEntre({ lat: h.lat, lng: h.lng }, { lat: h.latFin, lng: h.lngFin }) <= metros)
+    .map((h) => ({ lat: h.lat, lng: h.lng, ms: Date.parse(h.hasta) - Date.parse(h.desde) }));
+}
+
+/**
+ * Junta en una pastilla los huecos quietos cuyas marcas se enciman **en la
+ * pantalla**, con la proyección del zoom de ese momento. Se encadena: si A
+ * toca a B y B toca a C, en pantalla son una sola mancha, y una sola pastilla.
+ * La pastilla va donde cayó el primero.
+ */
+export function juntarEncimados(
+  quietos: HuecoQuieto[],
+  proyectar: (lat: number, lng: number) => { x: number; y: number },
+  px: number = HUECOS_ENCIMADOS_PX,
 ): Array<{ lat: number; lng: number; n: number; ms: number }> {
-  const lugares: Array<{ lat: number; lng: number; n: number; ms: number }> = [];
-  for (const h of huecos) {
-    if (metrosEntre({ lat: h.lat, lng: h.lng }, { lat: h.latFin, lng: h.lngFin }) > metros) continue;
-    const ms = Date.parse(h.hasta) - Date.parse(h.desde);
-    const aqui = lugares.find((l) => metrosEntre(l, h) <= metros);
-    if (aqui) {
-      aqui.n += 1;
-      aqui.ms += ms;
-    } else lugares.push({ lat: h.lat, lng: h.lng, n: 1, ms });
+  const puntos = quietos.map((q) => proyectar(q.lat, q.lng));
+  const grupo = quietos.map((_, i) => i);
+  const raiz = (i: number): number => (grupo[i] === i ? i : (grupo[i] = raiz(grupo[i]!)));
+  for (let i = 0; i < quietos.length; i += 1) {
+    for (let j = i + 1; j < quietos.length; j += 1) {
+      if (Math.hypot(puntos[i]!.x - puntos[j]!.x, puntos[i]!.y - puntos[j]!.y) <= px) {
+        grupo[Math.max(raiz(i), raiz(j))] = Math.min(raiz(i), raiz(j));
+      }
+    }
   }
-  return lugares;
+  const salida = new Map<number, { lat: number; lng: number; n: number; ms: number }>();
+  quietos.forEach((q, i) => {
+    const r = raiz(i);
+    const g = salida.get(r);
+    if (g) {
+      g.n += 1;
+      g.ms += q.ms;
+    } else salida.set(r, { lat: q.lat, lng: q.lng, n: 1, ms: q.ms });
+  });
+  return [...salida.values()];
 }
 
 /** La forma de cada pausa: la misma en la cinta y en el marcador detenido. */
@@ -155,7 +190,8 @@ export function glifoDePausa(p: Pausa): "sin-senal" | "en-destino" | "salto" {
 /** Cómo se nombra cada pausa en la cinta. */
 export function nombreDePausa(p: Pausa): string {
   if (p.tipo === "hueco") return `Sin señal · ${duracion(p.hasta - p.desde)}`;
-  if (p.tipo === "salto") return `Salto del GPS · ${p.km.toFixed(1)} km en ${duracion(p.hasta - p.desde)}`;
+  // «La señal siguió» explica por qué la cinta muestra dos barras donde las cifras cuentan un tramo medido.
+  if (p.tipo === "salto") return `Salto del GPS · ${p.km.toFixed(1)} km en ${duracion(p.hasta - p.desde)} · la señal siguió`;
   return `En ${p.lugar} · ${duracion(p.hasta - p.desde)}`;
 }
 
