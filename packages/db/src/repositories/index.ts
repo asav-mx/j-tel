@@ -578,6 +578,50 @@ export class FleetRepository {
     return unit!;
   }
 
+  /**
+   * La identidad de las unidades de una cuenta —nombre y VIN—, para revisar
+   * choques antes de dar de alta o corregir (C4-e). Sólo de esa cuenta: el
+   * nombre y el VIN son únicos por cuenta, y lo de las otras no se mira.
+   */
+  async identidadesDeUnidades(carrierAccountId: string) {
+    return this.db
+      .select({ id: units.id, label: units.label, vin: units.vin })
+      .from(units)
+      .where(eq(units.carrierAccountId, carrierAccountId));
+  }
+
+  /** Da de alta una unidad (C4-e). El choque de nombre o VIN lo rechaza la base (0040) si el código no lo vio. */
+  async darDeAltaUnidad(datos: { carrierAccountId: string; label: string; plateNumber: string | null; vin: string | null }) {
+    const [unidad] = await this.db
+      .insert(units)
+      .values({ carrierAccountId: datos.carrierAccountId, label: datos.label, plateNumber: datos.plateNumber, vin: datos.vin })
+      .returning();
+    return unidad!;
+  }
+
+  /**
+   * Corrige la identidad de una unidad de ESA cuenta (C4-e): nombre, placa y
+   * VIN. `null` si la unidad no es de la cuenta — el muro, igual que un id que
+   * no existe.
+   *
+   * **Sobrescribe, sin historia** (decisión de Asav, 18 sep 2026). La bitácora
+   * de correcciones es un pendiente con nombre: renombrar un número económico
+   * cambia cómo se lee toda su historia, y hoy no queda rastro de cómo se
+   * llamaba antes.
+   */
+  async corregirUnidad(
+    carrierAccountId: string,
+    unitId: string,
+    datos: { label: string; plateNumber: string | null; vin: string | null },
+  ) {
+    const [unidad] = await this.db
+      .update(units)
+      .set({ label: datos.label, plateNumber: datos.plateNumber, vin: datos.vin })
+      .where(and(eq(units.id, unitId), eq(units.carrierAccountId, carrierAccountId)))
+      .returning();
+    return unidad ?? null;
+  }
+
   async createDevice(carrierAccountId: string, imei: string, label?: string) {
     const [device] = await this.db
       .insert(devices)

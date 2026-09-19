@@ -168,6 +168,8 @@ export interface ExpedienteDeUnidad {
   identidad: {
     numeroEconomico: Parte<string>;
     placa: Parte<string>;
+    /** Desde C4-e (0040). Vacío si nadie lo ha capturado: ninguna unidad de antes lo tiene. */
+    vin: Parte<string>;
   };
   actividad: {
     /** Vacía si la unidad no tiene dispositivo, o si el suyo nunca reportó. */
@@ -225,6 +227,7 @@ export async function cargarExpedienteDeUnidad(
     identidad: {
       numeroEconomico: parteDe(unidad.label),
       placa: parteDe(unidad.plateNumber),
+      vin: parteDe(unidad.vin),
     },
     actividad,
     relaciones: {

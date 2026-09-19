@@ -281,6 +281,13 @@
       "when": 1789776000000,
       "tag": "0039_acciones_de_dispositivo",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1789862400000,
+      "tag": "0040_unidades_vin_y_nombres_unicos",
+      "breakpoints": true
     }
   ]
 }

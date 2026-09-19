@@ -235,10 +235,28 @@ export const units = pgTable("units", {
     .references(() => accounts.id, { onDelete: "cascade" }),
   label: text("label").notNull(),
   plateNumber: text("plate_number"),
+  /**
+   * El VIN, desde la 0040. Opcional; se guarda normalizado (mayúsculas, sin
+   * espacios ni guiones) y es único **por cuenta**, no en la plataforma: el
+   * camión es del transportista, y un aviso que dijera «ya existe en otra
+   * cuenta» delataría lo que hay del otro lado del muro (ASAV, 18 sep 2026).
+   */
+  vin: text("vin"),
   jrzPassDriverId: text("jrz_pass_driver_id"),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
-});
+}, (table) => [
+  /**
+   * Ningún nombre repetido en una cuenta (0040). «El mismo» es sin mayúsculas,
+   * sin espacios a los lados y con los de en medio contados como uno: la misma
+   * regla que `nombreComparable` en @jtel/domain.
+   */
+  uniqueIndex("units_nombre_unico_por_cuenta").on(
+    table.carrierAccountId,
+    sql`regexp_replace(lower(btrim(${table.label})), '\\s+', ' ', 'g')`,
+  ),
+  uniqueIndex("units_vin_unico_por_cuenta").on(table.carrierAccountId, table.vin).where(sql`${table.vin} IS NOT NULL`),
+]);
 
 export const devices = pgTable("devices", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -280,6 +298,14 @@ export const devices = pgTable("devices", {
 }, (table) => [
   uniqueIndex("devices_carrier_imei_idx").on(table.carrierAccountId, table.imei),
   uniqueIndex("devices_consecutivo_unico").on(table.consecutivo),
+  /**
+   * Ningún nombre repetido entre los dispositivos EN SERVICIO de una cuenta
+   * (0040). Los de baja no compiten: los 77 de Umbrella se llaman todos
+   * «umbrella» y su nombre ya es historia.
+   */
+  uniqueIndex("devices_nombre_unico_en_servicio")
+    .on(table.carrierAccountId, sql`regexp_replace(lower(btrim(${table.label})), '\\s+', ' ', 'g')`)
+    .where(sql`${table.label} IS NOT NULL AND ${table.retiredAt} IS NULL`),
 ]);
 
 export const deviceAssignments = pgTable("device_assignments", {

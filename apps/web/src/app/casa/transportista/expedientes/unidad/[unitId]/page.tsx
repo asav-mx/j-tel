@@ -2,11 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JTTEL_TZ, ORDEN_DE_ESTADOS } from "@jtel/domain";
 import { cargarExpedienteDeUnidad } from "@jtel/services";
+import { puedeManejarFlota } from "@jtel/auth-rbac";
 import { getRepos } from "@/lib/db";
 import { Marco } from "@/components/casa/marco";
 import { Migas } from "@/components/casa/migas";
 import { Pieza } from "@/components/casa/pieza";
-import { Encabezado, Familia, Parte, Renglon, SinCuenta, Titular } from "@/components/casa/expediente";
+import { AvisoDeError, Encabezado, Familia, Parte, Renglon, SinCuenta, Titular } from "@/components/casa/expediente";
+import { PanelDeIdentidadDeUnidad } from "@/components/casa/paneles-de-unidad";
+import { clases } from "@/components/casa/formulario";
+import { textoDeRuta } from "@/lib/casa/dispositivos";
 import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
 import { relojDePagina } from "@/lib/casa/cronometro";
@@ -58,8 +62,9 @@ export default async function VerUnidad({
       </Marco>
     );
   }
-  const { carrier, cuentaEnRuta } = cuenta;
+  const { carrier, cuentaEnRuta, identidad } = cuenta;
   const { unitId } = await params;
+  const sp = await searchParams;
   const ahora = new Date();
 
   // La unidad de otra cuenta no existe desde aquí: `null`, y 404.
@@ -70,6 +75,16 @@ export default async function VerUnidad({
 
   const nombre = e.identidad.numeroEconomico.estado === "con_datos" ? e.identidad.numeroEconomico.valor : "Unidad";
   const placa = e.identidad.placa.estado === "con_datos" ? e.identidad.placa.valor : null;
+  const vin = e.identidad.vin.estado === "con_datos" ? e.identidad.vin.valor : null;
+
+  // C4-e: corregir la identidad. Coordinador y admin (`puedeManejarFlota`); a
+  // despacho no se le dibuja el botón, y la ruta vuelve a preguntar.
+  const actua = puedeManejarFlota(identidad.memberships, carrier.id);
+  const corrigiendo = actua && sp.accion === "corregir";
+  const ficha = rutas.unidad(e.unidad.id, cuentaEnRuta);
+  const conCorregir = `${ficha}${ficha.includes("?") ? "&" : "?"}accion=corregir`;
+  // El «hecho» sólo nombra qué pasó; lo que se ve es lo que dice la base.
+  const hecho = sp.hecho === "alta" ? "Dada de alta." : sp.hecho === "corregida" ? "Identidad corregida." : null;
 
   return (
     <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
@@ -80,10 +95,45 @@ export default async function VerUnidad({
           bajo={[placa ?? "sin placa", carrier.name, e.unidad.activa ? null : "inactiva"].filter(Boolean).join(" · ")}
         />
 
+        {hecho && !corrigiendo && (
+          <p role="status" className="rounded-lg border border-[var(--linea)] bg-[var(--pieza)] px-3.5 py-2.5 text-[14px]">
+            {hecho}
+          </p>
+        )}
+
         <Familia nombre="Identidad">
-          <Parte pregunta="Número económico" parte={e.identidad.numeroEconomico} vacia="Sin número económico" conDatos={(v) => <Renglon pregunta="Número económico" medida>{v}</Renglon>} />
-          <Parte pregunta="Placa" parte={e.identidad.placa} vacia="Sin placa capturada" conDatos={(v) => <Renglon pregunta="Placa" medida>{v}</Renglon>} />
+          {corrigiendo ? (
+            <PanelDeIdentidadDeUnidad
+              modo="corregir"
+              cuenta={carrier.slug}
+              unitId={e.unidad.id}
+              valores={{
+                // Si vuelve de un error, lo tecleado; si no, lo que dice la base.
+                nombre: textoDeRuta(sp.nombre, 60) ?? (e.identidad.numeroEconomico.estado === "con_datos" ? nombre : ""),
+                placa: sp.error ? (textoDeRuta(sp.placa, 30) ?? "") : (placa ?? ""),
+                vin: sp.error ? (textoDeRuta(sp.vin, 40) ?? "") : (vin ?? ""),
+              }}
+              error={textoDeRuta(sp.error)}
+              cancelar={ficha}
+            />
+          ) : (
+            <>
+              <Parte pregunta="Número económico" parte={e.identidad.numeroEconomico} vacia="Sin número económico" conDatos={(v) => <Renglon pregunta="Número económico" medida>{v}</Renglon>} />
+              <Parte pregunta="Placa" parte={e.identidad.placa} vacia="Sin placa capturada" conDatos={(v) => <Renglon pregunta="Placa" medida>{v}</Renglon>} />
+              <Parte pregunta="VIN" parte={e.identidad.vin} vacia="Sin VIN capturado" conDatos={(v) => <Renglon pregunta="VIN" medida>{v}</Renglon>} />
+              {actua && (
+                <div>
+                  <Link href={conCorregir} className={clases.secundario}>
+                    Corregir
+                  </Link>
+                </div>
+              )}
+            </>
+          )}
         </Familia>
+
+        {/* Un error que no es del panel regresa sin `accion`: si sólo lo pintara el panel, no se vería. */}
+        {!corrigiendo && textoDeRuta(sp.error) && <AvisoDeError mensaje={textoDeRuta(sp.error)!} />}
 
         <Familia nombre="Actividad">
           <Parte
