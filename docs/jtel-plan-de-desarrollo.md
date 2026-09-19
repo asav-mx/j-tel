@@ -44,7 +44,7 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 - Los 8 FTC927 configurados; los 7 movidos a Juárez Bus (#419), el 002 en el Jeep (ASAV).
 - Velocidad: consulta de última señal 3.3 s → 1 ms (#423), cronómetro de lentitud (#427).
 - Muro entre cuentas **dentro del motor**: verificación, reverificación y el backfill de duraciones leen la evidencia filtrando por la cuenta del servicio que juzgan (#441). Medido en producción el 17-sep-2026 antes de cerrar: cero IMEIs con puntos en más de una cuenta, así que no movió ningún veredicto ya sellado. El 18-sep se borró la lectura sin cuenta del repositorio: ya no existe la puerta, no sólo está cerrada. Lo cuida una prueba-guardia que barre todos los paquetes y pone en rojo cualquier lectura sin cuenta que se reintroduzca.
-- La pausa de la verificación de un contrato (#447 / 0041, aplicada en Neon el 19-sep): se pausa y se reanuda como evento, con quién, desde cuándo vale y motivo; lo sellado no se toca y lo no medido durante la pausa jamás se genera hacia atrás. Primer uso previsto, desde J-Staff → Contratos: desde el 5 sep, «Sin telemetría: el proveedor anterior se desconectó».
+- La pausa de la verificación de un contrato (#447 / 0041): se pausa y se reanuda como evento, con quién, desde cuándo vale y motivo; lo sellado no se toca y lo no medido durante la pausa jamás se genera hacia atrás. **En uso:** los cuatro contratos quedaron pausados el 19-sep, con vigencia desde el 18-sep (se registró después y los eventos no se editan, así que no vale desde el 5). Los dos de Tecma, por el corte del proveedor de GPS; PRUEBA REAL y Honeywell, porque nunca operaron de verdad. Al pausar se borraron 1095 ocurrencias sin hecho.
 
 **El Marco: 7 piezas.** Pieza 6 (Compás, el cimiento), enmienda del expediente (§H, 6.30–6.33), Pieza 7 (la modalidad del servicio).
 
@@ -95,7 +95,9 @@ La piel vieja se apaga el 30-nov: las direcciones redirigen a la casa nueva y na
 - **`service_contracts.status = 'suspended'`** es una etiqueta comercial que ningún proceso lee, y la pausa de la verificación sí detiene al motor: dos cosas que se llaman casi igual y sólo una hace algo. Cuando se trabaje el tramo de contratos, se decide si se retira o se conecta. Mientras, J-Staff la muestra como «estado comercial», nunca junto a la pausa sin distinguirla.
 - **La lentitud de Servicios especiales**: 97–99 % en «datos» (cronómetro, 19 sep). Espera los EXPLAIN que corre Asav (`docs/correcciones/2026-09-19-medir-lentitud-servicios-especiales.sql`) y las líneas nuevas del cronómetro (#446) antes de optimizar.
 - **Corregir las geocercas mal trazadas.** Hoy sólo se puede en la piel vieja: necesita destino en la casa nueva antes del 30-nov.
-- **El hueco de navegación entre casas.** Quien tiene varias llaves no tiene cómo pasar de una casa a otra; se cierra con C · Los pasillos.
+- **El hueco de navegación entre casas.** Quien tiene varias llaves no tiene cómo pasar de una casa a otra: del transportista a J-Staff no hay paso dentro del producto, hoy se entra escribiendo la dirección (visto el 18-sep). Se cierra con C · Los pasillos.
+- **C4-d — apagar el alta vieja** de `/carrier/flota/alta`. Espera a que los 7 FTC estén rodando; hoy van 4.
+- **Migrar el alta de cuentas de J-Staff** a la casa nueva. Cuando se acerque el primer cliente real, no antes.
 - Cuadrar el dispositivo que no coincide: la hoja de Umbrella tiene 81 renglones (el 9181 repetido) pero en la base se dieron de baja 82.
 
 ---
