@@ -200,7 +200,11 @@ export function bloques(lista: OcurrenciaDeLaLista[], diaDeLaVentana: string | n
     porClave.set(clave, b);
   }
   return [...porClave.entries()]
-    .sort(([, a], [, b]) => (a.fecha === b.fecha ? a.primera - b.primera : a.fecha < b.fecha ? 1 : -1))
+    // Mismo día y misma hora (el mismo turno en dos contratos): desempata el
+    // nombre del bloque, para que el orden no dependa de cómo llegaron las filas.
+    .sort(([, a], [, b]) =>
+      a.fecha !== b.fecha ? (a.fecha < b.fecha ? 1 : -1) : a.primera - b.primera || a.turno.localeCompare(b.turno, "es"),
+    )
     .map(([clave, b]) => {
       const ventana = b.ventanas.size === 1 ? [...b.ventanas][0]! : "ventanas distintas";
       const conFecha = diaDeLaVentana === null || b.fecha !== diaDeLaVentana;

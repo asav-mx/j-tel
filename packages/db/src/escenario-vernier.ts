@@ -191,6 +191,10 @@ async function limpiar(db: ReturnType<typeof createDb>) {
   await db
     .delete(complianceFactHistory)
     .where(inArray(complianceFactHistory.serviceOccurrenceId, OCURRENCIAS.map((e) => id(1000 + e.n))));
+  // Las ocurrencias primero: arrastran sus hechos, y un hecho cita su geocerca
+  // sin cascada. Si la cascada de las cuentas llega antes a la geocerca, el
+  // borrado se niega.
+  await db.delete(serviceOccurrences).where(inArray(serviceOccurrences.id, OCURRENCIAS.map((e) => id(1000 + e.n))));
   await db.delete(accounts).where(inArray(accounts.id, [CARRIER, CARRIER_UNO, CARRIER_SOLO, CLIENTE_N, CLIENTE_O]));
   console.log(`[${SLUG}] borrado.`);
 }

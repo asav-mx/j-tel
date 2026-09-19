@@ -124,7 +124,13 @@ describe("bloques cronológicos (§6, prueba 3)", () => {
       [oc({ id: "a" }), oc({ id: "b", turno: { id: "otro", nombre: "T1" }, contrato: { id: "cB", nombre: "Contrato B" } })],
       "2026-09-17",
     );
-    expect(b.map((x) => x.titulo).sort()).toEqual(["T1 · Contrato A · 06:45–06:50", "T1 · Contrato B · 06:45–06:50"]);
+    expect(b.map((x) => x.titulo)).toEqual(["T1 · Contrato A · 06:45–06:50", "T1 · Contrato B · 06:45–06:50"]);
+    // El orden no depende de cómo llegaron las filas.
+    const alReves = bloques(
+      [oc({ id: "b", turno: { id: "otro", nombre: "T1" }, contrato: { id: "cB", nombre: "Contrato B" } }), oc({ id: "a" })],
+      "2026-09-17",
+    );
+    expect(alReves.map((x) => x.titulo)).toEqual(b.map((x) => x.titulo));
   });
 
   it("el riesgo no ordena: dentro del bloque, por hora exigida y ruta, no por veredicto", () => {
