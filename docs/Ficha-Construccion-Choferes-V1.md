@@ -1,6 +1,6 @@
 # Ficha de construcción · Choferes V1 — el alta y el expediente
 
-**Qué es.** El PR E que la ficha de Expedientes (16-sep) dejó con nombre: dar vida al cajón **Choferes** del archivero. Alta, corrección y expediente (`Ver ‹chofer›`). Con esto el cajón deja de decir «Sin choferes dados de alta», y se desbloquea la cadena que pidió Asav el 19-sep: **sin choferes no hay asignación, sin asignación no hay ausentismo, y la atribución del paso por parada (la suite de transporte público (B), por diseñar) queda coja.**
+**Qué es.** El PR E que la ficha de Expedientes (16-sep) dejó con nombre: dar vida al cajón **Choferes** del archivero. Alta, corrección y expediente (`Ver ‹chofer›`). Con esto el cajón deja de decir «Sin choferes dados de alta», y se desbloquea la cadena que pidió Asav el 19-sep: **sin choferes no hay asignación, sin asignación no hay ausentismo, y la atribución del paso por parada (Marco 9.2) queda coja.**
 
 Esta ficha obedece a `docs/Ficha-Expedientes.md` en todo lo que ya decidió (las cuatro familias, los tres estados, la vigencia §4, el catálogo §5) y al archivero (#450) en la puerta. No las repite: las llena.
 
@@ -25,7 +25,7 @@ Las cuatro familias, con los tres estados honestos de la ficha vieja. Al constru
 | Familia | Parte | Estado esperado hoy |
 |---|---|---|
 | Identidad | Nombre · número de licencia | con datos desde el alta |
-| Actividad | Unidades que ha operado | **aún no disponible · llega con el chofer declarado en cada servicio** — si la base ya tiene alguno, con datos (enmienda 5). Los pasos por parada no se dibujan en V1: no tienen fuente ni ley. |
+| Actividad | Unidades que ha operado | **aún no disponible · llega con el chofer declarado en cada servicio** — si la base ya tiene alguno, con datos (enmienda 5). Los pasos por parada no se dibujan en V1: **ya tienen ley** (Marco 9.2, ratificada el 19-sep), pero todavía no tienen fuente — su detección sigue abierta (9.11). |
 | Relaciones | Sus servicios asignados (ruta × turno, o circuito) | **aún no disponible · llega con la asignación** |
 | Documentos | Licencia con su vencimiento; los demás papeles del catálogo de su mercado | licencia con datos desde el alta; el resto según el catálogo (§5) |
 
@@ -37,8 +37,8 @@ Lo que el #450 dejó listo se llena solo: glifo por el peor papel, nombre, licen
 
 ## 4 · Lo que esta ficha NO construye (con nombre)
 
-- **La asignación chofer ↔ servicio.** Es el siguiente paso, no éste, y trae una pregunta abierta: `driver_assignments` liga chofer con **ruta × turno** (forma de especial); la forma para **circuito** (¿circuito × franja?) la define la construcción de la terminal (la suite de transporte público (B), por diseñar). Se diseña cuando la terminal se diseñe, para no inventarle forma dos veces.
-- **El ausentismo.** Necesita la asignación. Queda declarado en la terminal como «aún no disponible · llega con la asignación» (la suite de transporte público (B), por diseñar).
+- **La asignación chofer ↔ servicio.** Es el siguiente paso, no éste, y trae una pregunta abierta: `driver_assignments` liga chofer con **ruta × turno** (forma de especial); la forma para **circuito** (¿circuito × franja?) la define la construcción de la terminal del circuito (Marco 9.9), junto con la detección del paso por parada que la Pieza 9 dejó abierta (9.11). Se diseña cuando la terminal se diseñe, para no inventarle forma dos veces.
+- **El ausentismo.** Necesita la asignación. Queda declarado en la terminal como «aún no disponible · llega con la asignación» (Marco 9.5, que lo declara «aún no disponible · llega con el alta de choferes» y prohíbe inferir del GPS quién faltó).
 - **Papeles más allá de la licencia** (examen médico, antidoping): esperan la palabra del abogado (§6 de la ficha vieja) y el catálogo cargado.
 - **jrz-pass y abordaje**: futuro del expediente, no de esta ficha.
 - **La baja del chofer, con ficha propia.** Es el momento delicado: **purga datos personales** (Plan-Choferes 6.5), y los momentos delicados no se cuelan de pasada en otra ficha. Cuando se construya purga, en el mismo acto, las credenciales **y los papeles del chofer** —incluida la «Licencia» que nace en esta alta—, y conserva los hechos. Mientras un chofer de baja conservara sus credenciales seguiría ocupando su nombre y su licencia en el candado de la 0042: por eso la purga no puede quedar para después.
@@ -59,7 +59,7 @@ Desechable con choferes sembrados (incluido uno con licencia vencida y uno sin c
 
 Decididas por Asav el 19 de septiembre de 2026. Cada una corrige algo que la ficha daba por hecho y que el repo contradice. Donde el texto de arriba y una enmienda no coinciden, manda la enmienda.
 
-1. **Sin citas a ley no firmada.** La Pieza 9 está redactada y espera ratificación; no está en el Maestro del repo. Sus citas (9.2, 9.5, 9.11) dicen «la suite de transporte público (B), por diseñar». Cuando la pieza entre al Maestro, un PR de documento las restaura.
+1. **Sin citas a ley no firmada — ya cumplida.** Cuando se escribió esta enmienda, la Pieza 9 estaba redactada y sin ratificar, así que sus citas (9.2, 9.5, 9.11) decían «la suite de transporte público (B), por diseñar». **ASAV la ratificó el 19 de septiembre de 2026 y entró al Maestro**; las tres citas quedaron restauradas en su lugar por el PR de documento que esa enmienda anunciaba. La regla que la originó sigue viva: no se cita ley que no esté en el Maestro del repo.
 2. **La licencia en un solo lugar.** El número en las credenciales (identidad, con su candado); el vencimiento como papel «Licencia» del catálogo, con el número de folio. El alta sigue pidiendo el vencimiento, pero lo guarda como papel. `license_expires_on` no se escribe. La baja futura purga también esos papeles.
 3. **El candado en la base es la 0042:** la cuenta en las credenciales, con llave compuesta hacia `drivers`, y dos índices únicos —nombre y licencia— sobre los choferes activos. Se aplica en Neon antes del merge.
 4. **Examen médico y antidoping** dicen «aún no disponible · espera la palabra del abogado», sin botón, y **no cuentan** en el resumen ni en «Piden atención»: un chofer no puede nacer condenado a nunca estar al día por papeles que ni se pueden capturar.
