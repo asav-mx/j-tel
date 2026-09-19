@@ -63,7 +63,7 @@ Queda como pendiente con nombre, con su razón escrita.
 
 ## 6 · Lo que NO cambia (y no se toca)
 
-- El expediente en sí: `Ver ‹unidad›`, `Ver ‹dispositivo›`, `Ver ‹chofer›` con sus cuatro familias y sus tres estados. Intactos.
+- El expediente en sí: `Ver ‹unidad›` y `Ver ‹dispositivo›` con sus cuatro familias y sus tres estados. Intactos. `Ver ‹chofer›` todavía no existe: llega con el PR E de la ficha vieja.
 - Las reglas de vigencia y el catálogo por mercado (§4 y §5 de la ficha vieja).
 - Nada del motor. Esta ficha es puerta y navegación.
 - No se construyen los papeles ni el alta de choferes aquí: eso es el PR B/E de la ficha vieja y sigue su camino. El archivero los recibe cuando lleguen, sin rehacerse.
@@ -87,3 +87,14 @@ En la desechable, con las 84 unidades sembradas, las dos pieles, 375 y 1280 px. 
 - Cajón de Lugares propios del carrier (§5), cuando exista su fuente.
 - Los papeles y el alta de choferes (PR B/E de la ficha vieja).
 - Ligar `Ver ‹unidad›` con el acta de Vernier — va en el tramo de pasillos.
+
+## Enmiendas del 19-sep (al revisar el plan contra el repo)
+
+Decididas por Asav el 19 de septiembre de 2026. Cada una corrige algo que la ficha o el prototipo daban por hecho y que el repo contradice. Donde el texto de arriba y una enmienda no coinciden, manda la enmienda.
+
+1. **Tres secciones en el cajón de unidades, no dos:** `Piden algo` · `Sin juzgar` · `Al día`, cada una con su chip. «Al día» sólo se dice de lo que se juzgó: con el catálogo de Chihuahua sin valores, casi todas las unidades salen sin regla, y «81 al día» habría sido una cifra falsa (ficha vieja §5.4). `Sin juzgar` junta sin regla, sin papeles y sin mercado, y **dice su causa en una línea** («sin regla cargada para su mercado»): sin causa parece limbo. Las inactivas van plegadas al final.
+2. **«Dispositivos», no «Equipos».** El sustantivo ya está definido en el Marco (6.6), el skill y Ver ‹dispositivo›; una cosa se llama igual en todas las pantallas. El cajón es `Dispositivos` y su botón, `＋ Dar de alta un dispositivo`, como ya dice el alta existente.
+3. **Los cuatro grupos del inventario, no «sin señal»:** `Todos` · `Desconectados` · `En unidad` · `En bodega`, que no se enciman y suman el total; los de baja plegados al final, fuera de los chips. «Sin señal» es estado de unidad (15 min), no de dispositivo. «Piden atención» se lleva los desconectados. El 005 —comprado, nunca ha dicho una palabra— **tiene que aparecer** en «Piden atención»; cómo se nombra su caso está **pendiente de decidir** (choca con la definición del skill, que pide «montado»).
+4. **Los glifos del skill mandan**, no los del prototipo: la unidad lleva la hoja de su peor papel, como hoy; el dispositivo, los cuadros ratificados.
+5. **Sin botón de alta de chofer** ni liga «Dar de alta el primero»: no existe el alta. El cajón dice «Sin choferes dados de alta»; el botón llega con el PR E. Se corrigió el §6, que nombraba Ver ‹chofer› como existente.
+6. **Expedientes sigue sin sello**, como dice el Mapa; el prototipo lo había puesto bajo Compás.
