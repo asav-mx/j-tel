@@ -223,6 +223,14 @@ export class VerificationService {
       );
     }
 
+    const excluidasPorPausa = await this.repos.occurrences.contarVencidasEnPausa(now);
+    if (excluidasPorPausa > 0) {
+      console.warn(
+        `[verify] ${excluidasPorPausa} servicio(s) vencido(s) fuera de la cola por la pausa de la verificación de su contrato. ` +
+          `No se sellan mientras dure; lo ya sellado no se toca.`,
+      );
+    }
+
     const results = [];
     const verifiedIds: string[] = [];
 
@@ -870,6 +878,31 @@ export class VerificationService {
         skipped: true as const,
         cuentaDeEjemplo: true as const,
         motivo: motivoDemo,
+      };
+    }
+
+    /*
+     * LA SEGUNDA LLAVE: la pausa de la verificación del contrato (0041).
+     *
+     * En el mismo lugar y por la misma razón que la de arriba: las cuatro
+     * puertas pasan por aquí. Dos casos, los dos sin sellar nada:
+     *   · la ocurrencia cae en una pausa — nunca se sella, ni al reanudar;
+     *   · el contrato está en pausa ahora — no se sella nada de él, tampoco un
+     *     re-sello de un pendiente viejo (decisión 3 de Asav). Al reanudar, el
+     *     cron lo retoma solo.
+     * Lo ya sellado no se toca: esto sólo impide sellar.
+     */
+    const motivoPausa = await this.repos.pausas.motivoDePausa(
+      occurrence.contractId,
+      occurrence.expectedDeadline,
+      new Date(),
+    );
+    if (motivoPausa) {
+      return {
+        occurrenceId,
+        skipped: true as const,
+        enPausa: true as const,
+        motivo: motivoPausa,
       };
     }
 

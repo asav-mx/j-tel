@@ -36,7 +36,7 @@ const LECTURAS = [
 
 type Lectura = (typeof LECTURAS)[number];
 
-function espia(respuestas: Partial<Record<Lectura, (...a: unknown[]) => unknown>>) {
+function espia(respuestas: Partial<Record<Lectura | "eventosDeContratos", (...a: unknown[]) => unknown>>) {
   const llamadas: string[] = [];
   const vernier = new Proxy(
     {},
@@ -53,10 +53,24 @@ function espia(respuestas: Partial<Record<Lectura, (...a: unknown[]) => unknown>
       },
     },
   );
-  const repos = new Proxy({ vernier } as object, {
+  // Las pausas (0041) sólo se leen: la única lectura permitida es la de los eventos.
+  const pausas = new Proxy(
+    {},
+    {
+      get(_, nombre) {
+        if (nombre !== "eventosDeContratos") throw new Error(`El cargador llamó a pausas.${String(nombre)}, que no es una lectura`);
+        return async (...args: unknown[]) => {
+          llamadas.push("pausas.eventosDeContratos");
+          return respuestas.eventosDeContratos ? respuestas.eventosDeContratos(...args) : new Map();
+        };
+      },
+    },
+  );
+  const repos = new Proxy({ vernier, pausas } as object, {
     get(destino, nombre) {
       if (nombre === "vernier") return vernier;
-      throw new Error(`El cargador tocó repos.${String(nombre)}: sólo puede leer de repos.vernier`);
+      if (nombre === "pausas") return pausas;
+      throw new Error(`El cargador tocó repos.${String(nombre)}: sólo puede leer de repos.vernier y de los eventos de pausa`);
     },
   }) as unknown as ReposDeVernier;
   return { repos, llamadas };
@@ -123,7 +137,7 @@ describe("la lista lee el motivo del sello vigente", () => {
     const cuarto = await cargarServiciosEspeciales(repos, { carrierAccountId: CUENTA, desde: new Date(0), hasta: new Date() });
     expect(cuarto.ocurrencias[0]!.motivo.clave).toBe("llegada_sin_atribucion");
     expect(cuarto.ocurrencias[0]!.ventana).toEqual({ desde: "06:45", hasta: "06:50" });
-    expect(llamadas.every((l) => (LECTURAS as readonly string[]).includes(l))).toBe(true);
+    expect(llamadas.every((l) => (LECTURAS as readonly string[]).includes(l) || l === "pausas.eventosDeContratos")).toBe(true);
   });
 
   it("el cronómetro (#427) recibe tramos y tamaños, y la lista es la misma con él o sin él", async () => {
@@ -137,7 +151,7 @@ describe("la lista lee el motivo del sello vigente", () => {
       dato: (n, v) => eventos.push(`${n}=${v}`),
     });
     const sinMedidor = await cargarServiciosEspeciales(espia(respuestas).repos, { carrierAccountId: CUENTA, desde: new Date(0), hasta: new Date() });
-    expect(eventos).toEqual(["ocurrencias", "ocurrencias=2", "ledger", "entradasDelLedger=1", "motivos"]);
+    expect(eventos).toEqual(["ocurrencias", "ocurrencias=2", "ledger", "entradasDelLedger=1", "motivos", "pausas"]);
     expect(conMedidor).toEqual(sinMedidor);
   });
 
@@ -181,6 +195,33 @@ describe("la lista lee el motivo del sello vigente", () => {
     expect(o.veredicto).toBe("cumplido");
     expect(o.timing).toBe("tarde");
     expect(o.motivo.cifras).toEqual([{ medido: "Llegada 07:12:41", umbral: "límite 06:50:00" }]);
+  });
+});
+
+describe("las pausas de la verificación que tocan la ventana (0041)", () => {
+  const MOTIVO = "Sin telemetría: el proveedor anterior se desconectó";
+  const ev = (tipo: "pausa" | "reanudacion", iso: string) => ({ tipo, valeDesde: new Date(iso), motivo: tipo === "pausa" ? MOTIVO : null, registradoAt: new Date(iso) });
+
+  it("sólo las que tocan la ventana, con su contrato", async () => {
+    const { repos } = espia({
+      contratosDeCarrier: () => [
+        { id: "c1", nombre: "Contrato Norte", zona: ZONA },
+        { id: "c2", nombre: "Contrato Oriente", zona: ZONA },
+      ],
+      eventosDeContratos: () =>
+        new Map([
+          ["c1", [ev("pausa", "2026-09-05T06:00:00Z")]],
+          ["c2", [ev("pausa", "2026-08-01T06:00:00Z"), ev("reanudacion", "2026-08-10T06:00:00Z")]],
+        ]),
+    });
+    const cuarto = await cargarServiciosEspeciales(repos, {
+      carrierAccountId: CUENTA,
+      desde: new Date("2026-09-14T06:00:00Z"),
+      hasta: new Date("2026-09-19T06:00:00Z"),
+    });
+    expect(cuarto.pausas).toEqual([
+      { contratoId: "c1", contrato: "Contrato Norte", desde: "2026-09-05T06:00:00.000Z", hasta: null, motivo: MOTIVO },
+    ]);
   });
 });
 
@@ -278,7 +319,7 @@ describe("guardia: estas lecturas no juzgan ni escriben", () => {
       // nombre completo en este archivo haría saltar la guardia de muro, que
       // lo busca por nombre en todo el repo.
       new RegExp(`\\bgetFor${"Imeis"}\\w*\\(`),
-      /repos\.(?!vernier\b)\w+/,
+      /repos\.(?!vernier\b|pausas\.eventosDeContratos\b)\w+/,
     ]) {
       expect(fuente, String(prohibido)).not.toMatch(prohibido);
     }

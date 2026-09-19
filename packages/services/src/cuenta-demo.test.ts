@@ -75,6 +75,8 @@ describe("el motor no sella sobre cuentas de ejemplo", () => {
       updateTripStatus,
       clearPointsForTrip,
       repos: {
+        // La pausa de la verificación (0041): sin pausa, el motor sigue igual.
+        pausas: { motivoDePausa: vi.fn().mockResolvedValue(null) },
         occurrences: { findById: vi.fn().mockResolvedValue(occ) },
         evidence: {
           getPointsForTrip: vi.fn().mockResolvedValue([]),
@@ -160,9 +162,12 @@ describe("el motor no sella sobre cuentas de ejemplo", () => {
   it("el cron cuenta lo que dejó fuera en vez de saltárselo callado", async () => {
     const contar = vi.fn().mockResolvedValue(7);
     const repos = {
+      // La pausa de la verificación (0041): sin pausa, el motor sigue igual.
+      pausas: { motivoDePausa: vi.fn().mockResolvedValue(null) },
       occurrences: {
         findPendingVerification: vi.fn().mockResolvedValue([]),
         contarVencidasDeCuentaDemo: contar,
+        contarVencidasEnPausa: vi.fn().mockResolvedValue(0),
       },
       compliance: { addLedgerEntry: vi.fn() },
     };

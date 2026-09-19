@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { canAccessCarrierAccount, canAccessClientAccount, isJStaff, puedeManejarFlota } from "@jtel/auth-rbac";
+import { canAccessCarrierAccount, canAccessClientAccount, isJStaff, puedeManejarFlota, puedePausarVerificacion } from "@jtel/auth-rbac";
 import { getIdentidad, type Identidad } from "@/lib/auth";
 import { getRepos } from "@/lib/db";
 
@@ -24,6 +24,12 @@ import { getRepos } from "@/lib/db";
 
 export type Audiencia =
   | { tipo: "jstaff" }
+  /**
+   * Quien pausa y reanuda la verificación de un contrato (0041): sólo el admin
+   * de plataforma, provisional hasta la 6.29. Soporte y comercial son J-Staff y
+   * no pasan.
+   */
+  | { tipo: "jstaff-pausa-verificacion" }
   | { tipo: "cliente"; slug: string }
   /**
    * El cliente dueño, identificado por id en vez de por slug. Para rutas que
@@ -145,6 +151,12 @@ export async function decidir(identidad: Identidad, audiencia: Audiencia): Promi
       return {
         permitido: isJStaff(identidad.memberships),
         motivo: "Esta operación es de J-Staff.",
+      };
+
+    case "jstaff-pausa-verificacion":
+      return {
+        permitido: puedePausarVerificacion(identidad.memberships),
+        motivo: "Pausar o reanudar la verificación de un contrato es del admin de plataforma.",
       };
 
     case "cliente":

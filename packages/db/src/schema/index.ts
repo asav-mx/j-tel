@@ -1015,6 +1015,41 @@ export const documentVersions = pgTable("document_versions", {
 /** Fila completa de un hecho de cumplimiento. La foto que archiva la Pieza 1 debe ser fiel a esto. */
 export type ComplianceFact = typeof complianceFacts.$inferSelect;
 
+/**
+ * La pausa de la verificación de un contrato — eventos, no una palomita (0041,
+ * 19 sep 2026). Pausar agrega un evento; reanudar agrega otro. El estado se lee
+ * del último evento cuya `valeDesde` ya empezó.
+ *
+ * Mientras está en pausa el motor no genera ocurrencias del contrato ni sella
+ * nada de él. Lo ya sellado no se toca.
+ *
+ * `valeDesde` y `registradoAt` son dos fechas distintas a propósito: la pausa
+ * del primer uso vale desde el 5 sep 2026 (el día que la telemetría murió) y se
+ * registró días después.
+ *
+ * La base sostiene lo que el código revisa: los eventos se alternan, van hacia
+ * adelante, no valen en el futuro y no se editan (triggers de la 0041).
+ *
+ * No confundir con `serviceContracts.status = "suspended"`: ésa es una etiqueta
+ * comercial que ningún proceso lee.
+ */
+export const contractVerificationEvents = pgTable(
+  "contract_verification_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contractId: uuid("contract_id")
+      .notNull()
+      .references(() => serviceContracts.id, { onDelete: "cascade" }),
+    tipo: text("tipo").$type<"pausa" | "reanudacion">().notNull(),
+    valeDesde: timestamp("vale_desde", { withTimezone: true, mode: "date" }).notNull(),
+    motivo: text("motivo"),
+    actorKind: text("actor_kind").notNull(),
+    actorId: text("actor_id"),
+    registradoAt: timestamp("registrado_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [index("cve_contrato_idx").on(table.contractId, table.valeDesde)],
+);
+
 export const complianceFactHistory = pgTable("compliance_fact_history", {
   id: uuid("id").primaryKey().defaultRandom(),
   serviceOccurrenceId: uuid("service_occurrence_id").notNull(),

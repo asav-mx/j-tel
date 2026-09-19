@@ -21,6 +21,7 @@ import { planDeVinculacion } from "../mapeo-identidades.js";
 import { routeWindowSizing } from "../ventana-ocurrencia.js";
 import { consultaUltimoPuntoPorImei } from "../ultimo-punto-por-imei.js";
 import { VernierRepository } from "./vernier.js";
+import { PausasRepository, fueraPorPausa } from "./pausas.js";
 import {
   resumirUnidadDia,
   HUECO_MINUTOS_POR_DEFECTO,
@@ -98,6 +99,7 @@ import type {
 import { routeLengthKm } from "@jtel/domain";
 import { localDateIso, JTTEL_TZ, civilDatesInRange, addDaysIso } from "@jtel/domain";
 import { fechaDeVencimientoAGuardar, type ReglaDeTipo } from "@jtel/domain";
+import { caeEnPausa, intervalosDePausa } from "@jtel/domain";
 
 function suggestProfileCodeFromName(name: string): string {
   return suggestProfileCode(name);
@@ -2717,6 +2719,12 @@ export class OccurrenceRepository {
       windowEnd: Date;
     };
 
+    // La pausa de la verificación (0041): lo que cae en una pausa no se genera,
+    // ni ahora ni al reanudar. Lo no medido durante la pausa jamás se inventa
+    // hacia atrás. Es la única puerta de generación: la usan la renovación
+    // diaria y el botón «generar» de la pantalla.
+    const pausas = intervalosDePausa(await new PausasRepository(this.db).eventosDe(profile.contractId));
+
     const rows: Row[] = [];
     const startIso = start.toISOString().slice(0, 10);
     const endIso = end.toISOString().slice(0, 10);
@@ -2731,6 +2739,7 @@ export class OccurrenceRepository {
         anticipation,
         policy.timeZone,
       );
+      if (caeEnPausa(pausas, deadline)) continue;
       const { windowStart, windowEnd } = computeEvidenceWindow(
         deadline,
         policy,
@@ -3123,10 +3132,33 @@ export class OccurrenceRepository {
           // `contarVencidasDeCuentaDemo` — excluir en silencio es lo que ya nos
           // costó 35 días.
           not(this.esDeCuentaDeEjemplo()!),
+          // La pausa de la verificación (0041): ni lo que cae en una pausa ni
+          // nada de un contrato en pausa ahora entra a la cola. Cuántos se
+          // quedaron fuera lo dice `contarVencidasEnPausa`; `verifyOccurrence`
+          // vuelve a preguntar por si alguien llega por otra puerta.
+          not(fueraPorPausa(now)),
         ),
       );
 
     return rows;
+  }
+
+  /**
+   * Cuántos servicios vencidos NO entraron a la cola por la pausa de su contrato
+   * (0041). Igual que el de cuentas de ejemplo: un filtro que no se enuncia se
+   * ve idéntico a uno que no filtra.
+   */
+  async contarVencidasEnPausa(now: Date): Promise<number> {
+    const [fila] = await this.db
+      .select({ total: count() })
+      .from(serviceOccurrences)
+      .innerJoin(serviceContracts, eq(serviceOccurrences.contractId, serviceContracts.id))
+      .innerJoin(accounts, eq(accounts.id, serviceContracts.clientAccountId))
+      .innerJoin(trips, eq(trips.serviceOccurrenceId, serviceOccurrences.id))
+      .leftJoin(complianceFacts, eq(complianceFacts.serviceOccurrenceId, serviceOccurrences.id))
+      .where(and(this.condicionesDeCola(now), not(this.esDeCuentaDeEjemplo()!), fueraPorPausa(now)));
+
+    return Number(fila?.total ?? 0);
   }
 
   /**
@@ -7330,6 +7362,7 @@ export function createRepositories(db: Database) {
     circuits: new CircuitRepository(db),
     expedientes: new ExpedienteRepository(db),
     vernier: new VernierRepository(db),
+    pausas: new PausasRepository(db),
   };
 }
 

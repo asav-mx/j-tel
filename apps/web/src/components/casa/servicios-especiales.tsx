@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { horaCorta, localDateIso, type Veredicto } from "@jtel/domain";
-import type { OcurrenciaDeLaLista } from "@jtel/services";
+import { horaCorta, lineaDePausa, localDateIso, type Veredicto } from "@jtel/domain";
+import type { OcurrenciaDeLaLista, PausaDeLaVentana } from "@jtel/services";
 import { Glifo } from "@/components/casa/glifo";
 import { Pieza } from "@/components/casa/pieza";
 import { BarraDePeriodo } from "@/components/casa/barra-de-periodo";
@@ -79,6 +79,7 @@ function horaDelSello(o: OcurrenciaDeLaLista, zona: string): string {
  */
 export function ListaDeServiciosEspeciales({
   ocurrencias,
+  pausas,
   contratos,
   zona,
   periodo,
@@ -88,6 +89,8 @@ export function ListaDeServiciosEspeciales({
   diaDeLaVentana,
 }: {
   ocurrencias: OcurrenciaDeLaLista[];
+  /** Las pausas de la verificación que tocan la ventana (0041). */
+  pausas: PausaDeLaVentana[];
   contratos: Array<{ id: string; nombre: string }>;
   zona: string;
   periodo: Periodo;
@@ -126,6 +129,21 @@ export function ListaDeServiciosEspeciales({
         zona={zona}
         elegir={elegir}
       />
+
+      {/* La pausa de la verificación (0041): una línea por pausa que toca la
+          ventana, sin párrafos. Los días en pausa no tienen servicios, y esta
+          línea dice por qué. Respeta el chip de contrato: una pausa de otro
+          contrato no explica lo que se está mirando. */}
+      {pausas
+        .filter((p) => !f.contratoId || p.contratoId === f.contratoId)
+        .map((p) => (
+          <p key={`${p.contratoId}-${p.desde}`} role="status" className="mb-2 text-[13px] text-[var(--tinta)]">
+            {lineaDePausa(
+              { desde: new Date(p.desde), hasta: p.hasta ? new Date(p.hasta) : null, motivo: p.motivo },
+              { zona, contrato: contratos.length > 1 ? p.contrato : null },
+            )}
+          </p>
+        ))}
 
       {hayFilaDeContratos(contratos) && (
         <div role="group" aria-label="Contratos" className="mb-2 flex flex-wrap gap-1.5">

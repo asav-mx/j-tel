@@ -288,6 +288,13 @@
       "when": 1789862400000,
       "tag": "0040_unidades_vin_y_nombres_unicos",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1789948800000,
+      "tag": "0041_pausa_de_verificacion",
+      "breakpoints": true
     }
   ]
 }

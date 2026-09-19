@@ -32,6 +32,7 @@ export default defineConfig({
       "src/flota-en-vivo.integration.test.ts",
       "src/acciones-dispositivo.integration.test.ts",
       "src/nombres-unicos.integration.test.ts",
+      "src/pausa.integration.test.ts",
     ],
     // Escriben en la misma rama desechable: en paralelo se pisan.
     fileParallelism: false,
