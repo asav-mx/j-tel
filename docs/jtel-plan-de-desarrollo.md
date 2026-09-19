@@ -30,7 +30,7 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 - C1 — recorrido del día con huecos (#424) y corte de traza por modalidad (#426).
 - C2 — Flota en vivo con mapa (#428).
 - C3 — recorrido y playback en Ver ‹unidad› (#431, #432, #433).
-- C4 — acciones y candados (#434), el cuarto Dispositivos (#436), asignar/soltar/dar de baja (#437). Actúan coordinador y admin del carrier; el admin de plataforma de J-Staff también, en cualquier cuenta (soporte y comercial no) — **provisional hasta la 6.29**.
+- C4 — acciones y candados (#434), el cuarto Dispositivos (#436), asignar/soltar/dar de baja (#437). Actúan coordinador y admin del carrier; el admin de plataforma de J-Staff también, en cualquier cuenta (soporte y comercial no) — **provisional hasta la 6.29**. C4-e: dar de alta y corregir unidades desde la casa nueva, con su VIN (único por cuenta), y ningún nombre repetido en una cuenta, en el código y en la base (0040). La 2101 duplicada de juarez-bus se corrigió el 18-sep (conservada la del camión con su historia).
 - Recorrido y playback en Ver ‹dispositivo›, partido por unidad (#439).
 - Una traza rota se dibuja rota: el salto del GPS (más de 300 km/h) parte la traza sin borrar puntos y se declara con su rombo; los huecos de un camión estacionado se dicen en una pastilla; la línea se lee sobre un halo (4.78:1 y 4.59:1 medidos). Marcas de la traza ratificadas como familia propia en el skill (18 sep).
 
@@ -66,6 +66,9 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 
 ## Pendientes con nombre (anotados para no perderse)
 
+- **La bitácora de correcciones de identidad.** Corregir una unidad sobrescribe (decisión del 18-sep para C4-e): renombrar un número económico cambia cómo se lee toda su historia, y no queda registro de cómo se llamaba antes. No es decorativa. La pantalla lo avisa al corregir.
+- **Nombre único de usuario por cuenta** — la regla de C4-e alcanza a los usuarios, pero hoy no existe ninguna alta de usuarios y el nombre vive en Clerk. Entra con el Tramo 7 (altas por invitación o solicitud aprobada desde J-Staff).
+- **Las 77 asignaciones colgadas de Umbrella** en juarez-bus: la baja del 15-sep no las cerró. El guion `cerrar-asignaciones-de-baja.ts` las cierra con la fecha de su baja; simulado el 18-sep (0 conflictos), espera el sí de Asav para `--aplicar`.
 - **El evento de cambio de cuenta.** Hoy mover un dispositivo entre cuentas no deja fecha, así que no se puede decir «sin registro en esta cuenta». Cuando se construya (J-Staff), que sea un evento con fecha, y que el 6.14 lo diga al enmendarse.
 - **Quitar la baja desde la pantalla (6.18).** Hoy sólo con SQL. Necesita su propia conversación: reactivar debe ser un evento encima, no un borrado, para no perder fecha y motivo (6.15).
 - **El estado de una unidad y de un dispositivo debe derivar del lugar** (patio, taller, en servicio, en bodega) cuando existan Lugares y el mapa en vivo. Requiere roles nuevos de geocerca que hoy no existen.

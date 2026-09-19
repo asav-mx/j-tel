@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
 import { exigir } from "@/lib/guardia-api";
 import { validarImei } from "@jtel/domain";
+import { nombreDeDispositivoEnUso } from "@jtel/services";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -30,11 +31,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Carrier no encontrado" }, { status: 404 });
   }
 
+  // Ningún nombre repetido entre los dispositivos en servicio de la cuenta
+  // (C4-e). El alta nueva no lo necesita —el nombre lo pone el sistema—, pero
+  // ésta todavía deja teclearlo. La base lo garantiza igual (0040).
+  const YA_HAY = "Ya hay un GPS en servicio con ese nombre en esta cuenta.";
+  if (label && (await nombreDeDispositivoEnUso(repos, carrier.id, label))) {
+    return NextResponse.json({ error: YA_HAY }, { status: 400 });
+  }
+
   try {
     await repos.fleet.createDevice(carrier.id, imei, label);
-  } catch {
+  } catch (e) {
+    const x = e as { constraint_name?: string; cause?: { constraint_name?: string } };
+    const candado = x?.constraint_name ?? x?.cause?.constraint_name;
     return NextResponse.json(
-      { error: "No se pudo registrar el GPS (¿IMEI duplicado?)" },
+      { error: candado === "devices_nombre_unico_en_servicio" ? YA_HAY : "No se pudo registrar el GPS (¿IMEI duplicado?)" },
       { status: 400 },
     );
   }

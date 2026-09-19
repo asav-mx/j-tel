@@ -1,8 +1,13 @@
+import Link from "next/link";
 import { cargarCuartoDeExpedientes } from "@jtel/services";
+import { puedeManejarFlota } from "@jtel/auth-rbac";
 import { getRepos } from "@/lib/db";
 import { Marco } from "@/components/casa/marco";
 import { Pieza } from "@/components/casa/pieza";
-import { Encabezado, Renglon, SinCuenta, Titular, Vacio } from "@/components/casa/expediente";
+import { AvisoDeError, Encabezado, Renglon, SinCuenta, Titular, Vacio } from "@/components/casa/expediente";
+import { PanelDeIdentidadDeUnidad } from "@/components/casa/paneles-de-unidad";
+import { clases } from "@/components/casa/formulario";
+import { textoDeRuta } from "@/lib/casa/dispositivos";
 import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
 import { relojDePagina } from "@/lib/casa/cronometro";
@@ -22,8 +27,11 @@ export const dynamic = "force-dynamic";
  * El cuarto de Expedientes — la puerta a los expedientes de las cosas del
  * transportista (Marco 6.30–6.33; `docs/Ficha-Expedientes.md` §1).
  *
- * Es una **vista**: ve, agrupa y liga. No guarda nada. Capturar, corregir y
- * renovar un papel se hace en el expediente de su unidad (Ley de Acción).
+ * Es una **vista**: ve, agrupa y liga. Capturar, corregir y renovar un papel
+ * se hace en el expediente de su unidad (Ley de Acción), y corregir la unidad
+ * también. Lo único que se hace aquí es **dar de alta una unidad** (C4-e): lo
+ * que todavía no existe no tiene expediente donde hacerse, igual que el alta de
+ * un dispositivo vive en su cuarto.
  *
  * Tres grupos, en este orden: Unidades · Dispositivos · Choferes. La unidad
  * lleva el glifo de su peor papel y cuántos papeles le piden algo; el
@@ -51,23 +59,63 @@ export default async function CuartoDeExpedientes({
     );
   }
 
-  const { carrier, cuentaEnRuta } = cuenta;
+  const { carrier, cuentaEnRuta, identidad } = cuenta;
+  const sp = await searchParams;
   const ahora = new Date();
   const cuarto = await cargarCuartoDeExpedientes(getRepos(), { carrierAccountId: carrier.id, ahora });
   reloj.marca("datos");
   reloj.fin();
 
+  // C4-e: dar de alta una unidad. El botón lo ven coordinador y admin
+  // (`puedeManejarFlota`); a despacho no se le dibuja. La ruta vuelve a
+  // preguntar, porque esconder un botón no es una guardia.
+  const actua = puedeManejarFlota(identidad.memberships, carrier.id);
+  const altaAbierta = actua && sp.accion === "alta-unidad";
+  const conAlta = (abierta: boolean) => {
+    const base = rutas.cuarto(cuentaEnRuta);
+    return abierta ? `${base}${base.includes("?") ? "&" : "?"}accion=alta-unidad` : base;
+  };
+
   return (
     <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
       <div className="mx-auto flex max-w-3xl flex-col gap-8">
-        <Titular
-          nombre="Expedientes"
-          bajo={
-            cuarto.mercado
-              ? `${carrier.name} · ${cuarto.mercado.nombre} · juzgado el ${fechaCorta(cuarto.mercado.hoy)}`
-              : `${carrier.name} · sin mercado`
-          }
-        />
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <Titular
+            nombre="Expedientes"
+            bajo={
+              cuarto.mercado
+                ? `${carrier.name} · ${cuarto.mercado.nombre} · juzgado el ${fechaCorta(cuarto.mercado.hoy)}`
+                : `${carrier.name} · sin mercado`
+            }
+          />
+          {actua && (
+            <Link
+              href={conAlta(!altaAbierta)}
+              className={altaAbierta ? clases.abridor(true) : clases.primario}
+              aria-expanded={altaAbierta}
+            >
+              Dar de alta una unidad
+            </Link>
+          )}
+        </div>
+
+        {/* Un error que no es del panel —la guardia negó el paso, la cuenta no
+            existe— regresa sin `accion`: si sólo lo pintara el panel, no se vería. */}
+        {!altaAbierta && textoDeRuta(sp.error) && <AvisoDeError mensaje={textoDeRuta(sp.error)!} />}
+
+        {altaAbierta && (
+          <PanelDeIdentidadDeUnidad
+            modo="alta"
+            cuenta={carrier.slug}
+            valores={{
+              nombre: textoDeRuta(sp.nombre, 60) ?? "",
+              placa: textoDeRuta(sp.placa, 30) ?? "",
+              vin: textoDeRuta(sp.vin, 40) ?? "",
+            }}
+            error={textoDeRuta(sp.error)}
+            cancelar={rutas.cuarto(cuentaEnRuta)}
+          />
+        )}
 
         <section className="flex flex-col gap-2.5" aria-label="Unidades">
           <Encabezado
