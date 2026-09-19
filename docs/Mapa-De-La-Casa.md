@@ -20,7 +20,9 @@ Este documento define el **cascarón**: la estructura dentro de la cual entran l
 
 4. **Lo que no aplica, no aparece.** Ni apagado, ni con candado, ni «próximamente». Un cuarto que se ve y no se puede usar es una promesa que la pantalla no puede cumplir. Vernier sólo aparece con contrato; Circuitos sólo si opera transporte público.
 
-**Nombres del menú (ratificado, opción B):** el menú usa **nombres de cosa** —«Flota en vivo», «Cumplimiento», «Circuitos»— y el nombre de producto va como **sello chico** encima de su sección: «Compás» sobre la flota, «Vernier» sobre cumplimiento, «Transporte público» sobre circuitos. Razón: un coordinador sabe buscar «cumplimiento», no «Vernier»; la marca se graba por repetición del sello, sin estorbar el camino de todos. Compás y Vernier viven fuertes en la web, las ventas y los contratos — dentro del producto sirven mejor como sello que como letrero.
+**Nombres del menú (ratificado, opción B):** el menú usa **nombres de cosa** —«Flota en vivo», «Servicios especiales», «Circuitos»— y el nombre de producto va como **sello chico** encima de su sección: «Compás» sobre la flota, «Vernier» sobre servicios especiales, «Transporte público» sobre circuitos. Razón: un coordinador sabe buscar lo que hace, no «Vernier»; la marca se graba por repetición del sello, sin estorbar el camino de todos. Compás y Vernier viven fuertes en la web, las ventas y los contratos — dentro del producto sirven mejor como sello que como letrero.
+
+*El lugar de Vernier se llamó «Cumplimiento» hasta el 18 de septiembre de 2026.* ASAV lo renombró «Servicios especiales» al construirlo (Vernier V1): sigue siendo nombre de cosa, y el adjetivo evita que un carrier con concesión busque ahí sus circuitos, que viven en Circuitos.
 
 ---
 
@@ -38,10 +40,11 @@ Compra Compás aunque nunca tenga contrato. Vernier se enciende encima cuando lo
   - **Lugares** — las geocercas propias, cada una con su rol; el rol decide si la traza se corta. *(existe en parte)*
 - **Expedientes** — la puerta a los expedientes de las cosas del transportista: sus unidades, sus dispositivos, sus choferes, cada uno con sus cuatro familias —identidad, actividad, relaciones y documentos— (Marco 6.30–6.33). No es un archivero de papeles. La familia de documentos —el segundo afluente: pólizas, permisos, exámenes, capacitaciones, mantenimiento firmado, inspecciones— es la que hoy más falta, y es por donde se empieza. Aquí viven los **choferes**: hoy toda su sustancia es su expediente documental; cuando ganen actividad propia, su expediente crece sin cambiar de lugar. *(nuevo — construible ya, no depende del GPS)*
 - **Vernier** (con contrato) — servicios con veredicto, **justificaciones** (§D), reportes propios, su lado del estado de cuenta.
-  - **Contratos y perfiles** — ruta × turno, KML, tolerancias, unidades posibles. *(existe)*
+  - **Servicios especiales** — los servicios de modalidad especial con su veredicto, por ventana de tiempo; se toca uno y se abre su acta. *(construido: Vernier V1, `docs/Ficha-Construccion-Vernier-V1.md`)*
+  - **Contratos y perfiles** — ruta × turno, KML, tolerancias, unidades posibles. *(existe en la piel vieja; sin cuarto en la casa nueva, no se dibuja)*
 - **Circuitos** (si opera público) — circuitos, paradas, tabla de horario, publicación a la app del pasajero. *(existe en parte; la modalidad la define la Pieza 7 del Marco; cómo se marca en los datos sigue abierto, 7.7)*
 
-Fichas (se llega tocando): **Ver ‹unidad›** (ubicación viva + historial + playback + dispositivo + documentos + ledger), **Ver ‹dispositivo›**, **Ver ‹chofer›**.
+Fichas (se llega tocando): **Ver ‹unidad›** (ubicación viva + historial + playback + dispositivo + documentos + ledger), **Ver ‹dispositivo›**, **Ver ‹chofer›**, **Ver ‹ruta› · ‹turno› · ‹fecha›** — el acta de una ocurrencia: veredicto + identidad + evidencia + justificación (Vernier V1).
 
 Pendientes con nombre: uso fuera de horario y ubicaciones que frecuenta (§E); lo preventivo (§A presente); la planeación (§A futuro); cuenta y usuarios (Pieza 4); Diésel y Taller.
 

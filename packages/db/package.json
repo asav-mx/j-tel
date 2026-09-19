@@ -23,6 +23,7 @@
     "escenario-flota-compas": "tsx src/escenario-flota-compas.ts",
     "escenario-expedientes": "tsx src/escenario-expedientes.ts",
     "escenario-recorrido": "tsx src/escenario-recorrido.ts",
+    "escenario-vernier": "tsx src/escenario-vernier.ts",
     "studio": "drizzle-kit studio",
     "test": "TZ=UTC vitest run",
     "test:integration": "TZ=UTC vitest run --config vitest.integration.config.ts",
