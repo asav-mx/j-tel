@@ -795,6 +795,7 @@ export * from "./llegada.js";
 export * from "./tiempo.js";
 export * from "./trazado.js";
 export * from "./sello.js";
+export * from "./pausa.js";
 /*
  * `publico.js` NO se reexporta aquí, y no es olvido.
  *

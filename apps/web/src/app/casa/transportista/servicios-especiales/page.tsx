@@ -92,6 +92,7 @@ export default async function ServiciosEspeciales({
         />
         <ListaDeServiciosEspeciales
           ocurrencias={cuarto.ocurrencias}
+          pausas={cuarto.pausas}
           contratos={cuarto.contratos}
           zona={cuarto.zona}
           periodo={periodo}

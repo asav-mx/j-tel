@@ -197,3 +197,15 @@ export function puedeManejarFlota(memberships: UserMembership[], carrierAccountI
     return m.accountId === carrierAccountId && (m.scopeType === "account" || m.scopeType === "fleet");
   });
 }
+
+/**
+ * ¿Puede esta identidad pausar y reanudar la verificación de un contrato?
+ * (0041, 19 sep 2026.)
+ *
+ * Sólo el admin de plataforma, con alcance global — decisión 8 de Asav,
+ * provisional hasta la matriz de permisos (6.29). Soporte y comercial no: pausar
+ * borra ocurrencias sin hecho y detiene el sellado de un cliente entero.
+ */
+export function puedePausarVerificacion(memberships: UserMembership[]): boolean {
+  return memberships.some((m) => m.role === "admin_plataforma" && m.scopeType === "global");
+}

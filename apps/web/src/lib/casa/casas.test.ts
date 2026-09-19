@@ -153,7 +153,10 @@ describe("un cuarto que no existe no se dibuja", () => {
             nombre: "Cuentas y demos",
             ruta: "/casa/jstaff/cuentas-y-demos",
             condicion: "siempre",
-            hijos: [{ nombre: "Catálogo de documentos", ruta: "/casa/jstaff/cuentas-y-demos/catalogo", condicion: "siempre" }],
+            hijos: [
+              { nombre: "Catálogo de documentos", ruta: "/casa/jstaff/cuentas-y-demos/catalogo", condicion: "siempre" },
+              { nombre: "Contratos", ruta: "/casa/jstaff/cuentas-y-demos/contratos", condicion: "siempre" },
+            ],
           },
         ],
       },

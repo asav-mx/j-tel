@@ -1,6 +1,6 @@
 # J-Tel — Plan de desarrollo
 
-Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para saber el estado.** Se actualiza al cerrar cada pieza. Acompaña al Marco (`docs/marco-limpio/`) y al mapa de la casa (`docs/Mapa-De-La-Casa.md`). Sustituye a `Plan-Desarrollo-Orden-Frentes.md` (15 de agosto), archivado sin editar en `docs/archivo/`. Última actualización: 18 de septiembre de 2026.
+Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para saber el estado.** Se actualiza al cerrar cada pieza. Acompaña al Marco (`docs/marco-limpio/`) y al mapa de la casa (`docs/Mapa-De-La-Casa.md`). Sustituye a `Plan-Desarrollo-Orden-Frentes.md` (15 de agosto), archivado sin editar en `docs/archivo/`. Última actualización: 19 de septiembre de 2026.
 
 ---
 
@@ -87,6 +87,9 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 - **Congelar las unidades posibles con el hecho.** Hoy el acta las muestra «según el perfil hoy», porque el perfil sólo guarda el conjunto vigente. Es decisión de motor.
 - **Evidencia de lo que sí se hizo en un no cumplido** (Vernier, pendiente con nombre del 18-sep).
 - **Ligar «Servicios con veredicto» de Ver ‹unidad› al acta** de cada ocurrencia, con el hexágono. PR chico después de Vernier V1.
+- **La pausa de la verificación de un contrato** (0041, PR `feat/pausa-verificacion`, merge de Asav tras el SQL en Neon). Primer uso, después del merge y desde J-Staff → Contratos: desde el 5 sep, «Sin telemetría: el proveedor anterior se desconectó».
+- **`service_contracts.status = 'suspended'`** es una etiqueta comercial que ningún proceso lee, y la pausa de la verificación sí detiene al motor: dos cosas que se llaman casi igual y sólo una hace algo. Cuando se trabaje el tramo de contratos, se decide si se retira o se conecta. Mientras, J-Staff la muestra como «estado comercial», nunca junto a la pausa sin distinguirla.
+- **La lentitud de Servicios especiales**: 97–99 % en «datos» (cronómetro, 19 sep). Espera los EXPLAIN que corre Asav (`docs/correcciones/2026-09-19-medir-lentitud-servicios-especiales.sql`) y las líneas nuevas del cronómetro (#446) antes de optimizar.
 - Cuadrar el dispositivo que no coincide: la hoja de Umbrella tiene 81 renglones (el 9181 repetido) pero en la base se dieron de baja 82.
 
 ---

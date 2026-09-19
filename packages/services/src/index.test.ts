@@ -282,6 +282,8 @@ describe("cambio de política no toca hechos definitivos", () => {
 
     for (const status of ["cumplido", "no_cumplido"] as const) {
       const repos = {
+        // La pausa de la verificación (0041): sin pausa, el motor sigue igual.
+        pausas: { motivoDePausa: vi.fn().mockResolvedValue(null) },
         occurrences: { findById: vi.fn().mockResolvedValue(makeOcc(status)) },
         evidence: {
           getPointsForTrip: vi.fn(),
@@ -366,6 +368,8 @@ describe("cambio de política no toca hechos definitivos", () => {
     };
 
     const repos = {
+      // La pausa de la verificación (0041): sin pausa, el motor sigue igual.
+      pausas: { motivoDePausa: vi.fn().mockResolvedValue(null) },
       occurrences: { findById: vi.fn().mockResolvedValue(occ) },
       evidence: {
         getPointsForTrip: vi.fn().mockResolvedValue([
@@ -500,6 +504,8 @@ describe("actorIntent: decision vs maintenance (force:true)", () => {
 
   function buildRepos(newFactStatus: "cumplido" | "no_cumplido" | "pendiente_evidencia") {
     return {
+      // La pausa de la verificación (0041): sin pausa, el motor sigue igual.
+      pausas: { motivoDePausa: vi.fn().mockResolvedValue(null) },
       occurrences: { findById: vi.fn().mockResolvedValue(buildOcc()) },
       evidence: {
         // Primera llamada = existingPoints (para reuseEvidence); demás = storedPoints.
@@ -655,6 +661,8 @@ describe("perdedor exclusivo sin alternativa", () => {
 
     const saveFact = vi.fn().mockResolvedValue({ id: "fact-1" });
     const repos = {
+      // La pausa de la verificación (0041): sin pausa, el motor sigue igual.
+      pausas: { motivoDePausa: vi.fn().mockResolvedValue(null) },
       occurrences: { findById: vi.fn().mockResolvedValue(occ) },
       evidence: {
         getPointsForTrip: vi.fn().mockResolvedValue(opts.evidencePoints),
@@ -864,6 +872,8 @@ describe("Tarea 3 — contexto llegada fuera de ventana", () => {
     ];
 
     const repos = {
+      // La pausa de la verificación (0041): sin pausa, el motor sigue igual.
+      pausas: { motivoDePausa: vi.fn().mockResolvedValue(null) },
       occurrences: { findById: vi.fn().mockResolvedValue(buildOcc()) },
       evidence: {
         getPointsForTrip: vi
@@ -1071,6 +1081,8 @@ describe("sin evidencia posible — el servicio sale de la cola de reintento", (
     };
 
     return {
+      // La pausa de la verificación (0041): sin pausa, el motor sigue igual.
+      pausas: { motivoDePausa: vi.fn().mockResolvedValue(null) },
       occurrences: { findById: vi.fn().mockResolvedValue(occ) },
       evidence: {
         getPointsForTrip: vi.fn().mockResolvedValue([]),
@@ -1200,6 +1212,8 @@ describe("el catch deja rastro — el silencio que costó 35 días", () => {
      */
     const addLedgerEntry = vi.fn();
     const repos = {
+      // La pausa de la verificación (0041): sin pausa, el motor sigue igual.
+      pausas: { motivoDePausa: vi.fn().mockResolvedValue(null) },
       occurrences: {
         findPendingVerification: vi.fn().mockResolvedValue([
           { occurrence: { id: "occ-que-truena" }, contract: {}, trip: { id: "trip-1" } },
@@ -1207,6 +1221,7 @@ describe("el catch deja rastro — el silencio que costó 35 días", () => {
         // Lo que hace tronar verifyOccurrence: no encuentra la ocurrencia.
         findById: vi.fn().mockResolvedValue(null),
         contarVencidasDeCuentaDemo: vi.fn().mockResolvedValue(0),
+        contarVencidasEnPausa: vi.fn().mockResolvedValue(0),
       },
       compliance: { addLedgerEntry },
     };
@@ -1231,6 +1246,8 @@ describe("el catch deja rastro — el silencio que costó 35 días", () => {
   it("si ni el rastro se puede escribir, la corrida sigue", async () => {
     // Registrar el fallo nunca puede comerse el resto de los servicios.
     const repos = {
+      // La pausa de la verificación (0041): sin pausa, el motor sigue igual.
+      pausas: { motivoDePausa: vi.fn().mockResolvedValue(null) },
       occurrences: {
         findPendingVerification: vi.fn().mockResolvedValue([
           { occurrence: { id: "occ-a" }, contract: {}, trip: { id: "trip-a" } },
@@ -1238,6 +1255,7 @@ describe("el catch deja rastro — el silencio que costó 35 días", () => {
         ]),
         findById: vi.fn().mockResolvedValue(null),
         contarVencidasDeCuentaDemo: vi.fn().mockResolvedValue(0),
+        contarVencidasEnPausa: vi.fn().mockResolvedValue(0),
       },
       compliance: { addLedgerEntry: vi.fn().mockRejectedValue(new Error("ledger caído")) },
     };
@@ -1299,6 +1317,8 @@ describe("la puerta al proveedor está cerrada en el motor", () => {
       kmlVersionId: null,
     };
     return {
+      // La pausa de la verificación (0041): sin pausa, el motor sigue igual.
+      pausas: { motivoDePausa: vi.fn().mockResolvedValue(null) },
       occurrences: { findById: vi.fn().mockResolvedValue(occ) },
       evidence: {
         getPointsForTrip: vi.fn().mockResolvedValue([]),

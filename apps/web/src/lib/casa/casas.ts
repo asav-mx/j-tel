@@ -210,6 +210,9 @@ export const CASAS: Record<Cara, Casa> = {
             condicion: "siempre",
             hijos: [
               { nombre: "Catálogo de documentos", ruta: "/casa/jstaff/cuentas-y-demos/catalogo", condicion: "siempre" },
+              // La pausa de la verificación de un contrato (0041, 19 sep 2026):
+              // donde J-Staff ya administra cuentas (decisión 7 de Asav).
+              { nombre: "Contratos", ruta: "/casa/jstaff/cuentas-y-demos/contratos", condicion: "siempre" },
             ],
           },
         ],

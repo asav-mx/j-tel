@@ -7,6 +7,7 @@ import {
   canAccessPlant,
   hasPermission,
   puedeManejarFlota,
+  puedePausarVerificacion,
   tieneAlcanceGlobal,
   type UserMembership,
 } from "./index.js";
@@ -213,5 +214,25 @@ describe("roles parqueados: declarados a propósito, y sin poder hacer nada", ()
       // Pero el alcance sí sigue siendo alcance: eso no lo toca el rol.
       expect(tieneAlcanceGlobal([m])).toBe(true);
     }
+  });
+});
+
+describe("puedePausarVerificacion — quién pausa la verificación de un contrato (0041)", () => {
+  const fila = (role: string, scopeType: UserMembership["scopeType"]): UserMembership => ({
+    accountId: "jstaff",
+    clerkUserId: "u",
+    role,
+    scopeType,
+  });
+
+  it("sólo el admin de plataforma con alcance global", () => {
+    expect(puedePausarVerificacion([fila("admin_plataforma", "global")])).toBe(true);
+  });
+
+  it("soporte, comercial y cualquier rol de cuenta, no", () => {
+    expect(puedePausarVerificacion([fila("soporte", "global")])).toBe(false);
+    expect(puedePausarVerificacion([fila("comercial", "global")])).toBe(false);
+    expect(puedePausarVerificacion([fila("admin", "account")])).toBe(false);
+    expect(puedePausarVerificacion([])).toBe(false);
   });
 });

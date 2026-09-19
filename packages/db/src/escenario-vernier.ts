@@ -8,6 +8,7 @@ import { createDb } from "./index.js";
 import {
   accounts,
   carrierAportaciones,
+  contractVerificationEvents,
   complianceFactHistory,
   complianceFacts,
   evidencePoints,
@@ -39,6 +40,12 @@ import {
  *                           que el motor produce (ver OCURRENCIAS abajo)
  *   escenario-vernier-uno   un solo contrato: la fila de contratos no existe
  *   escenario-vernier-solo  sin contrato: el cuarto no existe, ni su pestaña
+ *
+ * Y para la pausa de la verificación (0041): el mismo usuario es admin de
+ * plataforma (J-Staff → Cuentas y demos → Contratos), Contrato Norte trae una
+ * pausa ya terminada (del día -20 al -15), y Contrato Oriente trae tres
+ * ocurrencias futuras sin hecho, para que pausarlo desde la pantalla tenga qué
+ * borrar y la vista previa lo cuente.
  *
  * **Cada hecho tiene la forma que el motor le da** —status, timing, paso
  * `decision` del ledger escrito justo después del sello, puntos de evidencia
@@ -81,6 +88,7 @@ const CARRIER_UNO = id(2);
 const CARRIER_SOLO = id(3);
 const CLIENTE_N = id(4);
 const CLIENTE_O = id(5);
+const JSTAFF = id(6);
 const USUARIO = "escenario_vernier";
 const MIN = 60_000;
 
@@ -194,8 +202,8 @@ async function limpiar(db: ReturnType<typeof createDb>) {
   // Las ocurrencias primero: arrastran sus hechos, y un hecho cita su geocerca
   // sin cascada. Si la cascada de las cuentas llega antes a la geocerca, el
   // borrado se niega.
-  await db.delete(serviceOccurrences).where(inArray(serviceOccurrences.id, OCURRENCIAS.map((e) => id(1000 + e.n))));
-  await db.delete(accounts).where(inArray(accounts.id, [CARRIER, CARRIER_UNO, CARRIER_SOLO, CLIENTE_N, CLIENTE_O]));
+  await db.delete(serviceOccurrences).where(inArray(serviceOccurrences.id, [...OCURRENCIAS.map((e) => id(1000 + e.n)), id(3001), id(3002), id(3003)]));
+  await db.delete(accounts).where(inArray(accounts.id, [CARRIER, CARRIER_UNO, CARRIER_SOLO, CLIENTE_N, CLIENTE_O, JSTAFF]));
   console.log(`[${SLUG}] borrado.`);
 }
 
@@ -214,6 +222,7 @@ async function sembrar(db: ReturnType<typeof createDb>) {
     { id: CARRIER_SOLO, type: "carrier", name: "Escenario Vernier · sin contrato", slug: `${SLUG}-solo` },
     { id: CLIENTE_N, type: "client", name: "Cliente Norte del escenario", slug: `${SLUG}-cliente-n` },
     { id: CLIENTE_O, type: "client", name: "Cliente Oriente del escenario", slug: `${SLUG}-cliente-o` },
+    { id: JSTAFF, type: "jstaff", name: "J-Staff del escenario", slug: `${SLUG}-jstaff` },
   ]);
   await db.insert(userMemberships).values(
     [CARRIER, CARRIER_UNO, CARRIER_SOLO].map((accountId) => ({
@@ -223,6 +232,8 @@ async function sembrar(db: ReturnType<typeof createDb>) {
       scopeType: "account" as const,
     })),
   );
+  // Admin de plataforma: puede pausar y reanudar la verificación (decisión 8).
+  await db.insert(userMemberships).values({ accountId: JSTAFF, clerkUserId: USUARIO, role: "admin_plataforma", scopeType: "global" });
 
   const etiquetas = ["2115", "2117", "2118", "2120", "2126"];
   await db.insert(units).values([
@@ -394,6 +405,38 @@ async function sembrar(db: ReturnType<typeof createDb>) {
         actorId: USUARIO,
         createdAt: new Date(sello + 3 * 60 * MIN),
       });
+    }
+  }
+
+  // ── La pausa (0041) ──
+  // Una pausa ya terminada en Contrato Norte: del día -20 al -15, sin servicios en medio.
+  await db.insert(contractVerificationEvents).values({
+    contractId: CONTRATO.N,
+    tipo: "pausa",
+    valeDesde: new Date(instante(addDaysIso(hoy, -20), "00:00")),
+    motivo: "Cambio de proveedor de GPS",
+    actorKind: "human",
+    actorId: USUARIO,
+  });
+  await db.insert(contractVerificationEvents).values({
+    contractId: CONTRATO.N,
+    tipo: "reanudacion",
+    valeDesde: new Date(instante(addDaysIso(hoy, -15), "00:00")),
+    motivo: null,
+    actorKind: "human",
+    actorId: USUARIO,
+  });
+  // Tres ocurrencias futuras sin hecho en Contrato Oriente: lo que pausarlo borraría.
+  const [perfilO] = [...perfiles.entries()].filter(([k]) => k.startsWith("O|")).map(([, v]) => v.split("|"));
+  if (perfilO) {
+    for (const d of [1, 2, 3]) {
+      const dia = addDaysIso(hoy, d);
+      const exigida = instante(dia, HORA_DEL_TURNO.T1);
+      const [o] = await db
+        .insert(serviceOccurrences)
+        .values({ id: id(3000 + d), serviceProfileId: perfilO[0]!, contractId: CONTRATO.O, routeShiftId: perfilO[1]!, serviceDate: dia, expectedDeadline: new Date(exigida), expectedGeofenceId: destino.O })
+        .returning({ id: serviceOccurrences.id });
+      await db.insert(trips).values({ serviceOccurrenceId: o!.id, evidenceWindowStart: new Date(exigida - 75 * MIN), evidenceWindowEnd: new Date(exigida + 30 * MIN) });
     }
   }
 

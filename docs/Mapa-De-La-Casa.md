@@ -80,6 +80,7 @@ Ve todo, con el razonamiento completo. La única cara que cruza entre cuentas, s
 - **Compás · operación** — la puerta: salud del servidor y la ingesta, avisos del cotejo, alta masiva por lista, chips y consumo (6.24).
 - **Compuerta de atención** — entrar a una cuenta con registro; el ledger completo; las correcciones que el producto aún no sabe hacer.
 - **Cuentas y demos** — altas de carrier y cliente, demos que se vuelven contrato, servicio operado; el **catálogo de documentos de cada mercado** (qué papel se exige, si vence, sus días de aviso), porque es ley del mercado y no preferencia del carrier (`docs/Ficha-Expedientes.md` §5).
+  - **Contratos** — todos los contratos de la plataforma con el estado de su verificación; en Ver ‹contrato› se **pausa y se reanuda la verificación** (0041, 19 sep 2026): un evento con quién, desde cuándo vale y por qué. Sólo el admin de plataforma, provisional hasta la 6.29. El estado comercial (`suspended`) va aparte y con su nombre: es una etiqueta que no detiene nada.
 
 Pendiente con nombre: la matriz de permisos fina (6.29).
 

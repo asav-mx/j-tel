@@ -205,6 +205,28 @@ describe("carrier-maneja-flota — las acciones sobre dispositivos (C4)", () => 
   });
 });
 
+describe("jstaff-pausa-verificacion — pausar la verificación de un contrato (0041)", () => {
+  const AUD = { tipo: "jstaff-pausa-verificacion" as const };
+
+  it("el admin de plataforma pausa", async () => {
+    getIdentidad.mockResolvedValue(identidad("jstaff_admin", JSTAFF));
+    expect((await exigir(PETICION, AUD, "json")).ok).toBe(true);
+  });
+
+  it("soporte es J-Staff y no pausa: detener el sellado de un cliente es del admin", async () => {
+    getIdentidad.mockResolvedValue(identidad("jstaff_soporte", [{ ...JSTAFF[0]!, clerkUserId: "jstaff_soporte", role: "soporte" }]));
+    const g = await exigir(PETICION, AUD, "json");
+    expect(g.ok).toBe(false);
+    if (g.ok) return;
+    expect((await g.respuesta.json()).detalle).toContain("admin de plataforma");
+  });
+
+  it("el admin de un carrier, tampoco", async () => {
+    getIdentidad.mockResolvedValue(identidad("jb_admin", CARRIER_JB));
+    expect((await exigir(PETICION, AUD, "json")).ok).toBe(false);
+  });
+});
+
 describe("contesta en el estilo de cada ruta", () => {
   beforeEach(() => {
     getIdentidad.mockResolvedValue(identidad("tecma_admin", CLIENTE_TECMA));

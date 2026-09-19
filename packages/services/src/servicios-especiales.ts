@@ -3,6 +3,8 @@ import { pairLedgerEntryWithFact } from "@jtel/db";
 import {
   JTTEL_TZ,
   SIN_LEDGER,
+  intervalosDePausa,
+  pausaTocaVentana,
   huecosDeSenal,
   lecturaDePasos,
   motivoDelSello,
@@ -31,7 +33,7 @@ import {
  * concreto es el **perfil**.
  */
 
-export type ReposDeVernier = Pick<Repositories, "vernier">;
+export type ReposDeVernier = Pick<Repositories, "vernier" | "pausas">;
 
 /** Una ocurrencia sellada, lista para la pieza. Sin `Date`: viaja al navegador. */
 export type OcurrenciaDeLaLista = {
@@ -55,11 +57,27 @@ export type OcurrenciaDeLaLista = {
   motivo: MotivoDelSello;
 };
 
+/** Una pausa de la verificación que toca la ventana (0041). Sin `Date`: viaja al navegador. */
+export type PausaDeLaVentana = {
+  contratoId: string;
+  contrato: string;
+  desde: string;
+  /** `null` mientras sigue en pausa. */
+  hasta: string | null;
+  motivo: string;
+};
+
 export type CuartoDeServiciosEspeciales = {
   zona: string;
   /** Todos los contratos de la cuenta, no sólo los que tienen algo en la ventana. */
   contratos: Array<{ id: string; nombre: string }>;
   ocurrencias: OcurrenciaDeLaLista[];
+  /**
+   * Las pausas de la verificación que tocan la ventana. Los días en pausa no
+   * tienen servicios; la línea de arriba de la lista dice por qué (decisión de
+   * Asav, 19 sep 2026). Los conteos no cambian: cuentan lo que la ventana tiene.
+   */
+  pausas: PausaDeLaVentana[];
 };
 
 /**
@@ -181,7 +199,24 @@ export async function cargarServiciosEspeciales(
   });
 
   medir?.marca("motivos");
-  return { zona, contratos: contratos.map((c) => ({ id: c.id, nombre: c.nombre })), ocurrencias };
+
+  const eventos = await repos.pausas.eventosDeContratos(contratos.map((c) => c.id));
+  const pausas: PausaDeLaVentana[] = contratos
+    .flatMap((c) =>
+      intervalosDePausa(eventos.get(c.id) ?? [])
+        .filter((i) => pausaTocaVentana(i, desde, hasta))
+        .map((i) => ({
+          contratoId: c.id,
+          contrato: c.nombre,
+          desde: i.desde.toISOString(),
+          hasta: i.hasta ? i.hasta.toISOString() : null,
+          motivo: i.motivo,
+        })),
+    )
+    .sort((a, b) => a.desde.localeCompare(b.desde) || a.contrato.localeCompare(b.contrato, "es"));
+  medir?.marca("pausas");
+
+  return { zona, contratos: contratos.map((c) => ({ id: c.id, nombre: c.nombre })), ocurrencias, pausas };
 }
 
 /* ─── El acta ─────────────────────────────────────────────────────────── */
