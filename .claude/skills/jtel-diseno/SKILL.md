@@ -90,8 +90,8 @@ Ratificados el 16 de septiembre de 2026 (boceto de «las dos familias»). Un dis
 |---|---|---|---|
 | En unidad | Cuadro lleno | Instalado y hablando | `--senal` |
 | En bodega | Cuadro hueco | Existe, espera camión | `--tenue` |
-| Desconectado | Cuadro cortado | Montado, y más de 24 h callado | `--tenue` a 60 % |
-| De baja | Cuadro tachado con una equis | Su historia queda; él ya no cuenta | `--tenue` a 60 % |
+| Desconectado | Cuadro cortado | Montado, y más de 24 h callado | `--tenue` |
+| De baja | Cuadro tachado con una equis | Su historia queda; él ya no cuenta | `--tenue` |
 
 **Regla de extensión:** cuando haga falta un estado nuevo, se inventa una **forma** nueva, no un color nuevo. Si dos estados comparten forma y se distinguen sólo por color, está mal.
 
@@ -230,6 +230,7 @@ Los dos del sello, medidos contra `--pieza` / `--papel` (18 sep 2026): clara `--
 1. **El cobre sólo aparece donde hay vida.** Un dato fresco, una unidad transmitiendo, un valor que cambia ahora. Nunca en bordes, botones inertes, encabezados ni decoración. Si el cobre está en todos lados, deja de significar.
    **Vida es cambio frente al usuario, no sólo el tiempo real.** El cobre marca el dato que está cambiando mientras alguien lo mira. En un playback, la velocidad que corre con la reproducción va en cobre; el recorrido ya dibujado, el marcador y la hora del recuerdo detenido van en tinta. Al pausar deja de cambiar y suelta el cobre. Y cuando el playback alcanza el ahora, el marcador pasa a cobre porque ya no es recuerdo. Decidido por ASAV el 16 de septiembre de 2026, al revisar C3 contra su prototipo v5.
 2. **Lo apagado se apaga hasta el mínimo legible, no más allá.** Suelta el color y pasa a `--tenue`: una unidad que llegó o se calló se va a gris. Pero su **texto se queda en 4.5:1 o más, en las dos pieles**, medido y no a ojo. La jerarquía la cargan la sección y el glifo, no la ilegibilidad del texto. Esta ley decía «baja a 60 % de opacidad»; ese número nunca se midió contra nada, y al medirlo dejaba el texto en 2.32:1 en la piel clara y 2.41:1 en la oscura. Se corrigió el 19 de septiembre de 2026 (ASAV): el texto apagado ya no baja su opacidad, cambia de tinta a tenue.
+   **Lo mismo vale para los glifos:** un glifo que carga estado cumple **3:1 en las dos pieles**. Lo apagado se distingue por su **forma** (hueco, cortado, punteado, tachado), a contraste pleno en `--tenue`, nunca por desvanecerse: un cuadro cortado ya se distingue de uno lleno sin bajar su opacidad. Los glifos de desconectado, de baja, sin transmitir y sin dispositivo iban al 60 % y medían 2.31:1 en clara y 2.47:1 en oscura; se subieron el mismo día. Lo que atenúa sin cargar estado (un botón deshabilitado, el relleno de un mapa, la línea del playback) no entra en esta ley.
 3. **El verde es del latido, no de un veredicto.** Marca que el sistema respira.
 4. **Los colores de veredicto viven aparte y no se tocan.** El Marco reserva significado a cumplido, no cumplido y pendiente. Sus colores —`--sello-ok` y `--ladrillo`; el pendiente va en tinta— nunca se usan para nada más, y el cobre nunca se usa para un veredicto.
 5. **Las dos pieles se diseñan juntas.** Ninguna pantalla se da por terminada sin verse en las dos. La piel clara no es la oscura con los fondos volteados: cada una tiene sus propios valores.

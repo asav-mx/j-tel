@@ -113,34 +113,33 @@ const EN_PALABRAS: Record<EstadoGlifo, string> = {
  * - **Cobre** sólo donde hay vida: la unidad que se mueve, el dispositivo que
  *   habla.
  * - **Tinta** en los papeles que piden hacer algo: el ojo tiene que ir ahí.
- * - **Tenue** en todo lo demás, y a 60 % lo que ya se apagó.
+ * - **Tenue** en todo lo demás, también en lo que ya se apagó. **Sin bajar la
+ *   opacidad** (skill, ley 2 del color, 19 sep 2026): un glifo que carga estado
+ *   cumple 3:1 en las dos pieles, y lo apagado se distingue por su forma
+ *   —hueca, cortada, punteada, tachada—, no por desvanecerse. Al 60 % medían
+ *   2.31:1 en clara y 2.47:1 en oscura.
  * - **Los sellos** con sus colores exclusivos: `--sello-ok` el cumplido,
  *   `--ladrillo` el no cumplido, tinta el pendiente. Ninguno es cobre: nada
  *   sellado está vivo.
  */
-function tintaDe(estado: EstadoGlifo): { color: string; opacidad: number } {
+function tintaDe(estado: EstadoGlifo): string {
   switch (estado) {
     case "sello-cumplido":
-      return { color: "var(--sello-ok)", opacidad: 1 };
+      return "var(--sello-ok)";
     case "sello-pendiente":
-      return { color: "var(--tinta)", opacidad: 1 };
+      return "var(--tinta)";
     case "sello-no-cumplido":
-      return { color: "var(--ladrillo)", opacidad: 1 };
+      return "var(--ladrillo)";
     case "en-movimiento":
     case "dispositivo-en-unidad":
-      return { color: "var(--senal)", opacidad: 1 };
+      return "var(--senal)";
     case "papel-vencido":
     case "papel-por-vencer":
     case "papel-falta":
     case "papel-falta-la-fecha":
-      return { color: "var(--tinta)", opacidad: 1 };
-    case "sin-transmitir":
-    case "sin-dispositivo":
-    case "dispositivo-desconectado":
-    case "dispositivo-de-baja":
-      return { color: "var(--tenue)", opacidad: 0.6 };
+      return "var(--tinta)";
     default:
-      return { color: "var(--tenue)", opacidad: 1 };
+      return "var(--tenue)";
   }
 }
 
@@ -171,8 +170,7 @@ export function Glifo({
    */
   tinta?: "tinta" | "senal";
 }) {
-  const propia = tintaDe(estado);
-  const { color, opacidad } = tinta ? { color: `var(--${tinta})`, opacidad: 1 } : propia;
+  const color = tinta ? `var(--${tinta})` : tintaDe(estado);
   const familia = estado.startsWith("papel-") || estado.startsWith("dispositivo-") ? 40 : 24;
   // Un id por instancia para el recorte de «por vencer»: dos glifos en la misma
   // página con el mismo id se pisarían el recorte.
@@ -185,7 +183,7 @@ export function Glifo({
       viewBox={`0 0 ${familia} ${familia}`}
       role="img"
       aria-label={EN_PALABRAS[estado]}
-      style={{ color, opacity: opacidad }}
+      style={{ color }}
     >
       {/* ── Unidades ── */}
       {estado === "en-movimiento" && (
