@@ -37,8 +37,12 @@ import { Glifo, type EstadoGlifo } from "@/components/casa/glifo";
  * Lo que **no** es vivo —un papel, cuyo dato es una fecha y no una lectura— pasa
  * `edad={null}` a la vista: es una decisión escrita, no un olvido.
  *
- * `apagada` baja la pieza a 60 %: lo que ya está al día suelta el peso para que
- * el ojo vaya solo a lo que pide algo.
+ * `apagada`: lo que ya está al día suelta el peso para que el ojo vaya solo a
+ * lo que pide algo. **Se apaga hasta el mínimo legible, no más allá** (skill,
+ * ley 2 del color, 19 sep 2026): el texto pasa a `--tenue`, que cumple el 4.5:1
+ * en las dos pieles, y la pieza no baja su opacidad. Al 60 % el texto medía
+ * 2.32:1 en clara y 2.41:1 en oscura. La jerarquía la cargan la sección y el
+ * glifo, no la ilegibilidad.
  *
  * `alTocar` es la otra forma de tocar, la de Flota en vivo: la pieza señala su
  * unidad en el mapa en vez de navegar (la ficha va en el mapa, «Ver 10254»).
@@ -63,12 +67,6 @@ import { Glifo, type EstadoGlifo } from "@/components/casa/glifo";
  * `compacta` es la fila del archivero de Expedientes (ficha V2 §3): nombre y
  * apoyo en un solo renglón, glifo y letra más chicos. 84 unidades en filas
  * compactas son tres pantallas y se recorren; en piezas altas son quince.
- *
- * **Compacta y apagada no baja la opacidad:** pasa el texto a `--tenue`, que
- * cumple el 4.5:1 solo. Al 60 % el texto medía 2.32:1 en clara y 2.41:1 en
- * oscura (19 sep 2026). La jerarquía la cargan la sección y el glifo, no la
- * ilegibilidad del texto (Asav). La pieza alta sigue al 60 % hasta que se
- * decida igual para las demás pantallas.
  */
 export function Pieza({
   estado,
@@ -106,7 +104,7 @@ export function Pieza({
   edad: string | null;
   /** La ficha a la que se llega tocando. Sin ella, la pieza no es tocable. */
   ficha?: string;
-  /** Lo que ya está al día: a 60 % la pieza alta; en tenue, sin opacidad, la compacta. */
+  /** Lo que ya está al día: el texto en tenue, sin bajar la opacidad. */
   apagada?: boolean;
   /** Tocar hace algo en la misma pantalla en vez de navegar. Excluye `ficha`. */
   alTocar?: () => void;
@@ -144,7 +142,7 @@ export function Pieza({
       ) : (
         <span className="min-w-0 flex-1">
           <span
-            className="block truncate text-[19px] leading-tight"
+            className={`block truncate text-[19px] leading-tight${apagada ? " text-[var(--tenue)]" : ""}`}
             style={{ fontFamily: "var(--letra-titular)", fontWeight: 700, letterSpacing: "-0.01em" }}
           >
             {nombre}
@@ -163,7 +161,7 @@ export function Pieza({
         <span
           data-medida
           className={`block ${compacta ? "text-[13.5px]" : "text-[15px]"} leading-tight${
-            datoVivo ? " text-[var(--senal)]" : datoNoCumplido ? " text-[var(--ladrillo)]" : compacta && apagada ? " text-[var(--tenue)]" : ""
+            datoVivo ? " text-[var(--senal)]" : datoNoCumplido ? " text-[var(--ladrillo)]" : apagada ? " text-[var(--tenue)]" : ""
           }`}
         >
           {dato}
@@ -201,9 +199,7 @@ export function Pieza({
   // Un solo color de borde por pieza: dos clases de borde juntas quedan a merced
   // del orden del CSS generado.
   const borde = alTocar && seleccionada ? "border-[var(--tinta)]" : "border-[var(--linea)]";
-  const forma = `flex w-full ${compacta ? "items-center gap-3 px-3.5 py-2" : "items-start gap-4 px-4 py-3.5"} rounded-lg border ${borde} bg-[var(--pieza)] text-left${
-    apagada && !compacta ? " opacity-60" : ""
-  }`;
+  const forma = `flex w-full ${compacta ? "items-center gap-3 px-3.5 py-2" : "items-start gap-4 px-4 py-3.5"} rounded-lg border ${borde} bg-[var(--pieza)] text-left`;
 
   if (alTocar) {
     return (
