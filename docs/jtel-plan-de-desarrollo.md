@@ -1,6 +1,6 @@
 # J-Tel — Plan de desarrollo
 
-Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para saber el estado.** Se actualiza al cerrar cada pieza. Acompaña al Marco (`docs/marco-limpio/`) y al mapa de la casa (`docs/Mapa-De-La-Casa.md`). Sustituye a `Plan-Desarrollo-Orden-Frentes.md` (15 de agosto), archivado sin editar en `docs/archivo/`. Última actualización: 17 de septiembre de 2026.
+Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para saber el estado.** Se actualiza al cerrar cada pieza. Acompaña al Marco (`docs/marco-limpio/`) y al mapa de la casa (`docs/Mapa-De-La-Casa.md`). Sustituye a `Plan-Desarrollo-Orden-Frentes.md` (15 de agosto), archivado sin editar en `docs/archivo/`. Última actualización: 18 de septiembre de 2026.
 
 ---
 
@@ -50,6 +50,8 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 1. **Instalar los 7 FTC en camiones de Juárez Bus.** Probar el 005 primero (prueba de 5 min al cielo: si no reporta en su ficha, no instalarlo — su IMEI empieza raro, `860573…`, y no tiene un solo punto en su historia). Asignar cada uno a su unidad **el mismo día** en la pantalla nueva: el cuarto Dispositivos (`/casa/transportista/dispositivos?account=juarez-bus`) o Ver ‹dispositivo› → «Asignar a una unidad». Es la mejor prueba del cuarto recién construido. El alta vieja (`/carrier/flota/alta`) queda sólo de respaldo si algo falla en el patio. Lo que llegue antes de asignar se guarda sin unidad para siempre.
 2. **C4-d — apagar el alta vieja** de `/carrier/flota/alta`, ya con los 7 rodando.
 3. **Migrar Vernier** a la casa nueva. Es el cuarto más grande que queda del transportista, ya funciona en la piel vieja.
+   - **Vernier V1 — Servicios especiales** (`docs/Ficha-Construccion-Vernier-V1.md`, PR `feat/vernier-v1`, merge de Asav): el cuarto con la lista por ventana y el acta de cada ocurrencia, la familia del sello (hexágonos, `--sello-ok`, `--ladrillo`) y la barra de ventana compartida con C3 («Esta semana» reemplaza a «Últimos 7 días» también en Compás). El menú lee el contrato de verdad: la constante que habría escondido el cuarto (`ALCANCE_SIN_CUARTOS`) ya no existe. Once decisiones del 18-sep corrigieron la ficha y el prototipo (registro al final de la ficha).
+   - Los cuartos viejos del carrier (`cumplimiento`, `historial`, `reportes`) siguen vivos; se decide apagarlos cuando este cuarto ruede.
 
 ### Después
 4. **Medir la lentitud como la vive el usuario** con el cronómetro (#427), y quitar las precargas en ráfaga si hace falta.
@@ -68,7 +70,6 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 
 - **La bitácora de correcciones de identidad.** Corregir una unidad sobrescribe (decisión del 18-sep para C4-e): renombrar un número económico cambia cómo se lee toda su historia, y no queda registro de cómo se llamaba antes. No es decorativa. La pantalla lo avisa al corregir.
 - **Nombre único de usuario por cuenta** — la regla de C4-e alcanza a los usuarios, pero hoy no existe ninguna alta de usuarios y el nombre vive en Clerk. Entra con el Tramo 7 (altas por invitación o solicitud aprobada desde J-Staff).
-- **Las 77 asignaciones colgadas de Umbrella** en juarez-bus: la baja del 15-sep no las cerró. El guion `cerrar-asignaciones-de-baja.ts` las cierra con la fecha de su baja; simulado el 18-sep (0 conflictos), espera el sí de Asav para `--aplicar`.
 - **El evento de cambio de cuenta.** Hoy mover un dispositivo entre cuentas no deja fecha, así que no se puede decir «sin registro en esta cuenta». Cuando se construya (J-Staff), que sea un evento con fecha, y que el 6.14 lo diga al enmendarse.
 - **Quitar la baja desde la pantalla (6.18).** Hoy sólo con SQL. Necesita su propia conversación: reactivar debe ser un evento encima, no un borrado, para no perder fecha y motivo (6.15).
 - **El estado de una unidad y de un dispositivo debe derivar del lugar** (patio, taller, en servicio, en bodega) cuando existan Lugares y el mapa en vivo. Requiere roles nuevos de geocerca que hoy no existen.
@@ -81,6 +82,11 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 - Las 5 reglas candidatas al Marco en `Trampas-De-Medicion.md` §2, sin ratificar.
 - **La cadencia de reporte por tipo de servicio.** La frecuencia cuesta SIM y no todas las unidades necesitan la misma: transporte público con app de pasajero pide frecuencia alta; transporte especial puede reportar menos, porque al árbitro le bastan las entradas y salidas de geocerca. Se decide con la medición real de consumo de los 8 — no antes.
 - **Horarios en puerta** (idea de Asav, 16-sep). En el piso de flota / monitoreo, el tablero de lo que viene: para especial, la lista de servicios por salir con su ventana (como pantalla de aeropuerto); para circuito, los circuitos en servicio con sus tablas de horario por parada. Un carrier con contrato y concesión ve los dos registros, uno por modalidad (Pieza 7). Es un cuarto/parte propio del piso de flota — se diseña en su momento, con prototipo.
+- **La deuda de Planta 47 · Turno A (Vernier, 6.17).** Los pendientes `llegada_sin_atribucion` del destino compartido se ven en Servicios especiales tal como están sellados. No es defecto de pantalla: es la guardia de atribución, decisión de motor y de negocio. El chip de pendientes tiene que poder llegar a cero el día que se salde; la cifra se mide cuando el cuarto ruede.
+- **La zona de la cuenta en las demás pantallas.** Servicios especiales usa la del mercado de la cuenta (respaldo: la política del contrato); C3 y las pantallas viejas siguen con `America/Ciudad_Juarez` fija.
+- **Congelar las unidades posibles con el hecho.** Hoy el acta las muestra «según el perfil hoy», porque el perfil sólo guarda el conjunto vigente. Es decisión de motor.
+- **Evidencia de lo que sí se hizo en un no cumplido** (Vernier, pendiente con nombre del 18-sep).
+- **Ligar «Servicios con veredicto» de Ver ‹unidad› al acta** de cada ocurrencia, con el hexágono. PR chico después de Vernier V1.
 - Cuadrar el dispositivo que no coincide: la hoja de Umbrella tiene 81 renglones (el 9181 repetido) pero en la base se dieron de baja 82.
 
 ---

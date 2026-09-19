@@ -1,6 +1,7 @@
 import { resolverCuentaYElegibles } from "@/lib/account-context";
 import { exigirEnPagina, exigirSesion } from "@/lib/guardia-pagina";
-import type { CuentaDeLaCasa } from "@/lib/casa/casas";
+import { getRepos } from "@/lib/db";
+import type { Alcance, CuentaDeLaCasa } from "@/lib/casa/casas";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -21,6 +22,13 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
  * `cuentaEnRuta` es el slug sólo si vino en la dirección: las ligas internas lo
  * arrastran para no perder la cuenta al navegar, y no lo agregan si no hacía
  * falta.
+ *
+ * `alcance` es lo que la cuenta tiene encendido, leído de la base —no una
+ * constante—: con algún contrato que no sea borrador, Vernier está encendido y
+ * el menú dibuja Servicios especiales (mapa, regla 4). Transporte público queda
+ * en `false` mientras Circuitos no tenga cuarto: con `ruta: null` el menú no lo
+ * dibujaría de todos modos, y leer la concesión para no usarla sería afirmar
+ * algo que nadie mira.
  */
 export async function cuentaDelCuarto(searchParams: SearchParams) {
   await exigirSesion();
@@ -34,11 +42,15 @@ export async function cuentaDelCuarto(searchParams: SearchParams) {
   }
 
   const identidad = await exigirEnPagina({ tipo: "carrier", slug: carrier.slug });
+  const alcance: Alcance = {
+    conContrato: await getRepos().expedientes.tieneContratoEncendido(carrier.id),
+    operaPublico: false,
+  };
   const cuentaEnRuta = typeof params?.account === "string" && params.account ? carrier.slug : null;
   const casa: CuentaDeLaCasa = {
     actual: { slug: carrier.slug, nombre: carrier.name },
     enRuta: cuentaEnRuta,
     elegibles: opciones,
   };
-  return { carrier, identidad, cuentaEnRuta, casa };
+  return { carrier, identidad, cuentaEnRuta, casa, alcance };
 }

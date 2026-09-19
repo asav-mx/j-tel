@@ -10,8 +10,8 @@
  *
  * **Regla 4 — lo que no aplica, no aparece.** Ni apagado, ni con candado, ni
  * «próximamente». Por eso cada lugar declara su `condicion` y el marco filtra
- * antes de dibujar: Cumplimiento sólo con contrato, Circuitos sólo si la cuenta
- * opera transporte público.
+ * antes de dibujar: Servicios especiales sólo con contrato, Circuitos sólo si la
+ * cuenta opera transporte público.
  *
  * **Y su hermana, decidida el mismo día: un cuarto vacío miente igual.** Por eso
  * `ruta` puede ser `null`, y `null` significa *el cuarto todavía no se
@@ -23,8 +23,11 @@
  * ## Los nombres
  *
  * Opción B, ratificada: el menú usa **nombres de cosa** —«Flota en vivo»,
- * «Cumplimiento», «Circuitos»— y el nombre de producto va como **sello chico**
- * encima de su sección. Un coordinador sabe buscar «cumplimiento», no «Vernier».
+ * «Servicios especiales», «Circuitos»— y el nombre de producto va como **sello
+ * chico** encima de su sección. Un coordinador sabe buscar lo que hace, no
+ * «Vernier». El lugar de Vernier se llamó «Cumplimiento» hasta el 18 sep 2026:
+ * Asav lo renombró al construirlo, porque sigue siendo nombre de cosa y el
+ * adjetivo evita que un carrier con concesión busque ahí sus circuitos.
  *
  * ## Dos niveles, y ni uno más
  *
@@ -121,9 +124,13 @@ export const CASAS: Record<Cara, Casa> = {
         sello: "Vernier",
         lugares: [
           {
-            nombre: "Cumplimiento",
-            ruta: null,
+            // Vernier V1 (18 sep 2026): los servicios de modalidad especial con su
+            // veredicto, y el acta de cada ocurrencia. Los circuitos de transporte
+            // público no entran aquí: viven en Circuitos.
+            nombre: "Servicios especiales",
+            ruta: "/casa/transportista/servicios-especiales",
             condicion: "con-contrato",
+            // Declarado y sin cuarto: no se dibuja (regla de la cabecera).
             hijos: [{ nombre: "Contratos y perfiles", ruta: null, condicion: "con-contrato" }],
           },
         ],
@@ -224,9 +231,10 @@ export const CASAS: Record<Cara, Casa> = {
  * Lo que la cuenta tiene encendido. Es lo único que el marco necesita saber
  * para aplicar la regla 4.
  *
- * Hoy lo arma quien dibuja el marco, porque ningún cuarto lee datos todavía.
- * Cuando el primer cuarto llegue, esto sale de la cuenta —contrato de Vernier
- * encendido, modalidad de transporte público— y no de una constante.
+ * Sale de la cuenta, no de una constante: `alcanceDeLaCuenta` en
+ * `cuenta-del-cuarto.ts` lee si hay contrato de Vernier encendido. El primer
+ * cuarto de Vernier (Servicios especiales, 18 sep 2026) desarmó la trampa que
+ * aquí se anotaba: con la constante, el cuarto no habría aparecido nunca.
  */
 export type Alcance = {
   conContrato: boolean;
@@ -234,20 +242,20 @@ export type Alcance = {
 };
 
 /**
- * El alcance que usa el cascarón mientras no hay un solo cuarto construido.
+ * El alcance cuando no hay una cuenta que leer: la sesión no alcanza ninguna,
+ * o ve varias y todavía no eligió. Sin cuenta no hay datos, así que no hay
+ * contrato ni transporte público que afirmar; lo único que se dibuja es el
+ * selector.
  *
- * ⚠ **No es una afirmación sobre ninguna cuenta.** Con cero cuartos el menú sale
- * vacío pongas lo que pongas aquí, porque `menuDe` tira primero todo lo que
- * tiene `ruta: null`. Existe para que el marco no tenga que inventarse un
- * objeto en cada casa.
+ * También lo usan las casas que no tienen un solo lugar condicionado —Planta,
+ * Corporativo, J-Staff—: ahí no cambia nada, porque nada de su menú pregunta.
  *
- * **Y es una trampa con fecha.** El día que aterrice el primer cuarto de
- * Cumplimiento o de Circuitos, si esto sigue en su lugar esos lugares no
- * aparecerán nunca y se va a ver igual que un defecto de ruteo. Quien construya
- * ese cuarto reemplaza esta constante por la lectura de verdad: contrato de
- * Vernier encendido, modalidad de transporte público.
+ * ⚠ **No es el alcance de una cuenta resuelta.** Un cuarto del transportista
+ * con cuenta usa `cuenta.alcance`. Pasarle esto en su lugar esconde Servicios
+ * especiales a una cuenta que sí tiene contrato — la trampa que este nombre
+ * reemplazó (`ALCANCE_SIN_CUARTOS`, hasta el 18 sep 2026).
  */
-export const ALCANCE_SIN_CUARTOS: Alcance = { conContrato: false, operaPublico: false };
+export const ALCANCE_SIN_CUENTA: Alcance = { conContrato: false, operaPublico: false };
 
 function aplica(condicion: Condicion, alcance: Alcance): boolean {
   if (condicion === "con-contrato") return alcance.conContrato;

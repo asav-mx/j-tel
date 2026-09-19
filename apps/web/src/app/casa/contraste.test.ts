@@ -57,7 +57,10 @@ describe("las dos pieles pasan el contraste que el propio skill exige", () => {
     // `--tinta` es el texto principal y `--tenue` el apoyo: los dos se leen, así
     // que los dos van al 4.5:1 de texto normal. El cobre también, porque el
     // skill lo pone sobre datos vivos — que son cifras que alguien lee.
-    for (const token of ["tinta", "tenue", "senal"]) {
+    // Los dos del sello (Vernier V1) también: `--ladrillo` se escribe —el nombre
+    // del no cumplido y la hora de su sello— y `--sello-ok` se mide igual para
+    // que el día que alguien escriba en él no haya que volver a abrir esto.
+    for (const token of ["tinta", "tenue", "senal", "sello-ok", "ladrillo"]) {
       for (const fondo of ["papel", "pieza"]) {
         it(`piel ${piel.nombre}: --${token} sobre --${fondo}`, () => {
           const p = paleta(piel.selector);

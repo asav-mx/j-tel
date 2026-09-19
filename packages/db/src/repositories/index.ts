@@ -20,6 +20,7 @@ import { escribirEnLotes, filasPorSentencia } from "../lote-de-escritura.js";
 import { planDeVinculacion } from "../mapeo-identidades.js";
 import { routeWindowSizing } from "../ventana-ocurrencia.js";
 import { consultaUltimoPuntoPorImei } from "../ultimo-punto-por-imei.js";
+import { VernierRepository } from "./vernier.js";
 import {
   resumirUnidadDia,
   HUECO_MINUTOS_POR_DEFECTO,
@@ -7328,6 +7329,7 @@ export function createRepositories(db: Database) {
     livePositions: new LivePositionRepository(db),
     circuits: new CircuitRepository(db),
     expedientes: new ExpedienteRepository(db),
+    vernier: new VernierRepository(db),
   };
 }
 

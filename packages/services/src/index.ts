@@ -23,3 +23,4 @@ export * from "./cierre.js";
 export * from "./cobertura.js";
 export * from "./medicion-recorrido.js";
 export * from "./resello.js";
+export * from "./servicios-especiales.js";

@@ -8,7 +8,7 @@ import { AvisoDeError, Encabezado, Renglon, SinCuenta, Titular, Vacio } from "@/
 import { PanelDeIdentidadDeUnidad } from "@/components/casa/paneles-de-unidad";
 import { clases } from "@/components/casa/formulario";
 import { textoDeRuta } from "@/lib/casa/dispositivos";
-import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
+import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
 import { relojDePagina } from "@/lib/casa/cronometro";
 import {
@@ -38,9 +38,9 @@ export const dynamic = "force-dynamic";
  * dispositivo, su cuadro de inventario y la edad de su última señal. Primero lo
  * que pide hacer algo.
  *
- * `ALCANCE_SIN_CUARTOS` sigue siendo correcto aquí: Expedientes aplica
- * «siempre», y ni Cumplimiento ni Circuitos tienen cuarto todavía. La trampa
- * que anota `casas.ts` muerde cuando llegue el primero de esos dos.
+ * El marco recibe el alcance de la cuenta (`cuenta.alcance`): Expedientes
+ * aplica «siempre», pero el menú que lo rodea tiene que enseñar Servicios
+ * especiales a una cuenta con contrato.
  */
 export default async function CuartoDeExpedientes({
   searchParams,
@@ -53,7 +53,7 @@ export default async function CuartoDeExpedientes({
   reloj.marca("guardia");
   if (!cuenta.carrier) {
     return (
-      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+      <Marco casa={casa} alcance={ALCANCE_SIN_CUENTA} cuenta={cuenta.casa}>
         <SinCuenta elegibles={cuenta.casa.elegibles} />
       </Marco>
     );
@@ -77,7 +77,7 @@ export default async function CuartoDeExpedientes({
   };
 
   return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+    <Marco casa={casa} alcance={cuenta.alcance} cuenta={cuenta.casa}>
       <div className="mx-auto flex max-w-3xl flex-col gap-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <Titular

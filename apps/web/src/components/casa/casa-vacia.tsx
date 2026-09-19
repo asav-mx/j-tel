@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ALCANCE_SIN_CUARTOS, menuDe, type Casa } from "@/lib/casa/casas";
+import { ALCANCE_SIN_CUENTA, menuDe, type Casa } from "@/lib/casa/casas";
 
 /**
  * Lo que se ve en una casa que todavía no tiene cuartos.
@@ -15,7 +15,7 @@ import { ALCANCE_SIN_CUARTOS, menuDe, type Casa } from "@/lib/casa/casas";
  */
 export function CasaVacia({ casa }: { casa: Casa }) {
   const puerta = casa.grupos[0]?.lugares[0]?.nombre ?? "su puerta";
-  const construidos = menuDe(casa, ALCANCE_SIN_CUARTOS).flatMap((grupo) => grupo.lugares);
+  const construidos = menuDe(casa, ALCANCE_SIN_CUENTA).flatMap((grupo) => grupo.lugares);
   return (
     <div className="mx-auto max-w-xl py-16">
       <p

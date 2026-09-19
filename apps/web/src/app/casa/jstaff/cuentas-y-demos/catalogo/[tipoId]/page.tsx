@@ -7,7 +7,7 @@ import { exigirEnPagina } from "@/lib/guardia-pagina";
 import { Marco } from "@/components/casa/marco";
 import { Migas } from "@/components/casa/migas";
 import { AvisoDeError, Familia, Renglon, Titular } from "@/components/casa/expediente";
-import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
+import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 import { correosDeAutores } from "@/lib/casa/autores";
 import { diaDe, fechaCorta } from "@/lib/casa/expedientes";
 import {
@@ -102,7 +102,7 @@ export default async function TipoDelCatalogo({
   };
 
   return (
-    <Marco casa={CASAS.jstaff} alcance={ALCANCE_SIN_CUARTOS}>
+    <Marco casa={CASAS.jstaff} alcance={ALCANCE_SIN_CUENTA}>
       <div className="mx-auto flex max-w-3xl flex-col gap-7">
         <Migas pasos={pasos} />
         <Titular

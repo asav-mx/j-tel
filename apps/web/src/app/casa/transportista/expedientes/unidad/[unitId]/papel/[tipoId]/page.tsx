@@ -6,7 +6,7 @@ import { Marco } from "@/components/casa/marco";
 import { Migas } from "@/components/casa/migas";
 import { Glifo } from "@/components/casa/glifo";
 import { AvisoDeError, Familia, Renglon, SinCuenta, Titular, Vacio } from "@/components/casa/expediente";
-import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
+import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
 import { relojDePagina } from "@/lib/casa/cronometro";
 import { correosDeAutores } from "@/lib/casa/autores";
@@ -55,7 +55,7 @@ export default async function VerPapel({
   reloj.marca("guardia");
   if (!cuenta.carrier) {
     return (
-      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+      <Marco casa={casa} alcance={ALCANCE_SIN_CUENTA} cuenta={cuenta.casa}>
         <SinCuenta elegibles={cuenta.casa.elegibles} />
       </Marco>
     );
@@ -93,7 +93,7 @@ export default async function VerPapel({
     accion === "capturar" && !vigente ? "capturar" : accion && accion !== "capturar" && vigente ? accion : null;
 
   return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+    <Marco casa={casa} alcance={cuenta.alcance} cuenta={cuenta.casa}>
       <div className="mx-auto flex max-w-3xl flex-col gap-7">
         <Migas
           pasos={[

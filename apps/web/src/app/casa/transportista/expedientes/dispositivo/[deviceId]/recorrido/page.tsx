@@ -6,7 +6,7 @@ import { Migas } from "@/components/casa/migas";
 import { SinCuenta } from "@/components/casa/expediente";
 import { RecorridoDispositivoPlayback } from "@/components/casa/recorrido-dispositivo-playback";
 import type { EstadoActual } from "@/components/casa/recorrido-playback";
-import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
+import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
 import { relojDePagina } from "@/lib/casa/cronometro";
 import { glifoDeDispositivo, rutas } from "@/lib/casa/expedientes";
@@ -39,7 +39,7 @@ export default async function RecorridoDeDispositivo({
   reloj.marca("guardia");
   if (!cuenta.carrier) {
     return (
-      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+      <Marco casa={casa} alcance={ALCANCE_SIN_CUENTA} cuenta={cuenta.casa}>
         <SinCuenta elegibles={cuenta.casa.elegibles} />
       </Marco>
     );
@@ -84,7 +84,7 @@ export default async function RecorridoDeDispositivo({
       : { nombre: "Expedientes", ruta: rutas.cuarto(cuentaEnRuta) };
 
   return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa} lugar={puerta === "dispositivos" ? RAIZ_DISPOSITIVOS : undefined}>
+    <Marco casa={casa} alcance={cuenta.alcance} cuenta={cuenta.casa} lugar={puerta === "dispositivos" ? RAIZ_DISPOSITIVOS : undefined}>
       <div className="mx-auto flex max-w-[1080px] flex-col gap-4">
         <Migas
           pasos={[

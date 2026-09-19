@@ -57,11 +57,28 @@
  *   · `--tenue` se usa para apoyo y etiquetas, nunca para lo único que hay que
  *     leer en una pantalla.
  *
- * **No hay tokens de veredicto aquí.** El Marco reserva significado a cumplido,
- * no cumplido y pendiente, y el skill vigente no publica sus valores en la piel
- * nueva. El cascarón no dibuja un solo veredicto, así que inventarle tres
- * colores sería escribir ley de diseño de contrabando. Entran con el primer
- * cuarto que muestre un veredicto, y los decide quien manda sobre el skill.
+ * **Los colores del sello (Vernier V1, 18 de septiembre de 2026).** Hasta ese
+ * día aquí no había tokens de veredicto: el cascarón no dibujaba ninguno, e
+ * inventarle colores habría sido escribir ley de diseño de contrabando. Entran
+ * con el primer cuarto que muestra un veredicto —Servicios especiales— y los
+ * decidió ASAV en la ficha (§4), con el skill actualizado en el mismo PR:
+ *
+ *   --sello-ok  cumplido      claro #2E6A4E  oscuro #7FBFA0
+ *   --ladrillo  no cumplido   claro #A93636  oscuro #FF8177
+ *
+ * Medidos contra `--pieza` / `--papel`: claro 6.39 / 6.13 y 6.43 / 6.16;
+ * oscuro 8.27 / 9.09 y 7.26 / 7.98. Los dos pasan el 4.5:1 de texto aunque
+ * `--sello-ok` sólo llene un hexágono: `--ladrillo` sí se escribe (el nombre del
+ * veredicto y la hora del sello de un no cumplido).
+ *
+ * Tres reglas que no dependen de los números:
+ *
+ *   · **exclusivos del sello**: ni `--sello-ok` ni `--ladrillo` se usan en ningún
+ *     otro lugar de la plataforma;
+ *   · `--sello-ok` es un verde **sobrio y distinto** de `--vivo`: el latido
+ *     sigue siendo lo único que brilla;
+ *   · **la forma carga el estado** (hexágono lleno, punteado, tachado); el color
+ *     acompaña. Pendiente de evidencia va en tinta: no tiene color propio.
  */
 
 .cascaron {
@@ -73,6 +90,8 @@
   --linea: #e4e5ee; /* separadores y bordes */
   --senal: #b05a0f; /* cobre — SÓLO donde hay vida */
   --vivo: #1b9e6b; /* el latido de «en vivo» */
+  --sello-ok: #2e6a4e; /* el sello de un cumplido — sólo ahí */
+  --ladrillo: #a93636; /* el sello de un no cumplido — sólo ahí */
 
   /* — Tipografía: los tres papeles del skill —
    *   Nombres propios, distintos de los `--fuente-*` de la piel anterior, para
@@ -110,6 +129,8 @@
   --linea: #232842;
   --senal: #ffa24d;
   --vivo: #2fcb8b;
+  --sello-ok: #7fbfa0;
+  --ladrillo: #ff8177;
 
   --roce: rgba(237, 238, 248, 0.05);
   --t-senal: rgba(255, 162, 77, 0.13);

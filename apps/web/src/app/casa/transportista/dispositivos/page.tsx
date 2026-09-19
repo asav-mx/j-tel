@@ -9,7 +9,7 @@ import { Glifo } from "@/components/casa/glifo";
 import { CampoImei } from "@/components/casa/campo-imei";
 import { clases, estiloTitularDePanel } from "@/components/casa/formulario";
 import { AvisoDeError, Encabezado, Renglon, SinCuenta, Titular } from "@/components/casa/expediente";
-import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
+import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
 import { relojDePagina } from "@/lib/casa/cronometro";
 import { diaDe, edad, glifoDeDispositivo } from "@/lib/casa/expedientes";
@@ -45,7 +45,7 @@ export default async function CuartoDeDispositivos({
   reloj.marca("guardia");
   if (!cuenta.carrier) {
     return (
-      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+      <Marco casa={casa} alcance={ALCANCE_SIN_CUENTA} cuenta={cuenta.casa}>
         <SinCuenta elegibles={cuenta.casa.elegibles} />
       </Marco>
     );
@@ -68,7 +68,7 @@ export default async function CuartoDeDispositivos({
       : null;
 
   return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+    <Marco casa={casa} alcance={cuenta.alcance} cuenta={cuenta.casa}>
       <div className="mx-auto flex max-w-3xl flex-col gap-7">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <Titular

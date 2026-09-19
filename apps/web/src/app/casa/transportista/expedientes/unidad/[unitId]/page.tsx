@@ -11,7 +11,7 @@ import { AvisoDeError, Encabezado, Familia, Parte, Renglon, SinCuenta, Titular }
 import { PanelDeIdentidadDeUnidad } from "@/components/casa/paneles-de-unidad";
 import { clases } from "@/components/casa/formulario";
 import { textoDeRuta } from "@/lib/casa/dispositivos";
-import { ALCANCE_SIN_CUARTOS, CASAS } from "@/lib/casa/casas";
+import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
 import { relojDePagina } from "@/lib/casa/cronometro";
 import {
@@ -57,7 +57,7 @@ export default async function VerUnidad({
   reloj.marca("guardia");
   if (!cuenta.carrier) {
     return (
-      <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+      <Marco casa={casa} alcance={ALCANCE_SIN_CUENTA} cuenta={cuenta.casa}>
         <SinCuenta elegibles={cuenta.casa.elegibles} />
       </Marco>
     );
@@ -87,7 +87,7 @@ export default async function VerUnidad({
   const hecho = sp.hecho === "alta" ? "Dada de alta." : sp.hecho === "corregida" ? "Identidad corregida." : null;
 
   return (
-    <Marco casa={casa} alcance={ALCANCE_SIN_CUARTOS} cuenta={cuenta.casa}>
+    <Marco casa={casa} alcance={cuenta.alcance} cuenta={cuenta.casa}>
       <div className="mx-auto flex max-w-3xl flex-col gap-7">
         <Migas pasos={[{ nombre: "Expedientes", ruta: rutas.cuarto(cuentaEnRuta) }, { nombre: `Ver ${nombre}` }]} />
         <Titular
