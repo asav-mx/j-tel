@@ -1,4 +1,4 @@
-import type { CuartoDeExpedientes, DispositivoDelCuarto, UnidadDelCuarto } from "@jtel/services";
+import type { ChoferDelCuarto, CuartoDeExpedientes, DispositivoDelCuarto, UnidadDelCuarto } from "@jtel/services";
 import type { EstadoGlifo } from "@/components/casa/glifo";
 import { conCuenta } from "@/lib/casa/casas";
 import { rutasDeDispositivos, senalViva } from "@/lib/casa/dispositivos";
@@ -38,7 +38,11 @@ export type CausaSinJuzgar = "sin_regla" | "sin_catalogo" | "sin_mercado";
 /** Los cuatro grupos del inventario (Marco 6.6; enmienda 3). No se enciman. */
 export type ClaseDeDispositivo = "desconectado" | "en_bodega" | "en_unidad" | "de_baja";
 
-export type ClaseDeChofer = "activo" | "de_baja";
+/**
+ * La clase de un chofer: la misma lectura de papeles que una unidad (Choferes
+ * V1, §3), y «de baja» en lugar de «inactiva».
+ */
+export type ClaseDeChofer = "piden" | "sin_juzgar" | "al_dia" | "de_baja";
 
 /** Una pieza ya en palabras. Plana: cruza del servidor al navegador tal cual. */
 export interface PiezaDelArchivero {
@@ -78,24 +82,36 @@ export function rutaDelCajon(cajon: Cajon, cuenta?: string | null): string {
 
 // ── Unidades ─────────────────────────────────────────────────────────────
 
-export function claseDeUnidad(u: Pick<UnidadDelCuarto, "activa" | "papeles">): { clase: ClaseDeUnidad; causa: CausaSinJuzgar | null } {
-  if (!u.activa) return { clase: "inactiva", causa: null };
-  if (u.papeles.estado === "aun_no_disponible") return { clase: "sin_juzgar", causa: "sin_mercado" };
-  if (u.papeles.estado === "vacia") return { clase: "sin_juzgar", causa: "sin_catalogo" };
-  const r = u.papeles.valor;
+/** Lo que dicen los papeles de algo que está en servicio: pide algo, sin juzgar (con su causa) o al día. */
+function claseSegunPapeles(papeles: UnidadDelCuarto["papeles"]): { clase: "piden" | "sin_juzgar" | "al_dia"; causa: CausaSinJuzgar | null } {
+  if (papeles.estado === "aun_no_disponible") return { clase: "sin_juzgar", causa: "sin_mercado" };
+  if (papeles.estado === "vacia") return { clase: "sin_juzgar", causa: "sin_catalogo" };
+  const r = papeles.valor;
   // Lo que pide algo gana aunque otro papel no tenga regla: ya hay algo que hacer.
   if (r.pidenAlgo > 0) return { clase: "piden", causa: null };
   if (r.estaAlDia) return { clase: "al_dia", causa: null };
   return { clase: "sin_juzgar", causa: "sin_regla" };
 }
 
+export function claseDeUnidad(u: Pick<UnidadDelCuarto, "activa" | "papeles">): { clase: ClaseDeUnidad; causa: CausaSinJuzgar | null } {
+  if (!u.activa) return { clase: "inactiva", causa: null };
+  return claseSegunPapeles(u.papeles);
+}
+
+export function claseDeChofer(c: Pick<ChoferDelCuarto, "activo" | "papeles">): { clase: ClaseDeChofer; causa: CausaSinJuzgar | null } {
+  if (!c.activo) return { clase: "de_baja", causa: null };
+  return claseSegunPapeles(c.papeles);
+}
+
 /** La línea que explica una causa (Asav: sin causa, «Sin juzgar» parece limbo). */
-export function lineaDeCausa(causa: CausaSinJuzgar, mercado: string | null): string {
+export function lineaDeCausa(causa: CausaSinJuzgar, mercado: string | null, sujeto: "unidad" | "chofer" = "unidad"): string {
   switch (causa) {
     case "sin_regla":
       return `Sin regla cargada para su mercado${mercado ? ` (${mercado})` : ""}: hasta que el catálogo la tenga, sus papeles no se declaran al día ni faltantes.`;
     case "sin_catalogo":
-      return "El catálogo de su mercado no tiene papeles de unidad: no hay contra qué juzgarlas.";
+      return sujeto === "unidad"
+        ? "El catálogo de su mercado no tiene papeles de unidad: no hay contra qué juzgarlas."
+        : "El catálogo de su mercado no tiene papeles de chofer que se puedan capturar: no hay contra qué juzgarlos.";
     case "sin_mercado":
       return "La cuenta no tiene mercado: sin catálogo, sus papeles no se pueden juzgar.";
   }
@@ -180,29 +196,35 @@ export function piezaDeDispositivo(d: DispositivoDelCuarto, ahora: Date, cuentaE
 
 // ── Choferes ─────────────────────────────────────────────────────────────
 
-type ChoferDelCuarto = Extract<CuartoDeExpedientes["choferes"], { estado: "con_datos" }>["valor"][number];
-
 /**
- * Sin glifo y sin ficha: el cuarto no juzga sus papeles todavía y Ver ‹chofer›
- * no existe (llegan con el PR E). Una forma aquí afirmaría un estado que nadie
- * midió; una liga, una puerta que no lleva a ningún lado.
+ * El chofer se lee como la unidad (Choferes V1, §3): la hoja de su peor papel,
+ * su nombre, su licencia de apoyo y cuántos papeles piden algo. Examen médico y
+ * antidoping ya vienen fuera del resumen: esperan al abogado (enmienda 4).
  */
-export function piezaDeChofer(c: ChoferDelCuarto): PiezaDelArchivero {
+export function piezaDeChofer(c: ChoferDelCuarto, cuentaEnRuta: string | null): PiezaDelArchivero {
+  const { clase, causa } = claseDeChofer(c);
+  const r = c.papeles.estado === "con_datos" ? c.papeles.valor : null;
+  const { dato, etiqueta } =
+    clase === "de_baja"
+      ? { dato: "—", etiqueta: "de baja" }
+      : causa
+        ? { dato: "—", etiqueta: ETIQUETA_DE_CAUSA[causa] }
+        : datoDeResumen(r!);
   return {
     id: c.id,
     cajon: "choferes",
-    clase: c.activo ? "activo" : "de_baja",
-    pideAtencion: false,
-    plegada: !c.activo,
-    causa: null,
-    glifo: null,
+    clase,
+    pideAtencion: clase === "piden",
+    plegada: clase === "de_baja",
+    causa,
+    glifo: (r?.peor && glifoDePapel(r.peor)) || "papel-falta-la-regla",
     nombre: c.nombre ?? "Credenciales purgadas",
     apoyo: c.licencia ?? "sin licencia",
-    dato: "—",
-    etiqueta: c.activo ? "sin juzgar" : "de baja",
+    dato,
+    etiqueta,
     datoVivo: false,
-    apagada: !c.activo,
-    ficha: null,
+    apagada: clase === "al_dia" || clase === "de_baja",
+    ficha: rutas.chofer(c.id, cuentaEnRuta),
     pajar: normalizar([c.nombre ?? "", c.licencia ?? ""].join(" ")),
   };
 }
@@ -213,7 +235,7 @@ export function armarArchivero(cuarto: CuartoDeExpedientes, ahora: Date, cuentaE
   return {
     unidades: cuarto.unidades.map((u) => piezaDeUnidad(u, cuentaEnRuta)),
     dispositivos: [...cuarto.dispositivos.enServicio, ...cuarto.dispositivos.deBaja].map((d) => piezaDeDispositivo(d, ahora, cuentaEnRuta)),
-    choferes: cuarto.choferes.estado === "con_datos" ? cuarto.choferes.valor.map(piezaDeChofer) : [],
+    choferes: cuarto.choferes.estado === "con_datos" ? cuarto.choferes.valor.map((c) => piezaDeChofer(c, cuentaEnRuta)) : [],
   };
 }
 
@@ -285,7 +307,7 @@ export function tarjetaDeCajon(cajon: Cajon, piezas: PiezaDelArchivero[]): Tarje
     }[cajon];
     return { ...base, piden: null, partes: [], vacio };
   }
-  if (cajon === "unidades") {
+  if (cajon === "unidades" || cajon === "choferes") {
     return {
       ...base,
       piden: piden > 0 ? `${piden} ${piden === 1 ? "pide algo" : "piden algo"}` : null,
@@ -308,7 +330,7 @@ export function tarjetaDeCajon(cajon: Cajon, piezas: PiezaDelArchivero[]): Tarje
       vacio: null,
     };
   }
-  return { ...base, piden: null, partes: [cuantas(enServicio.length, "activo", "activos")], vacio: null };
+  return { ...base, piden: null, partes: [], vacio: null };
 }
 
 // ── El cajón ─────────────────────────────────────────────────────────────
@@ -336,7 +358,13 @@ export const CHIPS: Record<Cajon, Chip[]> = {
     { clave: "en_unidad", nombre: "En unidad", pasa: DE_CLASE("en_unidad") },
     { clave: "en_bodega", nombre: "En bodega", pasa: DE_CLASE("en_bodega") },
   ],
-  choferes: [],
+  // Los mismos chips que Unidades (Choferes V1): la misma lectura de papeles.
+  choferes: [
+    { clave: "todas", nombre: "Todos", pasa: TODAS },
+    { clave: "piden", nombre: "Piden algo", pasa: DE_CLASE("piden") },
+    { clave: "sin_juzgar", nombre: "Sin juzgar", pasa: DE_CLASE("sin_juzgar") },
+    { clave: "al_dia", nombre: "Al día", pasa: DE_CLASE("al_dia") },
+  ],
 };
 
 /** La base: lo que el buscador del cajón deja pasar. De aquí salen los conteos y la lista. */
@@ -371,7 +399,11 @@ const SECCIONES: Record<Cajon, Array<{ clave: string; titulo: string; pasa: (p: 
     { clave: "en_bodega", titulo: "En bodega", pasa: DE_CLASE("en_bodega") },
     { clave: "en_unidad", titulo: "En unidad", pasa: DE_CLASE("en_unidad") },
   ],
-  choferes: [{ clave: "activos", titulo: "Choferes", pasa: DE_CLASE("activo") }],
+  choferes: [
+    { clave: "piden", titulo: "Piden algo", pasa: DE_CLASE("piden") },
+    { clave: "sin_juzgar", titulo: "Sin juzgar", pasa: DE_CLASE("sin_juzgar") },
+    { clave: "al_dia", titulo: "Al día", pasa: DE_CLASE("al_dia") },
+  ],
 };
 
 /** Lo plegado al final: fuera de los chips, con su propia cuenta. */
@@ -397,7 +429,7 @@ export function seccionesDelCajon(
         piezas.sort((a, b) => Number(b.pideAtencion) - Number(a.pideAtencion));
       }
       const causas = [...new Set(piezas.map((p) => p.causa).filter((c): c is CausaSinJuzgar => c !== null))];
-      return { clave, titulo, piezas, explicacion: causas.map((c) => lineaDeCausa(c, mercado)) };
+      return { clave, titulo, piezas, explicacion: causas.map((c) => lineaDeCausa(c, mercado, cajon === "choferes" ? "chofer" : "unidad")) };
     })
     .filter((s) => s.piezas.length > 0);
   // Lo plegado sólo acompaña a «Todas»: con un chip elegido, se está mirando otra cosa.

@@ -1030,8 +1030,12 @@ describe("choferes — la purga no rompe la historia", () => {
       if (!chofer) throw new Error("no se pudo insertar el chofer");
       await db.insert(driverCredentials).values({
         driverId: chofer.id,
-        fullName: "R. Medina",
-        licenseNumber: "LIC-TEST-0001",
+        carrierAccountId: carrier.id,
+        // Único por corrida: desde la 0042 el nombre y la licencia no se
+        // repiten en una cuenta, y una corrida interrumpida deja el suyo. Lo
+        // que esta prueba cuida es el nombre congelado del hecho, más abajo.
+        fullName: `R. Medina ${Date.now().toString(36)}`,
+        licenseNumber: `LIC-TEST-${Date.now().toString(36)}`,
       });
 
       // El servicio se sella con el chofer declarado, congelado en el hecho.

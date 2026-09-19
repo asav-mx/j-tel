@@ -48,6 +48,8 @@ interface Opciones {
   catalogo?: Array<{ tipo: ReturnType<typeof tipo>; regla: unknown }>;
   fojas?: unknown[];
   asignacionesDeChofer?: unknown[];
+  operadas?: unknown[];
+  fojasDeChoferes?: unknown[];
 }
 
 function repos(o: Opciones = {}) {
@@ -77,6 +79,8 @@ function repos(o: Opciones = {}) {
       asignacionesDeDispositivo: async (cuenta: string) =>
         cuenta === "c1" ? [{ unitId: "u1", etiqueta: "10254", desde: new Date("2026-09-01T00:00:00Z"), hasta: null }] : [],
       asignacionesDeChofer: async () => o.asignacionesDeChofer ?? [],
+      unidadesDeChoferDeclarado: async () => o.operadas ?? [],
+      fojasVigentesDeChoferesDeCuenta: async () => o.fojasDeChoferes ?? [],
       tieneContratoEncendido: async () => o.conContrato ?? false,
     },
     fleet: {
@@ -238,7 +242,8 @@ describe("el expediente de un chofer", () => {
   it("lo que nada alimenta dice «aún no disponible»; lo que la base tiene, se muestra", async () => {
     const sin = await cargarExpedienteDeChofer(repos().repos, { carrierAccountId: "c1", driverId: "ch1", ahora: AHORA });
     expect(sin?.identidad.nombre).toEqual({ estado: "con_datos", valor: "Juan Pérez" });
-    expect(sin?.actividad.unidadesOperadas).toEqual({ estado: "aun_no_disponible", fuente: "asignacion_de_choferes" });
+    // La fuente de lo operado es el chofer declarado en cada servicio, no la asignación (enmienda 5).
+    expect(sin?.actividad.unidadesOperadas).toEqual({ estado: "aun_no_disponible", fuente: "chofer_declarado" });
     expect(sin?.relaciones.rutas).toEqual({ estado: "aun_no_disponible", fuente: "asignacion_de_choferes" });
 
     const con = await cargarExpedienteDeChofer(
@@ -246,6 +251,31 @@ describe("el expediente de un chofer", () => {
       { carrierAccountId: "c1", driverId: "ch1", ahora: AHORA },
     );
     expect(con?.relaciones.rutas.estado).toBe("con_datos");
+  });
+
+  it("si la base ya tiene servicios con el chofer declarado, «unidades que ha operado» los muestra", async () => {
+    const e = await cargarExpedienteDeChofer(
+      repos({ operadas: [{ unitId: "u1", etiqueta: "10254", servicios: 3, ultimo: new Date("2026-09-12T12:00:00Z") }] }).repos,
+      { carrierAccountId: "c1", driverId: "ch1", ahora: AHORA },
+    );
+    expect(e?.actividad.unidadesOperadas).toEqual({
+      estado: "con_datos",
+      valor: [{ unitId: "u1", etiqueta: "10254", servicios: 3, ultimo: new Date("2026-09-12T12:00:00Z") }],
+    });
+  });
+
+  it("examen médico y antidoping esperan al abogado: aparte, fuera del resumen (enmienda 4)", async () => {
+    const catalogo = [
+      { tipo: tipo("l1", "licencia", "Licencia", "chofer"), regla: null },
+      { tipo: tipo("e1", "examen_medico", "Examen médico", "chofer"), regla: { obligatorio: true, vence: true, diasDeAviso: 30, periodicidadMeses: null } },
+      { tipo: tipo("a1", "antidoping", "Antidoping", "chofer"), regla: { obligatorio: true, vence: true, diasDeAviso: 30, periodicidadMeses: null } },
+    ];
+    const e = await cargarExpedienteDeChofer(repos({ catalogo }).repos, { carrierAccountId: "c1", driverId: "ch1", ahora: AHORA });
+    if (e?.documentos.estado !== "con_datos") throw new Error("sin documentos");
+    expect(e.documentos.valor.papeles.map((p) => p.tipo.clave)).toEqual(["licencia"]);
+    expect(e.documentos.valor.enEspera.map((t) => t.clave)).toEqual(["examen_medico", "antidoping"]);
+    // Obligatorios y sin capturar, pero no piden nada: no se pueden capturar.
+    expect(e.documentos.valor.resumen.pidenAlgo).toBe(0);
   });
 
   it("sus papeles salen del catálogo de chofer, no del de unidad", async () => {
@@ -270,10 +300,13 @@ describe("el cuarto de Expedientes", () => {
     version: version(id, expiresOn, creada),
   });
 
-  function reposDelCuarto(o: { mercado?: typeof CHIHUAHUA | null; fojas?: unknown[] } = {}) {
-    const base = repos({ mercado: o.mercado, catalogo }).repos as unknown as Record<string, Record<string, unknown>>;
+  function reposDelCuarto(
+    o: { mercado?: typeof CHIHUAHUA | null; fojas?: unknown[]; choferes?: unknown[]; fojasDeChoferes?: unknown[]; catalogo?: typeof catalogo } = {},
+  ) {
+    const base = repos({ mercado: o.mercado, catalogo: o.catalogo ?? catalogo }).repos as unknown as Record<string, Record<string, unknown>>;
     base.expedientes!.fojasVigentesDeUnidadesDeCuenta = async () => o.fojas ?? [];
-    base.expedientes!.choferesDeCuenta = async () => [];
+    base.expedientes!.choferesDeCuenta = async () => o.choferes ?? [];
+    base.expedientes!.fojasVigentesDeChoferesDeCuenta = async () => o.fojasDeChoferes ?? [];
     base.fleet!.getUnitsForCarrier = async () => [
       { id: "u1", label: "10254", plateNumber: "ETD-41-92", active: true },
       { id: "u2", label: "10118", plateNumber: null, active: true },
@@ -334,5 +367,40 @@ describe("el cuarto de Expedientes", () => {
     expect(cuarto.dispositivos.enServicio.map((d) => [d.nombre, d.estado.grupo, d.unidad])).toEqual([["TK-FTC927-001", "en_unidad", "10254"]]);
     expect(cuarto.dispositivos.deBaja.map((d) => d.nombre)).toEqual(["Umbrella 9"]);
     expect(cuarto.choferes).toEqual({ estado: "vacia" });
+  });
+});
+
+describe("los choferes en el cuarto (Choferes V1, §3)", () => {
+  const reglaChofer = { obligatorio: true, vence: true, diasDeAviso: 30, periodicidadMeses: null };
+  function reposConChoferes(fojasDeChoferes: unknown[]) {
+    const base = repos({
+      catalogo: [
+        { tipo: tipo("l1", "licencia", "Licencia", "chofer"), regla: reglaChofer },
+        { tipo: tipo("e1", "examen_medico", "Examen médico", "chofer"), regla: reglaChofer },
+      ],
+      fojasDeChoferes,
+    }).repos as unknown as Record<string, Record<string, unknown>>;
+    base.expedientes!.fojasVigentesDeUnidadesDeCuenta = async () => [];
+    base.expedientes!.choferesDeCuenta = async () => [
+      { id: "ch1", deactivatedAt: null, nombre: "Ana Ruiz", licencia: "CHH-1" },
+      { id: "ch2", deactivatedAt: null, nombre: "Beto Luna", licencia: "CHH-2" },
+    ];
+    return base as never;
+  }
+  const licencia = (driverId: string, expiresOn: string) => ({
+    foja: { id: `f-${driverId}`, driverId, documentTypeId: "l1", createdAt: new Date("2026-09-01T00:00:00Z") },
+    version: version(`f-${driverId}`, expiresOn, "2026-09-01T00:00:00Z"),
+  });
+
+  it("cada chofer trae el resumen de sus papeles; el de la licencia vencida va primero", async () => {
+    const cuarto = await cargarCuartoDeExpedientes(reposConChoferes([licencia("ch1", "2027-06-01"), licencia("ch2", "2026-09-10")]), {
+      carrierAccountId: "c1",
+      ahora: AHORA,
+    });
+    if (cuarto.choferes.estado !== "con_datos") throw new Error("sin choferes");
+    expect(cuarto.choferes.valor.map((c) => c.nombre)).toEqual(["Beto Luna", "Ana Ruiz"]);
+    expect(cuarto.choferes.valor[0]!.papeles).toMatchObject({ estado: "con_datos", valor: { pidenAlgo: 1, peor: "vencido" } });
+    // El examen médico obligatorio y sin capturar no la condena: espera al abogado.
+    expect(cuarto.choferes.valor[1]!.papeles).toMatchObject({ estado: "con_datos", valor: { pidenAlgo: 0, estaAlDia: true } });
   });
 });

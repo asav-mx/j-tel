@@ -6715,6 +6715,9 @@ export interface DatosDeFoja {
 /** El papel no es del mercado de la cuenta, o no es de ese tipo de sujeto. */
 export class FojaFueraDeCatalogo extends Error {}
 
+/** Una transacción abierta: lo que recibe una escritura que va dentro de otra. */
+type Transaccion = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
 function reglaDeFila(
   r: { required: boolean | null; expires: boolean | null; warningDays: number | null; periodicityMonths: number | null } | undefined,
 ): ReglaDeTipo | null {
@@ -6859,8 +6862,26 @@ export class ExpedienteRepository {
     datos: DatosDeFoja;
     actor: ActorDelExpediente;
   }) {
+    return this.db.transaction((tx) => this.capturarFojaEn(tx, entrada));
+  }
+
+  /**
+   * La captura de una foja dentro de una transacción ajena. La usa el alta del
+   * chofer: el chofer, sus credenciales y su «Licencia» nacen juntos o no nacen
+   * (Choferes V1, enmienda 2).
+   */
+  private async capturarFojaEn(
+    tx: Transaccion,
+    entrada: {
+      carrierAccountId: string;
+      documentTypeId: string;
+      sujeto: SujetoDeFoja;
+      datos: DatosDeFoja;
+      actor: ActorDelExpediente;
+    },
+  ) {
     const { carrierAccountId, documentTypeId, sujeto, datos, actor } = entrada;
-    return this.db.transaction(async (tx) => {
+    {
       const [tipo] = await tx.select().from(documentTypes).where(eq(documentTypes.id, documentTypeId));
       const [cuenta] = await tx
         .select({ marketId: accounts.marketId })
@@ -6912,7 +6933,7 @@ export class ExpedienteRepository {
         })
         .returning();
       return { documento: documento!, version: version! };
-    });
+    }
   }
 
   /**
@@ -7012,6 +7033,164 @@ export class ExpedienteRepository {
       .orderBy(documentVersions.documentId, desc(documentVersions.createdAt), desc(documentVersions.id));
     const vigentePorFoja = new Map(versiones.map((v) => [v.documentId, v]));
     return fojas.map((foja) => ({ foja, version: vigentePorFoja.get(foja.id)! }));
+  }
+
+  /**
+   * Las fojas de TODOS los choferes de una cuenta, cada una con su versión
+   * vigente. La lectura del cuarto, como la de unidades.
+   */
+  async fojasVigentesDeChoferesDeCuenta(carrierAccountId: string) {
+    const fojas = await this.db
+      .select()
+      .from(documents)
+      .where(and(eq(documents.carrierAccountId, carrierAccountId), isNotNull(documents.driverId)))
+      .orderBy(desc(documents.createdAt), desc(documents.id));
+    if (fojas.length === 0) return [];
+    const versiones = await this.db
+      .selectDistinctOn([documentVersions.documentId])
+      .from(documentVersions)
+      .where(inArray(documentVersions.documentId, fojas.map((f) => f.id)))
+      .orderBy(documentVersions.documentId, desc(documentVersions.createdAt), desc(documentVersions.id));
+    const vigentePorFoja = new Map(versiones.map((v) => [v.documentId, v]));
+    return fojas.map((foja) => ({ foja, version: vigentePorFoja.get(foja.id)! }));
+  }
+
+  // ── Choferes: alta y corrección (Choferes V1, 0042) ──
+
+  /**
+   * El nombre y la licencia de los choferes **activos** de una cuenta —los que
+   * tienen credenciales: la baja las purga—. Es contra lo que se revisa un alta
+   * o una corrección antes de escribir, para decir el choque en palabras.
+   */
+  async identidadesDeChoferes(carrierAccountId: string) {
+    return this.db
+      .select({ id: driverCredentials.driverId, nombre: driverCredentials.fullName, licencia: driverCredentials.licenseNumber })
+      .from(driverCredentials)
+      .where(eq(driverCredentials.carrierAccountId, carrierAccountId));
+  }
+
+  /**
+   * Da de alta un chofer: la Capa 1 (`drivers`, sin datos personales) y la
+   * Capa 2 (sus credenciales, purgables), y —si su mercado tiene el papel— su
+   * «Licencia» con el vencimiento. **Todo o nada**, en una transacción: un
+   * chofer sin credenciales, o una licencia sin chofer, no deben existir.
+   *
+   * `license_expires_on` no se escribe: el vencimiento vive como papel, y el §4
+   * de la ficha de Expedientes lo juzga en un solo lugar (enmienda 2).
+   */
+  async darDeAltaChofer(entrada: {
+    carrierAccountId: string;
+    nombre: string;
+    licencia: string;
+    papelDeLicencia: { documentTypeId: string; venceEl: string | null } | null;
+    actor: ActorDelExpediente;
+  }) {
+    const { carrierAccountId, nombre, licencia, papelDeLicencia, actor } = entrada;
+    return this.db.transaction(async (tx) => {
+      const [chofer] = await tx.insert(drivers).values({ carrierAccountId }).returning();
+      await tx.insert(driverCredentials).values({
+        driverId: chofer!.id,
+        carrierAccountId,
+        fullName: nombre,
+        licenseNumber: licencia,
+      });
+      if (papelDeLicencia) {
+        await this.capturarFojaEn(tx, {
+          carrierAccountId,
+          documentTypeId: papelDeLicencia.documentTypeId,
+          sujeto: { choferId: chofer!.id },
+          datos: { folio: licencia, emitidoEl: null, venceElImpreso: papelDeLicencia.venceEl },
+          actor,
+        });
+      }
+      return chofer!;
+    });
+  }
+
+  /**
+   * Corrige el nombre o la licencia de un chofer. **Sobrescribe**, como la
+   * unidad (C4-e): la bitácora de correcciones de identidad es pendiente con
+   * nombre. Devuelve `null` si el chofer no es de esta cuenta o ya no tiene
+   * credenciales.
+   *
+   * Si cambia el número y hay una «Licencia» vigente, su folio se corrige con
+   * una versión nueva de la foja —las fechas se conservan—: el número está en
+   * la identidad y es el folio del papel, y los dos no pueden decir cosas
+   * distintas.
+   */
+  async corregirChofer(
+    carrierAccountId: string,
+    driverId: string,
+    datos: { nombre: string; licencia: string },
+    papelDeLicencia: { documentTypeId: string } | null,
+    actor: ActorDelExpediente,
+  ) {
+    return this.db.transaction(async (tx) => {
+      const [antes] = await tx
+        .select({ licencia: driverCredentials.licenseNumber })
+        .from(driverCredentials)
+        .where(and(eq(driverCredentials.driverId, driverId), eq(driverCredentials.carrierAccountId, carrierAccountId)));
+      if (!antes) return null;
+      const [fila] = await tx
+        .update(driverCredentials)
+        .set({ fullName: datos.nombre, licenseNumber: datos.licencia, updatedAt: new Date() })
+        .where(and(eq(driverCredentials.driverId, driverId), eq(driverCredentials.carrierAccountId, carrierAccountId)))
+        .returning();
+      if (papelDeLicencia && antes.licencia !== datos.licencia) {
+        const [foja] = await tx
+          .select({ id: documents.id })
+          .from(documents)
+          .where(
+            and(
+              eq(documents.carrierAccountId, carrierAccountId),
+              eq(documents.driverId, driverId),
+              eq(documents.documentTypeId, papelDeLicencia.documentTypeId),
+            ),
+          )
+          .orderBy(desc(documents.createdAt), desc(documents.id))
+          .limit(1);
+        if (foja) {
+          const [vigente] = await tx
+            .select()
+            .from(documentVersions)
+            .where(eq(documentVersions.documentId, foja.id))
+            .orderBy(desc(documentVersions.createdAt), desc(documentVersions.id))
+            .limit(1);
+          await tx.insert(documentVersions).values({
+            documentId: foja.id,
+            folio: datos.licencia,
+            issuedOn: vigente?.issuedOn ?? null,
+            expiresOn: vigente?.expiresOn ?? null,
+            expiryCalculated: vigente?.expiryCalculated ?? false,
+            actorKind: actor.kind,
+            actorId: actor.id,
+            note: "Número corregido desde la identidad del chofer",
+          });
+        }
+      }
+      return fila ?? null;
+    });
+  }
+
+  /**
+   * Las unidades **de esta cuenta** que operó un chofer según el transportista:
+   * el chofer declarado en cada servicio sellado (`compliance_facts`). Es la
+   * fuente de «unidades que ha operado» (Choferes V1, enmienda 5). Declarado,
+   * no medido (Plan-Choferes §1).
+   */
+  async unidadesDeChoferDeclarado(carrierAccountId: string, driverId: string) {
+    return this.db
+      .select({
+        unitId: units.id,
+        etiqueta: units.label,
+        servicios: count(complianceFacts.id),
+        ultimo: sql<Date>`max(${complianceFacts.expectedDeadline})`,
+      })
+      .from(complianceFacts)
+      .innerJoin(units, eq(units.id, complianceFacts.observedUnitId))
+      .where(and(eq(complianceFacts.declaredDriverId, driverId), eq(units.carrierAccountId, carrierAccountId)))
+      .groupBy(units.id, units.label)
+      .orderBy(desc(sql`max(${complianceFacts.expectedDeadline})`));
   }
 
   /** Los choferes de una cuenta, con su nombre si las credenciales no se han purgado. */

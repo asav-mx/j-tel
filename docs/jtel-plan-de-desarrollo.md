@@ -99,6 +99,7 @@ La piel vieja se apaga el 30-nov: las direcciones redirigen a la casa nueva y na
 - **El hueco de navegación entre casas.** Quien tiene varias llaves no tiene cómo pasar de una casa a otra: del transportista a J-Staff no hay paso dentro del producto, hoy se entra escribiendo la dirección (visto el 18-sep). Se cierra con C · Los pasillos.
 - **C4-d — apagar el alta vieja** de `/carrier/flota/alta`. Espera a que los 7 FTC estén rodando; hoy van 4.
 - **Migrar el alta de cuentas de J-Staff** a la casa nueva. Cuando se acerque el primer cliente real, no antes.
+- **La baja del chofer, con ficha propia.** Es el momento delicado: purga datos personales (Plan-Choferes 6.5) y no se cuela de pasada en otra ficha. Purga en el mismo acto las credenciales y los papeles del chofer (incluida la «Licencia» del alta de Choferes V1) y conserva los hechos; mientras no exista, un chofer no se puede dar de baja.
 - Cuadrar el dispositivo que no coincide: la hoja de Umbrella tiene 81 renglones (el 9181 repetido) pero en la base se dieron de baja 82.
 
 ---

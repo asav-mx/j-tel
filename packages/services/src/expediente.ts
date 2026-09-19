@@ -1,5 +1,6 @@
 import type { Repositories } from "@jtel/db";
 import {
+  PAPELES_QUE_ESPERAN_AL_ABOGADO,
   aunNoDisponible,
   estadoDePapel,
   localDateIso,
@@ -79,6 +80,18 @@ export interface PapelesDelExpediente {
   hoy: string;
   papeles: PapelDelExpediente[];
   resumen: ResumenDePapeles;
+  /**
+   * Los tipos del catálogo que esperan la palabra del abogado (examen médico y
+   * antidoping, sólo de chofer). **No están en `papeles` ni cuentan en el
+   * resumen**: se dicen «aún no disponible», sin captura (Choferes V1,
+   * enmienda 4). Vacío en una unidad.
+   */
+  enEspera: Array<{ id: string; clave: string; nombre: string }>;
+}
+
+/** ¿Este tipo de papel espera al abogado? Sólo los de chofer. */
+function esperaAlAbogado(subject: "unidad" | "chofer", clave: string): boolean {
+  return subject === "chofer" && PAPELES_QUE_ESPERAN_AL_ABOGADO.includes(clave);
 }
 
 async function cargarPapeles(
@@ -95,10 +108,14 @@ async function cargarPapeles(
     repos.expedientes.catalogo(mercado.id, subject),
     repos.expedientes.fojasDeSujeto(carrierAccountId, sujeto),
   ]);
-  if (catalogo.length === 0) return { estado: "vacia" };
+  const enEspera = catalogo
+    .filter(({ tipo }) => esperaAlAbogado(subject, tipo.clave))
+    .map(({ tipo }) => ({ id: tipo.id, clave: tipo.clave, nombre: tipo.name }));
+  const juzgables = catalogo.filter(({ tipo }) => !esperaAlAbogado(subject, tipo.clave));
+  if (juzgables.length === 0 && enEspera.length === 0) return { estado: "vacia" };
 
   const hoy = localDateIso(ahora, mercado.timeZone);
-  const papeles = catalogo.map(({ tipo, regla }): PapelDelExpediente => {
+  const papeles = juzgables.map(({ tipo, regla }): PapelDelExpediente => {
     const delTipo = fojas.filter((f) => f.foja.documentTypeId === tipo.id).map(leerFoja);
     const [vigente = null, ...anteriores] = delTipo;
     const version = vigente?.versiones[0];
@@ -124,6 +141,7 @@ async function cargarPapeles(
       hoy,
       papeles,
       resumen: resumirPapeles(papeles.map((p) => p.estado)),
+      enEspera,
     },
   };
 }
@@ -349,7 +367,8 @@ export interface ExpedienteDeChofer {
     licencia: Parte<string>;
   };
   actividad: {
-    unidadesOperadas: Parte<never>;
+    /** Declarado, no medido (Plan-Choferes §1): el chofer que el transportista dijo en cada servicio. */
+    unidadesOperadas: Parte<Array<{ unitId: string; etiqueta: string; servicios: number; ultimo: Date }>>;
   };
   relaciones: {
     rutas: Parte<Array<{ routeShiftId: string; ruta: string; turno: string; desde: string; hasta: string | null }>>;
@@ -365,9 +384,10 @@ export async function cargarExpedienteDeChofer(
   const fila = await repos.expedientes.choferDeCuenta(carrierAccountId, driverId);
   if (!fila) return null;
 
-  const [asignaciones, documentos] = await Promise.all([
+  const [asignaciones, documentos, operadas] = await Promise.all([
     repos.expedientes.asignacionesDeChofer(driverId),
     cargarPapeles(repos, carrierAccountId, { choferId: driverId }, ahora),
+    repos.expedientes.unidadesDeChoferDeclarado(carrierAccountId, driverId),
   ]);
 
   return {
@@ -381,8 +401,21 @@ export async function cargarExpedienteDeChofer(
       licencia: parteDe(fila.credenciales?.licenseNumber),
     },
     actividad: {
-      // `compliance_facts.declaredDriverId` existe, pero nada lo escribe todavía.
-      unidadesOperadas: aunNoDisponible("asignacion_de_choferes"),
+      // La fuente es el chofer declarado en cada servicio (enmienda 5), no la
+      // asignación. Hoy nada lo escribe; si la base ya tiene alguno, se
+      // muestra: «aún no disponible» nunca se dice de algo que la base tiene.
+      unidadesOperadas:
+        operadas.length > 0
+          ? {
+              estado: "con_datos",
+              valor: operadas.map((o) => ({
+                unitId: o.unitId,
+                etiqueta: o.etiqueta,
+                servicios: Number(o.servicios),
+                ultimo: o.ultimo instanceof Date ? o.ultimo : new Date(o.ultimo),
+              })),
+            }
+          : aunNoDisponible("chofer_declarado"),
     },
     relaciones: {
       // Hoy nada escribe `driver_assignments`. Si ya hay filas, se muestran:
@@ -418,12 +451,25 @@ export interface DispositivoDelCuarto {
   unidad: string | null;
 }
 
+export interface ChoferDelCuarto {
+  id: string;
+  nombre: string | null;
+  licencia: string | null;
+  activo: boolean;
+  /**
+   * El resumen de sus papeles, como el de una unidad: aún no disponible sin
+   * mercado, vacío si su catálogo no tiene papeles de chofer que se puedan
+   * juzgar. Los que esperan al abogado no cuentan (enmienda 4).
+   */
+  papeles: Parte<ResumenDePapeles>;
+}
+
 export interface CuartoDeExpedientes {
   mercado: { nombre: string; hoy: string } | null;
   unidades: UnidadDelCuarto[];
   /** En servicio primero; los de baja al final, sin esconderse. */
   dispositivos: { enServicio: DispositivoDelCuarto[]; deBaja: DispositivoDelCuarto[] };
-  choferes: Parte<Array<{ id: string; nombre: string | null; licencia: string | null; activo: boolean }>>;
+  choferes: Parte<ChoferDelCuarto[]>;
   /**
    * Cuántos papeles de la flota **activa** le piden algo al transportista.
    * `null` sin mercado. Una unidad inactiva no opera: sus papeles faltantes se
@@ -431,6 +477,17 @@ export interface CuartoDeExpedientes {
    * cero (6.17).
    */
   papelesQuePidenAlgo: number | null;
+}
+
+/** Primero lo que pide algo, como las unidades; los de baja al final; luego por nombre. */
+function ordenarChoferes(choferes: ChoferDelCuarto[]): ChoferDelCuarto[] {
+  const piden = (c: ChoferDelCuarto) => (c.papeles.estado === "con_datos" ? c.papeles.valor.pidenAlgo : 0);
+  return [...choferes].sort(
+    (a, b) =>
+      Number(b.activo) - Number(a.activo) ||
+      piden(b) - piden(a) ||
+      (a.nombre ?? "").localeCompare(b.nombre ?? "", "es"),
+  );
 }
 
 const ORDEN_DEL_PEOR = [
@@ -468,7 +525,15 @@ export async function cargarCuartoDeExpedientes(
   ]);
 
   const hoy = mercado ? localDateIso(ahora, mercado.timeZone) : null;
-  const catalogo = mercado ? await repos.expedientes.catalogo(mercado.id, "unidad") : [];
+  const [catalogo, catalogoDeChofer, fojasDeChoferes] = mercado
+    ? await Promise.all([
+        repos.expedientes.catalogo(mercado.id, "unidad"),
+        repos.expedientes.catalogo(mercado.id, "chofer"),
+        repos.expedientes.fojasVigentesDeChoferesDeCuenta(carrierAccountId),
+      ])
+    : [[], [], []];
+  // Examen médico y antidoping esperan al abogado: no se juzgan (enmienda 4).
+  const juzgablesDeChofer = catalogoDeChofer.filter(({ tipo }) => !esperaAlAbogado("chofer", tipo.clave));
 
   // La foja vigente de cada (unidad, tipo): la capturada más recientemente.
   // Las fojas llegan de la más reciente a la más vieja, así que gana la primera.
@@ -515,6 +580,28 @@ export async function cargarCuartoDeExpedientes(
     return pb.piden - pa.piden || pa.peor - pb.peor || a.numeroEconomico.localeCompare(b.numeroEconomico, "es", { numeric: true });
   });
 
+  // Los papeles de cada chofer, con la misma regla que la unidad y su ficha.
+  const vigenteDeChofer = new Map<string, (typeof fojasDeChoferes)[number]>();
+  for (const f of fojasDeChoferes) {
+    const llave = `${f.foja.driverId}|${f.foja.documentTypeId}`;
+    if (!vigenteDeChofer.has(llave)) vigenteDeChofer.set(llave, f);
+  }
+  const papelesDeChofer = (driverId: string): Parte<ResumenDePapeles> => {
+    if (!mercado || !hoy) return aunNoDisponible("mercado_de_la_cuenta");
+    if (juzgablesDeChofer.length === 0) return { estado: "vacia" };
+    const estados = juzgablesDeChofer.map(({ tipo, regla }) => {
+      const f = vigenteDeChofer.get(`${driverId}|${tipo.id}`);
+      return estadoDePapel({
+        regla,
+        foja: f
+          ? { folio: f.version.folio, emitidoEl: f.version.issuedOn, venceEl: f.version.expiresOn, venceCalculado: f.version.expiryCalculated }
+          : null,
+        hoy,
+      });
+    });
+    return { estado: "con_datos", valor: resumirPapeles(estados) };
+  };
+
   const etiquetaDeUnidad = new Map(unidadesRaw.map((u) => [u.id, u.label]));
   const dispositivos = flota.flota.dispositivos.map(({ dispositivo, estado }): DispositivoDelCuarto => ({
     id: dispositivo.id,
@@ -537,9 +624,13 @@ export async function cargarCuartoDeExpedientes(
       enServicio: dispositivos.filter((d) => d.estado.grupo !== "de_baja").sort(porNombre),
       deBaja: dispositivos.filter((d) => d.estado.grupo === "de_baja").sort(porNombre),
     },
-    choferes: parteDe(
-      choferes.map((c) => ({ id: c.id, nombre: c.nombre, licencia: c.licencia, activo: c.deactivatedAt === null })),
-    ),
+    choferes: parteDe(ordenarChoferes(choferes.map((c) => ({
+      id: c.id,
+      nombre: c.nombre,
+      licencia: c.licencia,
+      activo: c.deactivatedAt === null,
+      papeles: papelesDeChofer(c.id),
+    })))),
     papelesQuePidenAlgo,
   };
 }

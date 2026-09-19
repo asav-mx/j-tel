@@ -33,6 +33,10 @@ export const rutas = {
   /** Recorridos y playback de una unidad (C3). Sin ventana, la pantalla abre en «Hoy». */
   recorrido: (id: string, cuenta?: string | null) => conCuenta(`${RAIZ_EXPEDIENTES}/unidad/${id}/recorrido`, cuenta),
   dispositivo: (id: string, cuenta?: string | null) => conCuenta(`${RAIZ_EXPEDIENTES}/dispositivo/${id}`, cuenta),
+  /** Ver ‹chofer› (Choferes V1). */
+  chofer: (id: string, cuenta?: string | null) => conCuenta(`${RAIZ_EXPEDIENTES}/chofer/${id}`, cuenta),
+  papelDeChofer: (driverId: string, tipoId: string, cuenta?: string | null, accion?: "capturar" | "corregir" | "renovar") =>
+    conCuenta(`${RAIZ_EXPEDIENTES}/chofer/${driverId}/papel/${tipoId}${accion ? `?accion=${accion}` : ""}`, cuenta),
 };
 
 // ── Papeles ──────────────────────────────────────────────────────────────
@@ -185,6 +189,8 @@ export function glifoDeDispositivo<E extends Pick<EstadoDeDispositivo, "grupo">>
 
 const LLEGA_CON: Record<FuentePendiente, string> = {
   asignacion_de_choferes: "Aún no disponible · llega con la asignación de choferes",
+  chofer_declarado: "Aún no disponible · llega con el chofer declarado en cada servicio",
+  palabra_del_abogado: "Aún no disponible · espera la palabra del abogado",
   mercado_de_la_cuenta: "Aún no disponible · la cuenta no tiene mercado",
 };
 

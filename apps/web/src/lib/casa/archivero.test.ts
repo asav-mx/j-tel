@@ -240,3 +240,51 @@ describe("5 · la dirección vieja de Dispositivos redirige al cajón", () => {
     );
   });
 });
+
+describe("los choferes en el archivero (Choferes V1)", () => {
+  const porVencer = { estado: "con_datos" as const, valor: { pidenAlgo: 1, faltaLaRegla: 0, peor: "por_vencer" as const, estaAlDia: false } };
+  const conChoferes = (): CuartoDeExpedientes => ({
+    ...cuarto(),
+    choferes: {
+      estado: "con_datos",
+      valor: [
+        { id: "ch1", nombre: "Ana Ruiz", licencia: "CHIH-1", activo: true, papeles: porVencer },
+        { id: "ch2", nombre: "Beto Luna", licencia: "CHIH-2", activo: true, papeles: sinRegla },
+        { id: "ch3", nombre: "Carlos Paz", licencia: "CHIH-3", activo: true, papeles: alDia },
+        { id: "ch4", nombre: "Dora Vela", licencia: null, activo: false, papeles: alDia },
+      ],
+    },
+  });
+  const choferes = () => armarArchivero(conChoferes(), AHORA, "juarez-bus").choferes;
+
+  it("4 · «por vencer» entra a «Piden atención», como en unidades (enmienda 7)", () => {
+    const atencion = piezasQuePidenAtencion(armarArchivero(conChoferes(), AHORA, null));
+    expect(nombres(atencion)).toContain("Ana Ruiz");
+    expect(nombres(atencion)).not.toContain("Beto Luna");
+  });
+
+  it("cada chofer lleva la hoja de su peor papel, su licencia de apoyo y liga a Ver ‹chofer›", () => {
+    const ana = choferes().find((p) => p.nombre === "Ana Ruiz")!;
+    expect(ana).toMatchObject({ clase: "piden", glifo: "papel-por-vencer", apoyo: "CHIH-1", apagada: false });
+    expect(ana.ficha).toBe("/casa/transportista/expedientes/chofer/ch1?account=juarez-bus");
+  });
+
+  it("las secciones y los chips son los de Unidades, y el de baja va plegado", () => {
+    const base = laBase(choferes(), "");
+    const { secciones, plegadas } = seccionesDelCajon("choferes", base, "todas", "Chihuahua");
+    expect(secciones.map((s) => s.titulo)).toEqual(["Piden algo", "Sin juzgar", "Al día"]);
+    expect(nombres(plegadas)).toEqual(["Dora Vela"]);
+    const c = conteosDeChips("choferes", base);
+    expect(c).toEqual({ todas: 3, piden: 1, sin_juzgar: 1, al_dia: 1 });
+  });
+
+  it("la tarjeta suma lo activo: piden + sin juzgar + al día", () => {
+    expect(tarjetaDeCajon("choferes", choferes())).toMatchObject({ cifra: 3, piden: "1 pide algo", partes: ["1 sin juzgar", "1 al día"] });
+  });
+
+  it("el buscador del tablero encuentra al chofer por nombre y por licencia", () => {
+    const a = armarArchivero(conChoferes(), AHORA, null);
+    expect(nombres(buscarEnTodo(a, "beto").choferes)).toEqual(["Beto Luna"]);
+    expect(nombres(buscarEnTodo(a, "chih-3").choferes)).toEqual(["Carlos Paz"]);
+  });
+});
