@@ -106,9 +106,12 @@ export function TableroDelArchivero({ archivero, cuentaEnRuta }: { archivero: Ar
           etiqueta="Buscar en todo el archivero"
           valor={q}
           alCambiar={setQ}
-          placeholder="Buscar en todo el archivero: unidad, placa, VIN, dispositivo, IMEI, chofer…"
+          // Corto: a 375 px uno largo se cortaba a media palabra. Los campos van abajo.
+          placeholder="Buscar en todo el archivero…"
         />
-        <p className="text-[12px] text-[var(--tenue)]">Teclea y salen las coincidencias de todos los cajones. Vacío, ves el tablero.</p>
+        <p className="text-[12px] text-[var(--tenue)]">
+          Unidad, placa, VIN, dispositivo, IMEI o chofer: salen las coincidencias de todos los cajones. Vacío, ves el tablero.
+        </p>
       </div>
 
       {resultados ? (
