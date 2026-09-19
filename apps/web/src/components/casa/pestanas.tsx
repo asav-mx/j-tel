@@ -56,7 +56,11 @@ export function Pestanas({ grupos, cuenta, lugar }: { grupos: Grupo[]; cuenta: s
         aria-label="Lugares de esta casa"
         className="hidden border-b border-[var(--linea)] px-6 md:block"
       >
-        <div className="flex flex-wrap items-end gap-x-7 gap-y-2">
+        {/* Entre grupos, 64 px más el relleno de las pestañas: casi cuatro veces
+            el espacio entre dos pestañas del mismo grupo. Un sello cubre sólo
+            sus pestañas, y una pestaña sin sello no puede leerse como parte
+            del grupo de arriba (skill, «Los grupos del menú», 19 sep 2026). */}
+        <div className="flex flex-wrap items-end gap-x-16 gap-y-2">
           {grupos.map((grupo, i) => (
             <div key={grupo.sello ?? `grupo-${i}`} className="flex flex-col">
               {/* Un sello sin sección debajo anunciaría algo que no está, así que
@@ -166,7 +170,9 @@ function BarraDeAbajo({
       {abierto && sobran.length > 0 && (
         <div className="fixed inset-x-0 bottom-[52px] z-20 max-h-[60dvh] overflow-y-auto border-t border-[var(--linea)] bg-[var(--pieza)] md:hidden">
           {gruposDelResto.map((grupo, i) => (
-            <div key={grupo.sello ?? `grupo-${i}`}>
+            // Un grupo sin sello después de otro abre con un corte: sin él, sus
+            // lugares se leerían bajo el sello de arriba.
+            <div key={grupo.sello ?? `grupo-${i}`} className={grupo.sello === null && i > 0 ? "mt-3 border-t border-[var(--linea)]" : undefined}>
               {grupo.sello !== null && (
                 <p
                   data-medida

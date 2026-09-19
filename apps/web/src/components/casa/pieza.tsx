@@ -59,6 +59,16 @@ import { Glifo, type EstadoGlifo } from "@/components/casa/glifo";
  * `datoNoCumplido` pone el dato en `--ladrillo`: la hora del sello de un no
  * cumplido (ficha Vernier §2). Es el único uso del ladrillo fuera del glifo, y
  * el ladrillo es exclusivo del sello: no sirve para nada más.
+ *
+ * `compacta` es la fila del archivero de Expedientes (ficha V2 §3): nombre y
+ * apoyo en un solo renglón, glifo y letra más chicos. 84 unidades en filas
+ * compactas son tres pantallas y se recorren; en piezas altas son quince.
+ *
+ * **Compacta y apagada no baja la opacidad:** pasa el texto a `--tenue`, que
+ * cumple el 4.5:1 solo. Al 60 % el texto medía 2.32:1 en clara y 2.41:1 en
+ * oscura (19 sep 2026). La jerarquía la cargan la sección y el glifo, no la
+ * ilegibilidad del texto (Asav). La pieza alta sigue al 60 % hasta que se
+ * decida igual para las demás pantallas.
  */
 export function Pieza({
   estado,
@@ -75,6 +85,7 @@ export function Pieza({
   datoVivo = false,
   datoNoCumplido = false,
   apoyoQueEnvuelve = false,
+  compacta = false,
 }: {
   /**
    * La forma que dice el estado. Opcional: una pieza que liga a otra cosa sin
@@ -95,7 +106,7 @@ export function Pieza({
   edad: string | null;
   /** La ficha a la que se llega tocando. Sin ella, la pieza no es tocable. */
   ficha?: string;
-  /** Lo que ya está al día, a 60 %. */
+  /** Lo que ya está al día: a 60 % la pieza alta; en tenue, sin opacidad, la compacta. */
   apagada?: boolean;
   /** Tocar hace algo en la misma pantalla en vez de navegar. Excluye `ficha`. */
   alTocar?: () => void;
@@ -107,43 +118,59 @@ export function Pieza({
   datoNoCumplido?: boolean;
   /** En celular el apoyo baja de renglón en vez de cortarse. */
   apoyoQueEnvuelve?: boolean;
+  /** La fila de una línea del archivero. */
+  compacta?: boolean;
 }) {
   const cuerpo = (
     <>
       {estado && (
-        <span className="mt-[2px] flex-none">
-          <Glifo estado={estado} rumbo={rumbo} />
+        <span className={compacta ? "flex-none self-center" : "mt-[2px] flex-none"}>
+          <Glifo estado={estado} rumbo={rumbo} tamano={compacta ? 16 : undefined} />
         </span>
       )}
 
-      <span className="min-w-0 flex-1">
-        <span
-          className="block truncate text-[19px] leading-tight"
-          style={{ fontFamily: "var(--letra-titular)", fontWeight: 700, letterSpacing: "-0.01em" }}
-        >
-          {nombre}
+      {compacta ? (
+        // Si nombre y apoyo no caben en el renglón, el apoyo baja en vez de
+        // cortarse: «en bo…» a 375 px ya no dice dónde está.
+        <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 self-center">
+          <span
+            className={`flex-none text-[16px] leading-tight${apagada ? " text-[var(--tenue)]" : ""}`}
+            style={{ fontFamily: "var(--letra-titular)", fontWeight: 700, letterSpacing: "-0.01em" }}
+          >
+            {nombre}
+          </span>
+          <span className="max-w-full truncate text-[13px] text-[var(--tenue)]">{apoyo}</span>
         </span>
-        <span
-          className={`mt-1 block truncate text-[13px] text-[var(--tenue)]${
-            apoyoQueEnvuelve ? " max-sm:overflow-visible max-sm:whitespace-normal" : ""
-          }`}
-        >
-          {apoyo}
+      ) : (
+        <span className="min-w-0 flex-1">
+          <span
+            className="block truncate text-[19px] leading-tight"
+            style={{ fontFamily: "var(--letra-titular)", fontWeight: 700, letterSpacing: "-0.01em" }}
+          >
+            {nombre}
+          </span>
+          <span
+            className={`mt-1 block truncate text-[13px] text-[var(--tenue)]${
+              apoyoQueEnvuelve ? " max-sm:overflow-visible max-sm:whitespace-normal" : ""
+            }`}
+          >
+            {apoyo}
+          </span>
         </span>
-      </span>
+      )}
 
       <span className="flex-none text-right">
         <span
           data-medida
-          className={`block text-[15px] leading-tight${
-            datoVivo ? " text-[var(--senal)]" : datoNoCumplido ? " text-[var(--ladrillo)]" : ""
+          className={`block ${compacta ? "text-[13.5px]" : "text-[15px]"} leading-tight${
+            datoVivo ? " text-[var(--senal)]" : datoNoCumplido ? " text-[var(--ladrillo)]" : compacta && apagada ? " text-[var(--tenue)]" : ""
           }`}
         >
           {dato}
         </span>
         <span
           data-medida
-          className="mt-1 block text-[10.5px] uppercase tracking-[0.12em] text-[var(--tenue)]"
+          className={`${compacta ? "mt-0.5 text-[10px]" : "mt-1 text-[10.5px]"} block uppercase tracking-[0.12em] text-[var(--tenue)]`}
         >
           {etiqueta}
         </span>
@@ -174,8 +201,8 @@ export function Pieza({
   // Un solo color de borde por pieza: dos clases de borde juntas quedan a merced
   // del orden del CSS generado.
   const borde = alTocar && seleccionada ? "border-[var(--tinta)]" : "border-[var(--linea)]";
-  const forma = `flex w-full items-start gap-4 rounded-lg border ${borde} bg-[var(--pieza)] px-4 py-3.5 text-left${
-    apagada ? " opacity-60" : ""
+  const forma = `flex w-full ${compacta ? "items-center gap-3 px-3.5 py-2" : "items-start gap-4 px-4 py-3.5"} rounded-lg border ${borde} bg-[var(--pieza)] text-left${
+    apagada && !compacta ? " opacity-60" : ""
   }`;
 
   if (alTocar) {

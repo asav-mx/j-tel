@@ -399,6 +399,8 @@ export interface UnidadDelCuarto {
   id: string;
   numeroEconomico: string;
   placa: string | null;
+  /** El VIN (0040): el buscador del archivero lo encuentra por aquí. */
+  vin: string | null;
   activa: boolean;
   /**
    * El resumen de sus papeles. Aún no disponible si la cuenta no tiene
@@ -498,7 +500,7 @@ export async function cargarCuartoDeExpedientes(
       });
       papeles = { estado: "con_datos", valor: resumirPapeles(estados) };
     }
-    return { id: u.id, numeroEconomico: u.label, placa: u.plateNumber, activa: u.active, papeles };
+    return { id: u.id, numeroEconomico: u.label, placa: u.plateNumber, vin: u.vin ?? null, activa: u.active, papeles };
   });
 
   const peso = (u: UnidadDelCuarto) => {

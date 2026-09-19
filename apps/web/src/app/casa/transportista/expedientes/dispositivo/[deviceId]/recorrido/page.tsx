@@ -10,7 +10,7 @@ import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
 import { relojDePagina } from "@/lib/casa/cronometro";
 import { glifoDeDispositivo, rutas } from "@/lib/casa/expedientes";
-import { RAIZ_DISPOSITIVOS, puertaDe, rutasDeDispositivos, senalViva } from "@/lib/casa/dispositivos";
+import { puertaDe, rutasDeDispositivos, senalViva } from "@/lib/casa/dispositivos";
 import { periodoDeLaDireccion } from "@/lib/casa/recorrido";
 
 export const dynamic = "force-dynamic";
@@ -78,17 +78,21 @@ export default async function RecorridoDeDispositivo({
     };
   }
   const texto = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
+  // Desde el cajón se regresa por él; desde el tablero, al tablero.
   const regreso =
     puerta === "dispositivos"
-      ? { nombre: "Dispositivos", ruta: rutasDeDispositivos.cuarto(cuentaEnRuta) }
-      : { nombre: "Expedientes", ruta: rutas.cuarto(cuentaEnRuta) };
+      ? [
+          { nombre: "Expedientes", ruta: rutas.cuarto(cuentaEnRuta) },
+          { nombre: "Dispositivos", ruta: rutasDeDispositivos.cuarto(cuentaEnRuta) },
+        ]
+      : [{ nombre: "Expedientes", ruta: rutas.cuarto(cuentaEnRuta) }];
 
   return (
-    <Marco casa={casa} alcance={cuenta.alcance} cuenta={cuenta.casa} lugar={puerta === "dispositivos" ? RAIZ_DISPOSITIVOS : undefined}>
+    <Marco casa={casa} alcance={cuenta.alcance} cuenta={cuenta.casa}>
       <div className="mx-auto flex max-w-[1080px] flex-col gap-4">
         <Migas
           pasos={[
-            regreso,
+            ...regreso,
             { nombre: `Ver ${nombre}`, ruta: rutasDeDispositivos.ver(deviceId, cuentaEnRuta, { desde: puerta }) },
             { nombre: "Recorridos y playback" },
           ]}
