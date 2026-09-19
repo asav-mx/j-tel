@@ -70,6 +70,9 @@ export default async function VerOcurrencia({
   // Una ocurrencia de otra cuenta no existe desde aquí: `null`, y 404.
   const acta = await cargarActa(getRepos(), { carrierAccountId: carrier.id, ocurrenciaId });
   reloj.marca("datos");
+  if (acta) {
+    reloj.dato("puntosDeTraza", acta.traza.tipo === "con_puntos" ? acta.traza.tramos.reduce((n, t) => n + t.length, 0) : 0);
+  }
   reloj.fin();
   if (!acta) notFound();
 

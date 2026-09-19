@@ -7,6 +7,7 @@ import type { OcurrenciaDeLaLista } from "@jtel/services";
 import { Glifo } from "@/components/casa/glifo";
 import { Pieza } from "@/components/casa/pieza";
 import { BarraDePeriodo } from "@/components/casa/barra-de-periodo";
+import { anunciarNavegacion } from "@/components/casa/cronometro-del-navegador";
 import type { Periodo } from "@/lib/casa/periodo";
 import {
   GLIFO_DEL_VEREDICTO,
@@ -106,7 +107,12 @@ export function ListaDeServiciosEspeciales({
   const grupos = useMemo(() => bloques(lista, diaDeLaVentana), [lista, diaDeLaVentana]);
   const turnos = useMemo(() => turnosDeLaVentana(ocurrencias, f.contratoId), [ocurrencias, f.contratoId]);
 
-  const elegir = (p: Periodo) => empezar(() => router.push(rutaDelCuarto(cuentaEnRuta, p)));
+  const elegir = (p: Periodo) => {
+    const ruta = rutaDelCuarto(cuentaEnRuta, p);
+    // Cronómetro (#427): el cambio de ventana es un botón, no un enlace; se anuncia para que se mida.
+    anunciarNavegacion(ruta.split("?")[0]!, "ventana");
+    empezar(() => router.push(ruta));
+  };
 
   return (
     <div className="flex flex-col">

@@ -25,6 +25,7 @@ export async function relojDePagina(pagina: string) {
   const h = await headers();
   const precarga = h.get("next-router-prefetch") === "1" || h.get("purpose") === "prefetch";
   const marcas: Array<[string, number]> = [];
+  const datos: Array<[string, number]> = [];
   let ultima = inicio;
 
   return {
@@ -34,12 +35,20 @@ export async function relojDePagina(pagina: string) {
       marcas.push([tramo, ahora - ultima]);
       ultima = ahora;
     },
+    /**
+     * Un tamaño que explica un tramo: cuántas filas trajo, cuántos días tiene la
+     * ventana. Sólo números; nunca un nombre ni un id.
+     */
+    dato(nombre: string, valor: number) {
+      datos.push([nombre, valor]);
+    },
     /** Escribe la línea. Se llama al terminar de juntar los datos. */
     fin() {
       const total = performance.now() - inicio;
       const tramos = marcas.map(([t, ms]) => `${t}=${Math.round(ms)}ms`).join(" ");
+      const tamanos = datos.map(([n, v]) => ` ${n}=${Math.round(v)}`).join("");
       console.log(
-        `[cronometro] servidor pagina=${pagina} total=${Math.round(total)}ms ${tramos} precarga=${precarga ? "si" : "no"} despliegue=${process.env.VERCEL_DEPLOYMENT_ID ?? "local"}`,
+        `[cronometro] servidor pagina=${pagina} total=${Math.round(total)}ms ${tramos}${tamanos} precarga=${precarga ? "si" : "no"} despliegue=${process.env.VERCEL_DEPLOYMENT_ID ?? "local"}`,
       );
     },
   };
