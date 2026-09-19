@@ -176,7 +176,7 @@ function Tarjeta({ cajon, piezas, cuentaEnRuta }: { cajon: Cajon; piezas: PiezaD
         {t.vacio ?? (
           <>
             {t.piden && <b className="font-semibold text-[var(--tinta)]">{t.piden}</b>}
-            {t.piden && t.partes.length > 0 && (cajon === "unidades" ? " · " : <br />)}
+            {t.piden && t.partes.length > 0 && (cajon === "dispositivos" ? <br /> : " · ")}
             {t.partes.join(" · ")}
           </>
         )}

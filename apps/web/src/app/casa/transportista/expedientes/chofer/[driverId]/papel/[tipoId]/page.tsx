@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { cargarExpedienteDeUnidad } from "@jtel/services";
+import { cargarExpedienteDeChofer } from "@jtel/services";
 import { getRepos } from "@/lib/db";
 import { Marco } from "@/components/casa/marco";
 import { SinCuenta } from "@/components/casa/expediente";
@@ -13,19 +13,20 @@ import { rutas } from "@/lib/casa/expedientes";
 export const dynamic = "force-dynamic";
 
 /**
- * Un papel del expediente de una unidad. La pantalla vive en
- * `components/casa/pagina-de-papel.tsx`, compartida con el chofer: aquí sólo se
- * carga la unidad —de esta cuenta, o 404— y su papel.
+ * Un papel del expediente de un chofer (Choferes V1). La pantalla vive en
+ * `components/casa/pagina-de-papel.tsx`, compartida con la unidad: aquí sólo se
+ * carga el chofer —de esta cuenta, o 404— y su papel. Examen médico y
+ * antidoping no están en `papeles`: esperan al abogado, y su dirección es 404.
  */
-export default async function VerPapel({
+export default async function VerPapelDeChofer({
   params,
   searchParams,
 }: {
-  params: Promise<{ unitId: string; tipoId: string }>;
+  params: Promise<{ driverId: string; tipoId: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const casa = CASAS.transportista;
-  const reloj = await relojDePagina("papel");
+  const reloj = await relojDePagina("papel-de-chofer");
   const cuenta = await cuentaDelCuarto(searchParams);
   reloj.marca("guardia");
   if (!cuenta.carrier) {
@@ -36,10 +37,10 @@ export default async function VerPapel({
     );
   }
   const { carrier, cuentaEnRuta } = cuenta;
-  const { unitId, tipoId } = await params;
+  const { driverId, tipoId } = await params;
   const sp = await searchParams;
 
-  const e = await cargarExpedienteDeUnidad(getRepos(), { carrierAccountId: carrier.id, unitId, ahora: new Date() });
+  const e = await cargarExpedienteDeChofer(getRepos(), { carrierAccountId: carrier.id, driverId, ahora: new Date() });
   reloj.marca("datos");
   reloj.fin();
   if (!e || e.documentos.estado !== "con_datos") notFound();
@@ -47,18 +48,18 @@ export default async function VerPapel({
   const papel = docs.papeles.find((p) => p.tipo.id === tipoId);
   if (!papel) notFound();
 
-  const unidad = e.identidad.numeroEconomico.estado === "con_datos" ? e.identidad.numeroEconomico.valor : "Unidad";
+  const nombre = e.identidad.nombre.estado === "con_datos" ? e.identidad.nombre.valor : "Chofer";
   const autores = await correosDeAutores(autoresDelPapel(papel));
 
   return (
     <Marco casa={casa} alcance={cuenta.alcance} cuenta={cuenta.casa}>
       <VistaDePapel
         sujeto={{
-          campo: "unitId",
-          id: unitId,
-          nombre: unidad,
-          ficha: rutas.unidad(unitId, cuentaEnRuta),
-          rutaDelPapel: (accion) => rutas.papel(unitId, tipoId, cuentaEnRuta, accion),
+          campo: "choferId",
+          id: driverId,
+          nombre,
+          ficha: rutas.chofer(driverId, cuentaEnRuta),
+          rutaDelPapel: (accion) => rutas.papelDeChofer(driverId, tipoId, cuentaEnRuta, accion),
         }}
         papel={papel}
         docs={docs}
