@@ -1030,6 +1030,7 @@ describe("choferes — la purga no rompe la historia", () => {
       if (!chofer) throw new Error("no se pudo insertar el chofer");
       await db.insert(driverCredentials).values({
         driverId: chofer.id,
+        carrierAccountId: carrier.id,
         fullName: "R. Medina",
         licenseNumber: "LIC-TEST-0001",
       });

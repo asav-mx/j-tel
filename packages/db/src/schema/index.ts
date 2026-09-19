@@ -840,6 +840,12 @@ export const driverCredentials = pgTable("driver_credentials", {
   driverId: uuid("driver_id")
     .primaryKey()
     .references(() => drivers.id, { onDelete: "cascade" }),
+  /**
+   * La cuenta del chofer, copiada de `drivers` (0042). Una llave compuesta en la
+   * migración la ata a la de su chofer; existe para que los candados de nombre y
+   * licencia puedan ser «únicos por cuenta».
+   */
+  carrierAccountId: uuid("carrier_account_id").notNull(),
   /** Alta mínima. */
   fullName: text("full_name").notNull(),
   licenseNumber: text("license_number").notNull(),
@@ -856,7 +862,22 @@ export const driverCredentials = pgTable("driver_credentials", {
    */
   carrierPayrollNumber: text("carrier_payroll_number"),
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
-});
+}, (table) => [
+  /**
+   * Ningún nombre ni licencia repetidos entre los choferes activos de una cuenta
+   * (0042). Activos son los que tienen credenciales: la baja las purga. Las
+   * expresiones son las de `nombreComparable` y `licenciaComparable` en
+   * @jtel/domain.
+   */
+  uniqueIndex("driver_credentials_nombre_unico_por_cuenta").on(
+    table.carrierAccountId,
+    sql`regexp_replace(lower(btrim(${table.fullName})), '\\s+', ' ', 'g')`,
+  ),
+  uniqueIndex("driver_credentials_licencia_unica_por_cuenta").on(
+    table.carrierAccountId,
+    sql`upper(regexp_replace(${table.licenseNumber}, '[\\s-]+', '', 'g'))`,
+  ),
+]);
 
 /**
  * Asignaciones — un solo tipo de registro, no varios.

@@ -27,8 +27,16 @@
  * no es «aún no disponible», es otra cosa.
  */
 export type FuentePendiente =
-  /** Qué choferes lleva una unidad, y qué unidades operó un chofer. */
+  /** Qué choferes lleva una unidad, y qué rutas × turnos tiene asignados un chofer. */
   | "asignacion_de_choferes"
+  /**
+   * Qué unidades operó un chofer: el chofer que el transportista declara en
+   * cada servicio (`compliance_facts.declared_driver_id`). Hoy nada lo escribe
+   * (Choferes V1, enmienda 5).
+   */
+  | "chofer_declarado"
+  /** Examen médico y antidoping: datos sensibles, esperan la palabra del abogado. */
+  | "palabra_del_abogado"
   /** La cuenta no tiene mercado todavía, así que no hay catálogo que aplicarle. */
   | "mercado_de_la_cuenta";
 
