@@ -319,6 +319,15 @@ Mismo idioma, distinto aire. No es la misma pantalla con permisos apagados.
 
 Responsivo real en 375 / 768 / 1024 / 1440. Lo ancho —tablas, mapas, trazas— se desplaza dentro de su propio contenedor; el cuerpo de la página nunca se va de lado.
 
+### Los grupos del menú
+
+Decidido por ASAV el 19 de septiembre de 2026, cuando Dispositivos salió del menú y Expedientes quedó pegado a Flota en vivo, leyéndose como parte de Compás sin serlo.
+
+- **Un sello cubre sólo sus propias pestañas.** El sello nombra el producto de su grupo; lo que está fuera del grupo no se lee debajo de él.
+- **Una pestaña sin sello no puede leerse como parte del grupo de arriba.** El espacio entre grupos es claramente mayor que el espacio entre las pestañas de un mismo grupo: en computadora, 64 px más el relleno de las pestañas, casi cuatro veces lo que separa dos pestañas hermanas. En la lista «Más» del celular, un grupo sin sello abre con su propio corte.
+- **No se inventa un sello para separar.** Un cuarto que no es de ningún producto (Expedientes) sigue sin sello: lo separa el espacio, no una marca que no tiene.
+- Va a volver a pasar **cada vez que un cuarto nazca sin sello** o cada vez que un grupo pierda un lugar: al tocar el menú, se mira la barra entera en computadora y se pregunta a qué sello pertenece cada pestaña.
+
 ---
 
 ## Anti-patrones
@@ -345,6 +354,7 @@ Si aparece cualquiera de éstos, el lenguaje se disolvió:
 - [ ] ¿Todo dato vivo trae su edad?
 - [ ] ¿El cobre aparece **sólo** donde hay vida?
 - [ ] ¿Lo apagado está apagado de verdad?
+- [ ] En el menú, ¿cada pestaña se lee bajo su propio sello, y la que no tiene sello se ve aparte?
 - [ ] ¿Se ve bien en las **dos** pieles?
 - [ ] ¿Se puede entender sin leer una oración completa?
 - [ ] ¿Las trazas se cortan según la **modalidad** del servicio (Pieza 7)?

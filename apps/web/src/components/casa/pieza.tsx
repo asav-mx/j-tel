@@ -63,6 +63,12 @@ import { Glifo, type EstadoGlifo } from "@/components/casa/glifo";
  * `compacta` es la fila del archivero de Expedientes (ficha V2 §3): nombre y
  * apoyo en un solo renglón, glifo y letra más chicos. 84 unidades en filas
  * compactas son tres pantallas y se recorren; en piezas altas son quince.
+ *
+ * **Compacta y apagada no baja la opacidad:** pasa el texto a `--tenue`, que
+ * cumple el 4.5:1 solo. Al 60 % el texto medía 2.32:1 en clara y 2.41:1 en
+ * oscura (19 sep 2026). La jerarquía la cargan la sección y el glifo, no la
+ * ilegibilidad del texto (Asav). La pieza alta sigue al 60 % hasta que se
+ * decida igual para las demás pantallas.
  */
 export function Pieza({
   estado,
@@ -100,7 +106,7 @@ export function Pieza({
   edad: string | null;
   /** La ficha a la que se llega tocando. Sin ella, la pieza no es tocable. */
   ficha?: string;
-  /** Lo que ya está al día, a 60 %. */
+  /** Lo que ya está al día: a 60 % la pieza alta; en tenue, sin opacidad, la compacta. */
   apagada?: boolean;
   /** Tocar hace algo en la misma pantalla en vez de navegar. Excluye `ficha`. */
   alTocar?: () => void;
@@ -128,7 +134,7 @@ export function Pieza({
         // cortarse: «en bo…» a 375 px ya no dice dónde está.
         <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 self-center">
           <span
-            className="flex-none text-[16px] leading-tight"
+            className={`flex-none text-[16px] leading-tight${apagada ? " text-[var(--tenue)]" : ""}`}
             style={{ fontFamily: "var(--letra-titular)", fontWeight: 700, letterSpacing: "-0.01em" }}
           >
             {nombre}
@@ -157,7 +163,7 @@ export function Pieza({
         <span
           data-medida
           className={`block ${compacta ? "text-[13.5px]" : "text-[15px]"} leading-tight${
-            datoVivo ? " text-[var(--senal)]" : datoNoCumplido ? " text-[var(--ladrillo)]" : ""
+            datoVivo ? " text-[var(--senal)]" : datoNoCumplido ? " text-[var(--ladrillo)]" : compacta && apagada ? " text-[var(--tenue)]" : ""
           }`}
         >
           {dato}
@@ -196,7 +202,7 @@ export function Pieza({
   // del orden del CSS generado.
   const borde = alTocar && seleccionada ? "border-[var(--tinta)]" : "border-[var(--linea)]";
   const forma = `flex w-full ${compacta ? "items-center gap-3 px-3.5 py-2" : "items-start gap-4 px-4 py-3.5"} rounded-lg border ${borde} bg-[var(--pieza)] text-left${
-    apagada ? " opacity-60" : ""
+    apagada && !compacta ? " opacity-60" : ""
   }`;
 
   if (alTocar) {
