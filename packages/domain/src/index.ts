@@ -794,6 +794,7 @@ export * from "./kml-circuito.js";
 export * from "./llegada.js";
 export * from "./tiempo.js";
 export * from "./trazado.js";
+export * from "./sello.js";
 /*
  * `publico.js` NO se reexporta aquí, y no es olvido.
  *
