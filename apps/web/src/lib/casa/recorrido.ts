@@ -40,6 +40,7 @@ export type RecorridoJson = {
   puntosDibujados: number;
   tramos: Array<Array<{ lat: number; lng: number; at: Iso; speed: number | null }>>;
   huecos: Array<{ desde: Iso; hasta: Iso; minutos: number; lat: number; lng: number; latFin: number; lngFin: number }>;
+  saltos: Array<{ desde: Iso; hasta: Iso; km: number; lat: number; lng: number; latFin: number; lngFin: number }>;
   visitas: Array<{ lugar: LugarBreveJson; entrada: Iso; entradaObservada: boolean; ultimoAdentro: Iso; salida: Iso | null }>;
   ocultos: Array<{ lugar: LugarBreveJson; desde: Iso; entradaObservada: boolean; hasta: Iso; salidaObservada: boolean }>;
   paradas: Array<{ desde: Iso; hasta: Iso; minutos: number; lat: number; lng: number }>;
@@ -56,6 +57,7 @@ export type Pedazo = { puntos: Punto[]; t0: number; t1: number };
 /** Por qué se detiene el playback entre dos pedazos. */
 export type Pausa =
   | { tipo: "hueco"; desde: number; hasta: number }
+  | { tipo: "salto"; desde: number; hasta: number; km: number }
   | { tipo: "destino"; lugar: string; desde: number; hasta: number; entradaObservada: boolean; salidaObservada: boolean };
 
 export function pedazosDe(r: RecorridoJson): Pedazo[] {
@@ -70,16 +72,23 @@ export function pedazosDe(r: RecorridoJson): Pedazo[] {
 /**
  * La pausa entre cada par de pedazos seguidos.
  *
- * Dos pedazos se separan por una de dos razones, y la pantalla no puede decir
- * la misma frase para las dos: **un hueco** —nadie midió— o **un destino** de
- * especial —se midió, pero adentro no se dibuja (Pieza 7)—. Si la separación
- * cae sobre un tramo oculto, es destino; si no, es hueco.
+ * Dos pedazos se separan por una de tres razones, y la pantalla no puede decir
+ * la misma frase para las tres: **un salto** —se midió, pero los dos puntos se
+ * contradicen—, **un destino** de especial —se midió, pero adentro no se
+ * dibuja (Pieza 7)— o **un hueco** —nadie midió—. El salto se reconoce por sus
+ * dos extremos exactos; si la separación cae sobre un tramo oculto, es
+ * destino; si no, es hueco.
  */
-export function pausasEntre(pedazos: Pedazo[], r: Pick<RecorridoJson, "ocultos">): Pausa[] {
+export function pausasEntre(pedazos: Pedazo[], r: Pick<RecorridoJson, "ocultos" | "saltos">): Pausa[] {
   const pausas: Pausa[] = [];
   for (let i = 0; i + 1 < pedazos.length; i += 1) {
     const fin = pedazos[i]!.t1;
     const inicio = pedazos[i + 1]!.t0;
+    const salto = r.saltos.find((x) => Date.parse(x.desde) === fin && Date.parse(x.hasta) === inicio);
+    if (salto) {
+      pausas.push({ tipo: "salto", desde: fin, hasta: inicio, km: salto.km });
+      continue;
+    }
     const oculto = r.ocultos.find((o) => Date.parse(o.desde) <= inicio && Date.parse(o.hasta) >= fin);
     pausas.push(
       oculto
@@ -95,6 +104,95 @@ export function pausasEntre(pedazos: Pedazo[], r: Pick<RecorridoJson, "ocultos">
     );
   }
   return pausas;
+}
+
+/**
+ * Metros dentro de los cuales un hueco «no se movió»: la deriva del GPS de un
+ * camión estacionado. Aprobado por ASAV el 18 sep 2026. Un hueco cuyos dos
+ * extremos quedan más cerca que esto no deja corte visible en la línea —la de
+ * antes y la de después se tocan—, así que se declara con una pastilla.
+ */
+export const HUECO_QUIETO_METROS = 50;
+
+/**
+ * Píxeles en pantalla dentro de los cuales dos marcas de hueco caen una encima
+ * de la otra: el diámetro de la marca (radio 6 más el trazo). Una pastilla
+ * junta **sólo** lo que se encima así; si a simple vista quedan separados,
+ * cada uno lleva la suya (ASAV, 18 sep 2026). Por eso se mide en la pantalla y
+ * no en el terreno: los mismos 10 m son una sola marca de lejos y dos de cerca.
+ */
+export const HUECOS_ENCIMADOS_PX = 14;
+
+function metrosEntre(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const k = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * k;
+  const dLng = (b.lng - a.lng) * k;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * k) * Math.cos(b.lat * k) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6_371_000 * Math.asin(Math.sqrt(x));
+}
+
+export type HuecoQuieto = { lat: number; lng: number; ms: number };
+
+/**
+ * Los huecos que no dejan corte visible.
+ *
+ * Un hueco con desplazamiento se ve solo: la línea se interrumpe y quedan sus
+ * dos círculos, lejos uno del otro. Uno **sin** desplazamiento —el camión
+ * estacionado que reporta cada hora— no: sus dos extremos caen en el mismo
+ * punto y el mapa se ve continuo aunque la cinta diga «4 huecos». Así se vio el
+ * Jeep el 18 sep 2026: sus ocho círculos quedaban además debajo del marcador
+ * del playback.
+ */
+export function huecosQuietos(huecos: RecorridoJson["huecos"], metros: number = HUECO_QUIETO_METROS): HuecoQuieto[] {
+  return huecos
+    .filter((h) => metrosEntre({ lat: h.lat, lng: h.lng }, { lat: h.latFin, lng: h.lngFin }) <= metros)
+    .map((h) => ({ lat: h.lat, lng: h.lng, ms: Date.parse(h.hasta) - Date.parse(h.desde) }));
+}
+
+/**
+ * Junta en una pastilla los huecos quietos cuyas marcas se enciman **en la
+ * pantalla**, con la proyección del zoom de ese momento. Se encadena: si A
+ * toca a B y B toca a C, en pantalla son una sola mancha, y una sola pastilla.
+ * La pastilla va donde cayó el primero.
+ */
+export function juntarEncimados(
+  quietos: HuecoQuieto[],
+  proyectar: (lat: number, lng: number) => { x: number; y: number },
+  px: number = HUECOS_ENCIMADOS_PX,
+): Array<{ lat: number; lng: number; n: number; ms: number }> {
+  const puntos = quietos.map((q) => proyectar(q.lat, q.lng));
+  const grupo = quietos.map((_, i) => i);
+  const raiz = (i: number): number => (grupo[i] === i ? i : (grupo[i] = raiz(grupo[i]!)));
+  for (let i = 0; i < quietos.length; i += 1) {
+    for (let j = i + 1; j < quietos.length; j += 1) {
+      if (Math.hypot(puntos[i]!.x - puntos[j]!.x, puntos[i]!.y - puntos[j]!.y) <= px) {
+        grupo[Math.max(raiz(i), raiz(j))] = Math.min(raiz(i), raiz(j));
+      }
+    }
+  }
+  const salida = new Map<number, { lat: number; lng: number; n: number; ms: number }>();
+  quietos.forEach((q, i) => {
+    const r = raiz(i);
+    const g = salida.get(r);
+    if (g) {
+      g.n += 1;
+      g.ms += q.ms;
+    } else salida.set(r, { lat: q.lat, lng: q.lng, n: 1, ms: q.ms });
+  });
+  return [...salida.values()];
+}
+
+/** La forma de cada pausa: la misma en la cinta y en el marcador detenido. */
+export function glifoDePausa(p: Pausa): "sin-senal" | "en-destino" | "salto" {
+  return p.tipo === "hueco" ? "sin-senal" : p.tipo === "salto" ? "salto" : "en-destino";
+}
+
+/** Cómo se nombra cada pausa en la cinta. */
+export function nombreDePausa(p: Pausa): string {
+  if (p.tipo === "hueco") return `Sin señal · ${duracion(p.hasta - p.desde)}`;
+  // «La señal siguió» explica por qué la cinta muestra dos barras donde las cifras cuentan un tramo medido.
+  if (p.tipo === "salto") return `Salto del GPS · ${p.km.toFixed(1)} km en ${duracion(p.hasta - p.desde)} · la señal siguió`;
+  return `En ${p.lugar} · ${duracion(p.hasta - p.desde)}`;
 }
 
 /* ─── La ventana ────────────────────────────────────────────────────────── */
@@ -163,6 +261,22 @@ export function rutaDelRecorrido(unitId: string, p: Periodo, cuenta: string | nu
 }
 
 /**
+ * La forma de lo que sirve el recorrido. **Súbela cada vez que cambie qué se
+ * dibuja o qué campos llegan.**
+ *
+ * La respuesta de una ventana cerrada se guarda un año en el navegador, y la
+ * llave es la dirección (regla 10). Sin este número, quien vio un periodo
+ * antes del cambio lo seguiría viendo como era — para siempre, porque «para
+ * siempre» es justo lo que promete la caché. Pasó el 18 sep 2026: los saltos
+ * del GPS empezaron a partir la traza, y lo congelado antes traía la recta de
+ * 10 km y ningún campo `saltos`. El servidor no lo lee; sólo cambia la llave.
+ *
+ *   1 · C3 (16 sep 2026)
+ *   2 · los saltos del GPS parten la traza y se declaran (18 sep 2026)
+ */
+export const FORMA_DEL_RECORRIDO = 2;
+
+/**
  * La petición al endpoint. **El grado va escrito**, calculado aquí: así la
  * respuesta de una ventana cerrada puede guardarse para siempre (regla 10).
  */
@@ -174,6 +288,7 @@ export function peticionDelRecorrido(slug: string, unitId: string, p: Periodo): 
     desde: ventana.desde.toISOString(),
     hasta: ventana.hasta.toISOString(),
     grado: String(gradoParaVentana(ventana)),
+    forma: String(FORMA_DEL_RECORRIDO),
   });
   return `/api/casa/recorrido?${q}`;
 }

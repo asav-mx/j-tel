@@ -117,6 +117,23 @@ Los papeles del expediente (Marco, Pieza 6 §H; `docs/Ficha-Expedientes.md` §4)
 - **Ni cobre ni colores de veredicto.** Un papel vencido no es un servicio no cumplido, y la vigencia no es vida.
 - En el vistazo, el dato es **un número**: los días que faltan (`en 12 d`) o los que lleva vencido (`hace 3 d`). La fecha exacta va en el expediente.
 
+### Las marcas de la traza: «aquí la medición se interrumpe»
+
+Ratificadas por ASAV el 18 de septiembre de 2026. **No son sujetos, y no entran a la tabla de sujetos** (la flecha es de la unidad, el cuadro del dispositivo, la hoja del papel; el hexágono queda reservado para los veredictos). No dicen qué *es* una cosa: dicen **dónde la traza deja de afirmar un camino**. Por eso son su propia familia, y las dos se leen juntas:
+
+| Marca | Forma | Qué dice | Dónde |
+|---|---|---|---|
+| Hueco | **Círculo hueco**, trazo continuo, en cada extremo | Nadie midió: el equipo calló más de 15 min | Mapa, cinta, pausa del playback |
+| Salto del GPS | **Rombo hueco**, en cada extremo | Se midió, pero los dos puntos se contradicen: ningún camión recorre esa distancia en ese tiempo (más de 300 km/h) | Mapa, cinta, pausa del playback |
+
+**Lo que tienen en común:** en los dos casos la línea entre los dos extremos **no se dibuja**, porque afirmaría un camino que nadie observó. Ningún punto se borra: los dos extremos se marcan. El playback se detiene en cada marca, lo dice, y salta al otro lado.
+
+**Lo que las separa,** y por eso son dos formas: el hueco es silencio —por eso comparte el círculo hueco con SIN SEÑAL de la unidad, que dice lo mismo—; el salto no es silencio —el equipo sí transmitía, y los tramos medidos no se cortan por él—: lo que no se sabe es el camino. Decidir cuál de los dos puntos es el falso sería especular.
+
+- **Un hueco sin desplazamiento también se declara.** Si sus dos extremos quedan a 50 m o menos (`HUECO_QUIETO_METROS`: la deriva de un camión estacionado), sus círculos caen uno encima del otro y la línea se ve continua. Se dice en una **pastilla** con el número y la palabra (`○ 9 huecos`), en la capa de rótulos para que el marcador del playback no la tape. Una pastilla junta sólo los huecos que de verdad caen **encima** en la pantalla; si a simple vista quedan separados, cada uno lleva la suya.
+- **La cifra de saltos sólo aparece cuando hay.** «0 saltos» es ruido: lo que no aplica no se muestra.
+- **La marca va en `--tinta` sobre `--pieza`**, en las dos pieles. Ni cobre (no es vida) ni colores de veredicto.
+
 ### Los tres estados de una parte del expediente
 
 Cada parte de un expediente declara uno de tres estados (`docs/Ficha-Expedientes.md` §3). Ninguno se esconde, y ninguno usa esqueleto: un esqueleto finge contenido que no va a llegar.
@@ -308,7 +325,7 @@ Si aparece cualquiera de éstos, el lenguaje se disolvió:
 - [ ] ¿Se ve bien en las **dos** pieles?
 - [ ] ¿Se puede entender sin leer una oración completa?
 - [ ] ¿Las trazas se cortan según la **modalidad** del servicio (Pieza 7)?
-- [ ] ¿El playback se detiene en los huecos en vez de deslizarse?
+- [ ] ¿El playback se detiene en los huecos **y en los saltos** en vez de deslizarse, y los dos extremos llevan su marca?
 - [ ] ¿Sólo aparecen los tres veredictos del Marco, con el detalle como motivo debajo?
 - [ ] ¿Ningún nombre de cliente, planta o ruta está horneado en el componente?
 - [ ] ¿Lo que se puede crear aquí, se puede corregir aquí?

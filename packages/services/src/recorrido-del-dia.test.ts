@@ -179,6 +179,7 @@ describe("recorridoPorVentana · kilómetros", () => {
     expect(r).toEqual({
       tramos: [],
       huecos: [],
+      saltos: [],
       visitas: [],
       cifras: { puntos: 0, kmMedidos: 0, saltosDescartados: 0, minutosConSenal: 0, huecos: 0 },
     });

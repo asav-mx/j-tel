@@ -9,9 +9,16 @@ import {
   instanteDelPanel,
   mover,
   panelDe,
+  glifoDePausa,
+  HUECO_QUIETO_METROS,
+  HUECOS_ENCIMADOS_PX,
+  huecosQuietos,
+  juntarEncimados,
+  nombreDePausa,
   pausasEntre,
   pedazosDe,
   periodoDeLaDireccion,
+  FORMA_DEL_RECORRIDO,
   peticionDelRecorrido,
   posicionEn,
   recorridoHasta,
@@ -24,6 +31,7 @@ import {
   type Pedazo,
   type RecorridoJson,
 } from "./recorrido";
+import { peticionDelRecorridoDeDispositivo } from "./recorrido-dispositivo";
 
 /** Instantes en Juárez (UTC-6 en septiembre). */
 const j = (s: string) => Date.parse(`${s}-06:00`);
@@ -99,6 +107,17 @@ describe("la ventana", () => {
     const semana = new URL(`https://x${peticionDelRecorrido("jb", "u1", atajosDeTiempo(LEIDA)[2]!.periodo)}`);
     expect(semana.searchParams.get("grado")).toBe("1");
   });
+
+  it("la petición lleva la forma: lo congelado con otra forma no se vuelve a leer", () => {
+    // Lo cerrado se guarda un año con la dirección como llave. Sin la forma, lo
+    // visto antes de que los saltos partieran la traza se vería igual para siempre.
+    const periodo = atajosDeTiempo(LEIDA)[1]!.periodo;
+    const deUnidad = new URL(`https://x${peticionDelRecorrido("jb", "u1", periodo)}`);
+    const deDispositivo = new URL(`https://x${peticionDelRecorridoDeDispositivo("jb", "d1", periodo)}`);
+    expect(FORMA_DEL_RECORRIDO).toBeGreaterThanOrEqual(2);
+    expect(deUnidad.searchParams.get("forma")).toBe(String(FORMA_DEL_RECORRIDO));
+    expect(deDispositivo.searchParams.get("forma")).toBe(String(FORMA_DEL_RECORRIDO));
+  });
 });
 
 describe("cómo se dice", () => {
@@ -158,7 +177,7 @@ describe("el playback", () => {
 });
 
 describe("las pausas entre pedazos", () => {
-  const recorrido = (ocultos: RecorridoJson["ocultos"]): RecorridoJson =>
+  const recorrido = (ocultos: RecorridoJson["ocultos"], saltos: RecorridoJson["saltos"] = []): RecorridoJson =>
     ({
       tramos: [
         [
@@ -171,7 +190,32 @@ describe("las pausas entre pedazos", () => {
         ],
       ],
       ocultos,
+      saltos,
     }) as RecorridoJson;
+
+  it("si los dos extremos son un salto del GPS, la pausa es el salto — se midió, pero se contradice", () => {
+    const r = recorrido(
+      [],
+      [{ desde: "2026-09-14T12:09:00.000Z", hasta: "2026-09-14T12:21:00.000Z", km: 10.2, lat: 1, lng: 1, latFin: 1.09, lngFin: 1 }],
+    );
+    const [pausa] = pausasEntre(pedazosDe(r), r);
+    expect(pausa).toEqual({
+      tipo: "salto",
+      desde: Date.parse("2026-09-14T12:09:00.000Z"),
+      hasta: Date.parse("2026-09-14T12:21:00.000Z"),
+      km: 10.2,
+    });
+    expect(glifoDePausa(pausa!)).toBe("salto");
+    expect(nombreDePausa(pausa!)).toBe("Salto del GPS · 10.2 km en 12:00 · la señal siguió");
+  });
+
+  it("cada pausa tiene su propia forma: círculo hueco, anillo punteado, rombo", () => {
+    expect(glifoDePausa({ tipo: "hueco", desde: 0, hasta: 1 })).toBe("sin-senal");
+    expect(glifoDePausa({ tipo: "salto", desde: 0, hasta: 1, km: 1 })).toBe("salto");
+    expect(
+      glifoDePausa({ tipo: "destino", lugar: "P", desde: 0, hasta: 1, entradaObservada: true, salidaObservada: true }),
+    ).toBe("en-destino");
+  });
 
   it("sin tramo oculto entre dos pedazos, la pausa es un hueco: nadie midió", () => {
     const r = recorrido([]);
@@ -216,5 +260,62 @@ describe("la ventana vacía (regla 11): dice qué se pudo medir, no si trabajó"
   it("con dispositivo que sí reportó fuera de la ventana: acota o amplía para verlo", () => {
     expect(vacioDe(dia, [disp({ ultimoPunto: j("2026-09-15T10:00:00") })]).tipo).toBe("reporto_fuera");
     expect(vacioDe(dia, [disp({ ultimoPunto: j("2026-09-12T10:00:00") })]).tipo).toBe("reporto_fuera");
+  });
+});
+
+describe("los huecos que no dejan corte visible", () => {
+  // El Jeep, 18 sep 2026: estacionado, reportando cada hora. Cuatro huecos con
+  // 0 m entre sus extremos, en dos lugares a unos 13 m uno del otro.
+  const hueco = (desde: string, hasta: string, lat: number, lng: number, latFin = lat, lngFin = lng) => ({
+    desde: `2026-09-18T${desde}:00.000Z`,
+    hasta: `2026-09-18T${hasta}:00.000Z`,
+    minutos: 0,
+    lat,
+    lng,
+    latFin,
+    lngFin,
+  });
+  const JEEP = [
+    hueco("17:14", "18:13", 31.6863, -106.35356),
+    hueco("18:13", "19:13", 31.6863, -106.35356),
+    hueco("19:13", "19:44", 31.6863, -106.35356),
+    hueco("19:56", "20:54", 31.68636, -106.35368),
+  ];
+  /** Una proyección de juguete: `pxPorMetro` píxeles por cada metro del terreno. */
+  const proyeccion = (pxPorMetro: number) => (lat: number, lng: number) => ({
+    x: lng * 111_320 * Math.cos((31.69 * Math.PI) / 180) * pxPorMetro,
+    y: -lat * 110_540 * pxPorMetro,
+  });
+
+  it("los umbrales son constantes con nombre, no números sueltos", () => {
+    expect(HUECO_QUIETO_METROS).toBe(50);
+    expect(HUECOS_ENCIMADOS_PX).toBe(14);
+  });
+
+  it("un hueco que sí se movió no es quieto: la línea ya se ve rota", () => {
+    // 12.9 km entre sus extremos, como el de la unidad 6867faeb el 26 ago.
+    expect(huecosQuietos([hueco("21:49", "22:39", 31.69, -106.42, 31.8, -106.4)])).toEqual([]);
+    expect(huecosQuietos(JEEP)).toHaveLength(4);
+  });
+
+  it("de lejos, los cuatro del Jeep se enciman: una pastilla, 4 huecos, 3 h 28 min", () => {
+    const juntos = juntarEncimados(huecosQuietos(JEEP), proyeccion(0.5)); // 13 m ≈ 6.5 px
+    expect(juntos).toHaveLength(1);
+    expect(juntos[0]!.n).toBe(4);
+    expect(juntos[0]!.ms).toBe((59 + 60 + 31 + 58) * 60_000);
+  });
+
+  it("de cerca, los dos lugares quedan separados a simple vista: cada uno con su pastilla", () => {
+    const separados = juntarEncimados(huecosQuietos(JEEP), proyeccion(4)); // 13 m ≈ 52 px
+    expect(separados.map((g) => g.n)).toEqual([3, 1]);
+  });
+
+  it("se encadena: A toca a B y B toca a C es una sola mancha, aunque A y C no se toquen", () => {
+    // Tres marcas en fila a 10 px: A–C quedan a 20 px (> 14), pero en pantalla son una sola mancha.
+    const x = new Map([[1, 0], [2, 10], [3, 20]]);
+    const enFila = [1, 2, 3].map((lat) => ({ lat, lng: 0, ms: 1 }));
+    const juntos = juntarEncimados(enFila, (lat) => ({ x: x.get(lat)!, y: 0 }));
+    expect(juntos).toHaveLength(1);
+    expect(juntos[0]!.n).toBe(3);
   });
 });

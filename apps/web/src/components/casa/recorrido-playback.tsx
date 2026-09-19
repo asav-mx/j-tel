@@ -19,6 +19,8 @@ import {
   instanteDelPanel,
   mover,
   panelDe,
+  glifoDePausa,
+  nombreDePausa,
   pausasEntre,
   pedazosDe,
   peticionDelRecorrido,
@@ -154,7 +156,7 @@ export function RecorridoPlayback({
     ? alto?.tipo === "ahora"
       ? { lat: pos.lat, lng: pos.lng, glifo: estadoActual?.glifo ?? "detenida", rumbo: estadoActual?.rumbo ?? 0, tinta: "senal" }
       : pausa
-        ? { lat: pos.lat, lng: pos.lng, glifo: pausa.tipo === "destino" ? "en-destino" : "sin-senal", rumbo: 0, tinta: "tinta" }
+        ? { lat: pos.lat, lng: pos.lng, glifo: glifoDePausa(pausa), rumbo: 0, tinta: "tinta" }
         : { lat: pos.lat, lng: pos.lng, glifo: "en-movimiento", rumbo: pos.rumbo, tinta: "tinta" }
     : null;
 
@@ -210,6 +212,7 @@ export function RecorridoPlayback({
             clave={datos.clave}
             pedazos={pedazos}
             huecos={datos.r.huecos}
+            saltos={datos.r.saltos}
             lugares={lugaresVisitados}
             progreso={{ seg, t }}
             marcador={marcador}
@@ -533,7 +536,9 @@ const Cifras = memo(function Cifras({ r }: { r: RecorridoJson }) {
     [`${r.cifras.kmMedidos.toFixed(1)} km`, "recorridos"],
     [r.cifras.minutosConSenal > 0 ? duracion(r.cifras.minutosConSenal * 60_000) : "0", "con señal"],
     [r.cifras.huecos > 0 ? `${r.cifras.huecos} · ${duracion(tHuecos)}` : "0", "huecos · duración"],
-    [String(tramos), "tramos medidos"],
+    [String(tramos), tramos === 1 ? "tramo medido" : "tramos medidos"],
+    // Sólo cuando los hay: cero saltos no es un dato que alguien mire.
+    ...(r.saltos.length > 0 ? [[String(r.saltos.length), r.saltos.length === 1 ? "salto del GPS" : "saltos del GPS"] as [string, string]] : []),
   ];
   return (
     <div className="mb-3.5 flex flex-wrap items-stretch gap-2.5">
@@ -599,6 +604,18 @@ export function Aviso({
 }
 
 export function AvisoDePausa({ pausa, continuaEn, alContinuar }: { pausa: Pausa; continuaEn: number; alContinuar: () => void }) {
+  if (pausa.tipo === "salto") {
+    return (
+      <Aviso
+        glifo={<Glifo estado="salto" tamano={16} tinta="tinta" />}
+        titulo="Salto del GPS"
+        rango={`${sello(pausa.desde)} → ${sello(pausa.hasta)} · ${pausa.km.toFixed(1)} km en ${duracion(pausa.hasta - pausa.desde)}`}
+        porque="La señal no se cortó: es el mismo tramo medido. Pero ningún camión recorre eso en ese tiempo, así que entre los dos puntos no se dibuja camino."
+        accion={`Continuar en ${hhmm(continuaEn)}`}
+        alTocar={alContinuar}
+      />
+    );
+  }
   if (pausa.tipo === "hueco") {
     return (
       <Aviso
@@ -730,9 +747,9 @@ function Cinta({
               {pausa && (
                 <div
                   className="grid w-7 flex-none place-items-center"
-                  title={`${pausa.tipo === "hueco" ? "Sin señal" : `En ${pausa.lugar}`} · ${duracion(pausa.hasta - pausa.desde)}`}
+                  title={nombreDePausa(pausa)}
                 >
-                  <Glifo estado={pausa.tipo === "hueco" ? "sin-senal" : "en-destino"} tamano={14} />
+                  <Glifo estado={glifoDePausa(pausa)} tamano={14} />
                 </div>
               )}
               <button

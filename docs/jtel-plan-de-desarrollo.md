@@ -32,6 +32,7 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 - C3 — recorrido y playback en Ver ‹unidad› (#431, #432, #433).
 - C4 — acciones y candados (#434), el cuarto Dispositivos (#436), asignar/soltar/dar de baja (#437). Actúan coordinador y admin del carrier; el admin de plataforma de J-Staff también, en cualquier cuenta (soporte y comercial no) — **provisional hasta la 6.29**. C4-e: dar de alta y corregir unidades desde la casa nueva, con su VIN (único por cuenta), y ningún nombre repetido en una cuenta, en el código y en la base (0040). La 2101 duplicada de juarez-bus se corrigió el 18-sep (conservada la del camión con su historia).
 - Recorrido y playback en Ver ‹dispositivo›, partido por unidad (#439).
+- Una traza rota se dibuja rota: el salto del GPS (más de 300 km/h) parte la traza sin borrar puntos y se declara con su rombo; los huecos de un camión estacionado se dicen en una pastilla; la línea se lee sobre un halo (4.78:1 y 4.59:1 medidos). Marcas de la traza ratificadas como familia propia en el skill (18 sep).
 
 **Infraestructura / motor:**
 - Migración a Compás cerrada; marca de lectura por aparato (#408 / 0037).
