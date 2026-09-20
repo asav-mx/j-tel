@@ -668,6 +668,21 @@ export const trips = pgTable("trips", {
   evidenceWindowStart: timestamp("evidence_window_start", { withTimezone: true, mode: "date" }).notNull(),
   evidenceWindowEnd: timestamp("evidence_window_end", { withTimezone: true, mode: "date" }).notNull(),
   evidenceStatus: evidenceStatusEnum("evidence_status").notNull().default("en_espera"),
+  /**
+   * Cuántas veces el motor intentó verificar este viaje — **estado, no historia**.
+   *
+   * Vive aquí y no como entradas del ledger por dos razones, y las dos
+   * costaron 4.16 millones de renglones antes de entenderse: `ledger_entries`
+   * no tiene `factId`, así que `ledger-pairing.ts` empareja por fecha y una
+   * entrada reescrita deja de representar la corrida que produjo el hecho; y
+   * los cambios son eventos, no reemplazos — menos todavía en la tabla que
+   * existe para ser la historia.
+   */
+  intentosDeVerificacion: integer("intentos_de_verificacion").notNull().default(0),
+  /** Cuándo se intentó la primera vez. Con `ultimoIntentoAt` conserva el «de tal fecha a tal fecha». */
+  primerIntentoAt: timestamp("primer_intento_at", { withTimezone: true, mode: "date" }),
+  /** Cuándo se intentó la última vez. */
+  ultimoIntentoAt: timestamp("ultimo_intento_at", { withTimezone: true, mode: "date" }),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 

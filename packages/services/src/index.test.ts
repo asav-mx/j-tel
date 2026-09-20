@@ -289,6 +289,7 @@ describe("cambio de política no toca hechos definitivos", () => {
           getPointsForTrip: vi.fn(),
           clearPointsForTrip: vi.fn(),
           updateTripStatus: vi.fn(),
+          registrarIntentoDeVerificacion: vi.fn().mockResolvedValue({ intentos: 1, primerIntentoAt: null, ultimoIntentoAt: null }),
         },
         compliance: { deleteFactForOccurrence: deleteFact, saveFact },
       };
@@ -383,6 +384,7 @@ describe("cambio de política no toca hechos definitivos", () => {
         ]),
         clearPointsForTrip: vi.fn(),
         updateTripStatus: vi.fn(),
+        registrarIntentoDeVerificacion: vi.fn().mockResolvedValue({ intentos: 1, primerIntentoAt: null, ultimoIntentoAt: null }),
         savePoints: vi.fn(),
       },
       compliance: {
@@ -404,7 +406,7 @@ describe("cambio de política no toca hechos definitivos", () => {
         getUnitsForCarrier: vi.fn().mockResolvedValue([{ id: "unit-1" }]),
         resolveUnitAtTime: vi.fn().mockResolvedValue({ unitId: "unit-1" }),
       },
-      telemetry: { getForImeisDeCuenta: vi.fn().mockResolvedValue([]) },
+      telemetry: { tomarLlaveDelMotor: vi.fn().mockResolvedValue(true), soltarLlaveDelMotor: vi.fn(), getForImeisDeCuenta: vi.fn().mockResolvedValue([]) },
       routes: { getKmlVersionForDate: vi.fn().mockResolvedValue(null), getActiveVariantVersionsForDate: vi.fn().mockResolvedValue([]) },
       carriers: { getGpsCredentials: vi.fn().mockResolvedValue(null) },
       notifications: { create: vi.fn() },
@@ -514,6 +516,7 @@ describe("actorIntent: decision vs maintenance (force:true)", () => {
         getPointsForTrip: vi.fn().mockResolvedValue([evidencePoint]),
         clearPointsForTrip: vi.fn(),
         updateTripStatus: vi.fn(),
+        registrarIntentoDeVerificacion: vi.fn().mockResolvedValue({ intentos: 1, primerIntentoAt: null, ultimoIntentoAt: null }),
         savePoints: vi.fn(),
       },
       compliance: {
@@ -533,7 +536,7 @@ describe("actorIntent: decision vs maintenance (force:true)", () => {
         getUnitsForCarrier: vi.fn().mockResolvedValue([{ id: "unit-1" }]),
         resolveUnitAtTime: vi.fn().mockResolvedValue(null),
       },
-      telemetry: { getForImeisDeCuenta: vi.fn().mockResolvedValue([]) },
+      telemetry: { tomarLlaveDelMotor: vi.fn().mockResolvedValue(true), soltarLlaveDelMotor: vi.fn(), getForImeisDeCuenta: vi.fn().mockResolvedValue([]) },
       routes: {
         getKmlVersionForDate: vi.fn().mockResolvedValue(null),
         getActiveVariantVersionsForDate: vi.fn().mockResolvedValue([]),
@@ -668,6 +671,7 @@ describe("perdedor exclusivo sin alternativa", () => {
         getPointsForTrip: vi.fn().mockResolvedValue(opts.evidencePoints),
         clearPointsForTrip: vi.fn(),
         updateTripStatus: vi.fn(),
+        registrarIntentoDeVerificacion: vi.fn().mockResolvedValue({ intentos: 1, primerIntentoAt: null, ultimoIntentoAt: null }),
         savePoints: vi.fn(),
       },
       compliance: {
@@ -688,7 +692,7 @@ describe("perdedor exclusivo sin alternativa", () => {
           .mockResolvedValue([{ id: "unit-other" }, { id: "unit-winner" }]),
         resolveUnitAtTime: vi.fn().mockResolvedValue({ unitId: "unit-other" }),
       },
-      telemetry: { getForImeisDeCuenta: vi.fn().mockResolvedValue([]) },
+      telemetry: { tomarLlaveDelMotor: vi.fn().mockResolvedValue(true), soltarLlaveDelMotor: vi.fn(), getForImeisDeCuenta: vi.fn().mockResolvedValue([]) },
       routes: { getKmlVersionForDate: vi.fn().mockResolvedValue(null), getActiveVariantVersionsForDate: vi.fn().mockResolvedValue([]) },
       carriers: { getGpsCredentials: vi.fn().mockResolvedValue(null) },
       notifications: { create: vi.fn() },
@@ -882,6 +886,7 @@ describe("Tarea 3 — contexto llegada fuera de ventana", () => {
           .mockResolvedValue(inWindow), // storedPoints tras ingest
         clearPointsForTrip: vi.fn(),
         updateTripStatus: vi.fn(),
+        registrarIntentoDeVerificacion: vi.fn().mockResolvedValue({ intentos: 1, primerIntentoAt: null, ultimoIntentoAt: null }),
         savePoints: vi.fn(),
       },
       compliance: {
@@ -1088,6 +1093,7 @@ describe("sin evidencia posible — el servicio sale de la cola de reintento", (
         getPointsForTrip: vi.fn().mockResolvedValue([]),
         clearPointsForTrip: vi.fn(),
         updateTripStatus: vi.fn(),
+        registrarIntentoDeVerificacion: vi.fn().mockResolvedValue({ intentos: opciones.intentosPrevios, primerIntentoAt: new Date("2026-06-22T13:00:00Z"), ultimoIntentoAt: new Date("2026-08-03T07:00:00Z") }),
         savePoints: vi.fn(),
       },
       compliance: {
@@ -1110,6 +1116,8 @@ describe("sin evidencia posible — el servicio sale de la cola de reintento", (
         resolveUnitAtTime: vi.fn().mockResolvedValue(null),
       },
       telemetry: {
+        tomarLlaveDelMotor: vi.fn().mockResolvedValue(true),
+        soltarLlaveDelMotor: vi.fn(),
         getForImeisDeCuenta: vi.fn().mockResolvedValue([]),
         getMemoryHorizon: vi.fn().mockResolvedValue(opciones.horizonte),
         // El archivador ya pasó de esta ventana de junio: si no hay puntos,
@@ -1127,7 +1135,7 @@ describe("sin evidencia posible — el servicio sale de la cola de reintento", (
     };
   }
 
-  it("ventana anterior a la memoria y miles de intentos: se retira y queda escrito", async () => {
+  it("la ventana que el archivador ya rebasó vacía, con miles de intentos: se retira y queda escrito", async () => {
     const repos = armarRepos({
       intentosPrevios: 31_424,
       horizonte: new Date("2026-06-28T02:23:16Z"),
@@ -1145,7 +1153,7 @@ describe("sin evidencia posible — el servicio sale de la cola de reintento", (
     const service = new VerificationService(repos as never);
     const result = await service.verifyOccurrence("occ-atorada");
 
-    expect(result.sinEvidenciaPosible).toBe("ventana_anterior_a_la_memoria");
+    expect(result.sinEvidenciaPosible).toBe("ventana_cerrada_vacia");
     expect(repos.evidence.updateTripStatus).toHaveBeenCalledWith(
       "trip-1",
       "sin_evidencia_posible",
@@ -1155,7 +1163,7 @@ describe("sin evidencia posible — el servicio sale de la cola de reintento", (
       .map((c) => c[0])
       .find((e) => e.action === "sin_evidencia_posible");
     expect(retiro).toBeDefined();
-    expect(retiro.steps[0].result).toBe("ventana_anterior_a_la_memoria");
+    expect(retiro.steps[0].result).toBe("ventana_cerrada_vacia");
     expect(retiro.steps[0].details.intentosPrevios).toBe(31_424);
 
     // EL VEREDICTO NO CAMBIA. Sin evidencia no es incumplimiento.
@@ -1164,12 +1172,22 @@ describe("sin evidencia posible — el servicio sale de la cola de reintento", (
     // Y no vuelve a notificar lo mismo: el veredicto no cambió.
     expect(repos.notifications.create).not.toHaveBeenCalled();
 
-    // El motivo queda en el ledger — y SOLO ahí. La marca de agua del
-    // archivador ya pasó de esta ventana, así que la unidad no transmitió.
+    /*
+     * El motivo queda en el ledger — y SOLO ahí. La marca de agua del
+     * archivador ya pasó de esta ventana, así que la unidad no transmitió.
+     * Vive en la entrada del RETIRO: el sello que no cambia nada ya no se
+     * escribe, que es justo lo que este tramo arregló.
+     */
+    expect(retiro.steps[0].details.motivoDeLaEvidencia).toBe("sin_senal");
+
+    // Y el sello mudo NO se escribió: ésa es la entrada que se multiplicaba
+    // por minuto. La cuenta de intentos y sus dos fechas viven en el retiro.
     const auto = repos.compliance.addLedgerEntry.mock.calls
       .map((c) => c[0])
       .find((e) => e.action === "verificacion_automatica");
-    expect(auto.metadata.motivoSinEvidencia).toBe("sin_senal");
+    expect(auto).toBeUndefined();
+    expect(retiro.steps[0].details.primerIntento).toBeTruthy();
+    expect(retiro.steps[0].details.ultimoIntento).toBeTruthy();
 
     vi.restoreAllMocks();
   });
@@ -1224,6 +1242,11 @@ describe("el catch deja rastro — el silencio que costó 35 días", () => {
         contarVencidasEnPausa: vi.fn().mockResolvedValue(0),
       },
       compliance: { addLedgerEntry },
+      // La llave de la corrida: sin otra pasada encima, el motor entra normal.
+      telemetry: {
+        tomarLlaveDelMotor: vi.fn().mockResolvedValue(true),
+        soltarLlaveDelMotor: vi.fn(),
+      },
     };
 
     const service = new VerificationService(repos as never);
@@ -1258,6 +1281,10 @@ describe("el catch deja rastro — el silencio que costó 35 días", () => {
         contarVencidasEnPausa: vi.fn().mockResolvedValue(0),
       },
       compliance: { addLedgerEntry: vi.fn().mockRejectedValue(new Error("ledger caído")) },
+      telemetry: {
+        tomarLlaveDelMotor: vi.fn().mockResolvedValue(true),
+        soltarLlaveDelMotor: vi.fn(),
+      },
     };
 
     const service = new VerificationService(repos as never);
@@ -1324,6 +1351,7 @@ describe("la puerta al proveedor está cerrada en el motor", () => {
         getPointsForTrip: vi.fn().mockResolvedValue([]),
         clearPointsForTrip: vi.fn(),
         updateTripStatus: vi.fn(),
+        registrarIntentoDeVerificacion: vi.fn().mockResolvedValue({ intentos: 1, primerIntentoAt: null, ultimoIntentoAt: null }),
         savePoints: vi.fn(),
       },
       compliance: {
@@ -1347,6 +1375,8 @@ describe("la puerta al proveedor está cerrada en el motor", () => {
       },
       // Memoria propia VACÍA: el caso que antes salía a buscar a Umbrella.
       telemetry: {
+        tomarLlaveDelMotor: vi.fn().mockResolvedValue(true),
+        soltarLlaveDelMotor: vi.fn(),
         getForImeisDeCuenta: vi.fn().mockResolvedValue([]),
         getMemoryHorizon: vi.fn().mockResolvedValue(null),
         getWatermark: vi.fn().mockResolvedValue({

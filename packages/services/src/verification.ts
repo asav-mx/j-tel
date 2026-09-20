@@ -204,6 +204,33 @@ export class VerificationService {
   constructor(private repos: Repositories) {}
 
   async processPending(now = new Date()) {
+    /*
+     * LA LLAVE DE LA CORRIDA. Lo primero, antes de leer la cola.
+     *
+     * Dos pasadas del cron trabajando a la vez sobre el mismo servicio es lo
+     * que reventaba `saveFact`: medido el 19-sep-2026, el 41 % de los sellos
+     * consecutivos de una misma ocurrencia caían a menos de 45 s. Bajar la
+     * cadencia a 5 minutos lo vuelve improbable; esto lo vuelve imposible.
+     *
+     * Si otra pasada va corriendo, ésta se va sin hacer nada y sin ruido: la
+     * siguiente sale en cinco minutos y la cola no se movió. Se dice en
+     * consola porque un motor que no hizo nada y uno que no pudo entrar se ven
+     * idénticos desde afuera — y esa confusión ya costó cinco semanas.
+     */
+    if (!(await this.repos.telemetry.tomarLlaveDelMotor())) {
+      console.warn(
+        "[verify] otra pasada del motor va corriendo. Ésta se salta, la cola no se toca.",
+      );
+      return [];
+    }
+    try {
+      return await this.procesarCola(now);
+    } finally {
+      await this.repos.telemetry.soltarLlaveDelMotor();
+    }
+  }
+
+  private async procesarCola(now: Date) {
     const pending = await this.repos.occurrences.findPendingVerification(now);
 
     /*
@@ -797,25 +824,20 @@ export class VerificationService {
   private async evaluarSinEvidenciaPosible(input: {
     occurrenceId: string;
     tripId: string;
-    carrierAccountId: string;
     finDeVentana: Date;
+    /** Lo que ya calculó `motivoSinEvidencia` sobre esta misma ventana. */
+    motivo: MotivoSinEvidencia | null;
+    /** El contador del viaje, ya incrementado por este intento. */
+    intentosPrevios: number;
+    primerIntentoAt: Date | null;
+    ultimoIntentoAt: Date | null;
     actorKind: string;
     actorId: string | null;
   }): Promise<RazonSinEvidencia | null> {
-    let horizonte = this.horizonteMemoriaPorCarrier.get(input.carrierAccountId);
-    if (horizonte === undefined) {
-      horizonte = await this.repos.telemetry.getMemoryHorizon(input.carrierAccountId);
-      this.horizonteMemoriaPorCarrier.set(input.carrierAccountId, horizonte);
-    }
-
-    const intentosPrevios = await this.repos.compliance.countAutomaticVerifications(
-      input.occurrenceId,
-    );
-
     const razon = razonSinEvidenciaPosible({
       finDeVentana: input.finDeVentana,
-      horizonteDeMemoria: horizonte,
-      intentosPrevios,
+      motivo: input.motivo,
+      intentosPrevios: input.intentosPrevios,
       ahora: new Date(),
     });
     if (!razon) return null;
@@ -833,14 +855,27 @@ export class VerificationService {
           result: razon,
           details: {
             explicacion: explicarRazon(razon),
-            intentosPrevios,
+            /*
+             * La cuenta completa, y sus dos fechas (Marco 3.10e). Ésta es la
+             * ÚNICA entrada que el ledger recibe por toda la espera: aquí
+             * queda «se intentó N veces, de tal fecha a tal fecha», que antes
+             * costaba un renglón por intento.
+             */
+            intentosPrevios: input.intentosPrevios,
+            primerIntento: input.primerIntentoAt?.toISOString() ?? null,
+            ultimoIntento: input.ultimoIntentoAt?.toISOString() ?? null,
+            motivoDeLaEvidencia: input.motivo,
             finDeVentana: input.finDeVentana.toISOString(),
-            horizonteDeMemoria: horizonte ? horizonte.toISOString() : null,
-            nota: "El veredicto NO cambia: sigue en pendiente_evidencia. Lo que cambia es que deja de reintentarse cada minuto. Reversible: una re-verificación forzada lo vuelve a juzgar.",
+            nota: "El veredicto NO cambia: sigue en pendiente_evidencia. Lo que cambia es que deja de reintentarse. Reversible: una re-verificación forzada lo vuelve a juzgar.",
           },
         },
       ],
-      metadata: { razon, intentosPrevios },
+      metadata: {
+        razon,
+        intentosPrevios: input.intentosPrevios,
+        primerIntento: input.primerIntentoAt?.toISOString() ?? null,
+        ultimoIntento: input.ultimoIntentoAt?.toISOString() ?? null,
+      },
     });
 
     return razon;
@@ -1082,12 +1117,24 @@ export class VerificationService {
       });
     }
 
+    /*
+     * El intento se cuenta SIEMPRE, y se cuenta aquí — estado del viaje, no
+     * una entrada de ledger (Marco 3.10e). Es lo que permite dejar de escribir
+     * un renglón por intento sin perder «se intentó N veces, de tal fecha a
+     * tal fecha», y es de donde sale el `intentosPrevios` del freno: contarlo
+     * del ledger se quedaría congelado en cuanto el motor deje de escribirlo.
+     */
+    const intentos = await this.repos.evidence.registrarIntentoDeVerificacion(trip.id);
+
     if (ingestStatus === "indisponible" && !opts.force) {
       razonRetiro = await this.evaluarSinEvidenciaPosible({
         occurrenceId,
         tripId: trip.id,
-        carrierAccountId: contract.carrierAccountId,
         finDeVentana: trip.evidenceWindowEnd,
+        motivo: motivoPendiente,
+        intentosPrevios: intentos.intentos,
+        primerIntentoAt: intentos.primerIntentoAt,
+        ultimoIntentoAt: intentos.ultimoIntentoAt,
         actorKind: resolvedActorKind,
         actorId: resolvedActorId,
       });
@@ -1438,9 +1485,48 @@ export class VerificationService {
       );
     }
 
+    /*
+     * ¿Este intento cambió algo? Se decide ANTES de guardar, porque de esto
+     * dependen dos cosas: si el sello se escribe al ledger, y con qué fecha se
+     * materializa el hecho.
+     *
+     * Se calla SÓLO cuando las cuatro se cumplen a la vez:
+     *   · ya había un hecho —no es el primer veredicto, que siempre se cuenta;
+     *   · el veredicto no cambió;
+     *   · no llegó un solo punto (`indisponible`), así que tampoco cambió la
+     *     evidencia — si llegó algo, aunque el veredicto siga igual, eso es
+     *     información y se escribe;
+     *   · nadie lo pidió a mano (`force`): una decisión humana se registra
+     *     aunque no mueva nada, porque alguien decidió revisarlo.
+     */
+    const nadaCambio =
+      !opts.force &&
+      pendingRetryFact !== null &&
+      pendingRetryFact.status === finalStatus &&
+      ingestStatus === "indisponible";
+
     const fact = await this.repos.compliance.saveFact({
       serviceOccurrenceId: occurrenceId,
       tripId: trip.id,
+      /*
+       * EL HECHO CONSERVA SU FECHA CUANDO NADA CAMBIÓ, y no es un detalle.
+       *
+       * Cada reintento borra el hecho y vuelve a insertarlo, así que
+       * `materializedAt` se corría a «ahora» cada minuto: un veredicto del 7
+       * de septiembre decía haberse materializado hoy a las 18:41. Eso ya era
+       * falso por sí solo.
+       *
+       * Y sostenerlo es lo que permite dejar de escribir el sello. El acta
+       * empareja la entrada del ledger con el hecho vigente POR FECHA
+       * —`ledger-pairing.ts`, porque el ledger no tiene `factId`— buscando un
+       * sello posterior a `materializedAt`. Si la fecha avanza y el sello no
+       * se escribe, no queda ninguna entrada que emparejar y el acta pierde su
+       * medición. Dejando la fecha quieta, el sello original sigue siendo el
+       * suyo, que es además la verdad: ese veredicto se materializó entonces.
+       */
+      ...(nadaCambio && pendingRetryFact
+        ? { materializedAt: pendingRetryFact.materializedAt }
+        : {}),
       expectedDeadline: occurrence.expectedDeadline,
       expectedGeofenceId: occurrence.expectedGeofenceId,
       referenceUnitId: occurrence.referenceUnitId,
@@ -1546,6 +1632,26 @@ export class VerificationService {
       });
     }
 
+    /*
+     * EL SELLO QUE NO CAMBIA NADA NO SE ESCRIBE (Marco 3.10e).
+     *
+     * Ésta es la línea que produjo 4 163 318 entradas sobre 1 008 servicios:
+     * se escribía una por intento, sin preguntar si el intento había cambiado
+     * algo. Diecisiete mil renglones diciendo «sigue sin evidencia» no son
+     * expediente, son ruido que sepulta lo que sí pasó.
+     *
+     * `nadaCambio` se decidió arriba, antes de guardar el hecho, porque de él
+     * depende también que el hecho conserve su `materializedAt` — sin eso, el
+     * acta se quedaría sin sello con el cual emparejar.
+     *
+     * Lo que se calla NO se pierde: el contador del viaje ya subió, y cuando
+     * la espera se cierre, la entrada `sin_evidencia_posible` dirá cuántas
+     * veces se intentó y entre qué fechas.
+     *
+     * Misma lógica que ya gobierna las notificaciones unas líneas abajo: se
+     * avisa cuando el veredicto CAMBIA, no cada vez que se recalcula.
+     */
+    if (!nadaCambio) {
     await this.repos.compliance.addLedgerEntry({
       tripId: trip.id,
       serviceOccurrenceId: occurrenceId,
@@ -1575,6 +1681,7 @@ export class VerificationService {
           : {}),
       },
     });
+    }
 
     // Tarea 3 (aprobada con 3 condiciones): contexto de calibración en el ledger.
     // (1) SOLO cuando el hecho quedó sin llegada (observedArrivalAt = null).
