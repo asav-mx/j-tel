@@ -309,6 +309,13 @@
       "when": 1790121600000,
       "tag": "0043_intentos_de_verificacion",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1790208000000,
+      "tag": "0044_promesa_por_franja",
+      "breakpoints": true
     }
   ]
 }

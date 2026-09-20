@@ -7,12 +7,19 @@ import {
   suggestProfileCode,
   MOTIVO_SISTEMA,
   nombreDeDispositivo,
+  validarFranjas,
+  promesaEnInstante,
+  tipoDeDiaLocal,
+  localTimeHHMM,
 } from "@jtel/domain";
 import type {
   PrefijoDeModelo,
   OperationalScope,
   OperationalUnit,
   RouteDurationSample,
+  FranjaCapturada,
+  FranjaRechazada,
+  PromesaEnInstante,
 } from "@jtel/domain";
 import { operationalScopeColumns } from "@jtel/domain";
 import type { Database } from "../index.js";
@@ -78,6 +85,8 @@ import {
   circuitStops,
   circuitStopVersions,
   circuitUnitAssignments,
+  circuitPromiseTables,
+  circuitPromiseBands,
   concessionCarriers,
   concessionProfiles,
   markets,
@@ -6836,6 +6845,148 @@ export class CircuitRepository {
       )
       .returning();
     return fila ?? null;
+  }
+
+  // ── La promesa por franja horaria (Marco 9.1c, 0044) ─────────────────────
+
+  /** La promesa vigente de un circuito, con sus franjas — `null` si nunca se capturó ninguna. */
+  async getPromiseTableVigente(circuitId: string) {
+    const [tabla] = await this.db
+      .select()
+      .from(circuitPromiseTables)
+      .where(
+        and(eq(circuitPromiseTables.circuitId, circuitId), isNull(circuitPromiseTables.validTo)),
+      );
+    if (!tabla) return null;
+    const bandas = await this.db
+      .select()
+      .from(circuitPromiseBands)
+      .where(eq(circuitPromiseBands.promiseTableId, tabla.id))
+      .orderBy(circuitPromiseBands.diaTipo, circuitPromiseBands.desdeLocal);
+    return { tabla, bandas };
+  }
+
+  /**
+   * La promesa vigente EN UN INSTANTE — para juzgar un paso de hace tres
+   * semanas contra lo que se prometía entonces, no contra la de hoy (9.1c).
+   * Misma forma que `resolveUnitAtTime`: `validFrom <= instante <= validTo`.
+   */
+  async getPromiseTableAt(circuitId: string, instante: Date) {
+    const [tabla] = await this.db
+      .select()
+      .from(circuitPromiseTables)
+      .where(
+        and(
+          eq(circuitPromiseTables.circuitId, circuitId),
+          lte(circuitPromiseTables.validFrom, instante),
+          or(isNull(circuitPromiseTables.validTo), gte(circuitPromiseTables.validTo, instante)),
+        ),
+      );
+    if (!tabla) return null;
+    const bandas = await this.db
+      .select()
+      .from(circuitPromiseBands)
+      .where(eq(circuitPromiseBands.promiseTableId, tabla.id));
+    return { tabla, bandas };
+  }
+
+  /**
+   * La promesa para un instante concreto, en una zona y un sentido — o la
+   * declaración honesta de que ninguna franja lo cubre (decisión 3 de Asav:
+   * un hueco del horario no se rellena con la franja vecina).
+   *
+   * Junta `getPromiseTableAt` (qué versión valía entonces) con
+   * `promesaEnInstante` (qué franja de esa versión cubre la hora). **No
+   * comprueba el horario de servicio** — eso es del eslabón 2, que ya sabe si
+   * la unidad iba en horario antes de preguntar por la promesa.
+   */
+  async getPromesaEnInstante(
+    circuitId: string,
+    instante: Date,
+    sentido: "ida" | "vuelta",
+    zona: string,
+  ): Promise<PromesaEnInstante> {
+    const promesa = await this.getPromiseTableAt(circuitId, instante);
+    if (!promesa) return { declarada: false };
+    return promesaEnInstante(
+      promesa.bandas.map((b) => ({
+        diaTipo: b.diaTipo,
+        sentido: b.sentido,
+        desdeLocal: b.desdeLocal,
+        hastaLocal: b.hastaLocal,
+        frequencyMinutes: b.frequencyMinutes,
+      })),
+      { diaTipo: tipoDeDiaLocal(instante, zona), horaLocal: localTimeHHMM(instante, zona), sentido },
+    );
+  }
+
+  /**
+   * Guarda una promesa nueva COMPLETA: cierra la vigente (si hay) y abre otra
+   * con todas sus franjas. **Nunca corrige una sola franja de la vigente** —
+   * es la decisión 1 de Asav: la promesa se lee como conjunto, y versionar el
+   * renglón permitiría una promesa Frankenstein mezclando dos versiones.
+   *
+   * **TODO O NADA.** Si una sola franja cae fuera del horario de servicio del
+   * circuito, o se encima con otra (`validarFranjas`, en `@jtel/domain`), NO
+   * SE GUARDA NADA: se devuelven las rechazadas para que la pantalla las
+   * enseñe y quien captura corrija el conjunto entero. Guardar las válidas y
+   * callar las demás sería la mitad de una promesa que nadie declaró así, y
+   * es justo lo que la decisión 3 de Asav prohíbe — "nunca se ignora en
+   * silencio". Esta elección de todo-o-nada es mía, no palabra textual de
+   * Asav: la alternativa —guardar lo válido y avisar aparte de lo rechazado—
+   * es defendible, y si la prefiere se cambia aquí, en un solo lugar.
+   */
+  async savePromiseTable(
+    circuitId: string,
+    franjas: FranjaCapturada[],
+    opts: { motivo?: string } = {},
+  ): Promise<{ ok: true; tableId: string } | { ok: false; rechazadas: FranjaRechazada[] }> {
+    const [circuito] = await this.db
+      .select({ inicio: circuits.serviceStartLocal, fin: circuits.serviceEndLocal })
+      .from(circuits)
+      .where(eq(circuits.id, circuitId));
+    if (!circuito) throw new Error(`No existe el circuito ${circuitId}`);
+
+    const { validas, rechazadas } = validarFranjas(franjas, {
+      inicioLocal: circuito.inicio,
+      finLocal: circuito.fin,
+    });
+    if (rechazadas.length > 0) return { ok: false, rechazadas };
+
+    const tableId = await this.db.transaction(async (tx) => {
+      const ahora = new Date();
+      // Por qué TERMINÓ la vigente — se escribe al cerrar, igual que paradas
+      // y asignaciones. Sin vigente previa (primera captura), no hay nada que
+      // este UPDATE toque, y eso está bien.
+      await tx
+        .update(circuitPromiseTables)
+        .set({ validTo: ahora, motivo: opts.motivo?.trim() || null })
+        .where(
+          and(eq(circuitPromiseTables.circuitId, circuitId), isNull(circuitPromiseTables.validTo)),
+        );
+
+      const [nueva] = await tx
+        .insert(circuitPromiseTables)
+        .values({ circuitId, validFrom: ahora })
+        .returning();
+      if (!nueva) throw new Error("No se pudo crear la nueva versión de la promesa.");
+
+      if (validas.length > 0) {
+        await tx.insert(circuitPromiseBands).values(
+          validas.map((f) => ({
+            promiseTableId: nueva.id,
+            diaTipo: f.diaTipo,
+            sentido: f.sentido,
+            desdeLocal: f.desdeLocal,
+            hastaLocal: f.hastaLocal,
+            frequencyMinutes: f.frequencyMinutes,
+          })),
+        );
+      }
+      return nueva.id;
+    });
+
+    return { ok: true, tableId };
   }
 }
 

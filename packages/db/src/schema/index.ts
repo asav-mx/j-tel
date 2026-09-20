@@ -26,6 +26,16 @@ import { ORIGEN_DEL_CIRCUITO } from "@jtel/domain/publico";
 export const accountTypeEnum = pgEnum("account_type", ["carrier", "client", "jstaff", "concesion"]);
 /** Ida y vuelta son caminos distintos, no espejo: en el circuito 1 son 20.83 y 16.44 km. */
 export const sentidoCircuitoEnum = pgEnum("sentido_circuito", ["ida", "vuelta"]);
+/**
+ * Entre semana, sábado o domingo — nunca los siete días (Marco 9.1c, decisión
+ * de Asav del 20-sep-2026). Un concesionario sabe contestar tres cadencias, no
+ * siete; los festivos no entran aquí, son un calendario y una pieza aparte.
+ */
+export const tipoDeDiaCircuitoEnum = pgEnum("tipo_de_dia_circuito", [
+  "entre_semana",
+  "sabado",
+  "domingo",
+]);
 export const complianceStatusEnum = pgEnum("compliance_status", [
   "cumplido",
   "no_cumplido",
@@ -1683,6 +1693,87 @@ export const circuitUnitAssignments = pgTable(
       .on(table.unitId)
       .where(sql`${table.validTo} IS NULL`),
   ],
+);
+
+/**
+ * La promesa de un circuito por franja horaria (Marco 9.1c, 0044).
+ *
+ * **La identidad de la promesa: el conjunto, no la franja.** Decisión de Asav
+ * (20-sep-2026): «la promesa se lee completa, y la pregunta que importa es
+ * qué prometíamos tal día». Versionar por franja permitiría una promesa
+ * Frankenstein mezclando dos versiones —una franja corregida hoy junto a otra
+ * que sigue de la semana pasada—, y «la promesa del 12 de octubre» dejaría de
+ * tener una sola respuesta. Por eso la vigencia vive AQUÍ, en la tabla que
+ * agrupa, no en `circuit_promise_bands`: cambiar una sola franja cierra esta
+ * fila entera y abre otra, con todas sus franjas de nuevo.
+ *
+ * Misma forma que ya usa la casa —`circuit_stop_versions`, la política del
+ * contrato—: cambiar no sobrescribe, cierra la vigente y abre la nueva.
+ */
+export const circuitPromiseTables = pgTable(
+  "circuit_promise_tables",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    circuitId: uuid("circuit_id")
+      .notNull()
+      .references(() => circuits.id, { onDelete: "cascade" }),
+    validFrom: timestamp("valid_from", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    validTo: timestamp("valid_to", { withTimezone: true, mode: "date" }),
+    /** Por qué TERMINÓ esta versión de la promesa. Se escribe al cerrar. */
+    motivo: text("motivo"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("circuit_promise_tables_circuit_idx").on(table.circuitId, table.validTo),
+    /**
+     * Una sola tabla de promesa vigente por circuito. Sin este candado, dos
+     * filas abiertas a la vez volverían ambigua «la promesa vigente hoy» —
+     * exactamente lo que 9.1c existe para que nunca lo sea.
+     */
+    uniqueIndex("circuit_promise_tables_una_vigente")
+      .on(table.circuitId)
+      .where(sql`${table.validTo} IS NULL`),
+  ],
+);
+
+/**
+ * Una franja dentro de una versión de la promesa: «cada N minutos, de tal
+ * hora a tal hora, tal tipo de día, tal sentido».
+ *
+ * **No lleva vigencia propia** — la de `circuitPromiseTables` es la única que
+ * cuenta, a propósito (ver el comentario de esa tabla).
+ *
+ * **El horario de servicio del circuito manda** (decisión de Asav, 20-sep):
+ * una franja fuera de `circuits.service_start_local`/`service_end_local` se
+ * rechaza al capturar, con su razón en pantalla — la base no lo impide con un
+ * CHECK porque cruza tablas, y `franjaDentroDelHorario` en `@jtel/domain` es
+ * quien lo decide antes de insertar. Y un hueco del horario que ninguna
+ * franja cubra es «sin promesa declarada» para ese tramo: `promesaEnInstante`
+ * lo dice así, y no se rellena con la franja vecina.
+ */
+export const circuitPromiseBands = pgTable(
+  "circuit_promise_bands",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    promiseTableId: uuid("promise_table_id")
+      .notNull()
+      .references(() => circuitPromiseTables.id, { onDelete: "cascade" }),
+    diaTipo: tipoDeDiaCircuitoEnum("dia_tipo").notNull(),
+    /** NULL = promete igual en los dos sentidos. */
+    sentido: sentidoCircuitoEnum("sentido"),
+    desdeLocal: time("desde_local").notNull(),
+    hastaLocal: time("hasta_local").notNull(),
+    frequencyMinutes: integer("frequency_minutes").notNull(),
+  },
+  (table) => [index("circuit_promise_bands_table_idx").on(table.promiseTableId)],
+  /*
+   * Dos CHECK viven en la migración SQL, no aquí — como el resto de la casa
+   * (`circuits_frecuencia_positiva` y compañía nunca se declaran con drizzle):
+   * frecuencia positiva, y que la franja no cruce medianoche
+   * (`desde_local < hasta_local`; ver `franjaDentroDelHorario` en
+   * `@jtel/domain` sobre por qué es la simplificación de esta primera
+   * versión).
+   */
 );
 
 /**

@@ -32,6 +32,24 @@ export function localDateIso(now = new Date(), timeZone = JTTEL_TZ): string {
     day: "2-digit",
   }).format(now);
 }
+/**
+ * Entre semana, sábado o domingo — nunca los siete días del calendario.
+ *
+ * Nace con la promesa por franja horaria de un circuito (Marco 9.1c): un
+ * concesionario sabe contestar tres cadencias, no siete, y siete tablas son
+ * siete que nadie va a capturar. Los días festivos no entran: son un
+ * calendario, y un calendario es otra pieza.
+ */
+export type TipoDeDiaCivil = "entre_semana" | "sabado" | "domingo";
+
+/** Qué tipo de día es, en la zona indicada — LA función canónica, no duplicar. */
+export function tipoDeDiaLocal(ahora: Date, timeZone = JTTEL_TZ): TipoDeDiaCivil {
+  const dia = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(ahora);
+  if (dia === "Sat") return "sabado";
+  if (dia === "Sun") return "domingo";
+  return "entre_semana";
+}
+
 /** Desplazamiento de una zona respecto a UTC, en ms, para un instante dado. */
 function desplazamientoMs(instante: Date, timeZone: string): number {
   const partes = new Intl.DateTimeFormat("en-US", {

@@ -2,63 +2,61 @@
 
 **Qué es.** El eslabón 1 de la cadena del arranque. Hoy la promesa de un circuito es **un solo número para todo el día** —`circuits.declared_frequency_minutes`— y el Marco dice otra cosa desde el 19-sep: la tabla publicada puede prometer frecuencias distintas por franja («cada 10 min de 6 a 9; cada 20 el resto del día»), y **lo medido se compara contra la promesa vigente de esa franja, nunca contra un promedio del día** (9.1c). Juzgar la hora pico con la tabla del valle es la afirmación falsa del alcance (Marco §D).
 
-**Por qué antes del 22 de septiembre.** Sin esto, los dos días de prueba miden contra nada: el detector de pasos del eslabón 2 necesita una promesa contra la cual calcular adelanto y atraso, y la app del pasajero necesita una tabla que publicar (8.2).
+**Estado: construida.** Migración 0044, dominio en `@jtel/domain`, repositorio en `@jtel/db`, probado de punta a punta contra la desechable. Falta la pantalla de captura (fuera de esta ficha, ver §5) y conectarla al eslabón 2.
 
-**Proceso:** rama propia. Plan antes de código; lo que choque con el repo se reporta, no se acomoda. Migración en Neon antes del merge. Checks verdes no son aprobación. **El merge es de Asav** — esto es base de datos.
+**Proceso:** rama propia. Migración en Neon antes del merge. Checks verdes no son aprobación. **El merge es de Asav** — esto es base de datos.
 
 ---
 
-## 1 · Lo que ya existe, medido contra `origin/main`
+## 1 · Las tres decisiones, ratificadas por Asav el 20-sep-2026
 
-- `circuits.declared_frequency_minutes` — **nullable desde la 0031**, y ese `null` es una decisión ganada: «sin declarar» es la respuesta honesta cuando el concesionario no dio la cadencia, y la app sabe decir que hay servicio sin prometer minutos. **Nada de lo que sigue puede quitar esa respuesta.**
-- `circuits.service_start_local` / `service_end_local` / `time_zone` — el horario de apertura diaria, uno solo, que hoy **se sobrescribe al editarlo**. Es un pendiente con nombre del plan vigente («la historia del horario de servicio de los circuitos»), y es exactamente el defecto que esta tabla no debe heredar.
-- La forma de versionar que ya usa la casa: `circuit_stop_versions` (una vigente por parada, con candado en la base), la política del contrato, las variantes de trazado. **Cambiar no sobrescribe: cierra la vigente y abre la nueva.**
+**1 · La promesa es un conjunto, no una franja suelta.** «Se lee completa, y la pregunta que importa es qué prometíamos tal día. Versionar por renglón permite una promesa Frankenstein mezclando versiones.» La vigencia vive en `circuit_promise_tables` — la tabla que agrupa —, y **no** en cada franja: `circuit_promise_bands` no lleva `valid_from`/`valid_to` propios. Corregir una sola franja cierra la versión entera y abre otra completa.
 
-## 2 · La forma propuesta
+**2 · Sí distingue día.** «Mínimo entre semana / sábado / domingo. El domingo no se parece al martes, y medir domingo contra la tabla de entre semana es afirmación falsa (§D). El modelo lo soporta aunque Oasis-Centro arranque con una sola tabla.» Enum `tipo_de_dia_circuito`, tres valores, nunca siete. Los festivos no entran: son un calendario, y un calendario es otra pieza.
 
-Una tabla nueva, aditiva, que **no toca `declared_frequency_minutes`**: el número suelto se queda como la promesa de respaldo del circuito, y la franja manda cuando existe.
+**3 · El horario de servicio manda.** «Una franja fuera de él se rechaza al capturar, con su razón en pantalla — nunca se ignora en silencio. Y si queda parte del horario sin franja, eso es "sin promesa declarada" para esa parte del día, dicho así: no se rellena con la franja vecina.» `franjaDentroDelHorario` (en `@jtel/domain`) rechaza al capturar, con contención completa —no traslape—; `promesaEnInstante` declara honestamente que no hay promesa cuando ningún franja cubre el instante, en vez de heredar la de la franja de al lado.
 
-```
-circuit_promise_bands
-  id
-  circuit_id          → circuits(id) ON DELETE CASCADE
-  sentido             sentido_circuito NULL  -- NULL = promete igual en los dos
-  dias                (ver decisión B)
-  desde_local         TIME NOT NULL
-  hasta_local         TIME NOT NULL
-  frequency_minutes   INTEGER NOT NULL CHECK (> 0)
-  valid_from          TIMESTAMPTZ NOT NULL DEFAULT now()
-  valid_to            TIMESTAMPTZ
-  motivo              TEXT
-```
+## 2 · Lo que se construyó, y dónde vive
 
-Y la regla de lectura, que es la mitad del punto: **para juzgar un paso se busca la franja vigente en el instante del paso**, no la vigente hoy. Un paso de hace tres semanas se juzga contra lo que se prometía hace tres semanas. Es la misma ley que la ventana congelada.
+| Pieza | Dónde |
+|---|---|
+| El enum de tipo de día | `packages/db/drizzle/0044_promesa_por_franja.sql` |
+| Las dos tablas (`circuit_promise_tables`, `circuit_promise_bands`) | misma migración, más su reversa |
+| `franjaDentroDelHorario`, `validarFranjas`, `promesaEnInstante` | `packages/domain/src/franja-horaria.ts` |
+| `tipoDeDiaLocal` (canónico, reusado — no duplicado) | `packages/domain/src/tiempo.ts` |
+| `getPromiseTableVigente`, `getPromiseTableAt`, `getPromesaEnInstante`, `savePromiseTable` | `CircuitRepository`, `packages/db/src/repositories/index.ts` |
+| Pruebas de dominio (23 casos) | `franja-horaria.test.ts`, `tiempo.test.ts` |
+| Pruebas de integración contra la desechable (10 casos) | `promesa-por-franja.integration.test.ts` |
 
-## 3 · Las tres decisiones que esta ficha NO toma sola
+## 3 · Cinco decisiones de construcción que Asav no fijó explícitamente, y quedaron a mi criterio
 
-**A · ¿Se versiona la franja, o la tabla entera?** Una tabla de franjas es un **conjunto** («6–9 cada 10; 9–22 cada 20»). Si cada renglón lleva su propia vigencia, una corrección a medias deja un conjunto incoherente —dos franjas encimadas, o un hueco a las 9 de la mañana— y la base no lo puede impedir renglón por renglón.
+Documentadas aquí para que se corrijan en un solo lugar si no son las correctas.
 
-- *Propuesta:* versionar **el conjunto**: una tabla `circuit_promise_tables` con su vigencia, y las franjas colgando de ella. Cambiar la promesa cierra la tabla vigente y abre otra completa. Más filas, pero «la promesa del 12 de octubre» nunca es ambigua, y el candado de «una vigente por circuito» lo puede sostener la base como ya lo hace con las paradas.
-- *Costo:* editar una franja obliga a reescribir el conjunto. En una pantalla eso se ve natural — se edita la tabla, se guarda la tabla.
+**A · El traslape entre franjas se rechaza, igual que estar fuera de horario.** Dos franjas del mismo día y sentido cubriendo el mismo instante volvería ambigua «la promesa vigente en ese instante» — justo lo que 9.1c existe para que nunca lo sea. No es palabra textual de Asav, pero es la misma familia que el candado de «una vigente» que ya sostiene la base en paradas y asignaciones.
 
-**B · ¿La promesa distingue días?** Un sábado no tiene la frecuencia de un martes, y un domingo menos. Hoy el circuito no distingue día ninguno.
+**B · Guardar es todo o nada.** Si una sola franja del conjunto que se manda a guardar es inválida (fuera de horario, o se encima), **no se guarda ninguna**: se devuelven las rechazadas para que la pantalla las enseñe y quien captura corrija el conjunto entero. La alternativa —guardar las válidas y avisar aparte de las rechazadas— es defendible y está a una línea de cambiarse si se prefiere.
 
-- *Propuesta:* un campo de tipo de día con tres valores —`entre_semana · sabado · domingo`— y no siete. Siete días son siete tablas que nadie va a capturar; tres son las que un concesionario de Juárez sí sabe contestar. **Los días festivos no entran**: son un calendario, y un calendario es otra pieza.
-- *Alternativa si Asav lo prefiere más flaco para el 22:* arrancar sin días, con una sola tabla que vale todos los días, y agregar el tipo de día después. La migración aditiva lo permite; el riesgo es medir el sábado contra la promesa del martes durante el arranque.
+**C · Las franjas no cruzan medianoche, aunque el horario de servicio sí pueda.** `franjaDentroDelHorario` sí aguanta un horario nocturno (22:00–06:00, como `enHorarioDeServicio`), pero una franja individual que ella misma cruce medianoche se rechaza — se declara como dos. Simplificación de esta primera versión; Oasis–Centro no lo necesita (05:00–23:00).
 
-**C · ¿Qué hace la franja con el horario de servicio que ya existe?** `service_start_local`/`service_end_local` dicen cuándo abre el circuito; las franjas dicen cada cuánto pasa dentro de ese horario. Se pueden contradecir: una franja de 5 a 7 en un circuito que abre a las 6.
+**D · Sentido `NULL` en una franja se trata como «ambos» al comprobar traslapes.** Una franja sin sentido declarado se encima con cualquier franja del mismo horario, sea cual sea su sentido — porque promete para los dos.
 
-- *Propuesta:* la base **no** las cruza; la pantalla avisa al guardar («esta franja empieza antes de que el circuito abra») y deja guardar. Prohibirlo en la base obliga a un orden de captura que nadie adivina.
+**E · `sentido` en la tabla es el enum `sentido_circuito` que ya existe** (`ida`/`vuelta`), no uno nuevo — reusa lo que el circuito ya declara para trazados y paradas.
 
 ## 4 · Lo que esta ficha NO construye
 
-- **La historia del horario de servicio del circuito.** Es el pendiente con nombre, y es otro frente: si se arregla de pasada aquí, se arregla a medias.
-- **La tabla publicada en la app del pasajero** (8.2). Esta ficha deja el dato; publicarlo es el eslabón 3.
-- **Comparar lo medido contra la franja.** Eso es el eslabón 2, y necesita el detector.
+- **La pantalla de captura.** Vive en `/jstaff/circuitos/[id]`, junto al editor que ya existe; no se tocó en este PR.
+- **El endpoint / API route** para llamar a `savePromiseTable` desde la pantalla.
+- **La historia del horario de servicio del circuito** (`service_start_local`/`service_end_local`). Sigue siendo el pendiente con nombre del plan, y **esta migración nace con vigencia desde el primer día**, exactamente para no heredar ese defecto — es lo que Asav pidió recordar.
+- **La tabla publicada en la app del pasajero** (8.2). El dato ya se puede leer (`getPromiseTableVigente`); publicarlo es el eslabón 3.
+- **Comparar lo medido contra la franja.** Eso es el eslabón 2 — `getPromesaEnInstante` es la pieza que lo va a alimentar, ya construida y probada.
 
-## 5 · Pruebas mínimas
+## 5 · Pruebas hechas (contra la desechable, no supuestas)
 
-1. Un circuito sin franjas sigue contestando «sin declarar» donde hoy contesta eso: la 0031 no se deshace.
-2. Guardar una promesa nueva **no borra la anterior**: quedan las dos, una con `valid_to` y una vigente, y el candado impide dos vigentes.
-3. Buscar la promesa de un instante pasado devuelve la que valía entonces, no la de hoy.
-4. Franjas encimadas o con hueco: la pantalla lo dice antes de guardar (y la prueba comprueba el aviso, no sólo el guardado).
+1. El ejemplo del Marco —cada 10 de 6 a 9, cada 20 el resto del día— se guarda entero. ✓
+2. Todo o nada: una franja fuera de horario tumba el conjunto completo sin guardar nada. ✓
+3. Corregir la promesa cierra la vigente (con su motivo) y abre otra — nunca pisa una franja suelta. ✓
+4. El candado de la base: dos tablas vigentes del mismo circuito, a mano y sin pasar por el método, revientan. ✓
+5. Horario nocturno: una franja de la madrugada se acepta, una del mediodía se rechaza. ✓
+6. Los dos CHECK de la base —frecuencia positiva, no cruzar medianoche— muerden aunque se les mande directo, sin pasar por el dominio. ✓
+7. La promesa vigente **en un instante pasado** devuelve lo que se prometía entonces, no lo de hoy — la ley central de 9.1c. ✓
+8. La hora pico y el valle dan cadencias distintas nunca un promedio del día; un circuito sin promesa capturada dice «sin declarar», no inventa nada. ✓
