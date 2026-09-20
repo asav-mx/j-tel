@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { inArray } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import {
   createDb,
   createRepositories,
@@ -360,3 +360,42 @@ describe("orquestador · la transacción es de todo o nada", () => {
     expect((await marcaDe(unidad.W))?.getTime()).toBe(en(1).getTime());
   });
 });
+
+describe("orquestador · el candado", () => {
+  it("con la llave de la unidad tomada por otra conexión, la ronda se va sin esperar; al soltarla, sigue", async () => {
+    // La prueba 6 pasa igual si la segunda ronda llega tarde y no encuentra nada, así que no demuestra
+    // el candado. Ésta sí: otra transacción sostiene EXACTAMENTE la llave que usa el repositorio
+    // (`pasos:<circuito>:<unidad>:<versión>`), y la ronda debe contestar «ocupada» sin escribir ni esperar.
+    const llave = `pasos:${circuitoAtomicidad}:${unidad.W}:${VERSION_DEL_DETECTOR}`;
+    const ronda = () =>
+      repos.pasosPorParada.detectarUnidadEnRonda({
+        circuitId: circuitoAtomicidad,
+        unitId: unidad.W,
+        carrierAccountId: cuentaA,
+        asignadaDesde: new Date(AHORA.getTime() - 3 * 24 * 3_600_000),
+        corridorToleranceMeters: 150,
+        sentidos: ["ida"],
+        detectorVersion: VERSION_DEL_DETECTOR,
+        arranque: new Date(AHORA.getTime() - 24 * 3_600_000),
+        hastaMaximo: new Date(AHORA.getTime() - 15 * 60_000),
+        simular: false,
+      });
+
+    let durante: Awaited<ReturnType<typeof ronda>> | undefined;
+    let milisegundos = Infinity;
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${llave}, 0))`);
+      const inicio = Date.now();
+      durante = await ronda();
+      milisegundos = Date.now() - inicio;
+    });
+
+    expect(durante?.estado).toBe("ocupada");
+    expect(durante?.pasosGuardados).toBe(0);
+    expect(milisegundos).toBeLessThan(5_000); // `try`, no `wait`: no hizo cola detrás del candado
+
+    // Soltada la llave, la misma ronda ya puede correr: W ya consumió sus dos pings.
+    expect((await ronda()).estado).toBe("sin_novedad");
+  });
+});
+
