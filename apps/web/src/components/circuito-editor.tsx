@@ -193,6 +193,24 @@ export function CircuitoEditor({
   useEffect(dibujarParadas, [dibujarParadas]);
 
   // ── picar en el mapa: fantasma antes de confirmar ────────────────────────
+  /*
+   * `mapaListo` va en las dependencias, y no es adorno: **sin él el pico no se
+   * engancha nunca al reabrir un circuito que ya trae su trazado.**
+   *
+   * El mapa se crea dentro de un `import("leaflet")`, que es asíncrono, así que
+   * la primera corrida de este efecto ocurre con `mapa.current` todavía en
+   * null y se sale por la guardia de arriba. Si después nada cambia
+   * `trazados` ni `toleranciaMetros` —el caso normal: abrir un circuito
+   * capturado hace semanas— el efecto no vuelve a correr y el mapa se queda
+   * sin oyente. El trazado y las paradas sí se dibujan, porque sus efectos ya
+   * miraban `mapaListo`; sólo el clic se quedaba fuera.
+   *
+   * Y la pantalla decía «Pica sobre el mapa para poner una parada» igual, que
+   * es lo que lo volvía indescifrable: el mapa se ve completo, invita al pico,
+   * y el pico no hace nada. Sólo funcionaba subiendo un KML en la misma
+   * sesión, porque eso cambia `trazados` cuando el mapa ya existe — que es
+   * exactamente como se construyó y por eso nadie lo vio.
+   */
   useEffect(() => {
     const m = mapa.current;
     const mod = L.current;
@@ -242,7 +260,7 @@ export function CircuitoEditor({
     return () => {
       m.off("click", alPicar);
     };
-  }, [trazados, toleranciaMetros]);
+  }, [trazados, toleranciaMetros, mapaListo]);
 
   // ── acciones ────────────────────────────────────────────────────────────
   async function subirKml(archivo: File) {
