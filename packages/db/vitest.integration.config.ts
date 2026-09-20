@@ -34,6 +34,7 @@ export default defineConfig({
       "src/nombres-unicos.integration.test.ts",
       "src/choferes-unicos.integration.test.ts",
       "src/pausa.integration.test.ts",
+      "src/carrera-savefact.integration.test.ts",
     ],
     // Escriben en la misma rama desechable: en paralelo se pisan.
     fileParallelism: false,
