@@ -287,6 +287,23 @@ Tarde-excusable ≠ incumplimiento penalizable. (Su detección automática es te
 Cada contrato define su tolerancia, su consecuencia y qué tan estricto se mide la ruta.
 El hecho se calcula una vez y se guarda; verificación, reportes y notificaciones lo leen igual.
 La verificación produce la verdad; el enforcement se apoya en ella.
+El árbitro puede cerrar un caso sin pruebas, y cerrarlo es parte de juzgar. (3.10, enmienda del 19 de septiembre de 2026 — ver abajo.)
+
+
+3.10 — El árbitro que se rinde · enmienda del 19 de septiembre de 2026
+Qué resuelve. Un árbitro que no puede cerrar un caso sin pruebas nunca se va del estadio. Medido en producción el 19-sep: 4 163 318 re-verificaciones sobre 1 008 servicios —hasta 17 637 sobre uno solo, una por minuto durante doce días— porque el motor pedía evidencia que ya no podía llegar y nada lo detenía. Ningún servicio que sí se pudo juzgar necesitó más de un intento (mediana y p90 = 1 sobre 381 sellados): reintentar nunca cambió un veredicto.
+
+3.10 El árbitro puede cerrar un caso sin pruebas. Cuando el plazo venció y la evidencia no llegó en un tiempo razonable, el sistema sella «sin evidencia posible» y deja de preguntar.
+
+3.10a Cerrar no es condenar. El veredicto sigue siendo pendiente_evidencia: sin evidencia ≠ incumplimiento (ley intocable de arriba), y esta afirmación NO crea un cuarto veredicto. Lo que se cierra es la espera, no el juicio. La cara del cliente no cambia.
+
+3.10b La imposibilidad se mide contra la ventana, no contra la historia. La pregunta no es cuándo empieza la historia del transportista, sino si ESTA ventana todavía puede recibir algo. Se contesta con la marca de agua del archivador: si ya tiene dato más nuevo que el fin de la ventana y dentro de la ventana no dejó ni un punto, esa ventana ya se cerró vacía y se cierra el caso. Si el archivador todavía no alcanza la ventana, se espera — eso sí se resuelve solo. Preguntar por el primer dato de toda la historia del transportista mata la regla en cuanto exista un punto viejo de cualquier origen, y así estuvo muerta hasta hoy.
+
+3.10c El plazo en días es respaldo, no regla principal. Sirve para cuando no hay marca de agua con la cual afirmar nada. Sin marca de agua no se cierra por esta vía: la ausencia declarada vale más que una causa verosímil.
+
+3.10d Es reversible, y por eso se puede cerrar tranquilo. Si después aparece la evidencia —un relleno de huecos, un archivador que se puso al día, una re-verificación pedida por una persona— el caso se vuelve a abrir y se juzga. Cerrar sin pruebas es dejar de preguntar, no borrar la pregunta.
+
+3.10e Lo que se cierra queda dicho, con su razón y su cuenta. En el expediente consta qué se intentó, cuántas veces, desde cuándo y hasta cuándo, y por qué se dejó de intentar. Un cierre callado sería indistinguible de un olvido. El conteo de intentos es estado del viaje, no entradas del ledger: la bitácora existe para ser la historia, y una historia no se reescribe.
 
 
 Pieza 4 — Usuarios, roles y accesos
