@@ -35,6 +35,7 @@ export default defineConfig({
       "src/choferes-unicos.integration.test.ts",
       "src/pausa.integration.test.ts",
       "src/carrera-savefact.integration.test.ts",
+      "src/promesa-por-franja.integration.test.ts",
     ],
     // Escriben en la misma rama desechable: en paralelo se pisan.
     fileParallelism: false,
