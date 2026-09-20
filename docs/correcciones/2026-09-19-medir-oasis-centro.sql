@@ -262,3 +262,36 @@ FROM circuits c
 LEFT JOIN circuit_opens o ON o.circuit_id = c.id
 GROUP BY c.name
 ORDER BY c.name;
+
+
+-- ───────────────────────────────────────────────────────────────────
+-- PASO 9 · ¿La concesión tiene transportista ligado? EL QUE FALTABA.
+--
+-- Agregado el 19-sep, después de ensayar la captura en la desechable: el
+-- selector «Asignar una unidad» NO lista todas las unidades. Lista las
+-- unidades activas de los transportistas ligados a ESTA concesión por un
+-- `concession_carriers` con `valid_to` nulo. Sin esa liga el selector sale
+-- vacío, la pantalla no explica por qué, y no hay forma de asignar nada.
+--
+-- Medido: con la liga, el selector trae las unidades y la asignación entra;
+-- sin la liga, cero.
+--
+-- Si `unidades_asignables` sale en 0 para Oasis–Centro, eso —y no las
+-- paradas— es lo primero que hay que arreglar el lunes.
+-- ───────────────────────────────────────────────────────────────────
+
+SELECT c.name                                   AS circuito,
+       a.slug                                   AS concesion,
+       count(cc.id) FILTER (WHERE cc.valid_to IS NULL) AS transportistas_ligados,
+       coalesce(string_agg(DISTINCT ca.slug, ', ') FILTER (WHERE cc.valid_to IS NULL), '—') AS cuales,
+       (SELECT count(*) FROM concession_carriers cc2
+          JOIN units u ON u.carrier_account_id = cc2.carrier_account_id
+         WHERE cc2.concession_account_id = a.id
+           AND cc2.valid_to IS NULL
+           AND u.active)                        AS unidades_asignables
+FROM circuits c
+JOIN accounts a ON a.id = c.concession_account_id
+LEFT JOIN concession_carriers cc ON cc.concession_account_id = a.id
+LEFT JOIN accounts ca ON ca.id = cc.carrier_account_id
+GROUP BY c.name, a.slug, a.id
+ORDER BY c.name;
