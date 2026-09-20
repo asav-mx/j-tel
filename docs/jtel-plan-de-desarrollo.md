@@ -195,6 +195,7 @@ Los **pendientes con nombre** de abajo siguen vivos y no se repiten aquí.
 
 ## Pendientes con nombre (anotados para no perderse)
 
+- **Una prueba que no prueba nada, y nadie se había enterado.** `integration.test.ts > generateForProfile — alineación de calendario > rango sáb-22 a lun-24 ago-2026` falla en `origin/main` sin tocar nada (comprobado el 19-sep, sesión del lazo de re-verificación). Depende de los datos de la rama desechable, que es compartida entre sesiones, y CI no la corre —sólo corre contra la rama de pruebas de integración cuando alguien la invoca a mano—. Antes de tocarla: medir qué dato de la desechable cambió y por qué, y decidir si la prueba se arregla o si la desechable necesita un guardián de datos fijos.
 - **La bitácora de correcciones de identidad.** Corregir una unidad sobrescribe (decisión del 18-sep para C4-e): renombrar un número económico cambia cómo se lee toda su historia, y no queda registro de cómo se llamaba antes. No es decorativa. La pantalla lo avisa al corregir.
 - **Nombre único de usuario por cuenta** — la regla de C4-e alcanza a los usuarios, pero hoy no existe ninguna alta de usuarios y el nombre vive en Clerk. Entra con el Tramo 7 (altas por invitación o solicitud aprobada desde J-Staff).
 - **El evento de cambio de cuenta.** Hoy mover un dispositivo entre cuentas no deja fecha, así que no se puede decir «sin registro en esta cuenta». Cuando se construya (J-Staff), que sea un evento con fecha, y que el 6.14 lo diga al enmendarse.
