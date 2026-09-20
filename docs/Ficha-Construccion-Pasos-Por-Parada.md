@@ -4,6 +4,14 @@
 
 **Esta ficha no decide sola.** Trae ocho preguntas con su recomendación y su costo. **Las ocho son de Asav** — cada una fija qué va a poder afirmar el sistema, y una detección mal escogida produce números correctos que mienten (Marco §D).
 
+> **Decidido por Asav el 19-sep, sobre esta ficha.** Detección **por cruce sobre el trazado** (A-2). La hora interpolada **sí es medición**, con tres condiciones que mandan sobre el resto del documento:
+>
+> 1. **El paso se guarda como rango, no como instante**, y el ancho del rango es el hueco entre pings.
+> 2. **La comparación contra la promesa es banda contra banda:** si el rango cabe dentro de la franja, **sostuvo**; si cae entero fuera, **se agujeró**; si se traslapa, **sin datos** — nunca un veredicto a medias.
+> 3. **El hecho guarda su evidencia:** qué dos pings se usaron y qué hueco había, para poder recalcular sin perder el día.
+>
+> La §3 de abajo ya está reescrita con esto.
+
 **Para cuándo.** Los dos días de prueba son del **22 al 25 de septiembre**. Si la detección se decide el lunes, se construye contra esos días; si no, los días de prueba miden movimiento y no cumplimiento.
 
 **Proceso:** rama propia. **Migración y motor: PR, aviso con el número, y esperar.** El merge es de Asav.
@@ -14,11 +22,43 @@
 
 Un camión pasa por una parada. El GPS no lo dice: el GPS deja puntos sueltos y de ahí hay que deducirlo.
 
-**La cadencia manda sobre todo lo demás.** Medido en este repo con la flota vieja: la densidad cayó de ~40 s entre pings a ~73 s el 28 de julio. A 40 km/h, eso son **440 m entre punto y punto en el mejor caso y ~810 m en el peor**. Una parada urbana está a 300–500 m de la siguiente.
+**La cadencia manda sobre todo lo demás — y ya está medida.**
 
-La consecuencia es la que decide la decisión A: **un detector de radio —«entró a 50 m de la parada»— se salta paradas enteras** a esa cadencia, y las salta en silencio. No produce un error: produce un cero.
+### Lo que se creía, y de dónde venía
 
-**La cadencia real de los FTC927 no está medida.** Es un pendiente con nombre del plan vigente («la cadencia de reporte por tipo de servicio»), y **medirla es el primer paso de este frente**, antes de escribir el detector. Se mide sobre `telemetry_points` de los 4 aparatos instalados.
+Con la flota vieja de Umbrella, la densidad cayó de ~40 s entre pings a ~73 s el 28 de julio; a 40 km/h eso son **440 m entre punto y punto en el mejor caso y ~810 m en el peor**. Con esos números, un detector de radio —«entró a 50 m de la parada»— se salta paradas enteras y en silencio.
+
+### Lo que miden los FTC927 de Juárez Bus
+
+**Medido en producción el 19-sep**, sólo lectura con `jtel_readonly`, siete días, 05:00–23:00 hora de Juárez, sobre `telemetry_points`:
+
+| Aparato | Puntos (7 d) | Mediana entre puntos | p90 | Huecos > 5 min | Metros entre puntos con el camión andando (mediana / p90) |
+|---|---|---|---|---|---|
+| TK-FTC927-003 | 1 067 | **6 s** | 54 s | 35 | **61 m** / 112 m |
+| TK-FTC927-005 | 290 | **4 s** | 11 s | 6 | **32 m** / 106 m |
+| TK-FTC927-008 | 179 huecos | **5 s** | 2 591 s | 24 | **15 m** / 102 m |
+| TK-FTC927-004 | 60 | 56 s | 484 s | 9 | — |
+| TK-FTC927-001 | 13 | 75 s | 681 s | 3 | — (mudo desde el 14-sep; es el del reclamo) |
+
+**El aparato propio es entre siete y veintisiete veces más fino que Umbrella:** 15–61 m entre puntos con el camión andando, contra 440–810 m. **El argumento con el que se descartó el radio no aplica a este hardware, y conviene decirlo en voz alta en vez de dejar la conclusión en pie por inercia.**
+
+### Por qué el cruce sigue siendo el correcto, por otra razón
+
+Lo que no cambió son **los huecos**: 35 huecos de más de cinco minutos en un solo aparato en una semana. La cadencia fina es el comportamiento del aparato **mientras se mueve y tiene red**; cuando se cae la red o el camión se detiene, el hueco es de minutos u horas (máximos medidos de 35 776 s y 269 880 s).
+
+Un detector de radio **falla justo en el hueco**, y el hueco es donde está la parada — porque la parada es donde el camión se detiene. El cruce sobre el trazado **no se salta ninguna parada** aunque el hueco se trague el tramo completo: el cruce ocurre entre los dos puntos que encierran el hueco, y lo único que se ensancha es el rango de la hora. Que es exactamente lo que la decisión de Asav manda guardar.
+
+### Lo que esta medición destapó, y no estaba en la pregunta
+
+**Hoy no hay volumen porque los camiones no ruedan.** De los 7 aparatos, sólo el 003 dio señal en las últimas horas; 006 y 007 están en bodega (3 y 1 punto en siete días) y el 001 está mudo desde el 14-sep. En movimiento real: **134 puntos al día el 003, 38 el 005, 17 el 008**. Todo `juarez-bus` produjo **1 693 puntos en siete días**.
+
+Con los 8 rodando de verdad —pongamos 10 horas de movimiento al día a un punto cada 5 s— eso sería del orden de **7 000 puntos por unidad por día, ~57 000 al día para la flota, ~1.7 millones al mes**. Hoy la tabla entera lleva 4.47 millones de filas y 1 621 MB, acumulados desde Umbrella. **El arranque multiplica el ritmo de escritura por dos órdenes de magnitud**, y eso toca de lleno dos cosas que ya están anotadas: la lentitud de Servicios especiales y «cuántos GPS aguanta el sistema». No es de esta ficha, pero sale de su medición y no se puede dejar sin decir.
+
+### La pregunta de la cadencia, al revés de como se planteó
+
+El pendiente del plan —«la cadencia de reporte por tipo de servicio»— nació suponiendo que habría que **subirla** para el transporte público. Medido, **ya está por encima de lo que el detector necesita**: 4–6 s contra los 15–20 s que se pensaban pedir. La pregunta real pasa a ser la contraria — **si 4–6 s es más de lo que hace falta, y qué cuesta en SIM y en base** —, y se contesta con el consumo real de los 8 rodando, no antes.
+
+**Lo que este repo no puede contestar:** si el intervalo es configurable desde el aparato. El FTC927 habla protocolo `teltonika` contra Traccar en el puerto 5027 (`docs/Ficha-Compas.md`, `docs/Procedimiento-Traccar-Servidor.md`), y **no hay en este código ningún camino para cambiarle parámetros**: la configuración de un Teltonika se hace del lado del aparato —cable con el configurador, o FOTA WEB—, que es territorio del proveedor. Eso se confirma con Teltonika México, no con una consulta.
 
 ## 2 · Las ocho decisiones
 
@@ -28,8 +68,8 @@ La consecuencia es la que decide la decisión A: **un detector de radio —«ent
 2. **Cruce sobre el trazado** — la unidad se proyecta sobre el trazado (la geometría punto-a-segmento que ya existe y que ya usa el pegado de paradas); la parada tiene su propia abscisa sobre ese mismo trazado; hay paso cuando la proyección **cruza** esa abscisa entre dos puntos consecutivos. No se salta ninguna parada mientras la unidad vaya en ruta, porque el cruce ocurre aunque no haya un punto cerca.
 3. **Detención cerca de la parada** — hubo paso si el camión se detuvo ahí. Es lo que de verdad le importa al pasajero y es el más frágil: un semáforo a 30 m de la parada es una detención, y un camión que no abre puertas porque va lleno **sí pasó**.
 
-- *Recomendación:* **(2), el cruce.** Es coherente con todo lo que ya se construyó —la llegada se calcula proyectando sobre el trazado, no sobre las paradas, y así está escrito en `circuit_stops`— y es el único que sobrevive a 800 m entre pings.
-- *Lo que (2) cuesta:* la **hora** del paso cae entre dos pings y hay que interpolarla. Ver la decisión C.
+- **✓ DECIDIDO (Asav, 19-sep): (2), el cruce.** Es coherente con todo lo que ya se construyó —la llegada se calcula proyectando sobre el trazado, no sobre las paradas, y así está escrito en `circuit_stops`— y es el único que no se salta una parada cuando el hueco se traga el tramo.
+- *Lo que (2) cuesta:* la **hora** del paso cae entre dos pings. Ver la decisión C, también decidida.
 
 ### B · ¿Y si la unidad se sale del corredor?
 
@@ -41,8 +81,19 @@ Ya hay ley para eso: fuera del corredor **no se publica** (`corridor_tolerance_m
 
 Ésta es la pregunta del Marco, no de ingeniería. Si el cruce ocurre entre un ping de las 7:04:10 y otro de las 7:04:50, el paso «fue» a las 7:04:31 por regla de tres.
 
-- *Recomendación:* se guarda la hora interpolada **y se guarda al lado la incertidumbre** —los segundos entre los dos pings que la encierran—, y la pantalla nunca enseña un minuto exacto cuando la incertidumbre lo desmiente. Con 40 s entre pings, «7:04» es honesto; con 800 m entre pings, «pasó entre 7:04 y 7:06» es lo único honesto.
-- *La alternativa dura:* no interpolar, y guardar sólo el intervalo. Más honesto y más incómodo de dibujar.
+**✓ DECIDIDO (Asav, 19-sep): es medición, y se guarda como RANGO.** No se guarda un instante con una incertidumbre al lado: **el paso *es* el rango**, y su ancho es el hueco entre los dos pings que lo encierran. Un paso entre las 7:04:10 y las 7:04:50 es «entre 7:04:10 y 7:04:50», no «7:04:31».
+
+La consecuencia es la regla de comparación, y es la parte que evita el veredicto a medias:
+
+| Lo medido contra la franja | Lo que se dice |
+|---|---|
+| El rango **cabe dentro** de lo prometido | **sostuvo** |
+| El rango **cae entero fuera** | **se agujeró** |
+| El rango **se traslapa** con la orilla | **sin datos** |
+
+«Sin datos» no es un empate ni un «casi»: es la respuesta honesta cuando el instrumento no alcanza a distinguir. Con 4–6 s entre pings —lo medido— el rango es angosto y casi siempre cae de un lado; con un hueco de cinco minutos, el rango es ancho y **el sistema dice que no sabe**, que es justo lo que tiene que decir.
+
+Y el hecho **guarda su evidencia**: los dos pings y el hueco. Sin eso, mejorar el detector obligaría a tirar los días ya medidos.
 
 ### D · ¿Contra qué franja se juzga?
 
@@ -73,7 +124,7 @@ Si el detector mejora y se vuelve a correr sobre el 23 de septiembre, ¿qué pas
 
 - *Recomendación:* **apilar, no pisar** — el principio recurrente de la casa. Y conectarlo con la idea sin decidir del re-sellado que ya está anotada: si esto se decide aquí a la ligera, se decide de hecho para el árbitro del 9.12.
 
-## 3 · La forma que saldría de las recomendaciones
+## 3 · La forma, con las decisiones de Asav dentro
 
 ```
 circuit_stop_passes
@@ -83,14 +134,27 @@ circuit_stop_passes
   stop_version_id      -- la parada como estaba (decisión F)
   unit_id
   sentido              sentido_circuito NOT NULL
-  passed_at            TIMESTAMPTZ NOT NULL   -- interpolada (decisión C)
-  uncertainty_seconds  INTEGER NOT NULL       -- los segundos que la encierran
-  prev_point_id / next_point_id               -- la evidencia, no el resumen
+
+  -- EL PASO ES UN RANGO (decisión C). No hay `passed_at`: el instante no
+  -- existe, y darle una columna propia invita a leerlo como si existiera.
+  paso_desde           TIMESTAMPTZ NOT NULL   -- el ping de antes del cruce
+  paso_hasta           TIMESTAMPTZ NOT NULL   -- el ping de después
+  CHECK (paso_hasta >= paso_desde)
+
+  -- LA EVIDENCIA, no el resumen: con esto se recalcula sin perder el día.
+  ping_previo_id       UUID NOT NULL → telemetry_points(id)
+  ping_siguiente_id    UUID NOT NULL → telemetry_points(id)
+  hueco_segundos       INTEGER NOT NULL       -- el ancho, ya calculado
+
   detector_version     TEXT NOT NULL          -- para apilar (decisión H)
   detected_at          TIMESTAMPTZ NOT NULL
 ```
 
-Lo que **no** lleva: veredicto. En esta etapa nada se sella (9.3).
+**El ancho se guarda calculado además de derivable.** `paso_hasta - paso_desde` lo da, y tenerlo como columna es lo que permite filtrar «enséñame sólo los pasos con hueco menor a un minuto» sin pelearse con el plan de la consulta — que en esta casa ya costó caro una vez.
+
+Lo que **no** lleva: veredicto. En esta etapa nada se sella (9.3). La comparación banda contra banda se calcula al leer, contra la franja vigente en `paso_desde`.
+
+**Y un tipo que Postgres ya trae:** `tstzrange` haría el rango nativo, con operadores de contención y traslape (`@>`, `&&`) que son literalmente las tres filas de la tabla de la decisión C. Vale la pena evaluarlo contra las dos columnas sueltas al construir; lo que no cambia es que el paso es un rango.
 
 ## 4 · Lo que esta ficha NO construye
 
@@ -99,7 +163,8 @@ Lo que **no** lleva: veredicto. En esta etapa nada se sella (9.3).
 - **La terminal** donde esto se ve (eslabón 4).
 - **La atribución a un chofer**: los pasos son de la unidad. Ligarlos a una persona espera los beacons (eslabón 7), y el beacon es evidencia declarada, no prueba.
 
-## 5 · Lo primero que hay que medir, antes de escribir una línea
+## 5 · Lo que falta medir
 
-1. **La cadencia real de los FTC927** sobre `telemetry_points`: mediana y p90 de segundos entre puntos, por aparato, en horario de servicio. Decide si (1) el radio era siquiera viable y qué incertidumbre va a cargar cada paso.
-2. **La distancia entre paradas** de Oasis–Centro, en cuanto estén capturadas. Con la cadencia al lado, dice cuántas paradas se saltaría cada método — con números, no con opinión.
+1. ~~La cadencia real de los FTC927.~~ **Medida el 19-sep** — está en la §1.
+2. **La distancia entre paradas de Oasis–Centro**, en cuanto estén capturadas. Con la cadencia al lado dice, con números, cuánto va a medir el rango típico de un paso: a 61 m entre puntos y paradas cada 300–500 m, el rango de casi todos los pasos va a ser de segundos, no de minutos.
+3. **El consumo real de SIM de los 8 rodando**, para contestar la pregunta invertida de la cadencia. Se mide con el servicio andando, no antes.

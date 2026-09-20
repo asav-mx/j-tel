@@ -72,6 +72,10 @@ Y con lo demás de la 0025 a la 0033: la concesión, el circuito, la parada con 
 Corrido por Asav en Neon con `docs/correcciones/2026-09-19-medir-oasis-centro.sql`:
 
 - **Cero paradas en los dos circuitos** — ni Oasis–Centro ni el Corredor de prueba tienen una sola.
+- **El trazado sí está completo y cuadra con lo medido en agosto:** ida 661 puntos / 20.83 km, vuelta 456 / 16.44 km, subido el 27-ago. No hay que volver a subir el KML.
+- **Oasis–Centro está NO PUBLICADO**, que es lo correcto mientras se arma.
+- **Los dos circuitos traen el color de fábrica** (`#7C5CE0`): el dato existe desde la 0029 y **nadie lo ha escogido**. Escogerlo es parte de la tarde de captura, no un frente.
+- **La tabla por franja no existe, confirmado contra la base** — el PASO 7 devolvió cero renglones.
 - **Oasis–Centro no tiene ninguna asignación vigente.** Las cuatro que hay son del **Corredor de prueba**, y son **Meitrack de Umbrella que ya no reportan** — o sea, cuatro asignaciones que no publican nada.
 - **La fecha de arranque dice 10 de septiembre y ya pasó.** Con fecha pasada el circuito deja de estar «por arrancar» y queda a merced de la evidencia, que hoy no existe.
 
@@ -83,7 +87,9 @@ Falta una respuesta que la hoja no pedía y ahora sí: **si la concesión de Oas
 Dos cosas, y sólo una es código.
 
 - **La promesa por franja horaria** (Marco 9.1c). Hoy la promesa es **un solo número para todo el día** —`circuits.declared_frequency_minutes`— y la ley dice que una tabla publicada promete distinto en hora pico que en el valle. Sin esto, lo medido no tiene contra qué compararse, y comparar la hora pico contra el promedio del día es la afirmación falsa del alcance (Marco §D). **Tabla nueva con vigencia, que nazca sin el defecto que el plan ya tiene anotado** para el horario de servicio: cambiar la tabla no sobrescribe, cierra la vigente y abre la nueva. Ficha de construcción antes del código: `docs/Ficha-Construccion-Franja-Horaria.md`.
-- **Capturar las paradas de Oasis–Centro.** No es un frente de construcción: es una tarde de Asav sobre la pantalla que ya existe. Lo que sí hacía falta era que la pantalla sirviera — y no servía: al reabrir un circuito que ya trae su trazado, **picar el mapa no ponía nada** (#457, arreglado y probado en el navegador).
+- **Capturar las paradas de Oasis–Centro**, y escogerle su color. No es un frente de construcción: es una tarde de Asav sobre la pantalla que ya existe, en `/jstaff/circuitos`. Lo que sí hacía falta era que la pantalla sirviera — y no servía: al reabrir un circuito que ya trae su trazado, **picar el mapa no ponía nada** (#457, arreglado, probado en el navegador y en producción desde el 19-sep).
+
+  **Y antes que las paradas, una comprobación:** el selector «Asignar una unidad» sólo lista unidades de los transportistas **ligados a esa concesión** por un `concession_carriers` vigente. Sin liga sale vacío y la pantalla no dice por qué — que explicaría «Oasis–Centro sin ninguna asignación vigente» mejor que el olvido. Es el PASO 9 de la hoja de medición.
 
 **Cómo se sabe que está hecho:** Oasis–Centro tiene sus paradas cargadas con nombre, orden y sentido, su tabla por franja y su color, y un humano las capturó desde una pantalla.
 
@@ -96,7 +102,9 @@ Dos cosas, y sólo una es código.
 - Que la desviación se calcule **contra la franja vigente** del eslabón 1, con sus dos orillas — el adelanto daña igual que el atraso (9.1b).
 - **Nada se sella.** Es la etapa del metro (9.3): se mide, no se juzga.
 
-**La detección sigue abierta en la ley y no se cierra solo.** Las preguntas —qué cuenta como paso, con qué evidencia, qué hacer con el hueco— van en `docs/Ficha-Construccion-Pasos-Por-Parada.md`, para decidirlas con Asav antes de escribir código.
+**Decidido por Asav el 19-sep**, sobre `docs/Ficha-Construccion-Pasos-Por-Parada.md`: detección **por cruce sobre el trazado**; la hora interpolada **es medición y se guarda como rango**, con el ancho del hueco entre pings; la comparación contra la promesa es **banda contra banda** —cabe dentro: sostuvo; cae entero fuera: se agujeró; se traslapa: **sin datos**, nunca un veredicto a medias—; y el hecho **guarda su evidencia** (qué dos pings, qué hueco) para poder recalcular sin perder el día. Las decisiones restantes siguen en la ficha.
+
+**La cadencia ya está medida** (19-sep, producción, sólo lectura): los FTC927 dan **4–6 s entre puntos y 15–61 m con el camión andando** — entre siete y veintisiete veces más fino que Umbrella, y por encima de los 15–20 s que el pendiente «cadencia de reporte por tipo de servicio» iba a pedir. Lo que no cambió son los huecos: 35 de más de cinco minutos en un aparato en una semana, y ahí es donde el cruce gana.
 
 **Cómo se sabe que está hecho:** una unidad real da una vuelta real y la base registra sus pasos con la desviación correcta. Si esto falla, lo demás da igual.
 
@@ -197,7 +205,7 @@ Los **pendientes con nombre** de abajo siguen vivos y no se repiten aquí.
 - Marcar el lugar activo dentro de "Más" en el menú.
 - Las 23 fichas del Marco que apuntaban al skill viejo (revisión de Asav).
 - Las 5 reglas candidatas al Marco en `Trampas-De-Medicion.md` §2, sin ratificar.
-- **La cadencia de reporte por tipo de servicio.** La frecuencia cuesta SIM y no todas las unidades necesitan la misma: transporte público con app de pasajero pide frecuencia alta; transporte especial puede reportar menos, porque al árbitro le bastan las entradas y salidas de geocerca. Se decide con la medición real de consumo de los 8 — no antes.
+- **La cadencia de reporte por tipo de servicio — y la pregunta salió al revés.** La frecuencia cuesta SIM y no todas las unidades necesitan la misma: transporte público con app de pasajero pide frecuencia alta; transporte especial puede reportar menos, porque al árbitro le bastan las entradas y salidas de geocerca. **Medido el 19-sep en producción:** los FTC927 ya dan **4–6 s entre puntos** con el camión andando (mediana 6 s el 003, 4 s el 005, 5 s el 008), o sea **más fino de los 15–20 s que se iba a pedir**. La pregunta pasa a ser si eso es más de lo necesario, y qué cuesta — en SIM y en base. Dos datos que la misma medición destapó: hoy `juarez-bus` produce **1 693 puntos en siete días** porque los camiones casi no ruedan, y con los 8 en servicio real el ritmo sube del orden de **~57 000 puntos al día**, contra una tabla que hoy lleva 4.47 M de filas y 1 621 MB. **Se decide con el consumo real de los 8 — no antes**, pero el orden de magnitud ya se conoce y toca a la lentitud y a «cuántos GPS aguanta el sistema». Si el intervalo se puede bajar, es del lado de Teltonika (configurador o FOTA): en este repo no hay camino para cambiarle parámetros a un aparato.
 - **Horarios en puerta** (idea de Asav, 16-sep). En el piso de flota / monitoreo, el tablero de lo que viene: para especial, la lista de servicios por salir con su ventana (como pantalla de aeropuerto); para circuito, los circuitos en servicio con sus tablas de horario por parada. Un carrier con contrato y concesión ve los dos registros, uno por modalidad (Pieza 7). Es un cuarto/parte propio del piso de flota — se diseña en su momento, con prototipo.
 - **La deuda de Planta 47 · Turno A (Vernier, 6.17).** Los pendientes `llegada_sin_atribucion` del destino compartido se ven en Servicios especiales tal como están sellados. No es defecto de pantalla: es la guardia de atribución, decisión de motor y de negocio. El chip de pendientes tiene que poder llegar a cero el día que se salde; la cifra se mide cuando el cuarto ruede.
 - **La zona de la cuenta en las demás pantallas.** Servicios especiales usa la del mercado de la cuenta (respaldo: la política del contrato); C3 y las pantallas viejas siguen con `America/Ciudad_Juarez` fija.
