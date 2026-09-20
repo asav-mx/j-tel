@@ -4184,7 +4184,54 @@ export class ComplianceRepository {
       .values(data)
       .onConflictDoNothing()
       .returning();
-    return fact!;
+    if (fact) return fact;
+
+    /*
+     * AQUÍ MURIÓ EL MOTOR 13 702 VECES, y el `!` de antes es quien lo escondía.
+     *
+     * `service_occurrence_id` es único y el cron corre cada minuto. Cuando dos
+     * pasadas se enciman sobre el mismo servicio —medido el 19-sep-2026: el
+     * 41 % de los sellos consecutivos de una misma ocurrencia caen a menos de
+     * 45 s, con mínimo de 0 s— la segunda borra, inserta, y choca contra la
+     * fila que la primera acaba de escribir. `onConflictDoNothing` entonces
+     * **no devuelve ninguna fila**, y el `return fact!` afirmaba que sí.
+     *
+     * El `undefined` viajaba hasta `verification.ts`, que unas líneas después
+     * lee `fact.status` y revienta con «Cannot read properties of undefined
+     * (reading 'status')». Ese mensaje, 13 702 veces en 412 servicios, es la
+     * huella exacta de esta línea. El `!` no era un descuido de tipos: era la
+     * única afirmación del camino que la base no garantizaba.
+     *
+     * Qué se hace ahora: se devuelve **el hecho que ganó la carrera**. Las dos
+     * pasadas juzgan la misma evidencia y llegan al mismo veredicto, así que
+     * el que quedó es el mismo que habríamos escrito. Lo que NO se hace es
+     * fingir que no pasó nada: queda en consola para poder contarlo.
+     *
+     * ⚠ Esto quita el reventón, NO la carrera. Que dos pasadas del cron
+     * trabajen a la vez sobre el mismo servicio sigue siendo cierto, y es
+     * decisión aparte — ver `docs/Diagnostico-Cadencia-Del-Motor-2026-09-19.md`.
+     */
+    const [gano] = await this.db
+      .select()
+      .from(complianceFacts)
+      .where(eq(complianceFacts.serviceOccurrenceId, data.serviceOccurrenceId));
+
+    if (!gano) {
+      /*
+       * Ni insertó ni hay fila. No es la carrera: es otra cosa, y tiene que
+       * doler aquí y no tres funciones más adelante disfrazada de TypeError.
+       */
+      throw new Error(
+        `No se pudo guardar el hecho de la ocurrencia ${data.serviceOccurrenceId}: ` +
+          `el INSERT no devolvió fila y tampoco existe una previa.`,
+      );
+    }
+
+    console.warn(
+      `[verify] carrera sobre la ocurrencia ${data.serviceOccurrenceId}: ` +
+        `otra pasada del cron selló primero (${gano.status}). Se usa el hecho que ganó.`,
+    );
+    return gano;
   }
 
   /**
