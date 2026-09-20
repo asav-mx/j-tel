@@ -53,22 +53,143 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 
 ## Lo que sigue, en orden
 
-### Ahora
-1. **A · El archivero de Expedientes.** El cuarto deja de ser lista y se vuelve tablero + cajones: un buscador que atraviesa todo, «Piden atención» como bandeja del día, y cajones de Unidades · Equipos · Choferes con filas compactas. La pestaña Dispositivos muere; sus acciones se mudan al cajón Equipos. Prototipo aprobado el 19-sep; la ficha de construcción llega antes del código. Los lugares propios del carrier (base, taller) serán cajón cuando exista su fuente; los destinos de las plantas no viven aquí porque no son suyos.
-2. **B · La suite de transporte público.** La terminal de operación del carrier (tiempos de parada por ubicación, y con el tiempo conteo de pasajeros) y la app del pasajero rumbo a producto. Es donde hoy ruedan los GPS propios. Sesión de diseño con prototipo antes de construir, como Vernier.
+**Reordenado el 19 de septiembre de 2026 por un dato nuevo:** las 8 unidades **arrancan la semana del 28 de septiembre**, con **dos días de prueba entre el 22 y el 25**. Todo lo que sigue cuelga de esas dos fechas.
 
-### Después
-3. **C · Los pasillos.** Cómo se camina: el paso entre casas para quien tiene varias llaves, toda pieza abre su expediente desde cualquier pantalla, y el apagado de la piel vieja.
-4. **D · Migrar Planta y Corporativo** — cuando los Teltonika devuelvan la evidencia y las pausas se reanuden (oct–nov). Antes serían pantallas vacías.
-5. Higiene entre tramos: la lentitud de Servicios especiales (EXPLAIN pendiente), las cifras en cero, Protomaps antes de las 80 unidades.
+**La regla de esta cadena.** Se avanza de eslabón en eslabón y **no se salta ninguno**. Lo que se nos ocurra en el camino no entra: se manda a la **cola** del final, con una línea de por qué. La cola se revisa entre eslabones, nunca en medio.
+
+### Lo que ya existe y no hay que construir
+
+**Medido contra `origin/main` el 19-sep, no supuesto.** La primera versión de esta cadena daba por faltantes tres cosas que ya estaban, y se corrigen aquí para que nadie las construya dos veces:
+
+- **La pantalla de captura existe** — editor de circuito con KML y paradas sobre el mapa (#346), el alta de concesión y circuito (#348), el arreglo del mapa y el encuadre (#349), y un solo lugar para configurarlo (#364). Con su API completa: crear parada con el pegado rehecho en el servidor, corregirla con vigencia, trazado, publicación, unidades y rango. Trae además su propia lista de armado, que dice qué le falta a cada circuito.
+- **El color del circuito existe como dato** — `circuits.color_hex` desde la 0029, obligatorio, con su comprobación de hexadecimal y su valor de origen. La pantalla ya tiene el selector. Lo que puede faltar es que alguien lo **escoja**, que es otra cosa.
+- **El orden y el sentido de cada parada existen** — `circuit_stop_versions.orden` y `.sentido`, con el candado de una sola versión vigente por parada.
+
+Y con lo demás de la 0025 a la 0033: la concesión, el circuito, la parada con su QR, la asignación de unidad, el interruptor de publicación, la velocidad, los estados públicos, la fecha de arranque y el contador anónimo de aperturas.
+
+### Lo que Oasis–Centro tiene hoy, medido en producción el 19-sep
+
+Corrido por Asav en Neon con `docs/correcciones/2026-09-19-medir-oasis-centro.sql`:
+
+- **Cero paradas en los dos circuitos** — ni Oasis–Centro ni el Corredor de prueba tienen una sola.
+- **El trazado sí está completo y cuadra con lo medido en agosto:** ida 661 puntos / 20.83 km, vuelta 456 / 16.44 km, subido el 27-ago. No hay que volver a subir el KML.
+- **Oasis–Centro está NO PUBLICADO**, que es lo correcto mientras se arma.
+- **Los dos circuitos traen el color de fábrica** (`#7C5CE0`): el dato existe desde la 0029 y **nadie lo ha escogido**. Escogerlo es parte de la tarde de captura, no un frente.
+- **La tabla por franja no existe, confirmado contra la base** — el PASO 7 devolvió cero renglones.
+- **Oasis–Centro no tiene ninguna asignación vigente.** Las cuatro que hay son del **Corredor de prueba**, y son **Meitrack de Umbrella que ya no reportan** — o sea, cuatro asignaciones que no publican nada.
+- **La fecha de arranque dice 10 de septiembre y ya pasó.** Con fecha pasada el circuito deja de estar «por arrancar» y queda a merced de la evidencia, que hoy no existe.
+
+Falta una respuesta que la hoja no pedía y ahora sí: **si la concesión de Oasis–Centro tiene un transportista ligado**. El selector «Asignar una unidad» sólo lista unidades de los transportistas ligados a esa concesión por un `concession_carriers` vigente; sin liga sale vacío y la pantalla no dice por qué. Es el PASO 9 de la hoja, agregado después de ensayar la captura.
+
+### Eslabón 1 · La franja horaria, y las paradas de Oasis–Centro capturadas
+**Antes del 22 de septiembre.**
+
+Dos cosas, y sólo una es código.
+
+- **La promesa por franja horaria** (Marco 9.1c). Hoy la promesa es **un solo número para todo el día** —`circuits.declared_frequency_minutes`— y la ley dice que una tabla publicada promete distinto en hora pico que en el valle. Sin esto, lo medido no tiene contra qué compararse, y comparar la hora pico contra el promedio del día es la afirmación falsa del alcance (Marco §D). **Tabla nueva con vigencia, que nazca sin el defecto que el plan ya tiene anotado** para el horario de servicio: cambiar la tabla no sobrescribe, cierra la vigente y abre la nueva. Ficha de construcción antes del código: `docs/Ficha-Construccion-Franja-Horaria.md`.
+- **Capturar las paradas de Oasis–Centro**, y escogerle su color. No es un frente de construcción: es una tarde de Asav sobre la pantalla que ya existe, en `/jstaff/circuitos`. Lo que sí hacía falta era que la pantalla sirviera — y no servía: al reabrir un circuito que ya trae su trazado, **picar el mapa no ponía nada** (#457, arreglado, probado en el navegador y en producción desde el 19-sep).
+
+  **Y antes que las paradas, una comprobación:** el selector «Asignar una unidad» sólo lista unidades de los transportistas **ligados a esa concesión** por un `concession_carriers` vigente. Sin liga sale vacío y la pantalla no dice por qué — que explicaría «Oasis–Centro sin ninguna asignación vigente» mejor que el olvido. Es el PASO 9 de la hoja de medición.
+
+**Cómo se sabe que está hecho:** Oasis–Centro tiene sus paradas cargadas con nombre, orden y sentido, su tabla por franja y su color, y un humano las capturó desde una pantalla.
+
+### Eslabón 2 · El detector de pasos por parada — el frente grande
+**Del 22 al 25 de septiembre, los dos días de prueba.**
+
+**Éste es el trabajo de verdad, y la primera versión de esta cadena lo subestimaba.** La Pieza 9.2 ya es ley desde el 19-sep, pero **no tiene fuente: no hay una sola tabla de pasos por parada en ninguna migración**, y la propia Pieza dejó su detección abierta (9.11). Los dos días de prueba no miden nada si esto no existe.
+
+- Que un camión rodando produzca **pasos por parada**: unidad, parada, hora, sentido.
+- Que la desviación se calcule **contra la franja vigente** del eslabón 1, con sus dos orillas — el adelanto daña igual que el atraso (9.1b).
+- **Nada se sella.** Es la etapa del metro (9.3): se mide, no se juzga.
+
+**Decidido por Asav el 19-sep**, sobre `docs/Ficha-Construccion-Pasos-Por-Parada.md`: detección **por cruce sobre el trazado**; la hora interpolada **es medición y se guarda como rango**, con el ancho del hueco entre pings; la comparación contra la promesa es **banda contra banda** —cabe dentro: sostuvo; cae entero fuera: se agujeró; se traslapa: **sin datos**, nunca un veredicto a medias—; y el hecho **guarda su evidencia** (qué dos pings, qué hueco) para poder recalcular sin perder el día. Las decisiones restantes siguen en la ficha.
+
+**La cadencia ya está medida** (19-sep, producción, sólo lectura): los FTC927 dan **4–6 s entre puntos y 15–61 m con el camión andando** — entre 7 y 50 veces más fino que Umbrella, y por encima de los 15–20 s que el pendiente «cadencia de reporte por tipo de servicio» iba a pedir. Lo que no cambió son los huecos: 35 de más de cinco minutos en un aparato en una semana, y ahí es donde el cruce gana.
+
+**Cómo se sabe que está hecho:** una unidad real da una vuelta real y la base registra sus pasos con la desviación correcta. Si esto falla, lo demás da igual.
+
+### Eslabón 3 · La app del pasajero, publicada
+**Semana del 28 de septiembre, con el arranque.**
+
+**Está más construida de lo que este plan suponía:** `apps/publico` ya es una PWA con su dirección por circuito, buscador, mapa vivo, el hilo de paradas ordenado, el color de ruta, la escalera de cuatro estados y la fecha de arranque (#351, #353, #359, #373, #380). Existe despublicada, que es como debe estar.
+
+Lo que falta de verdad:
+
+- **La tabla publicada de cada parada** (8.2), que vale aunque no haya unidad en vivo — y que **depende del eslabón 1**: sin franja no hay tabla que publicar.
+- El ETA hasta el pasajero, calculado en su teléfono (8.3b).
+- Prender la publicación del circuito cuando el eslabón 1 esté completo.
+
+**Y una cuenta que conviene tener antes de culpar a la cadencia:** si el camión se ve brincar en la app, **no es el aparato**. La cadena es aparato **4–6 s** (medido) → recolector cada **30 s** (`docs/Procedimiento-Traccar-Servidor.md`) → TTL del CDN **15 s** → la app sondea cada **15 s** (`SONDEO_MS`). Los dos cuellos son el recolector y el TTL: **hasta 45 s de retraso**, y el propio endpoint lo dice en su comentario. Subirle la cadencia al aparato no movería ninguno de los dos. Si el brinco molesta, se ataca ahí — o dibujando el movimiento entre lecturas, que es otra conversación.
+
+**Cómo se sabe que está hecho:** un pasajero cualquiera abre la app en la calle y ve a qué hora pasa su camión.
+
+### Eslabón 4 · La terminal del carrier
+**Después del arranque, con días medidos de verdad.**
+
+Prototipo v2 aprobado en forma: https://claude.ai/artifact/7NmMd5oC7HzB9HYUZj8P25
+
+**También tiene piso:** `Operar` (#362) y el reporte de la jornada (#372) existen. Cuelgan de `/jstaff` por una razón que hay que resolver, no rodear: **una cuenta de tipo `concesion` no puede entrar a ninguna parte** — no tiene membresía, no hay cara propia y la guardia sólo conoce jstaff · cliente · carrier. Hoy sólo J-Staff captura y sólo J-Staff opera.
+
+- La forma de tres golpes: **piden atención · las cifras · los cajones**.
+- `Ver ‹parada›` como ficha, no expediente (9.8b).
+- La jornada de cada unidad en el circuito, dentro de la familia Actividad de su expediente.
+- El bloque «Ahora» sólo cuando la ventana es hoy y el circuito está abierto (9.2b).
+
+**Cómo se sabe que está hecho:** Asav abre la terminal al final de un día real y entiende cómo salió el servicio sin preguntarle a nadie.
+
+### Eslabón 5 · La forma estándar se vuelve ley, y Servicios especiales la hereda
+- La forma de tres golpes entra al skill de diseño como ley de todo cuarto.
+- **Servicios especiales** deja de ser lista interminable y adopta la misma forma.
+
+### Eslabón 6 · El editor del trazado, con calca
+**Cuando haya semanas de rastro real.**
+
+- La **calca** se dibuja del rastro propio de Compás — ya no hay Umbrella de dónde bajar KML.
+- Encima de la calca se corrige el trazado con clics.
+- **Subir un KML** se queda como puerta secundaria, para trazados que lleguen de fuera.
+
+### Eslabón 7 · Los beacons: identificación del chofer y nómina
+**Cuando lleguen los beacons de Teltonika.**
+
+- El FTC927 lee el beacon a bordo y lo liga al chofer (cierra la asignación chofer ↔ servicio).
+- **El beacon es evidencia declarada, no prueba:** en pantalla dice que el beacon iba a bordo, nunca que esa persona manejó. Con el contrato laboral que lo declara como identificación, eso basta para asistencia y nómina.
+- Desbloquea el ausentismo (9.5), que jamás se infiere del GPS.
+
+### Higiene que no espera su turno
+
+Se atienden entre eslabones porque se agravan con el arranque:
+
+- **La lentitud de Servicios especiales.** Con 8 unidades en vez de 4, los puntos se duplican. El EXPLAIN sigue sin correrse (`docs/correcciones/2026-09-19-medir-lentitud-servicios-especiales.sql`). **Vale más que cualquier prueba de carga.**
+- **Las cifras en cero** y **Protomaps antes de las 80 unidades**.
+- **Cuántos GPS aguanta el sistema.** Nunca se ha medido. Se simula la carga de 50, 200 y 500 unidades contra una base desechable. No es urgente; es una pregunta abierta que conviene no contestar de memoria.
+
+### Fuera de la cadena, y sigue vivo
+
+La cadena es el arranque, no el plan entero. Estos dos frentes no entran en ella y no se cancelan:
+
+- **C · Los pasillos.** El paso entre casas para quien tiene varias llaves, toda pieza abre su expediente desde cualquier pantalla, y el apagado de la piel vieja. **Le toca la puerta del concesionario del eslabón 4.**
+- **D · Migrar Planta y Corporativo** — cuando los Teltonika devuelvan la evidencia y las pausas se reanuden (oct–nov). Antes serían pantallas vacías.
 
 ### La muerte de la piel vieja — 30 de noviembre de 2026
-La piel vieja se apaga el 30-nov: las direcciones redirigen a la casa nueva y nada de datos se toca. Antes: (1) inventario medido contra el código de todo lo que sólo ella sabe hacer, en un PR de documento; (2) cada cosa del inventario recibe destino en la casa nueva o muerte declarada. Cada «hazlo en la vieja» de aquí a esa fecha es tiempo prestado.
+La piel vieja se apaga el 30-nov: las direcciones redirigen a la casa nueva y nada de datos se toca. Antes: (1) inventario medido contra el código de todo lo que sólo ella sabe hacer, en un PR de documento; (2) cada cosa del inventario recibe destino en la casa nueva o muerte declarada. Cada «hazlo en la vieja» de aquí a esa fecha es tiempo prestado. **El editor de circuito y Operar viven ahí: son parte del inventario.**
 
 ### Condición, no fecha
-6. **Los 80+ GPS y el alta por lote.** NO es una fecha: se hace SÓLO cuando el cuarto de Compás funcione y Asav lo haya visto trabajar con los 8. Umbrella se deja cuando la prueba convenza.
+- **Los 80+ GPS y el alta por lote.** NO es una fecha: se hace SÓLO cuando el cuarto de Compás funcione y Asav lo haya visto trabajar con los 8. Umbrella se deja cuando la prueba convenza.
    - **Decidido (17-sep):** se compran Teltonika nuevos; no se redirigen los 82 Meitrack de Umbrella. Razón: 37 son 3G (red muriendo), ~20 ya callados, cinco modelos por validar contra el árbitro, dos protocolos que mantener. Un solo modelo probado vale más que cinco por validar.
    - Pendiente sin prisa: mandar `0000,A10` por SMS al chip del 10249 (656 551 7725). Si contesta, evaluar redirigir sólo los 42 de 4G como puente mientras llegan los Teltonika.
+
+### La cola
+
+Lo que se nos ocurre mientras avanzamos. No interrumpe la cadena.
+
+- El vigilante que avisa (Lenore sobre la torre): cuando haya frecuencia real medida que vigilar.
+- Las cuentas de pasajero y la cartera de pago (Pieza 8.14): pieza propia, con abogado.
+- Guardar posiciones de pasajeros (8.15): pieza propia, con abogado y sus seis condiciones.
+- El árbitro del circuito, etapa 2 (9.12): sólo tras semanas de medición con servicio real.
+- Comparar circuitos entre sí (9.10): igual.
+- Horarios en puerta (idea del 16-sep) — también anotada abajo como pendiente con nombre.
+
+Los **pendientes con nombre** de abajo siguen vivos y no se repiten aquí.
 
 ---
 
@@ -86,7 +207,7 @@ La piel vieja se apaga el 30-nov: las direcciones redirigen a la casa nueva y na
 - Marcar el lugar activo dentro de "Más" en el menú.
 - Las 23 fichas del Marco que apuntaban al skill viejo (revisión de Asav).
 - Las 5 reglas candidatas al Marco en `Trampas-De-Medicion.md` §2, sin ratificar.
-- **La cadencia de reporte por tipo de servicio.** La frecuencia cuesta SIM y no todas las unidades necesitan la misma: transporte público con app de pasajero pide frecuencia alta; transporte especial puede reportar menos, porque al árbitro le bastan las entradas y salidas de geocerca. Se decide con la medición real de consumo de los 8 — no antes.
+- **La cadencia de reporte por tipo de servicio — y la pregunta salió al revés.** La frecuencia cuesta SIM y no todas las unidades necesitan la misma: transporte público con app de pasajero pide frecuencia alta; transporte especial puede reportar menos, porque al árbitro le bastan las entradas y salidas de geocerca. **Medido el 19-sep en producción:** los FTC927 ya dan **4–6 s entre puntos** con el camión andando (mediana 6 s el 003, 4 s el 005, 5 s el 008), o sea **más fino de los 15–20 s que se iba a pedir**. La pregunta pasa a ser si eso es más de lo necesario, y qué cuesta — en SIM y en base. Dos datos que la misma medición destapó: hoy `juarez-bus` produce **1 693 puntos en siete días** porque los camiones casi no ruedan, y con los 8 en servicio real el ritmo sube del orden de **~57 000 puntos al día**, contra una tabla que hoy lleva 4.47 M de filas y 1 621 MB. **Se decide con el consumo real de los 8 — no antes**, pero el orden de magnitud ya se conoce y toca a la lentitud y a «cuántos GPS aguanta el sistema». Si el intervalo se puede bajar, es del lado de Teltonika (configurador o FOTA): en este repo no hay camino para cambiarle parámetros a un aparato.
 - **Horarios en puerta** (idea de Asav, 16-sep). En el piso de flota / monitoreo, el tablero de lo que viene: para especial, la lista de servicios por salir con su ventana (como pantalla de aeropuerto); para circuito, los circuitos en servicio con sus tablas de horario por parada. Un carrier con contrato y concesión ve los dos registros, uno por modalidad (Pieza 7). Es un cuarto/parte propio del piso de flota — se diseña en su momento, con prototipo.
 - **La deuda de Planta 47 · Turno A (Vernier, 6.17).** Los pendientes `llegada_sin_atribucion` del destino compartido se ven en Servicios especiales tal como están sellados. No es defecto de pantalla: es la guardia de atribución, decisión de motor y de negocio. El chip de pendientes tiene que poder llegar a cero el día que se salde; la cifra se mide cuando el cuarto ruede.
 - **La zona de la cuenta en las demás pantallas.** Servicios especiales usa la del mercado de la cuenta (respaldo: la política del contrato); C3 y las pantallas viejas siguen con `America/Ciudad_Juarez` fija.
