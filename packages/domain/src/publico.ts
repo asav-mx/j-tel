@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { proyectarSobreTrazado } from "./trazado.js";
-import { localDateIso, localTimeHHMM } from "./tiempo.js";
+import { localDateIso, localTimeHHMM, instanteZonificado } from "./tiempo.js";
 
 /**
  * Lo que el endpoint público necesita decidir, sin base de datos.
@@ -106,6 +106,26 @@ export function enHorarioDeServicio(
   const fin = finLocal.slice(0, 5);
   if (inicio === fin) return true; // 24 horas: no hay hueco que dejar fuera.
   return inicio < fin ? hhmm >= inicio && hhmm < fin : hhmm >= inicio || hhmm < fin;
+}
+
+/**
+ * La apertura declarada del circuito, como el instante REAL de un día civil
+ * dado — no una hora suelta.
+ *
+ * Nace para el detector de pasos (Marco 9.2): el primer paso del día no
+ * tiene paso anterior contra el cual medir cuánto esperó el pasajero, así
+ * que se compara contra la apertura (decisión de Asav, 20-sep). Convertir
+ * `service_start_local` («05:00») en un instante exige la zona del circuito
+ * y el día civil en cuestión — sin eso, «05:00» no es un momento, es una
+ * hora que podría ser cualquier día.
+ */
+export function aperturaDeclaradaEnFecha(
+  serviceStartLocal: string,
+  fechaCivil: string,
+  zona: string,
+): Date {
+  const [hh, mm] = serviceStartLocal.slice(0, 5).split(":").map(Number);
+  return instanteZonificado(fechaCivil, (hh ?? 0) * 60 + (mm ?? 0), zona);
 }
 
 // ── Fecha de arranque del servicio ───────────────────────────────────────
@@ -470,6 +490,12 @@ export const ORIGEN_DEL_CIRCUITO = {
   pegadoDeParadasMetros: 25,
   corredorEnRutaMetros: 150,
   confianzaMinutos: 15,
+  /**
+   * ±50 %: ancha a propósito. La primera medición es de un servicio nuevo, y
+   * una banda estrecha desde el día uno pintaría todo rojo sin que el
+   * servicio hubiera fallado. Se aprieta con semanas medidas (Asav, 20-sep).
+   */
+  toleranciaLlegadaPct: 50,
   velocidadKmh: 20.5,
   colorHex: "#7C5CE0",
   horaInicioLocal: "05:00",
