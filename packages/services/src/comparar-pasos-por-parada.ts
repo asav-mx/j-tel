@@ -32,12 +32,21 @@ export interface PasoConVeredicto {
 
 export async function compararPasosDeParada(
   repos: Repositories,
-  input: { circuitId: string; stopId: string; sentido: "ida" | "vuelta"; detectorVersion: string },
+  input: {
+    concessionAccountId: string;
+    circuitId: string;
+    stopId: string;
+    sentido: "ida" | "vuelta";
+    detectorVersion: string;
+  },
 ): Promise<PasoConVeredicto[]> {
   const circuito = await repos.circuits.getCircuit(input.circuitId);
-  if (!circuito) throw new Error(`No existe el circuito ${input.circuitId}`);
+  // El circuito de otra cuenta responde igual que uno que no existe (el muro).
+  if (!circuito || circuito.concessionAccountId !== input.concessionAccountId) {
+    throw new Error(`No existe el circuito ${input.circuitId}`);
+  }
 
-  const todos = await repos.pasosPorParada.listarPasosDeParada(input.stopId);
+  const todos = await repos.pasosPorParada.listarPasosDeParada(input.concessionAccountId, input.stopId);
   const pasos = todos
     .filter((p) => p.sentido === input.sentido && p.detectorVersion === input.detectorVersion)
     .sort((a, b) => a.pasoDesde.getTime() - b.pasoDesde.getTime());

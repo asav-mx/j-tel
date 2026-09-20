@@ -170,6 +170,7 @@ describe("compararPasosDeParada · contra datos sembrados", () => {
     });
 
     const resultados = await compararPasosDeParada(repos, {
+      concessionAccountId: concesionId,
       circuitId: circuitoId,
       stopId,
       sentido: "ida",
@@ -180,5 +181,17 @@ describe("compararPasosDeParada · contra datos sembrados", () => {
     expect(resultados[0]!.veredicto).toBe("se_agujero"); // contra la apertura, muy tarde.
     expect(resultados[1]!.veredicto).toBe("sostuvo"); // 10 min después del anterior.
     expect(resultados[2]!.veredicto).toBe("se_agujero"); // 22 min después, fuera de ±50% de 10.
+  });
+
+  it("el muro: el circuito de otra cuenta responde igual que uno que no existe", async () => {
+    await expect(
+      compararPasosDeParada(repos, {
+        concessionAccountId: carrierId,
+        circuitId: circuitoId,
+        stopId,
+        sentido: "ida",
+        detectorVersion: "v1-comparacion",
+      }),
+    ).rejects.toThrow(`No existe el circuito ${circuitoId}`);
   });
 });

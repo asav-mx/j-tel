@@ -192,13 +192,22 @@ describe("detectarYGuardar · el detector completo, contra datos sembrados", () 
   });
 
   it("listarPasosDeParada devuelve lo guardado, ordenado por paso_desde", async () => {
-    const pasos = await repos.pasosPorParada.listarPasosDeParada(stopA.stopId);
+    const pasos = await repos.pasosPorParada.listarPasosDeParada(concesionId, stopA.stopId);
     expect(pasos.length).toBeGreaterThanOrEqual(1);
     expect(pasos[0]!.stopId).toBe(stopA.stopId);
   });
 
+  it("el muro: una cuenta que no es la dueña del circuito no lee los pasos — responde como si no existieran", async () => {
+    // Hay pasos guardados (la prueba de arriba), así que la lista vacía no es «aún no hay»: es el muro.
+    const propios = await repos.pasosPorParada.listarPasosDeParada(concesionId, stopA.stopId);
+    expect(propios.length).toBeGreaterThanOrEqual(1);
+
+    const ajenos = await repos.pasosPorParada.listarPasosDeParada(carrierId, stopA.stopId);
+    expect(ajenos).toEqual([]);
+  });
+
   it("apilar, no pisar: una segunda corrida con otra detectorVersion no borra la primera", async () => {
-    const antes = await repos.pasosPorParada.listarPasosDeParada(stopA.stopId);
+    const antes = await repos.pasosPorParada.listarPasosDeParada(concesionId, stopA.stopId);
 
     await repos.pasosPorParada.detectarYGuardar({
       carrierAccountId: carrierId,
@@ -212,7 +221,7 @@ describe("detectarYGuardar · el detector completo, contra datos sembrados", () 
       detectorVersion: "v2-corregido",
     });
 
-    const despues = await repos.pasosPorParada.listarPasosDeParada(stopA.stopId);
+    const despues = await repos.pasosPorParada.listarPasosDeParada(concesionId, stopA.stopId);
     expect(despues.length).toBe(antes.length + 1);
     expect(despues.map((p) => p.detectorVersion).sort()).toEqual(["v1-cruce", "v2-corregido"]);
 

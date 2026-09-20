@@ -7906,13 +7906,25 @@ export class PasoPorParadaRepository {
       .returning();
   }
 
-  /** Los pasos detectados de una parada, de todas las corridas que existan. */
-  async listarPasosDeParada(stopId: string) {
-    return this.db
-      .select()
+  /**
+   * Los pasos detectados de una parada, de todas las corridas que existan —
+   * **de los circuitos de esa cuenta y de ninguna otra**.
+   *
+   * El muro de cuenta (#441/#442): `circuit_stop_passes` no lleva columna de
+   * cuenta, así que la cuenta se deriva del circuito dueño de la parada
+   * (`circuits.concession_account_id`). Un `stopId` de otra cuenta responde
+   * igual que uno que no existe: lista vacía, sin distinguir. La cuenta es
+   * obligatoria a propósito — una lectura por `stopId` a secas es la puerta
+   * que `guardia-muro-cuenta.test.ts` vigila.
+   */
+  async listarPasosDeParada(concessionAccountId: string, stopId: string) {
+    const filas = await this.db
+      .select({ paso: circuitStopPasses })
       .from(circuitStopPasses)
-      .where(eq(circuitStopPasses.stopId, stopId))
+      .innerJoin(circuits, eq(circuits.id, circuitStopPasses.circuitId))
+      .where(and(eq(circuits.concessionAccountId, concessionAccountId), eq(circuitStopPasses.stopId, stopId)))
       .orderBy(circuitStopPasses.pasoDesde);
+    return filas.map((f) => f.paso);
   }
 
   /**
