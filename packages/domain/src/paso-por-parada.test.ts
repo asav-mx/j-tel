@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { detectarPasosEnRecorrido, type PuntoDeTelemetria, type ParadaParaDetectar } from "./paso-por-parada.js";
+import {
+  detectarPasosEnRecorrido,
+  ventanaEsperada,
+  compararRangoContraVentana,
+  compararPaso,
+  type PuntoDeTelemetria,
+  type ParadaParaDetectar,
+} from "./paso-por-parada.js";
 
 /*
  * Un trazado recto de 1 km sobre el ecuador, para que 1° de longitud valga
@@ -115,5 +122,96 @@ describe("detectarPasosEnRecorrido", () => {
     ];
     const pasos = detectarPasosEnRecorrido(puntos, TRAZADO, [parada("s1", 200)], CORREDOR_M);
     expect(pasos[0]!.huecoSegundos).toBe(4);
+  });
+});
+
+describe("ventanaEsperada", () => {
+  it("centra en ancla + frecuencia, con tolerancia como porcentaje de la frecuencia", () => {
+    const ancla = new Date("2026-09-20T07:00:00Z");
+    const v = ventanaEsperada(ancla, 10, 50); // cada 10 min, ±50% = ±5 min
+    expect(v.centro).toEqual(new Date("2026-09-20T07:10:00Z"));
+    expect(v.desde).toEqual(new Date("2026-09-20T07:05:00Z"));
+    expect(v.hasta).toEqual(new Date("2026-09-20T07:15:00Z"));
+  });
+
+  it("la misma tolerancia en minutos pesa distinto según la frecuencia — 2 min sobre 10 es 20%, sobre 30 no es nada", () => {
+    const ancla = new Date("2026-09-20T07:00:00Z");
+    const cada10 = ventanaEsperada(ancla, 10, 20); // ±20% de 10 min = ±2 min
+    const cada30 = ventanaEsperada(ancla, 30, 20); // ±20% de 30 min = ±6 min
+    expect((cada10.hasta.getTime() - cada10.desde.getTime()) / 60_000).toBe(4);
+    expect((cada30.hasta.getTime() - cada30.desde.getTime()) / 60_000).toBe(12);
+  });
+});
+
+describe("compararRangoContraVentana", () => {
+  const ventana = ventanaEsperada(new Date("2026-09-20T07:00:00Z"), 10, 50); // [07:05, 07:15]
+
+  it("el rango que cabe entero dentro sostuvo", () => {
+    const r = { pasoDesde: new Date("2026-09-20T07:08:00Z"), pasoHasta: new Date("2026-09-20T07:09:00Z") };
+    expect(compararRangoContraVentana(r, ventana)).toBe("sostuvo");
+  });
+
+  it("un rango entero ANTES de la ventana se agujeró — llegó temprano", () => {
+    const r = { pasoDesde: new Date("2026-09-20T07:00:00Z"), pasoHasta: new Date("2026-09-20T07:01:00Z") };
+    expect(compararRangoContraVentana(r, ventana)).toBe("se_agujero");
+  });
+
+  it("un rango entero DESPUÉS de la ventana se agujeró — llegó tarde. Misma etiqueta que temprano (9.1b)", () => {
+    const r = { pasoDesde: new Date("2026-09-20T07:20:00Z"), pasoHasta: new Date("2026-09-20T07:21:00Z") };
+    expect(compararRangoContraVentana(r, ventana)).toBe("se_agujero");
+  });
+
+  it("un rango que se traslapa con la orilla es sin_datos, nunca un veredicto a medias", () => {
+    const r = { pasoDesde: new Date("2026-09-20T07:03:00Z"), pasoHasta: new Date("2026-09-20T07:07:00Z") };
+    expect(compararRangoContraVentana(r, ventana)).toBe("sin_datos");
+  });
+
+  it("los bordes exactos de la ventana cuentan como sostuvo (cerrada)", () => {
+    const r = { pasoDesde: new Date("2026-09-20T07:05:00Z"), pasoHasta: new Date("2026-09-20T07:15:00Z") };
+    expect(compararRangoContraVentana(r, ventana)).toBe("sostuvo");
+  });
+});
+
+describe("compararPaso — el 'no inventes' en el único lugar donde puede aplicarse", () => {
+  const paso = { pasoDesde: new Date("2026-09-20T07:09:00Z"), pasoHasta: new Date("2026-09-20T07:10:00Z") };
+
+  it("con paso anterior y promesa, compara normal", () => {
+    const v = compararPaso(paso, {
+      pasoAnteriorHasta: new Date("2026-09-20T07:00:00Z"),
+      aperturaDeclarada: null,
+      frequencyMinutes: 10,
+      toleranciaPct: 50,
+    });
+    expect(v).toBe("sostuvo");
+  });
+
+  it("sin paso anterior, usa la apertura declarada como ancla — el primero del día", () => {
+    const v = compararPaso(paso, {
+      pasoAnteriorHasta: null,
+      aperturaDeclarada: new Date("2026-09-20T07:00:00Z"),
+      frequencyMinutes: 10,
+      toleranciaPct: 50,
+    });
+    expect(v).toBe("sostuvo");
+  });
+
+  it("sin ancla NI apertura: sin_datos, no se inventa un ancla", () => {
+    const v = compararPaso(paso, {
+      pasoAnteriorHasta: null,
+      aperturaDeclarada: null,
+      frequencyMinutes: 10,
+      toleranciaPct: 50,
+    });
+    expect(v).toBe("sin_datos");
+  });
+
+  it("sin promesa vigente en el instante del paso: sin_datos, no se inventa una frecuencia", () => {
+    const v = compararPaso(paso, {
+      pasoAnteriorHasta: new Date("2026-09-20T07:00:00Z"),
+      aperturaDeclarada: null,
+      frequencyMinutes: null,
+      toleranciaPct: 50,
+    });
+    expect(v).toBe("sin_datos");
   });
 });

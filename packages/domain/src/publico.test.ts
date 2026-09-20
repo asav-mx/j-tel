@@ -5,6 +5,7 @@ import {
   huellaDeApertura,
   enHorarioDeServicio,
   yaArrancoElServicio,
+  aperturaDeclaradaEnFecha,
   antiguedadSegundos,
   esFresco,
   sentidoDeLaUnidad,
@@ -509,5 +510,24 @@ describe("estadoDelCircuito · la escalera", () => {
     const sinNinguna = plan.filter((u) => !u.enRuta);
     expect(sinNinguna.filter((u) => u.enRuta).length).toBe(0);
     expect(estadoDelCircuito({ ...base, unidades: sinNinguna })).toBe("por_horario");
+  });
+});
+
+describe("aperturaDeclaradaEnFecha", () => {
+  it("convierte una hora suelta en el instante real de ese día, en esa zona", () => {
+    const i = aperturaDeclaradaEnFecha("05:00", "2026-09-20", "America/Ciudad_Juarez");
+    // Juárez está en UTC-6 en septiembre (horario de verano, sin cambio hasta noviembre).
+    expect(i.toISOString()).toBe("2026-09-20T11:00:00.000Z");
+  });
+
+  it("acepta HH:MM:SS y sólo usa las primeras cinco posiciones", () => {
+    const i = aperturaDeclaradaEnFecha("05:00:00", "2026-09-20", "America/Ciudad_Juarez");
+    expect(i.toISOString()).toBe("2026-09-20T11:00:00.000Z");
+  });
+
+  it("el mismo horario en otro día da otro instante — no es una hora suelta", () => {
+    const a = aperturaDeclaradaEnFecha("05:00", "2026-09-20", "America/Ciudad_Juarez");
+    const b = aperturaDeclaradaEnFecha("05:00", "2026-09-21", "America/Ciudad_Juarez");
+    expect(b.getTime() - a.getTime()).toBe(24 * 60 * 60_000);
   });
 });
