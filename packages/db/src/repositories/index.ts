@@ -11,6 +11,7 @@ import {
   promesaEnInstante,
   tipoDeDiaLocal,
   localTimeHHMM,
+  detectarPasosEnRecorrido,
 } from "@jtel/domain";
 import type {
   PrefijoDeModelo,
@@ -20,6 +21,7 @@ import type {
   FranjaCapturada,
   FranjaRechazada,
   PromesaEnInstante,
+  PasoDetectado,
 } from "@jtel/domain";
 import { operationalScopeColumns } from "@jtel/domain";
 import type { Database } from "../index.js";
@@ -87,6 +89,7 @@ import {
   circuitUnitAssignments,
   circuitPromiseTables,
   circuitPromiseBands,
+  circuitStopPasses,
   concessionCarriers,
   concessionProfiles,
   markets,
@@ -7808,6 +7811,163 @@ export class ExpedienteRepository {
   }
 }
 
+/**
+ * El detector de pasos por parada (Marco 9.2 / 9.11, 0045) — eslabón 2 de la
+ * cadena del arranque.
+ *
+ * **Por lote, sobre `telemetry_points`** (decisión G, recomendación de la
+ * ficha): corre detrás del recolector, no en vivo. En vivo obliga a acertar
+ * a la primera; por lote se puede volver a correr sobre los mismos días
+ * cuando el detector mejore — que es justo lo que necesitan los días de
+ * prueba del 22 al 25.
+ */
+export class PasoPorParadaRepository {
+  constructor(private db: Database) {}
+
+  /**
+   * Los puntos de UNA unidad en una ventana, CON su id — es la evidencia
+   * (decisión C: el hecho guarda qué dos pings usó). `getForUnitsWindow` de
+   * `TelemetryRepository` no trae el id porque nadie lo había necesitado
+   * hasta ahora.
+   */
+  async puntosDeUnidadEnVentana(carrierAccountId: string, unitId: string, desde: Date, hasta: Date) {
+    return this.db
+      .select({
+        id: telemetryPoints.id,
+        lat: telemetryPoints.latitude,
+        lon: telemetryPoints.longitude,
+        recordedAt: telemetryPoints.recordedAt,
+      })
+      .from(telemetryPoints)
+      .where(
+        and(
+          eq(telemetryPoints.carrierAccountId, carrierAccountId),
+          eq(telemetryPoints.unitId, unitId),
+          gte(telemetryPoints.recordedAt, desde),
+          lte(telemetryPoints.recordedAt, hasta),
+        ),
+      )
+      .orderBy(telemetryPoints.recordedAt);
+  }
+
+  /**
+   * Las paradas vigentes de un circuito que sirven a un sentido — las de ese
+   * sentido más las que sirven a los dos (`sentido IS NULL`).
+   */
+  async paradasVigentesParaSentido(circuitId: string, sentido: "ida" | "vuelta") {
+    return this.db
+      .select({
+        stopId: circuitStops.id,
+        stopVersionId: circuitStopVersions.id,
+        latitude: circuitStopVersions.latitude,
+        longitude: circuitStopVersions.longitude,
+      })
+      .from(circuitStopVersions)
+      .innerJoin(circuitStops, eq(circuitStops.id, circuitStopVersions.stopId))
+      .where(
+        and(
+          eq(circuitStops.circuitId, circuitId),
+          isNull(circuitStops.retiredAt),
+          isNull(circuitStopVersions.validTo),
+          or(isNull(circuitStopVersions.sentido), eq(circuitStopVersions.sentido, sentido)),
+        ),
+      );
+  }
+
+  /**
+   * Guarda los pasos detectados. **Apila, no pisa** (decisión H): no hay
+   * `onConflictDoUpdate`. Volver a correr el detector sobre el mismo tramo
+   * produce filas nuevas junto a las anteriores, distinguibles por
+   * `detectorVersion` — decidir qué hacer con las viejas de una corrida
+   * superada es del orquestador que llame esto, no de aquí.
+   */
+  async guardarPasos(
+    pasos: PasoDetectado[],
+    contexto: { circuitId: string; unitId: string; sentido: "ida" | "vuelta"; detectorVersion: string },
+  ) {
+    if (pasos.length === 0) return [];
+    return this.db
+      .insert(circuitStopPasses)
+      .values(
+        pasos.map((p) => ({
+          circuitId: contexto.circuitId,
+          stopId: p.stopId,
+          stopVersionId: p.stopVersionId,
+          unitId: contexto.unitId,
+          sentido: contexto.sentido,
+          pasoDesde: p.pasoDesde,
+          pasoHasta: p.pasoHasta,
+          huecoSegundos: p.huecoSegundos,
+          pingPrevioId: p.pingPrevioId,
+          pingSiguienteId: p.pingSiguienteId,
+          detectorVersion: contexto.detectorVersion,
+        })),
+      )
+      .returning();
+  }
+
+  /**
+   * Los pasos detectados de una parada, de todas las corridas que existan —
+   * **de los circuitos de esa cuenta y de ninguna otra**.
+   *
+   * El muro de cuenta (#441/#442): `circuit_stop_passes` no lleva columna de
+   * cuenta, así que la cuenta se deriva del circuito dueño de la parada
+   * (`circuits.concession_account_id`). Un `stopId` de otra cuenta responde
+   * igual que uno que no existe: lista vacía, sin distinguir. La cuenta es
+   * obligatoria a propósito — una lectura por `stopId` a secas es la puerta
+   * que `guardia-muro-cuenta.test.ts` vigila.
+   */
+  async listarPasosDeParada(concessionAccountId: string, stopId: string) {
+    const filas = await this.db
+      .select({ paso: circuitStopPasses })
+      .from(circuitStopPasses)
+      .innerJoin(circuits, eq(circuits.id, circuitStopPasses.circuitId))
+      .where(and(eq(circuits.concessionAccountId, concessionAccountId), eq(circuitStopPasses.stopId, stopId)))
+      .orderBy(circuitStopPasses.pasoDesde);
+    return filas.map((f) => f.paso);
+  }
+
+  /**
+   * El detector completo: lee los puntos y las paradas vigentes, detecta por
+   * cruce sobre el trazado y guarda. Una llamada, una unidad, un sentido, una
+   * ventana — el orquestador que reparte por unidad y por día vive fuera de
+   * este repositorio.
+   */
+  async detectarYGuardar(input: {
+    carrierAccountId: string;
+    circuitId: string;
+    unitId: string;
+    sentido: "ida" | "vuelta";
+    trazado: Array<[number, number]>;
+    corridorToleranceMeters: number;
+    desde: Date;
+    hasta: Date;
+    detectorVersion: string;
+  }) {
+    const [puntosCrudos, paradas] = await Promise.all([
+      this.puntosDeUnidadEnVentana(input.carrierAccountId, input.unitId, input.desde, input.hasta),
+      this.paradasVigentesParaSentido(input.circuitId, input.sentido),
+    ]);
+
+    const puntos = puntosCrudos.map((p) => ({ id: p.id, lat: p.lat, lon: p.lon, recordedAt: p.recordedAt }));
+    const paradasParaDetectar = paradas.map((p) => ({
+      stopId: p.stopId,
+      stopVersionId: p.stopVersionId,
+      lat: p.latitude,
+      lon: p.longitude,
+    }));
+
+    const pasos = detectarPasosEnRecorrido(puntos, input.trazado, paradasParaDetectar, input.corridorToleranceMeters);
+
+    return this.guardarPasos(pasos, {
+      circuitId: input.circuitId,
+      unitId: input.unitId,
+      sentido: input.sentido,
+      detectorVersion: input.detectorVersion,
+    });
+  }
+}
+
 export function createRepositories(db: Database) {
   return {
     procedencia: new ProcedenciaRepository(db),
@@ -7838,6 +7998,7 @@ export function createRepositories(db: Database) {
     expedientes: new ExpedienteRepository(db),
     vernier: new VernierRepository(db),
     pausas: new PausasRepository(db),
+    pasosPorParada: new PasoPorParadaRepository(db),
   };
 }
 

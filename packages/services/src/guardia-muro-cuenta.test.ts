@@ -158,3 +158,86 @@ describe("guardia · el motor lee la evidencia con el muro de cuenta", () => {
     });
   }
 });
+
+/**
+ * El mismo muro, en `circuit_stop_passes` (los pasos por parada del detector).
+ *
+ * La tabla no lleva columna de cuenta: la cuenta se deriva del circuito dueño
+ * (`circuits.concession_account_id`). Una lectura por `stop_id` a secas —lo que
+ * fue `listarPasosDeParada(stopId)`— le entrega a cualquier cuenta los pasos de
+ * las paradas de otra. Y esos pasos son la evidencia de la comparación banda
+ * contra banda: el mismo daño que la telemetría por IMEI, con la misma
+ * apariencia de dato correcto.
+ *
+ * Misma disciplina que arriba: la prueba lee el código, no el comportamiento,
+ * para que una lectura nueva sin cuenta nazca en rojo.
+ *
+ *  1. **Nadie más toca la tabla.** Solo el esquema, el repositorio de pasos y
+ *     la prueba de integración que siembra filas. Una pantalla o un servicio
+ *     que la consulte por su cuenta se salta el muro: tiene que pasar por el
+ *     repositorio.
+ *  2. **Dentro del repositorio, todo lo que no sea insertar cruza con
+ *     `circuits.concessionAccountId`.** Insertar no lee; la cuenta la trae el
+ *     circuito con el que el orquestador llama.
+ */
+const TOCAN_LA_TABLA_DE_PASOS: Record<string, string> = {
+  "packages/db/src/schema/index.ts": "Define la tabla.",
+  "packages/db/src/repositories/index.ts": "El único repositorio que la lee; su lectura se revisa abajo.",
+  "packages/db/src/paso-por-parada.integration.test.ts":
+    "Siembra y limpia filas en la base de prueba (nunca producción); no es un camino de la aplicación.",
+};
+
+function metodosDelRepositorioDePasos(): string[] {
+  const repo = leer("packages/db/src/repositories/index.ts");
+  const inicio = repo.indexOf("export class PasoPorParadaRepository");
+  if (inicio < 0) return [];
+  const resto = repo.slice(inicio);
+  const fin = resto.indexOf("\nexport ", 1);
+  // Sin comentarios: uno que nombre la tabla (o el muro) no puede contar como lectura (ni como muro).
+  const clase = (fin < 0 ? resto : resto.slice(0, fin)).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  return clase.split(/\n(?=  (?:async\s+)?[a-zA-Z]+\()/);
+}
+
+describe("guardia · nadie lee los pasos por parada sin el muro de cuenta", () => {
+  const archivos = arboles().flatMap(fuentes).filter((a) => !(a in EXENTOS));
+
+  it("el repositorio de pasos existe y el barrido lo ve (guarda contra un falso verde)", () => {
+    const metodos = metodosDelRepositorioDePasos();
+    expect(metodos.length).toBeGreaterThan(2);
+    expect(metodos.some((m) => /async\s+listarPasosDeParada\s*\(\s*concessionAccountId/.test(m))).toBe(true);
+    for (const a of Object.keys(TOCAN_LA_TABLA_DE_PASOS)) expect(archivos).toContain(a);
+  });
+
+  it("ningún archivo fuera de la lista toca circuit_stop_passes", () => {
+    const culpables = archivos.filter(
+      (a) => !(a in TOCAN_LA_TABLA_DE_PASOS) && /circuitStopPasses|circuit_stop_passes/.test(leer(a)),
+    );
+    expect(
+      culpables,
+      "Estos archivos consultan circuit_stop_passes por su cuenta. La única lectura válida es " +
+        "repos.pasosPorParada.listarPasosDeParada(concessionAccountId, stopId), que filtra por " +
+        "la cuenta dueña del circuito. Ver el comentario de ese método.",
+    ).toEqual([]);
+  });
+
+  it("todo método del repositorio que lee la tabla la cruza con la cuenta del circuito", () => {
+    const sinMuro = metodosDelRepositorioDePasos()
+      .map((m) => m.replace(/\.insert\(circuitStopPasses\)/g, ""))
+      .filter((m) => /circuitStopPasses|circuit_stop_passes/.test(m))
+      .filter((m) => !m.includes("circuits.concessionAccountId"))
+      .map((m) => m.trim().split("\n")[0]);
+    expect(
+      sinMuro,
+      "Estos métodos de PasoPorParadaRepository leen circuit_stop_passes sin filtrar por " +
+        "circuits.concessionAccountId. Sin ese cruce, una cuenta lee los pasos de otra.",
+    ).toEqual([]);
+  });
+
+  it("la lista de archivos que tocan la tabla es exactamente la escrita aquí", () => {
+    expect(Object.keys(TOCAN_LA_TABLA_DE_PASOS)).toEqual([
+      "packages/db/src/schema/index.ts",
+      "packages/db/src/repositories/index.ts",
+      "packages/db/src/paso-por-parada.integration.test.ts",
+    ]);
+  });
+});

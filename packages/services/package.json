@@ -14,6 +14,7 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
+    "test:integration": "TZ=UTC vitest run --config vitest.integration.config.ts",
     "real-e2e": "tsx src/real-e2e.ts",
     "archive": "tsx src/archive-run.ts",
     "escenario-flota-compas-revisar": "tsx src/escenario-flota-compas-revisar.ts",
