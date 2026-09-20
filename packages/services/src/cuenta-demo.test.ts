@@ -170,6 +170,11 @@ describe("el motor no sella sobre cuentas de ejemplo", () => {
         contarVencidasEnPausa: vi.fn().mockResolvedValue(0),
       },
       compliance: { addLedgerEntry: vi.fn() },
+      // La llave de la corrida: sin otra pasada encima, el motor entra normal.
+      telemetry: {
+        tomarLlaveDelMotor: vi.fn().mockResolvedValue(true),
+        soltarLlaveDelMotor: vi.fn(),
+      },
     };
     const avisos: string[] = [];
     const warn = vi.spyOn(console, "warn").mockImplementation((m) => {

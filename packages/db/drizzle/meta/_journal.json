@@ -302,6 +302,13 @@
       "when": 1790035200000,
       "tag": "0042_choferes_identidad_unica",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1790121600000,
+      "tag": "0043_intentos_de_verificacion",
+      "breakpoints": true
     }
   ]
 }

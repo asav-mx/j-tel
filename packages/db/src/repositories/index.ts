@@ -4178,6 +4178,17 @@ export class ComplianceRepository {
       aparatos: number;
       puntos: number;
     } | null;
+    /**
+     * Cuándo se materializó este veredicto. Por omisión, ahora.
+     *
+     * Se pasa explícito cuando un reintento **no cambió nada**: el hecho se
+     * borra y se vuelve a insertar en cada pasada, y dejar que la fecha se
+     * corriera hacía que un veredicto del 7 de septiembre dijera haberse
+     * materializado hoy. Además de falso, rompía el acta: `ledger-pairing.ts`
+     * busca el sello posterior a esta fecha, y si avanza sin que se escriba un
+     * sello nuevo, no queda nada que emparejar.
+     */
+    materializedAt?: Date;
   }) {
     const [fact] = await this.db
       .insert(complianceFacts)
@@ -4588,6 +4599,52 @@ export class EvidenceRepository {
   ) {
     await this.db.update(trips).set({ evidenceStatus: status }).where(eq(trips.id, tripId));
   }
+
+  /**
+   * Cuenta un intento de verificación de este viaje y devuelve la cuenta.
+   *
+   * **Estado, no historia** (Marco 3.10e). Es lo que sustituyó a escribir una
+   * entrada de ledger por intento — 4 163 318 de ellas sobre 1 008 servicios,
+   * medidas el 19 de septiembre de 2026. El ledger existe para ser la
+   * historia, y una historia no se reescribe cada minuto; una cuenta sí.
+   *
+   * Se hace en la base y no leyendo-sumando-escribiendo: con dos pasadas del
+   * cron encimadas, leer y después escribir pierde intentos, y este contador
+   * es justo el que decide cuándo el motor deja de insistir.
+   *
+   * `primer_intento_at` se pone una sola vez y no se vuelve a tocar: con
+   * `ultimo_intento_at` es lo que conserva «se intentó N veces, de tal fecha a
+   * tal fecha» sin un renglón por intento.
+   */
+  async registrarIntentoDeVerificacion(tripId: string): Promise<{
+    intentos: number;
+    primerIntentoAt: Date | null;
+    ultimoIntentoAt: Date | null;
+  }> {
+    const ahora = new Date();
+    const [fila] = await this.db
+      .update(trips)
+      .set({
+        intentosDeVerificacion: sql`${trips.intentosDeVerificacion} + 1`,
+        primerIntentoAt: sql`coalesce(${trips.primerIntentoAt}, ${ahora.toISOString()}::timestamptz)`,
+        ultimoIntentoAt: ahora,
+      })
+      .where(eq(trips.id, tripId))
+      .returning({
+        intentos: trips.intentosDeVerificacion,
+        primerIntentoAt: trips.primerIntentoAt,
+        ultimoIntentoAt: trips.ultimoIntentoAt,
+      });
+
+    /*
+     * Sin fila el viaje no existe, y eso no es un contador en cero: es que
+     * alguien pidió verificar algo que no está. Se dice, en vez de devolver un
+     * cero que el freno leería como «apenas va empezando» — el mismo tipo de
+     * mentira cómoda que costó los 4.16 millones.
+     */
+    if (!fila) throw new Error(`No existe el viaje ${tripId}: no se pudo contar el intento.`);
+    return fila;
+  }
 }
 
 export class MembershipRepository {
@@ -4859,6 +4916,47 @@ export class TelemetryRepository {
    * Va por el índice (carrier_account_id, recorded_at), así que es una lectura
    * del extremo del índice y no un recorrido de la tabla.
    */
+  /**
+   * La llave de la corrida del motor. Devuelve `false` si otra ya la tiene.
+   *
+   * **Por qué existe.** Vercel dispara el cron sin preguntar si la pasada
+   * anterior terminó, y `processPending` no tomaba ninguna llave. Medido el 19
+   * de septiembre de 2026: el **41 %** de los sellos consecutivos de una misma
+   * ocurrencia caían a menos de 45 s —con mínimo de 0 s— y en seis horas no
+   * hubo un solo hueco de 20 s. Dos pasadas trabajando el mismo servicio a la
+   * vez es lo que reventaba `saveFact` 13 702 veces.
+   *
+   * Bajar la cadencia a 5 minutos hace el choque **improbable**; esto lo hace
+   * **imposible**. Son dos cosas distintas y hacen falta las dos: una cola que
+   * crezca —el arranque del 28, ocho unidades— vuelve a estirar la pasada.
+   *
+   * **Por qué un candado de Postgres y no una tabla.** Un candado consultivo
+   * de sesión no necesita limpieza: si el proceso muere, se cae la conexión y
+   * el candado se suelta solo. Una tabla de «corrida en curso» habría que
+   * limpiarla a mano después de cada muerte por falta de memoria — y este
+   * motor ya murió así, cinco semanas sin que nadie se enterara.
+   *
+   * **`try` y no `wait`.** Si otra pasada va corriendo, ésta no hace cola: se
+   * va. La siguiente sale en cinco minutos y la cola no se mueve mientras
+   * tanto. Esperar sólo apilaría pasadas contra el reloj del cron.
+   *
+   * ⚠ Quien la toma **tiene que soltarla** (`soltarLlaveDelMotor`), en un
+   * `finally`. Vive en la SESIÓN, no en la transacción.
+   */
+  async tomarLlaveDelMotor(): Promise<boolean> {
+    // El número es arbitrario y constante: identifica a esta llave y a ninguna
+    // otra. Cambiarlo dejaría correr dos motores a la vez sin avisar.
+    const [fila] = await this.db.execute<{ tomada: boolean }>(
+      sql`SELECT pg_try_advisory_lock(8_140_919) AS tomada`,
+    );
+    return fila?.tomada === true;
+  }
+
+  /** Suelta la llave de la corrida. Siempre en un `finally`. */
+  async soltarLlaveDelMotor(): Promise<void> {
+    await this.db.execute(sql`SELECT pg_advisory_unlock(8_140_919)`);
+  }
+
   async getMemoryHorizon(carrierAccountId: string): Promise<Date | null> {
     const [row] = await this.db
       .select({ primero: sql<Date | null>`min(${telemetryPoints.recordedAt})` })
