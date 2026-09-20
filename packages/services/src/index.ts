@@ -26,3 +26,4 @@ export * from "./medicion-recorrido.js";
 export * from "./resello.js";
 export * from "./servicios-especiales.js";
 export * from "./pausa-verificacion.js";
+export * from "./orquestador-de-pasos.js";

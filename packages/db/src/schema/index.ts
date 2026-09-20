@@ -12,6 +12,7 @@ import {
   uniqueIndex,
   index,
   doublePrecision,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
@@ -1864,6 +1865,42 @@ export const circuitStopPasses = pgTable(
      * resto de la casa (ver el comentario de `circuit_promise_bands` arriba).
      */
   ],
+);
+
+/**
+ * Hasta dónde ya detectó pasos el orquestador, por circuito, unidad y versión
+ * del detector (0047).
+ *
+ * **No es «hasta qué hora corrió»: es el `recorded_at` del ÚLTIMO PING
+ * CONSUMIDO.** Un cruce es el par de pings consecutivos que lo encierran. Con
+ * un marcador en la hora de la ronda, el par formado por el último ping de una
+ * ventana y el primero de la siguiente no cae en ninguna de las dos, y el
+ * cruce se pierde sin decirlo. Con el marcador en el último ping, la ventana
+ * siguiente arranca EN ese ping (inclusive): el par se detecta una vez, ni
+ * perdido ni repetido.
+ *
+ * **`detector_version` va en la llave.** Subir la versión arranca limpio, sin
+ * borrar nada de lo anterior — es como se re-corre sin pisar (los pasos apilan
+ * por esa misma versión).
+ *
+ * **No es** `telemetry_watermarks` (la del recolector) ni
+ * `telemetry_imei_watermarks` (la del relleno): compartir marcador es como el
+ * relleno le brincaba ventanas al archivador (lección del 15-sep).
+ */
+export const circuitDetectionMarks = pgTable(
+  "circuit_detection_marks",
+  {
+    circuitId: uuid("circuit_id")
+      .notNull()
+      .references(() => circuits.id, { onDelete: "cascade" }),
+    unitId: uuid("unit_id")
+      .notNull()
+      .references(() => units.id, { onDelete: "cascade" }),
+    detectorVersion: text("detector_version").notNull(),
+    lastPingAt: timestamp("last_ping_at", { withTimezone: true, mode: "date" }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.circuitId, table.unitId, table.detectorVersion] })],
 );
 
 /**

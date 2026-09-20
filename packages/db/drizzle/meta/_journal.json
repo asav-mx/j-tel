@@ -330,6 +330,13 @@
       "when": 1790380800000,
       "tag": "0046_tolerancia_de_llegada",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1790467200000,
+      "tag": "0047_marca_del_detector_de_pasos",
+      "breakpoints": true
     }
   ]
 }

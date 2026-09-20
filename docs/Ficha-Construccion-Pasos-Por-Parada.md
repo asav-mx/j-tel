@@ -190,6 +190,7 @@ Documentadas para corregirse en un solo lugar si no son las correctas — mismo 
 ## 4 · Lo que esta ficha NO construye
 
 - **El orquestador que decide cuándo y sobre qué ventana correr el detector** (por unidad, por circuito, cada cuánto, con qué `detector_version`). `detectarYGuardar` es la pieza que llama; nadie la llama todavía sola, sin intervención manual. Lo mismo para `compararPasosDeParada`: nadie decide todavía cuándo re-comparar ni qué hacer con el resultado (¿se guarda el veredicto en algún lado, o se calcula siempre al leer? Por ahora, siempre al leer — no hay tabla de veredictos).
+  - **Actualización (0047): el orquestador ya existe.** `OrquestadorDePasosService` (`@jtel/services`) corre en `/api/cron/detectar-pasos` cada 5 min, con marcador propio (`circuit_detection_marks`: el `recorded_at` del último ping consumido, por circuito, unidad y versión), una transacción por unidad y `?simular=1` para ver lo que escribiría. La duplicación que mencionan §2 y la nota ii se cierra ahí — con el marcador y el candado de la transacción, no con un candado de unicidad en la tabla. La comparación sigue calculándose al leer.
 - **Una tabla de veredictos.** `compararPasosDeParada` calcula al vuelo; el veredicto de un paso puede cambiar si se corrige la tolerancia o la promesa, y eso es correcto mientras nada se haya sellado (9.3).
 - **El árbitro del circuito** (9.12): sólo tras semanas de medición con servicio real.
 - **El ausentismo** (9.5): necesita la asignación del chofer, y jamás se infiere del GPS.

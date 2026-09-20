@@ -15,7 +15,10 @@ for (const p of ["../../.env", ".env"]) {
 
 export default defineConfig({
   test: {
-    include: ["src/comparar-pasos-por-parada.integration.test.ts"],
+    include: [
+      "src/comparar-pasos-por-parada.integration.test.ts",
+      "src/orquestador-de-pasos.integration.test.ts",
+    ],
     // Escribe en la misma rama desechable que @jtel/db: en paralelo se pisan.
     fileParallelism: false,
     testTimeout: 30_000,
