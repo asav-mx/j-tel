@@ -1413,6 +1413,21 @@ export const circuits = pgTable(
       .notNull()
       .default(ORIGEN_DEL_CIRCUITO.confianzaMinutos),
     /**
+     * Cuánto se perdona alrededor del intervalo esperado, al juzgar un paso
+     * contra la frecuencia prometida (Marco 9.2, decisión de Asav 20-sep):
+     * **porcentaje de la frecuencia, no segundos fijos** — 2 min de tolerancia
+     * sobre «cada 10» es el 20 %; sobre «cada 30» no es nada. `50` = ±50 %.
+     *
+     * **Por circuito, nunca escondida en el código.** Nace ANCHA a propósito:
+     * la primera medición es de un servicio nuevo, y una banda estrecha desde
+     * el día uno pintaría todo rojo sin que el servicio hubiera fallado. Se
+     * aprieta con semanas medidas — misma lógica que la tolerancia del
+     * transporte especial, que tampoco nació ajustada a ciegas.
+     */
+    arrivalTolerancePct: doublePrecision("arrival_tolerance_pct")
+      .notNull()
+      .default(ORIGEN_DEL_CIRCUITO.toleranciaLlegadaPct),
+    /**
      * Desde cuándo el circuito muestra el **rango** de llegada al pasajero.
      * `null` = apagado: se ve el camión moverse en el mapa —verdad observada—
      * pero no el minuto estimado, que depende de una velocidad todavía sin

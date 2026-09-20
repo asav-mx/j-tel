@@ -1,6 +1,6 @@
 # Ficha de construcción · El detector de pasos por parada (Marco 9.2 / 9.11)
 
-**Estado al 20-sep-2026, noche.** Construida la mitad de **detección**: migración 0045, `detectarPasosEnRecorrido` en `@jtel/domain`, `PasoPorParadaRepository` en `@jtel/db`, probado contra la desechable con un escenario sembrado que reproduce exactamente el caso central del Marco — un hueco de 40 minutos que se traga dos paradas, y el detector no se las salta. **NO construida: la comparación banda contra banda contra la promesa** (decisión C, tercera parte). Ver la nota al fondo de §3 antes de dar esto por completo.
+**Estado al 20-sep-2026, noche.** Completa: **detección** (migración 0045, `detectarPasosEnRecorrido`, `PasoPorParadaRepository`) y **comparación banda contra banda** (migración 0046, `compararPaso`, `compararPasosDeParada`), las dos probadas contra la desechable con escenarios sembrados. La comparación se decidió con Asav el mismo 20-sep, después de que esta ficha se detuviera explícitamente ante la tolerancia de llegada en vez de inventarla — ver §3c.
 
 **Qué es.** El eslabón 2 de la cadena del arranque, y **el frente grande**. La Pieza 9 ratificó el 19-sep que el paso por parada es ley (9.2) y **dejó su detección abierta a propósito (9.11)**. No hay una sola tabla de pasos en ninguna migración de este repo: el eslabón 2 no es conectar cables, es decidir qué cuenta como un paso y después construirlo.
 
@@ -165,11 +165,17 @@ Lo que **no** lleva: veredicto. En esta etapa nada se sella (9.3).
 
 **`PasoPorParadaRepository.detectarYGuardar`** (en `@jtel/db`) ata todo: lee los puntos de una unidad en una ventana (con su `id`, que es la evidencia), lee las paradas vigentes del sentido, detecta y guarda. Apila por `detector_version`, sin candado de unicidad — dos corridas de la MISMA versión sobre los mismos pings sí duplicarían; eso se resuelve cuando exista el orquestador que decida cuándo y con qué frecuencia se llama esto (no construido: ver §4).
 
-### ⚠️ LO QUE FALTA DE LA DECISIÓN C, Y NO ESTÁ CONSTRUIDO: la comparación banda contra banda
+### 3c · La comparación banda contra banda — decidida y construida (Asav, 20-sep)
 
-La regla que Asav dictó —«si el rango cabe dentro de la franja, sostuvo; si cae entero fuera, se agujeró; si se traslapa, sin datos»— compara el rango del paso contra **una banda esperada**, y esa banda no puede ser directamente la franja horaria de 9.1c (que dice «cada N minutos entre las 6 y las 9», no «se esperaba un camión exactamente a las 7:14»). Para que la comparación tenga sentido hace falta traducir la promesa de frecuencia en una **ventana de llegada esperada** — algo de la forma «el siguiente paso se espera entre (paso anterior + N − tolerancia) y (paso anterior + N + tolerancia)» — y **ese cálculo, y sobre todo la tolerancia, no están decididos en ningún documento de esta casa**. Inventar un número aquí sería exactamente la afirmación falsa que todo este trabajo existe para evitar.
+La regla original —«si el rango cabe dentro de la franja, sostuvo; si cae entero fuera, se agujeró; si se traslapa, sin datos»— compara el rango del paso contra **una ventana esperada**, y esa ventana no podía ser directamente la franja horaria de 9.1c (que dice «cada N minutos entre las 6 y las 9», no «se esperaba un camión exactamente a las 7:14»). Esta ficha se detuvo el 20-sep en vez de inventar la traducción, y Asav la cerró el mismo día con tres decisiones:
 
-**Esto no se construyó hoy, y se dice explícitamente en vez de adivinar.** Lo que sí existe y es reusable: `getPromesaEnInstante` (del eslabón 1) da la promesa vigente en cualquier instante; el rango del paso ya se guarda. Falta la función que las una — y esa función necesita una decisión de Asav sobre la tolerancia antes de escribirse.
+1. **La ventana se ancla al PASO ANTERIOR, no a la hora del reloj.** «Lo que importa es cuánto esperó el pasajero, no en qué hora del día llegó el camión.» `ventana = ancla + frecuencia_prometida ± tolerancia`, con `ancla = pasoHasta` del paso anterior en la MISMA parada y sentido, **del mismo día civil**.
+2. **La tolerancia es PORCENTAJE de la frecuencia, no segundos fijos.** «2 min sobre "cada 10" es 20 %; sobre "cada 30" no es nada.» Vive en `circuits.arrival_tolerance_pct` (migración 0046) — por circuito, nunca escondida en el código. **Nace en 50 (±50 %)**, ancha a propósito: la primera medición es de un servicio nuevo, y una banda estrecha desde el día uno pintaría todo rojo sin que el servicio hubiera fallado. Se aprieta con semanas medidas, como la tolerancia del transporte especial.
+3. **El primer paso del día no tiene paso anterior.** Se compara contra la **hora de apertura declarada** del circuito (`aperturaDeclaradaEnFecha`, en `@jtel/domain/publico`); si tampoco eso alcanza —o no hay promesa vigente en el instante del paso—, el veredicto es `sin_datos`. **No se inventa.**
+
+**Temprano y tarde dan la MISMA etiqueta** cuando el rango cae entero fuera de la ventana: `se_agujero`, sin distinguir de qué lado — es 9.1b, el adelanto daña igual que el atraso.
+
+**Lo construido:** `ventanaEsperada`, `compararRangoContraVentana` y `compararPaso` (puros, en `@jtel/domain`); `compararPasosDeParada` (en `@jtel/services`, no en un repositorio — cruza `PasoPorParadaRepository` y `CircuitRepository`, dos clases que no se llaman entre sí en esta casa, igual que hace `VerificationService`). Probado con un escenario sembrado: tres pasadas por una parada, la primera contra la apertura (se agujeró — llegó muy tarde para el primer paso esperado), la segunda 10 min después de la anterior (sostuvo), la tercera 22 min después (se agujeró, fuera del ±50 % de "cada 10").
 
 ## 3b · Tres decisiones de construcción que Asav no fijó explícitamente
 
@@ -183,8 +189,8 @@ Documentadas para corregirse en un solo lugar si no son las correctas — mismo 
 
 ## 4 · Lo que esta ficha NO construye
 
-- **La comparación banda contra banda contra la promesa.** Ver el recuadro de §3 — necesita una decisión de Asav sobre la tolerancia de llegada esperada antes de escribirse.
-- **El orquestador que decide cuándo y sobre qué ventana correr el detector** (por unidad, por circuito, cada cuánto, con qué `detector_version`). `detectarYGuardar` es la pieza que llama; nadie la llama todavía sola, sin intervención manual.
+- **El orquestador que decide cuándo y sobre qué ventana correr el detector** (por unidad, por circuito, cada cuánto, con qué `detector_version`). `detectarYGuardar` es la pieza que llama; nadie la llama todavía sola, sin intervención manual. Lo mismo para `compararPasosDeParada`: nadie decide todavía cuándo re-comparar ni qué hacer con el resultado (¿se guarda el veredicto en algún lado, o se calcula siempre al leer? Por ahora, siempre al leer — no hay tabla de veredictos).
+- **Una tabla de veredictos.** `compararPasosDeParada` calcula al vuelo; el veredicto de un paso puede cambiar si se corrige la tolerancia o la promesa, y eso es correcto mientras nada se haya sellado (9.3).
 - **El árbitro del circuito** (9.12): sólo tras semanas de medición con servicio real.
 - **El ausentismo** (9.5): necesita la asignación del chofer, y jamás se infiere del GPS.
 - **La terminal** donde esto se ve (eslabón 4).
@@ -198,6 +204,8 @@ Documentadas para corregirse en un solo lugar si no son las correctas — mismo 
 4. Una ventana sin ningún punto no detecta nada, y no truena. ✓
 5. El CHECK de la base rechaza un rango invertido (`paso_hasta < paso_desde`). ✓
 6. Nueve casos de dominio con geometría sintética: cruce simple, varias paradas en un intervalo, parada fuera del intervalo, sin avance (detenido o en reversa), fuera del corredor (decisión B), frontera exacta entre dos intervalos (no se cuenta dos veces), listas vacías.
+7. **La comparación banda contra banda**, once casos de dominio: la tolerancia pesa distinto según la frecuencia (2 min es 20 % de "cada 10" y nada de "cada 30"); temprano y tarde dan la misma etiqueta (`se_agujero`, 9.1b); el traslape con la orilla es `sin_datos`, nunca a medias; sin ancla ni promesa, `sin_datos` — nunca inventado.
+8. **El escenario sembrado de la comparación completa**, de punta a punta: tres pasadas reales por una parada — la primera contra la apertura declarada del circuito (se agujeró, llegó tarde para ser la primera esperada), la segunda 10 minutos después de la anterior (sostuvo), la tercera 22 minutos después (se agujeró, fuera de la tolerancia de "cada 10"). Corrida contra la desechable, con la promesa por franja del eslabón 1 realmente guardada y leída.
 
 ## 5 · Lo que falta medir
 
