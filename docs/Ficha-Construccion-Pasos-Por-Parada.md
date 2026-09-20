@@ -1,5 +1,7 @@
 # Ficha de construcción · El detector de pasos por parada (Marco 9.2 / 9.11)
 
+**Estado al 20-sep-2026, noche.** Construida la mitad de **detección**: migración 0045, `detectarPasosEnRecorrido` en `@jtel/domain`, `PasoPorParadaRepository` en `@jtel/db`, probado contra la desechable con un escenario sembrado que reproduce exactamente el caso central del Marco — un hueco de 40 minutos que se traga dos paradas, y el detector no se las salta. **NO construida: la comparación banda contra banda contra la promesa** (decisión C, tercera parte). Ver la nota al fondo de §3 antes de dar esto por completo.
+
 **Qué es.** El eslabón 2 de la cadena del arranque, y **el frente grande**. La Pieza 9 ratificó el 19-sep que el paso por parada es ley (9.2) y **dejó su detección abierta a propósito (9.11)**. No hay una sola tabla de pasos en ninguna migración de este repo: el eslabón 2 no es conectar cables, es decidir qué cuenta como un paso y después construirlo.
 
 **Esta ficha no decide sola.** Trae ocho preguntas con su recomendación y su costo. **Las ocho son de Asav** — cada una fija qué va a poder afirmar el sistema, y una detección mal escogida produce números correctos que mienten (Marco §D).
@@ -124,7 +126,7 @@ Si el detector mejora y se vuelve a correr sobre el 23 de septiembre, ¿qué pas
 
 - *Recomendación:* **apilar, no pisar** — el principio recurrente de la casa. Y conectarlo con la idea sin decidir del re-sellado que ya está anotada: si esto se decide aquí a la ligera, se decide de hecho para el árbitro del 9.12.
 
-## 3 · La forma, con las decisiones de Asav dentro
+## 3 · La forma — construida, migración 0045
 
 ```
 circuit_stop_passes
@@ -142,8 +144,11 @@ circuit_stop_passes
   CHECK (paso_hasta >= paso_desde)
 
   -- LA EVIDENCIA, no el resumen: con esto se recalcula sin perder el día.
-  ping_previo_id       UUID NOT NULL → telemetry_points(id)
-  ping_siguiente_id    UUID NOT NULL → telemetry_points(id)
+  -- Nullable (SET NULL, no NOT NULL como se pensó originalmente): si un
+  -- punto se purga del archivo, el hecho de que la unidad cruzó ahí no
+  -- debe desaparecer con él.
+  ping_previo_id       UUID → telemetry_points(id) ON DELETE SET NULL
+  ping_siguiente_id    UUID → telemetry_points(id) ON DELETE SET NULL
   hueco_segundos       INTEGER NOT NULL       -- el ancho, ya calculado
 
   detector_version     TEXT NOT NULL          -- para apilar (decisión H)
@@ -152,16 +157,47 @@ circuit_stop_passes
 
 **El ancho se guarda calculado además de derivable.** `paso_hasta - paso_desde` lo da, y tenerlo como columna es lo que permite filtrar «enséñame sólo los pasos con hueco menor a un minuto» sin pelearse con el plan de la consulta — que en esta casa ya costó caro una vez.
 
-Lo que **no** lleva: veredicto. En esta etapa nada se sella (9.3). La comparación banda contra banda se calcula al leer, contra la franja vigente en `paso_desde`.
+Lo que **no** lleva: veredicto. En esta etapa nada se sella (9.3).
 
-**Y un tipo que Postgres ya trae:** `tstzrange` haría el rango nativo, con operadores de contención y traslape (`@>`, `&&`) que son literalmente las tres filas de la tabla de la decisión C. Vale la pena evaluarlo contra las dos columnas sueltas al construir; lo que no cambia es que el paso es un rango.
+**`tstzrange` se evaluó y se descartó por ahora.** Dos columnas sueltas es más simple de indexar por separado (`stop_id, paso_desde`) para el patrón de lectura que va a tener el eslabón 2, y nada de lo construido necesita todavía los operadores de contención nativos. Queda anotado por si la comparación banda contra banda (abajo) los vuelve a hacer atractivos.
+
+**La geometría reusa `proyectarSobreTrazado`** (`trazado.ts`), la misma que ya usa el pegado de paradas — es literalmente la decisión A: «la geometría punto-a-segmento que ya existe». `detectarPasosEnRecorrido`, en `@jtel/domain`, proyecta cada punto del recorrido y cada parada sobre el trazado y busca dónde el avance de la unidad cruza la abscisa de la parada entre dos puntos consecutivos.
+
+**`PasoPorParadaRepository.detectarYGuardar`** (en `@jtel/db`) ata todo: lee los puntos de una unidad en una ventana (con su `id`, que es la evidencia), lee las paradas vigentes del sentido, detecta y guarda. Apila por `detector_version`, sin candado de unicidad — dos corridas de la MISMA versión sobre los mismos pings sí duplicarían; eso se resuelve cuando exista el orquestador que decida cuándo y con qué frecuencia se llama esto (no construido: ver §4).
+
+### ⚠️ LO QUE FALTA DE LA DECISIÓN C, Y NO ESTÁ CONSTRUIDO: la comparación banda contra banda
+
+La regla que Asav dictó —«si el rango cabe dentro de la franja, sostuvo; si cae entero fuera, se agujeró; si se traslapa, sin datos»— compara el rango del paso contra **una banda esperada**, y esa banda no puede ser directamente la franja horaria de 9.1c (que dice «cada N minutos entre las 6 y las 9», no «se esperaba un camión exactamente a las 7:14»). Para que la comparación tenga sentido hace falta traducir la promesa de frecuencia en una **ventana de llegada esperada** — algo de la forma «el siguiente paso se espera entre (paso anterior + N − tolerancia) y (paso anterior + N + tolerancia)» — y **ese cálculo, y sobre todo la tolerancia, no están decididos en ningún documento de esta casa**. Inventar un número aquí sería exactamente la afirmación falsa que todo este trabajo existe para evitar.
+
+**Esto no se construyó hoy, y se dice explícitamente en vez de adivinar.** Lo que sí existe y es reusable: `getPromesaEnInstante` (del eslabón 1) da la promesa vigente en cualquier instante; el rango del paso ya se guarda. Falta la función que las una — y esa función necesita una decisión de Asav sobre la tolerancia antes de escribirse.
+
+## 3b · Tres decisiones de construcción que Asav no fijó explícitamente
+
+Documentadas para corregirse en un solo lugar si no son las correctas — mismo criterio que la ficha de la franja horaria.
+
+**i · Los pings de evidencia son `NULL`able, no `NOT NULL` como decía el borrador original.** Con `ON DELETE SET NULL`: si el archivador purga un punto viejo, el paso detectado —el hecho medido— no debe desaparecer con él. Sólo se pierde el enlace a la evidencia cruda, y eso es preferible a perder la medición entera.
+
+**ii · Sin candado de unicidad en `circuit_stop_passes`.** Sería prematuro: la forma correcta del candado depende de cómo el orquestador (§4, no construido) decida reintentar o reprocesar. Ponerlo ahora sin saber esa forma arriesgaría bloquear una corrida legítima.
+
+**iii · `PasoPorParadaRepository` es una clase nueva, no métodos colgados de `CircuitRepository`.** El detector cruza `telemetry_points`, `circuit_stops`, `circuit_stop_versions` y `units` de una forma que no es «cosas de un circuito» sino «cosas de una detección» — más cerca de `VerificationService` en su alcance que de las demás operaciones de circuito.
 
 ## 4 · Lo que esta ficha NO construye
 
+- **La comparación banda contra banda contra la promesa.** Ver el recuadro de §3 — necesita una decisión de Asav sobre la tolerancia de llegada esperada antes de escribirse.
+- **El orquestador que decide cuándo y sobre qué ventana correr el detector** (por unidad, por circuito, cada cuánto, con qué `detector_version`). `detectarYGuardar` es la pieza que llama; nadie la llama todavía sola, sin intervención manual.
 - **El árbitro del circuito** (9.12): sólo tras semanas de medición con servicio real.
 - **El ausentismo** (9.5): necesita la asignación del chofer, y jamás se infiere del GPS.
 - **La terminal** donde esto se ve (eslabón 4).
 - **La atribución a un chofer**: los pasos son de la unidad. Ligarlos a una persona espera los beacons (eslabón 7), y el beacon es evidencia declarada, no prueba.
+
+## 4b · Pruebas hechas (contra la desechable, con datos sembrados — no con la captura real, que Asav pidió no esperar)
+
+1. **La prueba central del Marco:** un hueco de 40 minutos entre dos pings se traga DOS paradas completas, y el detector no se salta ninguna — las detecta con el rango correcto (`paso_desde`/`paso_hasta` en los dos pings que encierran el hueco). ✓
+2. `stop_version_id` queda ligado a la parada como estaba en el momento de detectar (decisión F). ✓
+3. Apilar, no pisar: una segunda corrida con otra `detector_version` sobre el mismo tramo agrega, no reemplaza. ✓
+4. Una ventana sin ningún punto no detecta nada, y no truena. ✓
+5. El CHECK de la base rechaza un rango invertido (`paso_hasta < paso_desde`). ✓
+6. Nueve casos de dominio con geometría sintética: cruce simple, varias paradas en un intervalo, parada fuera del intervalo, sin avance (detenido o en reversa), fuera del corredor (decisión B), frontera exacta entre dos intervalos (no se cuenta dos veces), listas vacías.
 
 ## 5 · Lo que falta medir
 

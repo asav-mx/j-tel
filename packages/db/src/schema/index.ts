@@ -1777,6 +1777,81 @@ export const circuitPromiseBands = pgTable(
 );
 
 /**
+ * Un cruce de una unidad sobre la abscisa de una parada (Marco 9.2 / 9.11,
+ * 0045) — el eslabón 2 de la cadena del arranque.
+ *
+ * **Detección por cruce sobre el trazado** (decisión de Asav, 19-sep): no por
+ * radio. Medido: los FTC927 dan 15–61 m entre puntos con el camión andando,
+ * pero los huecos siguen ahí (hasta 75 h en una semana), y el hueco es
+ * justo donde está la parada — donde el camión se detiene. El cruce no se
+ * salta ninguna, porque ocurre entre los dos puntos que encierran el hueco.
+ *
+ * **EL PASO ES UN RANGO, no un instante.** No hay `passed_at`: el instante
+ * no existe —el instrumento no lo mide—, y darle una columna propia invita a
+ * leerlo como si existiera. `paso_desde`/`paso_hasta` son los dos pings que
+ * encierran el cruce; `hueco_segundos` es su ancho, guardado calculado
+ * además de derivable porque filtrar «pasos con hueco < 1 min» sin él pelea
+ * con el plan de la consulta — que en esta casa ya costó caro una vez.
+ *
+ * **La evidencia se guarda, no el resumen**: los dos pings de origen, para
+ * poder recalcular sin perder el día si el detector mejora.
+ *
+ * **No lleva veredicto.** En esta etapa nada se sella (9.3): la comparación
+ * banda contra banda contra la promesa (`circuit_promise_bands`) se calcula
+ * al leer, contra la franja vigente en `paso_desde` — no se guarda aquí.
+ *
+ * **`detector_version` es lo que permite apilar, no pisar** (principio de la
+ * casa): si el detector se corrige y se vuelve a correr sobre los mismos
+ * días, la corrida nueva no borra la anterior. Sin candado de unicidad a
+ * propósito: dos corridas de la MISMA versión sobre los mismos pings sí
+ * producirían pasos duplicados, y eso se decide cuándo se construya el
+ * orquestador que llama al detector — aquí sólo vive el hecho.
+ */
+export const circuitStopPasses = pgTable(
+  "circuit_stop_passes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    circuitId: uuid("circuit_id")
+      .notNull()
+      .references(() => circuits.id, { onDelete: "cascade" }),
+    stopId: uuid("stop_id")
+      .notNull()
+      .references(() => circuitStops.id, { onDelete: "cascade" }),
+    /** La parada COMO ESTABA cuando se detectó — no se sigue a la vigente de hoy. */
+    stopVersionId: uuid("stop_version_id")
+      .notNull()
+      .references(() => circuitStopVersions.id, { onDelete: "cascade" }),
+    unitId: uuid("unit_id")
+      .notNull()
+      .references(() => units.id, { onDelete: "cascade" }),
+    sentido: sentidoCircuitoEnum("sentido").notNull(),
+    pasoDesde: timestamp("paso_desde", { withTimezone: true, mode: "date" }).notNull(),
+    pasoHasta: timestamp("paso_hasta", { withTimezone: true, mode: "date" }).notNull(),
+    huecoSegundos: integer("hueco_segundos").notNull(),
+    /**
+     * `set null` y no `cascade`: si un punto se purga del archivo, el paso
+     * detectado —el hecho de que la unidad cruzó ahí— no debe desaparecer con
+     * él. Lo que se pierde es sólo el enlace a la evidencia cruda.
+     */
+    pingPrevioId: uuid("ping_previo_id").references(() => telemetryPoints.id, { onDelete: "set null" }),
+    pingSiguienteId: uuid("ping_siguiente_id").references(() => telemetryPoints.id, {
+      onDelete: "set null",
+    }),
+    detectorVersion: text("detector_version").notNull(),
+    detectedAt: timestamp("detected_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("circuit_stop_passes_stop_idx").on(table.stopId, table.pasoDesde),
+    index("circuit_stop_passes_unit_idx").on(table.unitId, table.pasoDesde),
+    index("circuit_stop_passes_circuit_idx").on(table.circuitId, table.pasoDesde),
+    /*
+     * CHECK `paso_hasta >= paso_desde` vive en la migración SQL, como el
+     * resto de la casa (ver el comentario de `circuit_promise_bands` arriba).
+     */
+  ],
+);
+
+/**
  * Hasta dónde le preguntó el archivador al proveedor por cada aparato (0037).
  *
  * **No es el último punto del aparato**: es el fin de la última ventana que el
