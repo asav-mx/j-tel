@@ -40,7 +40,7 @@ Con la flota vieja de Umbrella, la densidad cayó de ~40 s entre pings a ~73 s e
 | TK-FTC927-004 | 60 | 56 s | 484 s | 9 | — |
 | TK-FTC927-001 | 13 | 75 s | 681 s | 3 | — (mudo desde el 14-sep; es el del reclamo) |
 
-**El aparato propio es entre siete y veintisiete veces más fino que Umbrella:** 15–61 m entre puntos con el camión andando, contra 440–810 m. **El argumento con el que se descartó el radio no aplica a este hardware, y conviene decirlo en voz alta en vez de dejar la conclusión en pie por inercia.**
+**El aparato propio es entre 7 y 50 veces más fino que Umbrella:** 15–61 m entre puntos con el camión andando, contra 440–810 m. **El argumento con el que se descartó el radio no aplica a este hardware, y conviene decirlo en voz alta en vez de dejar la conclusión en pie por inercia.**
 
 ### Por qué el cruce sigue siendo el correcto, por otra razón
 

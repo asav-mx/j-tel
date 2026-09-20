@@ -104,7 +104,7 @@ Dos cosas, y sólo una es código.
 
 **Decidido por Asav el 19-sep**, sobre `docs/Ficha-Construccion-Pasos-Por-Parada.md`: detección **por cruce sobre el trazado**; la hora interpolada **es medición y se guarda como rango**, con el ancho del hueco entre pings; la comparación contra la promesa es **banda contra banda** —cabe dentro: sostuvo; cae entero fuera: se agujeró; se traslapa: **sin datos**, nunca un veredicto a medias—; y el hecho **guarda su evidencia** (qué dos pings, qué hueco) para poder recalcular sin perder el día. Las decisiones restantes siguen en la ficha.
 
-**La cadencia ya está medida** (19-sep, producción, sólo lectura): los FTC927 dan **4–6 s entre puntos y 15–61 m con el camión andando** — entre siete y veintisiete veces más fino que Umbrella, y por encima de los 15–20 s que el pendiente «cadencia de reporte por tipo de servicio» iba a pedir. Lo que no cambió son los huecos: 35 de más de cinco minutos en un aparato en una semana, y ahí es donde el cruce gana.
+**La cadencia ya está medida** (19-sep, producción, sólo lectura): los FTC927 dan **4–6 s entre puntos y 15–61 m con el camión andando** — entre 7 y 50 veces más fino que Umbrella, y por encima de los 15–20 s que el pendiente «cadencia de reporte por tipo de servicio» iba a pedir. Lo que no cambió son los huecos: 35 de más de cinco minutos en un aparato en una semana, y ahí es donde el cruce gana.
 
 **Cómo se sabe que está hecho:** una unidad real da una vuelta real y la base registra sus pasos con la desviación correcta. Si esto falla, lo demás da igual.
 
