@@ -119,6 +119,8 @@ Lo que falta de verdad:
 - El ETA hasta el pasajero, calculado en su teléfono (8.3b).
 - Prender la publicación del circuito cuando el eslabón 1 esté completo.
 
+**Y una cuenta que conviene tener antes de culpar a la cadencia:** si el camión se ve brincar en la app, **no es el aparato**. La cadena es aparato **4–6 s** (medido) → recolector cada **30 s** (`docs/Procedimiento-Traccar-Servidor.md`) → TTL del CDN **15 s** → la app sondea cada **15 s** (`SONDEO_MS`). Los dos cuellos son el recolector y el TTL: **hasta 45 s de retraso**, y el propio endpoint lo dice en su comentario. Subirle la cadencia al aparato no movería ninguno de los dos. Si el brinco molesta, se ataca ahí — o dibujando el movimiento entre lecturas, que es otra conversación.
+
 **Cómo se sabe que está hecho:** un pasajero cualquiera abre la app en la calle y ve a qué hora pasa su camión.
 
 ### Eslabón 4 · La terminal del carrier
