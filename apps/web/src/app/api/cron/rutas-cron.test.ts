@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 /**
- * Las ocho rutas de cron, medidas donde de verdad importa: **en la ruta**, no
+ * Las nueve rutas de cron, medidas donde de verdad importa: **en la ruta**, no
  * en la guardia.
  *
  * `guardia-cron.test.ts` mide que la guardia decide bien. Esto mide otra cosa
- * —que las ocho la llaman, y que la llaman antes de hacer nada—, que es
+ * —que las nueve la llaman, y que la llaman antes de hacer nada—, que es
  * justamente lo que falló la primera vez: la lógica estaba bien escrita en un
  * lado y copiada mal en siete.
  *
@@ -25,6 +25,7 @@ const correrBackfill = vi.fn();
 const revisarLatido = vi.fn();
 const renovarVentana = vi.fn();
 const revisarHoras = vi.fn();
+const detectarPasos = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   getRepos: () => ({
@@ -47,6 +48,9 @@ vi.mock("@jtel/services", () => ({
   },
   IngestHealthService: class {
     checkHeartbeat = revisarLatido;
+  },
+  OrquestadorDePasosService: class {
+    correr = detectarPasos;
   },
 }));
 
@@ -86,6 +90,7 @@ const RUTAS = [
   { nombre: "cron/verify", modulo: () => import("./verify/route") },
   { nombre: "cron/archive", modulo: () => import("./archive/route") },
   { nombre: "cron/gap-backfill", modulo: () => import("./gap-backfill/route") },
+  { nombre: "cron/detectar-pasos", modulo: () => import("./detectar-pasos/route") },
   { nombre: "cron/ingest-heartbeat", modulo: () => import("./ingest-heartbeat/route") },
   { nombre: "cron/renew-occurrences", modulo: () => import("./renew-occurrences/route") },
   { nombre: "cron/alertas", modulo: () => import("./alertas/route") },
@@ -113,6 +118,7 @@ const TRABAJO = [
   revisarLatido,
   renovarVentana,
   revisarHoras,
+  detectarPasos,
 ];
 
 beforeEach(() => {
@@ -127,7 +133,7 @@ afterEach(() => {
   delete process.env.CRON_SECRET;
 });
 
-describe("sin CRON_SECRET, las ocho responden 503", () => {
+describe("sin CRON_SECRET, las nueve responden 503", () => {
   for (const ruta of RUTAS) {
     it(`${ruta.nombre} → 503`, async () => {
       const { GET } = await ruta.modulo();
@@ -139,7 +145,7 @@ describe("sin CRON_SECRET, las ocho responden 503", () => {
     });
   }
 
-  it("ninguna de las ocho llegó a trabajar", async () => {
+  it("ninguna de las nueve llegó a trabajar", async () => {
     for (const ruta of RUTAS) {
       const { GET } = await ruta.modulo();
       await GET(peticion(`Bearer ${RESPALDO_RETIRADO}`));
@@ -148,7 +154,7 @@ describe("sin CRON_SECRET, las ocho responden 503", () => {
     for (const f of TRABAJO) expect(f).not.toHaveBeenCalled();
   });
 
-  it("POST tampoco pasa — las ocho lo delegan a GET", async () => {
+  it("POST tampoco pasa — las nueve lo delegan a GET", async () => {
     for (const ruta of RUTAS) {
       const { POST } = await ruta.modulo();
       const r = await POST(peticion(`Bearer ${RESPALDO_RETIRADO}`));
@@ -157,7 +163,7 @@ describe("sin CRON_SECRET, las ocho responden 503", () => {
   });
 });
 
-describe("con CRON_SECRET, las ocho siguen exigiendo el secreto correcto", () => {
+describe("con CRON_SECRET, las nueve siguen exigiendo el secreto correcto", () => {
   const SECRETO = "secreto-de-prueba-no-usado-en-ninguna-parte";
 
   beforeEach(() => {
@@ -196,5 +202,26 @@ describe("con CRON_SECRET, las ocho siguen exigiendo el secreto correcto", () =>
 
     expect(r.status).toBe(200);
     expect(renovarVentana).toHaveBeenCalledWith(30);
+  });
+
+  it("detectar-pasos: cualquier ?simular= simula; sin él, o con 0, escribe", async () => {
+    detectarPasos.mockResolvedValue({ simulado: false, detalle: [] });
+    const { GET } = await import("./detectar-pasos/route");
+    const conSecreto = { headers: { authorization: `Bearer ${SECRETO}` } };
+    const pedir = (consulta: string) =>
+      GET(new Request(`https://j-telemetry.com/api/cron/detectar-pasos${consulta}`, conSecreto));
+
+    const real = await pedir("");
+    expect(real.status).toBe(200);
+    expect(detectarPasos).toHaveBeenLastCalledWith({ simular: false });
+
+    // Un error de dedo no puede convertir «quiero ver» en una escritura real.
+    for (const consulta of ["?simular=1", "?simular=true", "?simular=si", "?simular="]) {
+      await pedir(consulta);
+      expect(detectarPasos, consulta).toHaveBeenLastCalledWith({ simular: true });
+    }
+
+    await pedir("?simular=0");
+    expect(detectarPasos).toHaveBeenLastCalledWith({ simular: false });
   });
 });

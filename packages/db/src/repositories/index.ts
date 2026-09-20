@@ -87,6 +87,7 @@ import {
   circuitStops,
   circuitStopVersions,
   circuitUnitAssignments,
+  circuitDetectionMarks,
   circuitPromiseTables,
   circuitPromiseBands,
   circuitStopPasses,
@@ -7811,6 +7812,47 @@ export class ExpedienteRepository {
   }
 }
 
+/** Una unidad que el orquestador puede procesar en esta ronda, ya resuelta. */
+export type UnidadParaDetectar = {
+  circuitId: string;
+  unitId: string;
+  /**
+   * La cuenta dueña de la UNIDAD (`units.carrier_account_id`) — la de su
+   * telemetría. **No** la del circuito (`concession_account_id`): esa es la
+   * concesión, y con ella la lectura de puntos no encontraría nada, o peor,
+   * encontraría los de otro.
+   */
+  carrierAccountId: string;
+  asignadaDesde: Date;
+  corridorToleranceMeters: number;
+  /** Los sentidos que el circuito sirve con paradas capturadas; cada uno ya tiene trazado. */
+  sentidos: Array<"ida" | "vuelta">;
+  /** El último ping consumido de esta versión, o `null` si nunca corrió. */
+  marcaLastPingAt: Date | null;
+};
+
+export type UnidadSaltada = { circuitId: string; unitId: string; motivo: string };
+
+export type ResultadoDeUnidad = {
+  estado: "detectada" | "sin_novedad" | "ocupada";
+  simulado: boolean;
+  desde: Date | null;
+  hasta: Date | null;
+  /** Hasta dónde quedó (o habría quedado, en una simulación) el marcador. */
+  marcaNueva: Date | null;
+  pasosGuardados: number;
+  muestra: Array<{
+    stopId: string;
+    sentido: "ida" | "vuelta";
+    pasoDesde: Date;
+    pasoHasta: Date;
+    huecoSegundos: number;
+  }>;
+};
+
+/** Sale de la transacción para revertirla: una simulación corre todo y no deja nada. */
+class SimulacionRevertida extends Error {}
+
 /**
  * El detector de pasos por parada (Marco 9.2 / 9.11, 0045) — eslabón 2 de la
  * cadena del arranque.
@@ -7965,6 +8007,281 @@ export class PasoPorParadaRepository {
       sentido: input.sentido,
       detectorVersion: input.detectorVersion,
     });
+  }
+
+  /**
+   * Las unidades que el orquestador puede procesar, y las que salta con su
+   * motivo. **El silencio excluye**: una unidad entra sólo por su asignación
+   * declarada y vigente, y sólo si todo lo demás está capturado.
+   *
+   * Entra si: la asignación está vigente (`valid_to IS NULL`), la unidad y el
+   * circuito están de alta, la cuenta de la asignación es la dueña de la
+   * unidad, el circuito tiene al menos una parada vigente y hay trazado para
+   * cada sentido que esas paradas sirven. Lo que no entra se dice, no se
+   * calla: un circuito a medio capturar no es un error, pero tampoco es un
+   * cero.
+   *
+   * No exige dispositivo: una unidad sin telemetría sólo produce cero pasos.
+   */
+  async unidadesParaDetectar(detectorVersion: string): Promise<{
+    elegibles: UnidadParaDetectar[];
+    saltadas: UnidadSaltada[];
+  }> {
+    const asignaciones = await this.db
+      .select({
+        circuitId: circuitUnitAssignments.circuitId,
+        unitId: circuitUnitAssignments.unitId,
+        cuentaDeLaAsignacion: circuitUnitAssignments.carrierAccountId,
+        asignadaDesde: circuitUnitAssignments.validFrom,
+        cuentaDeLaUnidad: units.carrierAccountId,
+        unidadActiva: units.active,
+        circuitoActivo: circuits.active,
+        corridorToleranceMeters: circuits.corridorToleranceMeters,
+      })
+      .from(circuitUnitAssignments)
+      .innerJoin(units, eq(units.id, circuitUnitAssignments.unitId))
+      .innerJoin(circuits, eq(circuits.id, circuitUnitAssignments.circuitId))
+      .where(isNull(circuitUnitAssignments.validTo));
+    if (asignaciones.length === 0) return { elegibles: [], saltadas: [] };
+
+    const circuitIds = [...new Set(asignaciones.map((a) => a.circuitId))];
+    const [paradas, trazados, marcas] = await Promise.all([
+      this.db
+        .select({ circuitId: circuitStops.circuitId, sentido: circuitStopVersions.sentido })
+        .from(circuitStopVersions)
+        .innerJoin(circuitStops, eq(circuitStops.id, circuitStopVersions.stopId))
+        .where(
+          and(
+            inArray(circuitStops.circuitId, circuitIds),
+            isNull(circuitStops.retiredAt),
+            isNull(circuitStopVersions.validTo),
+          ),
+        ),
+      this.db
+        .select({ circuitId: circuitPaths.circuitId, sentido: circuitPaths.sentido })
+        .from(circuitPaths)
+        .where(inArray(circuitPaths.circuitId, circuitIds)),
+      this.db
+        .select({
+          circuitId: circuitDetectionMarks.circuitId,
+          unitId: circuitDetectionMarks.unitId,
+          lastPingAt: circuitDetectionMarks.lastPingAt,
+        })
+        .from(circuitDetectionMarks)
+        .where(
+          and(
+            inArray(circuitDetectionMarks.circuitId, circuitIds),
+            eq(circuitDetectionMarks.detectorVersion, detectorVersion),
+          ),
+        ),
+    ]);
+
+    // Un sentido `null` en la parada la hace servir a los dos.
+    const sentidosServidos = new Map<string, Set<"ida" | "vuelta">>();
+    for (const p of paradas) {
+      const set = sentidosServidos.get(p.circuitId) ?? new Set<"ida" | "vuelta">();
+      for (const s of p.sentido === null ? (["ida", "vuelta"] as const) : [p.sentido]) set.add(s);
+      sentidosServidos.set(p.circuitId, set);
+    }
+    const conTrazado = new Set(trazados.map((t) => `${t.circuitId}:${t.sentido}`));
+    const marcaDe = new Map(marcas.map((m) => [`${m.circuitId}:${m.unitId}`, m.lastPingAt]));
+
+    const elegibles: UnidadParaDetectar[] = [];
+    const saltadas: UnidadSaltada[] = [];
+    for (const a of asignaciones) {
+      const salta = (motivo: string) => saltadas.push({ circuitId: a.circuitId, unitId: a.unitId, motivo });
+      if (!a.unidadActiva) {
+        salta("la unidad está dada de baja");
+        continue;
+      }
+      if (!a.circuitoActivo) {
+        salta("el circuito está dado de baja");
+        continue;
+      }
+      if (a.cuentaDeLaAsignacion !== a.cuentaDeLaUnidad) {
+        salta("la cuenta de la asignación no es la dueña de la unidad");
+        continue;
+      }
+      const sentidos = [...(sentidosServidos.get(a.circuitId) ?? [])].sort();
+      if (sentidos.length === 0) {
+        salta("el circuito no tiene paradas capturadas");
+        continue;
+      }
+      const sinTrazado = sentidos.filter((s) => !conTrazado.has(`${a.circuitId}:${s}`));
+      if (sinTrazado.length > 0) {
+        salta(`el circuito no tiene trazado de ${sinTrazado.join(" y ")}`);
+        continue;
+      }
+      elegibles.push({
+        circuitId: a.circuitId,
+        unitId: a.unitId,
+        carrierAccountId: a.cuentaDeLaUnidad,
+        asignadaDesde: a.asignadaDesde,
+        corridorToleranceMeters: a.corridorToleranceMeters,
+        sentidos,
+        marcaLastPingAt: marcaDe.get(`${a.circuitId}:${a.unitId}`) ?? null,
+      });
+    }
+    return { elegibles, saltadas };
+  }
+
+  /**
+   * Una ronda del detector sobre UNA unidad, **entera en una transacción**:
+   * candado, lectura del marcador, detección de los sentidos, inserción de los
+   * pasos y avance del marcador. Todo o nada.
+   *
+   * Sin la transacción, morir entre guardar los pasos y mover el marcador
+   * dejaba la ventana a medio hacer, y la ronda siguiente la re-detectaba y
+   * DUPLICABA — la tabla de pasos no tiene candado de unicidad a propósito. Y
+   * dos corridas del cron traslapadas leían el mismo marcador y escribían los
+   * mismos pasos dos veces; el candado de aviso (`pg_try_advisory_xact_lock`,
+   * de transacción y no de sesión: se suelta solo, aunque la corrida muera) hace
+   * que la segunda se vaya sin esperar.
+   *
+   * **Ventana.** `desde` es el marcador (o `arranque` si nunca corrió), sin
+   * bajar del inicio de la asignación. `hasta` es el último ping que existe
+   * antes de `hastaMaximo` — el colchón que da el llamador —, así que el
+   * marcador nuevo es siempre un ping real y la ventana siguiente arranca EN
+   * él: el par de pings que cruza el borde se detecta una vez, ni perdido ni
+   * repetido.
+   *
+   * **El detector no se toca**: se le pasa la transacción para que lea y
+   * escriba dentro de ella. La cuenta con la que lee la telemetría es la de la
+   * unidad (`carrierAccountId`), no la del circuito.
+   *
+   * `simular` corre todo y revierte al final: dice lo que escribiría sin
+   * escribirlo.
+   */
+  async detectarUnidadEnRonda(input: {
+    circuitId: string;
+    unitId: string;
+    carrierAccountId: string;
+    asignadaDesde: Date;
+    corridorToleranceMeters: number;
+    sentidos: Array<"ida" | "vuelta">;
+    detectorVersion: string;
+    arranque: Date;
+    hastaMaximo: Date;
+    simular: boolean;
+  }): Promise<ResultadoDeUnidad> {
+    const vacio = (estado: ResultadoDeUnidad["estado"]): ResultadoDeUnidad => ({
+      estado,
+      simulado: input.simular,
+      desde: null,
+      hasta: null,
+      marcaNueva: null,
+      pasosGuardados: 0,
+      muestra: [],
+    });
+    let resultado: ResultadoDeUnidad = vacio("sin_novedad");
+
+    try {
+      await this.db.transaction(async (tx) => {
+        const llave = `pasos:${input.circuitId}:${input.unitId}:${input.detectorVersion}`;
+        const [candado] = await tx.execute<{ tomada: boolean }>(
+          sql`SELECT pg_try_advisory_xact_lock(hashtextextended(${llave}, 0)) AS tomada`,
+        );
+        if (candado?.tomada !== true) {
+          resultado = vacio("ocupada");
+          return;
+        }
+
+        const [marca] = await tx
+          .select({ lastPingAt: circuitDetectionMarks.lastPingAt })
+          .from(circuitDetectionMarks)
+          .where(
+            and(
+              eq(circuitDetectionMarks.circuitId, input.circuitId),
+              eq(circuitDetectionMarks.unitId, input.unitId),
+              eq(circuitDetectionMarks.detectorVersion, input.detectorVersion),
+            ),
+          );
+        const piso = marca?.lastPingAt ?? input.arranque;
+        const desde = piso.getTime() > input.asignadaDesde.getTime() ? piso : input.asignadaDesde;
+        if (desde.getTime() >= input.hastaMaximo.getTime()) return;
+
+        // El último ping que existe en la ventana — con el muro: la cuenta de la unidad.
+        const [ultimoPing] = await tx
+          .select({ recordedAt: telemetryPoints.recordedAt })
+          .from(telemetryPoints)
+          .where(
+            and(
+              eq(telemetryPoints.carrierAccountId, input.carrierAccountId),
+              eq(telemetryPoints.unitId, input.unitId),
+              gte(telemetryPoints.recordedAt, desde),
+              lte(telemetryPoints.recordedAt, input.hastaMaximo),
+            ),
+          )
+          .orderBy(desc(telemetryPoints.recordedAt))
+          .limit(1);
+        // Sin pings, o sólo el que el marcador ya consumió: nada nuevo.
+        if (!ultimoPing || ultimoPing.recordedAt.getTime() <= desde.getTime()) return;
+        const hasta = ultimoPing.recordedAt;
+
+        const trazados = await tx.select().from(circuitPaths).where(eq(circuitPaths.circuitId, input.circuitId));
+        // Ver `detectarYGuardar`: el repositorio, pero leyendo y escribiendo dentro de la transacción.
+        const enTransaccion = new PasoPorParadaRepository(tx as unknown as Database);
+
+        const muestra: ResultadoDeUnidad["muestra"] = [];
+        let total = 0;
+        for (const sentido of input.sentidos) {
+          const trazado = trazados.find((t) => t.sentido === sentido)?.coordinates;
+          if (!trazado) throw new Error(`El circuito ${input.circuitId} no tiene trazado de ${sentido}.`);
+          const guardados = await enTransaccion.detectarYGuardar({
+            carrierAccountId: input.carrierAccountId,
+            circuitId: input.circuitId,
+            unitId: input.unitId,
+            sentido,
+            trazado,
+            corridorToleranceMeters: input.corridorToleranceMeters,
+            desde,
+            hasta,
+            detectorVersion: input.detectorVersion,
+          });
+          total += guardados.length;
+          for (const g of guardados) {
+            muestra.push({
+              stopId: g.stopId,
+              sentido,
+              pasoDesde: g.pasoDesde,
+              pasoHasta: g.pasoHasta,
+              huecoSegundos: g.huecoSegundos,
+            });
+          }
+        }
+
+        await tx
+          .insert(circuitDetectionMarks)
+          .values({
+            circuitId: input.circuitId,
+            unitId: input.unitId,
+            detectorVersion: input.detectorVersion,
+            lastPingAt: hasta,
+          })
+          .onConflictDoUpdate({
+            target: [
+              circuitDetectionMarks.circuitId,
+              circuitDetectionMarks.unitId,
+              circuitDetectionMarks.detectorVersion,
+            ],
+            set: { lastPingAt: hasta, updatedAt: new Date() },
+          });
+
+        resultado = {
+          estado: "detectada",
+          simulado: input.simular,
+          desde,
+          hasta,
+          marcaNueva: hasta,
+          pasosGuardados: total,
+          muestra,
+        };
+        if (input.simular) throw new SimulacionRevertida();
+      });
+    } catch (e) {
+      if (!(e instanceof SimulacionRevertida)) throw e;
+    }
+    return resultado;
   }
 }
 
