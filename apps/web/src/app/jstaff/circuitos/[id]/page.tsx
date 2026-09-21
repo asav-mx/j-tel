@@ -11,6 +11,8 @@ import {
 } from "@/lib/resumen-de-aperturas";
 import { CircuitoEditor } from "@/components/circuito-editor";
 import { CircuitoUnidades } from "@/components/circuito-unidades";
+import { CircuitoPromesa } from "@/components/circuito-promesa";
+import { propuestaDesdeNumero } from "@/lib/promesa-por-franja";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
 import {
@@ -101,7 +103,7 @@ export default async function ExpedienteDelCircuitoPage({
    */
   const hoyLocal = localDateIso(new Date(), circuito.timeZone);
 
-  const [concesion, trazados, paradas, asignaciones, asignables, aperturas, primerDia] =
+  const [concesion, trazados, paradas, asignaciones, asignables, aperturas, primerDia, promesa, versiones] =
     await Promise.all([
       repos.accounts.findById(circuito.concessionAccountId),
       repos.circuits.getPaths(id),
@@ -110,6 +112,8 @@ export default async function ExpedienteDelCircuitoPage({
       repos.circuits.listUnidadesAsignables(circuito.concessionAccountId),
       repos.circuits.resumenDeAperturas(id, addDaysIso(hoyLocal, -(DIAS_DEL_RESUMEN - 1))),
       repos.circuits.primerDiaConAperturas(id),
+      repos.circuits.getPromiseTableVigente(id),
+      repos.circuits.listPromiseTables(id),
     ]);
 
   const serie = serieDeAperturas({
@@ -188,6 +192,18 @@ export default async function ExpedienteDelCircuitoPage({
           frecuenciaMin={circuito.declaredFrequencyMinutes}
           arrancaEl={circuito.serviceLaunchDate}
           hoyLocal={hoyLocal}
+        />
+
+        <LaPromesaPorFranja
+          circuitoId={id}
+          horario={{
+            inicioLocal: String(circuito.serviceStartLocal).slice(0, 5),
+            finLocal: String(circuito.serviceEndLocal).slice(0, 5),
+          }}
+          zona={circuito.timeZone}
+          frecuenciaMin={circuito.declaredFrequencyMinutes}
+          promesa={promesa}
+          versiones={versiones}
         />
 
         <ComoSeMide circuitoId={id} perillas={perillasDeMedicion(circuito)} />
@@ -715,6 +731,63 @@ function LoQueDeclara({
           Guardar lo declarado
         </button>
       </form>
+    </Seccion>
+  );
+}
+
+/* ── Dos-b · la promesa por franja ──────────────────────────────────────── */
+
+/**
+ * La promesa por franja (Marco 9.1c) — **la única fuente de la promesa**
+ * (decisión de Asav, 21 sep 2026). La torre mide contra ella; Ontoy pasa a
+ * leerla en el PR B. Va pegada a «lo que declara» porque es parte de lo mismo:
+ * lo que el concesionario promete, capturado por J-Staff.
+ */
+function LaPromesaPorFranja({
+  circuitoId,
+  horario,
+  zona,
+  frecuenciaMin,
+  promesa,
+  versiones,
+}: {
+  circuitoId: string;
+  horario: { inicioLocal: string; finLocal: string };
+  zona: string;
+  frecuenciaMin: number | null;
+  promesa: Awaited<ReturnType<ReturnType<typeof getRepos>["circuits"]["getPromiseTableVigente"]>>;
+  versiones: Awaited<ReturnType<ReturnType<typeof getRepos>["circuits"]["listPromiseTables"]>>;
+}) {
+  const vigente = promesa
+    ? promesa.bandas.map((b) => ({
+        diaTipo: b.diaTipo,
+        sentido: b.sentido,
+        desdeLocal: String(b.desdeLocal).slice(0, 5),
+        hastaLocal: String(b.hastaLocal).slice(0, 5),
+        frequencyMinutes: b.frequencyMinutes,
+      }))
+    : null;
+  return (
+    <Seccion
+      id="promesa"
+      numero="2b"
+      titulo="La promesa por franja"
+      pregunta="Cada cuántos minutos promete pasar, por tipo de día y por hora. Contra esto mide la torre: sin promesa, no hay contra qué medir."
+    >
+      <CircuitoPromesa
+        circuitoId={circuitoId}
+        horario={horario}
+        vigente={vigente}
+        propuesta={vigente === null ? propuestaDesdeNumero(frecuenciaMin, horario) : []}
+        ontoyHoy={loQueDiraLaApp(frecuenciaMin)}
+        historia={versiones.map((v) => ({
+          id: v.id,
+          desde: localDateTimeShort(v.validFrom.toISOString(), zona),
+          hasta: v.validTo ? localDateTimeShort(v.validTo.toISOString(), zona) : null,
+          motivo: v.motivo,
+          franjas: v.franjas,
+        }))}
+      />
     </Seccion>
   );
 }
