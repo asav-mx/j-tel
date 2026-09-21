@@ -57,6 +57,8 @@ export const metadata: Metadata = {
   description: "Dónde viene tu camión, en vivo.",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: NOMBRE, statusBarStyle: "default" },
+  // iOS no lee el manifiesto para el ícono de inicio: quiere este PNG (hueco de la identidad, `docs/Ontoy-Iconos.md`).
+  icons: { icon: "/icono.svg", apple: "/iconos/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {

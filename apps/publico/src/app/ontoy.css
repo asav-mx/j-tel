@@ -732,3 +732,58 @@
   border-radius: 0 0 0 8px;
   padding: 2px 6px;
 }
+
+/* ── la página de privacidad (Parte B): texto para leer, no una pantalla ── */
+/*
+ * Sin `.ontoy`: ésa es una pantalla de alto fijo con su mapa; ésta es una
+ * página que se lee de arriba abajo. Mismos tokens, así respeta las dos pieles.
+ */
+.ontoy-legal {
+  min-height: 100dvh;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--fuente-texto), system-ui, sans-serif;
+  padding: 22px 18px calc(28px + env(safe-area-inset-bottom, 0px));
+  max-width: 680px;
+  margin: 0 auto;
+  line-height: 1.6;
+  font-size: 15px;
+}
+.ontoy-legal h1 {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 10px 0 2px;
+}
+.ontoy-legal h2 {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  margin: 26px 0 6px;
+}
+.ontoy-legal p {
+  margin: 0 0 10px;
+}
+.ontoy-legal ul {
+  margin: 0;
+  padding-left: 20px;
+}
+.ontoy-legal li {
+  margin: 0 0 6px;
+}
+.ontoy-legal a {
+  color: var(--texto);
+  text-underline-offset: 3px;
+}
+.ontoy-legal-fecha {
+  color: var(--tenue);
+  font-size: 13px;
+}
+.ontoy-legal-salida {
+  font-size: 14px;
+}
+.ontoy-pie a {
+  color: var(--tenue);
+  text-underline-offset: 2px;
+}

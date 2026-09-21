@@ -113,7 +113,8 @@ export function VistaRutas({
 
       <p className="ontoy-pie">
         El color de cada ruta es el que sus camiones traen pintado en la calle — la app lo registra, no lo inventa.
-        Sólo se muestran rutas publicadas. Ninguna pantalla te pide cuenta ni te identifica.
+        Sólo se muestran rutas publicadas. Ninguna pantalla te pide cuenta ni te identifica.{" "}
+        <a href="/privacidad">Qué datos usa la app y para qué</a>.
       </p>
     </div>
   );
