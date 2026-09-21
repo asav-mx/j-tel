@@ -160,26 +160,9 @@ export function perillasDeMedicion(c: CircuitoParaExpediente): PerillaDeMedicion
 }
 
 /**
- * Qué va a decir la app del pasajero con la frecuencia que está guardada.
- *
- * Se escribe junto al campo **antes** de guardarlo, porque dejarlo vacío es una
- * decisión legítima y quien la toma tiene que saber qué produce. La alternativa
- * —un valor sugerido en el campo— es la que ya costó: `DEFAULT 20` hacía
- * indistinguibles «el concesionario declaró 20» y «nadie declaró nada», y la app
- * afirmaba la cadencia igual en los dos casos.
- */
-export function loQueDiraLaApp(frecuenciaMin: number | null): string {
-  return frecuenciaMin === null
-    ? "Sin frecuencia declarada la app dice que el servicio corre, y se calla el número. " +
-        "Es la respuesta honesta, no una carencia que haya que llenar."
-    : `La app dirá «cada ${frecuenciaMin} min» cuando no vea ningún camión en el corredor. ` +
-        "Lo dice en voz alta y con el sistema detrás, así que tiene que venir del concesionario.";
-}
-
-/**
  * Qué va a hacer la app con la fecha de arranque que está guardada.
  *
- * Hermana de `loQueDiraLaApp`, y por la misma razón: dejarla vacía es una
+ * Por la misma razón que la promesa vacía: dejarla vacía es una
  * decisión legítima y quien la toma tiene que saber qué produce, **antes** de
  * guardar. Aquí el hueco es más fácil de leer al revés que en la frecuencia —
  * un campo de fecha vacío se parece mucho a «arranca hoy»— y la frase existe
@@ -263,7 +246,8 @@ export function faltantesDelCircuito(entrada: {
   trazados: number;
   paradas: number;
   unidadesVigentes: number;
-  frecuenciaMin: number | null;
+  /** La promesa vigente en una línea (`resumenDeLaPromesa`): la única fuente, las franjas. */
+  promesa: string;
   rangoEncendido: boolean;
   /** El día de arranque declarado, o `null` si el circuito ya opera. */
   arrancaEl: string | null;
@@ -290,12 +274,13 @@ export function faltantesDelCircuito(entrada: {
     },
     {
       /*
-       * Sin declarar NO es una carencia: es la respuesta honesta cuando el
+       * Sin capturar NO es una carencia: es la respuesta honesta cuando el
        * concesionario no la dio, y la app sabe decirla. Marcarla «falta»
        * presiona a inventar un número — que es el defecto que la 0031 cerró.
+       * De las franjas, la única fuente de la promesa (21 sep 2026).
        */
-      que: "Frecuencia declarada",
-      cuanto: entrada.frecuenciaMin === null ? "sin declarar" : `cada ${entrada.frecuenciaMin} min`,
+      que: "Promesa por franja",
+      cuanto: entrada.promesa,
       estado: "decidido",
     },
     {

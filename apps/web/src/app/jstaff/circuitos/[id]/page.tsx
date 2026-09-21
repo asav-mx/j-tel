@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { addDaysIso, localDateIso, localDateTimeShort } from "@jtel/domain";
+import { addDaysIso, localDateIso, localDateTimeShort, promesaAhora, type FranjaCapturada } from "@jtel/domain";
 import {
   aperturasDeHoy,
   DIAS_DEL_RESUMEN,
@@ -12,13 +12,12 @@ import {
 import { CircuitoEditor } from "@/components/circuito-editor";
 import { CircuitoUnidades } from "@/components/circuito-unidades";
 import { CircuitoPromesa } from "@/components/circuito-promesa";
-import { propuestaDesdeNumero } from "@/lib/promesa-por-franja";
+import { loQueDiceOntoyAhora, resumenDeLaPromesa } from "@/lib/promesa-por-franja";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
 import {
   faltantesDelCircuito,
   loQueDiraDelArranque,
-  loQueDiraLaApp,
   perillasDeMedicion,
   type PerillaDeMedicion,
 } from "@/lib/expediente-circuito";
@@ -122,6 +121,17 @@ export default async function ExpedienteDelCircuitoPage({
     primerDiaConRegistro: primerDia,
   });
 
+  // La promesa vigente: la única fuente de la promesa (21 sep 2026).
+  const franjasVigentes = promesa
+    ? promesa.bandas.map((b) => ({
+        diaTipo: b.diaTipo,
+        sentido: b.sentido,
+        desdeLocal: String(b.desdeLocal).slice(0, 5),
+        hastaLocal: String(b.hastaLocal).slice(0, 5),
+        frequencyMinutes: b.frequencyMinutes,
+      }))
+    : null;
+
   const publicado = circuito.publishedAt !== null;
   const rangoEncendido = circuito.arrivalRangeEnabledAt !== null;
   const unidadesVigentes = asignaciones.filter((a) => !a.validTo).length;
@@ -130,7 +140,7 @@ export default async function ExpedienteDelCircuitoPage({
     trazados: trazados.length,
     paradas: paradas.length,
     unidadesVigentes,
-    frecuenciaMin: circuito.declaredFrequencyMinutes,
+    promesa: resumenDeLaPromesa(franjasVigentes),
     rangoEncendido,
     arrancaEl: circuito.serviceLaunchDate,
     zona: circuito.timeZone,
@@ -189,7 +199,6 @@ export default async function ExpedienteDelCircuitoPage({
           horaInicio={String(circuito.serviceStartLocal).slice(0, 5)}
           horaFin={String(circuito.serviceEndLocal).slice(0, 5)}
           zona={circuito.timeZone}
-          frecuenciaMin={circuito.declaredFrequencyMinutes}
           arrancaEl={circuito.serviceLaunchDate}
           hoyLocal={hoyLocal}
         />
@@ -201,8 +210,7 @@ export default async function ExpedienteDelCircuitoPage({
             finLocal: String(circuito.serviceEndLocal).slice(0, 5),
           }}
           zona={circuito.timeZone}
-          frecuenciaMin={circuito.declaredFrequencyMinutes}
-          promesa={promesa}
+          franjasVigentes={franjasVigentes}
           versiones={versiones}
         />
 
@@ -443,7 +451,7 @@ function IdentidadYPublicacion({
         </ul>
         <p className="mt-2 text-[12px] leading-snug text-[var(--tenue)]">
           Nada de esto impide publicar. Se enuncia para que se vea, no para decidir por ti. La
-          frecuencia sin declarar y el tiempo estimado apagado <strong>no van marcados</strong>:
+          promesa sin capturar y el tiempo estimado apagado <strong>no van marcados</strong>:
           son respuestas, no huecos.
         </p>
       </div>
@@ -591,7 +599,6 @@ function LoQueDeclara({
   horaInicio,
   horaFin,
   zona,
-  frecuenciaMin,
   arrancaEl,
   hoyLocal,
 }: {
@@ -599,7 +606,6 @@ function LoQueDeclara({
   horaInicio: string;
   horaFin: string;
   zona: string;
-  frecuenciaMin: number | null;
   arrancaEl: string | null;
   hoyLocal: string;
 }) {
@@ -663,38 +669,17 @@ function LoQueDeclara({
           </p>
         </div>
 
-        <div className="border-t border-[var(--linea-tenue)] pt-4">
-          <label className={etiqueta} htmlFor="frecuenciaMin">
-            Cada cuántos minutos pasa una unidad
-          </label>
-          <input
-            id="frecuenciaMin"
-            name="frecuenciaMin"
-            type="number"
-            min={1}
-            step={1}
-            defaultValue={frecuenciaMin === null ? "" : frecuenciaMin}
-            placeholder="vacío = no la declaró"
-            className={campo}
-            aria-describedby="frecuencia-efecto"
-          />
-          {/*
-            La frase de abajo dice qué produce el valor que está guardado AHORA,
-            no una regla general. Vaciar el campo y guardar BORRA la frecuencia,
-            y es una acción legítima: si el concesionario deja de declararla, la
-            app tiene que dejar de prometerla.
-          */}
-          <p
-            id="frecuencia-efecto"
-            className="mt-2 rounded border border-[var(--linea)] bg-[var(--panel2)] p-2.5 text-[12.5px] leading-snug text-[var(--texto)]"
-          >
-            {loQueDiraLaApp(frecuenciaMin)}
-          </p>
-          <p className="mt-1.5 text-[12px] leading-snug text-[var(--tenue)]">
-            Dejarlo vacío es una respuesta, no un hueco. Vaciar el campo y guardar borra la
-            frecuencia que hubiera.
-          </p>
-        </div>
+        {/*
+          La frecuencia ya no se declara aquí: la promesa tiene una sola fuente,
+          las franjas de la sección 2b (decisión de Asav, 21 sep 2026).
+        */}
+        <p className="border-t border-[var(--linea-tenue)] pt-4 text-[12.5px] leading-snug text-[var(--tenue)]">
+          Cada cuántos minutos pasa se captura por franja en{" "}
+          <a href="#promesa" className="underline">
+            la promesa por franja
+          </a>
+          , abajo.
+        </p>
 
         <div className="border-t border-[var(--linea-tenue)] pt-4">
           <label className={etiqueta} htmlFor="arrancaEl">
@@ -741,32 +726,23 @@ function LoQueDeclara({
  * La promesa por franja (Marco 9.1c) — **la única fuente de la promesa**
  * (decisión de Asav, 21 sep 2026). La torre mide contra ella; Ontoy pasa a
  * leerla en el PR B. Va pegada a «lo que declara» porque es parte de lo mismo:
- * lo que el concesionario promete, capturado por J-Staff.
+ * lo que el concesionario promete, capturado por J-Staff. El campo viejo de
+ * «cada cuántos minutos» se fue de «lo que declara»: dos lugares para la misma
+ * promesa son dos promesas.
  */
 function LaPromesaPorFranja({
   circuitoId,
   horario,
   zona,
-  frecuenciaMin,
-  promesa,
+  franjasVigentes,
   versiones,
 }: {
   circuitoId: string;
   horario: { inicioLocal: string; finLocal: string };
   zona: string;
-  frecuenciaMin: number | null;
-  promesa: Awaited<ReturnType<ReturnType<typeof getRepos>["circuits"]["getPromiseTableVigente"]>>;
+  franjasVigentes: FranjaCapturada[] | null;
   versiones: Awaited<ReturnType<ReturnType<typeof getRepos>["circuits"]["listPromiseTables"]>>;
 }) {
-  const vigente = promesa
-    ? promesa.bandas.map((b) => ({
-        diaTipo: b.diaTipo,
-        sentido: b.sentido,
-        desdeLocal: String(b.desdeLocal).slice(0, 5),
-        hastaLocal: String(b.hastaLocal).slice(0, 5),
-        frequencyMinutes: b.frequencyMinutes,
-      }))
-    : null;
   return (
     <Seccion
       id="promesa"
@@ -777,9 +753,8 @@ function LaPromesaPorFranja({
       <CircuitoPromesa
         circuitoId={circuitoId}
         horario={horario}
-        vigente={vigente}
-        propuesta={vigente === null ? propuestaDesdeNumero(frecuenciaMin, horario) : []}
-        ontoyHoy={loQueDiraLaApp(frecuenciaMin)}
+        vigente={franjasVigentes}
+        ontoyAhora={loQueDiceOntoyAhora(promesaAhora(franjasVigentes, new Date(), zona))}
         historia={versiones.map((v) => ({
           id: v.id,
           desde: localDateTimeShort(v.validFrom.toISOString(), zona),

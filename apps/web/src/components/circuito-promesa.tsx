@@ -56,23 +56,19 @@ export function CircuitoPromesa({
   circuitoId,
   horario,
   vigente,
-  propuesta,
-  ontoyHoy,
+  ontoyAhora,
   historia,
 }: {
   circuitoId: string;
   horario: { inicioLocal: string; finLocal: string };
   /** Las franjas de la versión vigente; `null` si nunca se capturó ninguna. */
   vigente: FranjaCapturada[] | null;
-  /** Prellenado para un circuito que traía número único y ninguna franja. */
-  propuesta: FranjaCapturada[];
-  /** Lo que Ontoy publica HOY, del número único — hasta que el PR B lo mude. */
-  ontoyHoy: string;
+  /** Lo que Ontoy le dice al pasajero en este momento — de estas mismas franjas. */
+  ontoyAhora: string;
   historia: VersionDeLaPromesa[];
 }) {
   const router = useRouter();
-  const inicial = vigente ?? propuesta;
-  const [filas, setFilas] = useState<Fila[]>(() => inicial.map(conClave));
+  const [filas, setFilas] = useState<Fila[]>(() => (vigente ?? []).map(conClave));
   const [dia, setDia] = useState<TipoDeDiaCircuito>("entre_semana");
   const [motivo, setMotivo] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -167,11 +163,11 @@ export function CircuitoPromesa({
 
   return (
     <div className="space-y-4">
-      {/* Lado a lado mientras el PR B no mude a Ontoy: dos promesas distintas no pasan calladas. */}
+      {/* Las dos caras de la misma fuente: lo que oye el pasajero y contra qué mide la torre. */}
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="rounded border border-[var(--linea)] bg-[var(--panel2)] p-2.5">
-          <p className={`${mono} text-[10.5px] tracking-[.1em] text-[var(--tenue)] uppercase`}>Ontoy publica hoy</p>
-          <p className="mt-1 text-[13px] leading-snug text-[var(--texto)]">{ontoyHoy}</p>
+          <p className={`${mono} text-[10.5px] tracking-[.1em] text-[var(--tenue)] uppercase`}>Ontoy dice ahora</p>
+          <p className="mt-1 text-[13px] leading-snug text-[var(--texto)]">{ontoyAhora}</p>
         </div>
         <div className="rounded border border-[var(--linea)] bg-[var(--panel2)] p-2.5">
           <p className={`${mono} text-[10.5px] tracking-[.1em] text-[var(--tenue)] uppercase`}>La torre mide contra</p>
@@ -185,16 +181,8 @@ export function CircuitoPromesa({
         </div>
       </div>
       <p className="text-[12px] leading-snug text-[var(--tenue)]">
-        La promesa tiene una sola fuente: estas franjas. Ontoy pasa a leerlas en el siguiente cambio; hasta entonces
-        publica el número de arriba.
+        La promesa tiene una sola fuente: estas franjas. Ontoy, la torre y el reporte leen de aquí.
       </p>
-
-      {vigente === null && propuesta.length > 0 && (
-        <p className="rounded border border-[var(--b-acero)] bg-[var(--t-acero)] p-2.5 text-[12.5px] leading-snug text-[var(--texto)]">
-          Prellenada con el número que el circuito ya declaraba, todo el horario, los tres tipos de día. Es una
-          propuesta: no vale hasta que la guardes.
-        </p>
-      )}
 
       <div role="tablist" aria-label="Tipo de día" className="flex flex-wrap gap-1.5">
         {DIAS.map((d) => {

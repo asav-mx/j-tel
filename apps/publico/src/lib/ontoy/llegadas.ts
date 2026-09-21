@@ -9,7 +9,7 @@ import {
   type MuestraDeAvance,
   type RangoDeLlegada,
 } from "@jtel/domain";
-import type { Forma, Sentido, Vivo } from "./forma";
+import type { Forma, PromesaAhora, Sentido, Vivo } from "./forma";
 
 /**
  * Las llegadas — **todo el cálculo de Ontoy, en un solo lugar.**
@@ -163,11 +163,26 @@ export function rangoEnPalabras(r: RangoDeLlegada): string {
  * La promesa publicada, en palabras. **Se enseña siempre** (8.2), aunque no
  * haya una sola unidad en vivo: vale por sí sola, como el horario del poste.
  *
- * Sin frecuencia declarada **no se inventa una cadencia**: se dice que la ruta
- * no la publicó. Es la diferencia entre una promesa y una suposición.
+ * Viene de las franjas —la única fuente de la promesa— y es la de ESTA hora
+ * (9.1c). Tres casos que no se funden:
+ *
+ * - sin promesa capturada: la ruta no publica cada cuánto pasa;
+ * - sin franja a esta hora: no hay frecuencia publicada para esta hora (no se
+ *   rellena con la franja vecina);
+ * - declarada: la del sentido de la parada. Una parada de los dos sentidos
+ *   dice las dos si difieren — nunca un promedio.
+ *
+ * `null` mientras no llega: no se dice nada que no se sabe.
  */
-export function promesaEnPalabras(frecuenciaMin: number | null): string {
-  return frecuenciaMin === null
-    ? "Esta ruta no publica cada cuánto pasa"
-    : `Frecuencia · cada ${frecuenciaMin} min`;
+export function promesaEnPalabras(promesa: PromesaAhora | null, sentido: Sentido | null): string | null {
+  if (!promesa) return null;
+  if (promesa.estado === "sin_capturar") return "Esta ruta no publica cada cuánto pasa";
+  if (promesa.estado === "sin_franja") return "Sin frecuencia publicada para esta hora";
+  const cada = (n: number | null) => (n === null ? "sin frecuencia a esta hora" : `cada ${n} min`);
+  if (sentido) {
+    const n = promesa[sentido];
+    return n === null ? "Sin frecuencia publicada para esta hora" : `Frecuencia · cada ${n} min`;
+  }
+  if (promesa.ida === promesa.vuelta) return `Frecuencia · cada ${promesa.ida} min`;
+  return `Frecuencia · ida ${cada(promesa.ida)} · vuelta ${cada(promesa.vuelta)}`;
 }

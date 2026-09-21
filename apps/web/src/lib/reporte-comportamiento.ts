@@ -90,16 +90,12 @@ export interface ReporteDelDia {
   intervaloMedianoMin: number | null;
   intervalosMedidos: number;
   /**
-   * La frecuencia que el concesionario declaró, o `null`.
-   *
-   * **Cuando es `null` no hay contra qué comparar, y la pantalla lo dice en vez
-   * de escoger un número.** Es exactamente lo que la `0031` vino a arreglar: el
-   * `DEFAULT 20` hacía indistinguibles «declaró 20» y «no declaró nada», y la
-   * app afirmaba la cadencia igual en los dos casos. Un reporte que dijera «va
-   * atrasada» contra una frecuencia que nadie declaró es la misma falta, del
-   * lado del concesionario en vez del pasajero.
+   * La promesa vigente en una línea (`resumenDeLaPromesa`), de las franjas —la
+   * única fuente de la promesa desde el 21 sep 2026—. Sin promesa no hay contra
+   * qué comparar, y la pantalla lo dice en vez de escoger un número: es lo que
+   * la `0031` vino a arreglar.
    */
-  frecuenciaDeclaradaMin: number | null;
+  promesa: string;
   /** Sin trazado no hay contra qué proyectar: no se mide nada y se dice. */
   sinTrazado: boolean;
 }
@@ -110,7 +106,7 @@ export function armarReporte(entrada: {
   corteDelArchivo: Date | null;
   trazados: TrazadoParaMedir[];
   corredorMetros: number;
-  frecuenciaDeclaradaMin: number | null;
+  promesa: string;
   /** Todas las del plan, incluidas las que no tienen un solo punto. */
   historial: UnidadDelHistorial[];
 }): ReporteDelDia {
@@ -205,7 +201,7 @@ export function armarReporte(entrada: {
     enElPlan: unidades.length,
     intervaloMedianoMin: intervaloMedianoMinutos(intervalos),
     intervalosMedidos: intervalos.length,
-    frecuenciaDeclaradaMin: entrada.frecuenciaDeclaradaMin,
+    promesa: entrada.promesa,
     sinTrazado,
   };
 }

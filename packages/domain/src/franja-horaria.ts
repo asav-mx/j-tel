@@ -24,7 +24,7 @@
  * construir fechas para compararlas obligaría a inventar un día por nada.
  */
 
-import type { TipoDeDiaCivil } from "./tiempo.js";
+import { localTimeHHMM, tipoDeDiaLocal, type TipoDeDiaCivil } from "./tiempo.js";
 
 export type TipoDeDiaCircuito = TipoDeDiaCivil;
 
@@ -198,4 +198,46 @@ export function promesaEnInstante(
   );
   if (!franja) return { declarada: false };
   return { declarada: true, frequencyMinutes: franja.frequencyMinutes, franja };
+}
+
+// ── La promesa de AHORA, para quien la publica ───────────────────────────
+
+/**
+ * La promesa que se le dice al pasajero en este momento (Pieza 8.2), leída de
+ * **la única fuente de la promesa: las franjas** (decisión de Asav, 21 sep
+ * 2026). `circuits.declared_frequency_minutes` ya no es promesa.
+ *
+ * Tres casos, y no se funden:
+ *
+ * - `sin_capturar` — el circuito no tiene ninguna promesa vigente. Ontoy dice
+ *   que la ruta no publica cada cuánto pasa; nunca inventa una cadencia.
+ * - `sin_franja` — hay promesa, pero ninguna franja cubre esta hora en ningún
+ *   sentido. Es la decisión 3 del 20-sep: ese tramo no tiene promesa, y no se
+ *   rellena con la franja vecina.
+ * - `declarada` — los minutos de cada sentido; `null` en el sentido que esta
+ *   hora no cubre.
+ *
+ * Por sentido y no un solo número porque una franja puede prometer distinto a
+ * la ida y a la vuelta: fundirlos sería el promedio que el 9.1c prohíbe.
+ */
+export type PromesaAhora =
+  | { estado: "sin_capturar" }
+  | { estado: "sin_franja" }
+  | { estado: "declarada"; ida: number | null; vuelta: number | null };
+
+export function promesaAhora(
+  franjasVigentes: FranjaCapturada[] | null,
+  instante: Date,
+  zona: string,
+): PromesaAhora {
+  if (franjasVigentes === null) return { estado: "sin_capturar" };
+  const cuando = { diaTipo: tipoDeDiaLocal(instante, zona), horaLocal: localTimeHHMM(instante, zona) };
+  const minutos = (sentido: "ida" | "vuelta") => {
+    const p = promesaEnInstante(franjasVigentes, { ...cuando, sentido });
+    return p.declarada ? p.frequencyMinutes : null;
+  };
+  const ida = minutos("ida");
+  const vuelta = minutos("vuelta");
+  if (ida === null && vuelta === null) return { estado: "sin_franja" };
+  return { estado: "declarada", ida, vuelta };
 }

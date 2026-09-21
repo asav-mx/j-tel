@@ -11,6 +11,8 @@ import {
   circuitStops,
   circuitUnitAssignments,
   circuits,
+  circuitPromiseBands,
+  circuitPromiseTables,
   deviceAssignments,
   devices,
   livePositions,
@@ -166,7 +168,6 @@ async function sembrar(db: ReturnType<typeof createDb>) {
       concessionAccountId: CUENTAS.concesion,
       name: s.nombre,
       publicSlug: s.slug,
-      declaredFrequencyMinutes: s.frecuencia,
       staleAfterSeconds: 180,
       arrivalRangeFloorSeconds: 180,
       corridorToleranceMeters: 150,
@@ -184,6 +185,31 @@ async function sembrar(db: ReturnType<typeof createDb>) {
       publishedAt: ahora,
       arrivalRangeEnabledAt: ahora,
     });
+
+    /*
+     * La promesa, por franja — la única fuente de la promesa (21 sep 2026).
+     * Una franja que cubre el horario, los tres tipos de día: lo que el número
+     * único decía antes. `validFrom` atrás, como en el escenario de la torre,
+     * para que la promesa ya valga en todo instante que la app pregunte.
+     */
+    const inicio = s.cerrada ? "05:00" : hhmm(new Date(ahora.getTime() - 60 * 60_000));
+    const fin = s.cerrada ? hhmm(new Date(ahora.getTime() - 30 * 60_000)) : "23:59";
+    const [tabla] = await db
+      .insert(circuitPromiseTables)
+      .values({ circuitId: s.id, validFrom: new Date(ahora.getTime() - 30 * 24 * 3_600_000) })
+      .returning();
+    if (inicio < fin) {
+      await db.insert(circuitPromiseBands).values(
+        (["entre_semana", "sabado", "domingo"] as const).map((diaTipo) => ({
+          promiseTableId: tabla!.id,
+          diaTipo,
+          sentido: null,
+          desdeLocal: `${inicio}:00`,
+          hastaLocal: `${fin}:00`,
+          frequencyMinutes: s.frecuencia,
+        })),
+      );
+    }
 
     await db.insert(circuitPaths).values([
       { circuitId: s.id, sentido: "ida", coordinates: trazado, pointCount: trazado.length, lengthMeters: 5500 },

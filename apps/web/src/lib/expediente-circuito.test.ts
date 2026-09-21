@@ -3,7 +3,6 @@ import { ORIGEN_DEL_CIRCUITO } from "@jtel/domain/publico";
 import {
   faltantesDelCircuito,
   loQueDiraDelArranque,
-  loQueDiraLaApp,
   perillasDeMedicion,
   type CircuitoParaExpediente,
 } from "./expediente-circuito";
@@ -94,25 +93,12 @@ describe("de dónde salió el valor que está guardado", () => {
   });
 });
 
-describe("la frecuencia vacía es una decisión, y la pantalla dice qué produce", () => {
-  it("sin frecuencia, la lectura no contiene ningún número de minutos", () => {
-    const texto = loQueDiraLaApp(null);
-    expect(texto).toMatch(/se calla el número/);
-    expect(texto).not.toMatch(/\d+\s*min/);
-  });
-
-  it("con frecuencia, la lectura cita exactamente la que está guardada", () => {
-    expect(loQueDiraLaApp(12)).toContain("cada 12 min");
-    expect(loQueDiraLaApp(12)).not.toContain("20");
-  });
-});
-
 describe("lo que falta se enuncia, y lo decidido no se marca como carencia", () => {
   const vacio = {
     trazados: 0,
     paradas: 0,
     unidadesVigentes: 0,
-    frecuenciaMin: null,
+    promesa: "sin promesa capturada",
     rangoEncendido: false,
     arrancaEl: null,
     zona: "America/Ciudad_Juarez",
@@ -123,8 +109,8 @@ describe("lo que falta se enuncia, y lo decidido no se marca como carencia", () 
     return r;
   };
 
-  it("la frecuencia sin declarar dice «sin declarar», nunca un número", () => {
-    expect(renglon(vacio, "Frecuencia declarada").cuanto).toBe("sin declarar");
+  it("la promesa sin capturar se dice así, nunca un número", () => {
+    expect(renglon(vacio, "Promesa por franja").cuanto).toBe("sin promesa capturada");
   });
 
   it("el tiempo estimado APAGADO no se marca como falta", () => {
@@ -140,9 +126,9 @@ describe("lo que falta se enuncia, y lo decidido no se marca como carencia", () 
     );
   });
 
-  it("la frecuencia sin declarar tampoco: es una respuesta, no un hueco", () => {
-    expect(renglon(vacio, "Frecuencia declarada").estado).toBe("decidido");
-    expect(renglon({ ...vacio, frecuenciaMin: 20 }, "Frecuencia declarada").estado).toBe("decidido");
+  it("la promesa sin capturar tampoco: es una respuesta, no un hueco", () => {
+    expect(renglon(vacio, "Promesa por franja").estado).toBe("decidido");
+    expect(renglon({ ...vacio, promesa: "2 franjas · cada 10–20 min" }, "Promesa por franja").estado).toBe("decidido");
   });
 
   it("lo que sí le falta al pasajero se marca: trazado, paradas y unidades", () => {
@@ -156,7 +142,7 @@ describe("lo que falta se enuncia, y lo decidido no se marca como carencia", () 
       trazados: 2,
       paradas: 7,
       unidadesVigentes: 3,
-      frecuenciaMin: 20,
+      promesa: "2 franjas · cada 10–20 min",
       rangoEncendido: true,
       arrancaEl: "2026-09-15",
       zona: "America/Ciudad_Juarez",

@@ -1,4 +1,4 @@
-import type { FranjaCapturada, SentidoDeFranja, TipoDeDiaCircuito } from "@jtel/domain";
+import type { FranjaCapturada, PromesaAhora, SentidoDeFranja, TipoDeDiaCircuito } from "@jtel/domain";
 
 /**
  * La captura de la promesa por franja (Marco 9.1c) en el expediente del
@@ -7,9 +7,9 @@ import type { FranjaCapturada, SentidoDeFranja, TipoDeDiaCircuito } from "@jtel/
  * decirla en palabras.
  *
  * **La promesa tiene UNA fuente: las franjas** (decisión de Asav, 21 sep 2026).
- * `circuits.declared_frequency_minutes` deja de ser promesa; mientras el PR B
- * no mude a Ontoy, esta pantalla enseña lado a lado lo que Ontoy publica hoy y
- * lo capturado aquí, para que el desacuerdo se vea y no pase callado.
+ * `circuits.declared_frequency_minutes` ya no es promesa: Ontoy, la torre y
+ * J-Staff leen de aquí, y una valla (`promesa-una-fuente.test.ts`) se pone en
+ * rojo si alguien vuelve a leer o escribir la columna.
  *
  * Guardar reusa `savePromiseTable` —todo o nada, contra el horario y sin
  * encimarse— y validar reusa `validarFranjas`. Aquí no vive una segunda regla.
@@ -83,31 +83,33 @@ export function leerFranjasCapturadas(
   return { ok: true, franjas };
 }
 
-/**
- * La propuesta para un circuito que ya declaraba un número único y no tiene
- * franjas: ese número, todo el horario, los tres tipos de día. **Es una
- * propuesta, no una conversión**: llega prellenada y un humano la guarda. Con
- * horario nocturno no se propone nada —una franja no cruza la medianoche, y
- * partirla en dos por quien captura es decidir por él.
- */
-export function propuestaDesdeNumero(
-  numero: number | null,
-  horario: { inicioLocal: string; finLocal: string },
-): FranjaCapturada[] {
-  const inicio = horario.inicioLocal.slice(0, 5);
-  const fin = horario.finLocal.slice(0, 5);
-  if (numero === null || inicio >= fin) return [];
-  return DIAS.map((d) => ({
-    diaTipo: d.tipo,
-    sentido: null,
-    desdeLocal: inicio,
-    hastaLocal: fin,
-    frequencyMinutes: numero,
-  }));
-}
-
 /** «06:00–09:00 · cada 10 min · los dos sentidos». */
 export function franjaEnPalabras(f: FranjaCapturada): string {
   const sentido = SENTIDOS.find((s) => s.valor === f.sentido)?.nombre.toLowerCase() ?? "los dos sentidos";
   return `${f.desdeLocal.slice(0, 5)}–${f.hastaLocal.slice(0, 5)} · cada ${f.frequencyMinutes} min · ${sentido}`;
+}
+
+/**
+ * La promesa vigente en una línea, para las listas y el reporte de J-Staff.
+ * Tres casos que no se funden: nunca capturada, capturada vacía (el
+ * concesionario no declara frecuencia) y con franjas. Con franjas dice el
+ * intervalo de cadencias, nunca un promedio (9.1c).
+ */
+export function resumenDeLaPromesa(franjas: FranjaCapturada[] | null): string {
+  if (franjas === null) return "sin promesa capturada";
+  if (franjas.length === 0) return "promesa vacía: el concesionario no declara frecuencia";
+  const cadencias = franjas.map((f) => f.frequencyMinutes);
+  const min = Math.min(...cadencias);
+  const max = Math.max(...cadencias);
+  const n = `${franjas.length} ${franjas.length === 1 ? "franja" : "franjas"}`;
+  return min === max ? `${n} · cada ${min} min` : `${n} · cada ${min}–${max} min`;
+}
+
+/** Lo que Ontoy le dice al pasajero en este momento, para que J-Staff lo vea desde aquí. */
+export function loQueDiceOntoyAhora(p: PromesaAhora): string {
+  if (p.estado === "sin_capturar") return "«Esta ruta no publica cada cuánto pasa» — no hay promesa capturada.";
+  if (p.estado === "sin_franja") return "«Sin frecuencia publicada para esta hora» — ninguna franja cubre este momento.";
+  if (p.ida === p.vuelta) return `«Frecuencia · cada ${p.ida} min», en los dos sentidos.`;
+  const cada = (n: number | null) => (n === null ? "sin frecuencia a esta hora" : `cada ${n} min`);
+  return `A la ida «${cada(p.ida)}», a la vuelta «${cada(p.vuelta)}».`;
 }
