@@ -38,7 +38,8 @@ import { promesaDelCircuito } from "@/lib/promesa";
  *    enseñar.
  * 2. **Caché obligatorio**, atado a la cadencia del recolector: 15 s. Una
  *    parada con cincuenta teléfonos pega al CDN, no a la base. El límite de
- *    tasa lo pone el firewall de Vercel — ver `docs/Procedimiento-Firewall-Publico.md`.
+ *    tasa lo pone el firewall de Vercel, fuera del repo — ver
+ *    `docs/Procedimiento-Firewall-Publico.md`, que dice qué frena y qué no.
  * 3. **Si el dato está viejo, no hay posición.** No se manda la última conocida:
  *    un camión de hace veinte minutos dibujado en un mapa en vivo se lee como
  *    «va llegando». La app cae a la frecuencia declarada, que es honesta.
@@ -284,11 +285,21 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
        *  1. **Sólo posición actual, nunca historia.** Este endpoint no sirve
        *     recorridos: lo que devuelve es dónde está cada unidad AHORA, y eso
        *     no se acumula solo.
-       *  2. **Límite de peticiones por teléfono**, que todavía NO existe y es
-       *     la mitad que falta. Un raspador puede pedir cada segundo y armar
-       *     el historial que el id opaco impedía. Va en su propio frente
-       *     —necesita un contador compartido entre instancias, no uno en
-       *     memoria— y está dicho aquí para que no se pierda.
+       *  2. **Límite de peticiones por IP**, en el firewall de Vercel (ver
+       *     `docs/Procedimiento-Firewall-Publico.md`): 120 por minuto, 429 al
+       *     pasarse. Cuenta ANTES del CDN y es global entre instancias; un
+       *     contador aquí dentro sólo vería las respuestas que el caché no
+       *     sirvió. No hay cuentas en la app, así que «por teléfono» es, en
+       *     la práctica, por IP.
+       *
+       *  **Lo que el límite frena y lo que no** (aceptado por ASAV, 21-sep):
+       *  frena el **barrido masivo** —muchas rutas o muchos slugs desde una
+       *  IP, o pedir mil veces saltándose el caché—. **No frena a quien sigue
+       *  UNA ruta**: la app pide cada 15 s, el CDN guarda 15 s, y un guion
+       *  que haga lo mismo no se distingue de un pasajero. Eso es aceptable
+       *  porque lo que obtiene es **público** (Pieza 9.14): que un camión de
+       *  servicio público pasó por un punto a cierta hora, con el económico
+       *  que trae pintado en el costado.
        */
       economico: p.unitLabel,
       lat: p.latitude,
