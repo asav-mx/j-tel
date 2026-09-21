@@ -74,17 +74,31 @@ describe("la puerta", () => {
     expect(await inventado.text()).toBe(await noPublicado.text());
   });
 
-  it("sin llave no publica unidades con identidad recalculable: 503", async () => {
+  it("SIN LLAVE LA APP SIGUE SIRVIENDO: la llave dejó de proteger este endpoint", async () => {
+    /*
+     * ✎ **21-sep-2026.** Antes esto exigía un 503: sin `JTEL_SECRET_KEY` el
+     * identificador de la unidad no habría sido opaco, y antes que publicar
+     * identidad recalculable no se publicaba nada.
+     *
+     * Ese identificador ya no existe — ahora va el número económico, que está
+     * pintado en el costado del camión (Pieza 8.5). La llave no protege nada de
+     * aquí, y dejar el 503 habría apagado la app del pasajero entera por una
+     * llave que ya no le hace falta.
+     *
+     * Quien sí la necesita es el contador de aperturas, y aquel endpoint grita
+     * en el registro cuando falta. Ver su comentario.
+     */
     delete process.env.JTEL_SECRET_KEY;
     repos.circuits.getPublishedCircuitBySlug.mockResolvedValue(CIRCUITO);
     const r = await GET(pedir(), ctx("oasis-centro"));
-    expect(r.status).toBe(503);
+    expect(r.status).toBe(200);
   });
 });
 
 describe("lo que sale, y lo que no", () => {
   const posicion = {
     unitId: "5cc6dc22-dc23-4467-afbd-2a91123fe0cf",
+    unitLabel: "2120",
     latitude: 31.71,
     longitude: -106.45,
     heading: 45,
@@ -100,13 +114,27 @@ describe("lo que sale, y lo que no", () => {
     const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
     expect(Object.keys(cuerpo.unidades[0]).sort()).toEqual([
       "antiguedad_seg",
+      // El número económico, desde el 21-sep-2026 (8.5). Antes: `id_publico`.
+      "economico",
       "fresco",
-      "id_publico",
       "lat",
       "lon",
       "rumbo",
       "sentido",
     ]);
+  });
+
+  it("EL ECONÓMICO SALE, Y LA PLACA NO — la línea no se movió entera", async () => {
+    /*
+     * El económico se enseña porque está pintado en el camión y la 8.5 lo pide.
+     * Eso NO abrió la puerta a lo demás: la placa y el transportista siguen sin
+     * existir para el pasajero, y ése era siempre el fondo de la separación
+     * entre esta consulta y la del operador.
+     */
+    const crudo = await (await GET(pedir(), ctx("oasis-centro"))).text();
+    expect(JSON.parse(crudo).unidades[0].economico).toBe("2120");
+    expect(crudo).not.toContain("plateNumber");
+    expect(crudo).not.toContain("carrier");
   });
 
   it("`circuito_id` es el slug, nunca el uuid interno", async () => {

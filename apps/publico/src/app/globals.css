@@ -127,36 +127,18 @@ body {
 }
 
 /*
- * El crédito de OpenStreetMap, y por qué se movió.
+ * ✎ **21-sep-2026: aquí vivían las reglas del crédito de OpenStreetMap, y se
+ * mudaron a `ontoy.css`.**
  *
- * Estaba abajo a la derecha, con 8 px y opacidad .6 — y la hoja lo tapaba
- * ENTERO, en los dos estados. Medido: la atribución cae en (274, 833) de una
- * ventana de 844, y `elementFromPoint` sobre su propio centro devuelve la hoja,
- * nunca a ella. O sea que no se veía nunca, ni cerrada ni abierta.
+ * Subían el control a `top: 62px` porque en la cara VIEJA la hoja tapaba el
+ * borde de abajo del mapa de forma permanente, y la licencia de OSM pide el
+ * crédito **visible**: uno que nadie puede ver es lo mismo que no tenerlo.
  *
- * No es un detalle de estética: las teselas son de OpenStreetMap y su licencia
- * pide el crédito **visible**. Un crédito que ningún usuario puede ver es lo
- * mismo que no tenerlo.
- *
- * Se sube al borde superior del mapa, que es la única franja visible en los dos
- * estados de la hoja. A la izquierda, debajo de la chapa del nombre, donde no
- * choca con el botón de tema. La opacidad sube a .75: sigue siendo discreto y ya
- * se lee.
+ * Esa cara ya no existe, pero las reglas seguían siendo globales y se colaron a
+ * Ontoy — donde la hoja sólo aparece al tocar una parada— dejando el crédito
+ * flotando a media pantalla. La razón sigue valiendo; el lugar cambió, y ahora
+ * vive junto a la pantalla que lo necesita.
  */
-.leaflet-bottom.leaflet-right {
-  /* La posición nativa del control queda debajo de la hoja: se anula. */
-  bottom: auto;
-  right: auto;
-  top: 62px;
-  left: 0;
-}
-
-.leaflet-control-attribution {
-  font-size: 9px;
-  opacity: 0.75;
-  border-radius: 0 8px 8px 0;
-  padding: 2px 6px;
-}
 
 /* ── La barra que flota encima ───────────────────────────────────── */
 
@@ -810,9 +792,7 @@ body {
   padding-top: 42px;
 }
 
-.pantalla:has(.franja-previa) .leaflet-bottom.leaflet-right {
-  top: 88px;
-}
+/* (la regla de `.franja-previa` se fue con la cara vieja, 21-sep-2026) */
 
 .franja-previa {
   position: fixed;

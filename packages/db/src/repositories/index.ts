@@ -6333,7 +6333,25 @@ export class CircuitRepository {
    */
   async listPublishedCircuits() {
     return this.db
-      .select({ publicSlug: circuits.publicSlug, name: circuits.name })
+      .select({
+        publicSlug: circuits.publicSlug,
+        name: circuits.name,
+        /*
+         * El color, la frecuencia y el horario entraron con Ontoy: la vista de
+         * ciudad los necesita para pintar cada ruta con su identidad (8.8c) y
+         * para decir su promesa aunque no haya una sola unidad en vivo (8.2).
+         *
+         * Son **públicos** y por eso pueden salir por aquí: la ruta, sus
+         * paradas y sus horarios están en el primer cajón del 9.14. Lo que
+         * sigue sin salir es el uuid, la concesión y quién los corre.
+         */
+        colorHex: circuits.colorHex,
+        declaredFrequencyMinutes: circuits.declaredFrequencyMinutes,
+        serviceStartLocal: circuits.serviceStartLocal,
+        serviceEndLocal: circuits.serviceEndLocal,
+        timeZone: circuits.timeZone,
+        serviceLaunchDate: circuits.serviceLaunchDate,
+      })
       .from(circuits)
       .where(isNotNull(circuits.publishedAt))
       .orderBy(circuits.name);
@@ -6453,12 +6471,36 @@ export class CircuitRepository {
     return this.db
       .select({
         unitId: circuitUnitAssignments.unitId,
+        /*
+         * **El número económico, y esto es un cambio con fecha: 21-sep-2026.**
+         *
+         * Esta consulta NO lo traía, a propósito. El porqué del cambio importa
+         * más que el campo:
+         *
+         * La **Pieza 8.5** lo pide por su nombre —«el pasajero ve la unidad en
+         * vivo, su número económico incluido: *viene la 2120* es parte de la
+         * confianza»— y el número **está pintado en el costado del camión**:
+         * cualquiera parado en la esquina lo lee. Esconderlo no protegía nada
+         * que la calle no enseñe.
+         *
+         * Lo que sí protegía el identificador opaco que esto reemplaza era otra
+         * cosa: que nadie armara el historial diario de un camión raspando el
+         * endpoint. Esa protección **no se abandona, cambia de lugar** (ASAV,
+         * 21-sep): el endpoint sirve sólo la posición ACTUAL y nunca historia, y
+         * el raspado se corta con un límite de peticiones por teléfono, que
+         * todavía no existe y está anotado en el endpoint.
+         *
+         * **La placa y el transportista siguen sin salir por aquí**, y ése era
+         * siempre el fondo de la separación con la consulta del operador.
+         */
+        unitLabel: units.label,
         latitude: livePositions.latitude,
         longitude: livePositions.longitude,
         heading: livePositions.heading,
         recordedAt: livePositions.recordedAt,
       })
       .from(circuitUnitAssignments)
+      .innerJoin(units, eq(units.id, circuitUnitAssignments.unitId))
       .innerJoin(
         deviceAssignments,
         and(
@@ -6480,12 +6522,18 @@ export class CircuitRepository {
    * consulta del operador, y es OTRA consulta a propósito.**
    *
    * No es `listLivePositionsForCircuit` con dos columnas más, y esa separación
-   * es estructura, no estilo: aquélla sirve al endpoint público, donde el
-   * número económico, la placa y el transportista **no deben existir**. Si las
-   * dos caras compartieran consulta, el día que alguien agregara un campo aquí
-   * lo agregaría también allá, y el filtro que lo quita sería una línea que
-   * alguien puede borrar sin que se rompa nada. Aquí la línea no existe: la
-   * consulta pública no trae `label` y nunca lo trajo.
+   * es estructura, no estilo: aquélla sirve al endpoint público, donde **la
+   * placa y el transportista no deben existir**. Si las dos caras compartieran
+   * consulta, el día que alguien agregara un campo aquí lo agregaría también
+   * allá, y el filtro que lo quita sería una línea que alguien puede borrar sin
+   * que se rompa nada. Aquí la línea no existe.
+   *
+   * ✎ **Corregido el 21-sep-2026.** Este párrafo decía que el económico tampoco
+   * debía existir allá, y que «la consulta pública no trae `label` y nunca lo
+   * trajo». Desde hoy sí lo trae: la Pieza 8.5 lo pide por su nombre y el
+   * número está pintado en el costado del camión (el porqué completo está en el
+   * comentario de `listLivePositionsForCircuit`). Lo que no cambió —y es el
+   * fondo de esta separación— es la placa y el transportista.
    *
    * ## Parte de la ASIGNACIÓN, no de la posición
    *

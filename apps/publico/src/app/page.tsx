@@ -1,63 +1,88 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
+import { enHorarioDeServicio, yaArrancoElServicio } from "@jtel/domain/publico";
 import { getRepos } from "@/lib/db";
+import { Ontoy } from "@/components/ontoy/ontoy";
+import type { RutaDeLaCiudad, Sentido } from "@/lib/ontoy/forma";
+import type { EstadoDeRuta } from "@/components/ontoy/vista-rutas";
 
 export const dynamic = "force-dynamic";
 
 /**
- * El mismo nombre que titula la pestaña y nombra la app instalada
- * (`layout.tsx`). De variable de entorno y no del código: esta app sirve a
- * cualquier concesionario invitado, y hornear «Juárez Bus» convertiría el alta
- * del siguiente en un despliegue.
+ * El nombre de la app, **de configuración y nunca del código**
+ * (`NEXT_PUBLIC_APP_NOMBRE=Ontoy`). El mismo que titula la pestaña y nombra la
+ * app instalada. Esta app sirve a cualquier concesionario invitado, y hornear un
+ * nombre convertiría el alta del siguiente en un despliegue.
  */
 const NOMBRE = process.env.NEXT_PUBLIC_APP_NOMBRE ?? "Transporte público";
 
 /**
- * La puerta.
+ * La puerta de Ontoy — **abre en la ciudad**, no en un circuito (8.8).
  *
- * Con un solo circuito publicado entra directo: un pasajero que abre la app no
- * debería tener que escoger de una lista de uno. Con varios, los lista. Ningún
- * nombre en el código — salen de la base.
+ * Hasta hoy pedía un slug: con un circuito publicado redirigía a él y con varios
+ * los listaba por nombre. La Pieza 8 pide otra cosa: dos vistas, Rutas y Mapa,
+ * sobre la ciudad entera, porque «la estructura es de la app de la ciudad, no de
+ * una cuenta: el pasajero no elige carrier, elige ruta».
+ *
+ * ## Por qué el horario se resuelve AQUÍ
+ *
+ * La escalera de estados la resuelve el servidor y la pantalla lee (8.9). Y hay
+ * una razón técnica que empuja en el mismo sentido: `@jtel/domain/publico` usa
+ * `node:crypto` y no puede cargarse en el navegador. Resolverlo aquí evita las
+ * dos cosas que salen mal — una segunda definición del horario en el teléfono, y
+ * un build roto.
+ *
+ * ## Sólo lo publicado
+ *
+ * `listPublishedCircuits` ya filtra por el interruptor de publicación (8.4). La
+ * vista previa **no entra aquí**: existe para mirar UNA ruta nombrándola, no
+ * para colarse a la portada.
  */
-export default async function Inicio() {
-  const circuitos = await getRepos().circuits.listPublishedCircuits();
+export default async function Inicio({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const pedida = (await searchParams).ruta;
+  const publicados = await getRepos().circuits.listPublishedCircuits();
+  const ahora = new Date();
 
-  if (circuitos.length === 1) redirect(`/c/${circuitos[0].publicSlug}`);
+  const rutas: RutaDeLaCiudad[] = [];
+  const estados: EstadoDeRuta[] = [];
+
+  for (const c of publicados) {
+    const circuito = await getRepos().circuits.getPublishedCircuitBySlug(c.publicSlug);
+    if (!circuito) continue;
+    const trazados = await getRepos().circuits.getPaths(circuito.id);
+
+    rutas.push({
+      circuito_id: c.publicSlug,
+      nombre: c.name,
+      color_hex: c.colorHex,
+      frecuencia_declarada_min: c.declaredFrequencyMinutes,
+      horario: { inicio: c.serviceStartLocal, fin: c.serviceEndLocal, zona: c.timeZone },
+      arranca_el: c.serviceLaunchDate,
+      trazados: trazados.map((t) => ({
+        sentido: t.sentido as Sentido,
+        coordenadas: t.coordinates as Array<[number, number]>,
+        largo_m: Math.round(t.lengthMeters),
+      })),
+    });
+
+    const arranco = yaArrancoElServicio(ahora, c.serviceLaunchDate, c.timeZone);
+    const abierto = enHorarioDeServicio(ahora, c.serviceStartLocal, c.serviceEndLocal, c.timeZone);
+    estados.push({
+      circuito_id: c.publicSlug,
+      situacion: !arranco ? "por_arrancar" : abierto ? "abierto" : "cerrado",
+      abre_a: c.serviceStartLocal.slice(0, 5),
+      arranca_el: c.serviceLaunchDate,
+    });
+  }
 
   return (
-    <main className="puerta">
-      {/*
-        La portada no decía en qué app estaba parado el pasajero.
-        Abría con «¿A dónde vas?» —una pregunta, sin sujeto—, y quien llega por
-        una liga compartida no tiene forma de saber qué está abriendo.
-
-        El nombre ya existía y ya salía del dato, no del código: la misma
-        variable que titula la pestaña y nombra la app instalada. Lo que faltaba
-        era decirlo en la página, que es el único lugar donde el pasajero mira.
-      */}
-      <p className="marca">{NOMBRE}</p>
-      <h1>¿A dónde vas?</h1>
-      <p>{circuitos.length === 0 ? "Todavía no hay rutas publicadas." : "Escoge tu ruta."}</p>
-      {/*
-        Y si no sabe cuál escoger, el buscador. Va arriba de la lista porque
-        con varias rutas la pregunta «¿cuál me sirve?» llega antes que la
-        respuesta «ésta»; con una sola esta página redirige y no se ve, así que
-        la liga que de verdad se usa es la de la vista de la ruta.
-      */}
-      {circuitos.length > 0 && (
-        <Link className="puerta-buscar" href="/buscar">
-          Ver cuál te sirve
-        </Link>
-      )}
-      {circuitos.length > 0 && (
-        <ul>
-          {circuitos.map((c) => (
-            <li key={c.publicSlug}>
-              <Link href={`/c/${c.publicSlug}`}>{c.name}</Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </main>
+    <Ontoy
+      nombre={NOMBRE}
+      rutas={rutas}
+      estados={estados}
+      rutaInicial={typeof pedida === "string" ? pedida : null}
+    />
   );
 }
