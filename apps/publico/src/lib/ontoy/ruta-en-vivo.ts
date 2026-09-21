@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Forma, Vivo } from "./forma";
+import { proximaEspera, SONDEO_MS } from "./ritmo-del-sondeo";
 
 /**
  * La ruta en vivo — la forma una vez, y las unidades cada quince segundos.
@@ -21,9 +22,9 @@ import type { Forma, Vivo } from "./forma";
  * ## Quince segundos, y no menos
  *
  * Es el TTL del CDN: sondear más seguido no trae dato más fresco y sí gasta
- * los datos del teléfono de alguien.
+ * los datos del teléfono de alguien. Tras un 429 del firewall el paso se baja
+ * solo y vuelve al primer éxito — ver `ritmo-del-sondeo.ts`.
  */
-const SONDEO_MS = 15_000;
 
 export interface RutaEnVivo {
   forma: Forma | null;
@@ -89,27 +90,40 @@ export function useRutaEnVivo(circuitoId: string | null): RutaEnVivo {
     mirar();
     document.addEventListener("visibilitychange", mirar);
 
+    /*
+     * Una cadena de `setTimeout`, no un `setInterval`: la espera siguiente
+     * depende de cómo contestó ésta (un 429 pide apartarse).
+     */
+    let espera = SONDEO_MS;
+    let id: ReturnType<typeof setTimeout> | undefined;
+
     const pedir = async () => {
-      if (!visible.current) return;
-      try {
-        const r = await fetch(`/api/circuitos/${circuitoId}/unidades`);
-        if (!r.ok) throw new Error(String(r.status));
-        const v: Vivo = await r.json();
-        if (montado) {
-          setVivo(v);
-          setError(false);
+      let status: number | null = null;
+      let retryAfter: string | null = null;
+      if (visible.current) {
+        try {
+          const r = await fetch(`/api/circuitos/${circuitoId}/unidades`);
+          status = r.status;
+          retryAfter = r.headers.get("retry-after");
+          if (!r.ok) throw new Error(String(r.status));
+          const v: Vivo = await r.json();
+          if (montado) {
+            setVivo(v);
+            setError(false);
+          }
+        } catch {
+          // Lo anterior NO se borra: sigue sirviendo, con su edad a la vista.
+          if (montado) setError(true);
         }
-      } catch {
-        // Lo anterior NO se borra: sigue sirviendo, con su edad a la vista.
-        if (montado) setError(true);
+        espera = proximaEspera(status, retryAfter, espera);
       }
+      if (montado) id = setTimeout(() => void pedir(), espera);
     };
 
     void pedir();
-    const id = setInterval(() => void pedir(), SONDEO_MS);
     return () => {
       montado = false;
-      clearInterval(id);
+      clearTimeout(id);
       document.removeEventListener("visibilitychange", mirar);
     };
   }, [circuitoId, intento]);
