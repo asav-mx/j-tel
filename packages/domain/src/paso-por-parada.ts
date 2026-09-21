@@ -229,3 +229,47 @@ export function compararPaso(
   if (!ancla || insumo.frequencyMinutes === null) return "sin_datos";
   return compararRangoContraVentana(paso, ventanaEsperada(ancla, insumo.frequencyMinutes, insumo.toleranciaPct));
 }
+
+/**
+ * De qué lado de la banda cayó el intervalo — la pieza que
+ * `compararRangoContraVentana` deja fuera a propósito.
+ *
+ * **Por qué una función nueva y no un cambio en aquélla.**
+ * `compararRangoContraVentana` ya selló veredictos; su contrato —`sostuvo` /
+ * `se_agujero` / `sin_datos`, sin decir de qué lado— es 9.1b en su nivel: para
+ * el motor, adelantado y atrasado son el mismo daño. Cambiarla para que
+ * distinga movería el significado de filas ya escritas. Aquí se agrega la
+ * conclusión que falta, con la misma aritmética, sin tocar la de abajo.
+ *
+ * **Quién sí necesita el lado.** La torre (9.2c, 9.3b): en pantalla no se dice
+ * «se agujeró», se dice **ADELANTADA** o **ATRASADA**, y son dos acciones
+ * distintas para quien tiene el radio en la mano. El daño es el mismo; la
+ * corrección no.
+ *
+ * Los cuatro casos, banda contra banda (decisión C de Asav, 19-sep):
+ *
+ * - `dentro` — el rango cabe entero en la ventana.
+ * - `antes` — cayó entero antes: el intervalo fue **más corto** que la banda,
+ *   el camión llegó pisándole los talones al anterior. Es ADELANTADA.
+ * - `despues` — cayó entero después: intervalo **más largo**. Es ATRASADA.
+ * - `a_caballo` — se traslapa con una orilla. **No es «sin medición»**: es una
+ *   medición que no alcanza a concluir, y por eso tiene nombre propio en vez de
+ *   confundirse con la unidad cuyo GPS calló. Quien traduce al borde decide qué
+ *   palabra le toca; aquí no se adivina un lado a medias.
+ */
+export type LadoDeLaBanda = "dentro" | "antes" | "despues" | "a_caballo";
+
+export function ladoDeLaBanda(
+  paso: { pasoDesde: Date; pasoHasta: Date },
+  ventana: VentanaEsperada,
+): LadoDeLaBanda {
+  const pDesde = paso.pasoDesde.getTime();
+  const pHasta = paso.pasoHasta.getTime();
+  const vDesde = ventana.desde.getTime();
+  const vHasta = ventana.hasta.getTime();
+
+  if (pDesde >= vDesde && pHasta <= vHasta) return "dentro";
+  if (pHasta < vDesde) return "antes";
+  if (pDesde > vHasta) return "despues";
+  return "a_caballo";
+}

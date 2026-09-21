@@ -490,6 +490,54 @@ describe("el muro por unidad — dos carriers en el mismo circuito", () => {
    * **el plan es lo vigente**. Una asignación cerrada le sigue abriendo al
    * carrier sus pasos de entonces y NO lo pone en el plan de hoy (`uH`).
    */
+  /*
+   * LA COMPUERTA DEL 9.14 — ¿este circuito lo corre más de un transportista?
+   *
+   * Va sobre un circuito propio (K3) para no mover lo que miden las otras
+   * matrices: darle a F o a G una unidad en K1 o K2 les abriría esos circuitos
+   * —el historial cuenta— y las pruebas de visibilidad de arriba dejarían de
+   * decir lo que dicen.
+   */
+  describe("la compuerta del flujo: ¿lo corre más de uno?", () => {
+    let k3 = "";
+
+    beforeAll(async () => {
+      k3 = (await circuitoConParada(cuentas.C1, "K3")).circuitId;
+      const deF = (await repos.fleet.createUnit(cuentas.F, `uF-${m}`)).id;
+      const deG = (await repos.fleet.createUnit(cuentas.G, `uG-${m}`)).id;
+      // F salió del circuito hace 5 días; G sigue.
+      await asignar(k3, deF, cuentas.F, hace(20), hace(5));
+      await asignar(k3, deG, cuentas.G, hace(20));
+    });
+
+    it("dos transportistas en la ventana: más de uno", async () => {
+      expect(await repos.circuits.circuitoTieneMasDeUnCarrier(k3, hace(10))).toBe(true);
+    });
+
+    it("UNA ASIGNACIÓN YA CERRADA SIGUE CONTANDO si alcanza la ventana", async () => {
+      /*
+       * Es la razón de que la compuerta reciba un instante y no mire sólo lo
+       * vigente: el carrier que se salió a media mañana dejó pasos, y su flujo
+       * sigue faltando en lo que la franja midió. Preguntar por «los de ahora»
+       * diría «uno solo» de un servicio que hoy corrieron dos, y la torre
+       * mediría sobre un pedazo creyéndolo entero.
+       */
+      expect(await repos.circuits.circuitoTieneMasDeUnCarrier(k3, hace(6))).toBe(true);
+    });
+
+    it("fuera de la ventana, el que ya se fue no cuenta: queda uno solo", async () => {
+      expect(await repos.circuits.circuitoTieneMasDeUnCarrier(k3, hace(1))).toBe(false);
+    });
+
+    it("un circuito con un solo transportista no es compartido", async () => {
+      expect(await repos.circuits.circuitoTieneMasDeUnCarrier(circuito.K2, hace(30))).toBe(false);
+    });
+
+    it("el circuito que corren A y B sí lo es", async () => {
+      expect(await repos.circuits.circuitoTieneMasDeUnCarrier(circuito.K1, hace(30))).toBe(true);
+    });
+  });
+
   describe("la puerta de posiciones del circuito", () => {
     const nombreDe = () => new Map(Object.entries(unidad).map(([n, id]) => [id, n]));
 

@@ -4,6 +4,7 @@ import {
   ventanaEsperada,
   compararRangoContraVentana,
   compararPaso,
+  ladoDeLaBanda,
   type PuntoDeTelemetria,
   type ParadaParaDetectar,
 } from "./paso-por-parada.js";
@@ -213,5 +214,60 @@ describe("compararPaso — el 'no inventes' en el único lugar donde puede aplic
       toleranciaPct: 50,
     });
     expect(v).toBe("sin_datos");
+  });
+});
+
+/*
+ * El lado de la banda (9.2c/9.3b): la conclusión que `compararRangoContraVentana`
+ * deja fuera a propósito. Para el motor, temprano y tarde son el mismo daño
+ * (9.1b); para quien tiene el radio en la mano son dos correcciones distintas.
+ */
+describe("ladoDeLaBanda — el lado que la torre sí necesita", () => {
+  const ancla = new Date("2026-09-20T07:00:00Z");
+  const ventana = ventanaEsperada(ancla, 10, 50); // [07:05, 07:15]
+  const rango = (desde: string, hasta: string) => ({
+    pasoDesde: new Date(`2026-09-20T${desde}Z`),
+    pasoHasta: new Date(`2026-09-20T${hasta}Z`),
+  });
+
+  it("dentro de la banda: EN RANGO", () => {
+    expect(ladoDeLaBanda(rango("07:08:00", "07:09:00"), ventana)).toBe("dentro");
+  });
+
+  it("intervalo CORTO (pasó antes): es lo que la torre llama ADELANTADA", () => {
+    // 1 min después del anterior, contra una banda de 5–15: le pisó los talones.
+    expect(ladoDeLaBanda(rango("07:00:30", "07:01:00"), ventana)).toBe("antes");
+  });
+
+  it("intervalo LARGO (pasó después): es lo que la torre llama ATRASADA", () => {
+    expect(ladoDeLaBanda(rango("07:20:00", "07:21:00"), ventana)).toBe("despues");
+  });
+
+  it("a caballo de la orilla tiene nombre propio: no es «sin medición»", () => {
+    expect(ladoDeLaBanda(rango("07:03:00", "07:07:00"), ventana)).toBe("a_caballo");
+  });
+
+  it("los bordes exactos cuentan como dentro, igual que en la de abajo", () => {
+    expect(ladoDeLaBanda(rango("07:05:00", "07:15:00"), ventana)).toBe("dentro");
+  });
+
+  it("NO cambia lo que ya sellaba compararRangoContraVentana", () => {
+    /*
+     * La razón por la que ésta es una función nueva y no un cambio en aquélla:
+     * `compararRangoContraVentana` ya escribió veredictos, y moverla movería el
+     * significado de filas ya guardadas. Los dos lados siguen dando la misma
+     * etiqueta única, como manda el 9.1b.
+     */
+    const casos = [
+      rango("07:08:00", "07:09:00"),
+      rango("07:00:30", "07:01:00"),
+      rango("07:20:00", "07:21:00"),
+      rango("07:03:00", "07:07:00"),
+      rango("07:05:00", "07:15:00"),
+    ];
+    const equivalente = { dentro: "sostuvo", antes: "se_agujero", despues: "se_agujero", a_caballo: "sin_datos" } as const;
+    for (const c of casos) {
+      expect(compararRangoContraVentana(c, ventana)).toBe(equivalente[ladoDeLaBanda(c, ventana)]);
+    }
   });
 });

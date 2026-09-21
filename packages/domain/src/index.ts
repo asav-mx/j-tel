@@ -799,6 +799,7 @@ export * from "./sello.js";
 export * from "./pausa.js";
 export * from "./franja-horaria.js";
 export * from "./paso-por-parada.js";
+export * from "./ritmo-prometido.js";
 /*
  * `publico.js` NO se reexporta aquí, y no es olvido.
  *

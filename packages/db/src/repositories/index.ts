@@ -6667,6 +6667,45 @@ export class CircuitRepository {
 
 
   /**
+   * ¿A este circuito lo corre más de un transportista? — **la compuerta del
+   * 9.14**, y devuelve un booleano y nada más.
+   *
+   * Ni cuántos son, ni quiénes. Es todo lo que la torre necesita para saber si
+   * lo que un carrier puede ver es el servicio completo o un pedazo, y es lo
+   * único que se le puede decir sin cruzar el muro: «hay alguien más» es una
+   * condición de su propia medición; «son tres y se llaman así» es el negocio
+   * de otro (9.14, privado del carrier). Un número también delata —dos
+   * transportistas hoy y tres mañana dice que alguien entró— y por eso no sale.
+   *
+   * **Se cuenta desde un instante, no sobre lo vigente de ahora.** Un carrier
+   * que cerró su asignación a media mañana dejó pasos de hoy, y su flujo sigue
+   * faltando en lo que la franja midió; preguntar sólo por las asignaciones
+   * abiertas diría «un solo carrier» de un servicio que hoy corrieron dos, y la
+   * torre mediría contra un flujo incompleto creyéndolo completo. Es el
+   * ATRASADA falso entrando por la puerta de atrás.
+   *
+   * Sin cuenta a propósito: no lee nada de nadie — cuenta cuentas sobre un
+   * circuito que quien llama ya abrió con su propio muro.
+   */
+  async circuitoTieneMasDeUnCarrier(circuitId: string, desde: Date) {
+    const filas = await this.db
+      .selectDistinct({ carrierAccountId: circuitUnitAssignments.carrierAccountId })
+      .from(circuitUnitAssignments)
+      .where(
+        and(
+          eq(circuitUnitAssignments.circuitId, circuitId),
+          or(
+            isNull(circuitUnitAssignments.validTo),
+            gt(circuitUnitAssignments.validTo, desde),
+          ),
+        ),
+      )
+      .limit(2);
+    return filas.length > 1;
+  }
+
+
+  /**
    * El HISTORIAL de un día para las unidades de un circuito — el insumo del
    * reporte de comportamiento.
    *
@@ -8278,11 +8317,24 @@ export class PasoPorParadaRepository {
    * más de un carrier, se salta a los demás y produciría un ATRASADA falso. Por
    * eso `compararPasosDeParada` sigue siendo exclusivo de la concesión.
    */
-  async listarPasosDeParada(cuentaId: string, stopId: string) {
+  async listarPasosDeParada(cuentaId: string, stopId: string, desde?: Date) {
     return this.db
       .select()
       .from(circuitStopPasses)
-      .where(and(eq(circuitStopPasses.stopId, stopId), pasosVisiblesParaCuenta(cuentaId)))
+      .where(
+        and(
+          eq(circuitStopPasses.stopId, stopId),
+          pasosVisiblesParaCuenta(cuentaId),
+          /*
+           * `desde` es OPCIONAL y acota, nunca abre: se suma con AND al muro,
+           * que sigue siendo obligatorio. Existe porque la torre relee esta
+           * parada cada pocos segundos y sólo le sirve lo de hoy; sin el corte
+           * arrastraría el historial completo de la parada en cada vuelta, y
+           * eso crece para siempre. Sin él, la lectura es la de antes.
+           */
+          ...(desde ? [gte(circuitStopPasses.pasoDesde, desde)] : []),
+        ),
+      )
       .orderBy(circuitStopPasses.pasoDesde);
   }
 
