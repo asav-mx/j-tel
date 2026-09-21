@@ -317,3 +317,21 @@ describe("listPromiseTables · la historia de la promesa", () => {
     expect(h[1]!.validTo).toBeInstanceOf(Date);
   });
 });
+
+describe("quién capturó la promesa (0049)", () => {
+  it("cada versión queda firmada con quien la capturó; lo de antes, nulo", async () => {
+    const propio = await repos.circuits.createCircuit({
+      concessionAccountId: concesionId,
+      name: `Autor ${marca}`,
+      publicSlug: `autor-${marca}`,
+    });
+    const circuitId = propio!.id;
+    await repos.circuits.savePromiseTable(circuitId, FRANJAS_OASIS);
+    await repos.circuits.savePromiseTable(circuitId, FRANJAS_OASIS, { motivo: "otra", capturadaPor: "user_jstaff" });
+
+    const h = await repos.circuits.listPromiseTables(circuitId);
+    expect(h[0]).toMatchObject({ capturadaPor: "user_jstaff", validTo: null });
+    // La primera no dijo quién: queda nula, no se inventa. Y quien la cerró es quien capturó la siguiente.
+    expect(h[1]).toMatchObject({ capturadaPor: null, motivo: "otra" });
+  });
+});

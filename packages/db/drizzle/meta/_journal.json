@@ -344,6 +344,13 @@
       "when": 1790553600000,
       "tag": "0048_quien_asigna_circuito",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1790640000000,
+      "tag": "0049_quien_captura_la_promesa",
+      "breakpoints": true
     }
   ]
 }

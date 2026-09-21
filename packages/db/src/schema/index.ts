@@ -1746,6 +1746,12 @@ export const circuitPromiseTables = pgTable(
     validTo: timestamp("valid_to", { withTimezone: true, mode: "date" }),
     /** Por qué TERMINÓ esta versión de la promesa. Se escribe al cerrar. */
     motivo: text("motivo"),
+    /**
+     * Quién capturó esta versión (id de usuario, 0049). Quien la cerró es quien
+     * capturó la siguiente: guardar una promesa nueva es lo único que cierra la
+     * vigente. Nulo en lo anterior a la 0049.
+     */
+    capturadaPor: text("capturada_por"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   },
   (table) => [
