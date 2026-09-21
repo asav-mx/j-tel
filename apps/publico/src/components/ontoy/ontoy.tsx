@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTema } from "@/lib/tema";
 import { useMiUbicacion } from "@/lib/ubicacion";
 import { avanceSobreTrazado } from "@jtel/domain";
@@ -43,12 +44,15 @@ export function Ontoy({
   nombre,
   rutas,
   estados,
+  vigenteHasta,
   rutaInicial,
 }: {
   /** De configuración, nunca del código: `NEXT_PUBLIC_APP_NOMBRE`. */
   nombre: string;
   rutas: RutaDeLaCiudad[];
   estados: EstadoDeRuta[];
+  /** Hasta cuándo vale lo que dice la lista (ISO); en ese instante se vuelve a pedir. */
+  vigenteHasta: string | null;
   /**
    * La ruta que la dirección pidió (`/?ruta=…`, o una liga vieja `/c/‹slug›`).
    * Cuando viene, la app abre en el Mapa con esa ruta enfocada: quien llega por
@@ -64,6 +68,7 @@ export function Ontoy({
   const [paradaAbierta, setParadaAbierta] = useState<string | null>(null);
 
   const guardadas = useParadasGuardadas();
+  useListaAlDia(vigenteHasta);
   const { forma, vivo, error, reintentar } = useRutaEnVivo(vista === "mapa" ? enfocada : null);
   const { velocidad, trazadoPorSentido } = useVelocidadDelCorredor(forma, vivo);
   const yo = useMiUbicacion();
@@ -223,4 +228,37 @@ function LogoOntoy() {
       <circle cx="46" cy="17" r="3.6" className="ontoy-logo-ojo" />
     </svg>
   );
+}
+
+/**
+ * La lista de rutas se arma una vez en el servidor, y lo que dice —la promesa
+ * de cada ruta, si está abierta— vale hasta la próxima frontera
+ * (`vigenteHasta`). Justo entonces se vuelve a pedir: seguir diciendo la
+ * promesa de una franja que ya terminó es afirmar algo que ya no es cierto.
+ *
+ * Con la pestaña escondida el reloj del teléfono puede dormir el temporizador;
+ * al volver, si la frontera ya pasó, se pide en ese momento.
+ *
+ * Refrescar vuelve a correr el servidor de la portada: trae las rutas con sus
+ * trazados, pero sólo en las fronteras (unas cuantas veces al día), no cada
+ * minuto.
+ */
+function useListaAlDia(vigenteHasta: string | null) {
+  const router = useRouter();
+  useEffect(() => {
+    if (!vigenteHasta) return;
+    const limite = new Date(vigenteHasta).getTime();
+    const refrescar = () => router.refresh();
+    // Un segundo después de la frontera: en la frontera misma el servidor todavía podría leer la de antes.
+    const espera = Math.max(0, limite - Date.now() + 1000);
+    const t = window.setTimeout(refrescar, Math.min(espera, 2_147_000_000));
+    const alVolver = () => {
+      if (document.visibilityState === "visible" && Date.now() > limite) refrescar();
+    };
+    document.addEventListener("visibilitychange", alVolver);
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener("visibilitychange", alVolver);
+    };
+  }, [vigenteHasta, router]);
 }

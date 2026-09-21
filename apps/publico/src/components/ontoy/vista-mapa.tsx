@@ -83,6 +83,9 @@ export function VistaMapa({
       if (!montado || !contenedor.current || mapa.current) return;
       L.current = leaflet;
       const m = leaflet.map(contenedor.current, { zoomControl: false, attributionControl: true });
+      // El crédito arriba a la derecha, bajo el selector de sentido: abajo se enciman la pista
+      // y las fichas de ruta, que crecen con el contenido (ver `ontoy.css`).
+      m.attributionControl.setPosition("topright");
       const fondo = fondoDelMapa();
       leaflet
         .tileLayer(fondo.url, { maxZoom: fondo.zoomMaximo, attribution: fondo.atribucion })

@@ -1,6 +1,7 @@
 import { enHorarioDeServicio, yaArrancoElServicio } from "@jtel/domain/publico";
+import { proximaFronteraDeLoPublicado } from "@jtel/domain";
 import { getRepos } from "@/lib/db";
-import { promesaDelCircuito } from "@/lib/promesa";
+import { promesaConSusFronteras } from "@/lib/promesa";
 import { Ontoy } from "@/components/ontoy/ontoy";
 import type { RutaDeLaCiudad, Sentido } from "@/lib/ontoy/forma";
 import type { EstadoDeRuta } from "@/components/ontoy/vista-rutas";
@@ -48,17 +49,32 @@ export default async function Inicio({
 
   const rutas: RutaDeLaCiudad[] = [];
   const estados: EstadoDeRuta[] = [];
+  /*
+   * Hasta cuándo vale lo que esta lista dice: la frontera más cercana entre
+   * todas las rutas (una franja que empieza o termina, un servicio que abre o
+   * cierra, la medianoche). La lista se arma UNA vez aquí; el teléfono la
+   * vuelve a pedir justo entonces, para no seguir diciendo la promesa de una
+   * franja que ya terminó.
+   */
+  let vigenteHasta: Date | null = null;
 
   for (const c of publicados) {
     const circuito = await getRepos().circuits.getPublishedCircuitBySlug(c.publicSlug);
     if (!circuito) continue;
     const trazados = await getRepos().circuits.getPaths(circuito.id);
+    const { promesa, horas } = await promesaConSusFronteras(circuito.id, ahora, c.timeZone);
+    const frontera = proximaFronteraDeLoPublicado(
+      [...horas, c.serviceStartLocal, c.serviceEndLocal],
+      ahora,
+      c.timeZone,
+    );
+    if (!vigenteHasta || frontera < vigenteHasta) vigenteHasta = frontera;
 
     rutas.push({
       circuito_id: c.publicSlug,
       nombre: c.name,
       color_hex: c.colorHex,
-      promesa: await promesaDelCircuito(circuito.id, ahora, c.timeZone),
+      promesa,
       horario: { inicio: c.serviceStartLocal, fin: c.serviceEndLocal, zona: c.timeZone },
       arranca_el: c.serviceLaunchDate,
       trazados: trazados.map((t) => ({
@@ -83,6 +99,7 @@ export default async function Inicio({
       nombre={NOMBRE}
       rutas={rutas}
       estados={estados}
+      vigenteHasta={vigenteHasta?.toISOString() ?? null}
       rutaInicial={typeof pedida === "string" ? pedida : null}
     />
   );

@@ -24,7 +24,7 @@
  * construir fechas para compararlas obligaría a inventar un día por nada.
  */
 
-import { localTimeHHMM, tipoDeDiaLocal, type TipoDeDiaCivil } from "./tiempo.js";
+import { addDaysIso, instanteZonificado, localDateIso, localTimeHHMM, tipoDeDiaLocal, type TipoDeDiaCivil } from "./tiempo.js";
 
 export type TipoDeDiaCircuito = TipoDeDiaCivil;
 
@@ -240,4 +240,33 @@ export function promesaAhora(
   const vuelta = minutos("vuelta");
   if (ida === null && vuelta === null) return { estado: "sin_franja" };
   return { estado: "declarada", ida, vuelta };
+}
+
+// ── Hasta cuándo vale lo que se publicó ──────────────────────────────────
+
+/**
+ * El primer instante, después de `instante`, en que lo que una pantalla dice
+ * de un circuito PUEDE cambiar: el inicio o el fin de una franja, la apertura o
+ * el cierre del servicio, o la medianoche local (cambia el tipo de día y la
+ * fecha de arranque). Nació para la lista de rutas de Ontoy: se arma una vez en
+ * el servidor, y sin esto se quedaba diciendo la promesa de una franja que ya
+ * terminó — afirmar algo que ya no es cierto.
+ *
+ * No decide QUÉ cambia, sólo CUÁNDO puede cambiar: una frontera de más cuesta
+ * un refresco de más, una de menos cuesta una afirmación falsa. Por eso entran
+ * las horas de todas las franjas sin filtrar por tipo de día.
+ *
+ * `horasLocales` en `HH:MM` o `HH:MM:SS`, del reloj del circuito.
+ */
+export function proximaFronteraDeLoPublicado(horasLocales: string[], instante: Date, zona: string): Date {
+  const hoy = localDateIso(instante, zona);
+  const medianoche = instanteZonificado(addDaysIso(hoy, 1), 0, zona);
+  let proxima = medianoche;
+  for (const h of horasLocales) {
+    const [hh, mm] = h.slice(0, 5).split(":").map(Number);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) continue;
+    const t = instanteZonificado(hoy, hh! * 60 + mm!, zona);
+    if (t.getTime() > instante.getTime() && t.getTime() < proxima.getTime()) proxima = t;
+  }
+  return proxima;
 }
