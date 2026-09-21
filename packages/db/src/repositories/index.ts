@@ -6027,6 +6027,12 @@ export interface UnidadDelPlanConPosicion {
   latitude: number | null;
   longitude: number | null;
   heading: number | null;
+  /**
+   * km/h del último fix. **Contexto del ritmo, nunca una orden** (9.2b): la
+   * torre muestra a qué va un camión; J-Tel no manda velocidades. `null` sin
+   * posición, y también cuando el aparato no la reporta — que no es cero.
+   */
+  speed: number | null;
   recordedAt: Date | null;
 }
 
@@ -6244,6 +6250,58 @@ export class CircuitRepository {
       );
     return fila ?? null;
   }
+
+  /**
+   * Los circuitos que existen **para esta cuenta** — la lista del cuarto, y la
+   * hermana a nivel cuenta de `getCircuitVisibleParaCuenta`.
+   *
+   * Mismas dos entradas y mismas cerraduras, por la misma razón: la concesión
+   * dueña ve los suyos; un carrier ve aquellos donde alguna unidad **suya** fue
+   * asignada **por él** —en cualquier momento, su historial es suyo—; nadie más
+   * ve nada. Es `getCircuitVisibleParaCuenta` sin el `id`, y se escribe aparte
+   * en vez de traer todos y filtrar arriba porque un filtro en la pantalla es
+   * una línea que alguien puede borrar sin que se rompa ninguna prueba.
+   *
+   * **También contesta si la cuenta opera transporte público**, que es cómo el
+   * menú decide si dibujar el cuarto Circuitos (mapa, regla 4). La respuesta
+   * sale de esta misma consulta y no de una bandera aparte: una bandera y una
+   * lista son dos definiciones de «opera público», y el día que se separen el
+   * menú enseñaría un cuarto vacío o escondería uno lleno.
+   *
+   * `active` viene y no se filtra aquí: un circuito dado de baja sigue siendo
+   * suyo y su historial se puede abrir. Quién se dibuja apagado lo decide la
+   * pantalla, que es donde se puede decir por qué.
+   */
+  async listarCircuitosVisiblesParaCuenta(cuentaId: string) {
+    return this.db
+      .select({
+        id: circuits.id,
+        name: circuits.name,
+        publicSlug: circuits.publicSlug,
+        /** Identidad del circuito, nunca estado (Pieza 8.8c). El nombre siempre lo acompaña. */
+        colorHex: circuits.colorHex,
+        active: circuits.active,
+        serviceStartLocal: circuits.serviceStartLocal,
+        serviceEndLocal: circuits.serviceEndLocal,
+        timeZone: circuits.timeZone,
+        esDeLaConcesion: sql<boolean>`${circuits.concessionAccountId} = ${cuentaId}`,
+      })
+      .from(circuits)
+      .where(
+        or(
+          eq(circuits.concessionAccountId, cuentaId),
+          sql`EXISTS (
+            SELECT 1 FROM ${circuitUnitAssignments}
+            INNER JOIN ${units} ON ${units.id} = ${circuitUnitAssignments.unitId}
+            WHERE ${circuitUnitAssignments.circuitId} = ${circuits.id}
+              AND ${circuitUnitAssignments.carrierAccountId} = ${cuentaId}
+              AND ${units.carrierAccountId} = ${cuentaId}
+          )`,
+        ),
+      )
+      .orderBy(circuits.name);
+  }
+
 
   async getCircuitByPublicSlug(slug: string) {
     const [fila] = await this.db.select().from(circuits).where(eq(circuits.publicSlug, slug));
@@ -6594,6 +6652,7 @@ export class CircuitRepository {
         latitude: livePositions.latitude,
         longitude: livePositions.longitude,
         heading: livePositions.heading,
+        speed: livePositions.speed,
         recordedAt: livePositions.recordedAt,
       })
       .from(circuitUnitAssignments)
@@ -6660,6 +6719,7 @@ export class CircuitRepository {
         latitude: u.latitude,
         longitude: u.longitude,
         heading: u.heading,
+        speed: u.speed,
         recordedAt: u.recordedAt,
       })),
     };

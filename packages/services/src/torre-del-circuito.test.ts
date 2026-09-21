@@ -81,7 +81,10 @@ function repos(opts: {
         })),
       }),
       listStopsVigentes: async () => paradas,
-      getPaths: async () => [{ sentido: "ida", coordinates: [[0, 0], [0.009, 0]] }],
+      getPaths: async () => [
+        { sentido: "ida", coordinates: [[0, 0], [0.009, 0]] },
+        { sentido: "vuelta", coordinates: [[0.009, 0], [0, 0]] },
+      ],
       getPromesaEnInstante: async () =>
         opts.frecuencia === null
           ? { declarada: false }
@@ -299,6 +302,37 @@ describe("armarTorreDelCircuito · la compuerta del flujo (9.14)", () => {
     expect(t.unidades[0]!.situacion).toBe("en_ruta");
     expect(t.unidades[0]!.ultimaPosicion).not.toBeNull();
     expect(t.unidades[0]!.sobreElCorredor).not.toBeNull();
+  });
+
+  it("LA PROMESA ES PÚBLICA y cruza la compuerta: no se dice «sin capturar» de un circuito que la tiene", async () => {
+    /*
+     * 9.14: la ruta, sus paradas y sus horarios son públicos; lo reservado es el
+     * RESULTADO de medirlos. La barra de arriba decía «promesa sin capturar» en
+     * un circuito compartido porque la deducía de las bandas de las unidades, y
+     * ésas sí están cerradas. Dato correcto sobre lo medible, afirmación falsa
+     * sobre lo declarado.
+     */
+    const t = await carrierCompartido();
+    expect(t.flujo).toBe("incompleto");
+    expect(t.promesaVigente).toEqual({ desdeMin: 5, hastaMin: 15, frecuenciaMin: 10 });
+  });
+
+  it("EL SENTIDO tampoco es un veredicto: una unidad propia sigue sabiendo para qué lado va", async () => {
+    const t = abierta(
+      await armarTorreDelCircuito(
+        repos({
+          alcance: "carrier",
+          variosCarriers: true,
+          unidades: [{ unitId: "u1", unitLabel: "10254", ...EN_LA_CALLE }],
+          pasos: [{ ...paso("p1", "u1", 20), sentido: "vuelta" }],
+        }),
+        { cuentaId: CARRIER, circuitId: "k1", ahora: AHORA },
+      ),
+    );
+    expect(t.flujo).toBe("incompleto");
+    expect(t.unidades[0]!.promesa.motivo).toBe("flujo_incompleto");
+    // Y aun así se sabe de qué lado va: eso sale de sus propios pasos, no de medirlos.
+    expect(t.unidades[0]!.sobreElCorredor?.sentido).toBe("vuelta");
   });
 });
 
