@@ -55,10 +55,22 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
      * 204 igual: el pasajero no tiene nada que ver con esto y una pantalla no
      * se rompe por un contador.
      *
-     * No es un silencio peligroso: sin `JTEL_SECRET_KEY` el endpoint de
-     * unidades ya contesta 503 y la app no funciona, así que este caso no
-     * produce un cero que alguien pueda leer como «nadie abrió».
+     * ✎ **Corregido el 21-sep-2026.** Aquí decía que este silencio no era
+     * peligroso «porque sin `JTEL_SECRET_KEY` el endpoint de unidades ya
+     * contesta 503 y la app no funciona». Ese 503 se retiró el mismo día —la
+     * llave dejó de proteger nada allá cuando el identificador opaco fue
+     * reemplazado por el número económico (8.5)—, así que **el apoyo de ese
+     * argumento ya no existe**: hoy la app SÍ funcionaría sin llave, y este
+     * contador produciría ceros que alguien podría leer como «nadie abrió».
+     *
+     * Por eso ahora se grita en el registro del servidor. Es el único lugar
+     * donde se puede decir sin romperle la pantalla a un pasajero que no tiene
+     * nada que ver con esto.
      */
+    console.error(
+      "[apertura] Falta JTEL_SECRET_KEY: las aperturas NO se están contando. " +
+        "Un cero de este contador hoy no significa que nadie abrió la app.",
+    );
     return sinCuerpo();
   }
 

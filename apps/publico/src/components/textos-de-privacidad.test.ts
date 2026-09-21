@@ -19,8 +19,17 @@ const fuente = (archivo: string) =>
 /** Lo que el pasajero lee, sin los comentarios que explican por qué. */
 const sinComentarios = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "");
 
+/*
+ * ✎ **21-sep-2026:** `vista-pasajero.tsx` era la cara vieja y se retiró con
+ * Ontoy. La valla se mudó a la nueva **sin aflojarse**: la pantalla que pide la
+ * ubicación sigue teniendo que decir para qué, y la hoja de una parada entra a
+ * la lista porque es donde se guarda algo y donde estuvo a punto de colarse una
+ * promesa absoluta («no en ningún servidor») en una pantalla cuyos mosaicos de
+ * mapa sí van a un tercero.
+ */
 const PANTALLAS = [
-  { archivo: "vista-pasajero.tsx", dice: "Tu ubicación se usa para calcular cuándo llega tu camión." },
+  { archivo: "ontoy/atajo-de-parada.tsx", dice: "Tu ubicación se usa para calcular cuándo llega tu camión." },
+  { archivo: "ontoy/hoja-de-parada.tsx", dice: "No hace falta cuenta." },
   { archivo: "buscador.tsx", dice: "A dónde vas y dónde estás se usan para contestarte." },
 ];
 

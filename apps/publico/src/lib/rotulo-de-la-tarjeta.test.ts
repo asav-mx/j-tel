@@ -239,12 +239,24 @@ describe("el rótulo y la pastilla del camión dicen lo mismo", () => {
      * Si alguien renombra la función o reacomoda el componente, esto se cae y
      * se actualiza a propósito — que es lo que se le pide a una valla.
      */
-    const fuente = readFileSync(
-      new URL("../components/vista-pasajero.tsx", import.meta.url),
-      "utf8",
-    );
-    expect(fuente).toContain("haceNMinutos(u.antiguedad_seg)");
-    // Y no queda ninguna copia del redondeo suelta en la pantalla.
-    expect(fuente).not.toContain("antiguedad_seg / 60");
+    /*
+     * ✎ **21-sep-2026:** apuntaba a `vista-pasajero.tsx`, la cara vieja. Ahora
+     * son tres archivos de Ontoy, y la valla se ganó su sueldo en la mudanza:
+     * la cara nueva nació con TRES copias de este redondeo escritas a mano
+     * —una por componente— mientras esta función ya existía. Ninguna prueba de
+     * unidad lo habría visto; ésta sí.
+     */
+    const caras = [
+      "../components/ontoy/atajo-de-parada.tsx",
+      "../components/ontoy/vista-mapa.tsx",
+      "../components/ontoy/ontoy.tsx",
+    ].map((r) => ({ r, fuente: readFileSync(new URL(r, import.meta.url), "utf8") }));
+
+    for (const { r, fuente } of caras) {
+      expect(fuente, r).toContain("haceNMinutos(");
+      // Y no queda ninguna copia del redondeo suelta en la pantalla.
+      expect(fuente, r).not.toContain("antiguedad_seg / 60");
+      expect(fuente, r).not.toContain("antiguedadSeg / 60");
+    }
   });
 });

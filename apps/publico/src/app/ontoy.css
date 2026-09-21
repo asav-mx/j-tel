@@ -1,0 +1,718 @@
+/*
+ * ONTOY — la piel de la app del pasajero.
+ *
+ * ## De quién es esta cara
+ *
+ * El logo, la letra y el fondo son **de Ontoy**, no de la plataforma (decisión
+ * de ASAV, 21-sep): es una marca de consumidor con su propio nombre, y no se
+ * parece a J-Staff porque no es J-Staff. Lo que sí gobierna aquí son **las
+ * reglas de honestidad del skill**, y ésas no son negociables:
+ *
+ *  - **El verde es del latido y de nada más.** Marca que el dato está vivo ahora.
+ *    No es un veredicto, no es «bien», no se usa de acento.
+ *  - **La forma carga el estado**, no el color: una unidad con dato viejo se
+ *    apaga Y cambia de forma (anillo hueco, sin latido). Sin color, se siguen
+ *    distinguiendo.
+ *  - **Todo dato vivo trae su edad**, escrita, siempre.
+ *  - **El color de una ruta es identidad, nunca estado** (8.8c), y el nombre
+ *    siempre lo acompaña. Sobre el mapa, el halo lo mide `contraste-de-ruta.ts`.
+ *  - Se mueve **sólo lo que está vivo**: el latido del punto y el anillo de una
+ *    unidad que transmite ahora. Nada más. Y `prefers-reduced-motion` se respeta.
+ *
+ * ## Las dos pieles
+ *
+ * Nace de día y la de noche es un interruptor, no un tema aparte. Cada una
+ * tiene sus propios valores: la clara no es la oscura con los fondos volteados.
+ */
+
+:root {
+  --fondo: #efebe3;
+  --panel: #ffffff;
+  --panel2: #f6f2ea;
+  --linea: rgba(26, 32, 38, 0.15);
+  --texto: #22282e;
+  --tenue: #5d6a74;
+  /* El verde del latido. SÓLO ahí. */
+  --vivo: #1d8a5c;
+  --sombra-hoja: 0 -18px 48px rgba(30, 35, 40, 0.22);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="dia"]) {
+    --fondo: #2b323b;
+    --panel: #343d48;
+    --panel2: #3d4753;
+    --linea: rgba(255, 255, 255, 0.14);
+    --texto: #efebe4;
+    --tenue: #a8b2bc;
+    --vivo: #34c77b;
+    --sombra-hoja: 0 -18px 48px rgba(0, 0, 0, 0.5);
+  }
+}
+
+:root[data-tema="noche"] {
+  --fondo: #2b323b;
+  --panel: #343d48;
+  --panel2: #3d4753;
+  --linea: rgba(255, 255, 255, 0.14);
+  --texto: #efebe4;
+  --tenue: #a8b2bc;
+  --vivo: #34c77b;
+  --sombra-hoja: 0 -18px 48px rgba(0, 0, 0, 0.5);
+}
+
+.ontoy {
+  /*
+   * `height`, no `min-height`: con `min-height` el contenedor puede crecer, y
+   * entonces el `flex: 1` del mapa no tiene qué repartir — se queda de alto
+   * cero y las teselas de Leaflet se desbordan fuera de su caja, con los
+   * controles de atribución aterrizando a media pantalla. Lo enseñó la primera
+   * captura. La vista de Rutas hace su propio scroll adentro.
+   */
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--fuente-texto), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.ontoy .mono,
+.ontoy [class*="mono"] {
+  font-family: var(--fuente-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── cabeza ─────────────────────────────────────────────────────────── */
+.ontoy-cabeza {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--linea);
+}
+.ontoy-logo {
+  width: 29px;
+  height: 29px;
+  flex: none;
+  color: var(--texto);
+}
+.ontoy-logo-ojo {
+  fill: var(--panel);
+}
+.ontoy-marca {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  margin: 0;
+}
+.ontoy-piel {
+  margin-left: auto;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--linea);
+  background: var(--panel2);
+  color: var(--tenue);
+  cursor: pointer;
+}
+.ontoy-piel svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* ── conmutador (8.8): siempre visible, en las dos vistas ───────────── */
+.ontoy-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 18px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--linea);
+}
+.ontoy-tab {
+  flex: 1;
+  padding: 9px 0 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--tenue);
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+.ontoy-tab[aria-selected="true"] {
+  color: var(--texto);
+  background: var(--panel2);
+  border-color: var(--linea);
+}
+
+/* ── vistas ─────────────────────────────────────────────────────────── */
+.ontoy-vista {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.ontoy-seccion {
+  padding: 16px 18px 6px;
+}
+.ontoy-seccion-titulo {
+  font-family: var(--fuente-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tenue);
+  margin: 0 0 9px;
+  font-weight: 500;
+}
+.ontoy-vacio {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--tenue);
+  margin: 0 0 10px;
+}
+.ontoy-pie {
+  padding: 6px 18px 22px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--tenue);
+}
+
+/* ── el atajo de una parada guardada (8.8b) ─────────────────────────── */
+.ontoy-atajo {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--linea);
+  border-radius: 16px;
+  background: var(--panel);
+  padding: 15px 16px 13px;
+  margin-bottom: 10px;
+}
+/* La franja del color de la ruta: identidad, y el nombre va al lado (8.8c). */
+.ontoy-atajo::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--ruta);
+}
+.ontoy-atajo-cabeza {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ontoy-atajo-nombre {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.ontoy-estrella {
+  margin-left: auto;
+  color: var(--ruta);
+  background: none;
+  border: 0;
+  padding: 2px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.ontoy-atajo-ruta {
+  font-size: 12.5px;
+  color: var(--tenue);
+  margin: 2px 0 12px;
+}
+.ontoy-atajo-ruta b {
+  color: var(--texto);
+  font-weight: 600;
+}
+.ontoy-atajo-eta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ontoy-eta-num {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 700;
+  font-size: 32px;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.ontoy-eta-quieta {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--tenue);
+}
+.ontoy-eta-apoyo {
+  font-size: 13px;
+  color: var(--tenue);
+}
+.ontoy-eta-apoyo b {
+  color: var(--texto);
+  font-weight: 600;
+}
+/* El punto verde: lo ÚNICO que dice «esto está vivo ahora». */
+.ontoy-punto-vivo {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--vivo);
+  margin-right: 5px;
+  vertical-align: 1px;
+  animation: ontoy-latido 1.6s ease-in-out infinite;
+}
+@keyframes ontoy-latido {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.ontoy-atajo-tuyo {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--linea);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ontoy-et {
+  font-family: var(--fuente-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+.ontoy-atajo-tuyo b {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+/* La promesa, SIEMPRE, y separada por su línea punteada (8.2, 8.3). */
+.ontoy-atajo-promesa,
+.ontoy-hoja-promesa {
+  margin: 11px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--linea);
+  font-size: 12.5px;
+  color: var(--tenue);
+}
+
+/* ── la lista de rutas ──────────────────────────────────────────────── */
+.ontoy-ruta {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 13px 14px;
+  margin-bottom: 9px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ontoy-ruta-color {
+  width: 14px;
+  height: 44px;
+  border-radius: 5px;
+  flex: none;
+}
+.ontoy-ruta-info {
+  flex: 1;
+  min-width: 0;
+}
+.ontoy-ruta-nombre {
+  display: block;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+}
+.ontoy-ruta-sub {
+  display: block;
+  font-size: 12.5px;
+  color: var(--tenue);
+  margin-top: 2px;
+}
+.ontoy-chevron {
+  color: var(--tenue);
+  flex: none;
+}
+
+/* ── mapa ───────────────────────────────────────────────────────────── */
+.ontoy-mapa {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+.ontoy-lienzo {
+  position: absolute;
+  inset: 0;
+}
+.ontoy-sentido {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  display: flex;
+  gap: 5px;
+  padding: 5px;
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.22);
+}
+.ontoy-sentido-btn {
+  border: 0;
+  background: transparent;
+  color: var(--tenue);
+  cursor: pointer;
+  font-family: var(--fuente-mono), monospace;
+  font-size: 11.5px;
+  padding: 7px 13px;
+  border-radius: 8px;
+}
+.ontoy-sentido-btn[aria-pressed="true"] {
+  background: var(--panel2);
+  color: var(--texto);
+  box-shadow: inset 0 0 0 1px var(--linea);
+}
+.ontoy-flecha {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 700;
+}
+.ontoy-fichas {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  pointer-events: none;
+}
+.ontoy-pista {
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--tenue);
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: 7px;
+  padding: 3px 9px;
+}
+.ontoy-fichas-fila {
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 0 12px;
+}
+.ontoy-ficha {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--panel);
+  border: 1.5px solid var(--linea);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--tenue);
+}
+.ontoy-ficha-punto {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ruta);
+}
+.ontoy-ficha[aria-pressed="true"] {
+  color: var(--texto);
+  border-color: var(--ruta);
+}
+.ontoy-aviso-red {
+  position: absolute;
+  top: 62px;
+  left: 12px;
+  right: 12px;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--linea);
+  border-radius: 11px;
+  background: var(--panel);
+  font-size: 12px;
+  color: var(--tenue);
+}
+.ontoy-aviso-red button {
+  margin-left: auto;
+  flex: none;
+  border: 1px solid var(--linea);
+  background: var(--panel2);
+  color: var(--texto);
+  border-radius: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font: inherit;
+}
+.ontoy-mapa-vacio {
+  position: absolute;
+  inset: auto 18px 80px;
+  text-align: center;
+  color: var(--tenue);
+  font-size: 13px;
+}
+
+/* ── las unidades sobre el mapa ─────────────────────────────────────── */
+.ontoy-unidad {
+  position: relative;
+  display: grid;
+  place-items: center;
+  transform: translate(-50%, -50%);
+}
+.ontoy-unidad-punto {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ruta);
+  border: 2px solid var(--panel);
+  display: block;
+}
+/* Dato viejo: se APAGA y CAMBIA DE FORMA — hueca, sin latido (8.9). */
+.ontoy-unidad.vieja .ontoy-unidad-punto {
+  background: transparent;
+  border: 2.5px solid var(--tenue);
+}
+.ontoy-anillo {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--ruta);
+  animation: ontoy-anillo 2s ease-out infinite;
+}
+@keyframes ontoy-anillo {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+.ontoy-unidad-num,
+.ontoy-unidad-edad {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--fuente-mono), monospace;
+  paint-order: stroke;
+  -webkit-text-stroke: 3px var(--fondo);
+}
+.ontoy-unidad-num {
+  top: -20px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--texto);
+}
+.ontoy-unidad-edad {
+  top: 14px;
+  font-size: 8.5px;
+  color: var(--tenue);
+}
+
+/* ── la hoja de una parada (8.10: siempre hay salida) ───────────────── */
+.ontoy-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  border: 0;
+  background: rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+.ontoy-hoja {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 901;
+  background: var(--panel);
+  border-top: 1px solid var(--linea);
+  border-radius: 20px 20px 0 0;
+  box-shadow: var(--sombra-hoja);
+  padding: 14px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  max-height: 72dvh;
+  overflow-y: auto;
+}
+.ontoy-hoja-asa {
+  display: block;
+  width: 38px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--linea);
+  margin: 0 auto 12px;
+}
+.ontoy-hoja-cabeza {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ontoy-hoja-nombre {
+  flex: 1;
+  margin: 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+}
+.ontoy-guardar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--linea);
+  background: var(--panel2);
+  color: var(--tenue);
+  border-radius: 9px;
+  padding: 7px 11px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.ontoy-guardar.guardada {
+  color: var(--ruta);
+  border-color: currentColor;
+}
+.ontoy-guardar:disabled {
+  cursor: not-allowed;
+}
+.ontoy-cerrar {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--tenue);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.ontoy-hoja-dir {
+  font-size: 12.5px;
+  color: var(--tenue);
+  margin: 2px 0 12px;
+}
+.ontoy-llegada {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid var(--linea);
+  flex-wrap: wrap;
+}
+.ontoy-llegada:first-of-type {
+  border-top: 0;
+}
+.ontoy-llegada-rotulo {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 700;
+  font-size: 19px;
+  min-width: 118px;
+  font-variant-numeric: tabular-nums;
+}
+.ontoy-llegada.vieja .ontoy-llegada-rotulo {
+  color: var(--tenue);
+}
+.ontoy-llegada-apoyo {
+  font-size: 12.5px;
+  color: var(--tenue);
+}
+.ontoy-hoja-nota {
+  margin: 7px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--tenue);
+}
+
+/* El foco se ve, siempre: esto se usa en la calle y con teclado. */
+.ontoy button:focus-visible,
+.ontoy-hoja button:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+
+/* Se mueve sólo lo que está vivo — y ni eso, si el teléfono pidió calma. */
+@media (prefers-reduced-motion: reduce) {
+  .ontoy-punto-vivo,
+  .ontoy-anillo {
+    animation: none;
+  }
+}
+
+/* En pantalla ancha, la app se queda del tamaño de un teléfono: es una app de
+   teléfono, y estirarla a 1400 px no la mejora, sólo la desparrama. */
+@media (min-width: 560px) {
+  .ontoy {
+    max-width: 430px;
+    margin: 0 auto;
+    border-left: 1px solid var(--linea);
+    border-right: 1px solid var(--linea);
+  }
+}
+
+/* El «para qué» de la ubicación: chico, donde se usa, y siempre presente. */
+.ontoy-porque {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--tenue);
+}
+
+/*
+ * El crédito de OpenStreetMap — **visible, que es lo que la licencia pide.**
+ *
+ * Su lugar nativo es abajo a la derecha, y ahí lo taparía la fila de fichas de
+ * ruta. Se sube justo encima de ellas: sigue en su esquina, se lee, y no pelea
+ * con nada. Un crédito que ningún usuario puede ver es lo mismo que no tenerlo.
+ *
+ * Esta regla vive aquí y no en `globals.css` a propósito: la anterior era
+ * global, sobrevivió a la pantalla para la que se escribió y se coló a ésta.
+ */
+.ontoy .leaflet-bottom.leaflet-right {
+  bottom: 58px;
+}
+.ontoy .leaflet-control-attribution {
+  font-size: 9px;
+  opacity: 0.8;
+  border-radius: 8px 0 0 8px;
+  padding: 2px 6px;
+}

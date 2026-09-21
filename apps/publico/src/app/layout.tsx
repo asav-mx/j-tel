@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Nunito, IBM_Plex_Mono } from "next/font/google";
+import { Archivo, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import "./ontoy.css";
 import { RegistrarServicio } from "@/components/registrar-servicio";
 
 /*
@@ -12,16 +13,34 @@ import { RegistrarServicio } from "@/components/registrar-servicio";
  * mismo origen con `font-display: swap`. En un teléfono con datos contados y red
  * lenta es la misma tipografía por bastante menos.
  */
-const nunito = Nunito({
+/*
+ * La letra de Ontoy: Archivo para lo que identifica, IBM Plex Sans para lo que
+ * se lee de corrido, IBM Plex Mono para toda medición. Es la cara de Ontoy, no
+ * la de la plataforma (decisión de ASAV, 21-sep).
+ *
+ * Autoalojadas y subconjuntadas, no por CDN: el prototipo las trae de
+ * fonts.googleapis.com, que en producción cuesta dos viajes de red extra —DNS y
+ * TLS a otro dominio— antes de que se vea una letra, y de paso le cuenta a un
+ * tercero que alguien abrió la app. En un teléfono con datos contados es la
+ * misma tipografía por bastante menos, y sin el tercero.
+ */
+const archivo = Archivo({
   subsets: ["latin"],
-  weight: ["600", "700", "800", "900"],
+  weight: ["600", "700"],
+  variable: "--fuente-titular",
+  display: "swap",
+});
+
+const plexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
   variable: "--fuente-texto",
   display: "swap",
 });
 
 const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
-  weight: ["500"],
+  weight: ["400", "500"],
   variable: "--fuente-mono",
   display: "swap",
 });
@@ -54,7 +73,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-MX" className={`${nunito.variable} ${plexMono.variable}`}>
+    <html lang="es-MX" className={`${archivo.variable} ${plexSans.variable} ${plexMono.variable}`}>
       <body>
         {children}
         <RegistrarServicio />

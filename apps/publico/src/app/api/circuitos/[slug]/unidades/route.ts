@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import {
   enHorarioDeServicio,
   estadoDelCircuito,
-  fechaLocalDelCircuito,
-  idPublicoDelDia,
   medirUnidad,
   sentidoDeLaUnidad,
   yaArrancoElServicio,
@@ -114,7 +112,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
   const responder = (
     estado: EstadoDelCircuito,
     unidades: Array<{
-      id_publico: string;
+      economico: string;
       lat: number;
       lon: number;
       rumbo: number | null;
@@ -173,12 +171,23 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
    */
   if (!enHorario) return responder("fuera_de_horario");
 
-  const secreto = process.env.JTEL_SECRET_KEY;
-  if (!secreto) {
-    // Sin llave el identificador no sería opaco. Antes que publicar unidades
-    // con identidad recalculable, no se publica ninguna.
-    return NextResponse.json({ error: "El servicio no está disponible" }, { status: 503 });
-  }
+  /*
+   * ✎ **Aquí había un 503 sin `JTEL_SECRET_KEY`, y se retiró el 21-sep-2026.**
+   *
+   * Existía porque la llave hacía opaco el identificador de la unidad: sin
+   * ella, «antes que publicar unidades con identidad recalculable, no se
+   * publica ninguna». Ese identificador ya no existe —ahora va el número
+   * económico, que está pintado en el camión (8.5)— así que la llave dejó de
+   * proteger nada de ESTE endpoint.
+   *
+   * Y dejarlo habría sido peor que inútil: apagaría la app del pasajero entera
+   * por una llave que ya no le hace falta.
+   *
+   * ⚠ **Lo que sí arrastra:** el contador de aperturas sí necesita la llave, y
+   * su comentario se apoyaba en este 503 para argumentar que un cero suyo nunca
+   * se podría leer como «nadie abrió». Ese apoyo desapareció con este bloque, y
+   * el de allá se corrigió el mismo día.
+   */
 
   const [posiciones, trazados] = await Promise.all([
     getRepos().circuits.listLivePositionsForCircuit(circuito.id),
@@ -232,10 +241,8 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
    * Pasada la ventana de confianza el punto sí desaparece: a esas alturas ya no
    * se puede sostener que la unidad siga en la ruta.
    */
-  const fechaLocal = fechaLocalDelCircuito(ahora, circuito.timeZone);
-
   const unidades: Array<{
-    id_publico: string;
+    economico: string;
     lat: number;
     lon: number;
     rumbo: number | null;
@@ -250,7 +257,37 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
     if (!m.dentroDeConfianza) continue;
 
     unidades.push({
-      id_publico: idPublicoDelDia(p.unitId, fechaLocal, secreto),
+      /*
+       * **El número económico, y antes aquí iba un identificador opaco.**
+       * Cambiado el 21 de septiembre de 2026 por decisión de ASAV, y el
+       * registro queda porque la reversión importa más que el campo.
+       *
+       * Iba `idPublicoDelDia(unitId, fechaLocal, llave)`: un HMAC que rotaba
+       * cada día para que nadie armara el historial de un camión —ni de su
+       * chofer— raspando este endpoint día tras día. La intención era buena; el
+       * instrumento, equivocado.
+       *
+       * **La Pieza 8.5 pide el económico por su nombre:** «el pasajero ve la
+       * unidad en vivo, su número económico incluido — “viene la 2120” es parte
+       * de la confianza». Y el número **está pintado en el costado del camión**:
+       * cualquiera parado en la esquina lo lee. Esconderlo no protegía nada que
+       * la calle no enseñe; lo que hacía era volver la frase ilegible («viene la
+       * 065f4e83bec3»), que es exactamente lo contrario de la confianza que la
+       * 8.5 busca.
+       *
+       * **La protección contra el raspado no se abandona, cambia de lugar**
+       * (ASAV, 21-sep). Dos piezas, y la primera ya está aquí:
+       *
+       *  1. **Sólo posición actual, nunca historia.** Este endpoint no sirve
+       *     recorridos: lo que devuelve es dónde está cada unidad AHORA, y eso
+       *     no se acumula solo.
+       *  2. **Límite de peticiones por teléfono**, que todavía NO existe y es
+       *     la mitad que falta. Un raspador puede pedir cada segundo y armar
+       *     el historial que el id opaco impedía. Va en su propio frente
+       *     —necesita un contador compartido entre instancias, no uno en
+       *     memoria— y está dicho aquí para que no se pierda.
+       */
+      economico: p.unitLabel,
       lat: p.latitude,
       lon: p.longitude,
       rumbo: p.heading,
