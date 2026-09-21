@@ -1694,6 +1694,15 @@ export const circuitUnitAssignments = pgTable(
      * historial de la concesión.
      */
     motivo: text("motivo"),
+    /** Quién abrió (id de usuario). Nulo en lo anterior a la 0048. */
+    asignadaPor: text("asignada_por"),
+    /**
+     * Quién cerró: al soltar, o al reasignar la unidad a otro circuito. Nulo en
+     * lo anterior a la 0048 o si la cerró un guion. Existe porque el carrier
+     * puede jalar su camión de un circuito de otra concesión, y esa concesión
+     * tiene que poder leer quién se lo llevó.
+     */
+    cerradaPor: text("cerrada_por"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   },
   (table) => [

@@ -9,6 +9,7 @@ export * from "./flota-compas.js";
 export * from "./cuarto-dispositivos.js";
 export * from "./acciones-dispositivo.js";
 export * from "./acciones-unidad.js";
+export * from "./acciones-circuito.js";
 export * from "./acciones-chofer.js";
 export * from "./expediente.js";
 export * from "./catalogo.js";

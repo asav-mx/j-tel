@@ -1,11 +1,20 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { puedeManejarFlota } from "@jtel/auth-rbac";
 import { armarTorreDelCircuito } from "@jtel/services";
 import type { Sentido } from "@jtel/domain";
 import { Marco } from "@/components/casa/marco";
-import { SinCuenta, Titular } from "@/components/casa/expediente";
+import { AvisoDeError, Encabezado, Familia, SinCuenta, Titular, Vacio } from "@/components/casa/expediente";
+import { clases } from "@/components/casa/formulario";
+import { PanelAsignarUnidad, PanelSoltarUnidad } from "@/components/casa/paneles-de-circuito";
+import { Pieza } from "@/components/casa/pieza";
 import { Torre, type VistaDeLaTorre } from "@/components/casa/torre/torre";
+import { correosDeAutores } from "@/lib/casa/autores";
 import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
+import { SUGERENCIAS_SOLTAR, accionDeCircuito, hechoDeCircuito, rutasDeCircuito } from "@/lib/casa/circuitos";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
+import { horaDe, quienYPorQue, textoDeRuta } from "@/lib/casa/dispositivos";
+import { diaDe, rutas } from "@/lib/casa/expedientes";
 import { getRepos } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +45,17 @@ const SENTIDOS: Sentido[] = ["ida", "vuelta"];
  * llega aquí un carrier: la cara de la concesión es la de J-Staff y se cablea
  * en su propio frente. El componente ya sabe dibujarla; lo que falta es la
  * puerta, y un cuarto al que nadie llega no se dibuja (mapa, regla 4).
+ *
+ * ## Relaciones: sus unidades en el circuito, y asignarlas
+ *
+ * Bajo la torre va la familia Relaciones del expediente del circuito (9.8):
+ * **sólo las unidades de esta cuenta** —vigentes y su historia—, leídas con
+ * muro (`listAsignacionesDeCuenta`). En un circuito compartido las del otro
+ * carrier no existen aquí (9.14).
+ *
+ * Quien maneja la flota (`puedeManejarFlota`) asigna y suelta desde aquí
+ * (ficha de huecos de «asignar unidad», PR 2). Despacho ve la lista y ningún
+ * botón (mapa, regla 4). La ruta vuelve a preguntar todo.
  */
 export default async function VerCircuito({
   params,
@@ -55,7 +75,10 @@ export default async function VerCircuito({
   }
 
   const { circuitId } = await params;
+  const sp = await searchParams;
   const repos = getRepos();
+  const { carrier, identidad, cuentaEnRuta } = cuenta;
+  const actua = puedeManejarFlota(identidad.memberships, carrier.id);
   const torre = await armarTorreDelCircuito(repos, {
     cuentaId: cuenta.carrier.id,
     circuitId,
@@ -63,12 +86,40 @@ export default async function VerCircuito({
   });
   if (torre.alcance === "ninguno") notFound();
 
-  const [circuito, paradasCrudas, trazadosCrudos] = await Promise.all([
+  let accion = actua ? accionDeCircuito(sp.accion) : null;
+  const [circuito, paradasCrudas, trazadosCrudos, asignaciones, asignables] = await Promise.all([
     repos.circuits.getCircuitVisibleParaCuenta(cuenta.carrier.id, circuitId),
     repos.circuits.listStopsVigentes(circuitId),
     repos.circuits.getPaths(circuitId),
+    repos.circuits.listAsignacionesDeCuenta(carrier.id, circuitId),
+    // El universo sólo hace falta para ofrecer; si no actúa, ni se pide.
+    actua ? repos.circuits.listUnidadesAsignablesDelCarrier(carrier.id, circuitId) : Promise.resolve([]),
   ]);
   if (!circuito) notFound();
+
+  const vigentes = asignaciones.filter((a) => a.validTo === null);
+  const historia = asignaciones.filter((a) => a.validTo !== null);
+  const aSoltar =
+    accion === "soltar" ? (vigentes.find((a) => a.id === textoDeRuta(sp.asignacion, 64)) ?? null) : null;
+  // Una acción que ya no procede no abre su panel: lo soltado ya no se suelta.
+  if (accion === "soltar" && !aSoltar) accion = null;
+  const autores = await correosDeAutores(asignaciones.flatMap((a) => [a.asignadaPor, a.cerradaPor]));
+  const correo = (id: string) => autores.get(id) ?? id;
+  const error = textoDeRuta(sp.error);
+  const esta = (p: Parameters<typeof rutasDeCircuito.ver>[2] = {}) => rutasDeCircuito.ver(circuitId, cuentaEnRuta, p);
+  const fraseDelHecho = armarHecho({
+    hecho: hechoDeCircuito(sp.hecho),
+    unidad: textoDeRuta(sp.unidad, 64),
+    asignaciones,
+    zona: circuito.timeZone,
+  });
+  const comunes = {
+    cuenta: carrier.slug,
+    circuitId,
+    nombreDelCircuito: circuito.name,
+    cancelar: esta(),
+    error,
+  };
 
   const paradas = paradasCrudas.map((p) => ({
     stopId: p.stopId,
@@ -130,6 +181,153 @@ export default async function VerCircuito({
         }
       />
       <Torre torre={torre} vista={vista} />
+
+      <div className="mx-auto mt-10 flex max-w-3xl flex-col gap-4">
+        <Familia nombre="Relaciones">
+          <Encabezado
+            izquierda="Tus unidades en este circuito"
+            derecha={vigentes.length ? `${vigentes.length} ${vigentes.length === 1 ? "asignada" : "asignadas"}` : null}
+          />
+
+          {fraseDelHecho && (
+            <p
+              role="status"
+              className="flex items-center gap-2.5 rounded-lg border border-[var(--linea)] bg-[var(--pieza)] px-3.5 py-2.5 text-[14px]"
+            >
+              <span aria-hidden="true" className="h-2 w-2 flex-none rounded-full bg-[var(--vivo)]" />
+              <span>{fraseDelHecho}</span>
+            </p>
+          )}
+          {/* Un error sin panel abierto (la guardia, o una acción que ya no procede) se dibuja aquí. */}
+          {error && !accion && <AvisoDeError mensaje={error} />}
+
+          {vigentes.length === 0 ? (
+            <Vacio>Ninguna unidad de esta cuenta está asignada a este circuito.</Vacio>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {vigentes.map((a) => (
+                <div key={a.id} className="flex flex-col gap-1">
+                  <Pieza
+                    nombre={a.unitLabel}
+                    apoyo={`desde ${diaDe(a.validFrom, circuito.timeZone)} ${horaDe(a.validFrom, circuito.timeZone)}`}
+                    /*
+                     * «asignada», no «corriendo»: esto es lo ESPERADO. Si de verdad
+                     * corre lo dice la torre, que lo mide (Pieza 1.C: esperado y
+                     * observado nunca se mezclan).
+                     */
+                    dato="asignada"
+                    etiqueta="unidad"
+                    edad={null}
+                    ficha={rutas.unidad(a.unitId, cuentaEnRuta)}
+                  />
+                  <div className="flex items-center justify-between gap-3 px-4">
+                    <p className="text-[12.5px] text-[var(--tenue)]">
+                      {quienYPorQue({ vigente: true, asignadaPor: a.asignadaPor, cerradaPor: null, motivoCierre: null }, correo)}
+                    </p>
+                    {actua && (
+                      <Link
+                        href={aSoltar?.id === a.id ? esta() : esta({ accion: "soltar", asignacion: a.id })}
+                        className="text-[12.5px] text-[var(--tinta)] underline underline-offset-2"
+                        aria-expanded={aSoltar?.id === a.id}
+                      >
+                        Soltar
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {actua && (
+            <div className="flex flex-wrap gap-2" aria-label="Acciones">
+              <Link
+                href={accion === "asignar" ? esta() : esta({ accion: "asignar" })}
+                className={clases.abridor(accion === "asignar")}
+                aria-expanded={accion === "asignar"}
+              >
+                Asignar una unidad
+              </Link>
+            </div>
+          )}
+
+          {accion === "asignar" && (
+            <PanelAsignarUnidad
+              {...comunes}
+              unidades={asignables
+                .filter((u) => u.ocupadaEnCircuitoId !== circuitId)
+                .map((u) => ({
+                  unitId: u.unitId,
+                  numeroEconomico: u.label,
+                  corre: u.ocupadaEnCircuitoId ? { circuitId: u.ocupadaEnCircuitoId, nombre: u.ocupadaEnCircuito } : null,
+                }))}
+            />
+          )}
+          {accion === "soltar" && aSoltar && (
+            <PanelSoltarUnidad
+              {...comunes}
+              asignacionId={aSoltar.id}
+              numeroEconomico={aSoltar.unitLabel}
+              sugerencias={SUGERENCIAS_SOLTAR}
+              motivoInicial={textoDeRuta(sp.motivo, 600) ?? ""}
+            />
+          )}
+
+          {historia.length > 0 && (
+            <>
+              <Encabezado izquierda="Asignaciones terminadas" />
+              <div className="flex flex-col gap-2">
+                {historia.map((a) => (
+                  <div key={a.id} className="flex flex-col gap-1">
+                    <Pieza
+                      nombre={a.unitLabel}
+                      apoyo={`${diaDe(a.validFrom, circuito.timeZone)} → ${diaDe(a.validTo!, circuito.timeZone)}`}
+                      dato="soltada"
+                      etiqueta="unidad"
+                      edad={null}
+                      apagada
+                      ficha={rutas.unidad(a.unitId, cuentaEnRuta)}
+                    />
+                    <p className="px-4 text-[12.5px] text-[var(--tenue)]">
+                      {quienYPorQue(
+                        { vigente: false, asignadaPor: a.asignadaPor, cerradaPor: a.cerradaPor, motivoCierre: a.motivo },
+                        correo,
+                      )}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </Familia>
+      </div>
     </Marco>
   );
+}
+
+/**
+ * La frase de lo que acaba de pasar, **leída de la base**. La dirección sólo
+ * dice qué acción fue y de qué unidad; si la base no lo sostiene —otra pestaña
+ * ya la movió, o alguien editó la dirección— no se dice nada.
+ */
+function armarHecho({
+  hecho,
+  unidad,
+  asignaciones,
+  zona,
+}: {
+  hecho: ReturnType<typeof hechoDeCircuito>;
+  unidad: string | null;
+  asignaciones: { unitId: string; unitLabel: string; validFrom: Date; validTo: Date | null }[];
+  zona: string;
+}): string | null {
+  if (!hecho || !unidad) return null;
+  const suya = asignaciones.filter((a) => a.unitId === unidad);
+  if (hecho === "asignada") {
+    const vigente = suya.find((a) => a.validTo === null);
+    return vigente ? `${vigente.unitLabel} quedó asignada a este circuito a las ${horaDe(vigente.validFrom, zona)}.` : null;
+  }
+  const ultima = suya.find((a) => a.validTo !== null);
+  if (!ultima || suya.some((a) => a.validTo === null)) return null;
+  return `${ultima.unitLabel} se soltó de este circuito a las ${horaDe(ultima.validTo!, zona)}.`;
 }
