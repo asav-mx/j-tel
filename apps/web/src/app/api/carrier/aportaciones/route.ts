@@ -23,6 +23,22 @@ import type { ContractPolicy } from "@jtel/domain";
  *
  * Un catálogo propio en esta ruta sería un segundo lugar donde vive la misma
  * lista, y las dos se separarían el primer mes.
+ *
+ * ---
+ *
+ * **Dos cierres del 21 sep 2026 (decisión de Asav):**
+ *
+ * 1. **Sólo el transportista escribe su versión** (`carrier-en-persona`). La
+ *    guardia de antes (`carrier`) dejaba pasar al alcance global, así que
+ *    J-Staff podía crear una aportación que la planta leería como del carrier.
+ *    J-Staff no escribe como carrier; si algún día hace falta, será por la
+ *    compuerta con registro.
+ * 2. **La unidad declarada sólo donde el sello no acreditó ninguna.** Si el
+ *    hecho ya tiene unidad observada, el campo se rechaza: declarar otra encima
+ *    sería discutir la evidencia desde el lugar equivocado. **Sólo ese campo**:
+ *    motivo, nota y adjuntos se siguen aceptando en cualquier servicio suyo.
+ *    Es la misma regla que ya aplicaban las dos pantallas (`sinUnidadAcreditada`,
+ *    `ofreceDeclararUnidad`); ahora la exige también la ruta.
  */
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
@@ -56,7 +72,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const g = await exigir(request, { tipo: "carrier", slug: accountSlug }, "json");
+  const g = await exigir(request, { tipo: "carrier-en-persona", slug: accountSlug }, "json");
   if (!g.ok) return g.respuesta;
 
   const repos = getRepos();
@@ -80,6 +96,17 @@ export async function POST(request: Request) {
    * le juzgó, no de lo que rige hoy.
    */
   const fact = occurrence.complianceFact;
+
+  if (declaredUnitId && fact?.observedUnitId) {
+    return NextResponse.json(
+      {
+        error:
+          "Este servicio ya tiene unidad observada: no se declara otra. " +
+          "Puedes mandar tu justificación sin unidad.",
+      },
+      { status: 409 },
+    );
+  }
   const policy = (fact?.contractPolicySnapshot ?? contract.policy) as ContractPolicy;
   const catalogo = policy?.excusableReasons ?? [];
 

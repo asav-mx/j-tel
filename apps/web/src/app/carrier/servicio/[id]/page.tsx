@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { esDelCarrier } from "@jtel/auth-rbac";
 import { NavBar } from "@/components/ui";
 import { ServiceDetailView } from "@/components/service-detail-view";
 import { CarrierDudosoReview } from "@/components/carrier-dudoso-review";
@@ -44,7 +45,7 @@ export default async function CarrierServicioPage({
   // Sin sesión no se renderiza. Va en la PÁGINA y no solo en el layout:
   // un redirect de layout no impide que la hija se renderice, y su payload
   // viaja igual en la respuesta (regla 7 del plan).
-  await exigirSesion();
+  const identidad = await exigirSesion();
 
   const { id } = await params;
   // La cuenta dueña sale de la FILA del servicio, no de `?account=`. Va ADEMÁS
@@ -384,7 +385,11 @@ export default async function CarrierServicioPage({
          * que no pudo atribuir. En una bandeja aparte sería una queja; aquí la
          * versión se lee junto a la evidencia que la sostiene o la contradice.
          */}
-        {sinUnidadAcreditada ? (
+        {/*
+         * Sólo a quien la ruta deja escribir (`carrier-en-persona`, 21 sep):
+         * J-Staff mira el servicio, pero no escribe como el transportista.
+         */}
+        {sinUnidadAcreditada && esDelCarrier(identidad.memberships, carrier.id) ? (
           <CajaAportacion
             occurrenceId={id}
             accountSlug={carrier.slug}

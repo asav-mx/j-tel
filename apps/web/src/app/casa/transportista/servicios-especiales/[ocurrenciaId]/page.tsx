@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { canAccessCarrierAccount } from "@jtel/auth-rbac";
+import { esDelCarrier } from "@jtel/auth-rbac";
 import {
   PALABRA_DEL_EXCUSABLE,
   horaConSegundos,
@@ -81,12 +81,13 @@ export default async function VerOcurrencia({
   /*
    * Declarar la unidad (ficha de huecos, PR 1): sólo donde la pantalla vieja lo
    * ofrecía —el sello no acreditó unidad— y sólo a quien la ruta deja pasar
-   * (`exigir` tipo «carrier» = `canAccessCarrierAccount`). Un botón que la ruta
+   * (`carrier-en-persona` = `esDelCarrier`: J-Staff mira, no escribe como el
+   * transportista). Un botón que la ruta
    * va a rechazar no se dibuja (mapa, regla 4). Las unidades son las de su
    * flota, las mismas que ofrecía la vieja; la ruta lo vuelve a comprobar.
    */
   const declarar =
-    acta.ofreceDeclararUnidad && canAccessCarrierAccount(identidad.memberships, carrier.id)
+    acta.ofreceDeclararUnidad && esDelCarrier(identidad.memberships, carrier.id)
       ? {
           cuenta: carrier.slug,
           unidades: (await getRepos().vernier.unidadesDelTransportista(carrier.id)).map((u) => ({
