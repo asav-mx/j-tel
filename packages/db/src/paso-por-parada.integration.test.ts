@@ -276,15 +276,18 @@ describe("detectarYGuardar · el detector completo, contra datos sembrados", () 
  * Los pasos se insertan a mano (este archivo es de los tres que pueden tocar la
  * tabla) y se leen SÓLO por el repositorio.
  */
-describe("el muro de los pasos por unidad — dos carriers en el mismo circuito", () => {
+describe("el muro por unidad — dos carriers en el mismo circuito", () => {
   const m = `mu${Date.now().toString(36)}`;
   const DIA = 24 * 3_600_000;
   const hace = (dias: number) => new Date(Date.now() - dias * DIA);
+  /** Dos fixes con orden conocido: es el desempate de «una sola fila por unidad». */
+  const FIX_VIEJO = new Date(Date.now() - 20 * 60_000);
+  const FIX_NUEVO = new Date(Date.now() - 2 * 60_000);
 
   const cuentas = {} as Record<"C1" | "C2" | "A" | "B" | "F" | "G" | "K" | "J", string>;
   const circuito = {} as Record<"K1" | "K2", string>;
   const parada = {} as Record<"S1" | "S2", { stopId: string; stopVersionId: string }>;
-  const unidad = {} as Record<"uA" | "uB" | "uH" | "uM" | "uO" | "uX", string>;
+  const unidad = {} as Record<"uA" | "uB" | "uD" | "uH" | "uM" | "uO" | "uS" | "uX", string>;
 
   async function circuitoConParada(concesion: string, nombre: string) {
     const c = await repos.circuits.createCircuit({
@@ -352,12 +355,16 @@ describe("el muro de los pasos por unidad — dos carriers en el mismo circuito"
     unidad.uM = (await repos.fleet.createUnit(cuentas.A, `uM-${m}`)).id; // de A, pero la asignación de K1 dice B (no cuadra)
     unidad.uO = (await repos.fleet.createUnit(cuentas.A, `uO-${m}`)).id; // de A, sin asignación alguna a K2
     unidad.uX = (await repos.fleet.createUnit(cuentas.B, `uX-${m}`)).id; // de B, pero la asignación de K2 dice G (no cuadra)
+    unidad.uS = (await repos.fleet.createUnit(cuentas.A, `uS-${m}`)).id; // de A, asignada por A a K1, SIN aparato
+    unidad.uD = (await repos.fleet.createUnit(cuentas.A, `uD-${m}`)).id; // de A, asignada por A a K1, con DOS aparatos vigentes
 
     await asignar(circuito.K1, unidad.uA, cuentas.A, hace(10));
     await asignar(circuito.K1, unidad.uB, cuentas.B, hace(10));
     await asignar(circuito.K1, unidad.uH, cuentas.A, hace(20), hace(5));
     await asignar(circuito.K1, unidad.uM, cuentas.B, hace(10));
     await asignar(circuito.K2, unidad.uX, cuentas.G, hace(10));
+    await asignar(circuito.K1, unidad.uS, cuentas.A, hace(10));
+    await asignar(circuito.K1, unidad.uD, cuentas.A, hace(10));
 
     // Todas pasaron por su parada: el muro decide quién lo puede leer.
     await paso(circuito.K1, parada.S1, unidad.uA, 0);
@@ -366,6 +373,50 @@ describe("el muro de los pasos por unidad — dos carriers en el mismo circuito"
     await paso(circuito.K1, parada.S1, unidad.uM, 30);
     await paso(circuito.K2, parada.S2, unidad.uO, 0);
     await paso(circuito.K2, parada.S2, unidad.uX, 10);
+
+    /*
+     * Aparatos y posiciones vivas — el insumo de la puerta de posiciones.
+     *
+     * La posición se cuelga del APARATO (`live_positions.device_id`), no de la
+     * unidad: en producción `live_positions.unit_id` viene vacío, así que
+     * sembrarlo aquí haría pasar una consulta que allá devuelve cero filas.
+     * Por eso se deja en null a propósito.
+     */
+    const aparatoConFix = async (unitId: string, imei: string, cuenta: string, fix: Date) => {
+      const d = await repos.fleet.createDevice(cuenta, imei, `dev ${imei}`);
+      await repos.fleet.assignDevice(unitId, d.id, hace(10));
+      const p = puntoSobreElTrazado(400);
+      await repos.livePositions.upsertMany([
+        { imei, carrierAccountId: cuenta, deviceId: d.id, latitude: p.lat, longitude: p.lon, recordedAt: fix },
+      ]);
+      return d;
+    };
+
+    await aparatoConFix(unidad.uA, `10${m}a`, cuentas.A, FIX_NUEVO);
+    await aparatoConFix(unidad.uB, `10${m}b`, cuentas.B, FIX_NUEVO);
+    await aparatoConFix(unidad.uM, `10${m}m`, cuentas.A, FIX_NUEVO);
+    // uH tiene aparato y fix fresco: su ausencia del plan es por la asignación
+    // cerrada del circuito, no por falta de señal. Si no, la prueba pasaría
+    // verde por la razón equivocada.
+    await aparatoConFix(unidad.uH, `10${m}h`, cuentas.A, FIX_NUEVO);
+    // uS no tiene aparato: su renglón se enuncia con la posición en null.
+
+    /*
+     * uD con DOS posiciones vivas colgadas del MISMO aparato.
+     *
+     * **No con dos aparatos**: desde la 0039 la base no deja dos asignaciones
+     * vigentes sobre una unidad, y esta matriz lo comprobó chocando de frente
+     * con `device_assignments_unidad_una_vigente` al intentar sembrarlo. La
+     * puerta por donde el duplicado SÍ entra es `live_positions`, que se lleva
+     * por IMEI y no tiene candado por `device_id`: un aparato reregistrado deja
+     * su fila vieja apuntando al mismo aparato, y la unidad saldría dos veces
+     * —«4 de 3 en el plan»— si la consulta no desempatara.
+     */
+    const aparatoD = await aparatoConFix(unidad.uD, `10${m}d1`, cuentas.A, FIX_VIEJO);
+    const pD = puntoSobreElTrazado(500);
+    await repos.livePositions.upsertMany([
+      { imei: `10${m}d2`, carrierAccountId: cuentas.A, deviceId: aparatoD.id, latitude: pD.lat, longitude: pD.lon, recordedAt: FIX_NUEVO },
+    ]);
   });
 
   afterAll(async () => {
@@ -425,6 +476,99 @@ describe("el muro de los pasos por unidad — dos carriers en el mismo circuito"
 
   it("un circuito que no existe responde igual que uno ajeno: null", async () => {
     expect(await repos.circuits.getCircuitVisibleParaCuenta(cuentas.C1, "00000000-0000-4000-8000-000000000000")).toBeNull();
+  });
+
+  /*
+   * LA PUERTA DE POSICIONES — el plan del circuito con muro (Paso 1.A).
+   *
+   * Misma matriz, otra puerta. `planDelCircuitoParaCuenta` comparte las dos
+   * cerraduras con la lectura de pasos, así que se mide sobre el mismo peor
+   * caso ya sembrado: sembrarlo aparte sería la segunda copia que se separa de
+   * la primera en el primer cambio.
+   *
+   * Lo que esta puerta NO comparte con la de pasos, y por eso se mide aquí:
+   * **el plan es lo vigente**. Una asignación cerrada le sigue abriendo al
+   * carrier sus pasos de entonces y NO lo pone en el plan de hoy (`uH`).
+   */
+  describe("la puerta de posiciones del circuito", () => {
+    const nombreDe = () => new Map(Object.entries(unidad).map(([n, id]) => [id, n]));
+
+    /** Las unidades que una cuenta lee del plan, en claro, con su alcance. */
+    async function plan(cuenta: keyof typeof cuentas, c: "K1" | "K2") {
+      const r = await repos.circuits.planDelCircuitoParaCuenta(cuentas[cuenta], circuito[c]);
+      const nombres = nombreDe();
+      return { alcance: r.alcance, unidades: r.unidades.map((u) => nombres.get(u.unitId)!).sort() };
+    }
+
+    it("la concesión dueña ve el plan completo de su circuito, con transportista", async () => {
+      const r = await repos.circuits.planDelCircuitoParaCuenta(cuentas.C1, circuito.K1);
+      expect(r.alcance).toBe("concesion");
+      const nombres = nombreDe();
+      expect(r.unidades.map((u) => nombres.get(u.unitId)!).sort()).toEqual(["uA", "uB", "uD", "uM", "uS"]);
+      // El transportista viene, y distingue: K1 lo corren dos.
+      if (r.alcance !== "concesion") throw new Error("alcance inesperado");
+      const deA = r.unidades.find((u) => u.unitId === unidad.uA)!;
+      const deB = r.unidades.find((u) => u.unitId === unidad.uB)!;
+      expect(deA.carrierAccountId).toBe(cuentas.A);
+      expect(deB.carrierAccountId).toBe(cuentas.B);
+      expect(deA.carrierName).not.toBe(deB.carrierName);
+    });
+
+    it("cada carrier ve SUS unidades del plan y ninguna del otro, en el mismo circuito", async () => {
+      expect(await plan("A", "K1")).toEqual({ alcance: "carrier", unidades: ["uA", "uD", "uS"] });
+      expect(await plan("B", "K1")).toEqual({ alcance: "carrier", unidades: ["uB"] });
+    });
+
+    it("el carrier no recibe columna de transportista: no hay dónde se cuele el nombre de otro", async () => {
+      const r = await repos.circuits.planDelCircuitoParaCuenta(cuentas.A, circuito.K1);
+      expect(r.alcance).toBe("carrier");
+      for (const u of r.unidades) {
+        expect(Object.keys(u)).not.toContain("carrierName");
+        expect(Object.keys(u)).not.toContain("carrierAccountId");
+      }
+    });
+
+    it("una fila que no cuadra (unidad de A, asignación a nombre de B) no entra al plan de ningún carrier", async () => {
+      expect((await plan("A", "K1")).unidades).not.toContain("uM"); // falla la cerradura de la asignación
+      expect((await plan("B", "K1")).unidades).not.toContain("uM"); // falla la cerradura del alta
+      expect((await plan("C1", "K1")).unidades).toContain("uM"); // sólo la concesión la ve
+    });
+
+    it("EL PLAN ES LO VIGENTE, el historial es otra pregunta: uH lee sus pasos y no sale en el plan", async () => {
+      // La misma unidad, la misma cuenta, las dos puertas — y contestan distinto a propósito.
+      expect(await lee("A", parada.S1.stopId)).toContain("uH");
+      expect((await plan("A", "K1")).unidades).not.toContain("uH");
+      expect((await plan("C1", "K1")).unidades).not.toContain("uH");
+    });
+
+    it("la asignación manda y la posición es opcional: una unidad sin aparato sale con null, no desaparece", async () => {
+      const r = await repos.circuits.planDelCircuitoParaCuenta(cuentas.A, circuito.K1);
+      const sinAparato = r.unidades.find((u) => u.unitId === unidad.uS);
+      expect(sinAparato, "uS se perdió del plan: sin aparato no es sin asignación").toBeDefined();
+      expect(sinAparato!.recordedAt).toBeNull();
+      expect(sinAparato!.latitude).toBeNull();
+      expect(sinAparato!.longitude).toBeNull();
+    });
+
+    it("una sola fila por unidad aunque traiga dos posiciones vivas, y gana el fix más reciente", async () => {
+      const r = await repos.circuits.planDelCircuitoParaCuenta(cuentas.A, circuito.K1);
+      const filas = r.unidades.filter((u) => u.unitId === unidad.uD);
+      expect(filas, "dos filas de la misma unidad envenenan el conteo del plan").toHaveLength(1);
+      expect(filas[0]!.recordedAt?.getTime()).toBe(FIX_NUEVO.getTime());
+    });
+
+    it("cualquier otra cuenta no recibe plan, y no distingue el circuito ajeno del inexistente", async () => {
+      for (const cuenta of ["F", "G", "K", "J", "C2"] as const) {
+        expect(await plan(cuenta, "K1"), `cuenta ${cuenta}`).toEqual({ alcance: "ninguno", unidades: [] });
+      }
+      // A y B corren K1, pero en K2 no tienen nada que cuadre: ahí tampoco existen.
+      expect(await plan("A", "K2")).toEqual({ alcance: "ninguno", unidades: [] });
+      expect(await plan("B", "K2")).toEqual({ alcance: "ninguno", unidades: [] });
+      // Y un uuid que nunca existió responde exactamente igual.
+      expect(
+        await repos.circuits.planDelCircuitoParaCuenta(cuentas.A, "00000000-0000-4000-8000-000000000000"),
+      ).toEqual({ alcance: "ninguno", unidades: [] });
+    });
   });
 });
 
