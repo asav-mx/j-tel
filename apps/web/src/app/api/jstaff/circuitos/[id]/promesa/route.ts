@@ -16,13 +16,17 @@ import { leerFranjasCapturadas } from "@/lib/promesa-por-franja";
  * y por qué, con el número de renglón para que la pantalla lo marque.
  *
  * Reemplazar una promesa vigente pide motivo: es lo único de la versión
- * cerrada que nadie puede reconstruir después.
+ * cerrada que nadie puede reconstruir después. Y la versión nueva queda firmada
+ * con quién la capturó (0049), que sale de la sesión, nunca del formulario.
  */
 export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const g = await exigir(request, { tipo: "jstaff" }, "json");
   if (!g.ok) return g.respuesta;
 
   const { id } = await ctx.params;
+  // Sin un quién no se escribe una promesa que Ontoy va a decir en voz alta.
+  const capturadaPor = g.identidad.userId;
+  if (!capturadaPor) return NextResponse.json({ error: "Inicia sesión." }, { status: 401 });
   const cuerpo = (await request.json().catch(() => null)) as { franjas?: unknown; motivo?: unknown } | null;
 
   const repos = getRepos();
@@ -41,7 +45,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     );
   }
 
-  const r = await repos.circuits.savePromiseTable(id, leidas.franjas, { motivo });
+  const r = await repos.circuits.savePromiseTable(id, leidas.franjas, { motivo, capturadaPor });
   if (!r.ok) {
     return NextResponse.json(
       {

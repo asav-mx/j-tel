@@ -12,6 +12,7 @@ import {
 import { CircuitoEditor } from "@/components/circuito-editor";
 import { CircuitoUnidades } from "@/components/circuito-unidades";
 import { CircuitoPromesa } from "@/components/circuito-promesa";
+import { correosDeAutores } from "@/lib/casa/autores";
 import { loQueDiceOntoyAhora, resumenDeLaPromesa } from "@/lib/promesa-por-franja";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
@@ -730,7 +731,7 @@ function LoQueDeclara({
  * «cada cuántos minutos» se fue de «lo que declara»: dos lugares para la misma
  * promesa son dos promesas.
  */
-function LaPromesaPorFranja({
+async function LaPromesaPorFranja({
   circuitoId,
   horario,
   zona,
@@ -743,6 +744,8 @@ function LaPromesaPorFranja({
   franjasVigentes: FranjaCapturada[] | null;
   versiones: Awaited<ReturnType<ReturnType<typeof getRepos>["circuits"]["listPromiseTables"]>>;
 }) {
+  // El correo de quien capturó cada versión; el id tal cual si Clerk no lo sabe (nunca un nombre inventado).
+  const autores = await correosDeAutores(versiones.map((v) => v.capturadaPor));
   return (
     <Seccion
       id="promesa"
@@ -761,6 +764,7 @@ function LaPromesaPorFranja({
           hasta: v.validTo ? localDateTimeShort(v.validTo.toISOString(), zona) : null,
           motivo: v.motivo,
           franjas: v.franjas,
+          capturo: v.capturadaPor ? (autores.get(v.capturadaPor) ?? v.capturadaPor) : null,
         }))}
       />
     </Seccion>

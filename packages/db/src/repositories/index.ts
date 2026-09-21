@@ -7477,6 +7477,7 @@ export class CircuitRepository {
         validFrom: circuitPromiseTables.validFrom,
         validTo: circuitPromiseTables.validTo,
         motivo: circuitPromiseTables.motivo,
+        capturadaPor: circuitPromiseTables.capturadaPor,
         /*
          * Nombres escritos a mano: dentro de la proyección Drizzle quita el
          * nombre de la tabla, y `id` se resolvería CALLADO al id de la franja
@@ -7600,7 +7601,7 @@ export class CircuitRepository {
   async savePromiseTable(
     circuitId: string,
     franjas: FranjaCapturada[],
-    opts: { motivo?: string } = {},
+    opts: { motivo?: string; capturadaPor?: string | null } = {},
   ): Promise<{ ok: true; tableId: string } | { ok: false; rechazadas: FranjaRechazada[] }> {
     const [circuito] = await this.db
       .select({ inicio: circuits.serviceStartLocal, fin: circuits.serviceEndLocal })
@@ -7628,7 +7629,7 @@ export class CircuitRepository {
 
       const [nueva] = await tx
         .insert(circuitPromiseTables)
-        .values({ circuitId, validFrom: ahora })
+        .values({ circuitId, validFrom: ahora, capturadaPor: opts.capturadaPor ?? null })
         .returning();
       if (!nueva) throw new Error("No se pudo crear la nueva versión de la promesa.");
 
