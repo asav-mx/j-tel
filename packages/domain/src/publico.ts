@@ -458,6 +458,81 @@ export function estadoDelCircuito(entrada: {
   return "sin_evidencia";
 }
 
+/**
+ * En cuál de los cinco cajones cae una unidad del plan: **¿está corriendo?**
+ *
+ * Son excluyentes y cubren el plan entero, así que toda unidad asignada aparece
+ * en exactamente uno. Que sumen es lo que permite escribir «3 de 5» sin dejar
+ * al lector preguntándose dónde están las otras dos.
+ *
+ * **Vivía dentro de `apps/web/src/lib/operar-circuito.ts` y se subió aquí sin
+ * cambiarle una línea** (Paso 1.B de la torre): la torre del carrier hace
+ * exactamente la misma pregunta que la pantalla de operación de J-Staff, y dos
+ * caras que calculan lo mismo por separado terminan diciendo cosas distintas
+ * del mismo camión — que es, palabra por palabra, la razón por la que existe
+ * `medirUnidad` unas líneas más arriba. La pantalla de J-Staff la sigue
+ * reexportando, así que nada de lo suyo cambió.
+ *
+ * **No contesta si la unidad sostuvo la promesa.** Ése es el otro eje, y vive
+ * en la torre (9.2c/9.3b): EN RANGO · ADELANTADA · ATRASADA · SIN DATOS. Los
+ * dos son ortogonales a propósito — aplanarlos haría que un camión fuera de
+ * horario saliera «SIN DATOS», que es un reproche por no estar trabajando de
+ * noche.
+ */
+export type Situacion =
+  /**
+   * El servicio del circuito todavía no arranca. **No se afirma nada de nadie**,
+   * igual que fuera de horario: la unidad no está corriendo porque no la tiene
+   * que estar.
+   */
+  | "por_arrancar"
+  /** Del plan, con señal fresca y dentro del corredor. Lo que cuenta el número grande. */
+  | "en_ruta"
+  /** Se le vio en el corredor y dejó de reportar. Sigue en su recorrido hasta donde sabemos. */
+  | "sin_senal"
+  /** El circuito ya abrió y su GPS no la ve en el corredor — con señal lejos, o sin ninguna. */
+  | "no_ha_salido"
+  /** El circuito está cerrado. Fuera de horario no se afirma nada de nadie. */
+  | "fuera_de_horario";
+
+/**
+ * La escalera de los cinco cajones. El orden importa: la fecha de arranque
+ * manda sobre el reloj, y el reloj sobre lo que vio el GPS.
+ *
+ * `medida` en `null` significa que de esa unidad no hay una sola posición —
+ * no es lo mismo que una posición vieja, y por eso se recibe así en vez de
+ * fabricar una medición vacía.
+ */
+export function situacionDe(
+  medida: MedidaDeUnidad | null,
+  enHorario: boolean,
+  yaArranco: boolean,
+): Situacion {
+  if (!yaArranco) return "por_arrancar";
+  if (!enHorario) return "fuera_de_horario";
+  if (!medida) return "no_ha_salido";
+  if (medida.enRuta) return "en_ruta";
+  if (medida.enCorredor) return "sin_senal";
+  return "no_ha_salido";
+}
+
+/**
+ * ¿Esta unidad está EN LA CALLE? — la compuerta del eje de promesa.
+ *
+ * La torre emite EN RANGO / ADELANTADA / ATRASADA sólo de las unidades que
+ * están corriendo (decisión de Asav, 20-sep). De una que no arrancó, que está
+ * fuera de horario o que no ha salido, la promesa **no aplica** — y «no aplica»
+ * no es «sin datos»: lo primero dice que la pregunta no viene al caso, lo
+ * segundo que la pregunta viene al caso y no se pudo contestar.
+ *
+ * `sin_senal` SÍ entra: la unidad va en su recorrido hasta donde sabemos, y su
+ * paso por una parada es evidencia que no depende de que el GPS siga hablando.
+ */
+export function estaEnLaCalle(situacion: Situacion): boolean {
+  return situacion === "en_ruta" || situacion === "sin_senal";
+}
+
+
 // ── Los valores con que nace un circuito ─────────────────────────────────
 
 /**

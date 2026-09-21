@@ -468,3 +468,99 @@ describe("guardia · nadie lee el plan del circuito sin el muro de cuenta", () =
     ]);
   });
 });
+
+/**
+ * La TORRE: que nadie derive un estado sobre un flujo que no ve entero (9.14).
+ *
+ * Es el mismo daño del muro, una capa más arriba y con otra cara. El muro ya
+ * impide que un carrier LEA los pasos de otro; lo que esta valla impide es que,
+ * teniendo sólo los suyos, alguien calcule con ellos «el intervalo contra el
+ * paso anterior» y pinte ATRASADA. El dato de entrada sería correcto y el
+ * resultado, falso — la forma del Marco §D que más caro cuesta, porque se
+ * defiende sola en una discusión.
+ *
+ * 9.14 lo dice como regla: **SIN DATOS antes que un número prestado.** La
+ * comparación entre carriers es valor reservado de J-Tel, se habilita por
+ * circuito y por acuerdo, nunca por default.
+ *
+ * Tres cosas se vigilan:
+ *
+ *  1. **La compuerta existe y se pasa hacia abajo.** No se consulta dentro de
+ *     cada derivación —eso se puede borrar sin romper nada—: viaja como campo
+ *     obligatorio, así que una derivación nueva que la olvide no compila.
+ *  2. **La compuerta nace cerrada.** `comparacionCompartidaHabilitada` devuelve
+ *     `false` hasta que el acuerdo por circuito exista en la base.
+ *  3. **El vocabulario del motor no cruza el borde** (9.3b): `sostuvo`,
+ *     `se_agujero` y «hueco» no salen de la capa de datos de la torre.
+ */
+const TORRE = "packages/services/src/torre-del-circuito.ts";
+
+describe("guardia · la torre no deriva sobre un flujo que no ve entero (9.14)", () => {
+  const archivos = arboles().flatMap(fuentes).filter((a) => !(a in EXENTOS));
+  const torre = () => leer(TORRE);
+
+  it("la capa de datos de la torre existe y el barrido la ve (guarda contra un falso verde)", () => {
+    expect(archivos).toContain(TORRE);
+    expect(torre()).toMatch(/export async function armarTorreDelCircuito\(/);
+  });
+
+  it("la compuerta se consulta una vez y VIAJA como campo obligatorio a cada derivación", () => {
+    const fuente = sinComentarios(torre());
+    expect(fuente, "la torre ya no le pregunta a la base si el circuito lo corren varios").toContain(
+      "circuitoTieneMasDeUnCarrier(",
+    );
+    // Cada derivación la recibe. Si alguien escribe una nueva sin el campo, el
+    // compilador la para; esto vigila que a las que hay no se lo quiten.
+    const derivaciones = ["derivarUnidades", "derivarEsperas", "contarSostenimiento", "derivarRitmo"];
+    const sinCompuerta = derivaciones.filter((d) => {
+      const cuerpo = cuerpoDe(fuente, new RegExp(`^async function ${d}\\(e: \\{`, "m"), /^\}\n/m);
+      return !/flujo: FlujoDelServicio;/.test(cuerpo);
+    });
+    expect(
+      sinCompuerta,
+      "Estas derivaciones dejaron de recibir el flujo. Sin él calculan sobre los pasos de UN carrier como " +
+        "si fueran el servicio completo, y producen un ATRASADA falso (9.14).",
+    ).toEqual([]);
+  });
+
+  it("la compuerta nace CERRADA: por default, nunca (9.14)", () => {
+    const cuerpo = cuerpoDe(
+      sinComentarios(torre()),
+      /^function comparacionCompartidaHabilitada\(/m,
+      /^\}\n/m,
+    );
+    expect(cuerpo, "no encuentro comparacionCompartidaHabilitada").not.toBe("");
+    expect(
+      cuerpo.replace(/\s/g, ""),
+      "La comparación entre carriers es valor reservado de J-Tel: se habilita POR CIRCUITO y por acuerdo " +
+        "de esa concesión, nunca por ley general ni por default (9.14). Si ya existe el acuerdo en la base, " +
+        "esta función lo lee — no devuelve true a secas.",
+    ).not.toMatch(/returntrue;/);
+  });
+
+  it("el vocabulario del motor no cruza el borde (9.3b)", () => {
+    const fuente = sinComentarios(torre());
+    for (const palabra of ["sostuvo", "se_agujero", "hueco"]) {
+      expect(
+        fuente,
+        `«${palabra}» es nombre interno del motor y no sale de esta capa. En pantalla el vocabulario es ` +
+          `EN RANGO · ADELANTADA · ATRASADA · SIN DATOS, y lo que una parada lleva sin que pase nadie se ` +
+          `llama espera (9.3b).`,
+      ).not.toContain(palabra);
+    }
+  });
+
+  it("quien concluye un lado de la banda fuera del dominio, pasa por la compuerta", () => {
+    const culpables = archivos.filter((a) => {
+      if (a.startsWith("packages/domain/src")) return false; // ahí vive la función pura
+      if (a.endsWith(".test.ts")) return false;
+      const fuente = sinComentarios(leer(a));
+      return /ladoDeLaBanda\(/.test(fuente) && !/FlujoDelServicio/.test(fuente);
+    });
+    expect(
+      culpables,
+      "Estos archivos concluyen ADELANTADA/ATRASADA sin declarar el flujo del servicio. Sobre los pasos de " +
+        "un solo carrier de un circuito compartido, esa conclusión es falsa (9.14).",
+    ).toEqual([]);
+  });
+});

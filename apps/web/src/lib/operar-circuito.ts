@@ -4,6 +4,8 @@ import {
   estadoDelCircuito,
   yaArrancoElServicio,
   medirUnidad,
+  situacionDe,
+  type Situacion,
   type EstadoDelCircuito,
   type MedidaDeUnidad,
   type TrazadoDeSentido,
@@ -78,27 +80,13 @@ export interface ParadaVigente {
 }
 
 /**
- * En cuál de los cinco cajones cae una unidad del plan.
- *
- * Son excluyentes y cubren el plan entero: toda unidad asignada aparece en
- * exactamente uno. Que sumen es lo que permite escribir «3 de 5» sin que el
- * lector se quede preguntando dónde están las otras dos.
+ * Los cinco cajones de «¿está corriendo?» **viven en el dominio** desde el Paso
+ * 1.B de la torre, junto a `medirUnidad`, y aquí sólo se reexportan: la torre
+ * del carrier hace la misma pregunta que esta pantalla, y dos copias de la
+ * escalera se separan igual que se separaban los `filter` que `medirUnidad`
+ * vino a juntar. Quien importaba `Situacion` de este módulo no se entera.
  */
-export type Situacion =
-  /**
-   * El servicio del circuito todavía no arranca. **No se afirma nada de nadie**,
-   * igual que fuera de horario: la unidad no está corriendo porque no la tiene
-   * que estar.
-   */
-  | "por_arrancar"
-  /** Del plan, con señal fresca y dentro del corredor. Lo que cuenta el número grande. */
-  | "en_ruta"
-  /** Se le vio en el corredor y dejó de reportar. Sigue en su recorrido hasta donde sabemos. */
-  | "sin_senal"
-  /** El circuito ya abrió y su GPS no la ve en el corredor — con señal lejos, o sin ninguna. */
-  | "no_ha_salido"
-  /** El circuito está cerrado. Fuera de horario no se afirma nada de nadie. */
-  | "fuera_de_horario";
+export type { Situacion };
 
 export interface UnidadOperando extends UnidadDelPlan {
   /** `null` cuando no hay una sola señal de esta unidad: no hay nada que medir. */
@@ -261,19 +249,6 @@ export function armarOperacion(entrada: {
  * enseñar—, y sin señal alguna no hay ni lo uno ni lo otro. Meterlas juntas
  * borraría justo el dato que distingue los dos problemas.
  */
-function situacionDe(
-  medida: MedidaDeUnidad | null,
-  enHorario: boolean,
-  yaArranco: boolean,
-): Situacion {
-  if (!yaArranco) return "por_arrancar";
-  if (!enHorario) return "fuera_de_horario";
-  if (!medida) return "no_ha_salido";
-  if (medida.enRuta) return "en_ruta";
-  if (medida.enCorredor) return "sin_senal";
-  return "no_ha_salido";
-}
-
 /**
  * Cuándo abrió la ventana de servicio que está corriendo ahora.
  *
