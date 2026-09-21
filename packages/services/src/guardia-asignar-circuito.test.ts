@@ -66,8 +66,13 @@ const sinComentarios = (f: string) => f.replace(/\/\*[\s\S]*?\*\//g, "").replace
 
 const REPO_DB = "packages/db/src/repositories/index.ts";
 const ESTA = "packages/services/src/guardia-asignar-circuito.test.ts";
-/** La cara de J-Staff: sus rutas de API y sus páginas, que viven tras su propia guardia. */
-const RUTA_JSTAFF = /^apps\/web\/src\/app\/(?:api\/)?jstaff\//;
+/**
+ * La cara de J-Staff: sus rutas de API y sus páginas, que viven tras su propia
+ * guardia — el árbol viejo (`/jstaff/`) y su casa nueva (`/casa/jstaff/`, donde
+ * se muda el cuarto Circuitos, 21-sep-2026). La casa nueva entra con condición:
+ * la prueba de abajo exige que TODA página suya tenga la guardia de J-Staff.
+ */
+const RUTA_JSTAFF = /^apps\/web\/src\/app\/(?:api\/|casa\/)?jstaff\//;
 /** Pruebas que siembran en la base desechable o usan dobles: no son caminos de la aplicación. */
 const PRUEBA = /\.test\.tsx?$/;
 
@@ -88,6 +93,22 @@ function metodo(nombre: string): string {
   const fin = resto.slice(1).search(/\n  (?:async\s+)?[a-zA-Z]+\s*\(|\n  \/\*\*/);
   return sinComentarios(fin < 0 ? resto : resto.slice(0, fin + 1));
 }
+
+describe("guardia · la casa nueva de J-Staff es cara de J-Staff sólo con su guardia", () => {
+  it("toda página bajo /casa/jstaff/ exige la sesión de J-Staff", () => {
+    const paginas = arboles()
+      .flatMap(fuentes)
+      .filter((a) => /^apps\/web\/src\/app\/casa\/jstaff\/.*page\.tsx$/.test(a));
+    expect(paginas.length).toBeGreaterThan(0);
+    const sinGuardia = paginas.filter(
+      (a) => !/exigirEnPagina\(\s*\{\s*tipo:\s*"jstaff"\s*\}\s*\)/.test(sinComentarios(leer(a))),
+    );
+    expect(
+      sinGuardia,
+      "Estas páginas viven en la casa de J-Staff —donde se leen puertas sin muro— y no exigen su sesión.",
+    ).toEqual([]);
+  });
+});
 
 describe("guardia · las puertas sin muro del circuito son sólo de J-Staff", () => {
   it("el barrido encuentra código de verdad (guarda contra un falso verde)", () => {

@@ -228,6 +228,23 @@ export const CASAS: Record<Cara, Casa> = {
           },
         ],
       },
+      {
+        sello: "Transporte público",
+        lugares: [
+          {
+            /*
+             * La captura de circuitos, mudándose de `/jstaff/circuitos` (ficha de
+             * Circuitos en la casa nueva, 21-sep-2026). La concesión es J-Tel,
+             * así que aquí la condición es «siempre»: capturar un circuito es
+             * trabajo propio de J-Staff, no cruce a otra cuenta. La pantalla
+             * vieja sigue viva hasta el PR D.
+             */
+            nombre: "Circuitos",
+            ruta: "/casa/jstaff/circuitos",
+            condicion: "siempre",
+          },
+        ],
+      },
     ],
   },
 };

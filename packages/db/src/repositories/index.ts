@@ -6204,6 +6204,70 @@ export class CircuitRepository {
       .orderBy(accounts.name, circuits.name);
   }
 
+  /**
+   * La cadena de TODOS los circuitos, para la lista de J-Staff en su casa
+   * nueva (21-sep-2026): lo que cada uno tiene de trazado, paradas, promesa y
+   * unidades, y si está publicado. **Sin muro, porque es de J-Staff** — igual
+   * que `listAllCircuits`, y la misma valla la amarra a esa cara
+   * (`guardia-muro-cuenta`).
+   *
+   * Cinco lecturas planas y el cruce en memoria: son decenas de circuitos, y
+   * una sola consulta con cuatro LEFT JOIN multiplicaría filas por cada
+   * combinación de trazado × parada × unidad.
+   */
+  async resumenDeCircuitosParaJStaff() {
+    const [lista, trazados, paradas, asignadas, promesas] = await Promise.all([
+      this.db
+        .select({
+          id: circuits.id,
+          name: circuits.name,
+          publicSlug: circuits.publicSlug,
+          active: circuits.active,
+          publishedAt: circuits.publishedAt,
+          serviceStartLocal: circuits.serviceStartLocal,
+          serviceEndLocal: circuits.serviceEndLocal,
+          concessionAccountId: circuits.concessionAccountId,
+          concessionName: accounts.name,
+        })
+        .from(circuits)
+        .innerJoin(accounts, eq(accounts.id, circuits.concessionAccountId))
+        .orderBy(accounts.name, circuits.name),
+      this.db
+        .select({ circuitId: circuitPaths.circuitId, sentido: circuitPaths.sentido, puntos: circuitPaths.pointCount })
+        .from(circuitPaths),
+      this.db
+        .select({ circuitId: circuitStops.circuitId, sentido: circuitStopVersions.sentido })
+        .from(circuitStops)
+        .innerJoin(circuitStopVersions, eq(circuitStopVersions.stopId, circuitStops.id))
+        .where(and(isNull(circuitStops.retiredAt), isNull(circuitStopVersions.validTo))),
+      this.db
+        .select({ circuitId: circuitUnitAssignments.circuitId, n: sql<number>`count(*)::int` })
+        .from(circuitUnitAssignments)
+        .where(isNull(circuitUnitAssignments.validTo))
+        .groupBy(circuitUnitAssignments.circuitId),
+      this.db
+        .select({
+          circuitId: circuitPromiseTables.circuitId,
+          franjas: sql<number>`(SELECT count(*)::int FROM circuit_promise_bands b WHERE b.promise_table_id = circuit_promise_tables.id)`,
+        })
+        .from(circuitPromiseTables)
+        .where(isNull(circuitPromiseTables.validTo)),
+    ]);
+
+    return lista.map((c) => ({
+      ...c,
+      trazados: trazados
+        .filter((t) => t.circuitId === c.id)
+        .map((t) => ({ sentido: t.sentido as "ida" | "vuelta", puntos: t.puntos })),
+      paradas: paradas
+        .filter((p) => p.circuitId === c.id)
+        .map((p) => ({ sentido: p.sentido as "ida" | "vuelta" | null })),
+      unidadesAsignadas: asignadas.find((a) => a.circuitId === c.id)?.n ?? 0,
+      /** `null`: nunca se capturó una promesa. 0: la vigente no tiene franjas. */
+      franjasDeLaPromesa: promesas.find((p) => p.circuitId === c.id)?.franjas ?? null,
+    }));
+  }
+
   async getCircuit(id: string) {
     const [fila] = await this.db.select().from(circuits).where(eq(circuits.id, id));
     return fila ?? null;

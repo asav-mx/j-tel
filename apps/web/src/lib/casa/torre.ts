@@ -81,12 +81,17 @@ export type QueDibujaLaTorre =
   | { tipo: "vacia"; titulo: string; explicacion: string }
   | { tipo: "radar"; sentidos: Sentido[]; sinUnidadesAsignadas: boolean };
 
+/**
+ * La decisión NO se toma aquí: los carriles y «hay unidades asignadas» llegan
+ * ya resueltos de `lo-minimo-para-medir` (capa de servicios), la misma
+ * definición que usa el expediente de J-Staff. Aquí sólo se escoge qué decir.
+ */
 export function queDibujaLaTorre(
-  abscisas: Record<Sentido, AbscisaDeParada[]>,
+  carriles: Sentido[],
   paradasCapturadas: number,
-  unidadesAsignadas: number,
+  hayUnidadesAsignadas: boolean,
 ): QueDibujaLaTorre {
-  const sentidos = (["ida", "vuelta"] as const).filter((s) => abscisas[s].length > 1);
+  const sentidos = (["ida", "vuelta"] as const).filter((s) => carriles.includes(s));
   if (sentidos.length === 0) {
     return paradasCapturadas === 0
       ? {
@@ -101,7 +106,7 @@ export function queDibujaLaTorre(
             "Hay paradas capturadas, pero un carril necesita al menos dos sobre el trazado de su sentido. Se corrige en el editor de paradas.",
         };
   }
-  return { tipo: "radar", sentidos, sinUnidadesAsignadas: unidadesAsignadas === 0 };
+  return { tipo: "radar", sentidos, sinUnidadesAsignadas: !hayUnidadesAsignadas };
 }
 
 export interface EnElTramo {

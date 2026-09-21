@@ -28,6 +28,10 @@ export interface VistaDeLaTorre {
   trazados: Array<{ sentido: Sentido; coordinates: Array<[number, number]> }>;
   /** El rótulo de cada sentido: «IDA · OASIS → CENTRO». Sale de las paradas, no se inventa. */
   rotulos: Record<Sentido, string>;
+  /** Los sentidos con carril, de «lo mínimo para medir» (capa de servicios). */
+  carriles: Sentido[];
+  /** De la misma definición: asignadas, no al aire. */
+  hayUnidadesAsignadas: boolean;
 }
 
 type Torre = Extract<TorreDelCircuito, { alcance: "concesion" | "carrier" }>;
@@ -83,7 +87,7 @@ export function Torre({ torre, vista }: { torre: Torre; vista: VistaDeLaTorre })
   const alTocar = (id: string) => setSeleccion((antes) => (antes === id ? null : id));
 
   /* ── El estado vacío: sólo cuando no hay carril que dibujar ───────────── */
-  const dibujo = queDibujaLaTorre(abscisas, vista.paradas.length, torre.unidades.length);
+  const dibujo = queDibujaLaTorre(vista.carriles, vista.paradas.length, vista.hayUnidadesAsignadas);
   if (dibujo.tipo === "vacia") {
     return (
       <>
