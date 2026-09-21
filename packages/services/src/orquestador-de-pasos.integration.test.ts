@@ -6,8 +6,9 @@ import {
   accounts,
   telemetryPoints,
   circuitUnitAssignments,
+  units,
 } from "@jtel/db";
-import { OrquestadorDePasosService, VERSION_DEL_DETECTOR } from "./orquestador-de-pasos.js";
+import { COLCHON_MINUTOS, OrquestadorDePasosService, VERSION_DEL_DETECTOR } from "./orquestador-de-pasos.js";
 
 /*
  * El orquestador contra base de verdad y DATOS SEMBRADOS: la transacción, el
@@ -399,3 +400,127 @@ describe("orquestador · el candado", () => {
   });
 });
 
+
+/*
+ * «Cerrada = acotada» (21 sep 2026). Hasta hoy el orquestador sólo leía
+ * asignaciones abiertas: cerrar una —soltar, reasignar— dejaba sin detectar lo
+ * que la unidad hizo entre su último marcador y el cierre, porque el detector
+ * va el colchón atrás. Estas pruebas tienen sus propios circuitos y unidades, y
+ * su propio filtro hermético: no mueven las cuentas de las de arriba.
+ */
+describe("orquestador · cerrada = acotada", () => {
+  const u: Record<"K" | "R" | "V" | "B", string> = { K: "", R: "", V: "", B: "" };
+  const p: Record<string, string> = {};
+  let circuitoCerrada = "";
+  let circuitoReabierta = "";
+  let circuitoVieja = "";
+  let circuitoBaja = "";
+
+  const hermetico = (reloj: Date) => {
+    const mias = new Set(Object.values(u));
+    const real = repos.pasosPorParada;
+    const envuelto = {
+      pasosPorParada: {
+        unidadesParaDetectar: async (version: string, ahora?: Date) => {
+          const r = await real.unidadesParaDetectar(version, ahora);
+          return {
+            elegibles: r.elegibles.filter((e) => mias.has(e.unitId)),
+            saltadas: r.saltadas.filter((s) => mias.has(s.unitId)),
+          };
+        },
+        detectarUnidadEnRonda: (input: Parameters<typeof real.detectarUnidadEnRonda>[0]) =>
+          real.detectarUnidadEnRonda(input),
+      },
+    } as unknown as ConstructorParameters<typeof OrquestadorDePasosService>[0];
+    return new OrquestadorDePasosService(envuelto, () => reloj);
+  };
+
+  const tramo = async (circuitId: string, unitId: string, desde: Date, hasta: Date | null) =>
+    db.insert(circuitUnitAssignments).values({ circuitId, unitId, carrierAccountId: cuentaA, validFrom: desde, validTo: hasta });
+
+  beforeAll(async () => {
+    for (const k of Object.keys(u) as Array<keyof typeof u>) {
+      u[k] = (await repos.fleet.createUnit(cuentaA, `cerrada-${k}-${marca}`)).id;
+    }
+    const tresDias = new Date(AHORA.getTime() - 3 * 24 * 3_600_000);
+
+    // K: la que lo fija. Cruza P1 antes de la primera ronda, P2 después — y se cierra en en(30).
+    // Después del cierre sigue andando y cruza P3: eso ya no es de la asignación.
+    circuitoCerrada = await circuitoConTrazado("Cerrada");
+    p.K1 = await parada(circuitoCerrada, "K1", 400, "ida");
+    p.K2 = await parada(circuitoCerrada, "K2", 600, "ida");
+    p.K3 = await parada(circuitoCerrada, "K3", 750, "ida");
+    await tramo(circuitoCerrada, u.K, tresDias, en(30));
+    await sembrarPunto(cuentaA, u.K, en(0), 300, "k");
+    await sembrarPunto(cuentaA, u.K, en(1), 500, "k");
+    await sembrarPunto(cuentaA, u.K, en(20), 550, "k");
+    await sembrarPunto(cuentaA, u.K, en(21), 650, "k");
+    await sembrarPunto(cuentaA, u.K, en(31), 700, "k");
+    await sembrarPunto(cuentaA, u.K, en(32), 780, "k");
+
+    // R: cerrada en en(30) y reabierta en el MISMO circuito en en(60). El hueco no es de nadie.
+    circuitoReabierta = await circuitoConTrazado("Reabierta");
+    p.R1 = await parada(circuitoReabierta, "R1", 400, "ida");
+    p.R2 = await parada(circuitoReabierta, "R2", 600, "ida");
+    await tramo(circuitoReabierta, u.R, tresDias, en(30));
+    await tramo(circuitoReabierta, u.R, en(60), null);
+    await sembrarPunto(cuentaA, u.R, en(20), 550, "r"); // tramo cerrado: cruza R2
+    await sembrarPunto(cuentaA, u.R, en(21), 650, "r");
+    await sembrarPunto(cuentaA, u.R, en(40), 300, "r"); // el hueco: cruzaría R1
+    await sembrarPunto(cuentaA, u.R, en(41), 500, "r");
+    await sembrarPunto(cuentaA, u.R, en(70), 300, "r"); // tramo abierto: cruza R1
+    await sembrarPunto(cuentaA, u.R, en(71), 500, "r");
+
+    // V: cerrada hace 30 h — fuera del arranque acotado.
+    circuitoVieja = await circuitoConTrazado("Vieja");
+    p.V1 = await parada(circuitoVieja, "V1", 400, "ida");
+    const hace30h = new Date(AHORA.getTime() - 30 * 3_600_000);
+    await tramo(circuitoVieja, u.V, tresDias, hace30h);
+    await sembrarPunto(cuentaA, u.V, new Date(hace30h.getTime() - 20 * 60_000), 300, "v");
+    await sembrarPunto(cuentaA, u.V, new Date(hace30h.getTime() - 19 * 60_000), 500, "v");
+
+    // B: cerrada, y la unidad dada de baja después. Su tramo es el pasado: no se salta.
+    circuitoBaja = await circuitoConTrazado("Baja");
+    p.B1 = await parada(circuitoBaja, "B1", 400, "ida");
+    await tramo(circuitoBaja, u.B, tresDias, en(30));
+    await sembrarPunto(cuentaA, u.B, en(20), 300, "b");
+    await sembrarPunto(cuentaA, u.B, en(21), 500, "b");
+    await db.update(units).set({ active: false }).where(inArray(units.id, [u.B]));
+  });
+
+  it("LA QUE LO FIJA: una cerrada con telemetría entre su marcador y su cierre — esos pasos aparecen; los de después, no", async () => {
+    // Ronda 1, cuando el cierre (en(30)) todavía está en el futuro de esa ronda: techo = en(1).
+    await hermetico(new Date(en(1).getTime() + COLCHON_MINUTOS * 60_000)).correr();
+    expect(await pasosDe(p.K1!)).toHaveLength(1);
+    expect(await pasosDe(p.K2!)).toHaveLength(0);
+
+    // Ronda 2, ya cerrada: el tope es su cierre (en(30)), no el colchón.
+    await hermetico(AHORA).correr();
+    expect(await pasosDe(p.K2!), "el cruce entre el marcador y el cierre").toHaveLength(1);
+    expect(await pasosDe(p.K3!), "el cruce de después del cierre no es de la asignación").toHaveLength(0);
+
+    // Y otra ronda no repite nada.
+    await hermetico(AHORA).correr();
+    expect(await pasosDe(p.K1!)).toHaveLength(1);
+    expect(await pasosDe(p.K2!)).toHaveLength(1);
+  });
+
+  it("una cerrada hace más de 24 h no entra a la ronda (arranque acotado)", async () => {
+    const r = await hermetico(AHORA).correr();
+    expect(r.detalle.some((d) => d.unitId === u.V)).toBe(false);
+    expect(await pasosDe(p.V1!)).toHaveLength(0);
+  });
+
+  it("cerrada y reabierta en el mismo circuito: los dos tramos, y el hueco entre ellos no", async () => {
+    await hermetico(AHORA).correr();
+    expect(await pasosDe(p.R2!), "el tramo cerrado").toHaveLength(1);
+    const r1 = await pasosDe(p.R1!);
+    expect(r1, "sólo el cruce del tramo abierto, no el del hueco").toHaveLength(1);
+    expect(r1[0]!.pasoDesde.getTime()).toBe(en(70).getTime());
+  });
+
+  it("una cerrada de una unidad dada de baja NO se salta: la baja es de hoy, el tramo es el pasado", async () => {
+    await hermetico(AHORA).correr();
+    expect(await pasosDe(p.B1!)).toHaveLength(1);
+  });
+});

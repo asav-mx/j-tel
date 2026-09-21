@@ -23,6 +23,7 @@ function unidad(n: number, extra: Partial<UnidadParaDetectar> = {}): UnidadParaD
     unitId: `unidad-${n}`,
     carrierAccountId: `cuenta-de-la-unidad-${n}`,
     asignadaDesde: new Date("2026-09-01T00:00:00.000Z"),
+    asignadaHasta: null,
     corridorToleranceMeters: 150,
     sentidos: ["ida", "vuelta"],
     marcaLastPingAt: null,
@@ -205,5 +206,33 @@ describe("orquestador de pasos · simular", () => {
     const { servicio } = armar([unidad(1)], async () => resultado({ pasosGuardados: 25, muestra }));
     const ronda = await servicio.correr();
     expect(ronda.detalle[0]).not.toHaveProperty("muestra");
+  });
+});
+
+describe("orquestador de pasos · cerrada = acotada (21 sep 2026)", () => {
+  it("le pide a la elegibilidad el ahora de la ronda: con él se acotan las cerradas a 24 h", async () => {
+    const { servicio, repos } = armar([], async () => resultado());
+    await servicio.correr();
+    expect(repos.pasosPorParada.unidadesParaDetectar).toHaveBeenCalledWith(VERSION_DEL_DETECTOR, AHORA);
+  });
+
+  it("le pasa al repositorio el cierre de la asignación: ahí se topa la ventana", async () => {
+    const cierre = new Date("2026-09-22T17:30:00.000Z");
+    const { servicio, detectarUnidadEnRonda } = armar([unidad(1, { asignadaHasta: cierre })], async () => resultado());
+    await servicio.correr();
+    expect(detectarUnidadEnRonda.mock.calls[0]![0].asignadaHasta).toBe(cierre);
+  });
+
+  it("a igual marcador, el tramo más viejo primero: el cerrado termina antes de que el abierto mueva el marcador", async () => {
+    const marca = new Date("2026-09-22T16:00:00.000Z");
+    const abierto = unidad(1, { asignadaDesde: new Date("2026-09-22T17:00:00.000Z"), marcaLastPingAt: marca });
+    const cerrado = unidad(1, {
+      asignadaDesde: new Date("2026-09-10T00:00:00.000Z"),
+      asignadaHasta: new Date("2026-09-22T17:00:00.000Z"),
+      marcaLastPingAt: marca,
+    });
+    const { servicio, detectarUnidadEnRonda } = armar([abierto, cerrado], async () => resultado());
+    await servicio.correr();
+    expect(detectarUnidadEnRonda.mock.calls.map((c) => c[0].asignadaHasta)).toEqual([cerrado.asignadaHasta, null]);
   });
 });

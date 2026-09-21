@@ -8535,6 +8535,12 @@ export type UnidadParaDetectar = {
    */
   carrierAccountId: string;
   asignadaDesde: Date;
+  /**
+   * El cierre de la asignación, o `null` si sigue abierta. Una cerrada entra a
+   * la ronda mientras su marcador no haya llegado a este instante («cerrada =
+   * acotada»), y su ventana nunca pasa de aquí.
+   */
+  asignadaHasta: Date | null;
   corridorToleranceMeters: number;
   /** Los sentidos que el circuito sirve con paradas capturadas; cada uno ya tiene trazado. */
   sentidos: Array<"ida" | "vuelta">;
@@ -8743,16 +8749,29 @@ export class PasoPorParadaRepository {
    * motivo. **El silencio excluye**: una unidad entra sólo por su asignación
    * declarada y vigente, y sólo si todo lo demás está capturado.
    *
-   * Entra si: la asignación está vigente (`valid_to IS NULL`), la unidad y el
-   * circuito están de alta, la cuenta de la asignación es la dueña de la
-   * unidad, el circuito tiene al menos una parada vigente y hay trazado para
-   * cada sentido que esas paradas sirven. Lo que no entra se dice, no se
-   * calla: un circuito a medio capturar no es un error, pero tampoco es un
-   * cero.
+   * Entra si: la asignación **no ha sido recorrida hasta su final** —abierta, o
+   * cerrada con el marcador todavía antes de su cierre («cerrada = acotada»,
+   * 21 sep 2026)—, la cuenta de la asignación es la dueña de la unidad, el
+   * circuito tiene al menos una parada vigente y hay trazado para cada sentido
+   * que esas paradas sirven. Lo que no entra se dice, no se calla: un circuito
+   * a medio capturar no es un error, pero tampoco es un cero.
+   *
+   * **Por qué entran las cerradas.** El detector va el colchón atrás (15 min),
+   * así que cerrar una asignación —soltar, reasignar— dejaba sin detectar lo
+   * que la unidad hizo entre su último marcador y el cierre. Minutos, callados.
+   *
+   * **Arranque acotado:** de las cerradas, sólo las que cerraron en las últimas
+   * 24 h (`ahora`). Lo que se pierde en un cierre son minutos, no días; la
+   * primera ronda no se pone a barrer meses de cierres viejos.
+   *
+   * **La baja no salta a una cerrada** (decisión de Asav, 21 sep): la baja es
+   * el estado de HOY, y el tramo cerrado es el pasado — un camión dado de baja
+   * al soltarlo perdería justo los minutos que esto recupera. A una abierta sí
+   * la salta, como siempre. La regla de la cuenta vale para las dos.
    *
    * No exige dispositivo: una unidad sin telemetría sólo produce cero pasos.
    */
-  async unidadesParaDetectar(detectorVersion: string): Promise<{
+  async unidadesParaDetectar(detectorVersion: string, ahora: Date = new Date()): Promise<{
     elegibles: UnidadParaDetectar[];
     saltadas: UnidadSaltada[];
   }> {
@@ -8762,6 +8781,7 @@ export class PasoPorParadaRepository {
         unitId: circuitUnitAssignments.unitId,
         cuentaDeLaAsignacion: circuitUnitAssignments.carrierAccountId,
         asignadaDesde: circuitUnitAssignments.validFrom,
+        asignadaHasta: circuitUnitAssignments.validTo,
         cuentaDeLaUnidad: units.carrierAccountId,
         unidadActiva: units.active,
         circuitoActivo: circuits.active,
@@ -8770,7 +8790,13 @@ export class PasoPorParadaRepository {
       .from(circuitUnitAssignments)
       .innerJoin(units, eq(units.id, circuitUnitAssignments.unitId))
       .innerJoin(circuits, eq(circuits.id, circuitUnitAssignments.circuitId))
-      .where(isNull(circuitUnitAssignments.validTo));
+      .where(
+        or(
+          isNull(circuitUnitAssignments.validTo),
+          // Arranque acotado: sólo las cerradas en las últimas 24 h.
+          gte(circuitUnitAssignments.validTo, new Date(ahora.getTime() - 24 * 3_600_000)),
+        ),
+      );
     if (asignaciones.length === 0) return { elegibles: [], saltadas: [] };
 
     const circuitIds = [...new Set(asignaciones.map((a) => a.circuitId))];
@@ -8819,11 +8845,15 @@ export class PasoPorParadaRepository {
     const saltadas: UnidadSaltada[] = [];
     for (const a of asignaciones) {
       const salta = (motivo: string) => saltadas.push({ circuitId: a.circuitId, unitId: a.unitId, motivo });
-      if (!a.unidadActiva) {
+      const marcaActual = marcaDe.get(`${a.circuitId}:${a.unitId}`) ?? null;
+      const cerrada = a.asignadaHasta !== null;
+      // Una cerrada cuyo marcador ya llegó a su cierre está terminada: ni entra ni se reporta.
+      if (cerrada && marcaActual !== null && marcaActual.getTime() >= a.asignadaHasta!.getTime()) continue;
+      if (!cerrada && !a.unidadActiva) {
         salta("la unidad está dada de baja");
         continue;
       }
-      if (!a.circuitoActivo) {
+      if (!cerrada && !a.circuitoActivo) {
         salta("el circuito está dado de baja");
         continue;
       }
@@ -8846,9 +8876,10 @@ export class PasoPorParadaRepository {
         unitId: a.unitId,
         carrierAccountId: a.cuentaDeLaUnidad,
         asignadaDesde: a.asignadaDesde,
+        asignadaHasta: a.asignadaHasta,
         corridorToleranceMeters: a.corridorToleranceMeters,
         sentidos,
-        marcaLastPingAt: marcaDe.get(`${a.circuitId}:${a.unitId}`) ?? null,
+        marcaLastPingAt: marcaActual,
       });
     }
     return { elegibles, saltadas };
@@ -8869,10 +8900,11 @@ export class PasoPorParadaRepository {
    *
    * **Ventana.** `desde` es el marcador (o `arranque` si nunca corrió), sin
    * bajar del inicio de la asignación. `hasta` es el último ping que existe
-   * antes de `hastaMaximo` — el colchón que da el llamador —, así que el
+   * antes del **tope** —`hastaMaximo`, el colchón que da el llamador, o el
+   * cierre de la asignación si llegó antes («cerrada = acotada»)—, así que el
    * marcador nuevo es siempre un ping real y la ventana siguiente arranca EN
    * él: el par de pings que cruza el borde se detecta una vez, ni perdido ni
-   * repetido.
+   * repetido. Ni un ping de después del cierre se le atribuye a la asignación.
    *
    * **El detector no se toca**: se le pasa la transacción para que lea y
    * escriba dentro de ella. La cuenta con la que lee la telemetría es la de la
@@ -8886,6 +8918,8 @@ export class PasoPorParadaRepository {
     unitId: string;
     carrierAccountId: string;
     asignadaDesde: Date;
+    /** El cierre de la asignación, o `null` si sigue abierta: la ventana no pasa de aquí. */
+    asignadaHasta?: Date | null;
     corridorToleranceMeters: number;
     sentidos: Array<"ida" | "vuelta">;
     detectorVersion: string;
@@ -8927,7 +8961,10 @@ export class PasoPorParadaRepository {
           );
         const piso = marca?.lastPingAt ?? input.arranque;
         const desde = piso.getTime() > input.asignadaDesde.getTime() ? piso : input.asignadaDesde;
-        if (desde.getTime() >= input.hastaMaximo.getTime()) return;
+        // El tope: el colchón, o el cierre de la asignación si llegó antes.
+        const cierre = input.asignadaHasta ?? null;
+        const tope = cierre && cierre.getTime() < input.hastaMaximo.getTime() ? cierre : input.hastaMaximo;
+        if (desde.getTime() >= tope.getTime()) return;
 
         // El último ping que existe en la ventana — con el muro: la cuenta de la unidad.
         const [ultimoPing] = await tx
@@ -8938,7 +8975,7 @@ export class PasoPorParadaRepository {
               eq(telemetryPoints.carrierAccountId, input.carrierAccountId),
               eq(telemetryPoints.unitId, input.unitId),
               gte(telemetryPoints.recordedAt, desde),
-              lte(telemetryPoints.recordedAt, input.hastaMaximo),
+              lte(telemetryPoints.recordedAt, tope),
             ),
           )
           .orderBy(desc(telemetryPoints.recordedAt))
