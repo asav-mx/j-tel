@@ -205,6 +205,36 @@ describe("carrier-maneja-flota — las acciones sobre dispositivos (C4)", () => 
   });
 });
 
+describe("carrier-en-persona — hablar como el transportista (aportaciones)", () => {
+  const AUD = { tipo: "carrier-en-persona" as const, slug: "juarez-bus" };
+  const DESPACHO_JB = [{ ...CARRIER_JB[0]!, clerkUserId: "jb_despacho", role: "despacho" }];
+
+  beforeEach(() => {
+    findBySlug.mockResolvedValue({ id: "cuenta-jb", type: "carrier", slug: "juarez-bus" });
+  });
+
+  it("quien es de la cuenta pasa, aunque sea despacho: la versión es de la cuenta, no de un rol", async () => {
+    getIdentidad.mockResolvedValue(identidad("jb_despacho", DESPACHO_JB));
+    expect((await exigir(PETICION, AUD, "json")).ok).toBe(true);
+  });
+
+  it("J-Staff con alcance global NO pasa — ve cualquier carrier, pero no escribe como él", async () => {
+    getIdentidad.mockResolvedValue(identidad("jstaff_admin", JSTAFF));
+    const g = await exigir(PETICION, AUD, "json");
+    expect(g.ok).toBe(false);
+    if (g.ok) return;
+    expect((await g.respuesta.json()).detalle).toContain("J-Staff no escribe como transportista");
+    // Y la guardia vieja, la de leer, lo seguía dejando pasar: es la diferencia que importa.
+    expect((await exigir(PETICION, { tipo: "carrier", slug: "juarez-bus" }, "json")).ok).toBe(true);
+  });
+
+  it("un miembro de otra cuenta no pasa", async () => {
+    getIdentidad.mockResolvedValue(identidad("jb_admin", CARRIER_JB));
+    findBySlug.mockResolvedValue({ id: "cuenta-otra", type: "carrier", slug: "juarez-bus" });
+    expect((await exigir(PETICION, AUD, "json")).ok).toBe(false);
+  });
+});
+
 describe("jstaff-pausa-verificacion — pausar la verificación de un contrato (0041)", () => {
   const AUD = { tipo: "jstaff-pausa-verificacion" as const };
 

@@ -152,6 +152,25 @@ export function canAccessCarrierAccount(
   );
 }
 
+/**
+ * ¿Es esta identidad **de** ese carrier — no sólo capaz de verlo?
+ *
+ * `canAccessCarrierAccount` deja pasar al alcance global, y está bien para
+ * LEER: J-Staff tiene que poder mirar cualquier cuenta. Para **hablar como el
+ * carrier** no: una aportación es la versión del transportista sobre su
+ * servicio, y si J-Staff pudiera escribirla, la planta leería como del carrier
+ * algo que el carrier nunca dijo. Aquí no hay pase global: sólo una membresía de
+ * esa misma cuenta, con alcance de cuenta o de flota.
+ *
+ * Decisión de Asav (21 sep 2026): J-Staff no escribe como carrier; si algún día
+ * hace falta, será por la compuerta con registro, no por esta puerta.
+ */
+export function esDelCarrier(memberships: UserMembership[], carrierAccountId: string): boolean {
+  return memberships.some(
+    (m) => m.accountId === carrierAccountId && (m.scopeType === "account" || m.scopeType === "fleet"),
+  );
+}
+
 export function isJStaff(memberships: UserMembership[]): boolean {
   return memberships.some((m) =>
     ["admin_plataforma", "soporte", "comercial"].includes(m.role),
