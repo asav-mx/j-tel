@@ -61,6 +61,17 @@ it("la guardia va primero: sólo J-Staff, y si niega no se guarda nada", async (
   expect(savePromiseTable).not.toHaveBeenCalled();
 });
 
+it("quién capturó sale de la sesión, nunca del cuerpo — y sin sesión no se guarda", async () => {
+  await mandar({ franjas: [f()], capturadaPor: "alguien_inventado" });
+  expect(savePromiseTable.mock.calls[0]![2]).toMatchObject({ capturadaPor: "jstaff_admin" });
+
+  savePromiseTable.mockClear();
+  exigir.mockResolvedValue({ ok: true, identidad: { userId: null } });
+  const r = await mandar({ franjas: [f()] });
+  expect(r.status).toBe(401);
+  expect(savePromiseTable).not.toHaveBeenCalled();
+});
+
 it("la primera promesa se guarda sin motivo, completa", async () => {
   const r = await mandar({ franjas: [f(), f({ desdeLocal: "09:00", hastaLocal: "20:00", frequencyMinutes: 20 })] });
   expect(r.status).toBe(200);
@@ -83,7 +94,10 @@ it("reemplazar una promesa vigente pide motivo, y con él se guarda", async () =
 
   const con = await mandar({ franjas: [f()], motivo: "  El concesionario subió la frecuencia en hora pico  " });
   expect(con.status).toBe(200);
-  expect(savePromiseTable.mock.calls[0]![2]).toEqual({ motivo: "El concesionario subió la frecuencia en hora pico" });
+  expect(savePromiseTable.mock.calls[0]![2]).toEqual({
+    motivo: "El concesionario subió la frecuencia en hora pico",
+    capturadaPor: "jstaff_admin",
+  });
 });
 
 it("un rechazo vuelve con el renglón y la razón en palabras — y no se guardó nada", async () => {

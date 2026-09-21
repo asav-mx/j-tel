@@ -50,6 +50,8 @@ export interface VersionDeLaPromesa {
   hasta: string | null;
   motivo: string | null;
   franjas: number;
+  /** El correo de quien la capturó, o `null` si no quedó registrado (antes de la 0049). */
+  capturo: string | null;
 }
 
 export function CircuitoPromesa({
@@ -348,6 +350,7 @@ export function CircuitoPromesa({
                 </span>{" "}
                 <span className="text-[var(--tenue)]">
                   · {v.franjas} {v.franjas === 1 ? "franja" : "franjas"}
+                  {` · ${v.capturo ? `capturó ${v.capturo}` : "sin registro de quién la capturó"}`}
                   {v.motivo ? ` · terminó: ${v.motivo}` : ""}
                 </span>
               </li>
