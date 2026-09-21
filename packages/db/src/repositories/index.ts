@@ -6150,6 +6150,47 @@ export class CircuitRepository {
     return fila ?? null;
   }
 
+  /**
+   * El circuito, **para esta cuenta** — o `null`, que es lo mismo que decir que
+   * no existe (Enmiendas de la Pieza 9, 9.14). Un circuito de otra cuenta no se
+   * distingue de uno que nunca hubo.
+   *
+   * Existe para dos cuentas y sólo dos:
+   *
+   *  - **La concesión dueña** (`circuits.concession_account_id`).
+   *  - **Un carrier con unidades suyas en él**: alguna unidad de la que es dueño
+   *    (`units.carrier_account_id`) que él mismo asignó a este circuito
+   *    (`circuit_unit_assignments.carrier_account_id`) **en cualquier momento**,
+   *    no sólo hoy — su historial es suyo. Las dos cerraduras, porque nada en la
+   *    base obliga a que coincidan: hoy coinciden por convención, y una fila que
+   *    no cuadra no le abre el circuito a nadie más que a la concesión.
+   *
+   * Es la misma regla que `pasosVisiblesParaCuenta`, a nivel de circuito; las dos
+   * las vigila `guardia-muro-cuenta.test.ts`. **No es `getCircuit`**: aquel sigue
+   * sin cuenta porque lo usa J-Staff, que ve todo.
+   */
+  async getCircuitVisibleParaCuenta(cuentaId: string, circuitId: string) {
+    const [fila] = await this.db
+      .select()
+      .from(circuits)
+      .where(
+        and(
+          eq(circuits.id, circuitId),
+          or(
+            eq(circuits.concessionAccountId, cuentaId),
+            sql`EXISTS (
+              SELECT 1 FROM ${circuitUnitAssignments}
+              INNER JOIN ${units} ON ${units.id} = ${circuitUnitAssignments.unitId}
+              WHERE ${circuitUnitAssignments.circuitId} = ${circuits.id}
+                AND ${circuitUnitAssignments.carrierAccountId} = ${cuentaId}
+                AND ${units.carrierAccountId} = ${cuentaId}
+            )`,
+          ),
+        ),
+      );
+    return fila ?? null;
+  }
+
   async getCircuitByPublicSlug(slug: string) {
     const [fila] = await this.db.select().from(circuits).where(eq(circuits.publicSlug, slug));
     return fila ?? null;
@@ -7812,6 +7853,59 @@ export class ExpedienteRepository {
   }
 }
 
+/**
+ * **El muro de lectura de los pasos por parada** (Enmiendas de la Pieza 9, 9.14):
+ * qué filas de `circuit_stop_passes` puede leer una cuenta. Es la ÚNICA puerta —
+ * todo método que lea esa tabla la cruza con esto, y
+ * `guardia-muro-cuenta.test.ts` lo exige y vigila que no se afloje una cerradura.
+ *
+ * La tabla no lleva columna de cuenta: la cuenta se deriva de los dos dueños que
+ * sí existen, el del circuito y el de la unidad.
+ *
+ *  - **La concesión dueña del circuito** ve todos los pasos de él.
+ *  - **Un carrier** ve los pasos de **sus** unidades y nada más — nunca las de
+ *    otro carrier en el mismo circuito. Con dos cerraduras: la unidad es suya
+ *    (`units.carrier_account_id`) **y** él mismo la asignó a ESE circuito
+ *    (`circuit_unit_assignments.carrier_account_id`), en cualquier momento —el
+ *    historial de sus unidades es suyo—, no sólo la asignación vigente. Nada en
+ *    la base obliga a que las dos cuentas coincidan; una fila que no cuadra no se
+ *    la abre a ningún carrier, sólo a la concesión.
+ *  - **Cualquier otra cuenta** —cliente, J-Staff, un carrier sin unidades ahí,
+ *    otra concesión— no cumple ninguna rama: lista vacía, igual que si no
+ *    hubiera pasos.
+ *
+ * Es un fragmento SQL sin depender de los joins de quien lo usa: se lee igual en
+ * cualquier consulta sobre `circuit_stop_passes`. Falla hacia cerrado — sin
+ * cuenta que coincida no devuelve nada, y una cuenta mal escrita revienta en
+ * vez de abrir.
+ *
+ * **La medición contra el flujo de OTRO carrier no pasa por aquí** (9.14: es
+ * comparación, valor reservado de J-Tel, por circuito y por acuerdo). Este muro
+ * es estricto a propósito, no provisional.
+ */
+function pasosVisiblesParaCuenta(cuentaId: string) {
+  return or(
+    sql`EXISTS (
+      SELECT 1 FROM ${circuits}
+      WHERE ${circuits.id} = ${circuitStopPasses.circuitId}
+        AND ${circuits.concessionAccountId} = ${cuentaId}
+    )`,
+    and(
+      sql`EXISTS (
+        SELECT 1 FROM ${units}
+        WHERE ${units.id} = ${circuitStopPasses.unitId}
+          AND ${units.carrierAccountId} = ${cuentaId}
+      )`,
+      sql`EXISTS (
+        SELECT 1 FROM ${circuitUnitAssignments}
+        WHERE ${circuitUnitAssignments.circuitId} = ${circuitStopPasses.circuitId}
+          AND ${circuitUnitAssignments.unitId} = ${circuitStopPasses.unitId}
+          AND ${circuitUnitAssignments.carrierAccountId} = ${cuentaId}
+      )`,
+    ),
+  );
+}
+
 /** Una unidad que el orquestador puede procesar en esta ronda, ya resuelta. */
 export type UnidadParaDetectar = {
   circuitId: string;
@@ -7950,23 +8044,28 @@ export class PasoPorParadaRepository {
 
   /**
    * Los pasos detectados de una parada, de todas las corridas que existan —
-   * **de los circuitos de esa cuenta y de ninguna otra**.
+   * **los que esta cuenta puede ver y ninguno más**.
    *
-   * El muro de cuenta (#441/#442): `circuit_stop_passes` no lleva columna de
-   * cuenta, así que la cuenta se deriva del circuito dueño de la parada
-   * (`circuits.concession_account_id`). Un `stopId` de otra cuenta responde
-   * igual que uno que no existe: lista vacía, sin distinguir. La cuenta es
-   * obligatoria a propósito — una lectura por `stopId` a secas es la puerta
-   * que `guardia-muro-cuenta.test.ts` vigila.
+   * El muro de cuenta (#441/#442, abierto por la unidad en 9.14):
+   * `circuit_stop_passes` no lleva columna de cuenta, así que la visibilidad
+   * sale de `pasosVisiblesParaCuenta` — ver ahí las dos entradas: la concesión
+   * dueña del circuito ve todo; un carrier ve los pasos de sus propias unidades.
+   * Un `stopId` que la cuenta no puede ver responde igual que uno que no existe:
+   * lista vacía, sin distinguir. La cuenta es obligatoria a propósito — una
+   * lectura por `stopId` a secas es la puerta que `guardia-muro-cuenta.test.ts`
+   * vigila.
+   *
+   * ⚠ **Con un carrier, esto son sus filas y no el flujo del servicio.** Un
+   * intervalo contra «el paso anterior» calculado sobre ellas, en un circuito con
+   * más de un carrier, se salta a los demás y produciría un ATRASADA falso. Por
+   * eso `compararPasosDeParada` sigue siendo exclusivo de la concesión.
    */
-  async listarPasosDeParada(concessionAccountId: string, stopId: string) {
-    const filas = await this.db
-      .select({ paso: circuitStopPasses })
+  async listarPasosDeParada(cuentaId: string, stopId: string) {
+    return this.db
+      .select()
       .from(circuitStopPasses)
-      .innerJoin(circuits, eq(circuits.id, circuitStopPasses.circuitId))
-      .where(and(eq(circuits.concessionAccountId, concessionAccountId), eq(circuitStopPasses.stopId, stopId)))
+      .where(and(eq(circuitStopPasses.stopId, stopId), pasosVisiblesParaCuenta(cuentaId)))
       .orderBy(circuitStopPasses.pasoDesde);
-    return filas.map((f) => f.paso);
   }
 
   /**
