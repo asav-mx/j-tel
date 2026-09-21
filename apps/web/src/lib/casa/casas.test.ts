@@ -125,7 +125,7 @@ describe("regla 4 — lo que no aplica, no aparece", () => {
 });
 
 describe("un cuarto que no existe no se dibuja", () => {
-  it("el menú lista lo construido: Flota en vivo, Expedientes y Servicios especiales en el transportista, Cuentas y demos en J-Staff", () => {
+  it("el menú lista lo construido: Flota en vivo, Expedientes, Servicios especiales y Circuitos en el transportista, Cuentas y demos en J-Staff", () => {
     // Esta prueba cambia cada vez que aterriza un cuarto. Lo que cuida no es la
     // lista de hoy: es que el menú liste lo construido y nada más.
     expect(menuDe(CASAS.transportista, TODO)).toEqual([
@@ -141,6 +141,13 @@ describe("un cuarto que no existe no se dibuja", () => {
         lugares: [
           // «Contratos y perfiles» está declarado pero sin cuarto: no se dibuja.
           { nombre: "Servicios especiales", ruta: "/casa/transportista/servicios-especiales", condicion: "con-contrato", hijos: [] },
+        ],
+      },
+      {
+        // Aterrizó con la torre del circuito (Paso 2, Pieza 9).
+        sello: "Transporte público",
+        lugares: [
+          { nombre: "Circuitos", ruta: "/casa/transportista/circuitos", condicion: "opera-publico", hijos: undefined },
         ],
       },
     ]);

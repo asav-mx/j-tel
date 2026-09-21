@@ -25,10 +25,14 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
  *
  * `alcance` es lo que la cuenta tiene encendido, leído de la base —no una
  * constante—: con algún contrato que no sea borrador, Vernier está encendido y
- * el menú dibuja Servicios especiales (mapa, regla 4). Transporte público queda
- * en `false` mientras Circuitos no tenga cuarto: con `ruta: null` el menú no lo
- * dibujaría de todos modos, y leer la concesión para no usarla sería afirmar
- * algo que nadie mira.
+ * el menú dibuja Servicios especiales (mapa, regla 4).
+ *
+ * **Transporte público sale de la misma lectura que llena el cuarto** —
+ * `listarCircuitosVisiblesParaCuenta`, con el muro del #473—: la cuenta opera
+ * público si tiene al menos un circuito visible. Una bandera aparte sería una
+ * segunda definición de lo mismo, y el día que las dos se separen el menú
+ * enseñaría un cuarto vacío o escondería uno lleno. Estuvo horneada en `false`
+ * desde el cascarón hasta que Circuitos ganó su cuarto (Paso 2 de la torre).
  */
 export async function cuentaDelCuarto(searchParams: SearchParams) {
   await exigirSesion();
@@ -42,10 +46,12 @@ export async function cuentaDelCuarto(searchParams: SearchParams) {
   }
 
   const identidad = await exigirEnPagina({ tipo: "carrier", slug: carrier.slug });
-  const alcance: Alcance = {
-    conContrato: await getRepos().expedientes.tieneContratoEncendido(carrier.id),
-    operaPublico: false,
-  };
+  const repos = getRepos();
+  const [conContrato, circuitos] = await Promise.all([
+    repos.expedientes.tieneContratoEncendido(carrier.id),
+    repos.circuits.listarCircuitosVisiblesParaCuenta(carrier.id),
+  ]);
+  const alcance: Alcance = { conContrato, operaPublico: circuitos.length > 0 };
   const cuentaEnRuta = typeof params?.account === "string" && params.account ? carrier.slug : null;
   const casa: CuentaDeLaCasa = {
     actual: { slug: carrier.slug, nombre: carrier.name },

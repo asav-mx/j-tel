@@ -27,3 +27,4 @@ export * from "./resello.js";
 export * from "./servicios-especiales.js";
 export * from "./pausa-verificacion.js";
 export * from "./orquestador-de-pasos.js";
+export * from "./torre-del-circuito.js";

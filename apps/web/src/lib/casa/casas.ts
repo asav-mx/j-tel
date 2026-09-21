@@ -139,7 +139,16 @@ export const CASAS: Record<Cara, Casa> = {
       },
       {
         sello: "Transporte público",
-        lugares: [{ nombre: "Circuitos", ruta: null, condicion: "opera-publico" }],
+        lugares: [
+          {
+            // La torre del circuito (Pieza 9, Paso 2). El cuarto lista los
+            // circuitos de la cuenta y tocar uno abre su expediente, cuya parte
+            // de actividad es el radar en vivo (9.9).
+            nombre: "Circuitos",
+            ruta: "/casa/transportista/circuitos",
+            condicion: "opera-publico",
+          },
+        ],
       },
     ],
   },

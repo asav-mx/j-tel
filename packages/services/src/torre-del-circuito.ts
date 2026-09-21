@@ -145,6 +145,30 @@ export interface PromesaDeUnidad {
   medidoEn: { stopId: string; sentido: Sentido; pasoDesde: Date; pasoHasta: Date } | null;
 }
 
+/**
+ * Un paso ya comparado contra su banda — **la unidad de trabajo de todo lo que
+ * la torre deriva de pasos**, calculada UNA vez por paso.
+ *
+ * Antes cada cifra recorría los pasos por su cuenta: el estado de la unidad
+ * buscaba su último paso y su ancla, y el sostenimiento volvía a recorrerlos
+ * todos calculando las mismas ventanas. Dos recorridos son dos definiciones
+ * del mismo veredicto esperando a separarse — y el día que se separen, la
+ * pieza diría ADELANTADA y el conteo de arriba la contaría en rango.
+ */
+export interface PasoMedido {
+  stopId: string;
+  nombreDeLaParada: string;
+  unitId: string;
+  sentido: Sentido;
+  pasoDesde: Date;
+  pasoHasta: Date;
+  /** El intervalo cerrado contra el paso anterior en esa parada (9.2d). */
+  intervalo: { desdeMin: number; hastaMin: number };
+  referencia: Referencia | null;
+  estado: EstadoDePromesa;
+  motivo: MotivoSinDatos | null;
+}
+
 export interface UnidadEnLaTorre {
   unitId: string;
   unitLabel: string;
@@ -154,6 +178,18 @@ export interface UnidadEnLaTorre {
   medida: MedidaDeUnidad | null;
   ultimaPosicion: { lat: number; lon: number; recordedAt: Date; antiguedadSeg: number } | null;
   /**
+   * km/h del último fix — **contexto del ritmo, nunca una orden** (9.2b).
+   * `null` sin posición, y también cuando el aparato no la reporta: eso no es
+   * cero, y dibujarlo como cero diría «detenida» de un camión andando.
+   */
+  velocidadKmh: number | null;
+  /**
+   * El rumbo en grados del último fix. Lo usa **sólo la flecha llena**: girar
+   * un círculo no dice nada, y girar la flecha hueca afirmaría un rumbo que ya
+   * nadie observa. `null` cuando el aparato no lo reporta.
+   */
+  rumboGrados: number | null;
+  /**
    * Dónde cae sobre el corredor, para poder dibujarla a lo largo del trazado.
    * `null` sin posición o sin trazado cargado — y `null` se dibuja como hueco,
    * nunca como cero.
@@ -161,6 +197,12 @@ export interface UnidadEnLaTorre {
   sobreElCorredor: { sentido: Sentido; avanceMetros: number; distanciaMetros: number } | null;
   /** ¿Sostuvo el intervalo? El otro eje. */
   promesa: PromesaDeUnidad;
+  /**
+   * Sus últimos pasos medidos, del más reciente al más viejo — lo que el
+   * detalle enseña al tocarla. Es **proyección de lo ya calculado**, no una
+   * segunda medición: son las mismas filas de las que sale su estado.
+   */
+  ultimosPasos: PasoMedido[];
 }
 
 /**
@@ -192,6 +234,12 @@ export interface EsperaDeParada {
    */
   estado: "en_rango" | "atrasada" | "sin_datos" | "no_aplica";
   motivo: MotivoSinDatos | null;
+  /**
+   * Quién pasó por aquí, del más reciente al más viejo — lo que el detalle
+   * enseña al tocarla. Son los mismos pasos medidos de los que sale todo lo
+   * demás, proyectados: nunca una segunda medición.
+   */
+  ultimasPasadas: PasoMedido[];
 }
 
 export type RitmoEnLaTorre =
@@ -220,6 +268,15 @@ export type TorreDelCircuito =
       /** Desde cuándo corre el día de servicio. Es el ancla de todo lo de abajo. */
       apertura: Date;
       flujo: FlujoDelServicio;
+      /**
+       * La promesa vigente AHORA — **pública, y por eso fuera de la compuerta**
+       * (9.14: la ruta, sus paradas y sus horarios son públicos; lo reservado es
+       * el resultado de la medición). Sin esto, un carrier en circuito
+       * compartido leía «promesa sin capturar» de un circuito que sí la tiene:
+       * dato correcto sobre lo que él puede medir, afirmación falsa sobre lo que
+       * el circuito declaró.
+       */
+      promesaVigente: Referencia | null;
       /** Con qué corrida del detector se midió todo esto. */
       detectorVersion: string;
       unidades: UnidadEnLaTorre[];
@@ -340,13 +397,27 @@ export async function armarTorreDelCircuito(
     }),
   );
 
-  const unidades = await derivarUnidades({
+  /*
+   * UNA pasada sobre los pasos de hoy, y de ella salen el estado de cada
+   * unidad, el sostenimiento y los dos detalles. Dos recorridos serían dos
+   * definiciones del mismo veredicto, y el día que se separaran la pieza diría
+   * ADELANTADA mientras el conteo de arriba la cuenta en rango.
+   */
+  const medidos = await medirTodosLosPasos({
     repos,
+    circuito,
+    paradas,
+    pasosPorParada,
+    apertura,
+    flujo,
+  });
+
+  const unidades = derivarUnidades({
     circuito,
     plan,
     trazados,
-    pasosPorParada,
-    apertura,
+    medidos,
+    sentidoDe: sentidoDeCadaUnidad(pasosPorParada),
     ahora,
     enHorario,
     yaArranco,
@@ -358,6 +429,7 @@ export async function armarTorreDelCircuito(
     circuito,
     paradas,
     pasosPorParada,
+    medidos,
     apertura,
     ahora,
     enHorario,
@@ -365,14 +437,18 @@ export async function armarTorreDelCircuito(
     flujo,
   });
 
-  const sostenimiento = await contarSostenimiento({
-    repos,
-    circuito,
-    paradas,
-    pasosPorParada,
-    apertura,
-    flujo,
-  });
+  const sostenimiento = contarSostenimiento(medidos);
+
+  /*
+   * La promesa de la franja de AHORA, sin pasar por la compuerta: es lo que el
+   * circuito declaró, no lo que esta cuenta midió. Se pregunta por «ida» porque
+   * la banda que la torre rotula es una sola; una promesa distinta por sentido
+   * es un caso que existe en la base y que la pantalla todavía no separa.
+   */
+  const declarada = await repos.circuits.getPromesaEnInstante(circuitId, ahora, "ida", zona);
+  const promesaVigente = declarada.declarada
+    ? referenciaDe(ahora, declarada.frequencyMinutes, circuito.arrivalTolerancePct)
+    : null;
 
   const ritmo = await derivarRitmo({
     repos,
@@ -393,6 +469,7 @@ export async function armarTorreDelCircuito(
     enHorario,
     apertura,
     flujo,
+    promesaVigente,
     detectorVersion: VERSION_DEL_DETECTOR,
     unidades,
     esperas,
@@ -428,18 +505,37 @@ function anclaDe(pasos: PasoVisible[], indice: number, apertura: Date): Date {
   return anterior ? anterior.pasoHasta : apertura;
 }
 
-async function derivarUnidades(e: {
-  repos: Repositories;
+/**
+ * Para qué lado va cada unidad, según su paso más reciente.
+ *
+ * **Sale de los pasos crudos y no de los medidos**, y por eso sobrevive a la
+ * compuerta del 9.14: saber que un camión propio va de vuelta no es un
+ * veredicto sobre el servicio, es de dónde está. Con la compuerta cerrada los
+ * medidos van vacíos, y sin esto la torre dibujaba de «ida» a un camión que
+ * venía de regreso — dato correcto, lado equivocado.
+ */
+function sentidoDeCadaUnidad(pasosPorParada: Map<string, PasoVisible[]>): Map<string, Sentido> {
+  const ultimo = new Map<string, PasoVisible>();
+  for (const pasos of pasosPorParada.values()) {
+    for (const paso of pasos) {
+      const previo = ultimo.get(paso.unitId);
+      if (!previo || paso.pasoDesde > previo.pasoDesde) ultimo.set(paso.unitId, paso);
+    }
+  }
+  return new Map([...ultimo].map(([unitId, paso]) => [unitId, paso.sentido]));
+}
+
+function derivarUnidades(e: {
   circuito: Circuito;
   plan: Awaited<ReturnType<Repositories["circuits"]["planDelCircuitoParaCuenta"]>>;
   trazados: TrazadoDeSentido[];
-  pasosPorParada: Map<string, PasoVisible[]>;
-  apertura: Date;
+  medidos: PasoMedido[];
+  sentidoDe: Map<string, Sentido>;
   ahora: Date;
   enHorario: boolean;
   yaArranco: boolean;
   flujo: FlujoDelServicio;
-}): Promise<UnidadEnLaTorre[]> {
+}): UnidadEnLaTorre[] {
   const contexto = {
     ahora: e.ahora,
     trazados: e.trazados,
@@ -448,52 +544,37 @@ async function derivarUnidades(e: {
     confianzaSegundos: e.circuito.serviceConfidenceMinutes * 60,
   };
 
-  // El paso más reciente de cada unidad, mirando todas las paradas.
-  const ultimoPasoDe = new Map<string, { paso: PasoVisible; ancla: Date }>();
-  for (const pasos of e.pasosPorParada.values()) {
-    for (const [i, paso] of pasos.entries()) {
-      const previo = ultimoPasoDe.get(paso.unitId);
-      if (!previo || paso.pasoDesde > previo.paso.pasoDesde) {
-        ultimoPasoDe.set(paso.unitId, { paso, ancla: anclaDe(pasos, i, e.apertura) });
-      }
-    }
+  // Los pasos de cada unidad, en orden de tiempo. `medidos` ya viene ordenado.
+  const porUnidad = new Map<string, PasoMedido[]>();
+  for (const paso of e.medidos) {
+    porUnidad.set(paso.unitId, [...(porUnidad.get(paso.unitId) ?? []), paso]);
   }
 
-  /*
-   * Cada unidad necesita consultar la franja del instante de SU paso, así que
-   * el mapeo es asíncrono y va en paralelo: en serie, un plan de veinte
-   * unidades encadenaría veinte viajes a la base por cada refresco de la torre.
-   */
-  return Promise.all(
-    e.plan.unidades.map(async (u): Promise<UnidadEnLaTorre> => {
-      const punto =
-        u.latitude !== null && u.longitude !== null && u.recordedAt !== null
-          ? { lat: u.latitude, lon: u.longitude, recordedAt: u.recordedAt }
-          : null;
-      const medida = punto ? medirUnidad(punto, contexto) : null;
-      const situacion = situacionDe(medida, e.enHorario, e.yaArranco);
-      const medido = ultimoPasoDe.get(u.unitId) ?? null;
+  return e.plan.unidades.map((u): UnidadEnLaTorre => {
+    const punto =
+      u.latitude !== null && u.longitude !== null && u.recordedAt !== null
+        ? { lat: u.latitude, lon: u.longitude, recordedAt: u.recordedAt }
+        : null;
+    const medida = punto ? medirUnidad(punto, contexto) : null;
+    const situacion = situacionDe(medida, e.enHorario, e.yaArranco);
+    const suyos = porUnidad.get(u.unitId) ?? [];
+    const ultimo = suyos[suyos.length - 1] ?? null;
 
-      return {
-        unitId: u.unitId,
-        unitLabel: u.unitLabel,
-        situacion,
-        medida,
-        ultimaPosicion:
-          punto && medida ? { ...punto, antiguedadSeg: medida.antiguedadSeg } : null,
-        sobreElCorredor: punto
-          ? proyectarPunto(punto, medido?.paso.sentido, e.trazados)
-          : null,
-        promesa: await resolverPromesa({
-          repos: e.repos,
-          circuito: e.circuito,
-          situacion,
-          flujo: e.flujo,
-          medido,
-        }),
-      };
-    }),
-  );
+    return {
+      unitId: u.unitId,
+      unitLabel: u.unitLabel,
+      situacion,
+      medida,
+      ultimaPosicion: punto && medida ? { ...punto, antiguedadSeg: medida.antiguedadSeg } : null,
+      velocidadKmh: u.speed ?? null,
+      rumboGrados: u.heading ?? null,
+      sobreElCorredor: punto
+        ? proyectarPunto(punto, e.sentidoDe.get(u.unitId) ?? ultimo?.sentido, e.trazados)
+        : null,
+      promesa: resolverPromesa(situacion, e.flujo, ultimo),
+      ultimosPasos: losUltimos(suyos),
+    };
+  });
 }
 
 
@@ -521,62 +602,38 @@ function proyectarPunto(
   return mejor;
 }
 
-async function resolverPromesa(e: {
-  repos: Repositories;
-  circuito: Circuito;
-  situacion: Situacion;
-  flujo: FlujoDelServicio;
-  medido: { paso: PasoVisible; ancla: Date } | null;
-}): Promise<PromesaDeUnidad> {
+/**
+ * La promesa de una unidad: **el veredicto de su paso más reciente**, ya
+ * calculado en la pasada única. Aquí no se mide nada — sólo se decide si ese
+ * veredicto viene al caso, y con qué motivo cuando no hay.
+ */
+function resolverPromesa(
+  situacion: Situacion,
+  flujo: FlujoDelServicio,
+  ultimo: PasoMedido | null,
+): PromesaDeUnidad {
   const vacia = { intervalo: null, referencia: null, medidoEn: null };
 
   // No está en la calle: la pregunta no viene al caso.
-  if (!estaEnLaCalle(e.situacion)) return { estado: "no_aplica", motivo: null, ...vacia };
+  if (!estaEnLaCalle(situacion)) return { estado: "no_aplica", motivo: null, ...vacia };
   // 9.14: SIN DATOS antes que un número prestado.
-  if (e.flujo === "incompleto") return { estado: "sin_datos", motivo: "flujo_incompleto", ...vacia };
-  if (!e.medido) return { estado: "sin_datos", motivo: "sin_pasos", ...vacia };
+  if (flujo === "incompleto") return { estado: "sin_datos", motivo: "flujo_incompleto", ...vacia };
+  if (!ultimo) return { estado: "sin_datos", motivo: "sin_pasos", ...vacia };
 
-  const { paso, ancla } = e.medido;
-  const medidoEn = {
-    stopId: paso.stopId,
-    sentido: paso.sentido,
-    pasoDesde: paso.pasoDesde,
-    pasoHasta: paso.pasoHasta,
+  return {
+    estado: ultimo.estado,
+    motivo: ultimo.motivo,
+    intervalo: ultimo.intervalo,
+    referencia: ultimo.referencia,
+    medidoEn: {
+      stopId: ultimo.stopId,
+      sentido: ultimo.sentido,
+      pasoDesde: ultimo.pasoDesde,
+      pasoHasta: ultimo.pasoHasta,
+    },
   };
-
-  const promesa = await e.repos.circuits.getPromesaEnInstante(
-    e.circuito.id,
-    paso.pasoDesde,
-    paso.sentido,
-    e.circuito.timeZone,
-  );
-  if (!promesa.declarada) {
-    return { estado: "sin_datos", motivo: "sin_promesa", intervalo: null, referencia: null, medidoEn };
-  }
-
-  const referencia = referenciaDe(ancla, promesa.frequencyMinutes, e.circuito.arrivalTolerancePct);
-  const intervalo = {
-    desdeMin: minutosEntre(ancla, paso.pasoDesde),
-    hastaMin: minutosEntre(ancla, paso.pasoHasta),
-  };
-  const ventana = ventanaEsperada(ancla, promesa.frequencyMinutes, e.circuito.arrivalTolerancePct);
-
-  /*
-   * Aquí y en ningún otro lado se traduce del motor a la pantalla (9.3b).
-   * «antes» es intervalo más CORTO que la banda: el camión llegó pisándole los
-   * talones al anterior — ADELANTADA. «despues» es más largo — ATRASADA.
-   */
-  switch (ladoDeLaBanda(paso, ventana)) {
-    case "dentro":
-      return { estado: "en_rango", motivo: null, intervalo, referencia, medidoEn };
-    case "antes":
-      return { estado: "adelantada", motivo: null, intervalo, referencia, medidoEn };
-    case "despues":
-      return { estado: "atrasada", motivo: null, intervalo, referencia, medidoEn };
-    case "a_caballo":
-      return { estado: "sin_datos", motivo: "a_caballo", intervalo, referencia, medidoEn };
-  }
 }
+
 
 /** Los sentidos que sirve una parada. `null` en la base significa que sirve los dos. */
 function sentidosDe(parada: Parada): Sentido[] {
@@ -588,6 +645,7 @@ async function derivarEsperas(e: {
   circuito: Circuito;
   paradas: Parada[];
   pasosPorParada: Map<string, PasoVisible[]>;
+  medidos: PasoMedido[];
   apertura: Date;
   ahora: Date;
   enHorario: boolean;
@@ -598,7 +656,14 @@ async function derivarEsperas(e: {
 
   for (const parada of e.paradas) {
     for (const sentido of sentidosDe(parada)) {
-      const base = { stopId: parada.stopId, nombre: parada.name, sentido };
+      const base = {
+        stopId: parada.stopId,
+        nombre: parada.name,
+        sentido,
+        ultimasPasadas: losUltimos(
+          e.medidos.filter((m) => m.stopId === parada.stopId && m.sentido === sentido),
+        ),
+      };
 
       /*
        * Con el circuito cerrado o sin arrancar no se afirma nada de nadie: una
@@ -683,47 +748,125 @@ async function derivarEsperas(e: {
   return salida;
 }
 
-async function contarSostenimiento(e: {
+/**
+ * Mide TODOS los pasos visibles de hoy contra su banda — **una sola pasada, y
+ * de ella sale todo lo que la torre deriva de pasos.**
+ *
+ * El estado de una unidad es el veredicto de su paso más reciente; el
+ * sostenimiento es cuántos de éstos cayeron en rango; el detalle son los
+ * últimos de una unidad o de una parada. Los tres salen de este arreglo, y por
+ * eso no se pueden contradecir entre sí.
+ *
+ * El ancla de cada paso es **el fin del rango del paso anterior en esa parada y
+ * ese sentido** —el que le precede, sea de la unidad que sea, porque lo que la
+ * promesa promete es la frecuencia de paso y no la vuelta de nadie (9.1,
+ * ratificado por ASAV el 21-sep)—; si es el primero del día, la apertura
+ * declarada. Es la misma regla de `compararPaso`, con su forma reusada.
+ */
+async function medirTodosLosPasos(e: {
   repos: Repositories;
   circuito: Circuito;
   paradas: Parada[];
   pasosPorParada: Map<string, PasoVisible[]>;
   apertura: Date;
   flujo: FlujoDelServicio;
-}): Promise<{ enRango: number; medidos: number } | null> {
-  // Sobre un flujo incompleto el conteo también mentiría: son los pasos de uno.
-  if (e.flujo === "incompleto") return null;
+}): Promise<PasoMedido[]> {
+  /*
+   * Con el flujo incompleto no se mide NADA de pasos: sobre las filas de un
+   * solo carrier, «el paso anterior» se salta a los demás y produce un ATRASADA
+   * falso. Devolver el arreglo vacío es lo que hace que las tres cifras de
+   * arriba salgan en SIN DATOS a la vez, sin que ninguna se escape (9.14).
+   */
+  if (e.flujo === "incompleto") return [];
 
-  let enRango = 0;
-  let medidos = 0;
+  const nombreDe = new Map(e.paradas.map((p) => [p.stopId, p.name]));
+  const medidos: PasoMedido[] = [];
 
   for (const parada of e.paradas) {
     const pasos = e.pasosPorParada.get(parada.stopId) ?? [];
     for (const sentido of SENTIDOS) {
       const delSentido = pasos.filter((p) => p.sentido === sentido);
       for (const [i, paso] of delSentido.entries()) {
+        const ancla = anclaDe(delSentido, i, e.apertura);
+        const intervalo = {
+          desdeMin: minutosEntre(ancla, paso.pasoDesde),
+          hastaMin: minutosEntre(ancla, paso.pasoHasta),
+        };
+        const base = {
+          stopId: paso.stopId,
+          nombreDeLaParada: nombreDe.get(paso.stopId) ?? "",
+          unitId: paso.unitId,
+          sentido,
+          pasoDesde: paso.pasoDesde,
+          pasoHasta: paso.pasoHasta,
+          intervalo,
+        };
+
         const promesa = await e.repos.circuits.getPromesaEnInstante(
           e.circuito.id,
           paso.pasoDesde,
           sentido,
           e.circuito.timeZone,
         );
-        // Sin promesa no hay con qué medir: no suma ni al numerador ni al
-        // denominador. Un paso que nadie pudo juzgar no es un paso que falló.
-        if (!promesa.declarada) continue;
-        const ventana = ventanaEsperada(
-          anclaDe(delSentido, i, e.apertura),
-          promesa.frequencyMinutes,
-          e.circuito.arrivalTolerancePct,
-        );
-        medidos += 1;
-        if (ladoDeLaBanda(paso, ventana) === "dentro") enRango += 1;
+        if (!promesa.declarada) {
+          medidos.push({ ...base, referencia: null, estado: "sin_datos", motivo: "sin_promesa" });
+          continue;
+        }
+
+        const referencia = referenciaDe(ancla, promesa.frequencyMinutes, e.circuito.arrivalTolerancePct);
+        const ventana = ventanaEsperada(ancla, promesa.frequencyMinutes, e.circuito.arrivalTolerancePct);
+        /*
+         * Aquí, y en ningún otro lado, se traduce del motor a la pantalla
+         * (9.3b). «antes» es intervalo más CORTO que la banda: el camión llegó
+         * pisándole los talones al anterior — ADELANTADA. «despues» es más
+         * largo — ATRASADA.
+         */
+        const lado = ladoDeLaBanda(paso, ventana);
+        medidos.push({
+          ...base,
+          referencia,
+          estado:
+            lado === "dentro"
+              ? "en_rango"
+              : lado === "antes"
+                ? "adelantada"
+                : lado === "despues"
+                  ? "atrasada"
+                  : "sin_datos",
+          motivo: lado === "a_caballo" ? "a_caballo" : null,
+        });
       }
     }
   }
 
-  return medidos === 0 ? null : { enRango, medidos };
+  return medidos.sort((a, b) => a.pasoDesde.getTime() - b.pasoDesde.getTime());
 }
+
+/** Cuántos pasos se enseñan en el detalle. Tres caben sin hacer scroll y bastan para ver la tendencia. */
+const PASOS_EN_EL_DETALLE = 3;
+
+/** Los últimos `n` de una lista ya ordenada por tiempo, del más reciente al más viejo. */
+function losUltimos<T>(lista: T[], n = PASOS_EN_EL_DETALLE): T[] {
+  return lista.slice(-n).reverse();
+}
+
+/**
+ * Cuántos de los pasos medidos cayeron en rango — **conteo, no juicio**: «12 de
+ * 16» no dice si eso está bien.
+ *
+ * Un paso sin promesa declarada no suma ni al numerador ni al denominador: uno
+ * que nadie pudo juzgar no es uno que falló. Y uno a caballo de la orilla sí
+ * cuenta como medido, porque se midió — sólo que no concluyó.
+ */
+function contarSostenimiento(medidos: PasoMedido[]): { enRango: number; medidos: number } | null {
+  const conBanda = medidos.filter((p) => p.referencia !== null);
+  if (conBanda.length === 0) return null;
+  return {
+    enRango: conBanda.filter((p) => p.estado === "en_rango").length,
+    medidos: conBanda.length,
+  };
+}
+
 
 async function derivarRitmo(e: {
   repos: Repositories;

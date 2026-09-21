@@ -198,6 +198,8 @@ const TOCAN_LA_TABLA_DE_PASOS: Record<string, string> = {
   "packages/db/src/repositories/index.ts": "El único repositorio que la lee; su lectura se revisa abajo.",
   "packages/db/src/paso-por-parada.integration.test.ts":
     "Siembra y limpia filas en la base de prueba (nunca producción); no es un camino de la aplicación.",
+  "packages/db/src/escenario-torre.ts":
+    "Siembra el escenario para MIRAR la torre, sólo en la rama desechable (candado-desechable) y con --limpiar; no es un camino de la aplicación.",
 };
 
 /** Sin comentarios: uno que nombre una pieza del muro no puede contar como si estuviera. */
@@ -336,6 +338,7 @@ describe("guardia · nadie lee los pasos por parada sin el muro de cuenta", () =
       "packages/db/src/schema/index.ts",
       "packages/db/src/repositories/index.ts",
       "packages/db/src/paso-por-parada.integration.test.ts",
+      "packages/db/src/escenario-torre.ts",
     ]);
   });
 });
@@ -504,22 +507,55 @@ describe("guardia · la torre no deriva sobre un flujo que no ve entero (9.14)",
     expect(torre()).toMatch(/export async function armarTorreDelCircuito\(/);
   });
 
-  it("la compuerta se consulta una vez y VIAJA como campo obligatorio a cada derivación", () => {
+  it("la compuerta se consulta una vez y la pasada de pasos nace vacía sin ella", () => {
     const fuente = sinComentarios(torre());
     expect(fuente, "la torre ya no le pregunta a la base si el circuito lo corren varios").toContain(
       "circuitoTieneMasDeUnCarrier(",
     );
-    // Cada derivación la recibe. Si alguien escribe una nueva sin el campo, el
-    // compilador la para; esto vigila que a las que hay no se lo quiten.
-    const derivaciones = ["derivarUnidades", "derivarEsperas", "contarSostenimiento", "derivarRitmo"];
+    /*
+     * La compuerta se aplica en la PASADA ÚNICA, y de ahí hereda todo lo demás:
+     * con el flujo incompleto `medirTodosLosPasos` devuelve el arreglo vacío, y
+     * ninguna cifra que coma de él puede inventar un veredicto. Es más fuerte
+     * que preguntarle a cada derivación —ahí bastaba olvidar una—, pero sólo
+     * mientras la pasada siga naciendo vacía: eso es lo que se vigila aquí.
+     */
+    const pasada = cuerpoDe(fuente, /^async function medirTodosLosPasos\(e: \{/m, /^\}\n/m);
+    expect(pasada, "no encuentro medirTodosLosPasos").not.toBe("");
+    expect(pasada, "medirTodosLosPasos dejó de recibir el flujo").toMatch(/flujo: FlujoDelServicio;/);
+    expect(
+      pasada.replace(/\s/g, ""),
+      "Con el flujo incompleto, la pasada de pasos TIENE que nacer vacía. De ella comen el estado de cada " +
+        "unidad, el sostenimiento y los dos detalles; si trae filas de un solo carrier, las tres afirman " +
+        "sobre un flujo que la cuenta no ve entero y sale el ATRASADA falso (9.14).",
+    ).toContain('if(e.flujo==="incompleto")return[];');
+  });
+
+  it("el veredicto de un paso se calcula en UN solo lugar", () => {
+    /*
+     * `ladoDeLaBanda` es lo que convierte un intervalo en ADELANTADA o ATRASADA.
+     * Si aparece dos veces en este módulo, hay dos definiciones del mismo
+     * veredicto: el día que se separen, la pieza dirá una cosa y el conteo de
+     * arriba otra, las dos con cara de dato. Una sola llamada, en la pasada.
+     */
+    const veces = (sinComentarios(torre()).match(/ladoDeLaBanda\(/g) ?? []).length;
+    expect(
+      veces,
+      "El lado de la banda se concluye más de una vez en la torre. Todo lo que se deriva de pasos sale de " +
+        "`medirTodosLosPasos`; lo demás proyecta ese resultado, no lo recalcula.",
+    ).toBe(1);
+  });
+
+  it("las derivaciones que todavía juzgan siguen recibiendo el flujo", () => {
+    const fuente = sinComentarios(torre());
+    const derivaciones = ["derivarUnidades", "derivarEsperas", "derivarRitmo"];
     const sinCompuerta = derivaciones.filter((d) => {
-      const cuerpo = cuerpoDe(fuente, new RegExp(`^async function ${d}\\(e: \\{`, "m"), /^\}\n/m);
+      const cuerpo = cuerpoDe(fuente, new RegExp(`^(?:async )?function ${d}\\(e: \\{`, "m"), /^\}\n/m);
       return !/flujo: FlujoDelServicio;/.test(cuerpo);
     });
     expect(
       sinCompuerta,
-      "Estas derivaciones dejaron de recibir el flujo. Sin él calculan sobre los pasos de UN carrier como " +
-        "si fueran el servicio completo, y producen un ATRASADA falso (9.14).",
+      "Estas derivaciones dejaron de recibir el flujo. La espera y el ritmo no salen de la pasada de pasos, " +
+        "así que la compuerta tiene que llegarles por su cuenta (9.14).",
     ).toEqual([]);
   });
 
@@ -562,5 +598,97 @@ describe("guardia · la torre no deriva sobre un flujo que no ve entero (9.14)",
       "Estos archivos concluyen ADELANTADA/ATRASADA sin declarar el flujo del servicio. Sobre los pasos de " +
         "un solo carrier de un circuito compartido, esa conclusión es falsa (9.14).",
     ).toEqual([]);
+  });
+});
+
+/**
+ * La LISTA de circuitos de una cuenta — el muro del cuarto (Paso 2).
+ *
+ * `listAllCircuits` trae todos los circuitos de la plataforma con el nombre de
+ * su concesión: es de J-Staff, que ve todo. Si el cuarto del transportista la
+ * usara y filtrara arriba, la fuga sería la de siempre — la garantía en el
+ * código de turno— sólo que a nivel de lista: el menú de un carrier delataría
+ * cuántos circuitos hay en la ciudad y de quién son.
+ *
+ * La lectura con muro es `listarCircuitosVisiblesParaCuenta(cuentaId)`, con las
+ * mismas dos cerraduras de `getCircuitVisibleParaCuenta`. **Y contesta también
+ * si la cuenta opera transporte público**, que es cómo el menú decide dibujar
+ * el cuarto: una bandera aparte sería una segunda definición de lo mismo.
+ */
+const VEN_TODOS_LOS_CIRCUITOS: Record<string, string> = {
+  "packages/db/src/repositories/index.ts": "Define las dos lecturas; la de la cuenta se revisa abajo.",
+  "apps/web/src/app/jstaff/circuitos/page.tsx": "J-Staff, que ve todo (Pieza 4).",
+};
+
+describe("guardia · nadie lista circuitos de otra cuenta", () => {
+  const archivos = arboles().flatMap(fuentes).filter((a) => !(a in EXENTOS));
+  const repo = () => leer("packages/db/src/repositories/index.ts");
+
+  it("la lista con muro existe y toma la cuenta primero (guarda contra un falso verde)", () => {
+    expect(repo()).toMatch(/async\s+listarCircuitosVisiblesParaCuenta\(\s*cuentaId/);
+    expect(repo()).toMatch(/async\s+listAllCircuits\(/);
+    for (const a of Object.keys(VEN_TODOS_LOS_CIRCUITOS)) expect(archivos).toContain(a);
+  });
+
+  it("ningún archivo fuera de la lista LLAMA a listAllCircuits ni a listCircuitsForConcession", () => {
+    /*
+     * Sin comentarios, y a diferencia de la valla de `getForImeis`: aquel
+     * método ya no existe, así que nombrarlo siquiera es la señal. Éstos sí
+     * existen —son de J-Staff, que ve todo—, y un comentario que explique por
+     * qué NO se usan aquí es justo lo que uno quiere encontrar en un cuarto de
+     * carrier, no una infracción que lo tumbe.
+     */
+    const culpables = archivos.filter(
+      (a) =>
+        !(a in VEN_TODOS_LOS_CIRCUITOS) &&
+        /listAllCircuits|listCircuitsForConcession/.test(sinComentarios(leer(a))),
+    );
+    expect(
+      culpables,
+      "Estos archivos listan circuitos SIN cuenta. `listAllCircuits` trae los de toda la plataforma con el " +
+        "nombre de su concesión; la lectura con muro es " +
+        "repos.circuits.listarCircuitosVisiblesParaCuenta(cuentaId).",
+    ).toEqual([]);
+  });
+
+  it("la lista con muro conserva sus dos cerraduras", () => {
+    const metodo = cuerpoDe(
+      leer("packages/db/src/repositories/index.ts"),
+      /^  async listarCircuitosVisiblesParaCuenta\(/m,
+      /^  }\n/m,
+    );
+    expect(metodo, "no encuentro listarCircuitosVisiblesParaCuenta").not.toBe("");
+    const piezas: Array<[string, RegExp]> = [
+      ["la concesión dueña", /eq\(circuits\.concessionAccountId,\s*cuentaId\)/],
+      [
+        "la unidad es del carrier Y la asignó él (las dos, con AND)",
+        /\$\{circuitUnitAssignments\.circuitId\}\s*=\s*\$\{circuits\.id\}\s*AND\s*\$\{circuitUnitAssignments\.carrierAccountId\}\s*=\s*\$\{cuentaId\}\s*AND\s*\$\{units\.carrierAccountId\}\s*=\s*\$\{cuentaId\}/,
+      ],
+      ["la asignación se junta con SU unidad", /\$\{units\.id\}\s*=\s*\$\{circuitUnitAssignments\.unitId\}/],
+    ];
+    const faltan = piezas.filter(([, re]) => !re.test(metodo)).map(([nombre]) => nombre);
+    expect(
+      faltan,
+      "listarCircuitosVisiblesParaCuenta perdió una cerradura: el cuarto le enseñaría a una cuenta los " +
+        "circuitos de otra.",
+    ).toEqual([]);
+  });
+
+  it("«opera público» sale de la lista con muro, no de una bandera aparte", () => {
+    const fuente = sinComentarios(leer("apps/web/src/lib/casa/cuenta-del-cuarto.ts"));
+    expect(
+      fuente,
+      "operaPublico decide si el menú dibuja el cuarto Circuitos. Tiene que salir de " +
+        "listarCircuitosVisiblesParaCuenta —la misma lectura que llena el cuarto—: con una bandera aparte, " +
+        "el día que las dos se separen el menú enseña un cuarto vacío o esconde uno lleno.",
+    ).toContain("listarCircuitosVisiblesParaCuenta(");
+    expect(fuente, "operaPublico volvió a estar horneado en false").not.toMatch(/operaPublico:\s*false/);
+  });
+
+  it("la lista de quienes ven todos los circuitos es exactamente la escrita aquí", () => {
+    expect(Object.keys(VEN_TODOS_LOS_CIRCUITOS)).toEqual([
+      "packages/db/src/repositories/index.ts",
+      "apps/web/src/app/jstaff/circuitos/page.tsx",
+    ]);
   });
 });
