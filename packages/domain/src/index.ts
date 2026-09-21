@@ -795,6 +795,7 @@ export * from "./kml-circuito.js";
 export * from "./llegada.js";
 export * from "./tiempo.js";
 export * from "./trazado.js";
+export * from "./jornada.js";
 export * from "./sello.js";
 export * from "./pausa.js";
 export * from "./franja-horaria.js";

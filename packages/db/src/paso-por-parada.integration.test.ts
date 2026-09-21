@@ -452,6 +452,40 @@ describe("el muro por unidad — dos carriers en el mismo circuito", () => {
     expect(await lee("G", parada.S2.stopId)).toEqual([]); // G reclama a uX, pero uX no es de G
   });
 
+  /*
+   * La jornada (21-sep-2026): los pasos de UNA unidad en UN circuito cruzan el
+   * mismo muro. J-Staff los lee como la concesión dueña; nadie más los abre.
+   */
+  describe("listarPasosDeUnidad · la jornada, por la misma puerta", () => {
+    const ventana = () => [hace(2), new Date()] as const;
+    const deUnidad = async (cuenta: keyof typeof cuentas, u: keyof typeof unidad) => {
+      const [desde, hasta] = ventana();
+      return (await repos.pasosPorParada.listarPasosDeUnidad(cuentas[cuenta], circuito.K1, unidad[u], desde, hasta)).length;
+    };
+
+    it("la concesión dueña y el carrier de la unidad la leen; el otro carrier y J-Staff como cuenta propia, no", async () => {
+      expect(await deUnidad("C1", "uA")).toBe(1);
+      expect(await deUnidad("A", "uA")).toBe(1);
+      expect(await deUnidad("B", "uA")).toBe(0);
+      expect(await deUnidad("J", "uA")).toBe(0);
+    });
+
+    it("la ventana acota: fuera de ella no hay pasos", async () => {
+      const pasos = await repos.pasosPorParada.listarPasosDeUnidad(cuentas.C1, circuito.K1, unidad.uA, hace(0.5), new Date());
+      expect(pasos).toEqual([]);
+    });
+
+    it("sin corrida del orquestador, la marca es null — «todavía no se mide»", async () => {
+      expect(await repos.pasosPorParada.marcaDeDeteccion(circuito.K1, unidad.uA, `muro-${m}`)).toBeNull();
+    });
+  });
+
+  it("listStopsEnInstante: una parada que todavía no existía no está; después, sí", async () => {
+    expect(await repos.circuits.listStopsEnInstante(circuito.K1, new Date(Date.now() - 365 * DIA))).toEqual([]);
+    const ahora = await repos.circuits.listStopsEnInstante(circuito.K1, new Date());
+    expect(ahora.map((p) => p.stopId)).toEqual([parada.S1.stopId]);
+  });
+
   it("cualquier otra cuenta lee lo mismo que si no hubiera pasos", async () => {
     for (const cuenta of ["F", "G", "K", "J", "C2"] as const) {
       expect(await lee(cuenta, parada.S1.stopId), `cuenta ${cuenta} en S1`).toEqual([]);

@@ -7036,6 +7036,35 @@ export class CircuitRepository {
       .orderBy(circuitStopVersions.orden);
   }
 
+  /**
+   * Las paradas como estaban EN un instante — la versión que valía entonces, de
+   * las paradas que no estaban retiradas. Para juzgar un día pasado contra lo
+   * que había ese día y no contra lo que hay hoy (la jornada, 21-sep-2026): una
+   * parada agregada después no puede faltar en una vuelta de antes.
+   */
+  async listStopsEnInstante(circuitId: string, instante: Date) {
+    return this.db
+      .select({
+        stopId: circuitStops.id,
+        name: circuitStopVersions.name,
+        orden: circuitStopVersions.orden,
+        sentido: circuitStopVersions.sentido,
+        latitude: circuitStopVersions.latitude,
+        longitude: circuitStopVersions.longitude,
+      })
+      .from(circuitStops)
+      .innerJoin(circuitStopVersions, eq(circuitStopVersions.stopId, circuitStops.id))
+      .where(
+        and(
+          eq(circuitStops.circuitId, circuitId),
+          or(isNull(circuitStops.retiredAt), gt(circuitStops.retiredAt, instante)),
+          lte(circuitStopVersions.validFrom, instante),
+          or(isNull(circuitStopVersions.validTo), gt(circuitStopVersions.validTo, instante)),
+        ),
+      )
+      .orderBy(circuitStopVersions.orden);
+  }
+
   /** Toda la historia de una parada, para poder explicar por qué se movió. */
   async getStopHistory(stopId: string) {
     return this.db
@@ -8702,6 +8731,46 @@ export class PasoPorParadaRepository {
         ),
       )
       .orderBy(circuitStopPasses.pasoDesde);
+  }
+
+  /**
+   * Los pasos de UNA unidad en UN circuito, en una ventana — la jornada.
+   * Cruza el muro como todo lo que lee esta tabla: quien no es la concesión
+   * dueña ni el carrier de la unidad recibe una lista vacía.
+   */
+  async listarPasosDeUnidad(cuentaId: string, circuitId: string, unitId: string, desde: Date, hasta: Date) {
+    return this.db
+      .select()
+      .from(circuitStopPasses)
+      .where(
+        and(
+          eq(circuitStopPasses.circuitId, circuitId),
+          eq(circuitStopPasses.unitId, unitId),
+          gte(circuitStopPasses.pasoDesde, desde),
+          lte(circuitStopPasses.pasoDesde, hasta),
+          pasosVisiblesParaCuenta(cuentaId),
+        ),
+      )
+      .orderBy(circuitStopPasses.pasoDesde);
+  }
+
+  /**
+   * Hasta dónde procesó el orquestador a esta unidad en este circuito, con esta
+   * versión del detector. `null`: todavía nada. Lo que queda después **todavía
+   * no se mide** — no es que falte.
+   */
+  async marcaDeDeteccion(circuitId: string, unitId: string, detectorVersion: string): Promise<Date | null> {
+    const [fila] = await this.db
+      .select({ lastPingAt: circuitDetectionMarks.lastPingAt })
+      .from(circuitDetectionMarks)
+      .where(
+        and(
+          eq(circuitDetectionMarks.circuitId, circuitId),
+          eq(circuitDetectionMarks.unitId, unitId),
+          eq(circuitDetectionMarks.detectorVersion, detectorVersion),
+        ),
+      );
+    return fila?.lastPingAt ?? null;
   }
 
   /**
