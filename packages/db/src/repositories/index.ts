@@ -6008,6 +6008,60 @@ export class LivePositionRepository {
 }
 
 /**
+ * Una unidad del plan de un circuito, con lo último que se sabe de dónde está.
+ *
+ * `latitude`, `longitude`, `heading` y `recordedAt` llegan en `null` cuando de
+ * esa unidad no se sabe nada: la asignación manda y la posición es opcional,
+ * porque una unidad asignada sin aparato es justo el renglón que el operador
+ * necesita ver. **Quién está fresco lo decide quien lee**, contra los umbrales
+ * del circuito (`medirUnidad`, en `@jtel/domain/publico`) — hornear aquí un
+ * umbral lo volvería constante.
+ */
+export interface UnidadDelPlanConPosicion {
+  assignmentId: string;
+  unitId: string;
+  /** El número económico: lo que el operador dice por el radio. */
+  unitLabel: string;
+  plateNumber: string | null;
+  assignedFrom: Date;
+  latitude: number | null;
+  longitude: number | null;
+  heading: number | null;
+  recordedAt: Date | null;
+}
+
+/** La misma unidad, más de quién es. Sólo la concesión dueña la recibe así. */
+export interface UnidadDelPlanConCarrier extends UnidadDelPlanConPosicion {
+  /**
+   * El id además del nombre: un circuito puede correrlo más de un
+   * transportista, y contar nombres en vez de cuentas fundiría dos que se
+   * llamen igual en uno solo.
+   */
+  carrierAccountId: string;
+  carrierName: string;
+}
+
+/**
+ * Lo que una cuenta puede ver del plan de un circuito — **el alcance viaja con
+ * el dato** (Paso 1.A de la torre).
+ *
+ * Es una unión discriminada y no una lista a secas porque el alcance cambia
+ * qué se puede afirmar: quien lee `carrier` está viendo SU flota dentro de un
+ * circuito que puede correr alguien más, y escribir «3 unidades en el
+ * circuito» con eso en la mano es la afirmación falsa del alcance (Marco §D).
+ * Con la unión, el compilador no deja leer `carrierName` donde no existe, y el
+ * total que se pueda escribir es el del alcance que se está leyendo.
+ *
+ * `ninguno` es la respuesta para una cuenta ajena **y** para un circuito que no
+ * existe: indistinguibles a propósito.
+ */
+export type PlanDelCircuitoParaCuenta =
+  | { alcance: "concesion"; unidades: UnidadDelPlanConCarrier[] }
+  | { alcance: "carrier"; unidades: UnidadDelPlanConPosicion[] }
+  | { alcance: "ninguno"; unidades: [] };
+
+
+/**
  * Concesión, circuito y parada — el registro interno del transporte concesionado.
  *
  * **La regla de vigencia vive aquí dentro, no en quien llama.** Mover o
@@ -6392,12 +6446,23 @@ export class CircuitRepository {
    *
    * ## Una fila por unidad
    *
-   * Nada en la base impide dos aparatos vigentes sobre la misma unidad
-   * —`device_assignments` no tiene candado de una-sola-vigente, a diferencia de
-   * la asignación de circuito—, y dos filas de la misma unidad envenenarían el
-   * conteo: «4 de 3 en el plan». Se resuelve aquí, una vez, quedándose con el
-   * fix más reciente. Hacerlo en la pantalla sería dejar la garantía en el
-   * código de turno, que es el que cambia.
+   * Dos filas de la misma unidad envenenarían el conteo: «4 de 3 en el plan».
+   *
+   * **De la asignación ya no vienen, y este comentario decía que sí.** Desde la
+   * 0039 la base tiene sus dos candados de una-sola-vigente —uno por unidad y
+   * otro por dispositivo—, así que el caso que aquí se describía es imposible;
+   * se descubrió el 20 de septiembre de 2026, cuando la matriz sembrada del
+   * Paso 1.A intentó sembrarlo y chocó contra
+   * `device_assignments_unidad_una_vigente`. Un comentario que justifica código
+   * con un hecho que dejó de ser cierto es la clase de afirmación falsa que se
+   * defiende sola en una discusión.
+   *
+   * **De donde sí vienen es de `live_positions`**, que se lleva por IMEI y
+   * **no tiene candado por `device_id`**: un aparato reregistrado deja su fila
+   * vieja apuntando al mismo aparato, y salen dos posiciones para la misma
+   * unidad. El desempate se queda, con su razón verdadera. Hacerlo en la
+   * pantalla sería dejar la garantía en el código de turno, que es el que
+   * cambia.
    */
   async listPlanDelCircuitoConPosicion(circuitId: string) {
     const filas = await this.db
@@ -6447,6 +6512,159 @@ export class CircuitRepository {
     }
     return [...porUnidad.values()];
   }
+
+  /**
+   * El plan del circuito con posición viva, **para UNA cuenta** — la puerta de
+   * la torre (Paso 1.A), y es muro.
+   *
+   * `listPlanDelCircuitoConPosicion` **no se reusa para el carrier**: aquélla
+   * trae todas las unidades del circuito con el nombre de su transportista, y
+   * es la vista de J-Staff y de la concesión. Filtrarla en la pantalla dejaría
+   * la garantía en el código de turno —el que cambia—, y lo que se abre en un
+   * muro de cuenta se abre para siempre. Es la misma separación por la que esa
+   * consulta ya no es la del pasajero: tres caras, tres consultas.
+   *
+   * ## Las tres respuestas
+   *
+   * - **La concesión dueña** ve el plan completo, con transportista: es su
+   *   circuito, y un circuito puede correrlo más de uno.
+   * - **Un carrier** ve **sólo sus propias unidades**, y sin columna de
+   *   transportista: todas las filas son suyas, así que no distinguiría nada y
+   *   sólo sería un campo esperando a que alguien lo llene con el de otro.
+   * - **Cualquier otra cuenta** recibe `ninguno` — lo mismo que un circuito que
+   *   no existe, indistinguibles a propósito.
+   *
+   * ## Las cerraduras van en el WHERE, no arriba
+   *
+   * Para el carrier son las dos del muro de pasos, juntas con `AND`: la unidad
+   * es suya (`units.carrier_account_id`) **y** él la asignó a este circuito
+   * (`circuit_unit_assignments.carrier_account_id`). Nada en la base obliga a
+   * que coincidan —hoy coinciden por convención— y con `OR` bastaría una. Aquí
+   * la fila ES la asignación, así que las dos se miden sobre ella sin `EXISTS`,
+   * a diferencia del paso, que no lleva cuenta y necesita derivarla.
+   *
+   * La comprobación del circuito de arriba **no hace sobrante al WHERE**: son
+   * la misma regla a dos granos. `getCircuitVisibleParaCuenta` contesta «¿este
+   * circuito existe para ti?» y cuenta el historial; el WHERE contesta «¿esta
+   * fila es tuya?». Quitar cualquiera de los dos abre algo: sin el de arriba,
+   * un uuid ajeno se distinguiría de uno inventado por el tiempo de respuesta
+   * y por lo que devuelve en el borde; sin el de abajo, la concesión y el
+   * carrier leerían el mismo plan.
+   *
+   * **No se filtra por `live_positions.carrier_account_id`** aunque la columna
+   * exista y sea cómoda: la escribe el recolector, no el alta, y sería una
+   * TERCERA fuente de verdad sobre de quién es una unidad. El muro de esta casa
+   * son el alta y la asignación; tres definiciones de lo mismo se separan igual
+   * que dos, nada más que más rápido.
+   *
+   * ## Lo que se hereda de la consulta del operador y no se reinventa
+   *
+   * La cadena de la posición —asignación → aparato vigente → posición del
+   * aparato— porque unir por `live_positions.unit_id` compila, corre y devuelve
+   * cero filas para siempre; la asignación mandando sobre la posición, con
+   * `null` que **se enuncia, no se omite**; y **una sola fila por unidad**,
+   * porque `live_positions` se lleva por IMEI y no por aparato, y dos filas de
+   * la misma unidad dirían «4 de 3 en el plan» (ver el desempate de la consulta
+   * de J-Staff, que también explica de dónde NO vienen).
+   *
+   * ## El plan es lo VIGENTE; el historial es otra pregunta
+   *
+   * Sólo asignaciones abiertas (`valid_to IS NULL`). Una asignación ya cerrada
+   * le sigue abriendo al carrier los pasos de entonces —su historial es suyo—
+   * pero no lo pone en el plan de hoy: «quién corre este circuito ahora» y «qué
+   * puedo leer de lo que corrí» son dos preguntas, y contestarlas igual pondría
+   * camiones en la torre que hace un mes que no están.
+   */
+  async planDelCircuitoParaCuenta(
+    cuentaId: string,
+    circuitId: string,
+  ): Promise<PlanDelCircuitoParaCuenta> {
+    const circuito = await this.getCircuitVisibleParaCuenta(cuentaId, circuitId);
+    if (!circuito) return { alcance: "ninguno", unidades: [] };
+
+    const filas = await this.db
+      .select({
+        assignmentId: circuitUnitAssignments.id,
+        unitId: circuitUnitAssignments.unitId,
+        unitLabel: units.label,
+        plateNumber: units.plateNumber,
+        carrierAccountId: circuitUnitAssignments.carrierAccountId,
+        carrierName: accounts.name,
+        assignedFrom: circuitUnitAssignments.validFrom,
+        latitude: livePositions.latitude,
+        longitude: livePositions.longitude,
+        heading: livePositions.heading,
+        recordedAt: livePositions.recordedAt,
+      })
+      .from(circuitUnitAssignments)
+      .innerJoin(units, eq(units.id, circuitUnitAssignments.unitId))
+      .innerJoin(accounts, eq(accounts.id, circuitUnitAssignments.carrierAccountId))
+      .leftJoin(
+        deviceAssignments,
+        and(
+          eq(deviceAssignments.unitId, circuitUnitAssignments.unitId),
+          isNull(deviceAssignments.validTo),
+        ),
+      )
+      .leftJoin(livePositions, eq(livePositions.deviceId, deviceAssignments.deviceId))
+      .where(
+        and(
+          eq(circuitUnitAssignments.circuitId, circuitId),
+          isNull(circuitUnitAssignments.validTo),
+          or(
+            sql`EXISTS (
+              SELECT 1 FROM ${circuits}
+              WHERE ${circuits.id} = ${circuitUnitAssignments.circuitId}
+                AND ${circuits.concessionAccountId} = ${cuentaId}
+            )`,
+            and(
+              eq(circuitUnitAssignments.carrierAccountId, cuentaId),
+              eq(units.carrierAccountId, cuentaId),
+            ),
+          ),
+        ),
+      )
+      .orderBy(units.label);
+
+    const porUnidad = new Map<string, (typeof filas)[number]>();
+    for (const fila of filas) {
+      const previa = porUnidad.get(fila.unitId);
+      // Sin fecha no hay con qué comparar: cualquier fila con fix le gana a una
+      // sin él, y entre dos sin él da igual cuál quede.
+      const gana =
+        !previa ||
+        (fila.recordedAt !== null &&
+          (previa.recordedAt === null || fila.recordedAt > previa.recordedAt));
+      if (gana) porUnidad.set(fila.unitId, fila);
+    }
+    const unidades = [...porUnidad.values()];
+
+    if (circuito.concessionAccountId === cuentaId) {
+      return { alcance: "concesion", unidades };
+    }
+
+    /*
+     * La proyección del carrier se escribe campo por campo, no con un `rest`
+     * que quite dos: así, la columna que alguien agregue arriba el mes que
+     * viene NO cae sola del otro lado del muro — hay que venir aquí y
+     * escribirla, que es justo el momento de preguntarse si le toca.
+     */
+    return {
+      alcance: "carrier",
+      unidades: unidades.map((u) => ({
+        assignmentId: u.assignmentId,
+        unitId: u.unitId,
+        unitLabel: u.unitLabel,
+        plateNumber: u.plateNumber,
+        assignedFrom: u.assignedFrom,
+        latitude: u.latitude,
+        longitude: u.longitude,
+        heading: u.heading,
+        recordedAt: u.recordedAt,
+      })),
+    };
+  }
+
 
   /**
    * El HISTORIAL de un día para las unidades de un circuito — el insumo del

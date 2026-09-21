@@ -339,3 +339,132 @@ describe("guardia · nadie lee los pasos por parada sin el muro de cuenta", () =
     ]);
   });
 });
+
+/**
+ * El mismo muro, en la PUERTA DE POSICIONES de la torre (Paso 1.A).
+ *
+ * `listPlanDelCircuitoConPosicion` trae TODAS las unidades del circuito con el
+ * nombre de su transportista. Es la vista de J-Staff y de la concesión, y para
+ * el carrier es una fuga: en un circuito que corren dos, le entrega los
+ * camiones del otro, dónde están y cómo se llama. Filtrarla en la pantalla deja
+ * la garantía en el código de turno —el que cambia—, y la fuga vuelve con el
+ * siguiente que escriba esa pantalla sin haber leído ésta.
+ *
+ * La puerta con muro es `planDelCircuitoParaCuenta(cuentaId, circuitId)`, y
+ * esta valla exige cuatro cosas:
+ *
+ *  1. **Nadie más nombra la consulta sin cuenta.** Lista corta y escrita, como
+ *     la de los pasos. Ninguna cara del carrier en ella.
+ *  2. **La puerta conserva sus cerraduras**: la concesión dueña, y —para el
+ *     carrier— que la unidad sea suya Y que él mismo la haya asignado a ESE
+ *     circuito, juntas con `AND`. Con `OR` bastaría una.
+ *  3. **El plan es lo VIGENTE** (`valid_to IS NULL`). Sin eso, la torre de hoy
+ *     se llena de camiones que salieron del circuito hace un mes.
+ *  4. **No se filtra por `live_positions.carrier_account_id`.** La columna
+ *     existe y es cómoda, pero la escribe el recolector, no el alta: sería una
+ *     tercera fuente de verdad sobre de quién es una unidad, y tres
+ *     definiciones de lo mismo se separan igual que dos.
+ *
+ * Corre sin base, como el resto de esta valla; el comportamiento lo mide la
+ * matriz sembrada de `paso-por-parada.integration.test.ts`, y aquí se exige que
+ * siga existiendo.
+ */
+const VEN_EL_PLAN_COMPLETO: Record<string, string> = {
+  "packages/db/src/repositories/index.ts": "Define las dos consultas; la de la cuenta se revisa abajo.",
+  "apps/web/src/app/jstaff/circuitos/[id]/operar/page.tsx": "J-Staff, que ve todo (Pieza 4).",
+  "apps/web/src/app/jstaff/circuitos/[id]/reporte/page.tsx": "J-Staff, que ve todo (Pieza 4).",
+};
+
+describe("guardia · nadie lee el plan del circuito sin el muro de cuenta", () => {
+  const archivos = arboles().flatMap(fuentes).filter((a) => !(a in EXENTOS));
+  const repo = () => leer("packages/db/src/repositories/index.ts");
+
+  it("la puerta con muro existe y toma la cuenta PRIMERO (guarda contra un falso verde)", () => {
+    expect(repo()).toMatch(/async\s+planDelCircuitoParaCuenta\(\s*cuentaId/);
+    // Y la de J-Staff sigue existiendo: borrar las dos dejaría lo de abajo en verde.
+    expect(repo()).toMatch(/async\s+listPlanDelCircuitoConPosicion\(/);
+    for (const a of Object.keys(VEN_EL_PLAN_COMPLETO)) expect(archivos).toContain(a);
+  });
+
+  it("ningún archivo fuera de la lista nombra listPlanDelCircuitoConPosicion", () => {
+    const culpables = archivos.filter(
+      (a) => !(a in VEN_EL_PLAN_COMPLETO) && /listPlanDelCircuitoConPosicion/.test(leer(a)),
+    );
+    expect(
+      culpables,
+      "Estos archivos usan el plan SIN cuenta. Trae todas las unidades del circuito con el nombre de su " +
+        "transportista: en un circuito que corren dos, le entrega a cada uno los camiones del otro. La " +
+        "lectura con muro es repos.circuits.planDelCircuitoParaCuenta(cuentaId, circuitId).",
+    ).toEqual([]);
+  });
+
+  it("ninguna cara del carrier la nombra — el daño tiene nombre y se busca por su nombre", () => {
+    // Redundante con la de arriba a propósito: si algún día alguien agrega una
+    // cara del carrier a la lista de exentos, esto sigue en rojo.
+    const caras = archivos.filter((a) => /(^|\/)(carrier|transportista)(\/|$)/.test(a) || a.includes("/carrier/"));
+    expect(caras.length, "no encuentro la cara del carrier: la ruta cambió y esta prueba dejó de medir").toBeGreaterThan(0);
+    const culpables = caras.filter((a) => /listPlanDelCircuitoConPosicion/.test(leer(a)));
+    expect(culpables, "Una cara del carrier está leyendo el plan sin cuenta.").toEqual([]);
+  });
+
+  it("la puerta conserva sus cerraduras y abre sólo después del muro del circuito", () => {
+    const metodo = cuerpoDe(repo(), /^  async planDelCircuitoParaCuenta\(/m, /^  }\n/m);
+    expect(metodo, "no encuentro planDelCircuitoParaCuenta en el repositorio").not.toBe("");
+    const piezas: Array<[string, RegExp]> = [
+      [
+        "abre sólo después de que el circuito exista para esa cuenta",
+        /getCircuitVisibleParaCuenta\(\s*cuentaId,\s*circuitId\s*\)/,
+      ],
+      ["y si no existe, responde como un circuito inexistente", /alcance:\s*"ninguno"/],
+      [
+        "la concesión dueña del circuito",
+        /\$\{circuits\.concessionAccountId\}\s*=\s*\$\{cuentaId\}/,
+      ],
+      [
+        "las DOS cerraduras del carrier, juntas con AND (con OR bastaría una)",
+        /and\(\s*eq\(circuitUnitAssignments\.carrierAccountId,\s*cuentaId\),\s*eq\(units\.carrierAccountId,\s*cuentaId\),?\s*\)/,
+      ],
+      ["el plan es lo VIGENTE", /isNull\(circuitUnitAssignments\.validTo\)/],
+      ["una sola fila por unidad (dos aparatos vigentes envenenan el conteo)", /porUnidad\.set\(/],
+    ];
+    const faltan = piezas.filter(([, re]) => !re.test(metodo)).map(([nombre]) => nombre);
+    expect(
+      faltan,
+      "planDelCircuitoParaCuenta perdió una pieza. Lo que se abre en un muro de cuenta se abre para siempre.",
+    ).toEqual([]);
+  });
+
+  it("la puerta NO filtra por live_positions.carrier_account_id (la tercera fuente de verdad)", () => {
+    const metodo = cuerpoDe(repo(), /^  async planDelCircuitoParaCuenta\(/m, /^  }\n/m);
+    expect(
+      metodo,
+      "La cuenta de live_positions la escribe el recolector, no el alta. Sería una tercera definición de " +
+        "«de quién es esta unidad», al lado del alta y de la asignación — y se separa de las otras dos. " +
+        "El muro va sobre units.carrier_account_id y circuit_unit_assignments.carrier_account_id.",
+    ).not.toMatch(/livePositions\.carrierAccountId/);
+  });
+
+  it("la fila que recibe el carrier no tiene dónde colarse el nombre de otro transportista", () => {
+    const tipo = cuerpoDe(repo(), /^export interface UnidadDelPlanConPosicion \{/m, /^}\n/m);
+    expect(tipo, "no encuentro UnidadDelPlanConPosicion").not.toBe("");
+    expect(
+      tipo,
+      "UnidadDelPlanConPosicion es la fila que ve el carrier: si gana un campo de transportista, hay dónde " +
+        "escribir el de otro. El que lleva transportista es UnidadDelPlanConCarrier, y sólo la concesión lo recibe.",
+    ).not.toMatch(/carrier/i);
+  });
+
+  it("la matriz sembrada mide también esta puerta (esta valla no puede sembrar)", () => {
+    const matriz = leer("packages/db/src/paso-por-parada.integration.test.ts");
+    expect(matriz).toContain("dos carriers en el mismo circuito");
+    expect(matriz).toContain("planDelCircuitoParaCuenta(");
+  });
+
+  it("la lista de quienes ven el plan completo es exactamente la escrita aquí", () => {
+    expect(Object.keys(VEN_EL_PLAN_COMPLETO)).toEqual([
+      "packages/db/src/repositories/index.ts",
+      "apps/web/src/app/jstaff/circuitos/[id]/operar/page.tsx",
+      "apps/web/src/app/jstaff/circuitos/[id]/reporte/page.tsx",
+    ]);
+  });
+});

@@ -20,6 +20,9 @@ export {
   type ActorDelExpediente,
   type DatosDeFoja,
   type SujetoDeFoja,
+  type UnidadDelPlanConPosicion,
+  type UnidadDelPlanConCarrier,
+  type PlanDelCircuitoParaCuenta,
 } from "./repositories/index.js";
 export { isEncryptionConfigured } from "./crypto.js";
 export { pedirAplicar, quiereAplicar, destinoLegible } from "./permiso-de-escritura.js";
