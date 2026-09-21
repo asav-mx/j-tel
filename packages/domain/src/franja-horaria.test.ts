@@ -4,6 +4,7 @@ import {
   validarFranjas,
   promesaEnInstante,
   promesaAhora,
+  proximaFronteraDeLoPublicado,
   explicarRechazoFranja,
   type FranjaCapturada,
 } from "./franja-horaria.js";
@@ -221,5 +222,30 @@ describe("promesaAhora — lo que se le dice al pasajero en este momento (8.2)",
 
   it("una promesa vacía (el concesionario dejó de declarar) es sin_franja a toda hora", () => {
     expect(promesaAhora([], picoLunes, ZONA)).toEqual({ estado: "sin_franja" });
+  });
+});
+
+describe("proximaFronteraDeLoPublicado — hasta cuándo vale lo que dice la lista", () => {
+  const ZONA = "America/Ciudad_Juarez"; // UTC-6
+  const a07 = new Date("2026-09-21T13:00:00Z"); // 07:00 local
+
+  it("la siguiente frontera del día: el fin de la franja del pico", () => {
+    const t = proximaFronteraDeLoPublicado(["06:00", "09:00:00", "20:00"], a07, ZONA);
+    expect(t.toISOString()).toBe("2026-09-21T15:00:00.000Z"); // 09:00 local
+  });
+
+  it("lo ya pasado no cuenta: después de la última, la medianoche local", () => {
+    const a21 = new Date("2026-09-22T03:00:00Z"); // 21:00 local del 21
+    const t = proximaFronteraDeLoPublicado(["06:00", "20:00"], a21, ZONA);
+    expect(t.toISOString()).toBe("2026-09-22T06:00:00.000Z"); // 00:00 local del 22
+  });
+
+  it("sin horas, la medianoche: ahí cambia el tipo de día", () => {
+    expect(proximaFronteraDeLoPublicado([], a07, ZONA).toISOString()).toBe("2026-09-22T06:00:00.000Z");
+  });
+
+  it("justo en la frontera no se queda en ella: busca la siguiente", () => {
+    const a09 = new Date("2026-09-21T15:00:00Z");
+    expect(proximaFronteraDeLoPublicado(["09:00", "12:00"], a09, ZONA).toISOString()).toBe("2026-09-21T18:00:00.000Z");
   });
 });

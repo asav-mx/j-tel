@@ -700,19 +700,35 @@
 /*
  * El crédito de OpenStreetMap — **visible, que es lo que la licencia pide.**
  *
- * Su lugar nativo es abajo a la derecha, y ahí lo taparía la fila de fichas de
- * ruta. Se sube justo encima de ellas: sigue en su esquina, se lee, y no pelea
- * con nada. Un crédito que ningún usuario puede ver es lo mismo que no tenerlo.
+ * Vivía abajo a la derecha, subido a 58 px sobre las fichas de ruta, y ahí se
+ * encimaba con la pista («Toca una parada…»): la columna de abajo crece con su
+ * contenido, y cualquier altura fija la vuelve a alcanzar. Arriba a la derecha,
+ * bajo el selector de sentido, sólo hay mapa: se lee y no pelea con nada. Un
+ * crédito que ningún usuario puede leer es lo mismo que no tenerlo.
  *
  * Esta regla vive aquí y no en `globals.css` a propósito: la anterior era
  * global, sobrevivió a la pantalla para la que se escribió y se coló a ésta.
  */
-.ontoy .leaflet-bottom.leaflet-right {
-  bottom: 58px;
+.ontoy .leaflet-top.leaflet-right {
+  top: 62px;
+}
+/*
+ * Los controles del mapa, DEBAJO del velo y de la hoja de parada.
+ *
+ * Leaflet los pone en `z-index: 1000`, por encima de todo lo nuestro: con la
+ * hoja abierta, el crédito flotaba sobre su texto y lo tapaba («Guardar una
+ * parada…» quedaba ilegible). En 800 siguen encima del mapa (sus capas van de
+ * 200 a 700) y de nuestros controles (500), pero debajo del velo (900) y de la
+ * hoja (901). Con la hoja abierta el mapa queda tapado, y su crédito con él;
+ * al cerrarla, vuelve a leerse en su esquina.
+ */
+.ontoy .leaflet-top,
+.ontoy .leaflet-bottom {
+  z-index: 800;
 }
 .ontoy .leaflet-control-attribution {
   font-size: 9px;
   opacity: 0.8;
-  border-radius: 8px 0 0 8px;
+  border-radius: 0 0 0 8px;
   padding: 2px 6px;
 }
