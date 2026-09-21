@@ -6,6 +6,7 @@ import {
   accounts,
   telemetryPoints,
   circuitStopPasses,
+  circuitUnitAssignments,
 } from "../src/index.js";
 
 /*
@@ -260,3 +261,170 @@ describe("detectarYGuardar · el detector completo, contra datos sembrados", () 
     ).rejects.toThrow();
   });
 });
+
+/*
+ * EL MURO DE LOS PASOS POR UNIDAD — dos carriers en el mismo circuito
+ * (Enmiendas de la Pieza 9, 9.14).
+ *
+ * La lectura tiene DOS entradas: la concesión dueña del circuito ve todos los
+ * pasos; un carrier ve los de SUS unidades y nada más. Esta matriz siembra el
+ * peor caso —dos carriers en el mismo circuito, más las filas que no cuadran— y
+ * mide, cuenta por cuenta, qué lee cada una. La valla estática
+ * (`guardia-muro-cuenta.test.ts`) corre sin base y no puede sembrar; exige que
+ * ESTA matriz exista, y aquí es donde se mide el comportamiento.
+ *
+ * Los pasos se insertan a mano (este archivo es de los tres que pueden tocar la
+ * tabla) y se leen SÓLO por el repositorio.
+ */
+describe("el muro de los pasos por unidad — dos carriers en el mismo circuito", () => {
+  const m = `mu${Date.now().toString(36)}`;
+  const DIA = 24 * 3_600_000;
+  const hace = (dias: number) => new Date(Date.now() - dias * DIA);
+
+  const cuentas = {} as Record<"C1" | "C2" | "A" | "B" | "F" | "G" | "K" | "J", string>;
+  const circuito = {} as Record<"K1" | "K2", string>;
+  const parada = {} as Record<"S1" | "S2", { stopId: string; stopVersionId: string }>;
+  const unidad = {} as Record<"uA" | "uB" | "uH" | "uM" | "uO" | "uX", string>;
+
+  async function circuitoConParada(concesion: string, nombre: string) {
+    const c = await repos.circuits.createCircuit({
+      concessionAccountId: concesion,
+      name: `${nombre} ${m}`,
+      publicSlug: `${nombre.toLowerCase()}-${m}`,
+      corridorToleranceMeters: 150,
+    });
+    const p = await repos.circuits.createStop({
+      circuitId: c!.id,
+      qrSlug: `p-${nombre.toLowerCase()}-${m}`,
+      name: `Parada ${nombre}`,
+      orden: 1,
+      latitude: 31.72,
+      longitude: -106.455,
+      sentido: "ida",
+    });
+    return { circuitId: c!.id, parada: { stopId: p.identidad.id, stopVersionId: p.version.id } };
+  }
+
+  async function asignar(circuitId: string, unitId: string, carrierAccountId: string, validFrom: Date, validTo: Date | null = null) {
+    await db.insert(circuitUnitAssignments).values({ circuitId, unitId, carrierAccountId, validFrom, validTo });
+  }
+
+  /** Un paso, sin pings de evidencia (son NULLables): aquí sólo importa quién lo puede leer. */
+  async function paso(circuitId: string, p: { stopId: string; stopVersionId: string }, unitId: string, minuto: number) {
+    const desde = new Date(hace(1).getTime() + minuto * 60_000);
+    await db.insert(circuitStopPasses).values({
+      circuitId,
+      stopId: p.stopId,
+      stopVersionId: p.stopVersionId,
+      unitId,
+      sentido: "ida",
+      pasoDesde: desde,
+      pasoHasta: new Date(desde.getTime() + 30_000),
+      huecoSegundos: 30,
+      detectorVersion: `muro-${m}`,
+    });
+  }
+
+  /** Las unidades que cada cuenta lee de una parada, en claro. */
+  async function lee(cuenta: keyof typeof cuentas, stopId: string): Promise<string[]> {
+    const nombreDe = new Map(Object.entries(unidad).map(([nombre, id]) => [id, nombre]));
+    const pasos = await repos.pasosPorParada.listarPasosDeParada(cuentas[cuenta], stopId);
+    return pasos.map((p) => nombreDe.get(p.unitId)!).sort();
+  }
+
+  beforeAll(async () => {
+    cuentas.C1 = (await repos.circuits.createConcession({ name: `Concesión 1 ${m}`, slug: `c1-${m}`, legalName: `C1 ${m} SA` })).cuenta.id;
+    cuentas.C2 = (await repos.circuits.createConcession({ name: `Concesión 2 ${m}`, slug: `c2-${m}`, legalName: `C2 ${m} SA` })).cuenta.id;
+    for (const [k, type] of [["A", "carrier"], ["B", "carrier"], ["F", "carrier"], ["G", "carrier"], ["K", "client"], ["J", "jstaff"]] as const) {
+      cuentas[k] = (await repos.accounts.create({ type, name: `Cuenta ${k} ${m}`, slug: `${k.toLowerCase()}-${m}` })).id;
+    }
+
+    const k1 = await circuitoConParada(cuentas.C1, "K1");
+    const k2 = await circuitoConParada(cuentas.C1, "K2");
+    circuito.K1 = k1.circuitId;
+    circuito.K2 = k2.circuitId;
+    parada.S1 = k1.parada;
+    parada.S2 = k2.parada;
+
+    unidad.uA = (await repos.fleet.createUnit(cuentas.A, `uA-${m}`)).id; // de A, asignada por A a K1
+    unidad.uB = (await repos.fleet.createUnit(cuentas.B, `uB-${m}`)).id; // de B, asignada por B a K1
+    unidad.uH = (await repos.fleet.createUnit(cuentas.A, `uH-${m}`)).id; // de A, asignación de K1 YA CERRADA (historial)
+    unidad.uM = (await repos.fleet.createUnit(cuentas.A, `uM-${m}`)).id; // de A, pero la asignación de K1 dice B (no cuadra)
+    unidad.uO = (await repos.fleet.createUnit(cuentas.A, `uO-${m}`)).id; // de A, sin asignación alguna a K2
+    unidad.uX = (await repos.fleet.createUnit(cuentas.B, `uX-${m}`)).id; // de B, pero la asignación de K2 dice G (no cuadra)
+
+    await asignar(circuito.K1, unidad.uA, cuentas.A, hace(10));
+    await asignar(circuito.K1, unidad.uB, cuentas.B, hace(10));
+    await asignar(circuito.K1, unidad.uH, cuentas.A, hace(20), hace(5));
+    await asignar(circuito.K1, unidad.uM, cuentas.B, hace(10));
+    await asignar(circuito.K2, unidad.uX, cuentas.G, hace(10));
+
+    // Todas pasaron por su parada: el muro decide quién lo puede leer.
+    await paso(circuito.K1, parada.S1, unidad.uA, 0);
+    await paso(circuito.K1, parada.S1, unidad.uB, 10);
+    await paso(circuito.K1, parada.S1, unidad.uH, 20);
+    await paso(circuito.K1, parada.S1, unidad.uM, 30);
+    await paso(circuito.K2, parada.S2, unidad.uO, 0);
+    await paso(circuito.K2, parada.S2, unidad.uX, 10);
+  });
+
+  afterAll(async () => {
+    // Las cuentas arrastran por cascada circuitos, unidades, asignaciones y pasos.
+    await db.delete(accounts).where(inArray(accounts.id, Object.values(cuentas).filter(Boolean)));
+  });
+
+  it("la concesión dueña ve TODOS los pasos de sus circuitos, como hoy", async () => {
+    expect(await lee("C1", parada.S1.stopId)).toEqual(["uA", "uB", "uH", "uM"]);
+    expect(await lee("C1", parada.S2.stopId)).toEqual(["uO", "uX"]);
+  });
+
+  it("cada carrier ve los pasos de SUS unidades y ninguno del otro, en el mismo circuito", async () => {
+    // A: sus dos unidades bien asignadas (uA, y uH de historial). No uB, y no uM (la asignación no cuadra).
+    expect(await lee("A", parada.S1.stopId)).toEqual(["uA", "uH"]);
+    // B: sólo la suya. No uA ni uH, y no uM (es de A aunque la asignación diga B).
+    expect(await lee("B", parada.S1.stopId)).toEqual(["uB"]);
+  });
+
+  it("el historial cuenta: una asignación ya cerrada sigue dejando a su carrier ver esos pasos", async () => {
+    expect(await lee("A", parada.S1.stopId)).toContain("uH");
+  });
+
+  it("una fila que no cuadra (unidad de A, asignación a nombre de B) no se la abre a ningún carrier", async () => {
+    expect(await lee("A", parada.S1.stopId)).not.toContain("uM"); // falla la cerradura 2
+    expect(await lee("B", parada.S1.stopId)).not.toContain("uM"); // falla la cerradura 1
+    expect(await lee("C1", parada.S1.stopId)).toContain("uM"); // sólo la concesión la ve
+  });
+
+  it("una unidad sin asignación a ESE circuito no lo abre: sus pasos ahí no los lee su dueño", async () => {
+    expect(await lee("A", parada.S2.stopId)).toEqual([]); // uO es de A, sin asignación a K2
+    expect(await lee("B", parada.S2.stopId)).toEqual([]); // uX es de B, pero la asignación dice G
+    expect(await lee("G", parada.S2.stopId)).toEqual([]); // G reclama a uX, pero uX no es de G
+  });
+
+  it("cualquier otra cuenta lee lo mismo que si no hubiera pasos", async () => {
+    for (const cuenta of ["F", "G", "K", "J", "C2"] as const) {
+      expect(await lee(cuenta, parada.S1.stopId), `cuenta ${cuenta} en S1`).toEqual([]);
+    }
+    for (const cuenta of ["F", "K", "J", "C2"] as const) {
+      expect(await lee(cuenta, parada.S2.stopId), `cuenta ${cuenta} en S2`).toEqual([]);
+    }
+  });
+
+  it("el circuito existe sólo para la concesión dueña y para el carrier con unidades suyas ahí; para todos los demás, no existe", async () => {
+    const ve = async (cuenta: keyof typeof cuentas, c: "K1" | "K2") =>
+      (await repos.circuits.getCircuitVisibleParaCuenta(cuentas[cuenta], circuito[c])) !== null;
+
+    // K1: la concesión, y los dos carriers con unidades suyas asignadas por ellos.
+    expect([await ve("C1", "K1"), await ve("A", "K1"), await ve("B", "K1")]).toEqual([true, true, true]);
+    for (const cuenta of ["F", "G", "K", "J", "C2"] as const) expect(await ve(cuenta, "K1"), `${cuenta} en K1`).toBe(false);
+
+    // K2: sólo la concesión. A, B y G tienen un rastro ahí (uO sin asignación, uX de B a nombre de G) y ninguno cuadra.
+    expect(await ve("C1", "K2")).toBe(true);
+    for (const cuenta of ["A", "B", "F", "G", "K", "J", "C2"] as const) expect(await ve(cuenta, "K2"), `${cuenta} en K2`).toBe(false);
+  });
+
+  it("un circuito que no existe responde igual que uno ajeno: null", async () => {
+    expect(await repos.circuits.getCircuitVisibleParaCuenta(cuentas.C1, "00000000-0000-4000-8000-000000000000")).toBeNull();
+  });
+});
+

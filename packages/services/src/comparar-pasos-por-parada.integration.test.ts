@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { inArray } from "drizzle-orm";
-import { createDb, createRepositories, accounts, telemetryPoints } from "@jtel/db";
+import { createDb, createRepositories, accounts, telemetryPoints, circuitUnitAssignments } from "@jtel/db";
 import { compararPasosDeParada } from "./comparar-pasos-por-parada.js";
 
 /*
@@ -184,6 +184,33 @@ describe("compararPasosDeParada · contra datos sembrados", () => {
   });
 
   it("el muro: el circuito de otra cuenta responde igual que uno que no existe", async () => {
+    await expect(
+      compararPasosDeParada(repos, {
+        concessionAccountId: carrierId,
+        circuitId: circuitoId,
+        stopId,
+        sentido: "ida",
+        detectorVersion: "v1-comparacion",
+      }),
+    ).rejects.toThrow(`No existe el circuito ${circuitoId}`);
+  });
+
+  it("un carrier con unidad asignada y pasos propios LEE sus filas, pero NO compara: sigue exclusivo de la concesión (9.14)", async () => {
+    // El caso difícil: no es una cuenta cualquiera, es el carrier dueño de la unidad, con su asignación al circuito.
+    await db.insert(circuitUnitAssignments).values({
+      circuitId: circuitoId,
+      unitId: unidadId,
+      carrierAccountId: carrierId,
+      validFrom: new Date(Date.now() - 24 * 3_600_000),
+    });
+
+    // Sus filas propias, sí — el muro por la unidad está abierto...
+    const propias = await repos.pasosPorParada.listarPasosDeParada(carrierId, stopId);
+    expect(propias.length).toBeGreaterThan(0);
+
+    // ...pero la comparación no. Sobre las filas de un carrier el «paso anterior» se saltaría a los demás
+    // carriers del circuito y daría un ATRASADA falso; y medirse contra otro carrier es valor reservado
+    // de J-Tel (9.14). Responde como si el circuito no existiera.
     await expect(
       compararPasosDeParada(repos, {
         concessionAccountId: carrierId,
