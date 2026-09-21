@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { localDateIso } from "@jtel/domain";
+import { localDateIso, type FranjaCapturada } from "@jtel/domain";
 import { AppNav, Card } from "@/components/ui";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
+import { resumenDeLaPromesa } from "@/lib/promesa-por-franja";
 
 export const dynamic = "force-dynamic";
 
@@ -26,11 +27,29 @@ export default async function CircuitosPage({
   const ok = typeof sp?.ok === "string" ? sp.ok : null;
 
   const repos = getRepos();
-  const [concesiones, circuitos, transportistas] = await Promise.all([
+  const [concesiones, circuitos, transportistas, franjas] = await Promise.all([
     repos.circuits.listConcessions(),
     repos.circuits.listAllCircuits(),
     repos.accounts.listByType("carrier"),
+    repos.circuits.listFranjasVigentesDeTodos(),
   ]);
+
+  // La promesa de cada circuito, de las franjas (la única fuente, 21 sep 2026).
+  // Sin fila: nunca capturada. Fila con día nulo: promesa vigente vacía.
+  const promesaDe = new Map<string, FranjaCapturada[]>();
+  for (const f of franjas) {
+    const lista = promesaDe.get(f.circuitId) ?? [];
+    if (f.diaTipo && f.desdeLocal && f.hastaLocal && f.frequencyMinutes) {
+      lista.push({
+        diaTipo: f.diaTipo,
+        sentido: f.sentido,
+        desdeLocal: f.desdeLocal,
+        hastaLocal: f.hastaLocal,
+        frequencyMinutes: f.frequencyMinutes,
+      });
+    }
+    promesaDe.set(f.circuitId, lista);
+  }
 
   /*
    * Los transportistas ligados a cada concesión.
@@ -229,10 +248,8 @@ export default async function CircuitosPage({
                     <strong>{c.name}</strong>
                     <span className="ml-2 text-xs text-[var(--muted)]">
                       {c.concessionName} ·{" "}
-                      {/* Vacía se enuncia, no se rellena con un número que nadie declaró. */}
-                      {c.declaredFrequencyMinutes === null
-                        ? "sin frecuencia declarada"
-                        : `cada ${c.declaredFrequencyMinutes} min`}{" "}
+                      {/* Sin capturar se enuncia, no se rellena con un número que nadie declaró. */}
+                      {resumenDeLaPromesa(promesaDe.get(c.id) ?? null)}{" "}
                       · <code>{c.publicSlug}</code>
                     </span>
                   </span>
@@ -289,34 +306,10 @@ export default async function CircuitosPage({
               </div>
 
               {/*
-                LA FRECUENCIA NO TRAE VALOR SUGERIDO, Y ES EL PUNTO DEL CAMPO.
-
-                Traía `defaultValue={20}`. La `0031` le quitó el DEFAULT a la
-                columna y al manejador del servidor, y este prellenado
-                **sobrevivió al arreglo**: quien daba de alta un circuito sin
-                borrarlo declaraba una cadencia que nadie declaró, y la app la
-                decía en voz alta con el sistema detrás.
-
-                Vacía es una respuesta, no un hueco que llenar.
+                La frecuencia ya no se da de alta aquí: se captura por franja en
+                el expediente del circuito, la única fuente de la promesa
+                (decisión de Asav, 21 sep 2026).
               */}
-              <div className="sm:col-span-3">
-                <label className={etiqueta} htmlFor="frecuenciaMin">
-                  Frecuencia declarada por el concesionario (min) — vacía si no la declaró
-                </label>
-                <input
-                  id="frecuenciaMin"
-                  name="frecuenciaMin"
-                  type="number"
-                  min={1}
-                  className={campo}
-                  aria-describedby="frecuencia-nota"
-                />
-                <p id="frecuencia-nota" className="mt-1 text-xs text-[var(--muted)]">
-                  Sin ella la app dice que el servicio corre y se calla el número. Con ella dirá
-                  «cada N min» cuando no vea ningún camión en el corredor, así que tiene que venir
-                  del concesionario y no de aquí.
-                </p>
-              </div>
 
               {/*
                 Las perillas de medición van VACÍAS con su valor de origen como

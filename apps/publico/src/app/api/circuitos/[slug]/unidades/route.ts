@@ -10,6 +10,7 @@ import {
 } from "@jtel/domain/publico";
 import { getRepos } from "@/lib/db";
 import { circuitoParaLaApp } from "@/lib/vista-previa";
+import { promesaDelCircuito } from "@/lib/promesa";
 
 /**
  * Dónde vienen los camiones de un circuito. **Sin autenticación, solo lectura.**
@@ -86,6 +87,8 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
   const { circuito } = visible;
 
   const ahora = new Date();
+  // La promesa de ESTE momento, de las franjas (la única fuente, 21 sep 2026).
+  const promesa = await promesaDelCircuito(circuito.id, ahora, circuito.timeZone);
 
   /*
    * La fecha de arranque se resuelve ANTES que el horario, porque manda sobre
@@ -127,12 +130,12 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
       ttl_seg: TTL_SEGUNDOS,
       estado,
       /*
-       * `null` cuando el concesionario no la declaró, y entonces la app dice
-       * que hay servicio SIN tiempo estimado. Nunca se inventa una cadencia:
-       * afirmar «cada 20 minutos» porque una columna traía default es
-       * exactamente completar un hueco para que la pantalla se vea entera.
+       * La promesa de AHORA, por sentido, de las franjas vigentes — la única
+       * fuente de la promesa (decisión de Asav, 21 sep 2026). Sin promesa
+       * capturada, o sin franja a esta hora, lo dice así: nunca se inventa una
+       * cadencia, y un tramo sin franja no se rellena con la vecina.
        */
-      frecuencia_declarada_min: circuito.declaredFrequencyMinutes,
+      promesa,
       /* A qué hora abre, para que FUERA DE HORARIO pueda decirlo. */
       abre_a: circuito.serviceStartLocal.slice(0, 5),
       /*

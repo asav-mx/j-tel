@@ -7,6 +7,7 @@ import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
 import { duracion, fechaCivilLarga } from "@/lib/formato-tiempo";
 import { aperturaDelHorario } from "@/lib/operar-circuito";
+import { resumenDeLaPromesa } from "@/lib/promesa-por-franja";
 import {
   agruparHistorial,
   armarReporte,
@@ -118,11 +119,12 @@ export default async function ReportePage({ params }: { params: Promise<{ id: st
    */
   const desde = aperturaDelHorario(ahora, circuito);
 
-  const [concesion, trazados, plan, corteDelArchivo] = await Promise.all([
+  const [concesion, trazados, plan, corteDelArchivo, promesaVigente] = await Promise.all([
     repos.accounts.findById(circuito.concessionAccountId),
     repos.circuits.getPaths(id),
     repos.circuits.listPlanDelCircuitoConPosicion(id),
     repos.circuits.ultimoPuntoArchivado(id, desde, ahora),
+    repos.circuits.getPromiseTableVigente(id),
   ]);
 
   const filas = await repos.circuits.listHistorialDelCircuito(id, desde, ahora);
@@ -136,7 +138,8 @@ export default async function ReportePage({ params }: { params: Promise<{ id: st
       coordenadas: t.coordinates as Array<[number, number]>,
     })) satisfies TrazadoParaMedir[],
     corredorMetros: circuito.corridorToleranceMeters,
-    frecuenciaDeclaradaMin: circuito.declaredFrequencyMinutes,
+    // De las franjas, la única fuente de la promesa (21 sep 2026).
+    promesa: resumenDeLaPromesa(promesaVigente ? promesaVigente.bandas : null),
     historial: agruparHistorial(
       filas,
       plan.map((u) => ({ unitId: u.unitId, unitLabel: u.unitLabel })),
@@ -394,20 +397,14 @@ function Intervalo({ reporte }: { reporte: ReporteDelDia }) {
           `DEFAULT 20` hacía indistinguibles «declaró 20» y «no declaró nada».
           Se enuncia el hueco y se enciende solo el día que alguien la capture.
         */}
-        <Renglon rotulo="Declarada">
-          {reporte.frecuenciaDeclaradaMin === null ? (
+        <Renglon rotulo="Prometida">
+          {reporte.promesa === "sin promesa capturada" ? (
             <span className="text-[var(--tenue)]">
-              el concesionario no ha declarado una frecuencia — sin ella no hay contra qué
-              comparar, y el reporte no escoge un número
+              sin promesa capturada — sin ella no hay contra qué comparar, y el reporte no escoge
+              un número
             </span>
           ) : (
-            <>
-              cada{" "}
-              <span className={`${mono} text-[var(--acero)] tabular-nums`}>
-                {reporte.frecuenciaDeclaradaMin}
-              </span>{" "}
-              min, según el concesionario
-            </>
+            <span className={`${mono} text-[var(--acero)] tabular-nums`}>{reporte.promesa}</span>
           )}
         </Renglon>
         <Renglon rotulo="De dónde sale">

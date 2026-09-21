@@ -6196,7 +6196,6 @@ export class CircuitRepository {
         name: circuits.name,
         publicSlug: circuits.publicSlug,
         active: circuits.active,
-        declaredFrequencyMinutes: circuits.declaredFrequencyMinutes,
         concessionAccountId: circuits.concessionAccountId,
         concessionName: accounts.name,
       })
@@ -6386,7 +6385,6 @@ export class CircuitRepository {
          * sigue sin salir es el uuid, la concesión y quién los corre.
          */
         colorHex: circuits.colorHex,
-        declaredFrequencyMinutes: circuits.declaredFrequencyMinutes,
         serviceStartLocal: circuits.serviceStartLocal,
         serviceEndLocal: circuits.serviceEndLocal,
         timeZone: circuits.timeZone,
@@ -7489,6 +7487,27 @@ export class CircuitRepository {
       .from(circuitPromiseTables)
       .where(eq(circuitPromiseTables.circuitId, circuitId))
       .orderBy(desc(circuitPromiseTables.validFrom));
+  }
+
+  /**
+   * Las franjas vigentes de TODOS los circuitos, para la lista de J-Staff. Una
+   * fila por franja; una promesa vigente sin franjas sale como una fila con
+   * `diaTipo` nulo, para que la lista distinga «promesa vacía» de «nunca
+   * capturada» — son dos respuestas distintas.
+   */
+  async listFranjasVigentesDeTodos() {
+    return this.db
+      .select({
+        circuitId: circuitPromiseTables.circuitId,
+        diaTipo: circuitPromiseBands.diaTipo,
+        sentido: circuitPromiseBands.sentido,
+        desdeLocal: circuitPromiseBands.desdeLocal,
+        hastaLocal: circuitPromiseBands.hastaLocal,
+        frequencyMinutes: circuitPromiseBands.frequencyMinutes,
+      })
+      .from(circuitPromiseTables)
+      .leftJoin(circuitPromiseBands, eq(circuitPromiseBands.promiseTableId, circuitPromiseTables.id))
+      .where(isNull(circuitPromiseTables.validTo));
   }
 
   /** La promesa vigente de un circuito, con sus franjas — `null` si nunca se capturó ninguna. */

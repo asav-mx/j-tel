@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { franjaEnPalabras, leerFranjasCapturadas, propuestaDesdeNumero } from "./promesa-por-franja";
+import { franjaEnPalabras, leerFranjasCapturadas, loQueDiceOntoyAhora, resumenDeLaPromesa } from "./promesa-por-franja";
 
 const buena = { diaTipo: "entre_semana", sentido: null, desdeLocal: "06:00", hastaLocal: "09:00", frequencyMinutes: 10 };
 
@@ -34,22 +34,24 @@ describe("leerFranjasCapturadas", () => {
   });
 });
 
-describe("propuestaDesdeNumero", () => {
-  it("el número de antes, todo el horario, los tres tipos de día", () => {
-    const p = propuestaDesdeNumero(20, { inicioLocal: "06:00:00", finLocal: "20:00:00" });
-    expect(p.map((f) => f.diaTipo)).toEqual(["entre_semana", "sabado", "domingo"]);
-    expect(p.every((f) => f.desdeLocal === "06:00" && f.hastaLocal === "20:00" && f.frequencyMinutes === 20)).toBe(true);
-  });
+it("franjaEnPalabras", () => {
+  expect(franjaEnPalabras({ ...buena, sentido: "ida" } as never)).toBe("06:00–09:00 · cada 10 min · sólo ida");
+});
 
-  it("sin número no se propone nada: no se inventa una promesa", () => {
-    expect(propuestaDesdeNumero(null, { inicioLocal: "06:00", finLocal: "20:00" })).toEqual([]);
+describe("resumenDeLaPromesa", () => {
+  it("tres casos que no se funden", () => {
+    expect(resumenDeLaPromesa(null)).toBe("sin promesa capturada");
+    expect(resumenDeLaPromesa([])).toContain("no declara frecuencia");
+    expect(resumenDeLaPromesa([buena as never])).toBe("1 franja · cada 10 min");
   });
-
-  it("con horario nocturno no se propone: partir la franja es decidir por quien captura", () => {
-    expect(propuestaDesdeNumero(15, { inicioLocal: "22:00", finLocal: "06:00" })).toEqual([]);
+  it("con cadencias distintas dice el intervalo, nunca un promedio", () => {
+    expect(resumenDeLaPromesa([buena as never, { ...buena, frequencyMinutes: 20 } as never])).toBe("2 franjas · cada 10–20 min");
   });
 });
 
-it("franjaEnPalabras", () => {
-  expect(franjaEnPalabras({ ...buena, sentido: "ida" } as never)).toBe("06:00–09:00 · cada 10 min · sólo ida");
+it("loQueDiceOntoyAhora dice lo mismo que la app", () => {
+  expect(loQueDiceOntoyAhora({ estado: "sin_capturar" })).toContain("no publica cada cuánto pasa");
+  expect(loQueDiceOntoyAhora({ estado: "sin_franja" })).toContain("Sin frecuencia publicada para esta hora");
+  expect(loQueDiceOntoyAhora({ estado: "declarada", ida: 10, vuelta: 10 })).toContain("cada 10 min");
+  expect(loQueDiceOntoyAhora({ estado: "declarada", ida: 10, vuelta: null })).toContain("sin frecuencia a esta hora");
 });

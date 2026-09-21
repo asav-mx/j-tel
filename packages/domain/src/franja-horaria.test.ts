@@ -3,6 +3,7 @@ import {
   franjaDentroDelHorario,
   validarFranjas,
   promesaEnInstante,
+  promesaAhora,
   explicarRechazoFranja,
   type FranjaCapturada,
 } from "./franja-horaria.js";
@@ -185,5 +186,40 @@ describe("explicarRechazoFranja", () => {
       expect(texto.length).toBeGreaterThan(20);
       expect(texto).not.toContain("_");
     }
+  });
+});
+
+describe("promesaAhora — lo que se le dice al pasajero en este momento (8.2)", () => {
+  const ZONA = "America/Ciudad_Juarez";
+  // Lunes 21 sep 2026. Juárez es UTC-6: 13:00Z = 07:00 local, 17:00Z = 11:00 local.
+  const picoLunes = new Date("2026-09-21T13:00:00Z");
+  const valleLunes = new Date("2026-09-21T17:00:00Z");
+  const noche = new Date("2026-09-22T04:00:00Z"); // 22:00 local
+  const pico: FranjaCapturada = { diaTipo: "entre_semana", sentido: null, desdeLocal: "06:00", hastaLocal: "09:00", frequencyMinutes: 10 };
+  const valleIda: FranjaCapturada = { diaTipo: "entre_semana", sentido: "ida", desdeLocal: "09:00", hastaLocal: "20:00", frequencyMinutes: 20 };
+  const valleVuelta: FranjaCapturada = { diaTipo: "entre_semana", sentido: "vuelta", desdeLocal: "09:00", hastaLocal: "20:00", frequencyMinutes: 30 };
+
+  it("sin promesa vigente: sin_capturar — nunca una cadencia inventada", () => {
+    expect(promesaAhora(null, picoLunes, ZONA)).toEqual({ estado: "sin_capturar" });
+  });
+
+  it("la franja de los dos sentidos promete lo mismo a la ida y a la vuelta", () => {
+    expect(promesaAhora([pico, valleIda, valleVuelta], picoLunes, ZONA)).toEqual({ estado: "declarada", ida: 10, vuelta: 10 });
+  });
+
+  it("por sentido cuando la tabla distingue — nunca un promedio (9.1c)", () => {
+    expect(promesaAhora([pico, valleIda, valleVuelta], valleLunes, ZONA)).toEqual({ estado: "declarada", ida: 20, vuelta: 30 });
+  });
+
+  it("un sentido sin franja a esta hora dice null, no el del otro sentido", () => {
+    expect(promesaAhora([pico, valleIda], valleLunes, ZONA)).toEqual({ estado: "declarada", ida: 20, vuelta: null });
+  });
+
+  it("hora que ninguna franja cubre: sin_franja — no se rellena con la vecina", () => {
+    expect(promesaAhora([pico, valleIda, valleVuelta], noche, ZONA)).toEqual({ estado: "sin_franja" });
+  });
+
+  it("una promesa vacía (el concesionario dejó de declarar) es sin_franja a toda hora", () => {
+    expect(promesaAhora([], picoLunes, ZONA)).toEqual({ estado: "sin_franja" });
   });
 });

@@ -51,19 +51,9 @@ export async function POST(request: Request) {
   };
 
   /*
-   * La frecuencia NO admite valor sugerido, a diferencia de las demás perillas.
-   *
-   * Las otras son umbrales del instrumento: hay un valor razonable y heredarlo
-   * no afirma nada de cara al pasajero. La frecuencia sí — la app la dice en voz
-   * alta, «cada 20 minutos», con la autoridad del sistema detrás. Un valor
-   * sugerido aquí vuelve indistinguible «lo declaró el concesionario» de «nadie
-   * lo escribió», y la app afirmaría la cadencia igual en los dos casos.
-   *
-   * Ese default vivía en dos lugares: en la columna —lo quitó la `0031`— y
-   * **prellenado en este formulario, donde sobrevivió**. Un circuito dado de
-   * alta sin borrar ese 20 declaraba una cadencia que nadie declaró.
+   * La frecuencia ya no nace aquí: la promesa se captura por franja en el
+   * expediente del circuito, su única fuente (decisión de Asav, 21 sep 2026).
    */
-  const frecuencia = opcional("frecuenciaMin") ?? null;
 
   const hora = (campo: string) => {
     const v = String(form.get(campo) ?? "").trim();
@@ -75,7 +65,6 @@ export async function POST(request: Request) {
       concessionAccountId: concesion,
       name: nombre,
       publicSlug: slug,
-      declaredFrequencyMinutes: frecuencia,
       staleAfterSeconds: opcional("frescuraSeg"),
       arrivalRangeFloorSeconds: opcional("pisoRangoSeg"),
       stopSnapToleranceMeters: opcional("pegadoParadasM"),

@@ -10,13 +10,14 @@
  * (8.9) la resuelve el servidor y **la pantalla lee, no deduce**.
  */
 
+import type { PromesaAhora } from "@jtel/domain";
+
 export type Sentido = "ida" | "vuelta";
+export type { PromesaAhora };
 
 export interface Forma {
   circuito_id: string;
   nombre: string;
-  /** `null` cuando el concesionario no la declaró. La app entonces NO promete cadencia. */
-  frecuencia_declarada_min: number | null;
   color_hex: string;
   piso_rango_seg: number;
   dato_viejo_seg: number;
@@ -63,7 +64,8 @@ export interface Vivo {
   arranca_el: string | null;
   /** El rango sólo se enseña si la velocidad del circuito ya se calibró. */
   rango_activo: boolean;
-  frecuencia_declarada_min: number | null;
+  /** La promesa de AHORA, de las franjas. Viaja aquí y no en la forma: la forma vive en caché. */
+  promesa: PromesaAhora;
   unidades: UnidadViva[];
   generado_en: string;
 }
@@ -73,7 +75,8 @@ export interface RutaDeLaCiudad {
   circuito_id: string;
   nombre: string;
   color_hex: string;
-  frecuencia_declarada_min: number | null;
+  /** La promesa de cuando se armó la portada. */
+  promesa: PromesaAhora;
   horario: { inicio: string; fin: string; zona: string };
   arranca_el: string | null;
   trazados: Array<{ sentido: Sentido; coordenadas: Array<[number, number]>; largo_m: number }>;

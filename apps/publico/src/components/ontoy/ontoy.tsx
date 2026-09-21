@@ -201,7 +201,7 @@ export function Ontoy({
             hastaMi ? ` · hasta donde estás ${hastaMi}` : ""
           }`}
           llegadas={llegadasDeLaHoja}
-          promesa={promesaEnPalabras(forma?.frecuencia_declarada_min ?? null)}
+          promesa={promesaEnPalabras(vivo?.promesa ?? null, sentido) ?? ""}
           guardada={guardadas.estaGuardada(parada.id)}
           sePuedeGuardar={guardadas.disponible}
           color={rutaEnfocada.color_hex}

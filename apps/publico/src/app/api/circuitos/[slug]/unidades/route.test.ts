@@ -14,7 +14,20 @@ const repos = {
     getPublishedCircuitBySlug: vi.fn(),
     listLivePositionsForCircuit: vi.fn(),
     getPaths: vi.fn(),
+    getPromiseTableVigente: vi.fn(),
   },
+};
+
+/** Cada 20 min, todo el día, los tres tipos de día, los dos sentidos: la hora de la corrida no importa. */
+const PROMESA_DE_20 = {
+  tabla: { id: "t1" },
+  bandas: (["entre_semana", "sabado", "domingo"] as const).map((diaTipo) => ({
+    diaTipo,
+    sentido: null,
+    desdeLocal: "00:00:00",
+    hastaLocal: "23:59:59",
+    frequencyMinutes: 20,
+  })),
 };
 
 vi.mock("@/lib/db", () => ({ getRepos: () => repos }));
@@ -56,6 +69,7 @@ beforeEach(() => {
   process.env.JTEL_SECRET_KEY = "llave-de-prueba";
   repos.circuits.getPaths.mockResolvedValue(TRAZADO);
   repos.circuits.listLivePositionsForCircuit.mockResolvedValue([]);
+  repos.circuits.getPromiseTableVigente.mockResolvedValue(PROMESA_DE_20);
 });
 
 describe("la puerta", () => {
@@ -233,8 +247,8 @@ describe("dato viejo", () => {
     expect(cuerpo.unidades).toHaveLength(1);
     expect(cuerpo.unidades[0].fresco).toBe(true);
     expect(crudo).not.toContain("u-vieja");
-    // La frecuencia declarada sí va, que es a lo que cae la app.
-    expect(cuerpo.frecuencia_declarada_min).toBe(20);
+    // La promesa sí va —de las franjas—, que es a lo que cae la app.
+    expect(cuerpo.promesa).toEqual({ estado: "declarada", ida: 20, vuelta: 20 });
   });
 
   it("el umbral de FRESCURA es el del circuito: con 15 s, la de 30 s va apagada", async () => {
@@ -454,17 +468,23 @@ describe("la escalera, por el endpoint", () => {
     expect(cuerpo.estado).toBe("sin_evidencia");
   });
 
-  it("sin frecuencia declarada NO inventa cadencia: viaja null", async () => {
-    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue({
-      ...CIRCUITO,
-      declaredFrequencyMinutes: null,
-    });
+  it("sin promesa capturada NO inventa cadencia — aunque la columna vieja traiga un número", async () => {
+    // La columna vieja trae 20: ya no es fuente de la promesa, y no se lee.
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue({ ...CIRCUITO, declaredFrequencyMinutes: 20 });
+    repos.circuits.getPromiseTableVigente.mockResolvedValue(null);
     repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
       { unitId: "u", ...enRuta, heading: 45, recordedAt: new Date(Date.now() - 10 * 60_000) },
     ]);
     const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
     expect(cuerpo.estado).toBe("por_horario");
-    expect(cuerpo.frecuencia_declarada_min).toBeNull();
+    expect(cuerpo.promesa).toEqual({ estado: "sin_capturar" });
+    expect(cuerpo).not.toHaveProperty("frecuencia_declarada_min");
+  });
+
+  it("con promesa pero sin franja a esta hora: sin_franja — no se rellena con la vecina", async () => {
+    repos.circuits.getPromiseTableVigente.mockResolvedValue({ tabla: { id: "t1" }, bandas: [] });
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.promesa).toEqual({ estado: "sin_franja" });
   });
 
   it("el interruptor del rango viaja, y viene apagado", async () => {

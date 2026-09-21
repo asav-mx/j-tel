@@ -99,7 +99,7 @@ export function VistaRutas({
                       ? `Arranca el ${e.arranca_el}`
                       : e?.situacion === "cerrado"
                         ? `Fuera de horario · abre ${e.abre_a}`
-                        : promesaEnPalabras(r.frecuencia_declarada_min)}
+                        : promesaEnPalabras(r.promesa, null)}
                   </span>
                 </span>
                 <svg className="ontoy-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">

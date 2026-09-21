@@ -29,7 +29,7 @@ const base = {
   corteDelArchivo: min(590),
   trazados: [IDA],
   corredorMetros: 150,
-  frecuenciaDeclaradaMin: null as number | null,
+  promesa: "sin promesa capturada",
 };
 
 describe("armarReporte", () => {
@@ -123,12 +123,12 @@ describe("armarReporte", () => {
      * concesionario en vez del pasajero.
      */
     const r = armarReporte({ ...base, historial: [] });
-    expect(r.frecuenciaDeclaradaMin).toBeNull();
+    expect(r.promesa).toBe("sin promesa capturada");
   });
 
-  it("con frecuencia declarada, el número viaja tal cual — sin veredicto pegado", () => {
-    const r = armarReporte({ ...base, frecuenciaDeclaradaMin: 20, historial: [] });
-    expect(r.frecuenciaDeclaradaMin).toBe(20);
+  it("con promesa capturada, su resumen viaja tal cual — sin veredicto pegado", () => {
+    const r = armarReporte({ ...base, promesa: "2 franjas · cada 10–20 min", historial: [] });
+    expect(r.promesa).toBe("2 franjas · cada 10–20 min");
     // Y nada en el reporte califica: no hay «atrasada» que buscar.
     expect(JSON.stringify(r)).not.toMatch(/atrasad|adelantad|cumpl/i);
   });

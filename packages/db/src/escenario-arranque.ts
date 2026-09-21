@@ -191,7 +191,6 @@ async function sembrar(
      * frecuencia, la frase se cierra en «cada N min» y el caso sin declarar
      * —que es el difícil— no se revisa.
      */
-    declaredFrequencyMinutes: null,
     staleAfterSeconds: 180,
     arrivalRangeFloorSeconds: 180,
     corridorToleranceMeters: 150,

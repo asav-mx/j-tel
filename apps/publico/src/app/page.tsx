@@ -1,5 +1,6 @@
 import { enHorarioDeServicio, yaArrancoElServicio } from "@jtel/domain/publico";
 import { getRepos } from "@/lib/db";
+import { promesaDelCircuito } from "@/lib/promesa";
 import { Ontoy } from "@/components/ontoy/ontoy";
 import type { RutaDeLaCiudad, Sentido } from "@/lib/ontoy/forma";
 import type { EstadoDeRuta } from "@/components/ontoy/vista-rutas";
@@ -57,7 +58,7 @@ export default async function Inicio({
       circuito_id: c.publicSlug,
       nombre: c.name,
       color_hex: c.colorHex,
-      frecuencia_declarada_min: c.declaredFrequencyMinutes,
+      promesa: await promesaDelCircuito(circuito.id, ahora, c.timeZone),
       horario: { inicio: c.serviceStartLocal, fin: c.serviceEndLocal, zona: c.timeZone },
       arranca_el: c.serviceLaunchDate,
       trazados: trazados.map((t) => ({

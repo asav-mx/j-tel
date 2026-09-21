@@ -176,7 +176,6 @@ async function sembrar(
     concessionAccountId: IDS.concesion,
     name: "Avenida de Escenario",
     publicSlug: SLUG,
-    declaredFrequencyMinutes: 20,
     staleAfterSeconds: 180,
     arrivalRangeFloorSeconds: 180,
     corridorToleranceMeters: 150,

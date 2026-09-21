@@ -46,7 +46,10 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
     {
       circuito_id: circuito.publicSlug,
       nombre: circuito.name,
-      frecuencia_declarada_min: circuito.declaredFrequencyMinutes,
+      /*
+       * La promesa NO viaja aquí: esta forma vive una hora en caché, y la
+       * promesa cambia de franja durante el día. Va en la respuesta de unidades.
+       */
       color_hex: circuito.colorHex,
       /* Los tres números que la app necesita para calcular sin inventar nada. */
       piso_rango_seg: circuito.arrivalRangeFloorSeconds,

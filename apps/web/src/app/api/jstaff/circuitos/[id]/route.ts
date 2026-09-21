@@ -68,7 +68,6 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const cambios: Partial<{
     name: string;
     colorHex: string;
-    declaredFrequencyMinutes: number | null;
     staleAfterSeconds: number;
     serviceConfidenceMinutes: number;
     corridorToleranceMeters: number;
@@ -98,21 +97,11 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   }
 
   /*
-   * Vaciar el campo BORRA la frecuencia, y es una acción legítima: si el
-   * concesionario deja de declararla, la app tiene que dejar de prometerla. Por
-   * eso aquí el vacío no es «no cambies nada» como en los demás campos.
+   * La frecuencia ya no se escribe aquí: la promesa tiene una sola fuente, las
+   * franjas (`/promesa`, decisión de Asav del 21 sep 2026). Un formulario viejo
+   * que todavía mande `frecuenciaMin` no escribe nada — la valla
+   * `promesa-una-fuente.test.ts` vigila que nadie vuelva a escribir la columna.
    */
-  if (form.has("frecuenciaMin")) {
-    const crudo = String(form.get("frecuenciaMin") ?? "").trim();
-    if (!crudo) cambios.declaredFrequencyMinutes = null;
-    else {
-      const v = Number(crudo);
-      if (!Number.isFinite(v) || v <= 0) {
-        return volver({ error: "La frecuencia tiene que ser mayor que cero, o quedar vacía" });
-      }
-      cambios.declaredFrequencyMinutes = Math.round(v);
-    }
-  }
 
   /*
    * Cada perilla con su mensaje propio. Un «la base rechazó alguno de los

@@ -132,7 +132,8 @@ export function AtajoDeParada({
       )}
 
       <p className="ontoy-atajo-promesa">
-        {promesaEnPalabras(forma?.frecuencia_declarada_min ?? ruta?.frecuencia_declarada_min ?? null)}
+        {/* La de ahora, del sentido de ESTA parada (las dos si sirve ambos): del vivo, o de la portada mientras llega. */}
+        {promesaEnPalabras(vivo?.promesa ?? ruta?.promesa ?? null, parada?.sentido ?? null)}
       </p>
     </article>
   );
