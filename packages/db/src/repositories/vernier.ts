@@ -271,8 +271,29 @@ export class VernierRepository {
   }
 
   /**
+   * Las unidades del transportista, para declarar cuál dio un servicio que el
+   * sello no acreditó (ficha de huecos, PR 1). Las mismas que ofrecía la
+   * pantalla vieja: toda su flota, activas o no — la del servicio de hace un
+   * mes puede estar hoy fuera de servicio. La ruta que escribe lo vuelve a
+   * comprobar contra la cuenta.
+   */
+  async unidadesDelTransportista(carrierAccountId: string) {
+    return this.db
+      .select({ id: units.id, etiqueta: units.label, placa: units.plateNumber })
+      .from(units)
+      .where(eq(units.carrierAccountId, carrierAccountId))
+      .orderBy(asc(units.label));
+  }
+
+  /**
    * Lo que el transportista aportó sobre la ocurrencia (`carrier_aportaciones`).
-   * Sólo lectura: el flujo de justificaciones es otra ficha (§D).
+   * Esta clase sólo lee; la escritura es `POST /api/carrier/aportaciones`, la
+   * misma de la pantalla vieja.
+   *
+   * `unidadDeclarada` es la etiqueta de la unidad que el transportista DECLARÓ,
+   * y viaja con ese nombre a propósito: **esperado y observado nunca se
+   * mezclan** (Pieza 1.C), y la observada vive en el hecho, no aquí. El join
+   * lleva la cuenta: una unidad que ya no es de este transportista no se nombra.
    */
   async aportacionesDeOcurrencia(carrierAccountId: string, ocurrenciaId: string) {
     return this.db
@@ -282,8 +303,13 @@ export class VernierRepository {
         nota: carrierAportaciones.nota,
         estado: carrierAportaciones.estado,
         creadaAt: carrierAportaciones.createdAt,
+        unidadDeclarada: units.label,
       })
       .from(carrierAportaciones)
+      .leftJoin(
+        units,
+        and(eq(units.id, carrierAportaciones.declaredUnitId), eq(units.carrierAccountId, carrierAccountId)),
+      )
       .where(
         and(
           eq(carrierAportaciones.serviceOccurrenceId, ocurrenciaId),

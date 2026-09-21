@@ -44,6 +44,37 @@ describe("las pantallas de Vernier leen lo sellado y nada más", () => {
   }
 });
 
+/**
+ * Declarar la unidad desde el acta (ficha de huecos de «asignar unidad», PR 1).
+ *
+ * El acta gana UNA escritura, y es la de la pantalla vieja: `POST
+ * /api/carrier/aportaciones`, que escribe sólo `carrier_aportaciones` y no
+ * tiene forma de tocar el hecho (0022). Una declaración es una aportación, no
+ * un veredicto. Esta guardia nace en rojo si el acta gana una segunda
+ * escritura, o si la caja deja de ir por esa ruta.
+ */
+describe("la única escritura del acta es la aportación de la pantalla vieja", () => {
+  const CAJA = "components/casa/declarar-unidad.tsx";
+
+  it("la caja manda a /api/carrier/aportaciones y a nada más", () => {
+    const fuente = leer(CAJA);
+    expect(fuente).toContain('fetch("/api/carrier/aportaciones"');
+    expect(fuente.match(/fetch\(/g) ?? []).toHaveLength(1);
+    expect(fuente).not.toMatch(/\/api\/(occurrences|support|jstaff|cron|carrier\/dudosos)\//);
+    // La unidad viaja como declarada: el campo es el de la aportación, no el del hecho.
+    expect(fuente).toContain("declaredUnitId");
+    expect(fuente).not.toMatch(/observedUnitId/);
+  });
+
+  it("la ruta que usa sigue sin poder tocar el hecho", () => {
+    const ruta = leer("app/api/carrier/aportaciones/route.ts");
+    expect(ruta).toContain("repos.aportaciones.crear(");
+    // Lee el hecho (con qué política se juzgó) y eso está bien; escribirlo, no.
+    expect(ruta).not.toMatch(/repos\.compliance\.(?!addLedgerEntry)\w+\(|saveFact|upsertFact|reverify|verifyOccurrence/);
+    expect(ruta).toContain("mutatesFact: false");
+  });
+});
+
 function archivos(dir: string): string[] {
   return readdirSync(dir).flatMap((n) => {
     const p = path.join(dir, n);

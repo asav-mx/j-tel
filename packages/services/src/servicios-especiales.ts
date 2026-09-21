@@ -269,8 +269,25 @@ export type ActaDeOcurrencia = {
     unidadObservada: string | null;
   };
   traza: TrazaDelActa;
-  /** Lo que el transportista aportó en la pantalla vieja. Vacío = no hay nada presentado. */
-  aportaciones: Array<{ id: string; motivo: string | null; nota: string | null; estado: string; creadaAt: Iso }>;
+  /** Lo que el transportista aportó. Vacío = no hay nada presentado. */
+  aportaciones: Array<{
+    id: string;
+    motivo: string | null;
+    nota: string | null;
+    /** La unidad que el transportista DECLARÓ — nunca la observada (Pieza 1.C). */
+    unidadDeclarada: string | null;
+    estado: string;
+    creadaAt: Iso;
+  }>;
+  /**
+   * Si el acta ofrece declarar la unidad: **el hecho sellado no acreditó
+   * ninguna.** Es la regla de la pantalla vieja (`/carrier/servicio/[id]`,
+   * `sinUnidadAcreditada`), que entra en todo sello sin unidad observada y no
+   * sólo en los `no_cumplido`: un `pendiente_evidencia` deja la misma pregunta.
+   * Con unidad observada no se ofrece — declarar otra encima sería discutir la
+   * evidencia desde el lugar equivocado.
+   */
+  ofreceDeclararUnidad: boolean;
 };
 
 /**
@@ -335,9 +352,11 @@ export async function cargarActa(
       id: a.id,
       motivo: a.motivo,
       nota: a.nota,
+      unidadDeclarada: a.unidadDeclarada ?? null,
       estado: a.estado,
       creadaAt: a.creadaAt.toISOString(),
     })),
+    ofreceDeclararUnidad: !f.unidadObservadaId,
   };
 }
 

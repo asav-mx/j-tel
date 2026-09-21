@@ -269,6 +269,31 @@ describe("el acta", () => {
     expect(acta!.identidad.unidadesPosibles).toEqual(["2115", "2118"]);
     expect(acta!.identidad.unidadObservada).toBe("2126");
   });
+
+  it("ofrece declarar la unidad sólo cuando el sello no acreditó ninguna — la regla de la pantalla vieja", async () => {
+    for (const veredicto of ["no_cumplido", "pendiente_evidencia"]) {
+      const { repos } = espia({ ocurrenciaDelActa: () => cabeza({ veredicto }) });
+      const acta = await cargarActa(repos, { carrierAccountId: CUENTA, ocurrenciaId: "o1" });
+      expect(acta!.ofreceDeclararUnidad).toBe(true);
+    }
+    const { repos } = espia({
+      ocurrenciaDelActa: () => cabeza({ veredicto: "no_cumplido", unidadObservadaId: "u9", unidadObservada: "2126" }),
+    });
+    const acta = await cargarActa(repos, { carrierAccountId: CUENTA, ocurrenciaId: "o1" });
+    expect(acta!.ofreceDeclararUnidad).toBe(false);
+  });
+
+  it("la unidad declarada viaja como declarada, y no toca la observada (1.C)", async () => {
+    const { repos } = espia({
+      ocurrenciaDelActa: () => cabeza(),
+      aportacionesDeOcurrencia: () => [
+        { id: "a1", motivo: null, nota: "Salió la 2120", estado: "enviada", creadaAt: new Date("2026-09-18T15:00:00Z"), unidadDeclarada: "2120" },
+      ],
+    });
+    const acta = await cargarActa(repos, { carrierAccountId: CUENTA, ocurrenciaId: "o1" });
+    expect(acta!.aportaciones[0]!.unidadDeclarada).toBe("2120");
+    expect(acta!.identidad.unidadObservada).toBeNull();
+  });
 });
 
 describe("la traza de la unidad observada", () => {

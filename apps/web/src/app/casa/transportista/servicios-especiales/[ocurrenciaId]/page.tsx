@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { canAccessCarrierAccount } from "@jtel/auth-rbac";
 import {
   PALABRA_DEL_EXCUSABLE,
   horaConSegundos,
@@ -13,6 +14,7 @@ import { Migas } from "@/components/casa/migas";
 import { Glifo } from "@/components/casa/glifo";
 import { Familia, Renglon, SinCuenta, Titular, Vacio } from "@/components/casa/expediente";
 import { TrazaDelActaEnMapa } from "@/components/casa/traza-del-acta";
+import { DeclararUnidad } from "@/components/casa/declarar-unidad";
 import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 import { cuentaDelCuarto } from "@/lib/casa/cuenta-del-cuarto";
 import { relojDePagina } from "@/lib/casa/cronometro";
@@ -63,7 +65,7 @@ export default async function VerOcurrencia({
   }
   if (!cuenta.alcance.conContrato) notFound();
 
-  const { carrier, cuentaEnRuta } = cuenta;
+  const { carrier, cuentaEnRuta, identidad } = cuenta;
   const { ocurrenciaId } = await params;
   if (!UUID.test(ocurrenciaId)) notFound();
 
@@ -76,6 +78,24 @@ export default async function VerOcurrencia({
   reloj.fin();
   if (!acta) notFound();
 
+  /*
+   * Declarar la unidad (ficha de huecos, PR 1): sólo donde la pantalla vieja lo
+   * ofrecía —el sello no acreditó unidad— y sólo a quien la ruta deja pasar
+   * (`exigir` tipo «carrier» = `canAccessCarrierAccount`). Un botón que la ruta
+   * va a rechazar no se dibuja (mapa, regla 4). Las unidades son las de su
+   * flota, las mismas que ofrecía la vieja; la ruta lo vuelve a comprobar.
+   */
+  const declarar =
+    acta.ofreceDeclararUnidad && canAccessCarrierAccount(identidad.memberships, carrier.id)
+      ? {
+          cuenta: carrier.slug,
+          unidades: (await getRepos().vernier.unidadesDelTransportista(carrier.id)).map((u) => ({
+            id: u.id,
+            etiqueta: `${u.etiqueta}${u.placa ? ` (${u.placa})` : ""}`,
+          })),
+        }
+      : null;
+
   const titulo = `Ver ${acta.identidad.ruta} · ${acta.identidad.turno} · ${fechaCorta(acta.fecha)}`;
 
   return (
@@ -87,7 +107,7 @@ export default async function VerOcurrencia({
         <FamiliaVeredicto acta={acta} />
         <FamiliaIdentidad acta={acta} />
         <FamiliaEvidencia acta={acta} />
-        <FamiliaJustificacion acta={acta} />
+        <FamiliaJustificacion acta={acta} declarar={declarar} />
       </div>
     </Marco>
   );
@@ -243,10 +263,20 @@ function FamiliaEvidencia({ acta }: { acta: ActaDeOcurrencia }) {
 
 /**
  * Lee `carrier_aportaciones`: decir «sin justificación presentada» a ciegas
- * sería afirmar lo que no se comprobó (decisión 8 de Asav). Con filas, se
- * listan en sólo lectura; el flujo de justificaciones es otra ficha (§D).
+ * sería afirmar lo que no se comprobó (decisión 8 de Asav). El flujo completo
+ * de justificaciones es otra ficha (§D); desde el PR 1 de la ficha de huecos,
+ * aquí se puede **declarar la unidad** cuando el sello no acreditó ninguna.
+ *
+ * La unidad declarada se dice «declarada», en la caja de la aportación: el
+ * renglón «Unidad observada» de Identidad no la conoce (Pieza 1.C).
  */
-function FamiliaJustificacion({ acta }: { acta: ActaDeOcurrencia }) {
+function FamiliaJustificacion({
+  acta,
+  declarar,
+}: {
+  acta: ActaDeOcurrencia;
+  declarar: { cuenta: string; unidades: { id: string; etiqueta: string }[] } | null;
+}) {
   return (
     <Familia nombre="Justificación">
       {acta.aportaciones.length === 0 ? (
@@ -258,16 +288,33 @@ function FamiliaJustificacion({ acta }: { acta: ActaDeOcurrencia }) {
           <div key={a.id} className="rounded-lg border border-[var(--linea)] bg-[var(--pieza)] px-4 py-3 text-[14px]">
             <div className="flex items-baseline justify-between gap-3">
               <span style={{ fontFamily: "var(--letra-titular)", fontWeight: 700 }}>
-                {a.motivo ? (PALABRA_DEL_EXCUSABLE[a.motivo] ?? a.motivo) : "Sin motivo del catálogo"}
+                {/* El encabezado dice lo que la aportación ES; «sin motivo» sólo si no trae otra cosa. */}
+                {a.motivo
+                  ? (PALABRA_DEL_EXCUSABLE[a.motivo] ?? a.motivo)
+                  : a.unidadDeclarada
+                    ? `Unidad declarada · ${a.unidadDeclarada}`
+                    : "Sin motivo del catálogo"}
               </span>
               <span data-medida className="flex-none text-[12px] text-[var(--tenue)]">
                 {fechaCorta(localDateIso(new Date(a.creadaAt), acta.zona))} · {ESTADO_DE_APORTACION[a.estado] ?? a.estado}
               </span>
             </div>
+            {a.unidadDeclarada &&
+              (a.motivo ? (
+                <p className="mt-1.5 text-[13.5px]">
+                  Unidad declarada por el transportista: <span data-medida>{a.unidadDeclarada}</span>
+                  <span className="text-[var(--tenue)]"> · no es la observada</span>
+                </p>
+              ) : (
+                <p className="mt-1.5 text-[13.5px] text-[var(--tenue)]">
+                  La declaró el transportista · no es la observada
+                </p>
+              ))}
             {a.nota && <p className="mt-1.5 text-[13.5px] text-[var(--tenue)]">{a.nota}</p>}
           </div>
         ))
       )}
+      {declarar && <DeclararUnidad cuenta={declarar.cuenta} ocurrenciaId={acta.id} unidades={declarar.unidades} />}
     </Familia>
   );
 }
