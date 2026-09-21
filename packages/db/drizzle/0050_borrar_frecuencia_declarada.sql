@@ -1,0 +1,26 @@
+-- Borra `circuits.declared_frequency_minutes` — DESTRUCTIVA.
+--
+-- ⚠ ORDEN AL REVÉS QUE UNA ADITIVA: se aplica **DESPUÉS de desplegar el código**
+-- que ya no la declara. La API relacional de Drizzle pide todas las columnas
+-- declaradas en el esquema: si la columna se borra mientras el código
+-- desplegado todavía la declara, cada consulta a `circuits` revienta. Primero
+-- se mergea y despliega el PR, después se corre esto.
+--
+-- ## Por qué se puede borrar
+--
+-- La promesa tiene una sola fuente: las franjas (`circuit_promise_tables`,
+-- decisión de Asav del 21 sep 2026, #481–#482). Desde el #482 nadie la lee ni
+-- la escribe, y la valla `guardia-promesa-una-fuente` lo vigila. Dejarla viva
+-- era dejar una segunda promesa esperando a que alguien la vuelva a leer.
+--
+-- ## Qué se pierde
+--
+-- Nada que valga: el 21 sep 2026 se leyó producción y los dos circuitos la
+-- tenían en NULL. El PASO 0 del runbook lo vuelve a comprobar, y si encuentra
+-- un valor, se para: ese número lo declaró alguien, y se captura como franja
+-- antes de borrar.
+--
+-- El CHECK `circuits_frecuencia_positiva` se va con la columna (Postgres borra
+-- las restricciones de una columna al borrarla).
+
+ALTER TABLE circuits DROP COLUMN IF EXISTS declared_frequency_minutes;

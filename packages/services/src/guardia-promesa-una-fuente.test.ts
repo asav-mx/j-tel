@@ -12,10 +12,9 @@ import { fileURLToPath } from "node:url";
  * hora pico mientras la torre mide contra «cada 10» — la afirmación falsa del
  * alcance (Marco §D, 9.1c), con las dos cifras «correctas» cada una en su lado.
  *
- * La columna sigue físicamente hasta la migración que la borre. Mientras tanto
- * esta prueba lee el código y exige que **nadie la lea ni la escriba**: fuera
- * del esquema, nombrarla es la señal. Las pruebas quedan fuera del barrido
- * porque una prueba puede sembrar la columna para demostrar que se ignora.
+ * La columna se borró en la 0050. Esta prueba se queda para que **no vuelva**:
+ * nombrarla en código —el esquema incluido— es la señal. Las pruebas quedan
+ * fuera del barrido porque ésta misma la nombra para buscarla.
  *
  * Y del lado del pasajero, que el campo viejo de la respuesta
  * (`frecuencia_declarada_min`) no vuelva: la app lee `promesa`, de las franjas.
@@ -66,9 +65,8 @@ describe("guardia · la promesa tiene una sola fuente: las franjas", () => {
     expect(archivos).toContain("apps/publico/src/app/api/circuitos/[slug]/unidades/route.ts");
   });
 
-  it("nadie fuera del esquema lee ni escribe declared_frequency_minutes", () => {
+  it("nadie —el esquema incluido— vuelve a declarar, leer ni escribir declared_frequency_minutes", () => {
     const culpables = archivos
-      .filter((a) => a !== ESQUEMA)
       .filter((a) => /declaredFrequencyMinutes|declared_frequency_minutes/.test(sinComentarios(leer(a))));
     expect(
       culpables,

@@ -1362,15 +1362,11 @@ export const circuits = pgTable(
     /** Va en la URL pública y en el QR impreso. No se cambia después de imprimir. */
     publicSlug: text("public_slug").notNull().unique(),
     /** En minutos: es una promesa pública, y en minutos se promete. */
-    /**
-     * Cada cuántos minutos declara el concesionario que pasa una unidad.
-     *
-     * **`null` = no declarada**, y entonces la app dice que hay servicio *sin*
-     * tiempo estimado. Era `NOT NULL DEFAULT 20`, y por eso «declaró 20» y «no
-     * declaró nada» eran indistinguibles: la app afirmaba una cadencia que
-     * nadie había dicho, con la autoridad del sistema detrás.
+    /*
+     * `declared_frequency_minutes` se borró en la 0050: la promesa tiene una sola
+     * fuente, las franjas (`circuit_promise_tables`, decisión de Asav del 21 sep
+     * 2026). La valla `guardia-promesa-una-fuente` impide que vuelva.
      */
-    declaredFrequencyMinutes: integer("declared_frequency_minutes"),
     /** En segundos: la prueba de campo puede pedir afinarlo por debajo del minuto. */
     staleAfterSeconds: integer("stale_after_seconds")
       .notNull()
