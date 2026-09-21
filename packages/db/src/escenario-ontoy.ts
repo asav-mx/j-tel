@@ -23,6 +23,7 @@ import {
  * El escenario de ONTOY — la ciudad, para poder mirar la app del pasajero.
  *
  *   pnpm --filter @jtel/db escenario-ontoy
+ *   pnpm --filter @jtel/db escenario-ontoy --un-sentido   # Insurgentes sin paradas de vuelta
  *   pnpm --filter @jtel/db escenario-ontoy --limpiar
  *
  * Tres rutas publicadas, porque las tres cosas que la app tiene que saber decir
@@ -147,7 +148,11 @@ async function limpiar(db: ReturnType<typeof createDb>) {
   console.log("[escenario-ontoy] borrado.");
 }
 
-async function sembrar(db: ReturnType<typeof createDb>) {
+/**
+ * `unSentido`: las paradas de Insurgentes quedan sólo de ida, y su vuelta sin
+ * ninguna — para ver que el mapa no invita a tocar lo que no existe.
+ */
+async function sembrar(db: ReturnType<typeof createDb>, unSentido: boolean) {
   const ahora = new Date();
   await limpiar(db);
 
@@ -227,7 +232,7 @@ async function sembrar(db: ReturnType<typeof createDb>) {
         orden: i + 1,
         latitude: lat(i, s.paradas.length),
         longitude: LON + s.lonOffset,
-        sentido: null,
+        sentido: unSentido && s.slug === "insurgentes" ? "ida" : null,
       });
     }
 
@@ -283,5 +288,5 @@ console.log(`[escenario-ontoy] destino: ${veredicto.identidad.host}/${veredicto.
 
 const db = createDb(process.env.DATABASE_URL_TEST!);
 if (args.includes("--limpiar")) await limpiar(db);
-else await sembrar(db);
+else await sembrar(db, args.includes("--un-sentido"));
 process.exit(0);
