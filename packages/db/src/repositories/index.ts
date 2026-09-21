@@ -6218,6 +6218,14 @@ export class CircuitRepository {
    * Existe para dos cuentas y sólo dos:
    *
    *  - **La concesión dueña** (`circuits.concession_account_id`).
+   *  - **Un carrier LIGADO a esa concesión** por un `concession_carriers`
+   *    vigente. Entrada agregada el 21-sep-2026, y sin ella el carrier no puede
+   *    asignar su primera unidad: las otras dos entradas exigen que YA corra
+   *    algo ahí, así que un carrier recién ligado no veía el circuito, no
+   *    llegaba a la pantalla, y nunca hacía la primera asignación. Es el huevo
+   *    y la gallina del muro. Lo que ve de más es lo público —paradas, promesa,
+   *    trazado (9.14)— y cero unidades, porque la compuerta de flujo de la
+   *    torre sigue siendo la suya.
    *  - **Un carrier con unidades suyas en él**: alguna unidad de la que es dueño
    *    (`units.carrier_account_id`) que él mismo asignó a este circuito
    *    (`circuit_unit_assignments.carrier_account_id`) **en cualquier momento**,
@@ -6238,6 +6246,12 @@ export class CircuitRepository {
           eq(circuits.id, circuitId),
           or(
             eq(circuits.concessionAccountId, cuentaId),
+            sql`EXISTS (
+              SELECT 1 FROM ${concessionCarriers}
+              WHERE ${concessionCarriers.concessionAccountId} = ${circuits.concessionAccountId}
+                AND ${concessionCarriers.carrierAccountId} = ${cuentaId}
+                AND ${concessionCarriers.validTo} IS NULL
+            )`,
             sql`EXISTS (
               SELECT 1 FROM ${circuitUnitAssignments}
               INNER JOIN ${units} ON ${units.id} = ${circuitUnitAssignments.unitId}
@@ -6285,11 +6299,37 @@ export class CircuitRepository {
         serviceEndLocal: circuits.serviceEndLocal,
         timeZone: circuits.timeZone,
         esDeLaConcesion: sql<boolean>`${circuits.concessionAccountId} = ${cuentaId}`,
+        /*
+         * Si HOY corre alguna unidad suya aquí. Desde la liga (21-sep) un
+         * carrier ve circuitos donde todavía no corre nada, y la pieza no puede
+         * decir «corres unidades aquí» de uno así: sería la afirmación falsa
+         * del alcance (Marco §D). Mismas dos cerraduras que la entrada de abajo.
+         */
+        /*
+         * Nombres escritos a mano y no con `${tabla.columna}`: dentro de la
+         * proyección Drizzle quita el nombre de la tabla a las columnas, y
+         * `"id" = "unit_id"` es ambiguo (lo enseñó la matriz sembrada).
+         */
+        correUnidadesHoy: sql<boolean>`EXISTS (
+          SELECT 1 FROM circuit_unit_assignments cua
+          INNER JOIN units u ON u.id = cua.unit_id
+          WHERE cua.circuit_id = circuits.id
+            AND cua.carrier_account_id = ${cuentaId}
+            AND u.carrier_account_id = ${cuentaId}
+            AND cua.valid_to IS NULL
+        )`,
       })
       .from(circuits)
       .where(
         or(
           eq(circuits.concessionAccountId, cuentaId),
+          /* La liga vigente con la concesión: ver `getCircuitVisibleParaCuenta`. */
+          sql`EXISTS (
+            SELECT 1 FROM ${concessionCarriers}
+            WHERE ${concessionCarriers.concessionAccountId} = ${circuits.concessionAccountId}
+              AND ${concessionCarriers.carrierAccountId} = ${cuentaId}
+              AND ${concessionCarriers.validTo} IS NULL
+          )`,
           sql`EXISTS (
             SELECT 1 FROM ${circuitUnitAssignments}
             INNER JOIN ${units} ON ${units.id} = ${circuitUnitAssignments.unitId}
@@ -7141,6 +7181,45 @@ export class CircuitRepository {
   }
 
   /**
+   * Las asignaciones de un circuito **que ve esta cuenta**: las de sus propias
+   * unidades, vigentes y terminadas — la versión con muro de `listAssignments`.
+   *
+   * `listAssignments` entrega las de todos los carriers del circuito y sirve a
+   * J-Staff. Aquí van las mismas dos cerraduras que en los pasos (#472) y que en
+   * `soltarAsignacionDeCuenta`: la asignación la hizo esta cuenta **y** la
+   * unidad es suya. En un circuito compartido, las unidades del otro carrier no
+   * existen para ésta (9.14: su negocio nunca cruza).
+   *
+   * La historia viene completa por lo mismo que en J-Staff: una asignación
+   * cerrada con su motivo y su autor explica meses después por qué un camión
+   * dejó de correr aquí.
+   */
+  async listAsignacionesDeCuenta(cuentaId: string, circuitId: string) {
+    return this.db
+      .select({
+        id: circuitUnitAssignments.id,
+        unitId: circuitUnitAssignments.unitId,
+        unitLabel: units.label,
+        plateNumber: units.plateNumber,
+        validFrom: circuitUnitAssignments.validFrom,
+        validTo: circuitUnitAssignments.validTo,
+        motivo: circuitUnitAssignments.motivo,
+        asignadaPor: circuitUnitAssignments.asignadaPor,
+        cerradaPor: circuitUnitAssignments.cerradaPor,
+      })
+      .from(circuitUnitAssignments)
+      .innerJoin(units, eq(units.id, circuitUnitAssignments.unitId))
+      .where(
+        and(
+          eq(circuitUnitAssignments.circuitId, circuitId),
+          eq(circuitUnitAssignments.carrierAccountId, cuentaId),
+          eq(units.carrierAccountId, cuentaId),
+        ),
+      )
+      .orderBy(desc(circuitUnitAssignments.validFrom));
+  }
+
+  /**
    * Qué unidades se pueden asignar a un circuito, y cuál viene ocupada.
    *
    * El universo son las unidades activas de los carriers ligados a la concesión
@@ -7192,6 +7271,122 @@ export class CircuitRepository {
       .orderBy(units.label);
   }
 
+
+  /**
+   * Las unidades que **este carrier** puede asignar — su universo, y por eso
+   * no hay filtro que alguien pueda borrar después.
+   *
+   * Es la hermana por carrier de `listUnidadesAsignables`, que va por concesión
+   * y sirve a J-Staff. Las dos entregan la misma forma —con `ocupadaEn…` para
+   * poder avisar qué se cerraría— y las dos existen porque **el universo es lo
+   * que hace el muro**: una unidad ajena no se puede asignar aunque alguien
+   * mande su id, porque no sale de aquí.
+   *
+   * Dos cerraduras, y las dos hacen falta:
+   *
+   *  1. **La unidad es suya** (`units.carrier_account_id`). Sin esto asignaría
+   *     camiones de otro.
+   *  2. **La concesión del circuito lo tiene ligado**, con un
+   *     `concession_carriers` vigente. Sin esto podría meter sus camiones al
+   *     circuito de cualquiera.
+   *
+   * La segunda se comprueba contra el circuito que se le pasa, no contra «algún
+   * circuito»: un carrier ligado a la concesión A no asigna en la B.
+   */
+  async listUnidadesAsignablesDelCarrier(carrierAccountId: string, circuitId: string) {
+    const vigente = this.db
+      .select({
+        unitId: circuitUnitAssignments.unitId,
+        circuitId: circuitUnitAssignments.circuitId,
+        validFrom: circuitUnitAssignments.validFrom,
+      })
+      .from(circuitUnitAssignments)
+      .where(isNull(circuitUnitAssignments.validTo))
+      .as("vigente");
+
+    return this.db
+      .select({
+        unitId: units.id,
+        label: units.label,
+        plateNumber: units.plateNumber,
+        carrierAccountId: units.carrierAccountId,
+        /*
+         * Qué circuito dejaría de correr si se asigna aquí. Viaja el nombre y
+         * no sólo el id porque la pantalla tiene que poder decir CUÁL **antes**
+         * de confirmar: el candado de una-sola-vigente es global, así que esto
+         * puede estar jalando el camión de un circuito de OTRA concesión, y eso
+         * no puede ocurrir callado (decisión de ASAV, 21-sep).
+         */
+        ocupadaEnCircuitoId: vigente.circuitId,
+        ocupadaEnCircuito: circuits.name,
+        ocupadaDesde: vigente.validFrom,
+      })
+      .from(units)
+      .leftJoin(vigente, eq(vigente.unitId, units.id))
+      .leftJoin(circuits, eq(circuits.id, vigente.circuitId))
+      .where(
+        and(
+          eq(units.carrierAccountId, carrierAccountId),
+          eq(units.active, true),
+          sql`EXISTS (
+            SELECT 1 FROM ${circuits}
+            INNER JOIN ${concessionCarriers}
+              ON ${concessionCarriers.concessionAccountId} = ${circuits.concessionAccountId}
+            WHERE ${circuits.id} = ${circuitId}
+              AND ${concessionCarriers.carrierAccountId} = ${carrierAccountId}
+              AND ${concessionCarriers.validTo} IS NULL
+          )`,
+        ),
+      )
+      .orderBy(units.label);
+  }
+
+  /**
+   * Suelta una asignación, **para una cuenta** — la versión con muro de
+   * `endAssignment`.
+   *
+   * `endAssignment` recibe un id y no comprueba nada, y hasta hoy daba igual
+   * porque sólo la llamaba J-Staff. En cuanto un carrier puede soltar, **ésa es
+   * la puerta por la que suelta la unidad de otro** con sólo adivinar un uuid:
+   * los identificadores no son un secreto, y un muro que depende de que nadie
+   * teclee el id correcto no es un muro.
+   *
+   * Las dos cerraduras van en el `WHERE`, juntas con `AND`, y las dos hacen
+   * falta por la misma razón que en el #472: nada en la base obliga a que la
+   * cuenta de la asignación y la de la unidad coincidan. Hoy coinciden por
+   * convención, y una fila que no cuadra no le abre nada a nadie.
+   *
+   * Devuelve `null` cuando no le toca — indistinguible de una asignación que no
+   * existe o que ya estaba cerrada, que es justo el punto.
+   */
+  async soltarAsignacionDeCuenta(
+    cuentaId: string,
+    circuitId: string,
+    assignmentId: string,
+    motivo?: string,
+    cerradaPor?: string | null,
+  ) {
+    const [fila] = await this.db
+      .update(circuitUnitAssignments)
+      .set({ validTo: new Date(), motivo: motivo?.trim() || null, cerradaPor: cerradaPor ?? null })
+      .where(
+        and(
+          eq(circuitUnitAssignments.id, assignmentId),
+          // El circuito de la pantalla: soltar desde Ver ‹A› no cierra nada de B.
+          eq(circuitUnitAssignments.circuitId, circuitId),
+          isNull(circuitUnitAssignments.validTo),
+          eq(circuitUnitAssignments.carrierAccountId, cuentaId),
+          sql`EXISTS (
+            SELECT 1 FROM ${units}
+            WHERE ${units.id} = ${circuitUnitAssignments.unitId}
+              AND ${units.carrierAccountId} = ${cuentaId}
+          )`,
+        ),
+      )
+      .returning();
+    return fila ?? null;
+  }
+
   /**
    * Asigna una unidad a un circuito. **No pisa: cierra y abre.**
    *
@@ -7211,12 +7406,19 @@ export class CircuitRepository {
     unitId: string;
     carrierAccountId: string;
     motivoDelCierre?: string | null;
+    /**
+     * Quién asigna (id de usuario, 0048). Firma la fila que abre **y** la que
+     * cierra, si cierra una: quien jala un camión de otro circuito es quien lo
+     * sacó de ahí.
+     */
+    actorId?: string | null;
   }) {
     return this.db.transaction(async (tx) => {
       const ahora = new Date();
+      const actor = datos.actorId ?? null;
       const [cerrada] = await tx
         .update(circuitUnitAssignments)
-        .set({ validTo: ahora, motivo: datos.motivoDelCierre ?? null })
+        .set({ validTo: ahora, motivo: datos.motivoDelCierre ?? null, cerradaPor: actor })
         .where(
           and(
             eq(circuitUnitAssignments.unitId, datos.unitId),
@@ -7232,6 +7434,7 @@ export class CircuitRepository {
           unitId: datos.unitId,
           carrierAccountId: datos.carrierAccountId,
           validFrom: ahora,
+          asignadaPor: actor,
         })
         .returning();
 
@@ -7245,11 +7448,15 @@ export class CircuitRepository {
    * No borra, igual que retirar una parada no borra. El `motivo` es el que
    * escribió quien la cerró — «se fue a maquila», «entró a taller»—, y es lo
    * único de esta fila que un humano no puede reconstruir después.
+   *
+   * **Sin muro: sólo para J-Staff.** Recibe un id y no comprueba de quién es.
+   * El carrier suelta por `soltarAsignacionDeCuenta`, y una valla vigila que
+   * ninguna ruta fuera de `/api/jstaff/` llame a ésta.
    */
-  async endAssignment(assignmentId: string, motivo?: string) {
+  async endAssignment(assignmentId: string, motivo?: string, cerradaPor?: string | null) {
     const [fila] = await this.db
       .update(circuitUnitAssignments)
-      .set({ validTo: new Date(), motivo: motivo?.trim() || null })
+      .set({ validTo: new Date(), motivo: motivo?.trim() || null, cerradaPor: cerradaPor ?? null })
       .where(
         and(eq(circuitUnitAssignments.id, assignmentId), isNull(circuitUnitAssignments.validTo)),
       )

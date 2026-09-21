@@ -25,6 +25,7 @@ export default defineConfig({
     include: [
       "src/integration.test.ts",
       "src/asignacion-circuito.integration.test.ts",
+      "src/asignacion-carrier.integration.test.ts",
       "src/publicacion-circuito.integration.test.ts",
       "src/circuits-constraints.integration.test.ts",
       "src/expediente-documentos.integration.test.ts",

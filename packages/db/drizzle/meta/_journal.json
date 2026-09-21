@@ -337,6 +337,13 @@
       "when": 1790467200000,
       "tag": "0047_marca_del_detector_de_pasos",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1790553600000,
+      "tag": "0048_quien_asigna_circuito",
+      "breakpoints": true
     }
   ]
 }

@@ -17,7 +17,8 @@ export const dynamic = "force-dynamic";
  *
  * **La lectura lleva muro** (`listarCircuitosVisiblesParaCuenta`, del #473 a
  * nivel cuenta): la concesión dueña ve los suyos, un carrier ve aquellos donde
- * tiene unidades propias que él asignó, y nadie más ve nada. `listAllCircuits`
+ * tiene unidades propias que él asignó **o donde la concesión lo tiene ligado**
+ * (21-sep: sin eso nunca llegaba a asignar la primera), y nadie más ve nada. `listAllCircuits`
  * —la de J-Staff— no se usa aquí, y una valla estática lo vigila.
  *
  * El cuarto **existe sólo si la cuenta opera transporte público**, y eso es
@@ -49,8 +50,8 @@ export default async function Circuitos({
 
       {circuitos.length === 0 ? (
         <p className="mt-8 text-[15px] leading-relaxed text-[var(--tenue)]">
-          Sin circuitos en esta cuenta. Un circuito aparece aquí cuando esta cuenta es su concesión, o cuando alguna
-          de sus unidades queda asignada a él.
+          Sin circuitos en esta cuenta. Un circuito aparece aquí cuando esta cuenta es su concesión, cuando su
+          concesión la liga como transportista, o cuando alguna de sus unidades queda asignada a él.
         </p>
       ) : (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -58,7 +59,9 @@ export default async function Circuitos({
             <Pieza
               key={c.id}
               nombre={c.name}
-              apoyo={c.esDeLaConcesion ? "tu concesión" : "corres unidades aquí"}
+              apoyo={
+                c.esDeLaConcesion ? "tu concesión" : c.correUnidadesHoy ? "con unidades tuyas asignadas" : "sin unidades asignadas"
+              }
               dato={`${c.serviceStartLocal.slice(0, 5)}–${c.serviceEndLocal.slice(0, 5)}`}
               etiqueta="SERVICIO"
               /*

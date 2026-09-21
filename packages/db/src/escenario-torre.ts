@@ -14,6 +14,7 @@ import {
   circuitStops,
   circuitUnitAssignments,
   circuits,
+  concessionCarriers,
   deviceAssignments,
   devices,
   livePositions,
@@ -27,6 +28,7 @@ import {
  *   pnpm --filter @jtel/db escenario-torre                # la torre llena
  *   pnpm --filter @jtel/db escenario-torre --compartido   # + otro transportista (9.14)
  *   pnpm --filter @jtel/db escenario-torre --vacio        # el circuito sin capturar
+ *   pnpm --filter @jtel/db escenario-torre --asignar      # + lo que hace falta para ver asignar (PR 2)
  *   pnpm --filter @jtel/db escenario-torre --limpiar
  *
  * ## Por qué un escenario y no la calle
@@ -88,6 +90,22 @@ const IDS = {
   otroCarrier: "f3000000-0000-4000-8000-000000000003",
   circuito: "f3000000-0000-4000-8000-000000000004",
   promesa: "f3000000-0000-4000-8000-000000000005",
+  concesionVecina: "f3000000-0000-4000-8000-000000000006",
+  circuitoVecino: "f3000000-0000-4000-8000-000000000007",
+} as const;
+
+/**
+ * `--asignar`: los camiones que hacen falta para ver Relaciones de Ver
+ * ‹circuito› decir todo lo que sabe decir (ficha de huecos de asignar, PR 2).
+ *
+ *   2130  libre         se asigna sin aviso
+ *   2131  en otro       corre un circuito de OTRA concesión: el aviso §4
+ *   2124  ya corrió     asignación cerrada, con motivo y autor (0048)
+ */
+const PARA_ASIGNAR = {
+  libre: { id: "f3000000-0000-4000-8000-00000000003a", label: "2130" },
+  enOtro: { id: "f3000000-0000-4000-8000-00000000003b", label: "2131" },
+  yaCorrio: { id: "f3000000-0000-4000-8000-00000000003c", label: "2124" },
 } as const;
 
 const SLUG = "escenario-torre";
@@ -178,12 +196,17 @@ function horaLocal(ahora: Date, menosMinutos: number): string {
 
 async function limpiar(db: ReturnType<typeof createDb>) {
   await db.delete(livePositions).where(inArray(livePositions.imei, IMEIS));
-  await db.delete(circuits).where(eq(circuits.id, IDS.circuito));
-  await db.delete(accounts).where(inArray(accounts.id, [IDS.concesion, IDS.carrier, IDS.otroCarrier]));
+  await db.delete(circuits).where(inArray(circuits.id, [IDS.circuito, IDS.circuitoVecino]));
+  await db
+    .delete(accounts)
+    .where(inArray(accounts.id, [IDS.concesion, IDS.carrier, IDS.otroCarrier, IDS.concesionVecina]));
   console.log("[escenario-torre] borrado.");
 }
 
-async function sembrar(db: ReturnType<typeof createDb>, opciones: { compartido: boolean; vacio: boolean }) {
+async function sembrar(
+  db: ReturnType<typeof createDb>,
+  opciones: { compartido: boolean; vacio: boolean; asignar: boolean },
+) {
   const ahora = new Date();
   await limpiar(db);
 
@@ -200,6 +223,18 @@ async function sembrar(db: ReturnType<typeof createDb>, opciones: { compartido: 
     role: "admin",
     scopeType: "account",
   });
+
+  /*
+   * La liga con la concesión. En la calle, un transportista que corre un
+   * circuito de una concesión está ligado a ella; sin esto el escenario
+   * enseñaba un carrier que corre donde nadie lo ligó. Desde el 21-sep la liga
+   * además abre la lectura (tercera entrada), así que `--vacio` por fin deja
+   * ver el circuito sin capturar.
+   */
+  await db.insert(concessionCarriers).values([
+    { concessionAccountId: IDS.concesion, carrierAccountId: IDS.carrier },
+    ...(opciones.compartido ? [{ concessionAccountId: IDS.concesion, carrierAccountId: IDS.otroCarrier }] : []),
+  ]);
 
   await db.insert(circuits).values({
     id: IDS.circuito,
@@ -350,6 +385,50 @@ async function sembrar(db: ReturnType<typeof createDb>, opciones: { compartido: 
     });
   }
 
+  if (opciones.asignar) {
+    await db.insert(accounts).values({
+      id: IDS.concesionVecina,
+      type: "concesion",
+      name: "Concesión vecina",
+      slug: `${SLUG}-vecina`,
+      isDemo: true,
+    });
+    await db.insert(concessionCarriers).values({ concessionAccountId: IDS.concesionVecina, carrierAccountId: IDS.carrier });
+    await db.insert(circuits).values({
+      id: IDS.circuitoVecino,
+      concessionAccountId: IDS.concesionVecina,
+      name: "Juárez–Aeropuerto",
+      publicSlug: `${SLUG}-vecino`,
+      declaredFrequencyMinutes: 15,
+      serviceStartLocal: "05:30:00",
+      serviceEndLocal: "22:00:00",
+      timeZone: ZONA,
+      active: true,
+    });
+    await db.insert(units).values(
+      Object.values(PARA_ASIGNAR).map((u) => ({ id: u.id, carrierAccountId: IDS.carrier, label: u.label, active: true })),
+    );
+    await db.insert(circuitUnitAssignments).values([
+      {
+        circuitId: IDS.circuitoVecino,
+        unitId: PARA_ASIGNAR.enOtro.id,
+        carrierAccountId: IDS.carrier,
+        validFrom: new Date(ahora.getTime() - 3 * 24 * 3_600_000),
+        asignadaPor: OPERADOR,
+      },
+      {
+        circuitId: IDS.circuito,
+        unitId: PARA_ASIGNAR.yaCorrio.id,
+        carrierAccountId: IDS.carrier,
+        validFrom: new Date(ahora.getTime() - 9 * 24 * 3_600_000),
+        validTo: new Date(ahora.getTime() - 2 * 24 * 3_600_000),
+        motivo: "Entró a taller",
+        asignadaPor: OPERADOR,
+        cerradaPor: OPERADOR,
+      },
+    ]);
+  }
+
   console.log(
     `[escenario-torre] sembrado · ${pasos.length} pasos · abre ${horaLocal(ahora, 60)}` +
       `${opciones.compartido ? " · COMPARTIDO con otro transportista (9.14)" : ""}`,
@@ -379,5 +458,10 @@ console.log(
 
 const db = createDb(process.env.DATABASE_URL_TEST!);
 if (args.includes("--limpiar")) await limpiar(db);
-else await sembrar(db, { compartido: args.includes("--compartido"), vacio: args.includes("--vacio") });
+else
+  await sembrar(db, {
+    compartido: args.includes("--compartido"),
+    vacio: args.includes("--vacio"),
+    asignar: args.includes("--asignar"),
+  });
 process.exit(0);
