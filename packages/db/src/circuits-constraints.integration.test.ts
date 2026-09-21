@@ -162,32 +162,12 @@ describe("circuits_color_valido", () => {
   });
 });
 
-describe("la frecuencia declarada, desde la 0031", () => {
-  it("acepta el vacío: no declarada es un estado legítimo", async () => {
-    const c = await repos.circuits.updateCircuit(circuitoId, { declaredFrequencyMinutes: null });
-    expect(c?.declaredFrequencyMinutes).toBeNull();
-  });
-
-  it("el CHECK sigue mordiendo cuando SÍ hay valor", async () => {
-    const quien = await violacion(() =>
-      db.update(circuits).set({ declaredFrequencyMinutes: 0 }).where(inArray(circuits.id, [circuitoId])),
-    );
-    expect(quien).toBe("circuits_frecuencia_positiva");
-  });
-
-  it("un circuito nuevo NO hereda frecuencia: nace sin declarar", async () => {
-    /*
-     * Es la mitad que importa de la 0031. Antes nacía con 20 por default y la
-     * app afirmaba «cada 20 minutos» sin que nadie lo hubiera dicho.
-     */
-    const nuevo = await repos.circuits.createCircuit({
-      concessionAccountId: concesionId,
-      name: `Sin frecuencia ${Date.now()}`,
-      publicSlug: `sin-frec-${Date.now()}`,
-    });
-    expect(nuevo.declaredFrequencyMinutes).toBeNull();
-  });
-});
+/*
+ * «La frecuencia declarada, desde la 0031» vivía aquí. La columna y su CHECK
+ * (`circuits_frecuencia_positiva`) se borraron en la 0050: la promesa tiene una
+ * sola fuente, las franjas, con sus propios CHECK (0044) y sus pruebas en
+ * `promesa-por-franja.integration.test.ts`.
+ */
 
 describe("la fecha de arranque, desde la 0032", () => {
   it("un circuito nuevo NACE SIN FECHA: ya opera, no «arranca hoy»", async () => {

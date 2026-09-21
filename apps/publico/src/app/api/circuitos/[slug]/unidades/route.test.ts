@@ -37,7 +37,6 @@ const { GET } = await import("./route.js");
 const CIRCUITO = {
   id: "uuid-interno-que-no-debe-salir",
   publicSlug: "oasis-centro",
-  declaredFrequencyMinutes: 20,
   staleAfterSeconds: 180,
   serviceStartLocal: "00:00",
   serviceEndLocal: "00:00", // 24 h: la prueba no depende de la hora a la que corra.
@@ -468,9 +467,7 @@ describe("la escalera, por el endpoint", () => {
     expect(cuerpo.estado).toBe("sin_evidencia");
   });
 
-  it("sin promesa capturada NO inventa cadencia — aunque la columna vieja traiga un número", async () => {
-    // La columna vieja trae 20: ya no es fuente de la promesa, y no se lee.
-    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue({ ...CIRCUITO, declaredFrequencyMinutes: 20 });
+  it("sin promesa capturada NO inventa cadencia", async () => {
     repos.circuits.getPromiseTableVigente.mockResolvedValue(null);
     repos.circuits.listLivePositionsForCircuit.mockResolvedValue([
       { unitId: "u", ...enRuta, heading: 45, recordedAt: new Date(Date.now() - 10 * 60_000) },

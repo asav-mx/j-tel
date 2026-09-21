@@ -54,10 +54,9 @@ beforeAll(async () => {
     concessionAccountId: concesionId,
     name: `Circuito ${marca}`,
     publicSlug: slug,
-    // Explícita: desde la 0031 la frecuencia ya no tiene default, y esta prueba
-    // comprueba que despublicar NO borra los datos del circuito. Para eso el
-    // dato tiene que haber sido puesto por alguien.
-    declaredFrequencyMinutes: 20,
+    // Explícito: esta prueba comprueba que despublicar NO borra los datos del
+    // circuito, y para eso el dato tiene que haber sido puesto por alguien.
+    colorHex: "#5B3EA6",
   });
   circuitoId = circuito.id;
 
@@ -119,7 +118,7 @@ describe("el interruptor", () => {
     // Apagar no tocó nada más del circuito.
     expect(apagado?.name).toBe(`Circuito ${marca}`);
     expect(apagado?.publicSlug).toBe(slug);
-    expect(apagado?.declaredFrequencyMinutes).toBe(20);
+    expect(apagado?.colorHex).toBe("#5B3EA6");
 
     // Y las asignaciones siguen ahí: despublicar no desasigna.
     expect(await repos.circuits.listActiveAssignments(circuitoId)).toHaveLength(2);
