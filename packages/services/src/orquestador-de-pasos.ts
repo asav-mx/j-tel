@@ -97,7 +97,8 @@ export class OrquestadorDePasosService {
 
     // Si esto falla (p. ej. falta la 0047), la ronda entera falla y se ve: no hay
     // nada que salvar sin saber a quién le toca.
-    const { elegibles, saltadas } = await this.repos.pasosPorParada.unidadesParaDetectar(VERSION_DEL_DETECTOR);
+    // `inicio` acota el arranque de las cerradas: sólo las que cerraron en las últimas 24 h.
+    const { elegibles, saltadas } = await this.repos.pasosPorParada.unidadesParaDetectar(VERSION_DEL_DETECTOR, inicio);
 
     const ronda: RondaDePasos = {
       simulado: simular,
@@ -116,8 +117,17 @@ export class OrquestadorDePasosService {
 
     // La que lleva más tiempo sin avanzar va primero (y la que nunca corrió, antes que todas):
     // si el presupuesto se acaba, la que se queda esperando es la más reciente.
+    //
+    // **A igual marcador, el tramo más viejo primero** («cerrada = acotada», 21 sep). Una unidad
+    // cerrada y reabierta en el MISMO circuito trae dos tramos que comparten marcador: el cerrado
+    // tiene que avanzar hasta su cierre antes de que el abierto mueva el marcador más allá — al
+    // revés, lo que el cerrado tenía pendiente se saltaría callado. Es orden y no exclusión: con
+    // exclusión, un cerrado cuyo último ping queda antes de su cierre (casi siempre) atoraría al
+    // abierto sus 24 h.
     const ordenadas = [...elegibles].sort(
-      (a, b) => (a.marcaLastPingAt?.getTime() ?? -Infinity) - (b.marcaLastPingAt?.getTime() ?? -Infinity),
+      (a, b) =>
+        (a.marcaLastPingAt?.getTime() ?? -Infinity) - (b.marcaLastPingAt?.getTime() ?? -Infinity) ||
+        a.asignadaDesde.getTime() - b.asignadaDesde.getTime(),
     );
 
     for (let i = 0; i < ordenadas.length; i++) {
@@ -132,6 +142,7 @@ export class OrquestadorDePasosService {
           unitId: u.unitId,
           carrierAccountId: u.carrierAccountId,
           asignadaDesde: u.asignadaDesde,
+          asignadaHasta: u.asignadaHasta,
           corridorToleranceMeters: u.corridorToleranceMeters,
           sentidos: u.sentidos,
           detectorVersion: VERSION_DEL_DETECTOR,
