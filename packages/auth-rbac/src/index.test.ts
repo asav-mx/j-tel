@@ -4,6 +4,7 @@ import {
   ROLES_PARQUEADOS,
   canAccessClientAccount,
   canAccessCarrierAccount,
+  esDelCarrier,
   canAccessPlant,
   hasPermission,
   puedeManejarFlota,
@@ -234,5 +235,29 @@ describe("puedePausarVerificacion — quién pausa la verificación de un contra
     expect(puedePausarVerificacion([fila("comercial", "global")])).toBe(false);
     expect(puedePausarVerificacion([fila("admin", "account")])).toBe(false);
     expect(puedePausarVerificacion([])).toBe(false);
+  });
+});
+
+describe("esDelCarrier — hablar como el carrier, no sólo verlo", () => {
+  const deJb: UserMembership = {
+    accountId: "acc-juarez-bus",
+    clerkUserId: "jb-despacho",
+    role: "despacho",
+    scopeType: "account",
+    scopeId: "acc-juarez-bus",
+  };
+
+  it("un miembro de la cuenta del carrier sí", () => {
+    expect(esDelCarrier([deJb], "acc-juarez-bus")).toBe(true);
+  });
+
+  it("el alcance global NO: J-Staff ve cualquier carrier, pero no escribe como él", () => {
+    expect(canAccessCarrierAccount([global], "acc-juarez-bus")).toBe(true);
+    expect(esDelCarrier([global], "acc-juarez-bus")).toBe(false);
+  });
+
+  it("un miembro de otra cuenta no", () => {
+    expect(esDelCarrier([deJb], "acc-otro")).toBe(false);
+    expect(esDelCarrier([deCuentaTecma], "acc-juarez-bus")).toBe(false);
   });
 });

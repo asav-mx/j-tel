@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { canAccessCarrierAccount, canAccessClientAccount, isJStaff, puedeManejarFlota, puedePausarVerificacion } from "@jtel/auth-rbac";
+import { canAccessCarrierAccount, canAccessClientAccount, esDelCarrier, isJStaff, puedeManejarFlota, puedePausarVerificacion } from "@jtel/auth-rbac";
 import { getIdentidad, type Identidad } from "@/lib/auth";
 import { getRepos } from "@/lib/db";
 
@@ -39,6 +39,13 @@ export type Audiencia =
    */
   | { tipo: "cliente-por-id"; accountId: string }
   | { tipo: "carrier"; slug: string }
+  /**
+   * Quien **habla como** el carrier: una membresía de esa misma cuenta, sin el
+   * pase del alcance global (`esDelCarrier`). Para escrituras que la otra parte
+   * lee como la voz del transportista — las aportaciones. J-Staff no pasa
+   * (decisión de Asav, 21 sep 2026).
+   */
+  | { tipo: "carrier-en-persona"; slug: string }
   /** El carrier dueño, o J-Staff operando de su parte. */
   | { tipo: "carrier-o-jstaff"; slug: string }
   /**
@@ -178,6 +185,14 @@ export async function decidir(identidad: Identidad, audiencia: Audiencia): Promi
         permitido: await perteneceA(identidad, audiencia.slug, "carrier"),
         motivo: "No perteneces a ese carrier.",
       };
+
+    case "carrier-en-persona": {
+      const cuenta = audiencia.slug ? await getRepos().accounts.findBySlug(audiencia.slug) : null;
+      return {
+        permitido: Boolean(cuenta && cuenta.type === "carrier" && esDelCarrier(identidad.memberships, cuenta.id)),
+        motivo: "Sólo el transportista escribe su versión. J-Staff no escribe como transportista.",
+      };
+    }
 
     case "carrier-o-jstaff":
       return {
