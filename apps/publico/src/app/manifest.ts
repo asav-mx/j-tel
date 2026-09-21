@@ -6,10 +6,13 @@ import type { MetadataRoute } from "next";
  * El nombre viene de variable de entorno por la misma razón que en el layout:
  * ningún nombre de concesionario dentro del código.
  *
- * **Los íconos son SVG y no PNG.** Pesan cientos de bytes en vez de decenas de
- * KB, escalan a cualquier densidad de pantalla, y en un teléfono con datos
- * contados eso se nota. Son marca provisional: la identidad de la concesión no
- * está diseñada, y cuando lo esté se cambia el archivo sin tocar esto.
+ * **SVG primero, PNG para quien no lee SVG.** El SVG pesa cientos de bytes y
+ * escala a cualquier pantalla; los PNG existen porque las tiendas y el empaque
+ * de Android los exigen en tamaños fijos (192 y 512, y el de máscara).
+ *
+ * **Es el hueco de la identidad de Ontoy** (Parte B): los archivos tienen
+ * nombre fijo en `public/iconos/`, y la identidad nueva entra reemplazándolos,
+ * sin tocar esto. Qué archivo va dónde: `docs/Ontoy-Iconos.md`.
  */
 export const dynamic = "force-static";
 
@@ -28,6 +31,9 @@ export default function manifest(): MetadataRoute.Manifest {
     icons: [
       { src: "/icono.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
       { src: "/icono-mascara.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
+      { src: "/iconos/icono-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/iconos/icono-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/iconos/icono-mascara-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }
