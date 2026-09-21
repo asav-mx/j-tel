@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
 import { exigir } from "@/lib/guardia-api";
+import { destinoDeVuelta } from "@/lib/casa/volver";
 
 /**
  * Alta de un circuito.
@@ -22,9 +23,11 @@ export async function POST(request: Request) {
   const nombre = String(form.get("nombre") ?? "").trim();
   const slug = String(form.get("publicSlug") ?? "").trim().toLowerCase();
 
+  // El cuarto nuevo de J-Staff pide regresar a él; sin eso, a la pantalla vieja como siempre.
+  const cuartoNuevo = destinoDeVuelta(form);
   const volver = (msg: string) =>
     NextResponse.redirect(
-      new URL(`/jstaff/circuitos?error=${encodeURIComponent(msg)}`, request.url),
+      new URL(`${cuartoNuevo ? `${cuartoNuevo}/nuevo` : "/jstaff/circuitos"}?error=${encodeURIComponent(msg)}`, request.url),
       303,
     );
 
@@ -76,7 +79,10 @@ export async function POST(request: Request) {
     });
     // Directo al expediente: dar de alta y quedarse en la lista obliga a buscar
     // lo que uno acaba de crear.
-    return NextResponse.redirect(new URL(`/jstaff/circuitos/${creado.id}`, request.url), 303);
+    return NextResponse.redirect(
+      new URL(`${cuartoNuevo ?? "/jstaff/circuitos"}/${creado.id}`, request.url),
+      303,
+    );
   } catch {
     return volver("Ya existe un circuito con ese slug público");
   }

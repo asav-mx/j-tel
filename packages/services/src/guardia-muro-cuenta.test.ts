@@ -618,6 +618,7 @@ describe("guardia · la torre no deriva sobre un flujo que no ve entero (9.14)",
 const VEN_TODOS_LOS_CIRCUITOS: Record<string, string> = {
   "packages/db/src/repositories/index.ts": "Define las dos lecturas; la de la cuenta se revisa abajo.",
   "apps/web/src/app/jstaff/circuitos/page.tsx": "J-Staff, que ve todo (Pieza 4).",
+  "apps/web/src/app/casa/jstaff/circuitos/page.tsx": "J-Staff en su casa nueva, que ve todo (Pieza 4).",
 };
 
 describe("guardia · nadie lista circuitos de otra cuenta", () => {
@@ -641,7 +642,7 @@ describe("guardia · nadie lista circuitos de otra cuenta", () => {
     const culpables = archivos.filter(
       (a) =>
         !(a in VEN_TODOS_LOS_CIRCUITOS) &&
-        /listAllCircuits|listCircuitsForConcession/.test(sinComentarios(leer(a))),
+        /listAllCircuits|listCircuitsForConcession|resumenDeCircuitosParaJStaff/.test(sinComentarios(leer(a))),
     );
     expect(
       culpables,
@@ -689,6 +690,8 @@ describe("guardia · nadie lista circuitos de otra cuenta", () => {
     expect(Object.keys(VEN_TODOS_LOS_CIRCUITOS)).toEqual([
       "packages/db/src/repositories/index.ts",
       "apps/web/src/app/jstaff/circuitos/page.tsx",
+      // El cuarto Circuitos en la casa nueva de J-Staff (21-sep-2026); la vieja se retira en el PR D.
+      "apps/web/src/app/casa/jstaff/circuitos/page.tsx",
     ]);
   });
 });

@@ -65,6 +65,7 @@ import {
   type Situacion,
   type TrazadoDeSentido,
 } from "@jtel/domain/publico";
+import { tieneUnidadesAsignadas } from "./lo-minimo-para-medir.js";
 import type { Repositories } from "@jtel/db";
 import { VERSION_DEL_DETECTOR } from "./orquestador-de-pasos.js";
 
@@ -427,7 +428,8 @@ export async function armarTorreDelCircuito(
   const esperas = await derivarEsperas({
     repos,
     circuito,
-    hayUnidadesAsignadas: plan.unidades.length > 0,
+    // La regla de «asignadas» vive en lo mínimo para medir: una sola definición.
+    hayUnidadesAsignadas: tieneUnidadesAsignadas(plan.unidades.length),
     paradas,
     pasosPorParada,
     medidos,

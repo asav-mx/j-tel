@@ -166,6 +166,10 @@ describe("un cuarto que no existe no se dibuja", () => {
           },
         ],
       },
+      {
+        sello: "Transporte público",
+        lugares: [{ nombre: "Circuitos", ruta: "/casa/jstaff/circuitos", condicion: "siempre", hijos: undefined }],
+      },
     ]);
     for (const cara of ["planta", "corporativo"] as const) {
       expect(menuDe(CASAS[cara], TODO), `casa ${cara}`).toEqual([]);

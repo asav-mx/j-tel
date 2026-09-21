@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { puedeManejarFlota } from "@jtel/auth-rbac";
-import { armarTorreDelCircuito } from "@jtel/services";
+import { armarTorreDelCircuito, carrilesDelCircuito, tieneUnidadesAsignadas } from "@jtel/services";
 import type { Sentido } from "@jtel/domain";
 import { Marco } from "@/components/casa/marco";
 import { AvisoDeError, Encabezado, Familia, SinCuenta, Titular, Vacio } from "@/components/casa/expediente";
@@ -166,6 +166,16 @@ export default async function VerCircuito({
       coordinates: t.coordinates as Array<[number, number]>,
     })),
     rotulos,
+    /*
+     * Lo mínimo para medir, de su única definición (`lo-minimo-para-medir`, la
+     * misma que lee el expediente de J-Staff). Se resuelve aquí, en el
+     * servidor, y la torre sólo lee la decisión.
+     */
+    carriles: carrilesDelCircuito(
+      trazadosCrudos.map((t) => ({ sentido: t.sentido as Sentido, puntos: (t.coordinates as unknown[]).length })),
+      paradas,
+    ),
+    hayUnidadesAsignadas: tieneUnidadesAsignadas(torre.unidades.length),
   };
 
   return (
