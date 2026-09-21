@@ -10,6 +10,7 @@ import {
   glifoDeLaUnidad,
   laPromesaPide,
   palabraDeLaPromesa,
+  queDibujaLaTorre,
   textoDelInstrumentoVacio,
   textoDeEspera,
   textoDeReferencia,
@@ -81,22 +82,22 @@ export function Torre({ torre, vista }: { torre: Torre; vista: VistaDeLaTorre })
   const sinPromesa = torre.unidades.some((u) => u.promesa.motivo === "sin_promesa");
   const alTocar = (id: string) => setSeleccion((antes) => (antes === id ? null : id));
 
-  /* ── El estado vacío: qué falta y qué enciende la torre ────────────────── */
-  if (abscisas.ida.length + abscisas.vuelta.length === 0 || torre.unidades.length === 0) {
+  /* ── El estado vacío: sólo cuando no hay carril que dibujar ───────────── */
+  const dibujo = queDibujaLaTorre(abscisas, vista.paradas.length, torre.unidades.length);
+  if (dibujo.tipo === "vacia") {
     return (
       <>
         <FranjaVacia torre={torre} paradas={vista.paradas.length} unidades={torre.unidades.length} />
         <div className="rounded-2xl border border-[var(--linea)] bg-[var(--pieza)] px-6 py-14 text-center">
-          <div className="text-[15px] leading-snug text-[var(--tenue)]">
-            {vista.paradas.length === 0 ? "Sin paradas capturadas" : "Sin unidades asignadas"}
-          </div>
-          <div className="mt-2 text-[12.5px] leading-relaxed text-[var(--tenue)]">
-            La torre se enciende cuando el circuito tenga sus paradas sobre el trazado y unidades asignadas.
-          </div>
+          <div className="text-[15px] leading-snug text-[var(--tenue)]">{dibujo.titulo}</div>
+          <div className="mt-2 text-[12.5px] leading-relaxed text-[var(--tenue)]">{dibujo.explicacion}</div>
         </div>
       </>
     );
   }
+  const { sentidos, sinUnidadesAsignadas } = dibujo;
+  // En celular, un sentido sin carril no se ofrece: se cae al primero que sí lo tiene.
+  const sentidoEnCelular = sentidos.includes(sentidoMovil) ? sentidoMovil : sentidos[0]!;
 
   const detalle = armarDetalle(seleccion, torre, vista);
 
@@ -118,12 +119,27 @@ export function Torre({ torre, vista }: { torre: Torre; vista: VistaDeLaTorre })
               : null
           }
         />
-        <Par
-          rubro="Al aire"
-          valor={`${torre.unidades.filter((u) => u.situacion === "en_ruta").length} de ${torre.unidades.length}`}
-        />
+        {sinUnidadesAsignadas ? (
+          <Par rubro="Unidades asignadas" valor="0" />
+        ) : (
+          <Par
+            rubro="Al aire"
+            valor={`${torre.unidades.filter((u) => u.situacion === "en_ruta").length} de ${torre.unidades.length}`}
+          />
+        )}
       </div>
 
+      {sinUnidadesAsignadas && (
+        /*
+         * Sin unidades asignadas la capa no corre el reloj de ninguna parada
+         * (no hay a quién corregir por radio); por eso el aviso dice las dos
+         * cosas que faltan, y no sólo los camiones.
+         */
+        <Aviso>
+          Sin unidades asignadas · aquí aparecen las unidades, y la espera de cada parada, cuando el circuito las tenga
+          asignadas.
+        </Aviso>
+      )}
       {torre.flujo === "incompleto" && (
         <Aviso>
           Aún no disponible · este circuito lo corre más de un transportista. Se muestra dónde va cada unidad tuya y
@@ -151,7 +167,7 @@ export function Torre({ torre, vista }: { torre: Torre; vista: VistaDeLaTorre })
         {/* Computadora: los dos carriles. Lo ancho se desplaza dentro de su caja. */}
         <div className="hidden overflow-x-auto px-[18px] md:block">
           <div className="relative min-w-[980px]">
-            {SENTIDOS.filter((s) => abscisas[s].length > 1).map((s) => (
+            {sentidos.map((s) => (
               <div key={s} className="border-t border-[var(--linea)] pt-3.5 first:border-t-0 first:pt-0">
                 <Carril
                   sentido={s}
@@ -173,15 +189,15 @@ export function Torre({ torre, vista }: { torre: Torre; vista: VistaDeLaTorre })
         {/* Celular: un sentido a la vez, el corredor vertical. Una decisión por pantalla. */}
         <div className="px-4 md:hidden">
           <div role="tablist" aria-label="Sentido" className="mb-3.5 flex gap-1.5 rounded-xl border border-[var(--linea)] p-1">
-            {SENTIDOS.filter((s) => abscisas[s].length > 1).map((s) => (
+            {sentidos.map((s) => (
               <button
                 key={s}
                 type="button"
                 role="tab"
-                aria-selected={sentidoMovil === s}
+                aria-selected={sentidoEnCelular === s}
                 onClick={() => setSentidoMovil(s)}
                 className={`flex-1 cursor-pointer rounded-lg border-0 px-1 py-2.5 text-[11px] uppercase tracking-[0.12em] ${
-                  sentidoMovil === s ? "bg-[var(--roce)] text-[var(--tinta)]" : "bg-transparent text-[var(--tenue)]"
+                  sentidoEnCelular === s ? "bg-[var(--roce)] text-[var(--tinta)]" : "bg-transparent text-[var(--tenue)]"
                 }`}
               >
                 {vista.rotulos[s]}
@@ -189,16 +205,17 @@ export function Torre({ torre, vista }: { torre: Torre; vista: VistaDeLaTorre })
             ))}
           </div>
           <CarrilVertical
-            abscisas={abscisas[sentidoMovil]}
-            unidades={unidadesDe(sentidoMovil)}
-            esperas={torre.esperas.map(esperaCorrida).filter((e) => e.sentido === sentidoMovil)}
+            abscisas={abscisas[sentidoEnCelular]}
+            unidades={unidadesDe(sentidoEnCelular)}
+            esperas={torre.esperas.map(esperaCorrida).filter((e) => e.sentido === sentidoEnCelular)}
             edadDe={edadDe}
             seleccion={seleccion}
             alTocar={alTocar}
           />
         </div>
 
-        <Clave />
+        {/* La clave explica camiones y el reloj en cobre: sin unidades asignadas no hay ninguno de los dos. */}
+        {!sinUnidadesAsignadas && <Clave />}
       </section>
 
       {detalle && <Detalle {...detalle} zona={vista.zona} alCerrar={() => setSeleccion(null)} />}
@@ -238,6 +255,15 @@ function porQueSinRitmo(ritmo: Extract<Torre["ritmo"], { disponible: false }>): 
     default:
       return "sin vueltas medidas todavía";
   }
+}
+
+/**
+ * Para qué lado va la unidad. **Sin una sola posición no se dice «fuera del
+ * corredor»**: afirmaría dónde está un camión que nadie ha visto (Marco §D).
+ */
+function dondeVa(u: UnidadEnLaTorre): string {
+  if (!u.ultimaPosicion) return "sin una sola posición";
+  return u.sobreElCorredor?.sentido ?? "fuera del corredor";
 }
 
 function Par({ rubro, valor, barra }: { rubro: string; valor: string; barra?: number | null }) {
@@ -361,7 +387,7 @@ function PiezaDeUnidad({
             {u.unitLabel}
           </span>
           <span className="mt-1 block text-[12px] leading-snug text-[var(--tenue)]">
-            {u.sobreElCorredor?.sentido ?? "fuera del corredor"}
+            {dondeVa(u)}
             {u.velocidadKmh !== null && (
               <>
                 {" · "}
@@ -484,9 +510,10 @@ function armarDetalle(seleccion: string | null, torre: Torre, vista: VistaDeLaTo
     return {
       titulo: u.unitLabel,
       apoyo: [
-        u.sobreElCorredor?.sentido ?? "fuera del corredor",
+        dondeVa(u),
         u.velocidadKmh !== null ? `${u.velocidadKmh.toFixed(1)} km/h` : null,
-        u.ultimaPosicion ? `dato de ${edad(u.ultimaPosicion.antiguedadSeg)}` : "sin una sola posición",
+        // Sin posición, `dondeVa` ya lo dijo: no se repite.
+        u.ultimaPosicion ? `dato de ${edad(u.ultimaPosicion.antiguedadSeg)}` : null,
       ]
         .filter(Boolean)
         .join(" · "),

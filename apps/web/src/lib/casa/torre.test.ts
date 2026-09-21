@@ -9,6 +9,7 @@ import {
   porcentajeDeParada,
   porcentajeEnElCarril,
   porQueSinDatos,
+  queDibujaLaTorre,
   textoDelInstrumentoVacio,
   textoDeEspera,
   textoDelIntervalo,
@@ -270,5 +271,39 @@ describe("las palabras de pantalla (9.3b)", () => {
     expect(porQueSinDatos(promesa({ motivo: "sin_pasos" }))).toBe("sin pasos que medir");
     expect(porQueSinDatos(promesa({ motivo: "a_caballo" }))).toContain("no concluye");
     expect(porQueSinDatos(promesa({ motivo: "flujo_incompleto" }))).toContain("más de un transportista");
+  });
+});
+
+describe("queDibujaLaTorre · la caja vacía es sólo cuando no hay nada que dibujar", () => {
+  const p = (id: string, m: number) => ({ stopId: id, nombre: id, avanceMetros: m });
+
+  it("sin paradas capturadas: la caja lo dice", () => {
+    expect(queDibujaLaTorre({ ida: [], vuelta: [] }, 0, 3)).toMatchObject({
+      tipo: "vacia",
+      titulo: "Sin paradas capturadas",
+    });
+  });
+
+  it("con paradas fuera del trazado NO dice «sin unidades asignadas», aunque tenga unidades", () => {
+    const r = queDibujaLaTorre({ ida: [], vuelta: [] }, 4, 2);
+    expect(r.tipo).toBe("vacia");
+    if (r.tipo === "vacia") expect(r.titulo).not.toMatch(/unidades/i);
+  });
+
+  it("un sentido con una sola parada no alcanza para un carril", () => {
+    expect(queDibujaLaTorre({ ida: [p("a", 0)], vuelta: [] }, 1, 1).tipo).toBe("vacia");
+  });
+
+  it("con paradas y SIN unidades asignadas se dibuja el radar, y lo declara", () => {
+    expect(queDibujaLaTorre({ ida: [p("a", 0), p("b", 500)], vuelta: [] }, 2, 0)).toEqual({
+      tipo: "radar",
+      sentidos: ["ida"],
+      sinUnidadesAsignadas: true,
+    });
+  });
+
+  it("sólo entran los sentidos que tienen carril", () => {
+    const r = queDibujaLaTorre({ ida: [p("a", 0)], vuelta: [p("c", 0), p("d", 900)] }, 3, 2);
+    expect(r).toEqual({ tipo: "radar", sentidos: ["vuelta"], sinUnidadesAsignadas: false });
   });
 });

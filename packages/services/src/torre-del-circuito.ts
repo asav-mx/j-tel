@@ -427,6 +427,7 @@ export async function armarTorreDelCircuito(
   const esperas = await derivarEsperas({
     repos,
     circuito,
+    hayUnidadesAsignadas: plan.unidades.length > 0,
     paradas,
     pasosPorParada,
     medidos,
@@ -643,6 +644,8 @@ function sentidosDe(parada: Parada): Sentido[] {
 async function derivarEsperas(e: {
   repos: Repositories;
   circuito: Circuito;
+  /** Las asignaciones vigentes que ve esta cuenta — al aire o no. */
+  hayUnidadesAsignadas: boolean;
   paradas: Parada[];
   pasosPorParada: Map<string, PasoVisible[]>;
   medidos: PasoMedido[];
@@ -671,6 +674,36 @@ async function derivarEsperas(e: {
        * servicio que no prometió.
        */
       if (!e.yaArranco || !e.enHorario) {
+        salida.push({
+          ...base,
+          minutos: null,
+          desdeLaApertura: false,
+          ultimaPasada: null,
+          referencia: null,
+          estado: "no_aplica",
+          motivo: null,
+        });
+        continue;
+      }
+
+      /*
+       * **Sin unidades ASIGNADAS no corre ningún reloj** (ASAV, 21-sep-2026).
+       * La torre es para corregir por radio (9.2b): sin camiones asignados no
+       * hay a quién, y el cobre en cada parada sería una alarma que no le pide
+       * nada a nadie — y al carrier le reclamaría un servicio que no tiene
+       * asignado. Mismo argumento que el horario de arriba.
+       *
+       * ⚠ **Asignadas pero ninguna al aire SÍ lleva reloj**: ésa es una falla
+       * real del servicio, y la parada tiene que poder decirlo (9.2d). Por eso
+       * se cuenta la asignación, no la posición.
+       *
+       * ✎ **Pendiente para el radar de J-Staff** (lo decide ASAV cuando se
+       * diseñe): para la CONCESIÓN, un circuito publicado sin camiones sí es
+       * una promesa rota al pasajero, y el 9.2d dice que la parada puede
+       * declararla «sin que ninguna unidad haya hecho nada». Si esa vista lo
+       * quiere, la excepción entra aquí, por alcance.
+       */
+      if (!e.hayUnidadesAsignadas) {
         salida.push({
           ...base,
           minutos: null,

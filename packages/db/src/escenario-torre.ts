@@ -28,6 +28,8 @@ import {
  *   pnpm --filter @jtel/db escenario-torre                # la torre llena
  *   pnpm --filter @jtel/db escenario-torre --compartido   # + otro transportista (9.14)
  *   pnpm --filter @jtel/db escenario-torre --vacio        # el circuito sin capturar
+ *   pnpm --filter @jtel/db escenario-torre --sin-unidades # paradas y promesa, ningún camión asignado
+ *   pnpm --filter @jtel/db escenario-torre --sin-salir    # camiones asignados, ninguno al aire
  *   pnpm --filter @jtel/db escenario-torre --asignar      # + lo que hace falta para ver asignar (PR 2)
  *   pnpm --filter @jtel/db escenario-torre --limpiar
  *
@@ -205,7 +207,7 @@ async function limpiar(db: ReturnType<typeof createDb>) {
 
 async function sembrar(
   db: ReturnType<typeof createDb>,
-  opciones: { compartido: boolean; vacio: boolean; asignar: boolean },
+  opciones: { compartido: boolean; vacio: boolean; asignar: boolean; sinUnidades: boolean; sinSalir: boolean },
 ) {
   const ahora = new Date();
   await limpiar(db);
@@ -313,6 +315,18 @@ async function sembrar(
     })),
   );
 
+  /*
+   * `--sin-unidades`: el circuito con sus paradas y su promesa, y ningún camión
+   * asignado — Oasis el 21-sep. La torre dibuja el radar y lo declara, y las
+   * paradas no llevan reloj (no hay a quién corregir por radio).
+   */
+  if (opciones.sinUnidades) {
+    console.log("[escenario-torre] sembrado SIN UNIDADES: paradas y promesa, ningún camión asignado.");
+    console.log(`[escenario-torre] torre:   http://localhost:3000/casa/transportista/circuitos/${IDS.circuito}`);
+    console.log(`[escenario-torre] mira con:  JTEL_DEV_USER=${OPERADOR}`);
+    return;
+  }
+
   await db.insert(units).values(
     CAMIONES.map((c) => ({ id: c.id, carrierAccountId: IDS.carrier, label: c.label, active: true })),
   );
@@ -335,6 +349,17 @@ async function sembrar(
       validFrom: new Date(ahora.getTime() - 30 * 24 * 3_600_000),
     })),
   );
+
+  /*
+   * `--sin-salir`: asignados y ninguno al aire. Es una falla real del
+   * servicio, y el reloj de cada parada tiene que correr desde la apertura.
+   */
+  if (opciones.sinSalir) {
+    console.log("[escenario-torre] sembrado SIN SALIR: camiones asignados, ninguno al aire.");
+    console.log(`[escenario-torre] torre:   http://localhost:3000/casa/transportista/circuitos/${IDS.circuito}`);
+    console.log(`[escenario-torre] mira con:  JTEL_DEV_USER=${OPERADOR}`);
+    return;
+  }
 
   /* Dónde va cada uno ahora. Todos dentro del corredor: lo que los separa es la
      edad de su fix y su velocidad, que es exactamente lo que la torre lee. */
@@ -461,5 +486,7 @@ else
     compartido: args.includes("--compartido"),
     vacio: args.includes("--vacio"),
     asignar: args.includes("--asignar"),
+    sinUnidades: args.includes("--sin-unidades"),
+    sinSalir: args.includes("--sin-salir"),
   });
 process.exit(0);
