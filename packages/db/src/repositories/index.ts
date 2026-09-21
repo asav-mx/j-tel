@@ -7466,6 +7466,31 @@ export class CircuitRepository {
 
   // ── La promesa por franja horaria (Marco 9.1c, 0044) ─────────────────────
 
+  /**
+   * La historia de la promesa: cada versión con su vigencia, su motivo de
+   * cierre y cuántas franjas traía, de la más reciente a la más vieja. Para que
+   * el expediente enseñe desde cuándo vale lo que vale y por qué cambió — la
+   * promesa se versiona, nunca se corrige encima (decisión 1 de Asav, 20-sep).
+   */
+  async listPromiseTables(circuitId: string) {
+    return this.db
+      .select({
+        id: circuitPromiseTables.id,
+        validFrom: circuitPromiseTables.validFrom,
+        validTo: circuitPromiseTables.validTo,
+        motivo: circuitPromiseTables.motivo,
+        /*
+         * Nombres escritos a mano: dentro de la proyección Drizzle quita el
+         * nombre de la tabla, y `id` se resolvería CALLADO al id de la franja
+         * — un conteo equivocado sin error (la trampa del #477).
+         */
+        franjas: sql<number>`(SELECT count(*)::int FROM circuit_promise_bands b WHERE b.promise_table_id = circuit_promise_tables.id)`,
+      })
+      .from(circuitPromiseTables)
+      .where(eq(circuitPromiseTables.circuitId, circuitId))
+      .orderBy(desc(circuitPromiseTables.validFrom));
+  }
+
   /** La promesa vigente de un circuito, con sus franjas — `null` si nunca se capturó ninguna. */
   async getPromiseTableVigente(circuitId: string) {
     const [tabla] = await this.db

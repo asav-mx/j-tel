@@ -292,3 +292,28 @@ describe("getPromesaEnInstante · la promesa para un instante, ya interpretada",
     expect(r).toEqual({ declarada: false });
   });
 });
+
+describe("listPromiseTables · la historia de la promesa", () => {
+  it("cada versión con su vigencia, su motivo de cierre y SUS franjas contadas — la más reciente arriba", async () => {
+    const propio = await repos.circuits.createCircuit({
+      concessionAccountId: concesionId,
+      name: `Historia ${marca}`,
+      publicSlug: `versiones-${marca}`,
+    });
+    const circuitId = propio!.id;
+    // Dos versiones con número de franjas distinto: si el conteo se cruzara con
+    // el id de la franja en vez del de la versión, saldría otro número.
+    await repos.circuits.savePromiseTable(circuitId, FRANJAS_OASIS);
+    await repos.circuits.savePromiseTable(
+      circuitId,
+      [{ diaTipo: "entre_semana", sentido: null, desdeLocal: "06:00", hastaLocal: "20:00", frequencyMinutes: 15 }],
+      { motivo: "se simplificó" },
+    );
+
+    const h = await repos.circuits.listPromiseTables(circuitId);
+    expect(h).toHaveLength(2);
+    expect(h[0]).toMatchObject({ validTo: null, motivo: null, franjas: 1 });
+    expect(h[1]).toMatchObject({ motivo: "se simplificó", franjas: FRANJAS_OASIS.length });
+    expect(h[1]!.validTo).toBeInstanceOf(Date);
+  });
+});
