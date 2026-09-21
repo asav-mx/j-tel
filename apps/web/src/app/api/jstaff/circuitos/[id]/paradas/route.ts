@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
-import { pegarAlTrazado } from "@jtel/domain";
 import { getRepos } from "@/lib/db";
 import { exigir } from "@/lib/guardia-api";
+import { leerSentido, pegarParadaASuSentido } from "@/lib/pegado-de-parada";
 
 /** Las paradas vigentes del circuito. */
 export async function GET(request: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -22,19 +22,30 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
  * tiene que salir de la misma geometría que después calcula las llegadas.
  * `sinPegar` respeta la decisión de quien editó cuando soltó el pegado a
  * propósito.
+ *
+ * **El sentido es obligatorio** (Oasis, 21 sep 2026): sin él la parada nacía
+ * «de los dos» pegada a la ida, y en un circuito cuya vuelta va por otra calle
+ * eso inventa paradas. Se pega al trazado de SU sentido (`pegado-de-parada`).
  */
 export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const g = await exigir(request, { tipo: "jstaff" }, "json");
   if (!g.ok) return g.respuesta;
 
   const { id } = await ctx.params;
-  const cuerpo = (await request.json()) as {
+  const cuerpo = ((await request.json().catch(() => null)) ?? {}) as {
     lat?: number;
     lon?: number;
     nombre?: string;
     sentido?: "ida" | "vuelta" | null;
     sinPegar?: boolean;
   };
+  const leido = leerSentido(cuerpo);
+  if (!leido.ok) {
+    return NextResponse.json(
+      { error: "Falta el sentido de la parada: ida, vuelta o los dos. No tiene valor por defecto." },
+      { status: 400 },
+    );
+  }
 
   if (!Number.isFinite(cuerpo.lat) || !Number.isFinite(cuerpo.lon)) {
     return NextResponse.json({ error: "Falta dónde va la parada" }, { status: 400 });
@@ -44,25 +55,15 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const circuito = await repos.circuits.getCircuit(id);
   if (!circuito) return NextResponse.json({ error: "No existe ese circuito" }, { status: 404 });
 
-  const punto = { lat: cuerpo.lat as number, lon: cuerpo.lon as number };
-  let destino = punto;
-  let aviso: string | null = null;
-
-  if (!cuerpo.sinPegar) {
-    const trazados = await repos.circuits.getPaths(id);
-    const trazado = trazados.find((t) => t.sentido === (cuerpo.sentido ?? "ida")) ?? trazados[0];
-    if (trazado) {
-      const pegado = pegarAlTrazado(
-        punto,
-        trazado.coordinates,
-        circuito.stopSnapToleranceMeters,
-      );
-      if (pegado) {
-        destino = { lat: pegado.proyeccion.lat, lon: pegado.proyeccion.lon };
-        aviso = pegado.aviso;
-      }
-    }
-  }
+  const pegado = pegarParadaASuSentido({
+    punto: { lat: cuerpo.lat as number, lon: cuerpo.lon as number },
+    sentido: leido.sentido,
+    trazados: await repos.circuits.getPaths(id),
+    toleranciaMetros: circuito.stopSnapToleranceMeters,
+    sinPegar: cuerpo.sinPegar,
+  });
+  if (!pegado.ok) return NextResponse.json({ error: pegado.error }, { status: 400 });
+  const destino = pegado.destino;
 
   const vigentes = await repos.circuits.listStopsVigentes(id);
   const orden = vigentes.reduce((max, p) => Math.max(max, p.orden), 0) + 1;
@@ -81,7 +82,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     orden,
     latitude: destino.lat,
     longitude: destino.lon,
-    sentido: cuerpo.sentido ?? null,
+    sentido: leido.sentido,
   });
 
   return NextResponse.json({
@@ -91,7 +92,8 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     orden: creada.version.orden,
     lat: creada.version.latitude,
     lon: creada.version.longitude,
+    sentido: leido.sentido,
     pegada: !cuerpo.sinPegar,
-    aviso,
+    aviso: pegado.avisos.join(" ") || null,
   });
 }

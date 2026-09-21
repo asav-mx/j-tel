@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { pegarAlTrazado } from "@jtel/domain";
 import { getRepos } from "@/lib/db";
 import { exigir } from "@/lib/guardia-api";
+import { avisosAlCorregirSentido, leerSentido, pegarParadaASuSentido } from "@/lib/pegado-de-parada";
 
 /**
  * Mover o renombrar una parada.
@@ -45,25 +45,45 @@ export async function PATCH(
   } = {};
   if (typeof cuerpo.nombre === "string" && cuerpo.nombre.trim()) cambios.name = cuerpo.nombre.trim();
   if (typeof cuerpo.orden === "number" && Number.isFinite(cuerpo.orden)) cambios.orden = cuerpo.orden;
-  if (cuerpo.sentido !== undefined) cambios.sentido = cuerpo.sentido;
+  /*
+   * El sentido que manda: el que llega, o el que la parada YA tiene. Antes era
+   * `cuerpo.sentido ?? "ida"`: mover una parada de vuelta sin repetir su
+   * sentido la pegaba a la ida (Oasis, 21 sep 2026).
+   */
+  const actual = (await repos.circuits.listStopsVigentes(id)).find((p) => p.stopId === stopId);
+  if (!actual) return NextResponse.json({ error: "Esa parada no tiene versión vigente" }, { status: 404 });
+  let sentido = (actual.sentido ?? null) as "ida" | "vuelta" | null;
+  if ("sentido" in cuerpo) {
+    const leido = leerSentido(cuerpo as Record<string, unknown>);
+    if (!leido.ok) return NextResponse.json({ error: "Ese sentido no existe: ida, vuelta o los dos." }, { status: 400 });
+    sentido = leido.sentido;
+    if (sentido !== actual.sentido) cambios.sentido = sentido;
+  }
   if (typeof cuerpo.motivo === "string" && cuerpo.motivo.trim()) cambios.motivo = cuerpo.motivo.trim();
 
-  let aviso: string | null = null;
+  let avisos: string[] = [];
+  const trazados = await repos.circuits.getPaths(id);
   if (Number.isFinite(cuerpo.lat) && Number.isFinite(cuerpo.lon)) {
-    let destino = { lat: cuerpo.lat as number, lon: cuerpo.lon as number };
-    if (!cuerpo.sinPegar) {
-      const trazados = await repos.circuits.getPaths(id);
-      const trazado = trazados.find((t) => t.sentido === (cuerpo.sentido ?? "ida")) ?? trazados[0];
-      if (trazado) {
-        const pegado = pegarAlTrazado(destino, trazado.coordinates, circuito.stopSnapToleranceMeters);
-        if (pegado) {
-          destino = { lat: pegado.proyeccion.lat, lon: pegado.proyeccion.lon };
-          aviso = pegado.aviso;
-        }
-      }
-    }
-    cambios.latitude = destino.lat;
-    cambios.longitude = destino.lon;
+    // Moverla: se pega al trazado de SU sentido.
+    const pegado = pegarParadaASuSentido({
+      punto: { lat: cuerpo.lat as number, lon: cuerpo.lon as number },
+      sentido,
+      trazados,
+      toleranciaMetros: circuito.stopSnapToleranceMeters,
+      sinPegar: cuerpo.sinPegar,
+    });
+    if (!pegado.ok) return NextResponse.json({ error: pegado.error }, { status: 400 });
+    cambios.latitude = pegado.destino.lat;
+    cambios.longitude = pegado.destino.lon;
+    avisos = pegado.avisos;
+  } else if (cambios.sentido !== undefined) {
+    // Sólo el sentido: la parada NO se mueve sola. Si su lugar queda lejos del trazado nuevo, se dice.
+    avisos = avisosAlCorregirSentido({
+      punto: { lat: actual.latitude, lon: actual.longitude },
+      sentido,
+      trazados,
+      toleranciaMetros: circuito.stopSnapToleranceMeters,
+    });
   }
 
   if (Object.keys(cambios).length === 0) {
@@ -79,8 +99,11 @@ export async function PATCH(
     orden: nueva.orden,
     lat: nueva.latitude,
     lon: nueva.longitude,
+    sentido: nueva.sentido ?? null,
     desde: nueva.validFrom,
-    aviso,
+    aviso: avisos.join(" ") || null,
+    // Si quedó lejos del trazado de su sentido, la pantalla ofrece moverla.
+    lejos: avisos.length > 0 && !(Number.isFinite(cuerpo.lat) && Number.isFinite(cuerpo.lon)),
   });
 }
 
