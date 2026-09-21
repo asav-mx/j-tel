@@ -893,6 +893,7 @@ function ElRecorrido({
           orden: p.orden,
           latitude: p.latitude,
           longitude: p.longitude,
+          sentido: (p.sentido ?? null) as "ida" | "vuelta" | null,
         }))}
       />
     </Seccion>

@@ -18,9 +18,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * lado sin explicación es lo que vuelve incomprensible una pantalla. Aquí el
  * pico deja un fantasma en el trazado, dice a cuántos metros quedó, y si pasa la
  * tolerancia del circuito avisa y deja soltar el pegado.
+ *
+ * **Cada parada dice su sentido, y se pega al trazado de ese sentido** (Oasis,
+ * 21 sep 2026). La pantalla nunca lo preguntaba: toda parada nacía «de los dos»
+ * pegada a la ida, y donde la vuelta va por otra calle eso inventaba paradas.
+ * Ahora el sentido se escoge sin valor por defecto, «ambos» avisa si queda lejos
+ * de la vuelta, y en la lista cada parada lo muestra y se puede corregir — y
+ * mover, porque corregir el sentido no la cambia de calle.
  */
 
 type Sentido = "ida" | "vuelta";
+/** Lo que se escoge al crear o corregir. «ambos» viaja como `null`. */
+type Eleccion = Sentido | "ambos";
+const aEleccion = (s: Sentido | null): Eleccion => s ?? "ambos";
+const aSentido = (e: Eleccion): Sentido | null => (e === "ambos" ? null : e);
+const PALABRA: Record<Eleccion, string> = { ida: "Ida", vuelta: "Vuelta", ambos: "Ambos" };
 
 export interface CapaAnalizada {
   indice: number;
@@ -41,6 +53,8 @@ export interface ParadaVigente {
   orden: number;
   latitude: number;
   longitude: number;
+  /** `null` = sirve a los dos sentidos. */
+  sentido: Sentido | null;
 }
 
 export interface TrazadoGuardado {
@@ -78,14 +92,18 @@ export function CircuitoEditor({
     capas: CapaAnalizada[];
     avisos: string[];
   } | null>(null);
-  const [pendiente, setPendiente] = useState<{
-    lat: number;
-    lon: number;
-    pegadaLat: number;
-    pegadaLon: number;
-    distancia: number;
-    fuera: boolean;
-  } | null>(null);
+  /** Donde se picó. El pegado depende del sentido, que se escoge después. */
+  const [pendiente, setPendiente] = useState<{ lat: number; lon: number } | null>(null);
+  /** El sentido de la parada nueva. `null` = todavía no se escoge: sin valor por defecto. */
+  const [sentidoPendiente, setSentidoPendiente] = useState<Eleccion | null>(null);
+  /** Corregir el sentido de una parada, con su motivo. */
+  const [corrigiendo, setCorrigiendo] = useState<{ stopId: string; eleccion: Eleccion; motivo: string } | null>(
+    null,
+  );
+  /** Mover una parada: el próximo pico en el mapa es su lugar nuevo. */
+  const [moviendo, setMoviendo] = useState<{ stopId: string; lat: number | null; lon: number | null } | null>(null);
+  /** Lo que el servidor dijo al corregir, por parada (p. ej. «queda a 180 m de la vuelta»). */
+  const [avisoDe, setAvisoDe] = useState<Record<string, string>>({});
   const [soltarPegado, setSoltarPegado] = useState(false);
   /**
    * El nombre que va a llevar la parada que se está por crear.
@@ -179,12 +197,13 @@ export function CircuitoEditor({
       mod
         .circleMarker([p.latitude, p.longitude], {
           radius: 7,
-          color: COLOR.parada,
-          fillColor: COLOR.parada,
+          // Del color del trazado de su sentido; «ambos», el neutro.
+          color: p.sentido ? COLOR[p.sentido] : COLOR.parada,
+          fillColor: p.sentido ? COLOR[p.sentido] : COLOR.parada,
           fillOpacity: 0.85,
           weight: 2,
         })
-        .bindTooltip(`${p.name} · orden ${p.orden}`)
+        .bindTooltip(`${p.name} · ${PALABRA[aEleccion(p.sentido)].toLowerCase()} · orden ${p.orden}`)
         .addTo(capaParadas.current);
     }
   }, [paradas, mapaListo]);
@@ -217,50 +236,71 @@ export function CircuitoEditor({
     if (!m || !mod) return;
 
     const alPicar = (e: import("leaflet").LeafletMouseEvent) => {
-      const trazado = trazados[0];
-      if (!trazado) {
+      if (trazados.length === 0) {
         setMensaje("Sube el KML antes de poner paradas: sin trazado no hay dónde pegarlas.");
         return;
       }
-      // La proyección se rehace en el servidor al guardar. Aquí solo es para
-      // que se VEA dónde va a quedar antes de confirmar.
-      const pegada = proyectarLocal(e.latlng.lat, e.latlng.lng, trazado.coordinates);
-      setPendiente({
-        lat: e.latlng.lat,
-        lon: e.latlng.lng,
-        pegadaLat: pegada.lat,
-        pegadaLon: pegada.lon,
-        distancia: pegada.distancia,
-        fuera: pegada.distancia > toleranciaMetros,
-      });
+      // Moviendo una parada: este pico es su lugar nuevo, no una parada nueva.
+      if (moviendo) {
+        setMoviendo({ ...moviendo, lat: e.latlng.lat, lon: e.latlng.lng });
+        return;
+      }
+      setPendiente({ lat: e.latlng.lat, lon: e.latlng.lng });
+      // Cada pico pregunta el sentido otra vez: arrastrar el de la anterior sería un valor por defecto.
+      setSentidoPendiente(null);
       setSoltarPegado(false);
-
-      capaFantasma.current?.clearLayers();
-      if (!capaFantasma.current) return;
-      mod
-        .circleMarker([pegada.lat, pegada.lon], {
-          radius: 8,
-          color: COLOR.fantasma,
-          dashArray: "4 3",
-          fillOpacity: 0.25,
-        })
-        .addTo(capaFantasma.current);
-      mod
-        .polyline(
-          [
-            [e.latlng.lat, e.latlng.lng],
-            [pegada.lat, pegada.lon],
-          ],
-          { color: COLOR.fantasma, weight: 1, dashArray: "3 4" },
-        )
-        .addTo(capaFantasma.current);
     };
 
     m.on("click", alPicar);
     return () => {
       m.off("click", alPicar);
     };
-  }, [trazados, toleranciaMetros, mapaListo]);
+  }, [trazados, toleranciaMetros, mapaListo, moviendo]);
+
+  /*
+   * El fantasma: dónde va a quedar, pegado al trazado DEL SENTIDO escogido.
+   * Sin sentido todavía, sólo se marca el pico — pegar a la ida «mientras» sería
+   * volver a decidir por quien captura.
+   */
+  const trazadoDe = (s: Sentido) => trazados.find((t) => t.sentido === s);
+  const previa = (() => {
+    const pico = moviendo?.lat != null && moviendo.lon != null ? { lat: moviendo.lat, lon: moviendo.lon } : pendiente;
+    if (!pico) return null;
+    const eleccion = moviendo ? aEleccion(paradas.find((p) => p.stopId === moviendo.stopId)?.sentido ?? null) : sentidoPendiente;
+    if (!eleccion) return { pico, eleccion: null, pegada: null, sinTrazado: false, avisoAmbos: null };
+    const principal = trazadoDe(eleccion === "vuelta" ? "vuelta" : "ida");
+    if (!principal) return { pico, eleccion, pegada: null, sinTrazado: true, avisoAmbos: null };
+    const pegada = proyectarLocal(pico.lat, pico.lon, principal.coordinates);
+    let avisoAmbos: string | null = null;
+    const vuelta = trazadoDe("vuelta");
+    if (eleccion === "ambos" && vuelta) {
+      const d = proyectarLocal(pegada.lat, pegada.lon, vuelta.coordinates).distancia;
+      if (d > toleranciaMetros) {
+        avisoAmbos = `Queda a ${Math.round(d)} m del trazado de la vuelta (la tolerancia es ${toleranciaMetros} m): ¿de verdad sirve a los dos sentidos?`;
+      }
+    }
+    return { pico, eleccion, pegada, sinTrazado: false, avisoAmbos };
+  })();
+  const fuera = previa?.pegada ? previa.pegada.distancia > toleranciaMetros : false;
+
+  useEffect(() => {
+    const mod = L.current;
+    const capa = capaFantasma.current;
+    if (!mod || !capa) return;
+    capa.clearLayers();
+    if (!previa) return;
+    const { pico, pegada } = previa;
+    if (!pegada) {
+      mod.circleMarker([pico.lat, pico.lon], { radius: 6, color: COLOR.fantasma, fillOpacity: 0.4 }).addTo(capa);
+      return;
+    }
+    mod
+      .circleMarker([pegada.lat, pegada.lon], { radius: 8, color: COLOR.fantasma, dashArray: "4 3", fillOpacity: 0.25 })
+      .addTo(capa);
+    mod
+      .polyline([[pico.lat, pico.lon], [pegada.lat, pegada.lon]], { color: COLOR.fantasma, weight: 1, dashArray: "3 4" })
+      .addTo(capa);
+  });
 
   // ── acciones ────────────────────────────────────────────────────────────
   async function subirKml(archivo: File) {
@@ -315,7 +355,7 @@ export function CircuitoEditor({
   }
 
   async function confirmarParada() {
-    if (!pendiente) return;
+    if (!pendiente || !sentidoPendiente) return;
     setOcupado(true);
     try {
       const r = await fetch(`/api/jstaff/circuitos/${circuitoId}/paradas`, {
@@ -332,7 +372,9 @@ export function CircuitoEditor({
           // un marcador de posición honesto; puesta por la pantalla se leería
           // como si alguien la hubiera nombrado así.
           nombre: nombrePendiente.trim() || undefined,
-          sinPegar: pendiente.fuera && soltarPegado,
+          // Siempre viaja, y nunca por defecto: «ambos» es `null` dicho a propósito.
+          sentido: aSentido(sentidoPendiente),
+          sinPegar: fuera && soltarPegado,
         }),
       });
       // Un 500 devuelve HTML, no JSON: si se intenta `r.json()` primero, revienta
@@ -352,12 +394,17 @@ export function CircuitoEditor({
           orden: cuerpo.orden,
           latitude: cuerpo.lat,
           longitude: cuerpo.lon,
+          sentido: cuerpo.sentido ?? null,
         },
       ]);
       setPendiente(null);
+      setSentidoPendiente(null);
       setNombrePendiente("");
       capaFantasma.current?.clearLayers();
-      setMensaje(`${cuerpo.nombre} creada. Su QR es ${cuerpo.qrSlug} y ya no cambia.`);
+      setMensaje(
+        `${cuerpo.nombre} creada (${PALABRA[aEleccion(cuerpo.sentido ?? null)].toLowerCase()}). Su QR es ${cuerpo.qrSlug} y ya no cambia.` +
+          (cuerpo.aviso ? ` ⚠ ${cuerpo.aviso}` : ""),
+      );
     } catch (err) {
       setMensaje(err instanceof Error ? err.message : String(err));
     } finally {
@@ -392,16 +439,56 @@ export function CircuitoEditor({
       setParadas((prev) =>
         prev.map((p) =>
           p.stopId === stopId
-            ? { ...p, name: cuerpo.nombre, orden: cuerpo.orden, latitude: cuerpo.lat, longitude: cuerpo.lon }
+            ? {
+                ...p,
+                name: cuerpo.nombre,
+                orden: cuerpo.orden,
+                latitude: cuerpo.lat,
+                longitude: cuerpo.lon,
+                sentido: cuerpo.sentido ?? null,
+              }
             : p,
         ),
       );
+      // El aviso se queda en el renglón de SU parada: «queda a 180 m de la vuelta, muévela».
+      setAvisoDe((prev) => {
+        const siguiente = { ...prev };
+        if (cuerpo.aviso) siguiente[stopId] = cuerpo.aviso;
+        else delete siguiente[stopId];
+        return siguiente;
+      });
       setMensaje("Cambio guardado. La versión anterior queda con su fecha; el QR no se tocó.");
     } catch (err) {
       setMensaje(err instanceof Error ? err.message : String(err));
     } finally {
       setOcupado(false);
     }
+  }
+
+  async function confirmarMovida() {
+    if (!moviendo || moviendo.lat == null || moviendo.lon == null) return;
+    const parada = paradas.find((p) => p.stopId === moviendo.stopId);
+    // Sin `sentido`: el servidor pega al que la parada YA tiene (antes pegaba a la ida).
+    await revisar(moviendo.stopId, {
+      lat: moviendo.lat,
+      lon: moviendo.lon,
+      sinPegar: fuera && soltarPegado,
+      motivo: `Se movió al trazado de ${parada?.sentido === "vuelta" ? "la vuelta" : "la ida"}`,
+    });
+    setMoviendo(null);
+    setSoltarPegado(false);
+    capaFantasma.current?.clearLayers();
+  }
+
+  async function confirmarCorreccion() {
+    if (!corrigiendo) return;
+    const parada = paradas.find((p) => p.stopId === corrigiendo.stopId);
+    if (!parada || aEleccion(parada.sentido) === corrigiendo.eleccion) return setCorrigiendo(null);
+    await revisar(corrigiendo.stopId, {
+      sentido: aSentido(corrigiendo.eleccion),
+      motivo: corrigiendo.motivo.trim() || undefined,
+    });
+    setCorrigiendo(null);
   }
 
   async function confirmarRetiro() {
@@ -538,14 +625,58 @@ export function CircuitoEditor({
           )}
         </section>
 
-        {pendiente && (
+        {pendiente && !moviendo && (
           <section className="rounded border border-[var(--linea-tenue)] p-3">
             <h3 className="mb-1 font-medium">Parada nueva</h3>
-            <p className="text-xs text-[var(--muted)]">
-              Picaste a <strong>{Math.round(pendiente.distancia)} m</strong> del recorrido. El
-              círculo punteado es donde va a quedar.
-            </p>
-            {pendiente.fuera && (
+            {/*
+              El sentido va PRIMERO y sin valor por defecto: de él depende a qué
+              trazado se pega. Sin escogerlo no hay fantasma pegado ni botón.
+            */}
+            <fieldset>
+              <legend className="mb-1 text-xs text-[var(--muted)]">¿Qué sentido sirve?</legend>
+              <div className="flex gap-2" role="radiogroup">
+                {(["ida", "vuelta", "ambos"] as Eleccion[]).map((e) => (
+                  <label
+                    key={e}
+                    className={`cursor-pointer rounded border px-3 py-1.5 text-sm ${
+                      sentidoPendiente === e ? "border-[var(--b-acero)] bg-[var(--t-acero)]" : "border-[var(--linea-tenue)]"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="sentidoPendiente"
+                      value={e}
+                      checked={sentidoPendiente === e}
+                      onChange={() => setSentidoPendiente(e)}
+                      className="sr-only"
+                    />
+                    {e !== "ambos" && <span style={{ color: COLOR[e] }}>■ </span>}
+                    {PALABRA[e]}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            {!sentidoPendiente && (
+              <p className="mt-2 text-xs text-[var(--muted)]">Escoge el sentido: de él depende a qué trazado se pega.</p>
+            )}
+            {previa?.sinTrazado && (
+              <p className="mt-2 rounded border border-[var(--b-ambar)] bg-[var(--t-ambar)] p-2 text-xs text-[var(--texto)]">
+                ⚠ Este circuito no tiene trazado de {sentidoPendiente === "vuelta" ? "vuelta" : "ida"}: súbelo antes de
+                poner paradas de ese sentido.
+              </p>
+            )}
+            {previa?.pegada && (
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                Picaste a <strong>{Math.round(previa.pegada.distancia)} m</strong> del trazado de{" "}
+                {sentidoPendiente === "vuelta" ? "la vuelta" : "la ida"}. El círculo punteado es donde va a quedar.
+              </p>
+            )}
+            {previa?.avisoAmbos && (
+              <p className="mt-2 rounded border border-[var(--b-ambar)] bg-[var(--t-ambar)] p-2 text-xs text-[var(--texto)]">
+                ⚠ {previa.avisoAmbos}
+              </p>
+            )}
+            {fuera && (
               // El color sale de los tokens de las dos paletas. El
               // `var(--aviso-fondo,#3a2d00)` que vivía aquí no existía en
               // ninguna: siempre caía al literal, y el literal es un café oscuro
@@ -585,7 +716,7 @@ export function CircuitoEditor({
               con una marcada. Dentro de la tolerancia el pegado no se discute:
               la parada está sobre la ruta por definición.
             */}
-            {pendiente.fuera && (
+            {fuera && (
               <label className="mt-2 flex items-center gap-2 text-xs">
                 <input
                   type="checkbox"
@@ -598,9 +729,9 @@ export function CircuitoEditor({
             <div className="mt-2 flex gap-2">
               <button
                 type="button"
-                disabled={ocupado}
+                disabled={ocupado || !sentidoPendiente || !previa?.pegada}
                 onClick={() => void confirmarParada()}
-                className="rounded border border-[var(--linea-tenue)] px-3 py-1 text-sm"
+                className="rounded border border-[var(--linea-tenue)] px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Crear parada
               </button>
@@ -608,6 +739,7 @@ export function CircuitoEditor({
                 type="button"
                 onClick={() => {
                   setPendiente(null);
+                  setSentidoPendiente(null);
                   setNombrePendiente("");
                   capaFantasma.current?.clearLayers();
                 }}
@@ -647,10 +779,49 @@ export function CircuitoEditor({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="min-w-0">
                     <strong className="text-[var(--texto)]">{p.name}</strong>
+                    {/* El sentido, siempre a la vista: es lo que decide a qué calle pertenece. */}
+                    <span
+                      className="ml-2 rounded border border-[var(--linea-tenue)] px-1.5 py-0.5"
+                      style={p.sentido ? { color: COLOR[p.sentido] } : undefined}
+                    >
+                      {PALABRA[aEleccion(p.sentido)].toLowerCase()}
+                    </span>
                     <span className="ml-1 text-[var(--muted)]">· QR {p.qrSlug}</span>
                   </span>
-                  {editando?.stopId !== p.stopId && retirando?.stopId !== p.stopId ? (
-                    <span className="flex shrink-0 gap-3">
+                  {editando?.stopId !== p.stopId &&
+                  retirando?.stopId !== p.stopId &&
+                  corrigiendo?.stopId !== p.stopId &&
+                  moviendo?.stopId !== p.stopId ? (
+                    <span className="flex shrink-0 flex-wrap gap-3">
+                      <button
+                        type="button"
+                        disabled={ocupado}
+                        onClick={() => {
+                          setEditando(null);
+                          setRetirando(null);
+                          setMoviendo(null);
+                          setCorrigiendo({ stopId: p.stopId, eleccion: aEleccion(p.sentido), motivo: "" });
+                        }}
+                        className="text-[var(--acero)] underline"
+                      >
+                        Corregir sentido
+                      </button>
+                      <button
+                        type="button"
+                        disabled={ocupado}
+                        onClick={() => {
+                          setEditando(null);
+                          setRetirando(null);
+                          setCorrigiendo(null);
+                          setPendiente(null);
+                          setSoltarPegado(false);
+                          setMoviendo({ stopId: p.stopId, lat: null, lon: null });
+                          setMensaje(`Pica en el mapa dónde va ${p.name}. Se pega al trazado de su sentido y el QR no cambia.`);
+                        }}
+                        className="text-[var(--acero)] underline"
+                      >
+                        Mover
+                      </button>
                       <button
                         type="button"
                         disabled={ocupado}
@@ -676,6 +847,125 @@ export function CircuitoEditor({
                     </span>
                   ) : null}
                 </div>
+
+                {avisoDe[p.stopId] && moviendo?.stopId !== p.stopId ? (
+                  <div className="mt-2 rounded border border-[var(--b-ambar)] bg-[var(--t-ambar)] p-2 text-[var(--texto)]">
+                    <p>⚠ {avisoDe[p.stopId]}</p>
+                    <button
+                      type="button"
+                      disabled={ocupado}
+                      onClick={() => {
+                        setPendiente(null);
+                        setSoltarPegado(false);
+                        setMoviendo({ stopId: p.stopId, lat: null, lon: null });
+                        setMensaje(`Pica en el mapa dónde va ${p.name}. Se pega al trazado de su sentido y el QR no cambia.`);
+                      }}
+                      className="mt-1 text-[var(--acero)] underline"
+                    >
+                      Moverla
+                    </button>
+                  </div>
+                ) : null}
+
+                {corrigiendo?.stopId === p.stopId ? (
+                  <div className="mt-2 space-y-2 rounded border border-[var(--linea)] bg-[var(--panel2)] p-2">
+                    <fieldset>
+                      <legend className="mb-1 text-[var(--muted)]">Sentido de {p.name}</legend>
+                      <div className="flex gap-2" role="radiogroup">
+                        {(["ida", "vuelta", "ambos"] as Eleccion[]).map((e) => (
+                          <label
+                            key={e}
+                            className={`cursor-pointer rounded border px-2.5 py-1 ${
+                              corrigiendo.eleccion === e ? "border-[var(--b-acero)] bg-[var(--t-acero)]" : "border-[var(--linea-tenue)]"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name={`sentido-${p.stopId}`}
+                              value={e}
+                              checked={corrigiendo.eleccion === e}
+                              onChange={() => setCorrigiendo({ ...corrigiendo, eleccion: e })}
+                              className="sr-only"
+                            />
+                            {PALABRA[e]}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                    <div>
+                      <label className="mb-1 block text-[var(--muted)]" htmlFor={`msen-${p.stopId}`}>
+                        Por qué cambia (opcional)
+                      </label>
+                      <input
+                        id={`msen-${p.stopId}`}
+                        value={corrigiendo.motivo}
+                        onChange={(e) => setCorrigiendo({ ...corrigiendo, motivo: e.target.value })}
+                        placeholder="la vuelta va por otra calle…"
+                        className="w-full rounded border border-[var(--linea)] bg-transparent px-2 py-1.5 text-sm text-[var(--texto)]"
+                      />
+                    </div>
+                    <p className="text-[var(--muted)]">
+                      Corregir el sentido no la mueve de calle. Si su lugar queda lejos del trazado nuevo, se te dice y
+                      puedes moverla.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={ocupado || corrigiendo.eleccion === aEleccion(p.sentido)}
+                        onClick={() => void confirmarCorreccion()}
+                        className="rounded border border-[var(--b-acero)] bg-[var(--t-acero)] px-3 py-1.5 text-[var(--acero)] disabled:opacity-50"
+                      >
+                        Guardar sentido
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCorrigiendo(null)}
+                        className="rounded px-3 py-1.5 text-[var(--muted)]"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {moviendo?.stopId === p.stopId ? (
+                  <div className="mt-2 space-y-2 rounded border border-[var(--b-acero)] bg-[var(--panel2)] p-2">
+                    {moviendo.lat == null ? (
+                      <p className="text-[var(--texto)]">Pica en el mapa dónde va {p.name}.</p>
+                    ) : previa?.pegada ? (
+                      <p className="text-[var(--texto)]">
+                        Va a quedar sobre el trazado de {p.sentido === "vuelta" ? "la vuelta" : "la ida"}, a{" "}
+                        {Math.round(previa.pegada.distancia)} m de donde picaste. El QR no cambia.
+                      </p>
+                    ) : null}
+                    {moviendo.lat != null && fuera && (
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={soltarPegado} onChange={(e) => setSoltarPegado(e.target.checked)} />
+                        Soltar el pegado y dejarla donde piqué
+                      </label>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={ocupado || moviendo.lat == null}
+                        onClick={() => void confirmarMovida()}
+                        className="rounded border border-[var(--b-acero)] bg-[var(--t-acero)] px-3 py-1.5 text-[var(--acero)] disabled:opacity-50"
+                      >
+                        Mover aquí
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMoviendo(null);
+                          capaFantasma.current?.clearLayers();
+                        }}
+                        className="rounded px-3 py-1.5 text-[var(--muted)]"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
 
                 {editando?.stopId === p.stopId ? (
                   <div className="mt-2 space-y-2 rounded border border-[var(--linea)] bg-[var(--panel2)] p-2">
