@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { haceNMinutos } from "@/lib/rotulo-de-la-tarjeta";
 import { fondoDelMapa } from "@/lib/ontoy/mapa-base";
 import { haloParaLaTraza } from "@/lib/ontoy/contraste-de-ruta";
+import { pistaDelMapa } from "@/lib/ontoy/pista-del-mapa";
 import type { Forma, RutaDeLaCiudad, Sentido, Vivo } from "@/lib/ontoy/forma";
 
 /** Los lienzos de las dos pieles, que es contra lo que se mide el halo (8.8c). */
@@ -220,6 +221,8 @@ export function VistaMapa({
   }, [listo, forma, vivo, sentido]);
 
   const sentidos: Sentido[] = ["ida", "vuelta"];
+  // Sólo se invita a tocar paradas que existen en el sentido elegido.
+  const pista = pistaDelMapa(forma, enfocada, sentido);
 
   return (
     <div className="ontoy-mapa">
@@ -255,7 +258,7 @@ export function VistaMapa({
       )}
 
       <div className="ontoy-fichas">
-        <p className="ontoy-pista">Toca una parada para ver cuándo pasa</p>
+        {pista && <p className="ontoy-pista">{pista}</p>}
         <div className="ontoy-fichas-fila">
           {rutas.map((r) => (
             <button
