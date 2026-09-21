@@ -337,9 +337,15 @@ describe("armarTorreDelCircuito · la compuerta del flujo (9.14)", () => {
 });
 
 describe("armarTorreDelCircuito · la espera de la parada (9.2d, 9.3b)", () => {
+  /*
+   * Una unidad ASIGNADA y sin posición: el reloj de la parada corre con
+   * asignación, no con camiones al aire (ASAV, 21-sep-2026).
+   */
+  const ASIGNADA = [{ unitId: "u1", unitLabel: "10254" }];
+
   it("es un número ABIERTO que crece: mismo dato, más tarde, más espera", async () => {
     const hacer = (ahora: Date) =>
-      armarTorreDelCircuito(repos({ pasos: [paso("p1", "u1", 20)] }), {
+      armarTorreDelCircuito(repos({ unidades: ASIGNADA, pasos: [paso("p1", "u1", 20)] }), {
         cuentaId: CONCESION,
         circuitId: "k1",
         ahora,
@@ -352,7 +358,7 @@ describe("armarTorreDelCircuito · la espera de la parada (9.2d, 9.3b)", () => {
   it("NUNCA dice adelantada: un intervalo abierto sólo crece", async () => {
     // Un minuto desde la última pasada, muy por debajo de la orilla de abajo.
     const t = abierta(
-      await armarTorreDelCircuito(repos({ pasos: [paso("p1", "u1", 1)] }), {
+      await armarTorreDelCircuito(repos({ unidades: ASIGNADA, pasos: [paso("p1", "u1", 1)] }), {
         cuentaId: CONCESION,
         circuitId: "k1",
         ahora: AHORA,
@@ -363,7 +369,7 @@ describe("armarTorreDelCircuito · la espera de la parada (9.2d, 9.3b)", () => {
 
   it("pasada la orilla de arriba, la parada lo declara", async () => {
     const t = abierta(
-      await armarTorreDelCircuito(repos({ pasos: [paso("p1", "u1", 40)] }), {
+      await armarTorreDelCircuito(repos({ unidades: ASIGNADA, pasos: [paso("p1", "u1", 40)] }), {
         cuentaId: CONCESION,
         circuitId: "k1",
         ahora: AHORA,
@@ -378,9 +384,12 @@ describe("armarTorreDelCircuito · la espera de la parada (9.2d, 9.3b)", () => {
      * El corazón del 9.2d: no hay un solo paso hoy, el circuito abrió hace dos
      * horas, y la parada ya tiene algo que decir. Es la única medición del
      * circuito que no espera a que ocurra un hecho.
+     *
+     * Y la unidad está ASIGNADA pero no ha salido: asignadas y ninguna al aire
+     * es una falla real, y la parada la dice.
      */
     const t = abierta(
-      await armarTorreDelCircuito(repos({ pasos: [] }), {
+      await armarTorreDelCircuito(repos({ unidades: ASIGNADA, pasos: [] }), {
         cuentaId: CONCESION,
         circuitId: "k1",
         ahora: AHORA,
@@ -402,6 +411,29 @@ describe("armarTorreDelCircuito · la espera de la parada (9.2d, 9.3b)", () => {
       ),
     );
     expect(t.esperas.map((e) => e.sentido)).toEqual(["ida", "vuelta"]);
+  });
+
+  it("SIN UNIDADES ASIGNADAS no corre ningún reloj: no hay a quién corregir por radio", async () => {
+    const t = abierta(
+      await armarTorreDelCircuito(repos({ unidades: [], pasos: [paso("p1", "u9", 40)] }), {
+        cuentaId: CONCESION,
+        circuitId: "k1",
+        ahora: AHORA,
+      }),
+    );
+    expect(t.esperas[0]!).toMatchObject({ estado: "no_aplica", minutos: null, motivo: null, referencia: null });
+  });
+
+  it("asignada pero sin salir SÍ lleva reloj: es la falla que hay que ver", async () => {
+    const t = abierta(
+      await armarTorreDelCircuito(repos({ unidades: ASIGNADA, pasos: [] }), {
+        cuentaId: CARRIER,
+        circuitId: "k1",
+        ahora: AHORA,
+      }),
+    );
+    expect(t.unidades[0]!.situacion).toBe("no_ha_salido");
+    expect(t.esperas[0]!.estado).toBe("atrasada");
   });
 });
 

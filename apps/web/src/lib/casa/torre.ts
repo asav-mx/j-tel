@@ -65,6 +65,45 @@ export function abscisasDeParadas(
     .sort((a, b) => a.avanceMetros - b.avanceMetros);
 }
 
+/**
+ * Qué dibuja la torre: la caja vacía o el radar, y si el radar va sin unidades.
+ *
+ * **La caja vacía es sólo para cuando no hay nada que dibujar**: ningún sentido
+ * con dos paradas sobre su trazado (un carril necesita un tramo). Antes también
+ * la sacaba no tener unidades, y entonces decía «Sin unidades asignadas» de un
+ * circuito que sí las tenía y cuyas paradas no caían sobre el trazado — el
+ * dato correcto de otra cosa (Marco §D).
+ *
+ * Con paradas y sin unidades asignadas **se dibuja el radar**: el circuito
+ * existe y sus paradas también; lo que falta se declara en un aviso (1.E).
+ */
+export type QueDibujaLaTorre =
+  | { tipo: "vacia"; titulo: string; explicacion: string }
+  | { tipo: "radar"; sentidos: Sentido[]; sinUnidadesAsignadas: boolean };
+
+export function queDibujaLaTorre(
+  abscisas: Record<Sentido, AbscisaDeParada[]>,
+  paradasCapturadas: number,
+  unidadesAsignadas: number,
+): QueDibujaLaTorre {
+  const sentidos = (["ida", "vuelta"] as const).filter((s) => abscisas[s].length > 1);
+  if (sentidos.length === 0) {
+    return paradasCapturadas === 0
+      ? {
+          tipo: "vacia",
+          titulo: "Sin paradas capturadas",
+          explicacion: "La torre se dibuja cuando el circuito tenga sus paradas sobre el trazado.",
+        }
+      : {
+          tipo: "vacia",
+          titulo: "Ningún sentido tiene dos paradas sobre su trazado",
+          explicacion:
+            "Hay paradas capturadas, pero un carril necesita al menos dos sobre el trazado de su sentido. Se corrige en el editor de paradas.",
+        };
+  }
+  return { tipo: "radar", sentidos, sinUnidadesAsignadas: unidadesAsignadas === 0 };
+}
+
 export interface EnElTramo {
   /** El índice de la parada que queda atrás. */
   desdeIndice: number;
