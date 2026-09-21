@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { inArray } from "drizzle-orm";
-import { createDb, createRepositories, accounts, telemetryPoints, circuitUnitAssignments } from "@jtel/db";
+import { eq, inArray } from "drizzle-orm";
+import {
+  createDb,
+  createRepositories,
+  accounts,
+  telemetryPoints,
+  circuitUnitAssignments,
+  circuitPromiseTables,
+} from "@jtel/db";
 import { compararPasosDeParada } from "./comparar-pasos-por-parada.js";
 
 /*
@@ -111,6 +118,19 @@ beforeAll(async () => {
     { diaTipo: "domingo", sentido: null, desdeLocal: "06:00", hastaLocal: "09:00", frequencyMinutes: 10 },
   ]);
   expect(promesa.ok).toBe(true);
+  /*
+   * La promesa nace con `validFrom = ahora`, y los pasos de abajo son de las
+   * 06:03 de HOY en Juárez: corrida después de esa hora, los pasos quedaban
+   * ANTES de que la promesa valiera y salían «sin_datos» (se juzgan contra la
+   * promesa de su instante, 9.1c). La misma trampa que documenta el escenario
+   * de la torre: la promesa se siembra valiendo desde atrás.
+   */
+  if (promesa.ok) {
+    await db
+      .update(circuitPromiseTables)
+      .set({ validFrom: new Date(Date.now() - 30 * 24 * 3_600_000) })
+      .where(eq(circuitPromiseTables.id, promesa.tableId));
+  }
 
   unidadId = (await repos.fleet.createUnit(carrierId, `U-${marca}`)).id;
 
