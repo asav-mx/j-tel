@@ -519,7 +519,8 @@ describe("guardia · la torre no deriva sobre un flujo que no ve entero (9.14)",
      * que preguntarle a cada derivación —ahí bastaba olvidar una—, pero sólo
      * mientras la pasada siga naciendo vacía: eso es lo que se vigila aquí.
      */
-    const pasada = cuerpoDe(fuente, /^async function medirTodosLosPasos\(e: \{/m, /^\}\n/m);
+    // Exportada desde el 22-sep (la jornada la reusa: una sola vara); la regla que se vigila es la misma.
+    const pasada = cuerpoDe(fuente, /^(?:export )?async function medirTodosLosPasos\(e: \{/m, /^\}\n/m);
     expect(pasada, "no encuentro medirTodosLosPasos").not.toBe("");
     expect(pasada, "medirTodosLosPasos dejó de recibir el flujo").toMatch(/flujo: FlujoDelServicio;/);
     expect(

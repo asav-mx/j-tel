@@ -15,10 +15,12 @@ function repos(opts: {
   circuito?: Record<string, unknown> | null;
   asignaciones?: Array<{ unitId: string; validFrom: Date; validTo: Date | null; carrierAccountId?: string }>;
   pasos?: Array<{ detectorVersion: string; pasoDesde: Date }>;
+  servicio?: Array<{ stopId: string; unitId: string; sentido: string; pasoDesde: Date; pasoHasta: Date; detectorVersion: string }>;
 } = {}) {
   const llamadas = {
     telemetria: [] as Array<{ cuenta: string; desde: Date; hasta: Date }>,
     pasos: [] as Array<{ cuenta: string; desde: Date; hasta: Date }>,
+    servicio: [] as string[],
   };
   const circuito =
     opts.circuito === null
@@ -33,6 +35,7 @@ function repos(opts: {
           staleAfterSeconds: 180,
           corridorToleranceMeters: 150,
           corridorExitMinutes: 3,
+          arrivalTolerancePct: 50,
           ...opts.circuito,
         };
   const r = {
@@ -42,6 +45,7 @@ function repos(opts: {
         { stopId: "p1", name: "P1", orden: 1, sentido: null, latitude: 0, longitude: 0 },
       ],
       getPaths: async () => [{ sentido: "ida", coordinates: [[0, 0], [0.036, 0]] }],
+      getPromesaEnInstante: async () => ({ declarada: true, frequencyMinutes: 10, franja: {} }),
     },
     telemetry: {
       getForUnitWindow: async (cuenta: string, _u: string, desde: Date, hasta: Date) => {
@@ -60,6 +64,11 @@ function repos(opts: {
         }));
       },
       marcaDeDeteccion: async () => D("2026-09-20T21:00:00Z"),
+      // Los pasos del SERVICIO en la parada (todas las unidades), por la puerta del muro.
+      listarPasosDeParada: async (cuenta: string) => {
+        llamadas.servicio.push(cuenta);
+        return opts.servicio ?? [];
+      },
     },
   };
   const asignaciones = (
@@ -154,3 +163,39 @@ describe("cargarJornadaParaJStaff · el día de servicio", () => {
   });
 });
 
+describe("cargarJornadaParaJStaff · el intervalo del SERVICIO en cada paso (una sola vara)", () => {
+  const paso = (unitId: string, hhmm: string) => ({
+    stopId: "p1",
+    unitId,
+    sentido: "ida",
+    pasoDesde: D(`2026-09-20T${hhmm}:00Z`),
+    pasoHasta: D(`2026-09-20T${hhmm}:20Z`),
+    detectorVersion: VERSION_DEL_DETECTOR,
+  });
+
+  it("se mide contra el paso anterior de CUALQUIER unidad, y dice cuál fue", async () => {
+    const r = repos({
+      asignaciones: [
+        { unitId: "u1", validFrom: D("2026-09-01T00:00:00Z"), validTo: null },
+        { unitId: "u2", validFrom: D("2026-09-01T00:00:00Z"), validTo: null },
+      ],
+      servicio: [paso("u2", "07:00"), paso("u1", "07:25")],
+    });
+    const j = await pedir({ ...r, asignaciones: r.asignaciones.map((a) => (a.unitId === "u2" ? { ...a, unitLabel: "2107" } : a)) });
+    if (j.estado !== "jornada") throw new Error("se esperaba jornada");
+    expect(j.intervalos).toHaveLength(1);
+    expect(j.intervalos[0]).toMatchObject({ unitId: "u1", anteriorUnitId: "u2", anteriorEtiqueta: "2107", estado: "atrasada" });
+  });
+
+  it("se lee como la concesión dueña, por la puerta del muro", async () => {
+    const r = repos({ servicio: [paso("u1", "07:05")] });
+    await pedir(r);
+    expect(new Set(r.llamadas.servicio)).toEqual(new Set([CONCESION]));
+  });
+
+  it("el primero del día se mide contra la apertura: sin paso anterior, no se nombra a nadie", async () => {
+    const j = await pedir(repos({ servicio: [paso("u1", "06:08")] }));
+    if (j.estado !== "jornada") throw new Error("se esperaba jornada");
+    expect(j.intervalos[0]).toMatchObject({ anteriorUnitId: null, anteriorEtiqueta: null, estado: "en_rango" });
+  });
+});
