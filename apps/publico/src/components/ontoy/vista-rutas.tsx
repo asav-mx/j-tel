@@ -15,13 +15,18 @@ export interface EstadoDeRuta {
 }
 
 /**
- * **Todas las rutas** — la lista completa de la ciudad, a un toque desde el
- * Mapa (8.8, 22-sep).
+ * **Todas las rutas** — la lista completa de la ciudad, a un toque desde
+ * **Ir a** (8.8, 22-sep).
  *
  * Antes era la primera de dos vistas y llevaba arriba las paradas guardadas;
- * con la barra nueva, las guardadas subieron a Inicio y esta lista vive detrás
- * del Mapa, con su salida de regreso arriba (8.10). Cada ruta con **su
+ * con la barra nueva, las guardadas subieron a Inicio. Cada ruta con **su
  * promesa** — que se enseña aunque no haya una sola unidad en vivo (8.2).
+ *
+ * > ✎ **Un solo camino hasta aquí** (ASAV, 22-sep). Esta lista se abría desde
+ * > dos lados: una ficha en el Mapa y el lugar «Ir a». Dos caminos a la misma
+ * > pantalla hacen dudar de si son la misma, así que la ficha del Mapa se
+ * > retiró y queda el de **Ir a**. Por eso la salida de arriba (8.10) devuelve
+ * > a la búsqueda y ya no al mapa.
  *
  * ## Lo que esta lista NO dice, y por qué
  *
@@ -51,7 +56,7 @@ export function VistaRutas({
   return (
     <div className="ontoy-vista">
       <button type="button" className="ontoy-volver" onClick={alVolver}>
-        ‹ Volver al mapa
+        ‹ Volver a la búsqueda
       </button>
       <section className="ontoy-seccion">
         <h2 className="ontoy-seccion-titulo">Todas las rutas</h2>

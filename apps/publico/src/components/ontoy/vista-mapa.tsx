@@ -15,7 +15,12 @@ import type { Forma, RutaDeLaCiudad, Sentido, Vivo } from "@/lib/ontoy/forma";
  * petición); las favoritas —las rutas de tus paradas guardadas— resaltadas y
  * con sus camiones, que llegan todos juntos por una sola consulta
  * (`useEnVivo`); tus paradas guardadas marcadas. Tocar una ruta, un camión o
- * una parada guardada abre su hilo.
+ * una parada guardada abre sus paradas.
+ *
+ * > ✎ **Aquí ya no está la ficha «Todas las rutas»** (ASAV, 22-sep). A la lista
+ * > completa se llegaba por dos caminos —esta ficha y el lugar «Ir a»—, y dos
+ * > caminos a la misma pantalla obligan al pasajero a preguntarse si son la
+ * > misma. Queda uno: el de **Ir a**. El Mapa vuelve a ser sólo el mapa.
  */
 export interface ModoCiudad {
   favoritas: string[];
@@ -69,7 +74,6 @@ export function VistaMapa({
   alCambiarSentido,
   alTocarParada,
   alReintentar,
-  alVerTodas,
   rutaAbierta = false,
   ciudad,
   yo = null,
@@ -86,8 +90,6 @@ export function VistaMapa({
   alCambiarSentido: (s: Sentido) => void;
   alTocarParada: (paradaId: string) => void;
   alReintentar: () => void;
-  /** Abre la lista completa de rutas de la ciudad. */
-  alVerTodas: () => void;
   /**
    * Con una ruta abierta, el sentido y la salida viven en su cabeza teñida; el
    * mapa no los repite (dos selectores del mismo sentido se contradicen).
@@ -406,9 +408,6 @@ export function VistaMapa({
             <p className="ontoy-pista">Guarda una parada y aquí verás su ruta en vivo.</p>
           )}
           <div className="ontoy-fichas-fila">
-            <button type="button" className="ontoy-ficha ontoy-ficha-todas" onClick={alVerTodas}>
-              Todas las rutas
-            </button>
             {ciudad.favoritas.map((id) => {
               const r = rutas.find((x) => x.circuito_id === id);
               if (!r) return null;
@@ -435,14 +434,6 @@ export function VistaMapa({
       <div className="ontoy-fichas">
         {pista && <p className="ontoy-pista">{pista}</p>}
         <div className="ontoy-fichas-fila">
-          {/*
-            La lista completa de la ciudad, a un toque (8.8). PRIMERA de la
-            fila, no al final: la fila se desliza de lado, y al final quedaba
-            fuera de la pantalla de un teléfono — lo enseñó la captura.
-          */}
-          <button type="button" className="ontoy-ficha ontoy-ficha-todas" onClick={alVerTodas}>
-            Todas las rutas
-          </button>
           {rutas.map((r) => (
             <button
               key={r.circuito_id}

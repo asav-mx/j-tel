@@ -26,11 +26,18 @@ const sinComentarios = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "");
  * la lista porque es donde se guarda algo y donde estuvo a punto de colarse una
  * promesa absoluta («no en ningún servidor») en una pantalla cuyos mosaicos de
  * mapa sí van a un tercero.
+ *
+ * ✎ **22-sep-2026:** `buscador.tsx` se retiró con `/buscar`; la búsqueda ahora
+ * vive en «Ir a». La valla se mudó **y se apretó**: al escribir la pantalla
+ * nueva salió sola la frase «lo que escribes no sale de tu teléfono» —otra
+ * promesa absoluta sobre el destino de un dato, con otras palabras—, así que
+ * esa forma entra a la lista de abajo. La valla atrapó la falta antes de que
+ * llegara a un pasajero; si no estuviera, habría pasado.
  */
 const PANTALLAS = [
   { archivo: "ontoy/atajo-de-parada.tsx", dice: "Tu ubicación se usa para calcular cuándo llega tu camión." },
   { archivo: "ontoy/hoja-de-parada.tsx", dice: "No hace falta cuenta." },
-  { archivo: "buscador.tsx", dice: "A dónde vas y dónde estás se usan para contestarte." },
+  { archivo: "ontoy/vista-ira.tsx", dice: "se usa para encontrar tu" },
 ];
 
 describe("los textos de privacidad describen el PARA QUÉ", () => {
@@ -51,6 +58,8 @@ describe("los textos de privacidad describen el PARA QUÉ", () => {
       expect(visible, p.archivo).not.toContain("ningún servidor");
       expect(visible, p.archivo).not.toContain("solo en este teléfono");
       expect(visible, p.archivo).not.toContain("sólo en este teléfono");
+      expect(visible, p.archivo).not.toContain("no sale de tu teléfono");
+      expect(visible, p.archivo).not.toContain("no sale del teléfono");
     }
   });
 });

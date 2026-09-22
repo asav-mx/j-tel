@@ -3,6 +3,14 @@ import type { MotivoDeNoServir, ResultadoDeBusqueda } from "@jtel/domain";
 /**
  * Cómo se dice que ninguna ruta sirve, sin decir de más.
  *
+ * > ⚠ **Sin llamador desde el 22-sep-2026, a propósito.** Su única pantalla era
+ * > `/buscar`, que se retiró; esto es el vocabulario del **«no» del planeador**
+ * > (8.16), que llega cuando haya recorridos medidos. Se conserva —con su
+ * > prueba, que sigue corriendo— porque **es la parte que ya se equivocó una
+ * > vez**: el titular contradecía al motivo que el dominio devolvía. Borrarlo y
+ * > rehacerlo desde cero es la forma más barata de volver a pagar esa
+ * > corrección. Si el planeador se cancela, esto se va con él.
+ *
  * Vive fuera del componente porque **es la parte que ya se equivocó una vez** y
  * la que ninguna prueba de datos alcanza: el motivo que devuelve el dominio era
  * correcto y el titular de encima lo contradecía. Aquí se puede probar que las
@@ -49,7 +57,7 @@ export type TituloDelNo =
  *
  * Es la §D del Marco —lo falso lo puso el ALCANCE: un titular hablando de
  * distancia sobre un caso que no era de distancia— y es la misma forma que ya
- * se pagó entre el titular y el hilo de paradas en el #366.
+ * se pagó entre el titular y la lista de paradas en el #366.
  */
 export function tituloDelNo(motivos: MotivoDeNoServir[]): TituloDelNo {
   if (motivos.includes("mejor_camina")) return "a_un_paso";
