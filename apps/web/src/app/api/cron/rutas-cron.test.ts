@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { readdirSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
- * Las nueve rutas de cron, medidas donde de verdad importa: **en la ruta**, no
+ * TODAS las rutas de cron, medidas donde de verdad importa: **en la ruta**, no
  * en la guardia.
  *
  * `guardia-cron.test.ts` mide que la guardia decide bien. Esto mide otra cosa
- * —que las nueve la llaman, y que la llaman antes de hacer nada—, que es
+ * —que todas la llaman, y que la llaman antes de hacer nada—, que es
  * justamente lo que falló la primera vez: la lógica estaba bien escrita en un
  * lado y copiada mal en siete.
  *
@@ -26,6 +29,9 @@ const revisarLatido = vi.fn();
 const renovarVentana = vi.fn();
 const revisarHoras = vi.fn();
 const detectarPasos = vi.fn();
+const resumirRecorridos = vi.fn();
+const recolectar = vi.fn();
+const revisarVentanas = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   getRepos: () => ({
@@ -48,6 +54,12 @@ vi.mock("@jtel/services", () => ({
   },
   IngestHealthService: class {
     checkHeartbeat = revisarLatido;
+  },
+  CollectorService: class {
+    collectAll = recolectar;
+  },
+  ResumenDeRecorridosService: class {
+    correr = resumirRecorridos;
   },
   OrquestadorDePasosService: class {
     correr = detectarPasos;
@@ -84,6 +96,7 @@ vi.mock("@/lib/alertas/decision", () => ({
 vi.mock("@jtel/db", async (original) => ({
   ...(await original<Record<string, unknown>>()),
   revisarHorasLimite: (...args: unknown[]) => revisarHoras(...args),
+  revisarVentanas: (...args: unknown[]) => revisarVentanas(...args),
 }));
 
 const RUTAS = [
@@ -95,6 +108,9 @@ const RUTAS = [
   { nombre: "cron/renew-occurrences", modulo: () => import("./renew-occurrences/route") },
   { nombre: "cron/alertas", modulo: () => import("./alertas/route") },
   { nombre: "cron/alertas-resumen", modulo: () => import("./alertas-resumen/route") },
+  { nombre: "cron/recorridos", modulo: () => import("./recorridos/route") },
+  { nombre: "cron/collect", modulo: () => import("./collect/route") },
+  { nombre: "cron/revisar-ventanas", modulo: () => import("./revisar-ventanas/route") },
   {
     nombre: "cron/revisar-horas-limite",
     modulo: () => import("./revisar-horas-limite/route"),
@@ -104,6 +120,29 @@ const RUTAS = [
 /** El respaldo que se quitó — escrito en piezas para no volver a publicarlo. */
 const RESPALDO_RETIRADO = "dev" + "-cron-" + "secret";
 
+/*
+ * ✎ 22-sep-2026: esta valla decía que «una ruta que no se agregue a RUTAS no
+ * rompe nada aquí», y era cierto: el verde seguía diciendo «las nueve». Se
+ * cierra con un barrido de carpetas — la ruta nueva entra sola a la lista o
+ * esto se cae.
+ */
+/*
+ * Y el hueco era más grande de lo que la nota decía: `cron/collect` y
+ * `cron/revisar-ventanas` nunca estuvieron en la lista — dos rondas que
+ * escriben, sin nadie comprobando que exijan el secreto. Entran con esto.
+ */
+function carpetasDeCron(): string[] {
+  const aqui = path.dirname(fileURLToPath(import.meta.url));
+  return readdirSync(aqui, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => `cron/${d.name}`)
+    .sort();
+}
+
+it("RUTAS cubre TODAS las carpetas de cron (guarda contra una ruta sin guardia)", () => {
+  expect(RUTAS.map((r) => r.nombre).sort()).toEqual(carpetasDeCron());
+});
+
 function peticion(autorizacion?: string): Request {
   return new Request("https://j-telemetry.com/api/cron/x", {
     headers: autorizacion ? { authorization: autorizacion } : {},
@@ -112,6 +151,9 @@ function peticion(autorizacion?: string): Request {
 
 /** Todo lo que una ruta podría hacer si la guardia la dejara pasar. */
 const TRABAJO = [
+  resumirRecorridos,
+  recolectar,
+  revisarVentanas,
   procesarPendientes,
   archivarTodo,
   correrBackfill,
@@ -133,7 +175,7 @@ afterEach(() => {
   delete process.env.CRON_SECRET;
 });
 
-describe("sin CRON_SECRET, las nueve responden 503", () => {
+describe("sin CRON_SECRET, todas responden 503", () => {
   for (const ruta of RUTAS) {
     it(`${ruta.nombre} → 503`, async () => {
       const { GET } = await ruta.modulo();
@@ -145,7 +187,7 @@ describe("sin CRON_SECRET, las nueve responden 503", () => {
     });
   }
 
-  it("ninguna de las nueve llegó a trabajar", async () => {
+  it("ninguna de todas llegó a trabajar", async () => {
     for (const ruta of RUTAS) {
       const { GET } = await ruta.modulo();
       await GET(peticion(`Bearer ${RESPALDO_RETIRADO}`));
@@ -154,7 +196,7 @@ describe("sin CRON_SECRET, las nueve responden 503", () => {
     for (const f of TRABAJO) expect(f).not.toHaveBeenCalled();
   });
 
-  it("POST tampoco pasa — las nueve lo delegan a GET", async () => {
+  it("POST tampoco pasa — todas lo delegan a GET", async () => {
     for (const ruta of RUTAS) {
       const { POST } = await ruta.modulo();
       const r = await POST(peticion(`Bearer ${RESPALDO_RETIRADO}`));
@@ -163,7 +205,7 @@ describe("sin CRON_SECRET, las nueve responden 503", () => {
   });
 });
 
-describe("con CRON_SECRET, las nueve siguen exigiendo el secreto correcto", () => {
+describe("con CRON_SECRET, todas siguen exigiendo el secreto correcto", () => {
   const SECRETO = "secreto-de-prueba-no-usado-en-ninguna-parte";
 
   beforeEach(() => {

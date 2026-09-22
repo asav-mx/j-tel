@@ -1758,6 +1758,49 @@ export const circuitRuleChanges = pgTable(
 );
 
 /**
+ * El resumen de los **recorridos por tramo** de un circuito (0053; Marco 8.16.5).
+ *
+ * De una parada a la siguiente, en un sentido: cuánto tarda, agregado sobre los
+ * últimos días. Lo escribe el cron `/api/cron/recorridos`, que es el único que
+ * lee los pasos del detector para esto; lo lee la app del pasajero, que **nunca
+ * toca esa evidencia** (muro de cuenta, 9.14 — camino escogido por ASAV el
+ * 22-sep).
+ *
+ * **Sin unidad y sin transportista**: lo que no se guarda no se puede filtrar.
+ * Un renglón por tramo (unicidad), que el cron reemplaza en cada corrida. Los
+ * CHECK (travesías > 0, el rango ordenado, la ventana con sentido, paradas
+ * distintas) viven en la 0053, como los demás del esquema.
+ */
+export const circuitLegTimes = pgTable(
+  "circuit_leg_times",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    circuitId: uuid("circuit_id")
+      .notNull()
+      .references(() => circuits.id, { onDelete: "cascade" }),
+    sentido: sentidoCircuitoEnum("sentido").notNull(),
+    deStopId: uuid("de_stop_id")
+      .notNull()
+      .references(() => circuitStops.id, { onDelete: "cascade" }),
+    aStopId: uuid("a_stop_id")
+      .notNull()
+      .references(() => circuitStops.id, { onDelete: "cascade" }),
+    travesias: integer("travesias").notNull(),
+    desdeSeg: integer("desde_seg").notNull(),
+    medianaSeg: integer("mediana_seg").notNull(),
+    hastaSeg: integer("hasta_seg").notNull(),
+    ventanaDesde: timestamp("ventana_desde", { withTimezone: true, mode: "date" }).notNull(),
+    ventanaHasta: timestamp("ventana_hasta", { withTimezone: true, mode: "date" }).notNull(),
+    detectorVersion: text("detector_version").notNull(),
+    calculadoEn: timestamp("calculado_en", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("circuit_leg_times_un_tramo_idx").on(table.circuitId, table.sentido, table.deStopId, table.aStopId),
+    index("circuit_leg_times_circuito_idx").on(table.circuitId, table.sentido),
+  ],
+);
+
+/**
  * Los avisos de la concesión al pasajero, por circuito (0052; Marco 8.13b).
  *
  * J-Staff los captura en el expediente del circuito, de parte de la

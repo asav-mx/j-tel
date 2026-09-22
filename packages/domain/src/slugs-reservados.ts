@@ -10,7 +10,7 @@
  * prueba de Ontoy exige que esta lista y esas carpetas coincidan. Si agregas
  * una carpeta fija allá, agrégala aquí.
  */
-export const SLUGS_RESERVADOS: readonly string[] = ["en-vivo", "paradas-de-la-ciudad"];
+export const SLUGS_RESERVADOS: readonly string[] = ["en-vivo", "paradas-de-la-ciudad", "recorridos"];
 
 export function slugReservado(slug: string): boolean {
   return SLUGS_RESERVADOS.includes(slug.trim().toLowerCase());

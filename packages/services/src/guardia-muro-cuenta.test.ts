@@ -183,7 +183,15 @@ describe("guardia · el motor lee la evidencia con el muro de cuenta", () => {
  *     repositorio.
  *  2. **Dentro del repositorio, todo lo que no sea insertar cruza con
  *     `pasosVisiblesParaCuenta`** — la única puerta. Insertar no lee; la cuenta
- *     la trae el circuito con el que el orquestador llama.
+ *     la trae el circuito con el que el orquestador llama. **Con una sola
+ *     excepción, nombrada y con sus propias cerraduras** (ASAV, 22-sep; PR 5a):
+ *     `pasosParaElResumen`, que calcula el recorrido agregado del circuito que
+ *     la 8.16.5 autoriza publicar al pasajero, que no tiene cuenta. Lo que la
+ *     hace segura no es una cuenta, y por eso se prueba cada pieza abajo:
+ *     no sale a internet (sólo la llama el servicio del cron), no devuelve
+ *     ninguna identidad (una cadena anónima en vez del id de la unidad), y lo
+ *     que escribe —`circuit_leg_times`, 0053— no guarda unidad ni
+ *     transportista. Lo que no se guarda no se puede filtrar.
  *  3. **La puerta conserva sus tres piezas**: la concesión del circuito, y, para
  *     el carrier, que la unidad sea suya Y que él mismo la haya asignado a ESE
  *     circuito. Quitar una la deja abierta de más sin romper ninguna otra prueba
@@ -249,7 +257,7 @@ describe("guardia · nadie lee los pasos por parada sin el muro de cuenta", () =
     ).toEqual([]);
   });
 
-  it("todo método del repositorio que lee la tabla la cruza con pasosVisiblesParaCuenta", () => {
+  it("todo método del repositorio que lee la tabla la cruza con pasosVisiblesParaCuenta, salvo LA excepción", () => {
     const sinMuro = metodosDelRepositorioDePasos()
       .map((m) => m.replace(/\.insert\(circuitStopPasses\)/g, ""))
       .filter((m) => /circuitStopPasses|circuit_stop_passes/.test(m))
@@ -258,8 +266,60 @@ describe("guardia · nadie lee los pasos por parada sin el muro de cuenta", () =
     expect(
       sinMuro,
       "Estos métodos de PasoPorParadaRepository leen circuit_stop_passes sin pasar por " +
-        "pasosVisiblesParaCuenta. Sin ese cruce, una cuenta lee los pasos de otra.",
-    ).toEqual([]);
+        "pasosVisiblesParaCuenta. Sin ese cruce, una cuenta lee los pasos de otra. La ÚNICA " +
+        "excepción es pasosParaElResumen, con las cerraduras que prueban los casos de abajo.",
+    ).toEqual(["async pasosParaElResumen(circuitId: string, desde: Date, hasta: Date) {"]);
+  });
+
+  describe("la excepción: pasosParaElResumen, y sus tres cerraduras (8.16.5; PR 5a)", () => {
+    const metodo = metodosDelRepositorioDePasos().find((m) => m.includes("async pasosParaElResumen(")) ?? "";
+
+    it("1 · no devuelve ninguna identidad: una cadena anónima, nunca el id de la unidad", () => {
+      expect(metodo, "no encuentro pasosParaElResumen").not.toBe("");
+      expect(metodo).toMatch(/dense_rank\(\) OVER/);
+      expect(metodo, "la lectura devuelve el id de la unidad: sin eso, el agregado deja de ser anónimo").not.toMatch(
+        /unitId:|carrierAccountId/,
+      );
+    });
+
+    it("2 · no sale a internet: sólo la llama el servicio del cron", () => {
+      const quienesLaLlaman = arboles()
+        .flatMap(fuentes)
+        .filter((a) => a !== "packages/db/src/repositories/index.ts")
+        // Esta valla la nombra para vigilarla; nombrarla no es llamarla.
+        .filter((a) => a !== "packages/services/src/guardia-muro-cuenta.test.ts")
+        .filter((a) => /pasosParaElResumen/.test(leer(a)));
+      expect(
+        quienesLaLlaman.sort(),
+        "Sólo el servicio del resumen (y sus pruebas) puede llamar la lectura sin muro. Una ruta o una " +
+          "pantalla que la llame la pone detrás de una petición de internet.",
+      ).toEqual([
+        // El servicio, y su prueba de mentira que simula la lectura. La de integración
+        // no aparece porque llama al SERVICIO, no a la lectura: es la forma correcta.
+        "packages/services/src/resumen-de-recorridos.test.ts",
+        "packages/services/src/resumen-de-recorridos.ts",
+      ]);
+    });
+
+    it("3 · lo que escribe no guarda unidad ni transportista (0053)", () => {
+      const esquema = leer("packages/db/src/schema/index.ts");
+      const tabla = esquema.slice(esquema.indexOf("export const circuitLegTimes"));
+      const cuerpo = tabla.slice(0, tabla.indexOf("\n);"));
+      expect(cuerpo).toContain('pgTable(\n  "circuit_leg_times"');
+      expect(cuerpo, "la tabla del resumen no puede tener columna de unidad ni de transportista").not.toMatch(
+        /unit_id|unitId|carrier/,
+      );
+    });
+
+    it("y la app del pasajero lee el resumen, nunca los pasos", () => {
+      const delPasajero = arboles()
+        .flatMap(fuentes)
+        .filter((a) => a.startsWith("apps/publico/"));
+      expect(delPasajero.length).toBeGreaterThan(20);
+      for (const a of delPasajero) {
+        expect(leer(a), a).not.toMatch(/circuitStopPasses|circuit_stop_passes|pasosParaElResumen/);
+      }
+    });
   });
 
   it("la puerta conserva sus tres piezas: la concesión, la unidad propia y la asignación propia", () => {
