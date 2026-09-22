@@ -84,8 +84,8 @@ export default function Privacidad() {
       <section>
         <h2>Lo que se guarda en tu teléfono</h2>
         <p>
-          Tus paradas guardadas y si prefieres la app en claro u oscuro se guardan en el almacenamiento de tu
-          navegador, en tu teléfono. No viajan a nuestro servidor. Se borran si borras los datos del sitio o
+          Tus paradas guardadas, qué avisos de tus rutas ya viste y si prefieres la app en claro u oscuro se guardan
+          en el almacenamiento de tu navegador, en tu teléfono. No viajan a nuestro servidor. Se borran si borras los datos del sitio o
           desinstalas la app.
         </p>
         <p>

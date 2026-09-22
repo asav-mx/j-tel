@@ -18,7 +18,7 @@ import {
 } from "@/lib/ontoy/llegadas";
 import { useContarApertura } from "@/lib/ontoy/apertura";
 import { useParadasGuardadas } from "@/lib/ontoy/paradas-guardadas";
-import { useRutaEnVivo } from "@/lib/ontoy/ruta-en-vivo";
+import { useForma } from "@/lib/ontoy/ruta-en-vivo";
 import { HojaDeParada, type LlegadaEnLaHoja } from "@/components/ontoy/hoja-de-parada";
 import { VistaMapa } from "@/components/ontoy/vista-mapa";
 import { VistaRutas, type EstadoDeRuta } from "@/components/ontoy/vista-rutas";
@@ -30,6 +30,11 @@ import { VistaHilo } from "@/components/ontoy/vista-hilo";
 import { armarHilo, haciaDonde } from "@/lib/ontoy/hilo";
 import { rutasEnVivo, rutasFavoritas } from "@/lib/ontoy/favoritas";
 import { useEnVivo } from "@/lib/ontoy/en-vivo";
+import { rutasDeLaConsulta } from "@/lib/ontoy/consulta-de-la-raiz";
+import { avisosDeTusRutas, hayAvisosNuevos } from "@/lib/ontoy/avisos";
+import { registrarSondeo, TELEFONO_INICIAL, type EstadoDelTelefono } from "@/lib/ontoy/avisos-del-telefono";
+import { useAvisosVistos } from "@/lib/ontoy/avisos-vistos";
+import { VistaAvisos } from "@/components/ontoy/vista-avisos";
 import { useParadasDeLaCiudad } from "@/lib/ontoy/usar-paradas-de-la-ciudad";
 
 /**
@@ -96,9 +101,8 @@ export function Ontoy({
   const enElMapa = lugar === "mapa" && !listaAbierta;
   /** El Mapa de la ciudad (PR 3b): en el Mapa, sin ruta abierta. */
   const enLaCiudad = enElMapa && !rutaAbierta;
-  // La ruta ABIERTA sondea la suya; el mapa de la ciudad no abre ninguna.
-  const { forma, vivo, error, reintentar } = useRutaEnVivo(enElMapa && rutaAbierta ? enfocada : null);
-  const { velocidad, trazadoPorSentido } = useVelocidadDelCorredor(forma, vivo);
+  /** La ruta abierta, si hay: su forma se pide aparte (una vez); sus camiones, en la consulta única. */
+  const abierta = enElMapa && rutaAbierta ? enfocada : null;
   const ubicacion = useUbicacion({ pedirAlAbrir: false });
   const yo = ubicacion.yo;
   // La única escritura de la app: una apertura por ruta abierta (8.7).
@@ -115,7 +119,35 @@ export function Ontoy({
     [guardadas.guardadas, rutas],
   );
   const prendidas = useMemo(() => rutasEnVivo(favoritas, apagadas), [favoritas, apagadas]);
-  const favoritasEnVivo = useEnVivo(enLaCiudad ? prendidas : []);
+
+  /*
+   * **La consulta única de la raíz** (PR 4b, decisión de ASAV): tus favoritas y
+   * la ruta abierta, en UNA consulta cada 15 s. De ella salen Inicio, el Mapa,
+   * el hilo y la campana: 4 peticiones por minuto en toda la app —antes, con
+   * una ruta abierta, eran 8— y los avisos al día en cualquier pantalla.
+   */
+  const [telefono, setTelefono] = useState<EstadoDelTelefono>(TELEFONO_INICIAL);
+  const consulta = useMemo(() => rutasDeLaConsulta(favoritas, abierta), [favoritas, abierta]);
+  const enVivo = useEnVivo(consulta, { alSondear: (s) => setTelefono((e) => registrarSondeo(e, s)) });
+  const f = useForma(abierta);
+  const forma = f.forma;
+  const vivo = abierta ? (enVivo.vivos.get(abierta) ?? null) : null;
+  const error = enVivo.error || f.error;
+  const reintentar = enVivo.reintentar;
+  const { velocidad, trazadoPorSentido } = useVelocidadDelCorredor(forma, vivo);
+
+  /* La campana (8.13b): los avisos de la concesión de tus rutas y de la abierta. */
+  const avisos = useMemo(() => avisosDeTusRutas(enVivo.vivos, rutas), [enVivo.vivos, rutas]);
+  const { vistos, marcarVistos } = useAvisosVistos();
+  const [campanaAbierta, setCampanaAbierta] = useState(false);
+  const abrirCampana = useCallback(() => {
+    setCampanaAbierta(true);
+    setParadaAbierta(null);
+  }, []);
+  useEffect(() => {
+    // Abierta, lo que está en pantalla queda visto: el punto se apaga.
+    if (campanaAbierta) marcarVistos(avisos.map((a) => a.id));
+  }, [campanaAbierta, avisos, marcarVistos]);
   const listaDeLaCiudad = useParadasDeLaCiudad(enLaCiudad && guardadas.guardadas.length > 0);
   const paradasGuardadasEnElMapa = useMemo(() => {
     const todas = listaDeLaCiudad.datos?.paradas ?? [];
@@ -133,6 +165,7 @@ export function Ontoy({
     setRutaAbierta(true);
     setModo("hilo");
     setLugar("mapa");
+    setCampanaAbierta(false);
   }, []);
 
   const irA = useCallback((l: Lugar) => {
@@ -140,6 +173,7 @@ export function Ontoy({
     setListaAbierta(false);
     setRutaAbierta(false);
     setParadaAbierta(null);
+    setCampanaAbierta(false);
   }, []);
 
   const rutaEnfocada = rutas.find((r) => r.circuito_id === enfocada) ?? null;
@@ -164,12 +198,12 @@ export function Ontoy({
     () => ({
       favoritas,
       prendidas: new Set(prendidas),
-      vivos: favoritasEnVivo.vivos,
+      vivos: enVivo.vivos,
       guardadas: paradasGuardadasEnElMapa,
       alAlternar: alternarFavorita,
       alAbrirRuta: (ruta: string, parada?: string) => abrirRuta(ruta, parada),
     }),
-    [favoritas, prendidas, favoritasEnVivo.vivos, paradasGuardadasEnElMapa, alternarFavorita, abrirRuta],
+    [favoritas, prendidas, enVivo.vivos, paradasGuardadasEnElMapa, alternarFavorita, abrirRuta],
   );
 
   /* El hilo de la ruta abierta: se arma en `lib/ontoy/hilo.ts`, aquí sólo se pide. */
@@ -277,6 +311,7 @@ export function Ontoy({
       <header className="ontoy-cabeza">
         <LogoOntoy />
         <h1 className="ontoy-marca">{nombre}</h1>
+        <Campana nuevos={hayAvisosNuevos(avisos, vistos)} abierta={campanaAbierta} alTocar={abrirCampana} />
         <button type="button" className="ontoy-piel" onClick={alternarPiel} aria-label="Cambiar entre piel de día y de noche">
           {deNoche ? (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
@@ -291,7 +326,16 @@ export function Ontoy({
         </button>
       </header>
 
-      {lugar === "inicio" && (
+      {campanaAbierta && (
+        <VistaAvisos
+          avisos={avisos}
+          telefono={telefono.avisos}
+          alVolver={() => setCampanaAbierta(false)}
+          alAbrirRuta={(ruta) => abrirRuta(ruta)}
+        />
+      )}
+
+      {!campanaAbierta && lugar === "inicio" && (
         <VistaInicio
           rutas={rutas}
           guardadas={guardadas.guardadas}
@@ -301,10 +345,11 @@ export function Ontoy({
           alAbrirRuta={abrirRuta}
           alQuitarGuardada={guardadas.alternar}
           alIrAlMapa={() => irA("mapa")}
+          enVivo={enVivo}
         />
       )}
 
-      {lugar === "mapa" &&
+      {!campanaAbierta && lugar === "mapa" &&
         (listaAbierta ? (
           <VistaRutas
             rutas={rutas}
@@ -337,6 +382,8 @@ export function Ontoy({
                 color={rutaEnfocada.color_hex}
                 paradaMarcada={paradaAbierta}
                 alTocarParada={setParadaAbierta}
+                avisos={avisos.filter((a) => a.ruta === rutaEnfocada.circuito_id)}
+                alVerAvisos={abrirCampana}
               />
             ) : (
           <VistaMapa
@@ -384,7 +431,7 @@ export function Ontoy({
           />
         ))}
 
-      {lugar === "ira" && (
+      {!campanaAbierta && lugar === "ira" && (
         <LugarReservado titulo="Ir a" alIrAlMapa={() => irA("mapa")}>
           <p>
             Aquí vas a escribir a dónde vas, y la app te va a armar el viaje, con o sin transbordo.{" "}
@@ -394,7 +441,7 @@ export function Ontoy({
         </LugarReservado>
       )}
 
-      {lugar === "pase" && (
+      {!campanaAbierta && lugar === "pase" && (
         <LugarReservado titulo="Tu pase" alIrAlMapa={() => irA("mapa")}>
           <p>
             Aquí va a vivir tu pase para pagar el camión con el teléfono. <b>Llega después.</b>
@@ -403,7 +450,7 @@ export function Ontoy({
         </LugarReservado>
       )}
 
-      {enElMapa && parada && rutaEnfocada && (
+      {!campanaAbierta && enElMapa && parada && rutaEnfocada && (
         <HojaDeParada
           nombre={parada.nombre}
           direccion={`Ruta ${rutaEnfocada.nombre} · ${nombreDeSentido(sentido) ?? (sentido === "ida" ? "ida" : "vuelta")}${
@@ -437,6 +484,30 @@ function avisoDeLaEscalera(
   if (vivo.estado === "por_arrancar") return vivo.arranca_el ? `Arranca el ${vivo.arranca_el}` : "Todavía no arranca";
   if (vivo.estado === "fuera_de_horario") return `Fuera de horario · abre ${vivo.abre_a}`;
   return null;
+}
+
+/**
+ * La campana (8.13b): abre los avisos de tus rutas. **El punto se prende sólo
+ * con avisos de la concesión que no has visto** — nunca por los del teléfono
+ * (decisión de ASAV, 22-sep): una campana que grita por cada señal caída se
+ * vuelve invisible. El punto es forma (un círculo lleno), no un color de alarma.
+ */
+function Campana({ nuevos, abierta, alTocar }: { nuevos: boolean; abierta: boolean; alTocar: () => void }) {
+  return (
+    <button
+      type="button"
+      className="ontoy-campana"
+      onClick={alTocar}
+      aria-pressed={abierta}
+      aria-label={nuevos ? "Avisos de tus rutas, hay nuevos" : "Avisos de tus rutas"}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />
+        <path d="M10 20.5a2 2 0 0 0 4 0" />
+      </svg>
+      {nuevos && <span className="ontoy-campana-punto" aria-hidden="true" />}
+    </button>
+  );
 }
 
 /** El logo de Ontoy. Su identidad es de Ontoy, no de la plataforma. */

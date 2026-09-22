@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { haceNMinutos } from "@/lib/rotulo-de-la-tarjeta";
 import type { RenglonDelHilo } from "@/lib/ontoy/hilo";
+import type { AvisoEnLaCampana } from "@/lib/ontoy/avisos";
 
 /**
  * **El hilo** — la ruta abierta como una línea (8.8, 8.8d). Sólo dibuja: el
@@ -26,6 +27,8 @@ export function VistaHilo({
   color,
   paradaMarcada,
   alTocarParada,
+  avisos = [],
+  alVerAvisos,
 }: {
   renglones: RenglonDelHilo[];
   cargando: boolean;
@@ -35,6 +38,13 @@ export function VistaHilo({
   color: string;
   paradaMarcada: string | null;
   alTocarParada: (id: string) => void;
+  /**
+   * Los avisos de la concesión de ESTA ruta (PR 4b): una línea arriba del hilo.
+   * Quien abre la ruta para tomarla es justo quien necesita ver el desvío
+   * (ASAV, 22-sep). Discreta: tinta, no alarma; el detalle vive en la campana.
+   */
+  avisos?: AvisoEnLaCampana[];
+  alVerAvisos?: () => void;
 }) {
   const marcada = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
@@ -44,6 +54,16 @@ export function VistaHilo({
   return (
     <div className="ontoy-vista ontoy-hilo" style={{ ["--ruta" as string]: color }}>
       {aviso && <p className="ontoy-hilo-aviso">{aviso}</p>}
+      {avisos.length > 0 && (
+        <button type="button" className="ontoy-hilo-aviso-concesion" onClick={alVerAvisos}>
+          <span className="ontoy-hilo-aviso-etiqueta mono">Aviso de la concesión</span>
+          <span className="ontoy-hilo-aviso-titulo">
+            {avisos[0]!.titulo}
+            {avisos.length > 1 && <> · y {avisos.length - 1} más</>}
+          </span>
+          <span aria-hidden="true">›</span>
+        </button>
+      )}
       {cargando && renglones.length === 0 ? (
         <p className="ontoy-vacio ontoy-hilo-vacio">Preguntando…</p>
       ) : renglones.length === 0 ? (
