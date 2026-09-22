@@ -794,6 +794,7 @@ export * from "./comportamiento.js";
 export * from "./kml-circuito.js";
 export * from "./llegada.js";
 export * from "./avisos.js";
+export * from "./recorridos.js";
 export * from "./slugs-reservados.js";
 export * from "./tiempo.js";
 export * from "./trazado.js";
