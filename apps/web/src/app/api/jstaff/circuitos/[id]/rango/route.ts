@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
 import { exigir } from "@/lib/guardia-api";
+import { destinoDeVuelta } from "@/lib/casa/volver";
 
 /**
  * Prende y apaga el **rango de llegada** del circuito.
@@ -24,7 +25,8 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const activar = String(form.get("activar") ?? "") === "si";
 
   const volver = (params: Record<string, string>) => {
-    const url = new URL(`/jstaff/circuitos/${id}`, request.url);
+    // El expediente nuevo de J-Staff pide regresar a él; sin eso, a la pantalla vieja como siempre.
+    const url = new URL(destinoDeVuelta(form) ?? `/jstaff/circuitos/${id}`, request.url);
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
     return NextResponse.redirect(url, 303);
   };
