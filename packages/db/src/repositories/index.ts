@@ -1,4 +1,5 @@
 import { eq, and, or, not, gt, gte, lte, isNull, isNotNull, inArray, sql, ne, desc, count } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   computeExpectedDeadline,
@@ -91,6 +92,7 @@ import {
   circuitPromiseTables,
   circuitRuleChanges,
   circuitNotices,
+  circuitLegTimes,
   circuitPromiseBands,
   circuitStopPasses,
   concessionCarriers,
@@ -6632,6 +6634,66 @@ export class CircuitRepository {
     });
   }
 
+  // ── Los recorridos por tramo, agregados (0053; Marco 8.16.5) ──────────
+
+  /**
+   * Reemplaza el resumen de un circuito: un renglón por tramo. En una
+   * transacción, borrando lo anterior — un tramo que dejó de tener travesías
+   * suficientes **desaparece**, en vez de quedarse con el número de la semana
+   * pasada.
+   */
+  async guardarRecorridos(
+    circuitId: string,
+    tramos: Array<{
+      sentido: "ida" | "vuelta";
+      deStopId: string;
+      aStopId: string;
+      travesias: number;
+      desdeSeg: number;
+      medianaSeg: number;
+      hastaSeg: number;
+      ventanaDesde: Date;
+      ventanaHasta: Date;
+      detectorVersion: string;
+    }>,
+  ): Promise<number> {
+    return this.db.transaction(async (tx) => {
+      await tx.delete(circuitLegTimes).where(eq(circuitLegTimes.circuitId, circuitId));
+      if (tramos.length === 0) return 0;
+      await tx.insert(circuitLegTimes).values(tramos.map((t) => ({ circuitId, ...t })));
+      return tramos.length;
+    });
+  }
+
+  /**
+   * Los recorridos publicables de TODOS los circuitos publicados, para la app
+   * del pasajero. Sólo lo que la 8.16.5 autoriza: el tramo por sus paradas
+   * públicas, su sentido, cuántas travesías lo sostienen y el rango. **Ni
+   * unidad ni transportista: la tabla no los tiene.**
+   */
+  async recorridosPublicados() {
+    const de = alias(circuitStops, "de_stop");
+    const a = alias(circuitStops, "a_stop");
+    return this.db
+      .select({
+        ruta: circuits.publicSlug,
+        sentido: circuitLegTimes.sentido,
+        de: de.qrSlug,
+        a: a.qrSlug,
+        travesias: circuitLegTimes.travesias,
+        desdeSeg: circuitLegTimes.desdeSeg,
+        medianaSeg: circuitLegTimes.medianaSeg,
+        hastaSeg: circuitLegTimes.hastaSeg,
+        ventanaHasta: circuitLegTimes.ventanaHasta,
+      })
+      .from(circuitLegTimes)
+      .innerJoin(circuits, eq(circuits.id, circuitLegTimes.circuitId))
+      .innerJoin(de, eq(de.id, circuitLegTimes.deStopId))
+      .innerJoin(a, eq(a.id, circuitLegTimes.aStopId))
+      .where(isNotNull(circuits.publishedAt))
+      .orderBy(circuits.publicSlug, circuitLegTimes.sentido);
+  }
+
   // ── Los avisos de la concesión al pasajero (0052; Marco 8.13b) ────────
 
   /**
@@ -8996,6 +9058,55 @@ export class PasoPorParadaRepository {
    * más de un carrier, se salta a los demás y produciría un ATRASADA falso. Por
    * eso `compararPasosDeParada` sigue siendo exclusivo de la concesión.
    */
+  /**
+   * Los pasos de un circuito en una ventana, **para el resumen de recorridos**
+   * (0053; 8.16.5) — la ÚNICA lectura de esta tabla sin muro de cuenta, y por
+   * eso la más acotada de la casa.
+   *
+   * ## Por qué no lleva cuenta
+   *
+   * El muro (9.14) deriva la visibilidad de dos dueños: la concesión del
+   * circuito y el carrier de la unidad. El resumen no es de ninguno de los dos:
+   * es el recorrido **agregado del circuito**, que la 8.16.5 autoriza publicar
+   * al pasajero, que no tiene cuenta. Lo que la hace segura no es una cuenta:
+   *
+   *  1. **No sale a internet.** La llama sólo el servicio del cron
+   *     (`ResumenDeRecorridosService`), detrás de `CRON_SECRET`. Ninguna ruta
+   *     de petición la toca — lo exige la valla del muro.
+   *  2. **No devuelve ninguna identidad.** En vez del id de la unidad devuelve
+   *     una **cadena anónima** (`dense_rank` dentro de ESTA consulta): sirve
+   *     para encadenar los pasos de un mismo camión —un tramo es de un camión,
+   *     no de dos— y no dice cuál es. Cambia entre consultas y no se puede
+   *     cruzar con nada.
+   *  3. **Lo que escribe no guarda unidad ni transportista** (0053): lo que no
+   *     se guarda no se puede filtrar.
+   */
+  async pasosParaElResumen(circuitId: string, desde: Date, hasta: Date) {
+    return this.db
+      .select({
+        /** Sin identidad: un número por camión dentro de esta consulta, y nada más. */
+        cadena: sql<number>`dense_rank() OVER (ORDER BY ${circuitStopPasses.unitId})`.as("cadena"),
+        sentido: circuitStopPasses.sentido,
+        parada: circuitStops.qrSlug,
+        stopId: circuitStopPasses.stopId,
+        orden: circuitStopVersions.orden,
+        desde: circuitStopPasses.pasoDesde,
+        hasta: circuitStopPasses.pasoHasta,
+        detectorVersion: circuitStopPasses.detectorVersion,
+      })
+      .from(circuitStopPasses)
+      .innerJoin(circuitStops, eq(circuitStops.id, circuitStopPasses.stopId))
+      .innerJoin(circuitStopVersions, eq(circuitStopVersions.id, circuitStopPasses.stopVersionId))
+      .where(
+        and(
+          eq(circuitStopPasses.circuitId, circuitId),
+          gte(circuitStopPasses.pasoDesde, desde),
+          lte(circuitStopPasses.pasoDesde, hasta),
+        ),
+      )
+      .orderBy(circuitStopPasses.pasoDesde);
+  }
+
   async listarPasosDeParada(cuentaId: string, stopId: string, desde?: Date) {
     return this.db
       .select()

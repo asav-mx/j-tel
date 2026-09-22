@@ -18,6 +18,7 @@ export default defineConfig({
     include: [
       "src/comparar-pasos-por-parada.integration.test.ts",
       "src/orquestador-de-pasos.integration.test.ts",
+      "src/resumen-de-recorridos.integration.test.ts",
     ],
     // Escribe en la misma rama desechable que @jtel/db: en paralelo se pisan.
     fileParallelism: false,

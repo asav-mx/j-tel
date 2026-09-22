@@ -43,6 +43,10 @@
     {
       "path": "/api/cron/detectar-pasos",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/recorridos",
+      "schedule": "10 7 * * *"
     }
   ]
 }
