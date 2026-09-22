@@ -47,33 +47,15 @@ export function useRutaEnVivo(circuitoId: string | null): RutaEnVivo {
   const reintentar = useCallback(() => setIntento((n) => n + 1), []);
 
   // La forma cambia cuando alguien publica, no cada quince segundos.
+  const f = useForma(circuitoId, intento);
   useEffect(() => {
-    if (!circuitoId) {
-      setForma(null);
-      setVivo(null);
-      return;
-    }
-    let montado = true;
-    setCargando(true);
-    void (async () => {
-      try {
-        const r = await fetch(`/api/circuitos/${circuitoId}`);
-        if (!r.ok) throw new Error(String(r.status));
-        const f: Forma = await r.json();
-        if (montado) {
-          setForma(f);
-          setError(false);
-        }
-      } catch {
-        if (montado) setError(true);
-      } finally {
-        if (montado) setCargando(false);
-      }
-    })();
-    return () => {
-      montado = false;
-    };
-  }, [circuitoId, intento]);
+    setForma(f.forma);
+    if (f.error) setError(true);
+    setCargando(f.cargando);
+  }, [f.forma, f.error, f.cargando]);
+  useEffect(() => {
+    if (!circuitoId) setVivo(null);
+  }, [circuitoId]);
 
   /*
    * El sondeo se detiene con la pestaña escondida: un teléfono en el bolsillo
@@ -129,4 +111,64 @@ export function useRutaEnVivo(circuitoId: string | null): RutaEnVivo {
   }, [circuitoId, intento]);
 
   return { forma, vivo, error, cargando, reintentar };
+}
+
+/**
+ * La FORMA de una ruta —trazados y paradas—, sin sondeo: baja una vez y se
+ * queda (el endpoint lleva caché largo). La usan la ruta abierta y cada tarjeta
+ * de Inicio; los camiones de las tarjetas llegan todos juntos por `useEnVivo`,
+ * en una sola consulta (PR 3b).
+ */
+export function useForma(circuitoId: string | null, intento = 0): { forma: Forma | null; error: boolean; cargando: boolean } {
+  const [forma, setForma] = useState<Forma | null>(null);
+  const [error, setError] = useState(false);
+  const [cargando, setCargando] = useState(false);
+
+  useEffect(() => {
+    if (!circuitoId) {
+      setForma(null);
+      return;
+    }
+    let montado = true;
+    setCargando(true);
+    void (async () => {
+      try {
+        const f = await formaCompartida(circuitoId, intento > 0);
+        if (montado) {
+          setForma(f);
+          setError(false);
+        }
+      } catch {
+        if (montado) setError(true);
+      } finally {
+        if (montado) setCargando(false);
+      }
+    })();
+    return () => {
+      montado = false;
+    };
+  }, [circuitoId, intento]);
+
+  return { forma, error, cargando };
+}
+
+/**
+ * Una sola petición por forma, aunque la pidan varias tarjetas a la vez: dos
+ * paradas guardadas de la misma ruta pedían su forma dos veces (lo enseñó el
+ * conteo de peticiones del PR 3b). Vive lo mismo que en el CDN, cinco minutos;
+ * un reintento la vuelve a pedir, y una falla no se queda guardada.
+ */
+const VIGENCIA_FORMA_MS = 5 * 60_000;
+const formas = new Map<string, { desde: number; promesa: Promise<Forma> }>();
+
+function formaCompartida(circuitoId: string, forzar: boolean): Promise<Forma> {
+  const hay = formas.get(circuitoId);
+  if (hay && !forzar && Date.now() - hay.desde < VIGENCIA_FORMA_MS) return hay.promesa;
+  const promesa = fetch(`/api/circuitos/${circuitoId}`).then(async (r) => {
+    if (!r.ok) throw new Error(String(r.status));
+    return (await r.json()) as Forma;
+  });
+  formas.set(circuitoId, { desde: Date.now(), promesa });
+  promesa.catch(() => formas.delete(circuitoId));
+  return promesa;
 }

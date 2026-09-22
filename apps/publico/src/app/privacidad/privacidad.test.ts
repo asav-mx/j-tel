@@ -74,11 +74,11 @@ describe("la declaración para las tiendas sigue al código", () => {
   });
 
   it("la lista de paradas de la ciudad está declarada, y su petición no lleva nada del pasajero", () => {
-    expect(declaracion).toContain("GET /api/paradas");
+    expect(declaracion).toContain("GET /api/circuitos/paradas-de-la-ciudad");
     expect(sinComentarios(leer(PAGINA))).toContain("sin ningún dato tuyo");
-    // La única petición a /api/paradas es un fetch sin nada más que la dirección.
-    const inicio = leer("apps/publico/src/components/ontoy/vista-inicio.tsx");
-    expect(inicio).toMatch(/fetch\("\/api\/paradas"\)/);
+    // La única petición a la lista de paradas es un fetch sin nada más que la dirección.
+    const inicio = leer("apps/publico/src/lib/ontoy/usar-paradas-de-la-ciudad.ts");
+    expect(inicio).toMatch(/fetch\("\/api\/circuitos\/paradas-de-la-ciudad"\)/);
     expect(leer("apps/publico/src/lib/ontoy/paradas-cerca.ts")).not.toMatch(/fetch\(/);
   });
 
@@ -94,6 +94,15 @@ describe("la declaración para las tiendas sigue al código", () => {
     expect(sinComentarios(leer(PAGINA))).toContain("para marcar dónde");
     expect(declaracion).toContain("marcar «aquí estás» sobre la ruta abierta");
     expect(leer("apps/publico/src/lib/ontoy/hilo.ts")).not.toMatch(/fetch\(/);
+  });
+
+  it("la consulta de las favoritas está dicha, y lleva rutas, no paradas ni ubicación", () => {
+    expect(declaracion).toContain("GET /api/circuitos/en-vivo?rutas=");
+    expect(sinComentarios(leer(PAGINA))).toContain("cuáles rutas, no cuáles paradas");
+    const hook = leer("apps/publico/src/lib/ontoy/en-vivo.ts");
+    // La única dirección que pide es la canónica de rutas; nada de la ubicación ni de las paradas.
+    expect(hook).toContain("fetch(direccion)");
+    expect(hook).not.toMatch(/lat|lon|parada/);
   });
 });
 

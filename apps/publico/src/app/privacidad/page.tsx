@@ -88,6 +88,11 @@ export default function Privacidad() {
           navegador, en tu teléfono. No viajan a nuestro servidor. Se borran si borras los datos del sitio o
           desinstalas la app.
         </p>
+        <p>
+          Para enseñarte los camiones de tus paradas guardadas, tu teléfono le pregunta a nuestro servidor, cada 15
+          segundos, por las rutas de esas paradas: cuáles rutas, no cuáles paradas, y nada más de ti. El servidor
+          contesta y no guarda la pregunta.
+        </p>
       </section>
 
       <section>

@@ -28,6 +28,9 @@ import { Barra, type Lugar } from "@/components/ontoy/barra";
 import { CabezaDeRuta } from "@/components/ontoy/cabeza-de-ruta";
 import { VistaHilo } from "@/components/ontoy/vista-hilo";
 import { armarHilo, haciaDonde } from "@/lib/ontoy/hilo";
+import { rutasEnVivo, rutasFavoritas } from "@/lib/ontoy/favoritas";
+import { useEnVivo } from "@/lib/ontoy/en-vivo";
+import { useParadasDeLaCiudad } from "@/lib/ontoy/usar-paradas-de-la-ciudad";
 
 /**
  * **Ontoy** — el cascarón de los cuatro lugares (8.8, 22-sep).
@@ -91,12 +94,36 @@ export function Ontoy({
   const guardadas = useParadasGuardadas();
   useListaAlDia(vigenteHasta);
   const enElMapa = lugar === "mapa" && !listaAbierta;
-  const { forma, vivo, error, reintentar } = useRutaEnVivo(enElMapa ? enfocada : null);
+  /** El Mapa de la ciudad (PR 3b): en el Mapa, sin ruta abierta. */
+  const enLaCiudad = enElMapa && !rutaAbierta;
+  // La ruta ABIERTA sondea la suya; el mapa de la ciudad no abre ninguna.
+  const { forma, vivo, error, reintentar } = useRutaEnVivo(enElMapa && rutaAbierta ? enfocada : null);
   const { velocidad, trazadoPorSentido } = useVelocidadDelCorredor(forma, vivo);
   const ubicacion = useUbicacion({ pedirAlAbrir: false });
   const yo = ubicacion.yo;
   // La única escritura de la app: una apertura por ruta abierta (8.7).
-  useContarApertura(enElMapa ? enfocada : null);
+  // Mirar tus favoritas en el mapa de la ciudad no es abrir una ruta: no cuenta.
+  useContarApertura(enElMapa && rutaAbierta ? enfocada : null);
+
+  /*
+   * Tus favoritas, en vivo y en UNA consulta cada 15 s (PR 3b, decisión de ASAV):
+   * sólo las prendidas, y ninguna petición si no hay.
+   */
+  const [apagadas, setApagadas] = useState<Set<string>>(new Set());
+  const favoritas = useMemo(
+    () => rutasFavoritas(guardadas.guardadas, rutas.map((r) => r.circuito_id)),
+    [guardadas.guardadas, rutas],
+  );
+  const prendidas = useMemo(() => rutasEnVivo(favoritas, apagadas), [favoritas, apagadas]);
+  const favoritasEnVivo = useEnVivo(enLaCiudad ? prendidas : []);
+  const listaDeLaCiudad = useParadasDeLaCiudad(enLaCiudad && guardadas.guardadas.length > 0);
+  const paradasGuardadasEnElMapa = useMemo(() => {
+    const todas = listaDeLaCiudad.datos?.paradas ?? [];
+    return guardadas.guardadas.flatMap((g) => {
+      const p = todas.find((x) => x.id === g.parada && x.ruta === g.ruta);
+      return p ? [{ id: p.id, ruta: p.ruta, nombre: p.nombre, lat: p.lat, lon: p.lon }] : [];
+    });
+  }, [listaDeLaCiudad.datos, guardadas.guardadas]);
 
   const abrirRuta = useCallback((circuitoId: string, parada?: string, enSentido?: Sentido) => {
     setEnfocada(circuitoId);
@@ -116,6 +143,34 @@ export function Ontoy({
   }, []);
 
   const rutaEnfocada = rutas.find((r) => r.circuito_id === enfocada) ?? null;
+
+  /*
+   * El Mapa de la ciudad, en UN objeto estable: los marcadores se redibujan
+   * cuando cambia lo que dicen, no en cada render. Recreado en cada render, un
+   * camión se borraba y se volvía a pintar bajo el dedo del pasajero — lo
+   * enseñó la revisión en el navegador, cuando el toque no le atinaba.
+   */
+  const alternarFavorita = useCallback(
+    (ruta: string) =>
+      setApagadas((antes) => {
+        const siguiente = new Set(antes);
+        if (siguiente.has(ruta)) siguiente.delete(ruta);
+        else siguiente.add(ruta);
+        return siguiente;
+      }),
+    [],
+  );
+  const ciudad = useMemo(
+    () => ({
+      favoritas,
+      prendidas: new Set(prendidas),
+      vivos: favoritasEnVivo.vivos,
+      guardadas: paradasGuardadasEnElMapa,
+      alAlternar: alternarFavorita,
+      alAbrirRuta: (ruta: string, parada?: string) => abrirRuta(ruta, parada),
+    }),
+    [favoritas, prendidas, favoritasEnVivo.vivos, paradasGuardadasEnElMapa, alternarFavorita, abrirRuta],
+  );
 
   /* El hilo de la ruta abierta: se arma en `lib/ontoy/hilo.ts`, aquí sólo se pide. */
   const renglones = useMemo(
@@ -307,6 +362,7 @@ export function Ontoy({
           </>
         ) : (
           <VistaMapa
+            ciudad={ciudad}
             rutas={rutas}
             enfocada={enfocada}
             forma={forma}

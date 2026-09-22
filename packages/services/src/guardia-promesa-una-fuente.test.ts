@@ -81,8 +81,21 @@ describe("guardia · la promesa tiene una sola fuente: las franjas", () => {
   });
 
   it("Ontoy lee la promesa de las franjas, y en la respuesta que no vive en caché", () => {
-    const unidades = sinComentarios(leer("apps/publico/src/app/api/circuitos/[slug]/unidades/route.ts"));
-    expect(unidades).toContain("promesaDelCircuito(");
+    /*
+     * ✎ 22-sep (Ontoy 2.0, PR 3b): el cuerpo de las unidades de una ruta se
+     * mudó a `lib/unidades-de-la-ruta.ts`, que usan la consulta de una ruta y
+     * la de las favoritas (`en-vivo`). La valla se mudó con él, sin aflojarse:
+     * la función lee la promesa de las franjas, y las DOS consultas pasan por
+     * ella — ninguna arma su cuerpo por su cuenta.
+     */
+    const cuerpo = sinComentarios(leer("apps/publico/src/lib/unidades-de-la-ruta.ts"));
+    expect(cuerpo).toContain("promesaDelCircuito(");
+    for (const consulta of [
+      "apps/publico/src/app/api/circuitos/[slug]/unidades/route.ts",
+      "apps/publico/src/app/api/circuitos/en-vivo/route.ts",
+    ]) {
+      expect(sinComentarios(leer(consulta)), consulta).toContain("unidadesDeLaRuta(");
+    }
     const promesa = sinComentarios(leer("apps/publico/src/lib/promesa.ts"));
     expect(promesa).toContain("getPromiseTableVigente(");
     expect(promesa).toContain("promesaAhora(");
