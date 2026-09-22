@@ -5,15 +5,28 @@ import type { RutaDeLaCiudad } from "@/lib/ontoy/forma";
 import type { ParadaDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
 import type { EstadoDeRuta } from "@/lib/ontoy/estado-de-ruta";
 import { promesaEnPalabras } from "@/lib/ontoy/llegadas";
-import { distanciaEnPalabras } from "@/lib/ontoy/paradas-cerca";
+import { distanciaEnPalabras } from "@/lib/ontoy/distancia";
 import { ordenarRutas, RUTAS_A_LA_VISTA } from "@/lib/ontoy/rutas-cerca";
+import type { Ubicacion } from "@/lib/ubicacion";
 
 /**
  * **Las rutas, en Inicio** (8.8; ASAV, 22-sep-2026).
  *
  * Tres rutas a la vista y el resto detrás de un botón que las despliega y las
- * vuelve a cerrar. Tocar una la abre en el Mapa. Aquí vive **el único camino a
- * la lista completa de la ciudad**: «Ir a» quedó sólo como buscador.
+ * vuelve a cerrar. Aquí vive **el único camino a la lista completa de la
+ * ciudad**: «Ir a» quedó sólo como buscador.
+ *
+ * ## El renglón contesta la pregunta completa (ASAV, 22-sep, tarde)
+ *
+ * Con ubicación, cada ruta dice **por dónde se toma**: «por Hospital General,
+ * a 120 m». Tocarla la abre en el Mapa **con esa parada abierta**, que es a
+ * donde el pasajero iba a ir de todos modos.
+ *
+ * Esto sustituye a la sección «Paradas cerca de ti», que vivía arriba y decía
+ * lo mismo con los mismos números —la misma ruta, la misma distancia, un
+ * bloque encima del otro—. Una lista en vez de dos, y de paso el número se
+ * vuelve comprobable: «a 120 m» suelto es una distancia abstracta; «a 120 m de
+ * Hospital General» se verifica parándose ahí.
  *
  * ## El encabezado dice lo que la app de verdad sabe
  *
@@ -47,28 +60,23 @@ export function RutasDeInicio({
   rutas,
   estados,
   paradas,
-  yo,
-  puedePedirUbicacion,
-  alPedirUbicacion,
+  ubicacion,
+  listaConError,
+  alReintentarLista,
   alAbrirRuta,
 }: {
   rutas: RutaDeLaCiudad[];
   estados: EstadoDeRuta[];
   /** Las paradas públicas de la ciudad; vacío mientras bajan o sin ubicación. */
   paradas: ParadaDeLaCiudad[];
-  yo: { lat: number; lon: number } | null;
-  /**
-   * Si esta sección debe ofrecer el botón de ubicación.
-   *
-   * **Una sola petición de permiso por pantalla.** Sin paradas guardadas, la
-   * sección de arriba ya la pide («Ver paradas cerca de mí») y concederla
-   * ordena las dos: repetir el botón aquí sería pedir dos veces lo mismo.
-   */
-  puedePedirUbicacion: boolean;
-  alPedirUbicacion: () => void;
-  alAbrirRuta: (circuitoId: string) => void;
+  ubicacion: Ubicacion;
+  /** No se pudo bajar la lista de paradas: hay rutas, pero no hay con qué medir. */
+  listaConError: boolean;
+  alReintentarLista: () => void;
+  alAbrirRuta: (circuitoId: string, parada?: string, sentido?: "ida" | "vuelta") => void;
 }) {
   const [todas, setTodas] = useState(false);
+  const { yo, estado, pedir, reintentar } = ubicacion;
   const { rutas: ordenadas, porDistancia } = useMemo(
     () => ordenarRutas(rutas, paradas, yo),
     [rutas, paradas, yo],
@@ -91,19 +99,29 @@ export function RutasDeInicio({
     <section className="ontoy-seccion">
       <h2 className="ontoy-seccion-titulo">{porDistancia ? "Rutas cerca de ti" : "Rutas de la ciudad"}</h2>
 
-      {visibles.map(({ ruta: r, distanciaM }) => {
+      {visibles.map(({ ruta: r, entrada }) => {
         const e = estadoDe.get(r.circuito_id);
         return (
           <button
             key={r.circuito_id}
             type="button"
             className="ontoy-ruta"
-            onClick={() => alAbrirRuta(r.circuito_id)}
+            onClick={() => alAbrirRuta(r.circuito_id, entrada?.id, entrada?.sentido ?? undefined)}
           >
             {/* El color es identidad y NUNCA va solo: el nombre siempre lo acompaña (8.8c). */}
             <span className="ontoy-ruta-color" style={{ background: r.color_hex }} aria-hidden="true" />
             <span className="ontoy-ruta-info">
               <span className="ontoy-ruta-nombre">{r.nombre}</span>
+              {/*
+                Por dónde se toma, cuando se midió. Es el renglón que sustituyó
+                a la sección de paradas cercanas: nombra el lugar Y su número,
+                y el número se puede comprobar porque dice de qué.
+              */}
+              {entrada && (
+                <span className="ontoy-ruta-entrada">
+                  por <b>{entrada.nombre}</b>, {distanciaEnPalabras(entrada.distanciaM)}
+                </span>
+              )}
               <span className="ontoy-ruta-sub">
                 {e?.situacion === "por_arrancar" && e.arranca_el
                   ? `Arranca el ${e.arranca_el}`
@@ -112,10 +130,6 @@ export function RutasDeInicio({
                     : promesaEnPalabras(r.promesa, null)}
               </span>
             </span>
-            {/* Sin distancia medida no va número: el hueco se calla, no se rellena. */}
-            {distanciaM !== null && (
-              <span className="ontoy-ruta-distancia mono">{distanciaEnPalabras(distanciaM)}</span>
-            )}
             <svg className="ontoy-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
               <path d="M9 6l6 6-6 6" />
             </svg>
@@ -135,23 +149,96 @@ export function RutasDeInicio({
         </button>
       )}
 
-      {puedePedirUbicacion && !porDistancia && (
-        <>
-          <button type="button" className="ontoy-boton ontoy-boton-segundo" onClick={alPedirUbicacion}>
-            Ver rutas cerca de mí
-          </button>
-          {/* El PARA QUÉ, antes de que el teléfono pregunte. */}
-          <p className="ontoy-porque">Tu ubicación se usa para ordenar las rutas por cuál te queda más cerca.</p>
-        </>
-      )}
+      {!porDistancia && <SinCercania estado={estado} conError={listaConError} alPedir={pedir} alReintentar={estado === "sin-senal" ? reintentar : alReintentarLista} />}
 
       <p className="ontoy-vacio ontoy-rutas-nota">
         {porDistancia
-          ? "Se ordenan por su parada más cercana a ti. La distancia es en línea recta, no caminando."
+          ? "Se ordenan por la parada más cercana a ti, y ésa es la que se abre al tocarlas. La distancia es en línea recta, no caminando."
           : "En orden alfabético."}{" "}
         El color de cada ruta es el que sus camiones traen pintado en la calle — la app lo registra, no lo
         inventa. Sólo se muestran rutas publicadas.
       </p>
     </section>
   );
+}
+
+/**
+ * Lo que se dice cuando las rutas NO se pudieron ordenar por cercanía.
+ *
+ * **Ninguno de estos casos es un callejón**, y por eso ninguno se lleva la
+ * pantalla: la lista de rutas está completa y sirve igual, en orden alfabético.
+ * Aquí sólo se explica por qué no hay distancias, y se ofrece lo que sí se
+ * puede hacer al respecto.
+ *
+ * Antes estos estados vivían en la sección de paradas cercanas, y ahí **sí**
+ * eran bloqueantes —sin ubicación esa sección no tenía nada que enseñar—, así
+ * que cada uno ocupaba un párrafo y un botón al Mapa. Fundida con las rutas, la
+ * pantalla siempre tiene algo que contestar y esto vuelve a ser una nota.
+ *
+ * Cada caso dice lo suyo: un permiso que no se ha pedido, uno negado, un
+ * teléfono que no la da y una lista que no bajó son cuatro cosas distintas, y
+ * juntarlas en «no se pudo» le quitaría al pasajero lo único que le dice si hay
+ * algo que él pueda hacer.
+ */
+function SinCercania({
+  estado,
+  conError,
+  alPedir,
+  alReintentar,
+}: {
+  estado: Ubicacion["estado"];
+  conError: boolean;
+  alPedir: () => void;
+  alReintentar: () => void;
+}) {
+  if (estado === "sin-pedir") {
+    return (
+      <>
+        <button type="button" className="ontoy-boton ontoy-boton-segundo" onClick={alPedir}>
+          Ver rutas cerca de mí
+        </button>
+        {/* El PARA QUÉ, antes de que el teléfono pregunte. */}
+        <p className="ontoy-porque">
+          Tu ubicación se usa para ordenarlas por cuál te queda más cerca y decirte por dónde tomarlas.
+        </p>
+      </>
+    );
+  }
+  if (estado === "buscando") return <p className="ontoy-porque">Buscando dónde estás…</p>;
+  if (estado === "negada") {
+    return (
+      <p className="ontoy-porque">
+        Sin tu ubicación no podemos ordenarlas por cercanía, y la app funciona igual. Si cambias de idea,
+        dale permiso de ubicación a esta app en los ajustes de tu teléfono o de tu navegador.
+      </p>
+    );
+  }
+  if (estado === "no-disponible") {
+    return <p className="ontoy-porque">Este teléfono no nos da tu ubicación, así que no podemos ordenarlas por cercanía.</p>;
+  }
+  if (estado === "sin-senal") {
+    return (
+      <>
+        <p className="ontoy-porque">
+          Tu teléfono no nos da tu posición ahorita. Revisa que la ubicación esté prendida, o intenta donde
+          haya mejor señal.
+        </p>
+        <button type="button" className="ontoy-boton ontoy-boton-segundo" onClick={alReintentar}>
+          Reintentar
+        </button>
+      </>
+    );
+  }
+  /* Permiso concedido: o la lista no bajó, o bajó y ninguna ruta tiene paradas. */
+  if (conError) {
+    return (
+      <>
+        <p className="ontoy-porque">No pudimos traer las paradas ahorita, así que no podemos ordenarlas por cercanía.</p>
+        <button type="button" className="ontoy-boton ontoy-boton-segundo" onClick={alReintentar}>
+          Reintentar
+        </button>
+      </>
+    );
+  }
+  return null;
 }

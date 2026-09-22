@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { distanciaALaRuta, ordenarRutas } from "./rutas-cerca";
+import { ordenarRutas, paradaDeEntrada } from "./rutas-cerca";
 import type { RutaDeLaCiudad } from "@/lib/ontoy/forma";
 import type { ParadaDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
 
@@ -36,18 +36,34 @@ describe("con ubicación: por distancia", () => {
     expect(porDistancia).toBe(true);
   });
 
-  it("cada una trae su distancia, para que el orden se pueda comprobar", () => {
-    expect(rutas.every((r) => r.distanciaM !== null)).toBe(true);
-    expect(Math.round(rutas[0]!.distanciaM! / 10) * 10).toBeLessThan(200);
+  it("cada una dice POR DÓNDE se toma y a cuánto — el número se puede comprobar", () => {
+    expect(rutas.every((r) => r.entrada !== null)).toBe(true);
+    expect(rutas[0]!.entrada!.distanciaM).toBeLessThan(200);
+    expect(rutas[0]!.entrada!.nombre).toBe("a");
   });
 
-  it("la distancia de una ruta es la de su parada MÁS cercana, no la de cualquiera", () => {
+  it("la parada de entrada es la MÁS cercana de esa ruta, no cualquiera suya", () => {
     const dos = [parada("r", "lejana", 31.78, -106.42), parada("r", "pegada", 31.7005, -106.42)];
-    expect(distanciaALaRuta(YO, "r", dos)).toBeLessThan(100);
+    expect(paradaDeEntrada(YO, "r", dos)!.nombre).toBe("pegada");
   });
 
   it("las paradas de OTRA ruta no cuentan para ésta", () => {
-    expect(distanciaALaRuta(YO, "cerca", [parada("otra", "pegadísima", 31.7, -106.42)])).toBeNull();
+    expect(paradaDeEntrada(YO, "cerca", [parada("otra", "pegadísima", 31.7, -106.42)])).toBeNull();
+  });
+
+  /*
+   * La misma esquina suele existir dos veces, una por sentido. El renglón abre
+   * la que de verdad le queda más cerca **y con su sentido**, porque abrir la
+   * parada en el sentido contrario la deja fuera del trazado.
+   */
+  it("entre la esquina de ida y la de vuelta, la más cercana con su sentido", () => {
+    const esquinas = [
+      { ...parada("r", "esquina-ida", 31.7008, -106.42), sentido: "ida" as const },
+      { ...parada("r", "esquina-vuelta", 31.7002, -106.42), sentido: "vuelta" as const },
+    ];
+    const e = paradaDeEntrada(YO, "r", esquinas)!;
+    expect(e.nombre).toBe("esquina-vuelta");
+    expect(e.sentido).toBe("vuelta");
   });
 });
 
@@ -67,8 +83,8 @@ describe("sin ubicación: alfabético, y NO son «cercanas»", () => {
     expect(porDistancia).toBe(false);
   });
 
-  it("ninguna finge una distancia que nadie midió", () => {
-    expect(rutas.every((r) => r.distanciaM === null)).toBe(true);
+  it("ninguna finge una parada ni una distancia que nadie midió", () => {
+    expect(rutas.every((r) => r.entrada === null)).toBe(true);
   });
 });
 
@@ -78,7 +94,7 @@ describe("una ruta sin paradas publicadas", () => {
   it("no se esconde, pero no se cuela entre las cercanas ni inventa número", () => {
     const { rutas } = ordenarRutas([SIN, CERCA, MEDIA], PARADAS, YO);
     expect(rutas.map((r) => r.ruta.circuito_id)).toEqual(["cerca", "media", "sin"]);
-    expect(rutas.at(-1)!.distanciaM).toBeNull();
+    expect(rutas.at(-1)!.entrada).toBeNull();
   });
 
   it("con TODAS sin paradas, el orden no puede decirse por distancia", () => {

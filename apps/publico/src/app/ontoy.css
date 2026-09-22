@@ -515,11 +515,20 @@
   color: var(--tenue);
   margin-top: 2px;
 }
-.ontoy-ruta-distancia {
-  flex: none;
+/* Por dónde se toma la ruta: el lugar y su número, en el mismo renglón. */
+.ontoy-ruta-entrada {
+  display: block;
   font-size: 12.5px;
   color: var(--tenue);
-  white-space: nowrap;
+  margin-top: 3px;
+}
+.ontoy-ruta-entrada b {
+  color: var(--texto);
+  font-weight: 600;
+}
+.ontoy-inicio-invitacion {
+  padding: 0 18px;
+  margin: 14px 0 2px;
 }
 .ontoy-chevron {
   color: var(--tenue);

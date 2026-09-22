@@ -349,7 +349,6 @@ export function Ontoy({
           ubicacion={ubicacion}
           alAbrirRuta={abrirRuta}
           alQuitarGuardada={guardadas.alternar}
-          alIrAlMapa={() => irA("mapa")}
           enVivo={enVivo}
         />
       )}

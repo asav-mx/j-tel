@@ -1,6 +1,6 @@
 import type { RutaDeLaCiudad } from "@/lib/ontoy/forma";
 import type { ParadaDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
-import { distanciaM } from "@/lib/ontoy/paradas-cerca";
+import { distanciaM } from "@/lib/ontoy/distancia";
 
 /**
  * En qué orden se enseñan las rutas en Inicio (8.8; ASAV, 22-sep-2026).
@@ -8,12 +8,23 @@ import { distanciaM } from "@/lib/ontoy/paradas-cerca";
  * Son **dos órdenes distintos**, y la pantalla dice cuál está usando porque
  * cada uno afirma una cosa diferente.
  *
- * ## Con ubicación: por distancia, y la distancia se enseña
+ * ## Con ubicación: por distancia, y se enseña POR DÓNDE
  *
  * La distancia de una ruta es la de **su parada más cercana** al pasajero, en
  * línea recta, calculada en el teléfono sobre la lista pública que ya bajó
- * (8.3b). Va a la vista en cada renglón: un orden que no se puede comprobar
- * pide que le crean, y aquí se puede comprobar.
+ * (8.3b).
+ *
+ * Y esa parada **viaja con la ruta**, porque el renglón la nombra: «por
+ * Hospital General, a 120 m». Ésa es la pregunta completa del pasajero —qué
+ * ruta, y dónde la tomo—, y de paso hace comprobable el número: «a 120 m»
+ * suelto es una distancia abstracta; «a 120 m de Hospital General» se puede
+ * verificar parándose ahí.
+ *
+ * ✎ **22-sep-2026 (ASAV).** Antes esto sólo devolvía metros, y las paradas
+ * cercanas vivían en una sección aparte de Inicio. Las dos secciones decían lo
+ * mismo con los mismos números —la misma ruta, la misma distancia, una encima
+ * de la otra—, así que se fundieron en esta lista. La sección de paradas se
+ * retiró; su trabajo lo hace el renglón.
  *
  * ## Sin ubicación: alfabético, y NO se llaman «cerca de ti»
  *
@@ -37,10 +48,22 @@ import { distanciaM } from "@/lib/ontoy/paradas-cerca";
  * eso esto devuelve `porDistancia`, y la pantalla titula con él.
  */
 
+/** La parada por la que se toma una ruta: la más cercana al pasajero. */
+export interface ParadaDeEntrada {
+  id: string;
+  nombre: string;
+  sentido: "ida" | "vuelta" | null;
+  distanciaM: number;
+}
+
 export interface RutaOrdenada {
   ruta: RutaDeLaCiudad;
-  /** Metros a su parada más cercana, o `null` sin ubicación o sin paradas. */
-  distanciaM: number | null;
+  /**
+   * Por dónde se toma, y a cuánto. `null` sin ubicación o sin paradas
+   * publicadas: entonces el renglón no dice ni parada ni distancia, porque no
+   * hay ninguna medida que decir.
+   */
+  entrada: ParadaDeEntrada | null;
 }
 
 export interface OrdenDeLasRutas {
@@ -53,21 +76,24 @@ export interface OrdenDeLasRutas {
 export const RUTAS_A_LA_VISTA = 3;
 
 /**
- * La distancia del pasajero a la parada más cercana de una ruta.
- * `null` si esa ruta no tiene ninguna parada publicada: no se inventa un número.
+ * La parada más cercana de una ruta, con su distancia.
+ * `null` si esa ruta no tiene ninguna parada publicada: no se inventa un punto
+ * de entrada ni un número.
  */
-export function distanciaALaRuta(
+export function paradaDeEntrada(
   yo: { lat: number; lon: number },
   circuitoId: string,
   paradas: ParadaDeLaCiudad[],
-): number | null {
-  let menor: number | null = null;
+): ParadaDeEntrada | null {
+  let mejor: ParadaDeEntrada | null = null;
   for (const p of paradas) {
     if (p.ruta !== circuitoId) continue;
     const d = distanciaM(yo, p);
-    if (menor === null || d < menor) menor = d;
+    if (!mejor || d < mejor.distanciaM) {
+      mejor = { id: p.id, nombre: p.nombre, sentido: p.sentido, distanciaM: d };
+    }
   }
-  return menor;
+  return mejor;
 }
 
 export function ordenarRutas(
@@ -80,14 +106,14 @@ export function ordenarRutas(
 
   if (!yo) {
     return {
-      rutas: rutas.map((ruta) => ({ ruta, distanciaM: null })).sort(porNombre),
+      rutas: rutas.map((ruta) => ({ ruta, entrada: null })).sort(porNombre),
       porDistancia: false,
     };
   }
 
   const conDistancia = rutas.map((ruta) => ({
     ruta,
-    distanciaM: distanciaALaRuta(yo, ruta.circuito_id, paradas),
+    entrada: paradaDeEntrada(yo, ruta.circuito_id, paradas),
   }));
 
   /*
@@ -96,12 +122,12 @@ export function ordenarRutas(
    * cercanas fingiendo una distancia que nadie midió: va al final, en su
    * orden alfabético, y su renglón no enseña número.
    */
-  const medidas = conDistancia.filter((r) => r.distanciaM !== null);
-  const sinMedir = conDistancia.filter((r) => r.distanciaM === null);
+  const medidas = conDistancia.filter((r) => r.entrada !== null);
+  const sinMedir = conDistancia.filter((r) => r.entrada === null);
 
   return {
     rutas: [
-      ...medidas.sort((a, b) => a.distanciaM! - b.distanciaM! || porNombre(a, b)),
+      ...medidas.sort((a, b) => a.entrada!.distanciaM - b.entrada!.distanciaM || porNombre(a, b)),
       ...sinMedir.sort(porNombre),
     ],
     porDistancia: medidas.length > 0,

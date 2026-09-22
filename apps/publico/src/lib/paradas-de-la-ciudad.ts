@@ -26,7 +26,7 @@ import type { Sentido } from "@/lib/ontoy/forma";
  *
  * La petición que la trae **no lleva nada del pasajero**: es un GET sin
  * parámetros, igual para todos. La ubicación se cruza con la lista en el
- * teléfono (`lib/ontoy/paradas-cerca.ts`).
+ * teléfono (`lib/ontoy/rutas-cerca.ts`).
  */
 
 export interface RutaDeLaLista {
