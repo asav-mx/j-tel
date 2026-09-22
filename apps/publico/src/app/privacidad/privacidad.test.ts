@@ -44,9 +44,13 @@ describe("la página de privacidad dice lo que el código hace", () => {
   });
 
   it("la app liga a la página (toda pantalla tiene su salida, y la tienda pide que se encuentre)", () => {
-    // Inicio es donde abre la app; la lista de rutas, a un toque del Mapa.
+    /*
+     * Inicio es donde abre la app, y desde el 22-sep-2026 también es donde
+     * viven las rutas: `vista-rutas.tsx` era la lista aparte y se retiró.
+     * «Ir a» liga aparte porque se llega a él sin pasar por Inicio.
+     */
     expect(leer("apps/publico/src/components/ontoy/vista-inicio.tsx")).toContain('href="/privacidad"');
-    expect(leer("apps/publico/src/components/ontoy/vista-rutas.tsx")).toContain('href="/privacidad"');
+    expect(leer("apps/publico/src/components/ontoy/vista-ira.tsx")).toContain('href="/privacidad"');
   });
 });
 

@@ -747,6 +747,17 @@ La estructura es de la app de la ciudad, no de una cuenta: el pasajero no elige 
 >
 > **Y lo que «Ir a» es hoy.** El renglón dice que Ir a «es el buscador y el planeador (8.16)». Hoy es **el buscador**: empareja nombres de paradas y de rutas, en el teléfono, y abre la que se escoja en el Mapa. El **planeador** de la 8.16 no está, y la pantalla lo dice en vez de fingirlo: sin recorridos medidos no hay total (8.16 regla 4), y un total sin ellos sería una llegada inventada (8.9). La 8.16 no se toca — sigue siendo la ley del planeador para cuando exista.
 
+> ✎ **22-sep-2026, más tarde (ASAV) — segunda enmienda a la 8.8. Se agrega; no se borra nada, ni siquiera el punto 2 de la enmienda de arriba, que queda como registro de por dónde pasó la decisión.**
+>
+> **Las rutas viven en Inicio, y «Ir a» queda sólo como buscador.** El punto 2 de la enmienda anterior mandó la lista completa a «Ir a». Ese mismo día se movió otra vez, y ahora rige esto:
+>
+> - **Inicio** enseña, debajo de la parada guardada, **las rutas**: tres a la vista y el resto tras un botón que las despliega. Ahí está el único camino a la lista completa de la ciudad. La pantalla aparte de «todas las rutas» dejó de existir.
+> - **«Ir a»** es **sólo el buscador** hasta que llegue el planeador (8.16).
+>
+> *Por qué se movió otra vez:* la lista de rutas es lo que el pasajero viene a ver, y escondida detrás de un buscador pedía escribir antes de poder mirar. Inicio ya es «la app abre contestando»; las rutas son parte de esa respuesta.
+>
+> **Y el orden de esas rutas es materia de la 8.7, no de diseño.** Con ubicación se ordenan por cercanía —la parada más cercana de cada ruta, medida en el teléfono— y cada renglón enseña su distancia, para que el orden se pueda comprobar. **Sin ubicación se ordenan alfabéticamente**, y el encabezado deja de decir «cerca de ti» para decir «Rutas de la ciudad»: tres rutas cualesquiera tituladas «cerca de ti» serían el dato correcto con la afirmación falsa (§D). El orden sin ubicación **no puede salir de rastrear a nadie** —nada de «las más buscadas»—, porque la app no sabe quién eres (8.7).
+
 **8.8b No hay tercera vista; hay un atajo.** Se evaluó una tercera vista y dos bastan: lo que el pasajero de todos los días necesita no es otra pantalla sino llegar en un toque a **su parada**. La app permite **guardar una parada** (o más de una), y las guardadas aparecen en **Inicio** (8.8), con su próximo paso ya visible. La parada guardada **vive en el teléfono**, no en el servidor (8.7): guardarla no identifica a nadie. Si con el uso real aparece la necesidad de una tercera vista, se enmienda con evidencia, no antes.
 
 > ✎ **22-sep-2026 (ASAV):** decía «las guardadas aparecen hasta arriba de Rutas»; ahora apuntan a Inicio, para leerse con la 8.8 nueva. Lo de la tercera vista lo contesta el *por qué* de la 8.8 nueva: Inicio es este mismo atajo subido a la portada, e Ir a se aprobó por diseño.

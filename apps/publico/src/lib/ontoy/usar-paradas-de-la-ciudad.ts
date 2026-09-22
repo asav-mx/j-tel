@@ -9,7 +9,14 @@ import type { ParadasDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
  * de ti) y el Mapa de la ciudad (dónde están tus paradas guardadas). El
  * endpoint lleva caché largo; la petición no lleva nada del pasajero.
  */
-export function useParadasDeLaCiudad(haceFalta: boolean) {
+/** Lo que devuelve el hook, para poder pasarlo a quien lo comparte. */
+export interface ListaDeLaCiudad {
+  datos: ParadasDeLaCiudad | null;
+  error: boolean;
+  reintentar: () => void;
+}
+
+export function useParadasDeLaCiudad(haceFalta: boolean): ListaDeLaCiudad {
   const [datos, setDatos] = useState<ParadasDeLaCiudad | null>(null);
   const [error, setError] = useState(false);
   const [intento, setIntento] = useState(0);

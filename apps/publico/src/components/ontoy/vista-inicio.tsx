@@ -12,7 +12,9 @@ import {
 import type { Ubicacion } from "@/lib/ubicacion";
 import { AtajoDeParada } from "@/components/ontoy/atajo-de-parada";
 import type { Vivo } from "@/lib/ontoy/forma";
-import { useParadasDeLaCiudad } from "@/lib/ontoy/usar-paradas-de-la-ciudad";
+import { useParadasDeLaCiudad, type ListaDeLaCiudad } from "@/lib/ontoy/usar-paradas-de-la-ciudad";
+import type { EstadoDeRuta } from "@/lib/ontoy/estado-de-ruta";
+import { RutasDeInicio } from "@/components/ontoy/rutas-de-inicio";
 
 /**
  * **Inicio** — la app abre contestando (8.8, 22-sep).
@@ -27,12 +29,19 @@ import { useParadasDeLaCiudad } from "@/lib/ontoy/usar-paradas-de-la-ciudad";
  * dado, no se le vuelve a preguntar y la lista sale sola. Si dice que no, Inicio
  * lo manda al Mapa y la app sirve completa (8.7).
  *
- * La lista de paradas de la ciudad (`/api/circuitos/paradas-de-la-ciudad`) se baja sólo cuando hace
- * falta —sin guardadas y con ubicación—, una vez, y el cruce con la ubicación
- * ocurre aquí. La petición no lleva nada del pasajero.
+ * Y debajo, **siempre**, las rutas: tres a la vista y el resto tras un botón
+ * (`RutasDeInicio`). Ahí vive el único camino a la lista completa de la ciudad
+ * — «Ir a» quedó sólo como buscador (ASAV, 22-sep).
+ *
+ * La lista de paradas de la ciudad (`/api/circuitos/paradas-de-la-ciudad`) se
+ * baja sólo cuando hace falta —con ubicación concedida—, **una vez para toda
+ * la pantalla**: la piden las paradas cercanas y el orden de las rutas, y se
+ * lee aquí arriba para no bajarla dos veces. El cruce con la ubicación ocurre
+ * en el teléfono; la petición no lleva nada del pasajero.
  */
 export function VistaInicio({
   rutas,
+  estados,
   guardadas,
   guardadasListas,
   puedeGuardar,
@@ -43,6 +52,7 @@ export function VistaInicio({
   enVivo,
 }: {
   rutas: RutaDeLaCiudad[];
+  estados: EstadoDeRuta[];
   guardadas: ParadaGuardada[];
   /** Si ya se leyó el teléfono: antes, «ninguna guardada» todavía no es cierto. */
   guardadasListas: boolean;
@@ -57,11 +67,20 @@ export function VistaInicio({
    */
   enVivo: { vivos: Map<string, Vivo>; error: boolean; respondio: boolean };
 }) {
+  /*
+   * UNA sola bajada para toda la pantalla. Antes vivía dentro de las paradas
+   * cercanas; ahora también la necesita el orden de las rutas, y dos hooks
+   * serían dos peticiones para la misma lista.
+   */
+  const lista = useParadasDeLaCiudad(ubicacion.estado === "concedida");
+
   if (!guardadasListas) return <div className="ontoy-vista" />;
+
+  const hayGuardadas = guardadas.length > 0;
 
   return (
     <div className="ontoy-vista">
-      {guardadas.length > 0 ? (
+      {hayGuardadas ? (
         <section className="ontoy-seccion">
           <h2 className="ontoy-seccion-titulo">Tu próximo camión</h2>
           {guardadas.map((g) => (
@@ -81,12 +100,28 @@ export function VistaInicio({
       ) : (
         <ParadasCercaDeTi
           rutas={rutas}
+          lista={lista}
           puedeGuardar={puedeGuardar}
           ubicacion={ubicacion}
           alAbrirRuta={alAbrirRuta}
           alIrAlMapa={alIrAlMapa}
         />
       )}
+
+      <RutasDeInicio
+        rutas={rutas}
+        estados={estados}
+        paradas={lista.datos?.paradas ?? []}
+        yo={ubicacion.yo}
+        /*
+         * El permiso se pide UNA vez por pantalla. Sin paradas guardadas, el
+         * bloque de arriba ya lo pide y concederlo ordena las dos secciones;
+         * con guardadas, ese bloque no está y el botón vive aquí.
+         */
+        puedePedirUbicacion={hayGuardadas && ubicacion.estado === "sin-pedir"}
+        alPedirUbicacion={ubicacion.pedir}
+        alAbrirRuta={(id) => alAbrirRuta(id)}
+      />
 
       <p className="ontoy-pie">
         Tus paradas guardadas se quedan en tu teléfono. No hace falta cuenta.{" "}
@@ -98,19 +133,21 @@ export function VistaInicio({
 
 function ParadasCercaDeTi({
   rutas,
+  lista,
   puedeGuardar,
   ubicacion,
   alAbrirRuta,
   alIrAlMapa,
 }: {
   rutas: RutaDeLaCiudad[];
+  /** Bajada UNA vez por `VistaInicio` y compartida con las rutas. */
+  lista: ListaDeLaCiudad;
   puedeGuardar: boolean;
   ubicacion: Ubicacion;
   alAbrirRuta: (circuitoId: string, parada?: string, sentido?: Sentido) => void;
   alIrAlMapa: () => void;
 }) {
   const { yo, estado, pedir, reintentar } = ubicacion;
-  const lista = useParadasDeLaCiudad(estado === "concedida");
 
   const cercanas = useMemo(
     () => (yo && lista.datos ? paradasCerca(yo, lista.datos.paradas) : null),
