@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { armarHilo, haciaDonde, type RenglonDelHilo } from "@/lib/ontoy/hilo";
+import { armarParadas, haciaDonde, type RenglonDeParadas } from "@/lib/ontoy/paradas-de-la-ruta";
 import type { Forma, Sentido, UnidadViva, Vivo } from "@/lib/ontoy/forma";
 
 /* Una calle recta de sur a norte (ida), paradas cada ~1.1 km. */
@@ -38,15 +38,15 @@ const vivo = (unidades: UnidadViva[], o: Partial<Vivo> = {}): Vivo => ({
   promesa: null as unknown as Vivo["promesa"], unidades, generado_en: "2026-09-22T12:00:00Z", ...o,
 });
 
-const hilo = (v: Vivo | null, yo: { lat: number; lon: number } | null = null, guardadas: string[] = []) =>
-  armarHilo({ forma: FORMA, vivo: v, sentido: "ida", yo, velocidadKmh: 20, trazadoPorSentido: TPS, estaGuardada: (id) => guardadas.includes(id) });
+const paradas = (v: Vivo | null, yo: { lat: number; lon: number } | null = null, guardadas: string[] = []) =>
+  armarParadas({ forma: FORMA, vivo: v, sentido: "ida", yo, velocidadKmh: 20, trazadoPorSentido: TPS, estaGuardada: (id) => guardadas.includes(id) });
 
-const resumen = (r: RenglonDelHilo[]) =>
+const resumen = (r: RenglonDeParadas[]) =>
   r.map((x) => (x.tipo === "parada" ? `${x.id}:${x.falta ?? "—"}` : x.tipo === "unidad" ? `[${x.economico}${x.fresca ? "" : " vieja"}]` : `AQUÍ:${x.falta ?? "·"}`));
 
-describe("el hilo", () => {
+describe("la lista de paradas", () => {
   it("las paradas del sentido (y las de los dos) en orden de paso, con los camiones en su lugar", () => {
-    expect(resumen(hilo(vivo([unidad("2120", 31.71)])))).toEqual([
+    expect(resumen(paradas(vivo([unidad("2120", 31.71)])))).toEqual([
       "Sur:—", // ya pasó: sin número
       "[2120]",
       "Torres:a 1 parada",
@@ -56,13 +56,13 @@ describe("el hilo", () => {
   });
 
   it("calibrada, las paradas dicen minutos", () => {
-    const r = hilo(vivo([unidad("2120", 31.71)], { rango_activo: true }));
+    const r = paradas(vivo([unidad("2120", 31.71)], { rango_activo: true }));
     const torres = r.find((x) => x.tipo === "parada" && x.id === "Torres");
     expect(torres && torres.tipo === "parada" && torres.falta).toMatch(/min$/);
   });
 
   it("el camión viejo se dibuja en su lugar, pero no le da número a ninguna parada", () => {
-    expect(resumen(hilo(vivo([unidad("2087", 31.71, { fresco: false, antiguedad_seg: 500 })])))).toEqual([
+    expect(resumen(paradas(vivo([unidad("2087", 31.71, { fresco: false, antiguedad_seg: 500 })])))).toEqual([
       "Sur:—",
       "[2087 vieja]",
       "Torres:—",
@@ -73,22 +73,22 @@ describe("el hilo", () => {
 
   it("«aquí estás» sin calibración es sólo el punto; calibrada, lleva sus minutos", () => {
     const yo = { lat: 31.738, lon: LON };
-    expect(resumen(hilo(vivo([unidad("2120", 31.71)]), yo))).toContain("AQUÍ:·");
-    const cal = hilo(vivo([unidad("2120", 31.71)], { rango_activo: true }), yo).find((x) => x.tipo === "aqui");
+    expect(resumen(paradas(vivo([unidad("2120", 31.71)]), yo))).toContain("AQUÍ:·");
+    const cal = paradas(vivo([unidad("2120", 31.71)], { rango_activo: true }), yo).find((x) => x.tipo === "aqui");
     expect(cal && cal.tipo === "aqui" && cal.falta).toMatch(/min$/);
   });
 
   it("«aquí estás» sólo sobre el corredor: lejos de la ruta no aparece", () => {
-    expect(hilo(vivo([]), { lat: 31.73, lon: LON + 0.02 }).some((x) => x.tipo === "aqui")).toBe(false);
+    expect(paradas(vivo([]), { lat: 31.73, lon: LON + 0.02 }).some((x) => x.tipo === "aqui")).toBe(false);
   });
 
   it("con la ruta cerrada no se dibujan camiones ni números", () => {
-    const r = hilo(vivo([unidad("2120", 31.71)], { estado: "fuera_de_horario" }));
+    const r = paradas(vivo([unidad("2120", 31.71)], { estado: "fuera_de_horario" }));
     expect(r.every((x) => x.tipo === "parada" && x.falta === null)).toBe(true);
   });
 
   it("marca las guardadas", () => {
-    const r = hilo(vivo([]), null, ["Ejército"]);
+    const r = paradas(vivo([]), null, ["Ejército"]);
     expect(r.filter((x) => x.tipo === "parada" && x.guardada).map((x) => x.tipo === "parada" && x.id)).toEqual(["Ejército"]);
   });
 });

@@ -14,7 +14,7 @@
  * «Horario declarado por el concesionario». La palabra «horario» era la misma
  * de arriba, y lo único que agregaba —la atribución— venía enterrado detrás de
  * ella. Es la misma falta que ya se había corregido dos veces en esta pantalla:
- * entre el titular y la frase el 28 de agosto, y entre el titular y el hilo de
+ * entre el titular y la frase el 28 de agosto, y entre el titular y la lista de
  * paradas en el #366. **Cada renglón agrega, o no va.**
  *
  * ## La atribución NO se quita, y eso es la otra mitad

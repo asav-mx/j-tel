@@ -86,7 +86,8 @@ verdad.
 | Pantalla | Salida |
 |---|---|
 | `/c/[slug]` — la ruta | Es la portada de hecho: con un circuito publicado, `/` redirige aquí |
-| `/buscar` | **La flecha de arriba a la izquierda** — este arreglo |
+| ~~`/buscar`~~ | **Retirada el 22-sep-2026.** Su emparejador vive en el lugar «Ir a»; la salida de ahí es la barra, siempre visible |
+| «Ir a» — la búsqueda | La barra de abajo, siempre visible; la lista de todas las rutas regresa con «‹ Volver a la búsqueda» |
 | `/` — la portada | Lista las rutas; no necesita salir de ningún lado |
 | `not-found` | «Ver las rutas» |
 

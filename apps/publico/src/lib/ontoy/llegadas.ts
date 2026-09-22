@@ -119,7 +119,7 @@ export function llegadasHasta(
     /*
      * El permiso resuelve de una vez el interruptor del circuito y la frescura
      * de ESTA posición. Dos comprobaciones separadas y lejos una de otra es lo
-     * que ya dejó una vez al hilo de paradas sin ninguna de las dos.
+     * que ya dejó una vez a la lista de paradas sin ninguna de las dos.
      */
     const permiso = permisoDeRango({
       rangoActivo: vivo.rango_activo,

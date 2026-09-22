@@ -9,7 +9,7 @@ import {
 } from "./llegadas";
 
 /**
- * **El hilo** — la ruta abierta como una línea (8.8, 8.8d; Ontoy 2.0, PR 3).
+ * **Las paradas de la ruta** — la ruta abierta como una línea (8.8, 8.8d; Ontoy 2.0, PR 3).
  *
  * Las paradas de un sentido en el orden en que pasa el camión, con los camiones
  * metidos entre ellas en el lugar de su posición real y, si el pasajero dio su
@@ -32,7 +32,7 @@ import {
  *   que no está en una parada no es honesto (decisión de ASAV, 22-sep).
  */
 
-export type RenglonDelHilo =
+export type RenglonDeParadas =
   | {
       tipo: "parada";
       id: string;
@@ -44,7 +44,7 @@ export type RenglonDelHilo =
   | { tipo: "unidad"; economico: string; fresca: boolean; antiguedadSeg: number }
   | { tipo: "aqui"; falta: string | null };
 
-export function armarHilo(entrada: {
+export function armarParadas(entrada: {
   forma: Forma;
   vivo: Vivo | null;
   sentido: Sentido;
@@ -52,7 +52,7 @@ export function armarHilo(entrada: {
   velocidadKmh: number;
   trazadoPorSentido: Map<Sentido, Array<[number, number]>>;
   estaGuardada: (paradaId: string) => boolean;
-}): RenglonDelHilo[] {
+}): RenglonDeParadas[] {
   const { forma, vivo, sentido, yo, velocidadKmh, trazadoPorSentido, estaGuardada } = entrada;
   const trazado = trazadoPorSentido.get(sentido);
   if (!trazado) return [];
@@ -72,7 +72,7 @@ export function armarHilo(entrada: {
     return fresca ? paradasEnPalabras(fresca.paradas) : null;
   };
 
-  type ConAbscisa = { avance: number; orden: number; renglon: RenglonDelHilo };
+  type ConAbscisa = { avance: number; orden: number; renglon: RenglonDeParadas };
   const todos: ConAbscisa[] = [];
 
   for (const p of forma.paradas) {

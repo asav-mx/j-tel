@@ -2848,10 +2848,11 @@ de la ciudad **servido como la forma del circuito** —baja una vez, se empareja
 aquí— o un geocodificador propio dentro de nuestra infraestructura, que deja de
 ser un tercero pero sigue viendo el destino y por eso es el peor de los dos.
 
-**Dónde toca.** `apps/publico/src/lib/buscar-lugar.ts` (el emparejamiento, que ya
-es el único lugar por donde pasaría), `apps/publico/src/components/buscador.tsx`
-(el campo y sus sugerencias) y `apps/publico/src/app/buscar/page.tsx` (que hoy
-sirve las paradas de los circuitos publicados y serviría también el índice).
+**Dónde toca** (al 22-sep-2026, después de retirar `/buscar`).
+`apps/publico/src/lib/ontoy/buscar-lugar.ts` (el emparejamiento, que sigue siendo
+el único lugar por donde pasaría), `apps/publico/src/components/ontoy/vista-ira.tsx`
+(el campo y sus sugerencias) y `apps/publico/src/app/api/circuitos/paradas-de-la-ciudad/route.ts`
+(que hoy sirve las paradas públicas y serviría también el índice).
 
 ## ¿Sigue siendo exacta «no se envía a ningún servidor»?
 

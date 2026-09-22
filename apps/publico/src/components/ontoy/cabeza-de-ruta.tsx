@@ -30,10 +30,10 @@ export function CabezaDeRuta({
   sentido: Sentido;
   /** «hacia Centro», o `null` y se dice «Ida» / «Vuelta». */
   nombreDeSentido: (s: Sentido) => string | null;
-  modo: "hilo" | "mapa";
+  modo: "paradas" | "mapa";
   alVolver: () => void;
   alCambiarSentido: (s: Sentido) => void;
-  alCambiarModo: (m: "hilo" | "mapa") => void;
+  alCambiarModo: (m: "paradas" | "mapa") => void;
 }) {
   const texto = textoSobreLaRuta(color).color;
   return (
@@ -61,9 +61,9 @@ export function CabezaDeRuta({
           ))}
         </div>
         <div className="ontoy-cabeza-ruta-grupo ontoy-cabeza-ruta-modo" role="group" aria-label="Ver como">
-          {(["hilo", "mapa"] as const).map((m) => (
+          {(["paradas", "mapa"] as const).map((m) => (
             <button key={m} type="button" aria-pressed={modo === m} onClick={() => alCambiarModo(m)}>
-              {m === "hilo" ? "Hilo" : "Mapa"}
+              {m === "paradas" ? "Paradas" : "Mapa"}
             </button>
           ))}
         </div>

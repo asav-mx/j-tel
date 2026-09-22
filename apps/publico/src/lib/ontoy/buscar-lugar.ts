@@ -16,8 +16,18 @@
  * declara en la pantalla, no se esconde — una app que calla lo que no sabe hace
  * que el pasajero crea que escribió mal.
  *
- * Todo esto corre en el teléfono, sobre las paradas que la forma ya bajó. No
- * hace ni una petición.
+ * Todo esto corre en el teléfono, sobre las paradas que ya bajaron. No hace ni
+ * una petición.
+ *
+ * > ✎ **22-sep-2026 (ASAV): una sola búsqueda.** Esto vivía en `/buscar`, una
+ * > pantalla aparte que la app del pasajero ya no enlazaba desde ningún lado.
+ * > La pantalla se retiró y el emparejador se mudó **al lugar «Ir a»**, que es
+ * > donde el pasajero va a buscar. Dos buscadores distintos para la misma
+ * > pregunta son dos respuestas que se pueden contradecir.
+ * >
+ * > Lo que `/buscar` medía además —qué ruta te sirve de un punto a otro— **no
+ * > se mudó**: eso es el planeador (8.16), y llega cuando haya recorridos
+ * > medidos. Este archivo empareja nombres; no mide viajes.
  */
 
 export interface ParadaBuscable {
@@ -27,6 +37,8 @@ export interface ParadaBuscable {
   lon: number;
   circuitoSlug: string;
   circuitoNombre: string;
+  /** `null`: la parada sirve a los dos sentidos. */
+  sentido?: "ida" | "vuelta" | null;
 }
 
 export interface RutaBuscable {
@@ -35,8 +47,25 @@ export interface RutaBuscable {
 }
 
 export type Sugerencia =
-  /** Un lugar con coordenadas: se puede medir contra el recorrido. */
-  | { tipo: "parada"; clave: string; nombre: string; lat: number; lon: number; circuitoNombre: string }
+  /**
+   * Un lugar con coordenadas: se puede medir contra el recorrido.
+   *
+   * Viaja con **su ruta y su sentido** porque escoger una parada la abre en el
+   * Mapa, y abrirla en el sentido contrario la dejaría fuera del trazado: la
+   * pantalla marcaría una parada que en ese sentido no existe.
+   */
+  | {
+      tipo: "parada";
+      clave: string;
+      /** El identificador público de la parada (el slug de su QR). */
+      paradaId: string;
+      nombre: string;
+      lat: number;
+      lon: number;
+      circuitoSlug: string;
+      circuitoNombre: string;
+      sentido: "ida" | "vuelta" | null;
+    }
   /**
    * El nombre de una ruta. **No es un destino y no se trata como tal:** una
    * ruta no es un punto, y proyectarla no significa nada. Se ofrece aparte,
@@ -102,10 +131,13 @@ export function emparejarLugares(
       s: {
         tipo: "parada",
         clave: `${p.circuitoSlug}:${p.id}`,
+        paradaId: p.id,
         nombre: p.nombre,
         lat: p.lat,
         lon: p.lon,
+        circuitoSlug: p.circuitoSlug,
         circuitoNombre: p.circuitoNombre,
+        sentido: p.sentido ?? null,
       },
     });
   }

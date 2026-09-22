@@ -89,13 +89,13 @@ describe("la declaración para las tiendas sigue al código", () => {
     expect(sinComentarios(leer(PAGINA))).toContain("La app no te pide tu ubicación al abrir.");
   });
 
-  it("cada uso de la ubicación está dicho: «aquí estás» en el hilo aparece en la página y en la declaración", () => {
-    expect(leer("apps/publico/src/lib/ontoy/hilo.ts")).toContain('tipo: "aqui"');
+  it("cada uso de la ubicación está dicho: «aquí estás» en la lista de paradas aparece en la página y en la declaración", () => {
+    expect(leer("apps/publico/src/lib/ontoy/paradas-de-la-ruta.ts")).toContain('tipo: "aqui"');
     expect(sinComentarios(leer(PAGINA))).toContain("para marcar dónde");
     // Y el punto «tú» del mapa (recuperado el 22-sep): también está dicho.
     expect(sinComentarios(leer(PAGINA))).toMatch(/estás en el mapa/);
     expect(declaracion).toContain("marcar «tú» en el mapa y «aquí estás» sobre la ruta abierta");
-    expect(leer("apps/publico/src/lib/ontoy/hilo.ts")).not.toMatch(/fetch\(/);
+    expect(leer("apps/publico/src/lib/ontoy/paradas-de-la-ruta.ts")).not.toMatch(/fetch\(/);
   });
 
   it("los avisos ya vistos se guardan en el teléfono, y eso está dicho (PR 4b)", () => {

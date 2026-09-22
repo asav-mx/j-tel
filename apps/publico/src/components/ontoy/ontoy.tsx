@@ -24,10 +24,11 @@ import { VistaMapa } from "@/components/ontoy/vista-mapa";
 import { VistaRutas, type EstadoDeRuta } from "@/components/ontoy/vista-rutas";
 import { VistaInicio } from "@/components/ontoy/vista-inicio";
 import { LugarReservado } from "@/components/ontoy/lugar-reservado";
+import { VistaIrA } from "@/components/ontoy/vista-ira";
 import { Barra, type Lugar } from "@/components/ontoy/barra";
 import { CabezaDeRuta } from "@/components/ontoy/cabeza-de-ruta";
-import { VistaHilo } from "@/components/ontoy/vista-hilo";
-import { armarHilo, haciaDonde } from "@/lib/ontoy/hilo";
+import { VistaParadas } from "@/components/ontoy/vista-paradas";
+import { armarParadas, haciaDonde } from "@/lib/ontoy/paradas-de-la-ruta";
 import { rutasEnVivo, rutasFavoritas } from "@/lib/ontoy/favoritas";
 import { useEnVivo } from "@/lib/ontoy/en-vivo";
 import { rutasDeLaConsulta } from "@/lib/ontoy/consulta-de-la-raiz";
@@ -83,22 +84,25 @@ export function Ontoy({
   const { deNoche, alternar: alternarPiel } = useTema();
   const pedida = rutaInicial && rutas.some((r) => r.circuito_id === rutaInicial) ? rutaInicial : null;
   const [lugar, setLugar] = useState<Lugar>(pedida ? "mapa" : "inicio");
-  /** La lista de todas las rutas, abierta encima del Mapa. */
+  /**
+   * La lista de todas las rutas, abierta encima de **Ir a** (ASAV, 22-sep).
+   * Vivía encima del Mapa, con una ficha que la abría; ahora hay un solo camino.
+   */
   const [listaAbierta, setListaAbierta] = useState(false);
   const [enfocada, setEnfocada] = useState<string | null>(pedida ?? rutas[0]?.circuito_id ?? null);
   const [sentido, setSentido] = useState<Sentido>("ida");
   const [paradaAbierta, setParadaAbierta] = useState<string | null>(null);
   /**
-   * Una ruta ABIERTA: su cabeza teñida y su hilo o su mapa (8.8, 8.8d). Quien
+   * Una ruta ABIERTA: su cabeza teñida y sus paradas o su mapa (8.8, 8.8d). Quien
    * llega por la liga de una ruta la ve abierta; el Mapa sin ruta abierta es el
    * de la ciudad.
    */
   const [rutaAbierta, setRutaAbierta] = useState<boolean>(pedida !== null);
-  const [modo, setModo] = useState<"hilo" | "mapa">("hilo");
+  const [modo, setModo] = useState<"paradas" | "mapa">("paradas");
 
   const guardadas = useParadasGuardadas();
   useListaAlDia(vigenteHasta);
-  const enElMapa = lugar === "mapa" && !listaAbierta;
+  const enElMapa = lugar === "mapa";
   /** El Mapa de la ciudad (PR 3b): en el Mapa, sin ruta abierta. */
   const enLaCiudad = enElMapa && !rutaAbierta;
   /** La ruta abierta, si hay: su forma se pide aparte (una vez); sus camiones, en la consulta única. */
@@ -123,7 +127,7 @@ export function Ontoy({
   /*
    * **La consulta única de la raíz** (PR 4b, decisión de ASAV): tus favoritas y
    * la ruta abierta, en UNA consulta cada 15 s. De ella salen Inicio, el Mapa,
-   * el hilo y la campana: 4 peticiones por minuto en toda la app —antes, con
+   * la lista de paradas y la campana: 4 peticiones por minuto en toda la app —antes, con
    * una ruta abierta, eran 8— y los avisos al día en cualquier pantalla.
    */
   const [telefono, setTelefono] = useState<EstadoDelTelefono>(TELEFONO_INICIAL);
@@ -148,7 +152,14 @@ export function Ontoy({
     // Abierta, lo que está en pantalla queda visto: el punto se apaga.
     if (campanaAbierta) marcarVistos(avisos.map((a) => a.id));
   }, [campanaAbierta, avisos, marcarVistos]);
-  const listaDeLaCiudad = useParadasDeLaCiudad(enLaCiudad && guardadas.guardadas.length > 0);
+  /*
+   * La lista pública de paradas: la piden el Mapa de la ciudad (para marcar tus
+   * guardadas) y **Ir a** (para emparejar lo que escribes). Una sola bajada,
+   * cacheada por el hook: entrar y salir de Ir a no vuelve a pedirla.
+   */
+  const listaDeLaCiudad = useParadasDeLaCiudad(
+    (enLaCiudad && guardadas.guardadas.length > 0) || lugar === "ira",
+  );
   const paradasGuardadasEnElMapa = useMemo(() => {
     const todas = listaDeLaCiudad.datos?.paradas ?? [];
     return guardadas.guardadas.flatMap((g) => {
@@ -163,7 +174,7 @@ export function Ontoy({
     if (enSentido) setSentido(enSentido);
     setListaAbierta(false);
     setRutaAbierta(true);
-    setModo("hilo");
+    setModo("paradas");
     setLugar("mapa");
     setCampanaAbierta(false);
   }, []);
@@ -206,11 +217,11 @@ export function Ontoy({
     [favoritas, prendidas, enVivo.vivos, paradasGuardadasEnElMapa, alternarFavorita, abrirRuta],
   );
 
-  /* El hilo de la ruta abierta: se arma en `lib/ontoy/hilo.ts`, aquí sólo se pide. */
+  /* Las paradas de la ruta abierta: se arma en `lib/ontoy/paradas-de-la-ruta.ts`, aquí sólo se pide. */
   const renglones = useMemo(
     () =>
       forma
-        ? armarHilo({
+        ? armarParadas({
             forma,
             vivo,
             sentido,
@@ -350,14 +361,7 @@ export function Ontoy({
       )}
 
       {!campanaAbierta && lugar === "mapa" &&
-        (listaAbierta ? (
-          <VistaRutas
-            rutas={rutas}
-            estados={estados}
-            alAbrirRuta={(id) => abrirRuta(id)}
-            alVolver={() => setListaAbierta(false)}
-          />
-        ) : rutaAbierta && rutaEnfocada ? (
+        (rutaAbierta && rutaEnfocada ? (
           <>
             <CabezaDeRuta
               nombre={rutaEnfocada.nombre}
@@ -373,8 +377,8 @@ export function Ontoy({
               alCambiarSentido={setSentido}
               alCambiarModo={setModo}
             />
-            {modo === "hilo" ? (
-              <VistaHilo
+            {modo === "paradas" ? (
+              <VistaParadas
                 renglones={renglones}
                 cargando={!forma || !vivo}
                 aviso={avisoDeLaEscalera(vivo, error)}
@@ -401,10 +405,6 @@ export function Ontoy({
             alCambiarSentido={setSentido}
             alTocarParada={setParadaAbierta}
             alReintentar={reintentar}
-            alVerTodas={() => {
-              setParadaAbierta(null);
-              setListaAbierta(true);
-            }}
           />
             )}
           </>
@@ -424,22 +424,28 @@ export function Ontoy({
             alCambiarSentido={setSentido}
             alTocarParada={setParadaAbierta}
             alReintentar={reintentar}
-            alVerTodas={() => {
-              setParadaAbierta(null);
-              setListaAbierta(true);
-            }}
           />
         ))}
 
-      {!campanaAbierta && lugar === "ira" && (
-        <LugarReservado titulo="Ir a" alIrAlMapa={() => irA("mapa")}>
-          <p>
-            Aquí vas a escribir a dónde vas, y la app te va a armar el viaje, con o sin transbordo.{" "}
-            <b>El planeador llega pronto.</b>
-          </p>
-          <p>Mientras, en el Mapa están todas las rutas con sus paradas y sus camiones en vivo.</p>
-        </LugarReservado>
-      )}
+      {!campanaAbierta && lugar === "ira" &&
+        (listaAbierta ? (
+          <VistaRutas
+            rutas={rutas}
+            estados={estados}
+            alAbrirRuta={(id) => abrirRuta(id)}
+            alVolver={() => setListaAbierta(false)}
+          />
+        ) : (
+          <VistaIrA
+            rutas={rutas}
+            paradas={listaDeLaCiudad.datos?.paradas ?? []}
+            paradasListas={listaDeLaCiudad.datos !== null}
+            error={listaDeLaCiudad.error}
+            alReintentar={listaDeLaCiudad.reintentar}
+            alAbrirRuta={abrirRuta}
+            alVerTodas={() => setListaAbierta(true)}
+          />
+        ))}
 
       {!campanaAbierta && lugar === "pase" && (
         <LugarReservado titulo="Tu pase" alIrAlMapa={() => irA("mapa")}>
@@ -472,7 +478,7 @@ export function Ontoy({
 }
 
 /**
- * Lo que la escalera dice arriba del hilo cuando no hay servicio o no hay red
+ * Lo que la escalera dice arriba de la lista de paradas cuando no hay servicio o no hay red
  * (8.9). Cada caso dice lo suyo: una ruta cerrada y una red caída son dos cosas.
  */
 function avisoDeLaEscalera(
