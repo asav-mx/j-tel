@@ -729,19 +729,41 @@ La confianza del pasajero se construye de las dos: saber a qué hora pasa, y **v
 
 La estructura es de la app de la ciudad, no de una cuenta: el pasajero no elige carrier, elige ruta.
 
+**8.8 (reemplaza a la 8.8 del 19-sep) — Cuatro lugares, y la app abre contestando.** La barra tiene cuatro lugares: **Inicio · Mapa · Ir a · Pase**.
+- **Inicio** abre con la respuesta que el pasajero viene a buscar: su parada guardada con su próximo camión y su promesa. Si no tiene guardadas, ofrece las paradas cerca de él, calculadas en su teléfono (8.3b).
+- **Mapa** enseña sus rutas favoritas en vivo y cualquier ruta que abra. Tocar una ruta abre su **hilo**: la ruta como una línea con paradas, camiones y dónde está él. Desde el Mapa se llega a la lista completa de rutas publicadas.
+- **Ir a** es el buscador y el planeador (8.16).
+- **Pase** es el lugar de la cartera de pago (8.14); hasta que exista, dice que llega después.
+- Los **avisos** viven en la campana de arriba (8.13b).
+
+*Por qué se reemplaza:* la 8.8b pedía evidencia de uso antes de una tercera vista. Inicio no es vista nueva: es el atajo de la parada guardada subido a la portada. Ir a sí es nuevo, y se aprueba **por diseño, no por evidencia de uso** — y así se registra.
+
 **8.8b No hay tercera vista; hay un atajo.** Se evaluó una tercera vista y dos bastan: lo que el pasajero de todos los días necesita no es otra pantalla sino llegar en un toque a **su parada**. La app permite **guardar una parada** (o más de una), y las guardadas aparecen hasta arriba de Rutas, con su próximo paso ya visible. La parada guardada **vive en el teléfono**, no en el servidor (8.7): guardarla no identifica a nadie. Si con el uso real aparece la necesidad de una tercera vista, se enmienda con evidencia, no antes.
 
 **8.8c Cada ruta tiene su color, y es identidad.** En México las rutas se conocen por su color, y la app lo respeta: cada circuito registra su color (parte de su identidad, Pieza 9.8) y la app lo usa para pintar su trazado, sus paradas y sus piezas. Dos reglas del skill lo acotan: el color de ruta es **identidad, nunca estado** — jamás significa «bien» o «mal», y no puede ser el único portador de una diferencia (el nombre siempre acompaña) —, y sobre el mapa debe cumplir el contraste mínimo de 3:1 en las dos pieles, con el halo de la traza si hace falta. Los colores reservados de la plataforma (el cobre de lo vivo, el verde del latido, el ladrillo, el verde sello) no se les asignan a rutas.
 
+**8.8d El tinte de la ruta.** Una ruta abierta tiñe la pantalla con su color; un viaje de varias rutas mezcla sus colores sin promediarlos. Hereda las reglas de la 8.8c. Tres cosas que el tinte nunca toca: **el texto**, **el verde del latido** y **el dato viejo** (si pintara el dato viejo, el color diría estado).
+
 **8.9 La escalera de estados gobierna la honestidad** (ficha del 28-ago, ahora ley): cuando el dato vivo no alcanza, la app degrada por su escalera declarada y jamás inventa una llegada. El cuarto estado no emite veredictos: un camión con dato viejo se queda en el mapa como dato viejo, no como acusación.
 
+**8.9b «A N paradas».** Mientras la velocidad del corredor de una ruta no esté calibrada con sus propios camiones, la app no da minutos: dice a cuántas paradas viene la unidad, que sale de su posición real. Los minutos se prenden cuando la calibración exista. Dar minutos con velocidad de otra flota es inventar una llegada (8.9).
+
 **8.10 Toda pantalla tiene su salida** (ficha del 4-sep, ahora ley): ninguna pantalla de la app es un callejón; siempre hay un camino de regreso visible.
+
+**8.16 El planeador («Ir a»).** El pasajero busca a dónde va y la app arma el viaje, con o sin transbordo. Seis reglas:
+1. Cada tramo dice de dónde sale su número: calculado en el teléfono, medido en vivo, o prometido por la concesión.
+2. Lo medido y lo prometido nunca se funden en un número sin su condición. Un total sólo se da si dice, a la vista, qué parte es promesa: «27–47 min, si el Circuito Norte pasa como promete».
+3. Una espera prometida entra completa. «Cada 20 min» sin camión a la vista es una espera de 0 a 20 min, y el total la carga completa.
+4. Sin recorridos medidos no hay total.
+5. Los recorridos publicados son del circuito, agregados, nunca de un transportista ni de una unidad. La comparación entre transportistas sigue en el cajón reservado (9.14).
+6. El viaje del pasajero no se guarda: origen y destino no quedan en ningún servidor ni en registros. Las búsquedas recientes viven en el teléfono.
 
 ## D. Lo que esta pieza deja abierto
 
 **8.11** El nombre público de la app y su distribución (PWA hoy; tiendas después) — decisión de negocio.
 **8.12** La app del pasajero de transporte **especial** («mi ruta, mi unidad, a qué hora pasa por mí»): prevista, con su propia pieza cuando toque.
 **8.13** Avisos al pasajero (notificaciones de «tu ruta abrió» o «se cayó el servicio»): esperan a que el servicio real ruede semanas; un aviso sobre un servicio inestable enseña a desinstalar.
+**8.13b Avisos dentro de la app, fechados y atribuidos.** Un aviso dentro de la app dice quién lo dijo y desde cuándo («según la concesión») y nunca es un letrero de alarma. Los avisos del propio teléfono se dicen aparte. Esto **no abre las notificaciones**: la 8.13 sigue igual; el aviso se ve al abrir la app, no llega solo.
 **8.15 Guardar las posiciones de los pasajeros: decidido que sí, con condiciones** (ASAV, 19-sep). ASAV quiere, a futuro, conservar posiciones de pasajeros para entender la demanda real: de dónde a dónde viaja la gente, qué paradas faltan, qué ruta pide más unidades. Es data que hoy nadie tiene en la ciudad y es parte de la visión del producto. Se hará **en su propia pieza**, redactada con el abogado, y esta pieza fija desde hoy las condiciones que esa pieza no podrá aflojar, porque diseñarlas después sería un parche:
 
 - **Nunca por defecto, nunca en silencio.** Se activa con consentimiento explícito, informado y revocable; la app completa funciona sin él, y negarse no degrada ninguna función (el ETA del 8.3b no lo necesita: se calcula en el teléfono).
@@ -764,6 +786,8 @@ La estructura es de la app de la ciudad, no de una cuenta: el pasajero no elige 
 - **Las Piezas 1 a 7 no se editan por esta pieza.** Donde la Pieza 4 anota al pasajero como «usuario a futuro», se lee con 8.7: hoy no hay cuenta de pasajero, y cuando la haya será opcional.
 
 El Maestro de siete piezas queda archivado sin editar en `docs/marco-limpio/archivo/`.
+
+**22 de septiembre de 2026 — ASAV.** Afirmaciones 8.8 (nueva), 8.8d, 8.9b, 8.13b, 8.16 y 9.3c revisadas y ✓.
 
 
 ---
@@ -792,11 +816,28 @@ La Pieza 7 definió la modalidad circuito y dejó abierto, a propósito, qué si
 
 **9.2b La torre del circuito.** Mientras el circuito está abierto, la terminal funciona como torre de control: por cada parada y cada unidad muestra **en vivo** su desviación contra la promesa vigente — adelantada, en banda, atrasada — para que el operador corrija por radio antes de que el hueco llegue al pasajero. Dos límites que no se cruzan: **la torre muestra y el humano decide** — J-Tel no maneja camiones ni ordena velocidades —, y la torre **vive del lado del carrier**: el pasajero nunca ve «adelantado/atrasado», ve su tabla y su unidad venir (Pieza 8). La velocidad se mide y se muestra como contexto del ritmo; nunca como orden.
 
+**9.2c «En banda» se dice «en rango».** (Enmienda 20-sep.) Cambio de palabra, no de significado. El 9.2b decía «adelantada, en banda, atrasada»; se lee **«adelantada, en rango, atrasada»**. La orilla que define el rango es la de la promesa vigente de esa franja (9.1c).
+
+**9.2d Los dos tiempos del circuito.** (Enmienda 20-sep, de ASAV.) Un circuito se mide con dos relojes que corren en sentidos opuestos, y confundirlos produce afirmaciones falsas. **El esperado** corre hacia adelante y está declarado: la promesa de la franja («cada 10 min»); no se mide, se captura. **El ejecutado** corre en reversa y es medido, y se mide distinto según el sujeto: en la **unidad**, hacia atrás contra **el paso anterior por esa parada, de cualquier unidad** —el intervalo entre camiones que vive el pasajero, la frecuencia real, no la vuelta de la unidad— un número **cerrado**; en la **parada**, desde la última pasada hacia el ahora — un número **abierto que crece mientras nadie pasa**. Una parada puede declarar que la promesa se rompe sin que ninguna unidad haya hecho nada todavía. Ninguno de los dos es un pronóstico: el tiempo estimado de llegada es del pasajero (Pieza 8), no de esta pieza.
+
+**9.2e El ritmo prometido se dibuja del tiempo medido, o no se dibuja.** (Enmienda 20-sep.) La torre puede mostrar, como referencia, dónde iría una unidad si la frecuencia se sostuviera. Esa referencia **no es una unidad**: vive en su propio carril, con forma y tono propios, y ninguna pantalla la cuenta como camión ni la mezcla con la traza (la prohibición de simular en el mapa sigue intacta). Su posición **se deriva del tiempo de vuelta ya medido** de esa franja. Está prohibido repartirla pareja sobre el corredor: eso supone velocidad uniforme, que nadie midió, y es completar lo que falta (Marco 1.E). Mientras no haya vueltas medidas, el carril va vacío y lo declara.
+
 **9.3 Dos etapas, y el orden es ley: primero el metro, después el juez.**
 - **Etapa 1 — medir (esta pieza la habilita):** la terminal del carrier muestra lo medido, con el vocabulario de la medición — «se sostuvo», «se agujeró», «sin datos» — y sin sellar nada. Territorio de Compás.
 - **Etapa 2 — juzgar (fuera de esta pieza):** sellar cumplimiento del circuito como hechos, con las leyes del árbitro (la verdad se calcula una vez, sin evidencia no es incumplimiento, alarmas que llegan a cero). **No se construye hasta que la medición haya rodado con servicio real y ASAV la ratifique.** Qué producto le pone el sello — Vernier u otro nombre — se decide entonces, no ahora.
 
 Una pantalla de la etapa 1 que diga «cumplió» o «no cumplió» se pasó de etapa: se detiene y se corrige.
+
+**9.3b El vocabulario de la etapa 1 en pantalla es el de la operación, no el del motor.** (Enmienda 20-sep.) Los nombres «se sostuvo», «se agujeró», «sin datos» del 9.3 quedan **sólo como nombres internos del motor**; en pantalla no aparecen — confunden a quien opera, que no es ingeniero. El vocabulario de pantalla es **uno solo**, el mismo para el estado de una unidad y para cada paso medido: **EN RANGO · ADELANTADA · ATRASADA · SIN DATOS.** Todo número lleva su referencia al lado («4 min · rango 5–15»). «Sostener la frecuencia» se conserva en prosa (9.1); como etiqueta de pantalla, no. **La palabra «hueco» no se usa en pantalla:** ahí ya significa que el equipo calló y nadie midió (dos cosas con el mismo nombre en la misma pantalla es la trampa del Marco §D). Lo que una parada lleva sin que pase nadie se llama **espera**; el 9.4 conserva «hueco de servicio» sólo en su prosa.
+
+**9.3c El vocabulario de la jornada.** Al describir el día de una unidad:
+- **Completa** — pasó por todas las paradas de su sentido, en orden.
+- **Incompleta · salió del corredor en ‹parada›** (o **entró**, si faltan las del principio) — sólo con una salida del corredor medida que lo explique.
+- **SIN DATOS** — lo que falta cae en un silencio del GPS. No se afirma que no lo hizo.
+- **Paradas sin paso** — faltan pasos sin causa medida: se listan, sin adjetivo.
+- **Todavía no se mide** — lo que el detector aún no alcanza.
+
+**«Cortó», «cortada», «cortó la ruta» no se dicen en pantalla:** implican intención, y lo único medido es por dónde anduvo el camión. La calificación, cuando llegue, será un catálogo de incumplimientos con reglas escritas antes que Vernier aplica solo — no adjetivos en la jornada.
 
 ## B. Lo que la terminal mide (etapa 1)
 
@@ -834,6 +875,17 @@ Una pantalla de la etapa 1 que diga «cumplió» o «no cumplió» se pasó de e
 **9.12** El árbitro del circuito completo (etapa 2): sus hechos, sus sellos, su producto.
 **9.13** `corredor-prueba` sigue pendiente de corregirse (7.9).
 
+## E. Qué es público, qué reserva J-Tel, y qué es privado del carrier
+
+**9.14 Los tres cajones de visibilidad del circuito.** (Enmienda 20-sep, de ASAV.) La operación de un circuito toca tres cajones, y confundirlos abre o cierra el muro donde no debe:
+- **Público** — la ruta, sus paradas, sus horarios, y el hecho de que un camión de servicio público pasó por una parada a cierta hora. Cualquiera lo observa desde la calle; ocultarlo no protege a nadie.
+- **Reservado de J-Tel** — el **resultado de la medición** (si la frecuencia de paso se sostuvo) y **la comparación entre carriers** de un mismo servicio. No se publica: es el valor que produce la plataforma. El acceso de un carrier a medirse contra el resto del servicio, y el de cualquier tercero a la data agregada, **pasa por J-Tel**.
+- **Privado del carrier** — su negocio: ingresos, números, choferes, expediente. **Nunca cruza** de una cuenta a otra.
+
+De aquí, la regla de visibilidad: **J-Staff** ve el agregado completo del circuito; **la concesión** dueña ve todos los pasos de su circuito; **el carrier** ve los pasos de **sus propias unidades**, y su medición se calcula **sobre lo que puede ver** (en un circuito de un solo carrier eso es el servicio completo, correcto tal cual). Medir un carrier contra los camiones de **otro** carrier **no es la ruta pública: es comparación**, y por lo tanto valor reservado — se habilita **por circuito, según el acuerdo de esa concesión**, nunca por ley general ni por default. El muro estricto entre carriers no es una limitación técnica: es la política que protege el negocio de cada carrier y el de J-Tel a la vez.
+
+**SIN DATOS antes que un número prestado.** Mientras la comparación compartida no esté habilitada para un circuito, la torre del carrier en un servicio compartido **declara lo que no puede medir** en vez de medir contra un flujo incompleto (que produciría un ATRASADA falso — Marco §D). La honestidad del hueco (1.E) manda sobre la completitud de la pantalla.
+
 ---
 
 ## Registro de ratificación
@@ -847,3 +899,7 @@ Una pantalla de la etapa 1 que diga «cumplió» o «no cumplió» se pasó de e
 - **Las Piezas 1 a 6 no se editan.** Donde la Pieza 3 habla del árbitro y del sello, se lee con 9.3: el circuito hoy está en la etapa de medir, y la etapa de juzgar no existe hasta que ASAV la ratifique.
 
 El Maestro de siete piezas queda archivado sin editar en `docs/marco-limpio/archivo/`.
+
+**20 de septiembre de 2026 — ASAV.** Enmiendas ratificadas al diseñar la torre del circuito (prototipo v6): **9.2c** (en rango), **9.2d** (los dos tiempos), **9.2e** (el ritmo prometido derivado del tiempo medido), **9.3b** (el vocabulario de pantalla) y **9.14** (los tres cajones de visibilidad y el valor reservado). Tres nacieron de ASAV en esta sesión: los dos tiempos (9.2d) y la visibilidad como negocio (9.14); el vocabulario de pantalla (9.3b) corrige el 9.3 sin borrarlo. Las decisiones de interfaz asociadas (el cobre del reloj de espera, la dirección del eje del instrumento) **no entran al Marco**: viven en el skill `jtel-diseno`.
+
+**22 de septiembre de 2026 — ASAV.** Afirmaciones 8.8 (nueva), 8.8d, 8.9b, 8.13b, 8.16 y 9.3c revisadas y ✓.
