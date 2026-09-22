@@ -1,7 +1,7 @@
 # Ontoy — declaración de datos para las tiendas (borrador)
 
 **Para:** Asav, cuando llene los formularios de Google Play («Seguridad de los datos») y
-del App Store («Privacidad de la app»). **Fecha:** 21 de septiembre de 2026; revisada el 22 (Ontoy 2.0: PR 1, las paradas cerca de ti; PR 3, «aquí estás» sobre la ruta; PR 3b, los camiones de tus rutas favoritas en una sola consulta).
+del App Store («Privacidad de la app»). **Fecha:** 21 de septiembre de 2026; revisada el 22 (Ontoy 2.0: PR 1, las paradas cerca de ti; PR 3, «aquí estás» sobre la ruta; PR 3b, los camiones de tus rutas favoritas en una sola consulta; PR 4a, los avisos de la concesión en esas respuestas).
 
 **La regla:** esta declaración tiene que coincidir **al pie de la letra** con el código.
 Cada respuesta lleva dónde se comprueba. Si un día el texto y el código no coinciden,
@@ -24,7 +24,7 @@ Cada respuesta lleva dónde se comprueba. Si un día el texto y el código no co
 
 **Las peticiones que hace la app, completas:** las paradas de la ciudad (`GET /api/circuitos/paradas-de-la-ciudad`, sin parámetros), la forma de la ruta (`GET /api/circuitos/‹ruta›`),
 los camiones en vivo de la ruta abierta (`GET …/unidades`, cada 15 s) y los de tus rutas favoritas (`GET /api/circuitos/en-vivo?rutas=…`, cada 15 s, una para todas), la apertura (`POST …/apertura`, vacío) y
-**las teselas del mapa, a un tercero** (ver abajo). Ninguna lleva ubicación, nombre, correo,
+**las teselas del mapa, a un tercero** (ver abajo). Las respuestas de los camiones traen además **los avisos de la concesión** que valen en ese momento (título, detalle, fechas; nada de quién los capturó) — datos públicos de la ruta, no del pasajero, desde la 0052. Ninguna petición lleva ubicación, nombre, correo,
 teléfono ni identificador del aparato.
 
 ### El tercero: el mapa de fondo

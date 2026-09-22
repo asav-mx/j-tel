@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readdirSync } from "node:fs";
+import { SLUGS_RESERVADOS } from "@jtel/domain";
 import { direccionEnVivo, MAXIMO_RUTAS, rutasPedidas } from "@/lib/rutas-pedidas";
 
 describe("las rutas que pide /api/circuitos/en-vivo", () => {
@@ -35,7 +36,8 @@ describe("todo lo que la app pide al servidor vive bajo el prefijo del firewall"
 
   it("las carpetas fijas bajo /api/circuitos/ son nombres que ninguna ruta puede usar como slug", () => {
     const fijas = readdirSync(new URL("../app/api/circuitos/", import.meta.url)).filter((d) => !d.startsWith("["));
-    // Si agregas una, anótala aquí: un circuito con ese slug quedaría tapado por ella.
-    expect(fijas.sort()).toEqual(["en-vivo", "paradas-de-la-ciudad"]);
+    // La lista vive en @jtel/domain (SLUGS_RESERVADOS) y J-Staff la usa para rechazar esos slugs al dar
+    // de alta (PR 4a). Si agregas una carpeta fija aquí, agrégala allá: si no, esto se cae.
+    expect(fijas.sort()).toEqual([...SLUGS_RESERVADOS].sort());
   });
 });

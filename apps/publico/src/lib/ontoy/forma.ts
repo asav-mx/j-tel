@@ -64,6 +64,12 @@ export interface Vivo {
   arranca_el: string | null;
   /** El rango sólo se enseña si la velocidad del circuito ya se calibró. */
   rango_activo: boolean;
+  /**
+   * Los avisos de la concesión que valen ahora (8.13b; 0052): «según la
+   * concesión», con su fecha. Los enseña la campana (PR 4b). Opcional: una
+   * respuesta de antes de la 0052 no los trae.
+   */
+  avisos?: Array<{ id: string; titulo: string; detalle: string | null; desde: string; hasta: string | null }>;
   /** La promesa de AHORA, de las franjas. Viaja aquí y no en la forma: la forma vive en caché. */
   promesa: PromesaAhora;
   unidades: UnidadViva[];

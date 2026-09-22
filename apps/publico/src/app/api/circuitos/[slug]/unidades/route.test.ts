@@ -15,6 +15,7 @@ const repos = {
     listLivePositionsForCircuit: vi.fn(),
     getPaths: vi.fn(),
     getPromiseTableVigente: vi.fn(),
+    listAvisosVigentes: vi.fn(),
   },
 };
 
@@ -69,6 +70,7 @@ beforeEach(() => {
   repos.circuits.getPaths.mockResolvedValue(TRAZADO);
   repos.circuits.listLivePositionsForCircuit.mockResolvedValue([]);
   repos.circuits.getPromiseTableVigente.mockResolvedValue(PROMESA_DE_20);
+  repos.circuits.listAvisosVigentes.mockResolvedValue([]);
 });
 
 describe("la puerta", () => {
@@ -547,5 +549,27 @@ describe("caché", () => {
     return GET(pedir(), ctx("oasis-centro")).then((r) => {
       expect(r.headers.get("cache-control")).toContain("max-age=0");
     });
+  });
+});
+
+describe("los avisos de la concesión (8.13b, 0052)", () => {
+  it("viajan con los camiones, sólo lo que el pasajero lee — ni quién capturó ni motivos", async () => {
+    repos.circuits.getPublishedCircuitBySlug.mockResolvedValue(CIRCUITO);
+    repos.circuits.listAvisosVigentes.mockResolvedValue([
+      {
+        id: "a1",
+        titulo: "La ruta va por Av. de la Raza",
+        detalle: "Mientras dure la obra.",
+        vigenteDesde: new Date("2026-09-22T14:00:00Z"),
+        vigenteHasta: null,
+        capturadoPor: "user_que_no_debe_salir",
+        motivoRetiro: "tampoco",
+      },
+    ]);
+    const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+    expect(cuerpo.avisos).toEqual([
+      { id: "a1", titulo: "La ruta va por Av. de la Raza", detalle: "Mientras dure la obra.", desde: "2026-09-22T14:00:00.000Z", hasta: null },
+    ]);
+    expect(JSON.stringify(cuerpo)).not.toMatch(/user_que_no_debe_salir|tampoco/);
   });
 });

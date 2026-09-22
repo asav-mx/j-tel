@@ -1,3 +1,4 @@
+import { slugReservado } from "@jtel/domain";
 import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/db";
 import { exigir } from "@/lib/guardia-api";
@@ -35,6 +36,10 @@ export async function POST(request: Request) {
   if (!nombre) return volver("Falta el nombre del circuito");
   if (!/^[a-z0-9-]{3,60}$/.test(slug)) {
     return volver("El slug público solo admite minúsculas, números y guiones");
+  }
+  // Nombres reservados: las consultas fijas de Ontoy viven ahí, y un circuito así quedaría tapado.
+  if (slugReservado(slug)) {
+    return volver(`«${slug}» está reservado para Ontoy; escoge otro slug público`);
   }
 
   /**

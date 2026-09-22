@@ -1758,6 +1758,35 @@ export const circuitRuleChanges = pgTable(
 );
 
 /**
+ * Los avisos de la concesión al pasajero, por circuito (0052; Marco 8.13b).
+ *
+ * J-Staff los captura en el expediente del circuito, de parte de la
+ * concesión; en Ontoy se leen «según la concesión», con su fecha. Firmados.
+ * **No se editan: se retiran con motivo**, para que quede qué se le dijo al
+ * pasajero y cuándo. Los CHECK (título 1–80, detalle ≤280, vigencia, retiro
+ * completo o nada) viven en la 0052, como los demás CHECK del esquema.
+ */
+export const circuitNotices = pgTable(
+  "circuit_notices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    circuitId: uuid("circuit_id")
+      .notNull()
+      .references(() => circuits.id, { onDelete: "cascade" }),
+    titulo: text("titulo").notNull(),
+    detalle: text("detalle"),
+    vigenteDesde: timestamp("vigente_desde", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    vigenteHasta: timestamp("vigente_hasta", { withTimezone: true, mode: "date" }),
+    capturadoPor: text("capturado_por").notNull(),
+    capturadoEn: timestamp("capturado_en", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    retiradoEn: timestamp("retirado_en", { withTimezone: true, mode: "date" }),
+    retiradoPor: text("retirado_por"),
+    motivoRetiro: text("motivo_retiro"),
+  },
+  (table) => [index("circuit_notices_circuito_idx").on(table.circuitId, table.vigenteDesde)],
+);
+
+/**
  * La promesa de un circuito por franja horaria (Marco 9.1c, 0044).
  *
  * **La identidad de la promesa: el conjunto, no la franja.** Decisión de Asav
