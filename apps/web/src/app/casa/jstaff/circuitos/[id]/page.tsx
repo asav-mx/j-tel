@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { promesaAhora, promesaEnPalabras, type FranjaCapturada } from "@jtel/domain";
+import { promesaAhora, promesaEnPalabras, velocidadCalibrada, type FranjaCapturada } from "@jtel/domain";
 import { ORIGEN_DEL_CIRCUITO } from "@jtel/domain/publico";
 import { loMinimoParaMedir } from "@jtel/services";
 import { getRepos } from "@/lib/db";
@@ -420,7 +420,7 @@ export default async function VerCircuitoJStaff({
               Ver la operación en la pantalla de siempre →
             </Link>
           </p>
-          <AjustesDeMedicion circuitId={id} ajustes={ajustes} rangoEncendido={circuito.arrivalRangeEnabledAt !== null} />
+          <AjustesDeMedicion circuitId={id} ajustes={ajustes} rangoEncendido={velocidadCalibrada(circuito)} />
           <HistoriaDeReglas
             cambios={reglasCambiadas.map((c) => ({
               id: c.id,

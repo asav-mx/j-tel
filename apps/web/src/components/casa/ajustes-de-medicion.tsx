@@ -106,7 +106,7 @@ export function AjustesDeMedicion({
           <span className="mt-1 block text-[13px] text-[var(--tenue)]">
             {rangoEncendido
               ? "Ontoy dice en cuántos minutos pasa el camión, con la velocidad de arriba."
-              : "Ontoy enseña el camión moverse y calla los minutos: se enciende cuando la velocidad ya se calibró contra la calle."}
+              : "Ontoy dice a cuántas paradas viene el camión y calla los minutos: se enciende cuando la velocidad ya se calibró contra la calle."}
           </span>
         </span>
         <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto">

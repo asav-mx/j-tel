@@ -8,6 +8,7 @@ import {
   type EstadoDelCircuito,
   type TrazadoDeSentido,
 } from "@jtel/domain/publico";
+import { velocidadCalibrada } from "@jtel/domain";
 import { getRepos } from "@/lib/db";
 import { circuitoParaLaApp } from "@/lib/vista-previa";
 import { promesaDelCircuito } from "@/lib/promesa";
@@ -151,7 +152,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slug: stri
        * contra la calle. Apagado, EN VIVO sigue enseñando el camión moviéndose
        * —verdad observada— y se calla el minuto estimado, que aún no lo es.
        */
-      rango_activo: circuito.arrivalRangeEnabledAt !== null,
+      rango_activo: velocidadCalibrada(circuito),
       unidades,
     });
 

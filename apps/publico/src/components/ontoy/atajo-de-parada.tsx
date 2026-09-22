@@ -5,6 +5,8 @@ import type { RutaDeLaCiudad } from "@/lib/ontoy/forma";
 import {
   dondeCaeLaParada,
   llegadasHasta,
+  paradasEnPalabras,
+  paradasHastaLaParada,
   promesaEnPalabras,
   rangoEnPalabras,
   useVelocidadDelCorredor,
@@ -74,6 +76,19 @@ export function AtajoDeParada({
       : [];
   const proxima = llegadas[0] ?? null;
 
+  /*
+   * 8.9b: sin minutos —velocidad sin calibrar, o sin permiso de rango—, la
+   * cuenta de paradas, que sale de la posición real y de ninguna velocidad.
+   * Con la ruta cerrada o sin arrancar no se cuenta nada: manda la escalera.
+   */
+  const enServicio = vivo !== null && vivo.estado !== "por_arrancar" && vivo.estado !== "fuera_de_horario";
+  const porParadas =
+    forma && vivo && enServicio && abscisa !== null
+      ? paradasHastaLaParada({ avanceMetros: abscisa, sentido }, { forma, vivo, trazadoPorSentido })
+      : [];
+  const frescaEnParadas = porParadas.find((p) => p.fresca) ?? null;
+  const viejaEnParadas = porParadas.find((p) => !p.fresca) ?? null;
+
   /* 8.3b: hasta DONDE ESTÁ EL PASAJERO, y sólo si está sobre el corredor. */
   const miAvance =
     yo && trazado && forma ? avanceSobreTrazado(yo, trazado, forma.corredor_m) : null;
@@ -116,6 +131,26 @@ export function AtajoDeParada({
               viene la <b>{proxima.unidad}</b> · {haceNMinutos(proxima.antiguedadSeg)}
             </span>
           </>
+        ) : frescaEnParadas ? (
+          <>
+            <span className="ontoy-eta-num mono">{paradasEnPalabras(frescaEnParadas.paradas)}</span>
+            <span className="ontoy-eta-apoyo">
+              <span className="ontoy-punto-vivo" aria-hidden="true" />
+              viene la <b>{frescaEnParadas.unidad}</b> · {haceNMinutos(frescaEnParadas.antiguedadSeg)}
+            </span>
+          </>
+        ) : viejaEnParadas ? (
+          /*
+            El dato viejo se queda como dato viejo (8.9): en pasado, sin número
+            grande y con su edad. Es lo último que se vio, no dónde está.
+          */
+          <span className="ontoy-eta-vieja">
+            la <b>{viejaEnParadas.unidad}</b> iba {paradasEnPalabras(viejaEnParadas.paradas)}
+            <span className="ontoy-eta-edad mono">
+              <span className="ontoy-punto-viejo" aria-hidden="true" />
+              posición de {haceNMinutos(viejaEnParadas.antiguedadSeg)}
+            </span>
+          </span>
         ) : (
           <span className="ontoy-eta-quieta">{sinLlegada({ cargando, error, vivo })}</span>
         )}

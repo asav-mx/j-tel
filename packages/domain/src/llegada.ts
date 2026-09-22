@@ -116,6 +116,59 @@ export interface RangoDeLlegada {
  */
 export const LLEGANDO_METROS = 400;
 
+// ── La calibración: una sola definición (8.9b) ──────────────────────────
+
+/**
+ * ¿La velocidad del corredor de este circuito está calibrada?
+ *
+ * **La única definición de «calibrado» de la casa** (8.9b). La leen Ontoy —para
+ * decidir entre minutos y «a N paradas»— y la casa de J-Staff —para decir en
+ * qué modo está Ontoy—. La torre no la lee porque no estima llegadas: mide
+ * pasos. El día que prediga un tiempo, importa ésta. Una valla
+ * (`velocidad-calibrada.test.ts`) se cae si alguien vuelve a leer el
+ * interruptor por su cuenta.
+ *
+ * **Qué es hoy, dicho sin adornos:** una **decisión humana firmada**. Alguien de
+ * J-Staff enciende «Tiempo estimado de llegada» cuando juzga que la velocidad
+ * del circuito ya se midió contra la calle; el cambio queda con quién, cuándo y
+ * por qué (`circuit_rule_changes`, 0051). **No es una calibración automática**
+ * con los pasos de sus propios camiones: esa pieza no existe, y mientras no
+ * exista la marca no afirma más que eso. Un circuito recién dado de alta arranca
+ * con la velocidad de otra flota y con esto en `false`.
+ */
+export function velocidadCalibrada(circuito: { arrivalRangeEnabledAt: Date | null }): boolean {
+  return circuito.arrivalRangeEnabledAt !== null;
+}
+
+// ── «A N paradas» (8.9b) ─────────────────────────────────────────────────
+
+/**
+ * A cuántas paradas viene una unidad de la parada del pasajero, contando las
+ * que le faltan **incluida la suya**: 1 es «la siguiente es la tuya». La cuenta
+ * es pareja: nunca «llegando», nunca «en tu parada» — la posición no da para
+ * afirmarlo.
+ *
+ * Es lo que la app dice mientras la velocidad no está calibrada: sale de la
+ * posición real del camión y del orden real de las paradas sobre el trazado,
+ * **sin ninguna velocidad**, así que no inventa una llegada (8.9).
+ *
+ * `abscisasDeParadas` son las paradas de ESE sentido sobre ESE trazado (las que
+ * no caen en él ya vienen fuera). `null` cuando la unidad ya pasó la parada:
+ * volverá dando la vuelta, y eso es especulación, igual que con los minutos.
+ */
+export function paradasHasta(
+  avanceUnidadMetros: number,
+  avanceParadaMetros: number,
+  abscisasDeParadas: number[],
+): number | null {
+  if (!(avanceParadaMetros > avanceUnidadMetros)) return null;
+  const faltan = abscisasDeParadas.filter(
+    (a) => a > avanceUnidadMetros && a <= avanceParadaMetros,
+  ).length;
+  // La parada del pasajero siempre cuenta, aunque su abscisa no venga en la lista.
+  return Math.max(1, faltan);
+}
+
 // ── El permiso para afirmar un tiempo ────────────────────────────────────
 
 declare const marcaDePermiso: unique symbol;

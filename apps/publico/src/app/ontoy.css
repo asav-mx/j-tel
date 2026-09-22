@@ -393,6 +393,31 @@
   font-size: 18px;
   color: var(--tenue);
 }
+/* El dato viejo (8.9): en pasado, sin número grande, con su edad. */
+.ontoy-eta-vieja {
+  display: block;
+  font-size: 14px;
+  color: var(--tenue);
+}
+.ontoy-eta-vieja b {
+  color: var(--texto);
+  font-weight: 600;
+}
+.ontoy-eta-edad {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+}
+/* La forma carga el estado: anillo hueco, sin latido — distinto del punto vivo aunque no se vea el color. */
+.ontoy-punto-viejo {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.6px solid var(--tenue);
+  margin-right: 6px;
+  vertical-align: 0;
+}
 .ontoy-eta-apoyo {
   font-size: 13px;
   color: var(--tenue);
@@ -792,6 +817,12 @@
 }
 .ontoy-llegada.vieja .ontoy-llegada-rotulo {
   color: var(--tenue);
+}
+/* La posición vieja: en pasado y sin número grande (8.9). */
+.ontoy-llegada.pasada .ontoy-llegada-rotulo {
+  font-family: var(--fuente-texto), sans-serif;
+  font-weight: 500;
+  font-size: 14px;
 }
 .ontoy-llegada-apoyo {
   font-size: 12.5px;
