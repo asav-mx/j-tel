@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { RutaDeLaCiudad, Sentido } from "@/lib/ontoy/forma";
 import type { ParadaGuardada } from "@/lib/ontoy/paradas-guardadas";
 import {
@@ -9,9 +9,10 @@ import {
   RADIO_CERCA_M,
   sentidoEnPalabras,
 } from "@/lib/ontoy/paradas-cerca";
-import type { ParadasDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
 import type { Ubicacion } from "@/lib/ubicacion";
 import { AtajoDeParada } from "@/components/ontoy/atajo-de-parada";
+import { useEnVivo } from "@/lib/ontoy/en-vivo";
+import { useParadasDeLaCiudad } from "@/lib/ontoy/usar-paradas-de-la-ciudad";
 
 /**
  * **Inicio** — la app abre contestando (8.8, 22-sep).
@@ -26,7 +27,7 @@ import { AtajoDeParada } from "@/components/ontoy/atajo-de-parada";
  * dado, no se le vuelve a preguntar y la lista sale sola. Si dice que no, Inicio
  * lo manda al Mapa y la app sirve completa (8.7).
  *
- * La lista de paradas de la ciudad (`/api/paradas`) se baja sólo cuando hace
+ * La lista de paradas de la ciudad (`/api/circuitos/paradas-de-la-ciudad`) se baja sólo cuando hace
  * falta —sin guardadas y con ubicación—, una vez, y el cruce con la ubicación
  * ocurre aquí. La petición no lleva nada del pasajero.
  */
@@ -50,6 +51,13 @@ export function VistaInicio({
   alQuitarGuardada: (g: ParadaGuardada) => void;
   alIrAlMapa: () => void;
 }) {
+  /*
+   * Los camiones de TODAS las rutas de tus paradas, en una sola consulta cada
+   * 15 s (PR 3b). Antes cada tarjeta sondeaba la suya.
+   */
+  const rutasGuardadas = useMemo(() => [...new Set(guardadas.map((g) => g.ruta))], [guardadas]);
+  const enVivo = useEnVivo(rutasGuardadas);
+
   if (!guardadasListas) return <div className="ontoy-vista" />;
 
   return (
@@ -63,6 +71,8 @@ export function VistaInicio({
               guardada={g}
               ruta={rutas.find((r) => r.circuito_id === g.ruta) ?? null}
               yo={ubicacion.yo}
+              vivo={enVivo.vivos.get(g.ruta) ?? (enVivo.respondio ? null : undefined)}
+              errorVivo={enVivo.error}
               alAbrir={() => alAbrirRuta(g.ruta, g.parada)}
               alQuitar={() => alQuitarGuardada(g)}
             />
@@ -218,29 +228,4 @@ function ParadasCercaDeTi({
       {cuerpo}
     </section>
   );
-}
-
-/** Baja la lista de la ciudad una vez, y sólo cuando `hace_falta`. */
-function useParadasDeLaCiudad(haceFalta: boolean) {
-  const [datos, setDatos] = useState<ParadasDeLaCiudad | null>(null);
-  const [error, setError] = useState(false);
-  const [intento, setIntento] = useState(0);
-
-  useEffect(() => {
-    if (!haceFalta || datos) return;
-    let vivo = true;
-    setError(false);
-    fetch("/api/paradas")
-      .then((r) => {
-        if (!r.ok) throw new Error(String(r.status));
-        return r.json() as Promise<ParadasDeLaCiudad>;
-      })
-      .then((d) => vivo && setDatos(d))
-      .catch(() => vivo && setError(true));
-    return () => {
-      vivo = false;
-    };
-  }, [haceFalta, datos, intento]);
-
-  return { datos, error, reintentar: () => setIntento((n) => n + 1) };
 }

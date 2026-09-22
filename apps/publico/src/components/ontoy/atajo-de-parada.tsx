@@ -12,7 +12,8 @@ import {
   useVelocidadDelCorredor,
 } from "@/lib/ontoy/llegadas";
 import type { ParadaGuardada } from "@/lib/ontoy/paradas-guardadas";
-import { useRutaEnVivo } from "@/lib/ontoy/ruta-en-vivo";
+import { useForma } from "@/lib/ontoy/ruta-en-vivo";
+import type { Vivo } from "@/lib/ontoy/forma";
 import { avanceSobreTrazado } from "@jtel/domain";
 
 /**
@@ -39,6 +40,8 @@ export function AtajoDeParada({
   guardada,
   ruta,
   yo,
+  vivo: vivoDeInicio,
+  errorVivo,
   alAbrir,
   alQuitar,
 }: {
@@ -50,10 +53,22 @@ export function AtajoDeParada({
    * y varias tarjetas no deben encender varias lecturas del GPS.
    */
   yo: { lat: number; lon: number } | null;
+  /**
+   * Los camiones de SU ruta, de la consulta única de Inicio (`useEnVivo`, PR 3b):
+   * una tarjeta ya no sondea por su cuenta — con cinco tarjetas eran cinco
+   * sondeos cada 15 s. `undefined` mientras llega la primera respuesta; `null`
+   * si la respuesta ya llegó y esta ruta no venía (dejó de publicarse).
+   */
+  vivo: Vivo | null | undefined;
+  /** La consulta única falló: lo que se ve es lo último que se supo. */
+  errorVivo: boolean;
   alAbrir: () => void;
   alQuitar: () => void;
 }) {
-  const { forma, vivo, error, cargando } = useRutaEnVivo(guardada.ruta);
+  const { forma, error: errorForma, cargando: cargandoForma } = useForma(guardada.ruta);
+  const vivo = vivoDeInicio ?? null;
+  const error = errorForma || errorVivo;
+  const cargando = cargandoForma || vivoDeInicio === undefined;
   const { velocidad, trazadoPorSentido } = useVelocidadDelCorredor(forma, vivo);
 
   const parada = forma?.paradas.find((p) => p.id === guardada.parada) ?? null;
@@ -191,7 +206,8 @@ function sinLlegada(e: {
   vivo: { estado: string; abre_a: string; arranca_el: string | null } | null;
 }): string {
   if (e.error) return "No pudimos preguntar ahorita";
-  if (e.cargando || !e.vivo) return "Preguntando…";
+  if (e.cargando) return "Preguntando…";
+  if (!e.vivo) return "Sin datos de esta ruta ahorita";
   if (e.vivo.estado === "por_arrancar") {
     return e.vivo.arranca_el ? `Arranca el ${e.vivo.arranca_el}` : "Todavía no arranca";
   }

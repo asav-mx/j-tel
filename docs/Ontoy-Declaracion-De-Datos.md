@@ -1,7 +1,7 @@
 # Ontoy — declaración de datos para las tiendas (borrador)
 
 **Para:** Asav, cuando llene los formularios de Google Play («Seguridad de los datos») y
-del App Store («Privacidad de la app»). **Fecha:** 21 de septiembre de 2026; revisada el 22 (Ontoy 2.0: PR 1, las paradas cerca de ti; PR 3, «aquí estás» sobre la ruta).
+del App Store («Privacidad de la app»). **Fecha:** 21 de septiembre de 2026; revisada el 22 (Ontoy 2.0: PR 1, las paradas cerca de ti; PR 3, «aquí estás» sobre la ruta; PR 3b, los camiones de tus rutas favoritas en una sola consulta).
 
 **La regla:** esta declaración tiene que coincidir **al pie de la letra** con el código.
 Cada respuesta lleva dónde se comprueba. Si un día el texto y el código no coinciden,
@@ -17,12 +17,13 @@ Cada respuesta lleva dónde se comprueba. Si un día el texto y el código no co
 | **Ubicación precisa** | Se lee en el teléfono (`watchPosition`) sólo si el pasajero da permiso. **No se pide al abrir:** se pide al tocar «Ver paradas cerca de mí», y si el permiso ya estaba dado se usa sin volver a preguntar (`navigator.permissions`, que no pregunta). Se usa ahí mismo para escoger las paradas cercanas, marcar «aquí estás» sobre la ruta abierta y calcular la llegada hasta él. **No viaja** en ninguna petición nuestra. | `apps/publico/src/lib/ubicacion.ts`, `lib/ontoy/paradas-cerca.ts`; las únicas peticiones de la app son las de la tabla de abajo |
 | **Paradas guardadas** y **piel clara/oscura** | En el almacenamiento del navegador (`localStorage`), en el teléfono. No viajan. | `lib/ontoy/paradas-guardadas.ts`, `lib/tema.ts` |
 | **Apertura de una ruta** | Un `POST` **sin cuerpo** a `/api/circuitos/‹ruta›/apertura`. El servidor guarda `{circuito, día local, huella}`. La huella es un HMAC de IP + agente + día + circuito; **la IP y el agente no se guardan**, y la huella rota cada día. | `app/api/circuitos/[slug]/apertura/route.ts`, `huellaDeApertura` en `@jtel/domain/publico` |
-| **Paradas cerca de ti** | Un `GET /api/paradas` **sin parámetros**, igual para todos: baja las paradas públicas de la ciudad (por ruta: id público, nombre, color; por parada: id público, ruta, nombre, sentido, posición — **cero mediciones**). El cruce con la ubicación ocurre en el teléfono. Se pide sólo en Inicio, sin paradas guardadas y con ubicación. | `app/api/paradas/route.ts`, `lib/paradas-de-la-ciudad.ts` (y su prueba) |
+| **Paradas cerca de ti** | Un `GET /api/circuitos/paradas-de-la-ciudad` **sin parámetros**, igual para todos: baja las paradas públicas de la ciudad (por ruta: id público, nombre, color; por parada: id público, ruta, nombre, sentido, posición — **cero mediciones**). El cruce con la ubicación ocurre en el teléfono. Se pide en Inicio (sin paradas guardadas y con ubicación) y en el Mapa de la ciudad (para marcar tus paradas guardadas). | `app/api/circuitos/paradas-de-la-ciudad/route.ts`, `lib/paradas-de-la-ciudad.ts` (y su prueba) |
+| **Las rutas de tus paradas guardadas** | Para enseñar sus camiones en Inicio y en el Mapa de la ciudad, un `GET /api/circuitos/en-vivo?rutas=‹ruta›,‹ruta›` cada 15 s, **una sola consulta para todas** (antes, una por tarjeta). Lleva **cuáles rutas** —ids públicos, ordenados, como mucho 8—, **no cuáles paradas**, ni ubicación, ni identificador. El servidor contesta y **no la guarda**; como con cualquier petición, la plataforma puede anotar la dirección pedida (y con ella esa lista) en sus registros técnicos por un tiempo corto. Es lo mismo que ya pasaba al pedir cada ruta por su nombre, ahora junto. | `app/api/circuitos/en-vivo/route.ts`, `lib/rutas-pedidas.ts`, `lib/ontoy/en-vivo.ts` |
 | **Búsqueda** | Corre en el teléfono sobre las paradas ya bajadas. **No hace petición.** No hay buscador de direcciones (decisión del 2 sep, `DESPUES.md` §6). | `lib/buscar-lugar.ts` |
 | **Letras** | Servidas del mismo sitio (`next/font`), no de Google. | `app/layout.tsx` |
 
-**Las peticiones que hace la app, completas:** las paradas de la ciudad (`GET /api/paradas`, sin parámetros), la forma de la ruta (`GET /api/circuitos/‹ruta›`),
-los camiones en vivo (`GET …/unidades`, cada 15 s), la apertura (`POST …/apertura`, vacío) y
+**Las peticiones que hace la app, completas:** las paradas de la ciudad (`GET /api/circuitos/paradas-de-la-ciudad`, sin parámetros), la forma de la ruta (`GET /api/circuitos/‹ruta›`),
+los camiones en vivo de la ruta abierta (`GET …/unidades`, cada 15 s) y los de tus rutas favoritas (`GET /api/circuitos/en-vivo?rutas=…`, cada 15 s, una para todas), la apertura (`POST …/apertura`, vacío) y
 **las teselas del mapa, a un tercero** (ver abajo). Ninguna lleva ubicación, nombre, correo,
 teléfono ni identificador del aparato.
 
@@ -68,6 +69,7 @@ contestar la petición).
 | · ¿Se procesa de forma efímera? | **No** | Se guarda por día |
 | · ¿Es obligatoria? | Sí (automática; no hay forma de apagarla en la app) | Nadie la configura |
 | · Propósito | **Análisis** | Medir la demanda por ruta |
+| · Y las rutas favoritas (`en-vivo?rutas=`) | **No se declaran aparte: procesamiento efímero** | La lista viaja para contestar la petición y el servidor no la guarda. Es el mismo caso que pedir una ruta por su nombre, que ya se hacía. **Revisar con el abogado de Ontoy 3.0** si el registro técnico de la plataforma cambia esa respuesta |
 | **Identificadores de dispositivo u otros** | **No** | La huella viaja dentro de la interacción de arriba (ya declarada), rota cada día y no identifica al aparato entre días; la IP entra al cálculo y se descarta. Si la revisión de Google lo pregunta, ésa es la explicación |
 | **Compartidos con terceros** | **Revisar con el tercero del mapa**: mientras sea OSM, el teléfono le pide teselas directo, con su IP. Google considera «compartir» enviar datos a un tercero; lo prudente es declarar **Ubicación aproximada → compartida → funcionalidad de la app**, con la nota de que es la zona de la tesela, no la ubicación. **Con Protomaps, esta fila desaparece.** | Ver «el tercero» arriba |
 | ¿Los datos se cifran en tránsito? | **Sí** | Todo va por HTTPS |

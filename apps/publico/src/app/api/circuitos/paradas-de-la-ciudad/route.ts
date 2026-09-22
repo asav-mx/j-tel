@@ -9,6 +9,9 @@ import { paradasDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
  * Se pide **sólo** cuando el pasajero toca «Ver paradas cerca de mí», no al
  * abrir: en un teléfono con datos contados, lo que no se usa no se baja.
  *
+ * **Vive bajo `/api/circuitos/`** (se mudó de `/api/paradas` el 22-sep): es el
+ * prefijo de la regla del firewall, y fuera de él ninguna regla la cubría.
+ *
  * GET sin parámetros, igual para todos: no hay nada del pasajero que pueda
  * viajar en él. Mismo caché que la forma de una ruta — una parada cambia
  * cuando alguien la mueve media cuadra, no cada minuto.

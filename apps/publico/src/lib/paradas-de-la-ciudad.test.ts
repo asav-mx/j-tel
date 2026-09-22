@@ -98,7 +98,7 @@ describe("las paradas de la ciudad", () => {
   });
 
   it("la ruta del servidor no arma nada por su cuenta: devuelve lo que armó esta función", () => {
-    const ruta = readFileSync(new URL("../app/api/paradas/route.ts", import.meta.url), "utf8");
+    const ruta = readFileSync(new URL("../app/api/circuitos/paradas-de-la-ciudad/route.ts", import.meta.url), "utf8");
     expect(ruta).toContain("paradasDeLaCiudad(getRepos().circuits)");
     expect(ruta).toContain("NextResponse.json(lista,");
     // Un GET sin parámetros: nada del pasajero puede viajar en él.

@@ -50,6 +50,12 @@ historia** (el endpoint), y **este límite**.
 - **Frena el barrido masivo:** alguien recorriendo slugs, pidiendo muchas rutas
   desde una IP, o pidiendo el mismo circuito cientos de veces por minuto con el
   encabezado que sea para saltarse el caché.
+- **Las favoritas no suben la cuenta (PR 3b, 22-sep).** Inicio y el Mapa de la
+  ciudad piden los camiones de TODAS las rutas guardadas en **una** consulta
+  cada 15 s (`/api/circuitos/en-vivo?rutas=…`, como mucho 8 rutas): siguen
+  siendo **4 peticiones por minuto por pasajero**, tenga una favorita o cinco.
+  Antes, cada tarjeta de Inicio sondeaba la suya. La lista va ordenada, así que
+  dos teléfonos con las mismas favoritas comparten la respuesta del CDN.
 - **NO frena a quien sigue UNA ruta.** La app pide las unidades cada 15 s y el
   CDN guarda cada respuesta 15 s. Un guion que quiera el recorrido de los
   camiones de una ruta necesita exactamente eso: 4 peticiones por minuto, igual
@@ -69,7 +75,7 @@ En el proyecto de Vercel **`j-tel-publico`** → **Firewall** → **Rate Limitin
 
 | Campo | Valor | Por qué |
 |---|---|---|
-| Ruta | `/api/circuitos/*` (prefijo `/api/circuitos/`) | Todo el endpoint, cualquier circuito: forma, unidades y aperturas. |
+| Ruta | `/api/circuitos/*` (prefijo `/api/circuitos/`) | Todo el endpoint, cualquier circuito: forma, unidades y aperturas; y desde el 22-sep también `/api/circuitos/en-vivo` (las favoritas, en una consulta) y `/api/circuitos/paradas-de-la-ciudad` (que vivía en `/api/paradas`, **fuera** de la regla). **Todo lo que la app pide vive bajo este prefijo**, y una prueba (`apps/publico/src/lib/rutas-pedidas.test.ts`) se cae si alguien agrega una consulta fuera de él. |
 | Llave | **IP** | No hay otra: la app no tiene cuentas. |
 | Ventana | **60 s**, ventana fija | Larga para que un pico normal no la toque. |
 | Límite | **120 peticiones por IP** | ASAV, 21-sep: las compañías de celular meten muchos teléfonos detrás de una misma IP, y en Juárez es el caso normal. Un pasajero hace 4 por minuto; 120 son treinta pasajeros con la app abierta detrás de una IP, y sigue siendo muy poco para un barrido. |
