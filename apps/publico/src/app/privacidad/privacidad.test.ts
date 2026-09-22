@@ -92,7 +92,9 @@ describe("la declaración para las tiendas sigue al código", () => {
   it("cada uso de la ubicación está dicho: «aquí estás» en el hilo aparece en la página y en la declaración", () => {
     expect(leer("apps/publico/src/lib/ontoy/hilo.ts")).toContain('tipo: "aqui"');
     expect(sinComentarios(leer(PAGINA))).toContain("para marcar dónde");
-    expect(declaracion).toContain("marcar «aquí estás» sobre la ruta abierta");
+    // Y el punto «tú» del mapa (recuperado el 22-sep): también está dicho.
+    expect(sinComentarios(leer(PAGINA))).toMatch(/estás en el mapa/);
+    expect(declaracion).toContain("marcar «tú» en el mapa y «aquí estás» sobre la ruta abierta");
     expect(leer("apps/publico/src/lib/ontoy/hilo.ts")).not.toMatch(/fetch\(/);
   });
 

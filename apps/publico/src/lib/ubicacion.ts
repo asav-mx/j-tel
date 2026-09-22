@@ -37,19 +37,43 @@ export type EstadoDeUbicacion =
   /** Hay posición. */
   | "concedida"
   /** El pasajero dijo que no, o lo quitó en ajustes. No se insiste. */
-  | "negada";
+  | "negada"
+  /**
+   * Hay permiso, pero el teléfono no da posición: GPS apagado, sin señal, o se
+   * agotó el tiempo. **No es un «no» del pasajero**, y no se confunde con él:
+   * se dice distinto y se puede reintentar. Antes se quedaba en «buscando»
+   * para siempre (bug del 22-sep-2026).
+   */
+  | "sin-senal";
 
 export interface Ubicacion {
   yo: { lat: number; lon: number } | null;
   estado: EstadoDeUbicacion;
   /** Pide el permiso (sólo tras un toque del pasajero) y empieza a leer. */
   pedir: () => void;
+  /** Vuelve a empezar la lectura: tras «sin señal», cuando el pasajero prende su GPS. */
+  reintentar: () => void;
+}
+
+/**
+ * Qué estado deja un error de `watchPosition`. Pura, para probarla sin GPS.
+ *
+ * - 1 (PERMISSION_DENIED): el pasajero dijo que no → «negada».
+ * - 2 (POSITION_UNAVAILABLE) y 3 (TIMEOUT): hay permiso y no hay posición. Si
+ *   ya había una, se conserva —un túnel no borra dónde estabas— y si nunca
+ *   llegó ninguna, «sin-senal», que la pantalla dice con su salida.
+ */
+export function estadoTrasError(codigo: number, hayPosicion: boolean): EstadoDeUbicacion {
+  if (codigo === 1) return "negada";
+  return hayPosicion ? "concedida" : "sin-senal";
 }
 
 export function useUbicacion({ pedirAlAbrir }: { pedirAlAbrir: boolean }): Ubicacion {
   const [yo, setYo] = useState<{ lat: number; lon: number } | null>(null);
   const [estado, setEstado] = useState<EstadoDeUbicacion>("sin-pedir");
   const vigilancia = useRef<number | null>(null);
+  /** Si ya llegó alguna posición: un error después de eso no la borra. */
+  const huboPosicion = useRef(false);
 
   const leer = useCallback(() => {
     if (vigilancia.current !== null) return;
@@ -60,16 +84,23 @@ export function useUbicacion({ pedirAlAbrir }: { pedirAlAbrir: boolean }): Ubica
     setEstado((e) => (e === "concedida" ? e : "buscando"));
     vigilancia.current = navigator.geolocation.watchPosition(
       (p) => {
+        huboPosicion.current = true;
         setYo({ lat: p.coords.latitude, lon: p.coords.longitude });
         setEstado("concedida");
       },
       (err) => {
         /* Sin permiso la app sigue sirviendo. No se insiste ni se bloquea. */
-        if (err.code === err.PERMISSION_DENIED) {
+        if (err.code === 1) {
           setEstado("negada");
           if (vigilancia.current !== null) navigator.geolocation.clearWatch(vigilancia.current);
           vigilancia.current = null;
+          return;
         }
+        /*
+         * Sin señal o sin GPS: la vigilancia SIGUE —si el GPS vuelve, la
+         * posición llega sola— y la pantalla lo dice con «Reintentar».
+         */
+        setEstado(estadoTrasError(err.code, huboPosicion.current));
       },
       { enableHighAccuracy: true, maximumAge: 10_000, timeout: 20_000 },
     );
@@ -106,7 +137,13 @@ export function useUbicacion({ pedirAlAbrir }: { pedirAlAbrir: boolean }): Ubica
     };
   }, [pedirAlAbrir, leer]);
 
-  return { yo, estado, pedir: leer };
+  const reintentar = useCallback(() => {
+    if (vigilancia.current !== null) navigator.geolocation.clearWatch(vigilancia.current);
+    vigilancia.current = null;
+    leer();
+  }, [leer]);
+
+  return { yo, estado, pedir: leer, reintentar };
 }
 
 /**
