@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { promesaAhora, promesaEnPalabras, type FranjaCapturada } from "@jtel/domain";
 import { loMinimoParaMedir } from "@jtel/services";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
@@ -8,6 +9,9 @@ import { Migas } from "@/components/casa/migas";
 import { AvisoDeError, Renglon, Titular, Vacio } from "@/components/casa/expediente";
 import { clases } from "@/components/casa/formulario";
 import { CadenaEnEslabones } from "@/components/casa/cadena-del-circuito";
+import { PromesaDelCircuito } from "@/components/casa/promesa-del-circuito";
+import { UnidadesDelCircuito } from "@/components/casa/unidades-del-circuito";
+import { correosDeAutores } from "@/lib/casa/autores";
 import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 import { cadenaDelCircuito, loQueFaltaEnPalabras, type Eslabon } from "@/lib/casa/cadena-del-circuito";
 
@@ -22,9 +26,10 @@ export const dynamic = "force-dynamic";
  * servicios): la misma definición que decide la caja vacía de la torre y su
  * aviso de «sin unidades». Dos definiciones se separan el primer mes.
  *
- * **En A1 sólo Publicar escribe desde aquí**, con la ruta de siempre. Los
- * demás pasos enseñan lo que hay y llevan a su parte de la pantalla vieja, que
- * sigue viva: unidades y promesa se mudan en A2, trazado y paradas en A3.
+ * **Escriben desde aquí** Publicar (A1), y la promesa y las unidades (A2),
+ * siempre con las rutas de siempre. Identidad, trazado y paradas todavía llevan
+ * a su parte de la pantalla vieja, que sigue viva: trazado y paradas se mudan
+ * en A3.
  *
  * **Publicar no exige nada** (ASAV, 21-sep: la decisión escrita en la ruta de
  * publicación se queda). Es acto de quien opera; la cadena enuncia lo que
@@ -43,14 +48,26 @@ export default async function VerCircuitoJStaff({
   const circuito = await repos.circuits.getCircuit(id);
   if (!circuito) notFound();
 
-  const [concesion, trazados, paradas, asignaciones, promesa] = await Promise.all([
+  const [concesion, trazados, paradas, asignaciones, promesa, asignables, versiones] = await Promise.all([
     repos.accounts.findById(circuito.concessionAccountId),
     repos.circuits.getPaths(id),
     repos.circuits.listStopsVigentes(id),
     repos.circuits.listAssignments(id),
     repos.circuits.getPromiseTableVigente(id),
+    repos.circuits.listUnidadesAsignables(circuito.concessionAccountId),
+    repos.circuits.listPromiseTables(id),
   ]);
-  const vigentes = asignaciones.filter((a) => a.validTo === null);
+  // Desempate por número económico: con la misma fecha, el orden cambiaba de una carga a otra.
+  const vigentes = asignaciones
+    .filter((a) => a.validTo === null)
+    .sort((a, b) => b.validFrom.getTime() - a.validFrom.getTime() || a.unitLabel.localeCompare(b.unitLabel, "es", { numeric: true }));
+  const soltadas = asignaciones.filter((a) => a.validTo !== null);
+  // Quién asignó, soltó o capturó: correos, de la sesión que firmó (0048, 0049).
+  const autores = await correosDeAutores([
+    ...asignaciones.flatMap((a) => [a.asignadaPor, a.cerradaPor]),
+    ...versiones.map((v) => v.capturadaPor),
+  ]);
+  const quien = (idUsuario: string | null) => (idUsuario ? (autores.get(idUsuario) ?? idUsuario) : null);
   const publicado = circuito.publishedAt !== null;
 
   const minimo = loMinimoParaMedir({
@@ -77,6 +94,32 @@ export default async function VerCircuitoJStaff({
   const ok = typeof sp.ok === "string" ? sp.ok : null;
   const error = typeof sp.error === "string" ? sp.error : null;
   const porSentido = (s: "ida" | "vuelta") => paradas.filter((p) => p.sentido === s || p.sentido === null).length;
+
+  const franjas: FranjaCapturada[] = (promesa?.bandas ?? []).map((b) => ({
+    diaTipo: b.diaTipo,
+    sentido: b.sentido,
+    desdeLocal: b.desdeLocal,
+    hastaLocal: b.hastaLocal,
+    frequencyMinutes: b.frequencyMinutes,
+  }));
+  /*
+   * Lo que Ontoy le dice al pasajero AHORA, con sus mismas dos funciones: la
+   * promesa de este instante (`promesaAhora`) y su frase (`promesaEnPalabras`,
+   * que vive en el dominio para que no haya dos). Sin sentido: la portada.
+   */
+  const ahora = new Date();
+  const ontoyDice = promesaEnPalabras(promesaAhora(promesa ? franjas : null, ahora, zona), null);
+  const horaAhora = new Intl.DateTimeFormat("es-MX", { timeZone: zona, weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(ahora);
+  const enPantalla = (a: (typeof asignaciones)[number]) => ({
+    id: a.id,
+    unidad: a.unitLabel,
+    transportista: a.carrierName,
+    desde: dia(a.validFrom),
+    hasta: a.validTo ? dia(a.validTo) : null,
+    asignadaPor: quien(a.asignadaPor),
+    cerradaPor: quien(a.cerradaPor),
+    motivo: a.motivo,
+  });
 
   return (
     <Marco casa={CASAS.jstaff} alcance={ALCANCE_SIN_CUENTA} lugar="/casa/jstaff/circuitos">
@@ -150,32 +193,59 @@ export default async function VerCircuitoJStaff({
         </Paso>
 
         <Paso eslabon={eslabon(4)} titulo="Promesa por franja">
-          {promesa === null ? (
-            <Vacio>Sin promesa capturada</Vacio>
-          ) : (
-            <>
-              <Renglon pregunta="Franjas vigentes" medida tenue={promesa.bandas.length === 0}>
-                {promesa.bandas.length === 0 ? "ninguna" : promesa.bandas.length}
-              </Renglon>
-              <Renglon pregunta="Vigente desde" medida>
-                {dia(promesa.tabla.validFrom)}
-              </Renglon>
-            </>
+          <PromesaDelCircuito
+            circuitId={id}
+            vigentes={franjas}
+            hayVigente={promesa !== null}
+            horario={{ abre: circuito.serviceStartLocal.slice(0, 5), cierra: circuito.serviceEndLocal.slice(0, 5) }}
+          />
+          {/*
+           * Sin publicar, Ontoy no dice nada: la ruta no existe para el pasajero.
+           * Decir «Ontoy dice…» de un circuito que nadie ve sería afirmar algo
+           * que no ocurre (Marco §D); se dice lo que diría al publicarlo.
+           */}
+          <p className="text-[13px] text-[var(--tenue)]">
+            {publicado ? (
+              <>
+                Ontoy ahorita (<span data-medida>{horaAhora}</span>) dice:{" "}
+                <span className="text-[var(--tinta)]">«{ontoyDice}»</span>
+              </>
+            ) : (
+              <>
+                Ontoy no lo muestra: el circuito no está publicado. Publicado ahorita (<span data-medida>{horaAhora}</span>),
+                diría: <span className="text-[var(--tinta)]">«{ontoyDice}»</span>
+              </>
+            )}{" "}
+            — de la promesa guardada, no de lo que se está editando.
+          </p>
+          {versiones.length > 0 && (
+            <div className="flex flex-col gap-1 border-t border-dashed border-[var(--linea)] pt-2 text-[12.5px] text-[var(--tenue)]">
+              {versiones.slice(0, 5).map((v) => (
+                <span key={v.id}>
+                  <span data-medida>{dia(v.validFrom)}</span>
+                  {v.validTo ? <> → <span data-medida>{dia(v.validTo)}</span></> : " · vigente"} ·{" "}
+                  {v.franjas === 1 ? "1 franja" : `${v.franjas} franjas`} ·{" "}
+                  {v.capturadaPor ? `capturó ${quien(v.capturadaPor)}` : "sin registro de quién"}
+                  {v.motivo ? ` · «${v.motivo}»` : ""}
+                </span>
+              ))}
+            </div>
           )}
-          <SeEditaEnLaVieja ruta={vieja} que="Se captura" />
         </Paso>
 
         <Paso eslabon={eslabon(5)} titulo="Unidades asignadas">
-          {vigentes.length === 0 ? (
-            <Vacio>Sin unidades asignadas</Vacio>
-          ) : (
-            vigentes.map((a) => (
-              <Renglon key={a.id} pregunta={`${a.unitLabel} · ${a.carrierName}`} medida>
-                asignada desde {dia(a.validFrom)}
-              </Renglon>
-            ))
-          )}
-          <SeEditaEnLaVieja ruta={vieja} que="Se asignan" />
+          <UnidadesDelCircuito
+            circuitId={id}
+            vigentes={vigentes.map(enPantalla)}
+            historia={soltadas.map(enPantalla)}
+            asignables={asignables.map((u) => ({
+              unitId: u.unitId,
+              label: u.label,
+              transportista: u.carrierName,
+              ocupadaEn: u.ocupadaEnCircuitoId && u.ocupadaEnCircuitoId !== id ? u.ocupadaEnCircuito : null,
+              ocupadaEnEste: u.ocupadaEnCircuitoId === id,
+            }))}
+          />
         </Paso>
 
         <Paso eslabon={eslabon(6)} titulo="Medición">

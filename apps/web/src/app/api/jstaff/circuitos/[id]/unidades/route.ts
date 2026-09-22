@@ -44,6 +44,8 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   if (!g.ok) return g.respuesta;
 
   const { id } = await ctx.params;
+  // Sin un quién no se asigna: la asignación queda firmada (0048), igual que la promesa (0049).
+  if (!g.identidad.userId) return NextResponse.json({ error: "Inicia sesión." }, { status: 401 });
   const cuerpo = (await request.json()) as { unidadId?: string; motivoDelCierre?: string };
   if (!cuerpo.unidadId) {
     return NextResponse.json({ error: "Falta qué unidad asignar" }, { status: 400 });
@@ -74,6 +76,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     unitId: unidad.unitId,
     carrierAccountId: unidad.carrierAccountId,
     motivoDelCierre: cuerpo.motivoDelCierre?.trim() || `Reasignada a ${circuito.name}`,
+    /*
+     * Quién asigna, de la sesión — nunca del cuerpo (0048). Firma la que abre y,
+     * si jala el camión de otro circuito, también la que cierra. Faltaba desde
+     * la 0048: la pantalla vieja nunca lo mandó (ficha de Circuitos, A2).
+     */
+    actorId: g.identidad.userId,
   });
 
   return NextResponse.json({

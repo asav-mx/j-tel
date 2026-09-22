@@ -1,4 +1,4 @@
-import type { FranjaCapturada, PromesaAhora, SentidoDeFranja, TipoDeDiaCircuito } from "@jtel/domain";
+import { promesaEnPalabras, type FranjaCapturada, type PromesaAhora, type SentidoDeFranja, type TipoDeDiaCircuito } from "@jtel/domain";
 
 /**
  * La captura de la promesa por franja (Marco 9.1c) en el expediente del
@@ -110,6 +110,6 @@ export function loQueDiceOntoyAhora(p: PromesaAhora): string {
   if (p.estado === "sin_capturar") return "«Esta ruta no publica cada cuánto pasa» — no hay promesa capturada.";
   if (p.estado === "sin_franja") return "«Sin frecuencia publicada para esta hora» — ninguna franja cubre este momento.";
   if (p.ida === p.vuelta) return `«Frecuencia · cada ${p.ida} min», en los dos sentidos.`;
-  const cada = (n: number | null) => (n === null ? "sin frecuencia a esta hora" : `cada ${n} min`);
-  return `A la ida «${cada(p.ida)}», a la vuelta «${cada(p.vuelta)}».`;
+  // Con ida y vuelta distintas, la frase exacta de Ontoy — antes aquí había otra que ya no coincidía.
+  return `«${promesaEnPalabras(p, null)}».`;
 }

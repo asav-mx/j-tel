@@ -16,10 +16,25 @@ export async function DELETE(
   const g = await exigir(request, { tipo: "jstaff" }, "json");
   if (!g.ok) return g.respuesta;
 
-  const { assignmentId } = await ctx.params;
+  const { id, assignmentId } = await ctx.params;
+  // Sin un quién no se suelta: el cierre queda firmado (0048).
+  if (!g.identidad.userId) return NextResponse.json({ error: "Inicia sesión." }, { status: 401 });
   const motivo = new URL(request.url).searchParams.get("motivo") ?? undefined;
+  const repos = getRepos();
 
-  const terminada = await getRepos().circuits.endAssignment(assignmentId, motivo);
+  /*
+   * La asignación tiene que ser DE ESTE circuito y estar vigente. Antes se
+   * soltaba por id nada más, y la dirección de un circuito podía cerrar la
+   * asignación de otro (ficha de Circuitos, A2). Una ajena responde igual que
+   * una que no existe.
+   */
+  const deEste = (await repos.circuits.listAssignments(id)).find((a) => a.id === assignmentId && a.validTo === null);
+  if (!deEste) {
+    return NextResponse.json({ error: "Esa asignación no existe o ya estaba terminada" }, { status: 404 });
+  }
+
+  // Quién suelta, de la sesión — nunca del formulario (0048).
+  const terminada = await repos.circuits.endAssignment(assignmentId, motivo, g.identidad.userId);
   if (!terminada) {
     return NextResponse.json(
       { error: "Esa asignación no existe o ya estaba terminada" },
