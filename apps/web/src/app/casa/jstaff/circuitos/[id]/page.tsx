@@ -9,9 +9,11 @@ import { Migas } from "@/components/casa/migas";
 import { AvisoDeError, Renglon, Titular, Vacio } from "@/components/casa/expediente";
 import { clases } from "@/components/casa/formulario";
 import { CadenaEnEslabones } from "@/components/casa/cadena-del-circuito";
+import { EditorDelMapa } from "@/components/casa/editor-del-mapa";
 import { PromesaDelCircuito } from "@/components/casa/promesa-del-circuito";
 import { UnidadesDelCircuito } from "@/components/casa/unidades-del-circuito";
 import { correosDeAutores } from "@/lib/casa/autores";
+import { SENTIDO_EN_PALABRAS, distanciasEnPalabras, medirParadas } from "@/lib/casa/paradas-del-circuito";
 import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
 import { cadenaDelCircuito, loQueFaltaEnPalabras, type Eslabon } from "@/lib/casa/cadena-del-circuito";
 
@@ -26,10 +28,10 @@ export const dynamic = "force-dynamic";
  * servicios): la misma definición que decide la caja vacía de la torre y su
  * aviso de «sin unidades». Dos definiciones se separan el primer mes.
  *
- * **Escriben desde aquí** Publicar (A1), y la promesa y las unidades (A2),
- * siempre con las rutas de siempre. Identidad, trazado y paradas todavía llevan
- * a su parte de la pantalla vieja, que sigue viva: trazado y paradas se mudan
- * en A3.
+ * **Escriben desde aquí** Publicar (A1), la promesa y las unidades (A2), y el
+ * trazado y las paradas con el editor del mapa de siempre, envuelto sin tocarlo
+ * (A3) — siempre con las rutas de siempre. La identidad y los ajustes de
+ * medición todavía llevan a la pantalla vieja, que sigue viva: llegan en A4.
  *
  * **Publicar no exige nada** (ASAV, 21-sep: la decisión escrita en la ruta de
  * publicación se queda). Es acto de quien opera; la cadena enuncia lo que
@@ -94,6 +96,14 @@ export default async function VerCircuitoJStaff({
   const ok = typeof sp.ok === "string" ? sp.ok : null;
   const error = typeof sp.error === "string" ? sp.error : null;
   const porSentido = (s: "ida" | "vuelta") => paradas.filter((p) => p.sentido === s || p.sentido === null).length;
+  const trazadosDeSentido = trazados.map((t) => ({
+    sentido: t.sentido as "ida" | "vuelta",
+    coordinates: t.coordinates as Array<[number, number]>,
+  }));
+  const paradasConSentido = paradas.map((p) => ({ ...p, sentido: (p.sentido ?? null) as "ida" | "vuelta" | null }));
+  // La misma tolerancia con la que el editor avisa al pegar: la del pegado de paradas.
+  const medidas = medirParadas(paradasConSentido, trazadosDeSentido, circuito.stopSnapToleranceMeters);
+  const lejos = medidas.filter((m) => m.lejos).length;
 
   const franjas: FranjaCapturada[] = (promesa?.bandas ?? []).map((b) => ({
     diaTipo: b.diaTipo,
@@ -160,15 +170,22 @@ export default async function VerCircuitoJStaff({
         </Paso>
 
         <Paso eslabon={eslabon(2)} titulo="Trazado">
-          {(["ida", "vuelta"] as const).map((s) => {
-            const t = trazados.find((x) => x.sentido === s);
+          {(["ida", "vuelta"] as const).map((sentido) => {
+            const t = trazados.find((x) => x.sentido === sentido);
             return (
-              <Renglon key={s} pregunta={s === "ida" ? "Ida" : "Vuelta"} medida={Boolean(t)} tenue={!t}>
-                {t ? `${(t.lengthMeters / 1000).toFixed(1)} km · ${t.pointCount} puntos` : "sin trazado"}
+              <Renglon key={sentido} pregunta={sentido === "ida" ? "Ida" : "Vuelta"} medida={Boolean(t)} tenue={!t}>
+                {t
+                  ? `${(t.lengthMeters / 1000).toFixed(1)} km · ${t.pointCount} puntos · ${t.sourceLayerName ?? "capa sin nombre"} · subido el ${dia(t.uploadedAt)}`
+                  : "sin trazado"}
               </Renglon>
             );
           })}
-          <SeEditaEnLaVieja ruta={vieja} que="Se sube" />
+          <p className="text-[13px] text-[var(--tenue)]">
+            Se sube en el editor del mapa ·{" "}
+            <a href="#editor" className="text-[var(--tinta)] underline underline-offset-2">
+              ir al editor ↓
+            </a>
+          </p>
         </Paso>
 
         <Paso eslabon={eslabon(3)} titulo="Paradas">
@@ -176,21 +193,60 @@ export default async function VerCircuitoJStaff({
             <Vacio>Sin paradas capturadas</Vacio>
           ) : (
             <>
-              <Renglon pregunta="De ida (o de los dos)" medida>
-                {porSentido("ida")}
-              </Renglon>
-              <Renglon pregunta="De vuelta (o de los dos)" medida>
-                {porSentido("vuelta")}
-              </Renglon>
-              <Renglon pregunta="Sentidos que se pueden medir" tenue={minimo.carriles.length === 0}>
-                {minimo.carriles.length === 0
-                  ? "ninguno: hacen falta dos paradas sobre el trazado de un sentido"
-                  : minimo.carriles.join(" y ")}
-              </Renglon>
+              <p className="text-[13px] text-[var(--tenue)]">
+                <span data-medida>{porSentido("ida")}</span> de ida · <span data-medida>{porSentido("vuelta")}</span> de
+                vuelta (las de «ambos» cuentan en los dos) ·{" "}
+                {minimo.carriles.length === 0 ? "ningún sentido se puede medir todavía" : `se mide ${minimo.carriles.join(" y ")}`}
+                {lejos > 0 && (
+                  <span className="font-semibold text-[var(--tinta)]">
+                    {" "}
+                    · {lejos === 1 ? "1 parada lejos" : `${lejos} paradas lejos`} de su trazado
+                  </span>
+                )}
+              </p>
+              {medidas.map((m) => (
+                <Renglon
+                  key={m.stopId}
+                  pregunta={`${m.nombre} · ${SENTIDO_EN_PALABRAS[m.sentido ?? "ambos"]}`}
+                  medida
+                >
+                  {/* Lejos va en tinta y negrita, con su palabra: sin cobre (un aviso no es vida). */}
+                  <span className={m.lejos ? "font-semibold" : "text-[var(--tenue)]"}>
+                    {distanciasEnPalabras(m)}
+                    {m.lejos ? ` · lejos, tolerancia ${circuito.stopSnapToleranceMeters} m` : ""} · {m.qr}
+                  </span>
+                </Renglon>
+              ))}
             </>
           )}
-          <SeEditaEnLaVieja ruta={vieja} que="Se ponen" />
+          <p className="text-[13px] text-[var(--tenue)]">
+            Se ponen, se corrige su sentido y se mueven —conservando su QR— en el editor del mapa ·{" "}
+            <a href="#editor" className="text-[var(--tinta)] underline underline-offset-2">
+              ir al editor ↓
+            </a>
+          </p>
         </Paso>
+
+        <EditorDelMapa
+          circuitoId={id}
+          toleranciaMetros={circuito.stopSnapToleranceMeters}
+          trazadosIniciales={trazados.map((t) => ({
+            sentido: t.sentido as "ida" | "vuelta",
+            coordinates: t.coordinates as Array<[number, number]>,
+            pointCount: t.pointCount,
+            lengthMeters: t.lengthMeters,
+            sourceLayerName: t.sourceLayerName,
+          }))}
+          paradasIniciales={paradasConSentido.map((p) => ({
+            stopId: p.stopId,
+            qrSlug: p.qrSlug,
+            name: p.name,
+            orden: p.orden,
+            latitude: p.latitude,
+            longitude: p.longitude,
+            sentido: p.sentido,
+          }))}
+        />
 
         <Paso eslabon={eslabon(4)} titulo="Promesa por franja">
           <PromesaDelCircuito
