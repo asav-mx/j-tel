@@ -1,6 +1,5 @@
 "use client";
 
-import { useMiUbicacion } from "@/lib/ubicacion";
 import { haceNMinutos } from "@/lib/rotulo-de-la-tarjeta";
 import type { RutaDeLaCiudad } from "@/lib/ontoy/forma";
 import {
@@ -37,17 +36,23 @@ import { avanceSobreTrazado } from "@jtel/domain";
 export function AtajoDeParada({
   guardada,
   ruta,
+  yo,
   alAbrir,
   alQuitar,
 }: {
   guardada: ParadaGuardada;
   ruta: RutaDeLaCiudad | null;
+  /**
+   * Dónde está el pasajero, si ya dio permiso. Viene de la raíz de la app y no
+   * se pide aquí: una tarjeta no pregunta por la ubicación (decisión del 22-sep),
+   * y varias tarjetas no deben encender varias lecturas del GPS.
+   */
+  yo: { lat: number; lon: number } | null;
   alAbrir: () => void;
   alQuitar: () => void;
 }) {
   const { forma, vivo, error, cargando } = useRutaEnVivo(guardada.ruta);
   const { velocidad, trazadoPorSentido } = useVelocidadDelCorredor(forma, vivo);
-  const yo = useMiUbicacion();
 
   const parada = forma?.paradas.find((p) => p.id === guardada.parada) ?? null;
   const color = ruta?.color_hex ?? forma?.color_hex ?? "currentColor";

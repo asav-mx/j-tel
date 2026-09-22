@@ -28,7 +28,7 @@ import { fondoDelMapa } from "@/lib/ontoy/mapa-base";
 const NOMBRE = process.env.NEXT_PUBLIC_APP_NOMBRE ?? "Transporte público";
 const CONTACTO = process.env.NEXT_PUBLIC_CONTACTO_PRIVACIDAD ?? null;
 /** El día en que esta página cambió por última vez. Se mueve a mano, con el texto. */
-const VIGENTE_DESDE = "21 de septiembre de 2026";
+const VIGENTE_DESDE = "22 de septiembre de 2026";
 
 export const metadata: Metadata = {
   title: `Privacidad · ${NOMBRE}`,
@@ -62,13 +62,21 @@ export default function Privacidad() {
       <section>
         <h2>Tu ubicación</h2>
         <p>
-          Si das permiso, la app lee tu ubicación para calcular cuánto le falta al camión para llegar hasta donde
-          estás. Ese cálculo se hace en tu teléfono. La app no envía tu ubicación a nuestro servidor, no la guarda y
-          no arma una historia de dónde has estado.
+          La app no te pide tu ubicación al abrir. Te la pide cuando tocas «Ver paradas cerca de mí»; si ya se la
+          habías dado antes, la usa sin volver a preguntar.
+        </p>
+        <p>
+          Si das permiso, la app lee tu ubicación para enseñarte las paradas que tienes cerca y para calcular cuánto
+          le falta al camión para llegar hasta donde estás. Los dos cálculos se hacen en tu teléfono. La app no envía
+          tu ubicación a nuestro servidor, no la guarda y no arma una historia de dónde has estado.
+        </p>
+        <p>
+          Para encontrar las paradas cerca de ti, tu teléfono baja la lista de paradas de todas las rutas —la misma
+          para todos, sin ningún dato tuyo— y escoge ahí mismo las más cercanas.
         </p>
         <p>
           Si no das permiso, la app sigue funcionando: ves las rutas, las paradas y los camiones en vivo; sólo no se
-          calcula la llegada hasta ti. Puedes quitar el permiso cuando quieras desde los ajustes de tu teléfono.
+          calculan las paradas cerca de ti ni la llegada hasta ti. Puedes quitar el permiso cuando quieras desde los ajustes de tu teléfono.
         </p>
       </section>
 

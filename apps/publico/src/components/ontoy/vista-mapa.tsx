@@ -51,6 +51,7 @@ export function VistaMapa({
   alCambiarSentido,
   alTocarParada,
   alReintentar,
+  alVerTodas,
 }: {
   rutas: RutaDeLaCiudad[];
   enfocada: string | null;
@@ -64,6 +65,8 @@ export function VistaMapa({
   alCambiarSentido: (s: Sentido) => void;
   alTocarParada: (paradaId: string) => void;
   alReintentar: () => void;
+  /** Abre la lista completa de rutas de la ciudad. */
+  alVerTodas: () => void;
 }) {
   const contenedor = useRef<HTMLDivElement | null>(null);
   const mapa = useRef<import("leaflet").Map | null>(null);
@@ -260,6 +263,14 @@ export function VistaMapa({
       <div className="ontoy-fichas">
         {pista && <p className="ontoy-pista">{pista}</p>}
         <div className="ontoy-fichas-fila">
+          {/*
+            La lista completa de la ciudad, a un toque (8.8). PRIMERA de la
+            fila, no al final: la fila se desliza de lado, y al final quedaba
+            fuera de la pantalla de un teléfono — lo enseñó la captura.
+          */}
+          <button type="button" className="ontoy-ficha ontoy-ficha-todas" onClick={alVerTodas}>
+            Todas las rutas
+          </button>
           {rutas.map((r) => (
             <button
               key={r.circuito_id}
