@@ -723,6 +723,8 @@ La confianza del pasajero se construye de las dos: saber a qué hora pasa, y **v
 
 ## C. La forma
 
+> ✎ **Reemplazada el 22-sep-2026 por la 8.8 que sigue, que es la que rige** (ASAV). Se conserva tal cual, sin borrar, como registro de la decisión del 19-sep.
+
 **8.8 Dos vistas: Rutas y Mapa** (decisión de ASAV, 19-sep). La app abre en la ciudad con el conmutador arriba:
 - **Rutas** — la lista de circuitos publicados. Abrir una ruta muestra sus paradas, cada una con su tabla de paso y su próximo paso estimado, y las unidades en servicio.
 - **Mapa** — los circuitos sobre la ciudad; tocar uno lo enfoca con sus paradas y sus unidades en vivo.
@@ -738,7 +740,9 @@ La estructura es de la app de la ciudad, no de una cuenta: el pasajero no elige 
 
 *Por qué se reemplaza:* la 8.8b pedía evidencia de uso antes de una tercera vista. Inicio no es vista nueva: es el atajo de la parada guardada subido a la portada. Ir a sí es nuevo, y se aprueba **por diseño, no por evidencia de uso** — y así se registra.
 
-**8.8b No hay tercera vista; hay un atajo.** Se evaluó una tercera vista y dos bastan: lo que el pasajero de todos los días necesita no es otra pantalla sino llegar en un toque a **su parada**. La app permite **guardar una parada** (o más de una), y las guardadas aparecen hasta arriba de Rutas, con su próximo paso ya visible. La parada guardada **vive en el teléfono**, no en el servidor (8.7): guardarla no identifica a nadie. Si con el uso real aparece la necesidad de una tercera vista, se enmienda con evidencia, no antes.
+**8.8b No hay tercera vista; hay un atajo.** Se evaluó una tercera vista y dos bastan: lo que el pasajero de todos los días necesita no es otra pantalla sino llegar en un toque a **su parada**. La app permite **guardar una parada** (o más de una), y las guardadas aparecen en **Inicio** (8.8), con su próximo paso ya visible. La parada guardada **vive en el teléfono**, no en el servidor (8.7): guardarla no identifica a nadie. Si con el uso real aparece la necesidad de una tercera vista, se enmienda con evidencia, no antes.
+
+> ✎ **22-sep-2026 (ASAV):** decía «las guardadas aparecen hasta arriba de Rutas»; ahora apuntan a Inicio, para leerse con la 8.8 nueva. Lo de la tercera vista lo contesta el *por qué* de la 8.8 nueva: Inicio es este mismo atajo subido a la portada, e Ir a se aprobó por diseño.
 
 **8.8c Cada ruta tiene su color, y es identidad.** En México las rutas se conocen por su color, y la app lo respeta: cada circuito registra su color (parte de su identidad, Pieza 9.8) y la app lo usa para pintar su trazado, sus paradas y sus piezas. Dos reglas del skill lo acotan: el color de ruta es **identidad, nunca estado** — jamás significa «bien» o «mal», y no puede ser el único portador de una diferencia (el nombre siempre acompaña) —, y sobre el mapa debe cumplir el contraste mínimo de 3:1 en las dos pieles, con el halo de la traza si hace falta. Los colores reservados de la plataforma (el cobre de lo vivo, el verde del latido, el ladrillo, el verde sello) no se les asignan a rutas.
 
@@ -789,6 +793,7 @@ El Maestro de siete piezas queda archivado sin editar en `docs/marco-limpio/arch
 
 **22 de septiembre de 2026 — ASAV.** Afirmaciones 8.8 (nueva), 8.8d, 8.9b, 8.13b, 8.16 y 9.3c revisadas y ✓.
 
+- **✎ Dos ajustes de redacción, no de fondo** (ASAV, 22-sep). Al subir la 8.8 nueva, la del 19-sep se quedó sin marcar y la 8.8b seguía mandando las paradas guardadas «hasta arriba de Rutas», así que el Maestro se contradecía. La 8.8 del 19-sep queda **marcada como reemplazada, sin borrarse**, y la 8.8b apunta a Inicio. **Rige la 8.8 nueva.**
 
 ---
 
