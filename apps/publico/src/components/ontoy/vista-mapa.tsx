@@ -6,6 +6,8 @@ import { haceNMinutos } from "@/lib/rotulo-de-la-tarjeta";
 import { fondoDelMapa } from "@/lib/ontoy/mapa-base";
 import { haloParaLaTraza } from "@/lib/ontoy/contraste-de-ruta";
 import { pistaDelMapa } from "@/lib/ontoy/pista-del-mapa";
+import { useTinteDelMapa } from "@/lib/tinte-del-mapa";
+import { trazoDeLaRuta } from "@/lib/ontoy/trazo-de-la-ruta";
 import type { Forma, RutaDeLaCiudad, Sentido, Vivo } from "@/lib/ontoy/forma";
 
 /**
@@ -117,6 +119,17 @@ export function VistaMapa({
 
   const rutaEnfocada = rutas.find((r) => r.circuito_id === enfocada) ?? null;
   const lienzo = deNoche ? LIENZO.noche : LIENZO.dia;
+  /*
+   * El teñido de las teselas (`lib/tinte-del-mapa.ts`). **Esta llamada faltaba**,
+   * y por eso este mapa salía a todo color en las dos pieles: de noche, blanco
+   * debajo de un cascarón oscuro, y de día con los amarillos y naranjas de OSM
+   * a todo volumen — que es contra lo que se dibujan las rutas.
+   *
+   * El hook existía, documentado y probado, pero su único llamador era la
+   * pantalla `/buscar`, que se retiró en el #514. Nació para el mapa del
+   * buscador y nadie lo conectó al de Ontoy.
+   */
+  useTinteDelMapa(contenedor, deNoche, listo);
 
   // ── El mapa, una vez ───────────────────────────────────────────────────
   useEffect(() => {
@@ -290,25 +303,28 @@ export function VistaMapa({
     capaRutas.current.clearLayers();
     const puntos: Array<[number, number]> = [];
     const todos: Array<[number, number]> = [];
+    /* Con qué fuerza va cada una, y por qué: `lib/ontoy/trazo-de-la-ruta.ts`. */
+    const hayPrendidas = ciudad.prendidas.size > 0;
     // Primero las de contexto y encima las prendidas: una línea tenue no tapa a una viva.
     const orden = [...rutas].sort((a, b) => Number(ciudad.prendidas.has(a.circuito_id)) - Number(ciudad.prendidas.has(b.circuito_id)));
     for (const r of orden) {
       const viva = ciudad.prendidas.has(r.circuito_id);
+      const trazo = trazoDeLaRuta(viva, hayPrendidas);
       const halo = haloParaLaTraza(r.color_hex, lienzo);
       for (const t of r.trazados) {
         if (t.sentido !== "ida") continue; // ida y vuelta suelen compartir calle; la ruta abierta enseña las dos
         const latlngs = t.coordenadas.map(([lon, lat]) => [lat, lon] as [number, number]);
         todos.push(...latlngs);
-        if (viva && halo > 0) {
+        if (trazo.conHalo && halo > 0) {
           leaflet.polyline(latlngs, { color: lienzo, weight: 5 + halo, opacity: 0.9, interactive: false }).addTo(capaRutas.current);
         }
         const linea = leaflet.polyline(latlngs, {
           color: r.color_hex,
-          weight: viva ? 5 : 3,
-          opacity: viva ? 0.95 : 0.25,
-          interactive: viva,
+          weight: trazo.grosor,
+          opacity: trazo.opacidad,
+          interactive: trazo.tocable,
         });
-        if (viva) {
+        if (trazo.tocable) {
           linea.bindTooltip(r.nombre, { sticky: true, opacity: 0.95 }).on("click", () => ciudad.alAbrirRuta(r.circuito_id));
           puntos.push(...latlngs);
         }
