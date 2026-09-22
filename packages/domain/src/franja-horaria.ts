@@ -270,3 +270,30 @@ export function proximaFronteraDeLoPublicado(horasLocales: string[], instante: D
   }
   return proxima;
 }
+
+/**
+ * **Lo que Ontoy le dice al pasajero de la promesa — en un solo lugar**
+ * (21-sep-2026). Vivía en la app pública; el expediente de J-Staff la enseña
+ * («Ontoy ahorita dice: …») y la pantalla vieja tenía una copia que ya se había
+ * separado en el caso de ida y vuelta distintas. Una sola frase, leída por los
+ * dos lados.
+ *
+ * - sin capturar: la ruta no publica frecuencia;
+ * - sin franja a esta hora: no se rellena con la franja vecina;
+ * - declarada: la del sentido pedido; sin sentido, las dos si difieren — nunca
+ *   un promedio.
+ *
+ * `null` mientras no llega: no se dice nada que no se sabe.
+ */
+export function promesaEnPalabras(promesa: PromesaAhora | null, sentido: "ida" | "vuelta" | null): string | null {
+  if (!promesa) return null;
+  if (promesa.estado === "sin_capturar") return "Esta ruta no publica cada cuánto pasa";
+  if (promesa.estado === "sin_franja") return "Sin frecuencia publicada para esta hora";
+  const cada = (n: number | null) => (n === null ? "sin frecuencia a esta hora" : `cada ${n} min`);
+  if (sentido) {
+    const n = promesa[sentido];
+    return n === null ? "Sin frecuencia publicada para esta hora" : `Frecuencia · cada ${n} min`;
+  }
+  if (promesa.ida === promesa.vuelta) return `Frecuencia · cada ${promesa.ida} min`;
+  return `Frecuencia · ida ${cada(promesa.ida)} · vuelta ${cada(promesa.vuelta)}`;
+}

@@ -7263,6 +7263,9 @@ export class CircuitRepository {
         validFrom: circuitUnitAssignments.validFrom,
         validTo: circuitUnitAssignments.validTo,
         motivo: circuitUnitAssignments.motivo,
+        // Quién abrió y quién cerró cada asignación (0048). Null en las de antes de firmar.
+        asignadaPor: circuitUnitAssignments.asignadaPor,
+        cerradaPor: circuitUnitAssignments.cerradaPor,
       })
       .from(circuitUnitAssignments)
       .innerJoin(units, eq(units.id, circuitUnitAssignments.unitId))

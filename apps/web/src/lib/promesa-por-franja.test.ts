@@ -55,3 +55,9 @@ it("loQueDiceOntoyAhora dice lo mismo que la app", () => {
   expect(loQueDiceOntoyAhora({ estado: "declarada", ida: 10, vuelta: 10 })).toContain("cada 10 min");
   expect(loQueDiceOntoyAhora({ estado: "declarada", ida: 10, vuelta: null })).toContain("sin frecuencia a esta hora");
 });
+
+it("con ida y vuelta distintas cita la frase EXACTA de Ontoy, no una propia", () => {
+  expect(loQueDiceOntoyAhora({ estado: "declarada", ida: 10, vuelta: 20 })).toBe(
+    "«Frecuencia · ida cada 10 min · vuelta cada 20 min».",
+  );
+});
