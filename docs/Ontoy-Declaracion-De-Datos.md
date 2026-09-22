@@ -1,7 +1,7 @@
 # Ontoy — declaración de datos para las tiendas (borrador)
 
 **Para:** Asav, cuando llene los formularios de Google Play («Seguridad de los datos») y
-del App Store («Privacidad de la app»). **Fecha:** 21 de septiembre de 2026.
+del App Store («Privacidad de la app»). **Fecha:** 21 de septiembre de 2026; revisada el 22 (Ontoy 2.0, PR 1: las paradas cerca de ti).
 
 **La regla:** esta declaración tiene que coincidir **al pie de la letra** con el código.
 Cada respuesta lleva dónde se comprueba. Si un día el texto y el código no coinciden,
@@ -14,13 +14,14 @@ Cada respuesta lleva dónde se comprueba. Si un día el texto y el código no co
 
 | Dato | Qué pasa | Dónde se comprueba |
 |---|---|---|
-| **Ubicación precisa** | Se lee en el teléfono (`watchPosition`) sólo si el pasajero da permiso, y se usa ahí mismo para calcular la llegada hasta él. **No viaja** en ninguna petición nuestra. | `apps/publico/src/lib/ubicacion.ts`; las únicas peticiones de la app son las de la tabla de abajo |
+| **Ubicación precisa** | Se lee en el teléfono (`watchPosition`) sólo si el pasajero da permiso. **No se pide al abrir:** se pide al tocar «Ver paradas cerca de mí», y si el permiso ya estaba dado se usa sin volver a preguntar (`navigator.permissions`, que no pregunta). Se usa ahí mismo para escoger las paradas cercanas y calcular la llegada hasta él. **No viaja** en ninguna petición nuestra. | `apps/publico/src/lib/ubicacion.ts`, `lib/ontoy/paradas-cerca.ts`; las únicas peticiones de la app son las de la tabla de abajo |
 | **Paradas guardadas** y **piel clara/oscura** | En el almacenamiento del navegador (`localStorage`), en el teléfono. No viajan. | `lib/ontoy/paradas-guardadas.ts`, `lib/tema.ts` |
 | **Apertura de una ruta** | Un `POST` **sin cuerpo** a `/api/circuitos/‹ruta›/apertura`. El servidor guarda `{circuito, día local, huella}`. La huella es un HMAC de IP + agente + día + circuito; **la IP y el agente no se guardan**, y la huella rota cada día. | `app/api/circuitos/[slug]/apertura/route.ts`, `huellaDeApertura` en `@jtel/domain/publico` |
+| **Paradas cerca de ti** | Un `GET /api/paradas` **sin parámetros**, igual para todos: baja las paradas públicas de la ciudad (por ruta: id público, nombre, color; por parada: id público, ruta, nombre, sentido, posición — **cero mediciones**). El cruce con la ubicación ocurre en el teléfono. Se pide sólo en Inicio, sin paradas guardadas y con ubicación. | `app/api/paradas/route.ts`, `lib/paradas-de-la-ciudad.ts` (y su prueba) |
 | **Búsqueda** | Corre en el teléfono sobre las paradas ya bajadas. **No hace petición.** No hay buscador de direcciones (decisión del 2 sep, `DESPUES.md` §6). | `lib/buscar-lugar.ts` |
 | **Letras** | Servidas del mismo sitio (`next/font`), no de Google. | `app/layout.tsx` |
 
-**Las peticiones que hace la app, completas:** la forma de la ruta (`GET /api/circuitos/‹ruta›`),
+**Las peticiones que hace la app, completas:** las paradas de la ciudad (`GET /api/paradas`, sin parámetros), la forma de la ruta (`GET /api/circuitos/‹ruta›`),
 los camiones en vivo (`GET …/unidades`, cada 15 s), la apertura (`POST …/apertura`, vacío) y
 **las teselas del mapa, a un tercero** (ver abajo). Ninguna lleva ubicación, nombre, correo,
 teléfono ni identificador del aparato.

@@ -44,6 +44,8 @@ describe("la página de privacidad dice lo que el código hace", () => {
   });
 
   it("la app liga a la página (toda pantalla tiene su salida, y la tienda pide que se encuentre)", () => {
+    // Inicio es donde abre la app; la lista de rutas, a un toque del Mapa.
+    expect(leer("apps/publico/src/components/ontoy/vista-inicio.tsx")).toContain('href="/privacidad"');
     expect(leer("apps/publico/src/components/ontoy/vista-rutas.tsx")).toContain('href="/privacidad"');
   });
 });
@@ -69,6 +71,22 @@ describe("la declaración para las tiendas sigue al código", () => {
     expect(apertura).toMatch(/method: "POST"/);
     expect(apertura).not.toMatch(/body:/);
     expect(leer("apps/publico/src/lib/ubicacion.ts")).not.toMatch(/fetch\(/);
+  });
+
+  it("la lista de paradas de la ciudad está declarada, y su petición no lleva nada del pasajero", () => {
+    expect(declaracion).toContain("GET /api/paradas");
+    expect(sinComentarios(leer(PAGINA))).toContain("sin ningún dato tuyo");
+    // La única petición a /api/paradas es un fetch sin nada más que la dirección.
+    const inicio = leer("apps/publico/src/components/ontoy/vista-inicio.tsx");
+    expect(inicio).toMatch(/fetch\("\/api\/paradas"\)/);
+    expect(leer("apps/publico/src/lib/ontoy/paradas-cerca.ts")).not.toMatch(/fetch\(/);
+  });
+
+  it("la ubicación no se pide al abrir: Ontoy la lee con pedirAlAbrir en false (decisión del 22-sep)", () => {
+    expect(leer("apps/publico/src/components/ontoy/ontoy.tsx")).toContain("useUbicacion({ pedirAlAbrir: false })");
+    expect(leer("apps/publico/src/components/ontoy/ontoy.tsx")).not.toContain("useMiUbicacion");
+    expect(leer("apps/publico/src/components/ontoy/atajo-de-parada.tsx")).not.toMatch(/useMiUbicacion|useUbicacion/);
+    expect(sinComentarios(leer(PAGINA))).toContain("La app no te pide tu ubicación al abrir.");
   });
 });
 

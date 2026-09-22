@@ -2,8 +2,6 @@
 
 import type { RutaDeLaCiudad } from "@/lib/ontoy/forma";
 import { promesaEnPalabras } from "@/lib/ontoy/llegadas";
-import type { ParadaGuardada } from "@/lib/ontoy/paradas-guardadas";
-import { AtajoDeParada } from "@/components/ontoy/atajo-de-parada";
 
 /** Lo que el servidor ya resolvió del horario de cada ruta. La pantalla lee, no deduce. */
 export interface EstadoDeRuta {
@@ -17,12 +15,13 @@ export interface EstadoDeRuta {
 }
 
 /**
- * **Rutas** — la primera de las dos vistas (8.8).
+ * **Todas las rutas** — la lista completa de la ciudad, a un toque desde el
+ * Mapa (8.8, 22-sep).
  *
- * Arriba, las paradas guardadas: el atajo que reemplazó a una tercera vista
- * (8.8b), con su próximo paso ya visible. Abajo, las rutas publicadas de la
- * ciudad, cada una con **su promesa** — que se enseña aunque no haya una sola
- * unidad en vivo (8.2).
+ * Antes era la primera de dos vistas y llevaba arriba las paradas guardadas;
+ * con la barra nueva, las guardadas subieron a Inicio y esta lista vive detrás
+ * del Mapa, con su salida de regreso arriba (8.10). Cada ruta con **su
+ * promesa** — que se enseña aunque no haya una sola unidad en vivo (8.2).
  *
  * ## Lo que esta lista NO dice, y por qué
  *
@@ -39,45 +38,23 @@ export interface EstadoDeRuta {
 export function VistaRutas({
   rutas,
   estados,
-  guardadas,
-  puedeGuardar,
   alAbrirRuta,
-  alQuitarGuardada,
+  alVolver,
 }: {
   rutas: RutaDeLaCiudad[];
   estados: EstadoDeRuta[];
-  guardadas: ParadaGuardada[];
-  puedeGuardar: boolean;
-  alAbrirRuta: (circuitoId: string, parada?: string) => void;
-  alQuitarGuardada: (g: ParadaGuardada) => void;
+  alAbrirRuta: (circuitoId: string) => void;
+  alVolver: () => void;
 }) {
   const estadoDe = new Map(estados.map((e) => [e.circuito_id, e]));
 
   return (
     <div className="ontoy-vista">
+      <button type="button" className="ontoy-volver" onClick={alVolver}>
+        ‹ Volver al mapa
+      </button>
       <section className="ontoy-seccion">
-        <h2 className="ontoy-seccion-titulo">Tus paradas</h2>
-        {guardadas.length === 0 ? (
-          <p className="ontoy-vacio">
-            {puedeGuardar
-              ? "Todavía no guardas ninguna. Abre una ruta, toca una parada y guárdala: aparecerá aquí con su próximo paso."
-              : "Tu navegador no deja guardar nada en este teléfono, así que este atajo no está disponible. Todo lo demás funciona igual."}
-          </p>
-        ) : (
-          guardadas.map((g) => (
-            <AtajoDeParada
-              key={g.parada}
-              guardada={g}
-              ruta={rutas.find((r) => r.circuito_id === g.ruta) ?? null}
-              alAbrir={() => alAbrirRuta(g.ruta, g.parada)}
-              alQuitar={() => alQuitarGuardada(g)}
-            />
-          ))
-        )}
-      </section>
-
-      <section className="ontoy-seccion">
-        <h2 className="ontoy-seccion-titulo">Rutas publicadas</h2>
+        <h2 className="ontoy-seccion-titulo">Todas las rutas</h2>
         {rutas.length === 0 ? (
           <p className="ontoy-vacio">Todavía no hay rutas publicadas en esta ciudad.</p>
         ) : (

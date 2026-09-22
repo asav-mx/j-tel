@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTema } from "@/lib/tema";
-import { useMiUbicacion } from "@/lib/ubicacion";
+import { useUbicacion } from "@/lib/ubicacion";
 import { avanceSobreTrazado } from "@jtel/domain";
 import { haceNMinutos } from "@/lib/rotulo-de-la-tarjeta";
 import type { RutaDeLaCiudad, Sentido } from "@/lib/ontoy/forma";
@@ -20,25 +20,32 @@ import { useRutaEnVivo } from "@/lib/ontoy/ruta-en-vivo";
 import { HojaDeParada, type LlegadaEnLaHoja } from "@/components/ontoy/hoja-de-parada";
 import { VistaMapa } from "@/components/ontoy/vista-mapa";
 import { VistaRutas, type EstadoDeRuta } from "@/components/ontoy/vista-rutas";
+import { VistaInicio } from "@/components/ontoy/vista-inicio";
+import { LugarReservado } from "@/components/ontoy/lugar-reservado";
+import { Barra, type Lugar } from "@/components/ontoy/barra";
 
 /**
- * **Ontoy** — el cascarón de las dos vistas (8.8).
+ * **Ontoy** — el cascarón de los cuatro lugares (8.8, 22-sep).
  *
- * Rutas y Mapa, con el conmutador arriba, **y ninguna tercera**: la Pieza 8 lo
- * evaluó y decidió que lo que el pasajero de todos los días necesita no es otra
- * pantalla, es llegar en un toque a su parada (8.8b). Ese toque es el atajo de
- * la vista de Rutas, no una vista más.
+ * **Inicio · Mapa · Ir a · Pase**, con la barra abajo. La app abre en Inicio,
+ * contestando: la parada guardada con su próximo camión, o las paradas cerca
+ * del pasajero. Quien llega por la liga de una ruta abre en el Mapa con esa
+ * ruta enfocada. **Ir a** y **Pase** son lugares reservados hasta que existan
+ * el planeador (8.16) y la cartera (8.14).
  *
  * ## Toda pantalla tiene su salida (8.10)
  *
- * El conmutador está siempre visible, en las dos vistas. La hoja de una parada
- * se cierra de tres maneras. Ninguna pantalla de esta app es un callejón.
+ * La barra está siempre visible. La lista de todas las rutas regresa al mapa
+ * con su botón. La hoja de una parada se cierra de tres maneras. Ninguna
+ * pantalla de esta app es un callejón.
  *
  * ## La app no sabe quién eres (8.7)
  *
  * No hay cuenta, no hay registro, no hay identificación. Lo único que se guarda
- * son las paradas guardadas, y viven en el teléfono. La ubicación entra al
- * cálculo aquí mismo y no sale del aparato (8.3b).
+ * son las paradas guardadas, y viven en el teléfono. La ubicación **no se pide
+ * al abrir** (decisión de ASAV, 22-sep): se pide con el botón de Inicio, y si ya
+ * se había dado se usa sin volver a preguntar. Entra al cálculo aquí mismo y no
+ * sale del aparato (8.3b). Se lee UNA vez, aquí, y baja a quien la usa.
  */
 export function Ontoy({
   nombre,
@@ -62,23 +69,35 @@ export function Ontoy({
 }) {
   const { deNoche, alternar: alternarPiel } = useTema();
   const pedida = rutaInicial && rutas.some((r) => r.circuito_id === rutaInicial) ? rutaInicial : null;
-  const [vista, setVista] = useState<"rutas" | "mapa">(pedida ? "mapa" : "rutas");
+  const [lugar, setLugar] = useState<Lugar>(pedida ? "mapa" : "inicio");
+  /** La lista de todas las rutas, abierta encima del Mapa. */
+  const [listaAbierta, setListaAbierta] = useState(false);
   const [enfocada, setEnfocada] = useState<string | null>(pedida ?? rutas[0]?.circuito_id ?? null);
   const [sentido, setSentido] = useState<Sentido>("ida");
   const [paradaAbierta, setParadaAbierta] = useState<string | null>(null);
 
   const guardadas = useParadasGuardadas();
   useListaAlDia(vigenteHasta);
-  const { forma, vivo, error, reintentar } = useRutaEnVivo(vista === "mapa" ? enfocada : null);
+  const enElMapa = lugar === "mapa" && !listaAbierta;
+  const { forma, vivo, error, reintentar } = useRutaEnVivo(enElMapa ? enfocada : null);
   const { velocidad, trazadoPorSentido } = useVelocidadDelCorredor(forma, vivo);
-  const yo = useMiUbicacion();
+  const ubicacion = useUbicacion({ pedirAlAbrir: false });
+  const yo = ubicacion.yo;
   // La única escritura de la app: una apertura por ruta abierta (8.7).
-  useContarApertura(vista === "mapa" ? enfocada : null);
+  useContarApertura(enElMapa ? enfocada : null);
 
-  const abrirRuta = useCallback((circuitoId: string, parada?: string) => {
+  const abrirRuta = useCallback((circuitoId: string, parada?: string, enSentido?: Sentido) => {
     setEnfocada(circuitoId);
     setParadaAbierta(parada ?? null);
-    setVista("mapa");
+    if (enSentido) setSentido(enSentido);
+    setListaAbierta(false);
+    setLugar("mapa");
+  }, []);
+
+  const irA = useCallback((l: Lugar) => {
+    setLugar(l);
+    setListaAbierta(false);
+    if (l !== "mapa") setParadaAbierta(null);
   }, []);
 
   const rutaEnfocada = rutas.find((r) => r.circuito_id === enfocada) ?? null;
@@ -155,51 +174,71 @@ export function Ontoy({
         </button>
       </header>
 
-      <div className="ontoy-tabs" role="tablist" aria-label="Vistas">
-        {(["rutas", "mapa"] as const).map((v) => (
-          <button
-            key={v}
-            type="button"
-            role="tab"
-            aria-selected={vista === v}
-            className="ontoy-tab"
-            onClick={() => setVista(v)}
-          >
-            {v === "rutas" ? "Rutas" : "Mapa"}
-          </button>
-        ))}
-      </div>
-
-      {vista === "rutas" ? (
-        <VistaRutas
+      {lugar === "inicio" && (
+        <VistaInicio
           rutas={rutas}
-          estados={estados}
           guardadas={guardadas.guardadas}
+          guardadasListas={guardadas.listo}
           puedeGuardar={guardadas.disponible}
+          ubicacion={ubicacion}
           alAbrirRuta={abrirRuta}
           alQuitarGuardada={guardadas.alternar}
-        />
-      ) : (
-        <VistaMapa
-          rutas={rutas}
-          enfocada={enfocada}
-          forma={forma}
-          vivo={vivo}
-          error={error}
-          deNoche={deNoche}
-          sentido={sentido}
-          paradaAbierta={paradaAbierta}
-          alEnfocar={(id) => {
-            setEnfocada(id);
-            setParadaAbierta(null);
-          }}
-          alCambiarSentido={setSentido}
-          alTocarParada={setParadaAbierta}
-          alReintentar={reintentar}
+          alIrAlMapa={() => irA("mapa")}
         />
       )}
 
-      {vista === "mapa" && parada && rutaEnfocada && (
+      {lugar === "mapa" &&
+        (listaAbierta ? (
+          <VistaRutas
+            rutas={rutas}
+            estados={estados}
+            alAbrirRuta={(id) => abrirRuta(id)}
+            alVolver={() => setListaAbierta(false)}
+          />
+        ) : (
+          <VistaMapa
+            rutas={rutas}
+            enfocada={enfocada}
+            forma={forma}
+            vivo={vivo}
+            error={error}
+            deNoche={deNoche}
+            sentido={sentido}
+            paradaAbierta={paradaAbierta}
+            alEnfocar={(id) => {
+              setEnfocada(id);
+              setParadaAbierta(null);
+            }}
+            alCambiarSentido={setSentido}
+            alTocarParada={setParadaAbierta}
+            alReintentar={reintentar}
+            alVerTodas={() => {
+              setParadaAbierta(null);
+              setListaAbierta(true);
+            }}
+          />
+        ))}
+
+      {lugar === "ira" && (
+        <LugarReservado titulo="Ir a" alIrAlMapa={() => irA("mapa")}>
+          <p>
+            Aquí vas a escribir a dónde vas, y la app te va a armar el viaje, con o sin transbordo.{" "}
+            <b>El planeador llega pronto.</b>
+          </p>
+          <p>Mientras, en el Mapa están todas las rutas con sus paradas y sus camiones en vivo.</p>
+        </LugarReservado>
+      )}
+
+      {lugar === "pase" && (
+        <LugarReservado titulo="Tu pase" alIrAlMapa={() => irA("mapa")}>
+          <p>
+            Aquí va a vivir tu pase para pagar el camión con el teléfono. <b>Llega después.</b>
+          </p>
+          <p>Mientras, pagas tu camión como siempre. Nada de esta app te pide cuenta ni dinero.</p>
+        </LugarReservado>
+      )}
+
+      {enElMapa && parada && rutaEnfocada && (
         <HojaDeParada
           nombre={parada.nombre}
           direccion={`Ruta ${rutaEnfocada.nombre} · ${sentido === "ida" ? "ida" : "vuelta"}${
@@ -214,6 +253,8 @@ export function Ontoy({
           alCerrar={() => setParadaAbierta(null)}
         />
       )}
+
+      <Barra activo={lugar} alIr={irA} />
     </div>
   );
 }

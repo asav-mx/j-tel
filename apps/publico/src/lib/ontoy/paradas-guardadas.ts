@@ -74,6 +74,12 @@ export function useParadasGuardadas() {
    * puede guardar», y la pantalla lo dice distinto.
    */
   const [disponible, setDisponible] = useState(true);
+  /**
+   * Si ya se leyó el teléfono. Antes de eso la lista vacía no significa «no
+   * guardas ninguna»: Inicio esperaría un instante enseñando las paradas cerca
+   * a quien sí tiene guardadas, y luego brincaría.
+   */
+  const [listo, setListo] = useState(false);
 
   useEffect(() => {
     try {
@@ -82,6 +88,7 @@ export function useParadasGuardadas() {
     } catch {
       setDisponible(false);
     }
+    setListo(true);
   }, []);
 
   const alternar = useCallback((g: ParadaGuardada) => {
@@ -97,6 +104,7 @@ export function useParadasGuardadas() {
   return {
     guardadas: ids,
     disponible,
+    listo,
     alternar,
     estaGuardada: (parada: string) => ids.some((x) => x.parada === parada),
   };
