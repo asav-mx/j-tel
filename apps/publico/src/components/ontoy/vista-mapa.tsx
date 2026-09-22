@@ -52,6 +52,7 @@ export function VistaMapa({
   alTocarParada,
   alReintentar,
   alVerTodas,
+  rutaAbierta = false,
 }: {
   rutas: RutaDeLaCiudad[];
   enfocada: string | null;
@@ -67,6 +68,11 @@ export function VistaMapa({
   alReintentar: () => void;
   /** Abre la lista completa de rutas de la ciudad. */
   alVerTodas: () => void;
+  /**
+   * Con una ruta abierta, el sentido y la salida viven en su cabeza teñida; el
+   * mapa no los repite (dos selectores del mismo sentido se contradicen).
+   */
+  rutaAbierta?: boolean;
 }) {
   const contenedor = useRef<HTMLDivElement | null>(null);
   const mapa = useRef<import("leaflet").Map | null>(null);
@@ -232,7 +238,7 @@ export function VistaMapa({
       <div ref={contenedor} className="ontoy-lienzo" style={{ background: lienzo }} />
 
       {/* El sentido, arriba: la misma ruta tiene dos, y mezclarlas es mezclar dos servicios. */}
-      {forma && (
+      {forma && !rutaAbierta && (
         <div className="ontoy-sentido" role="group" aria-label="Sentido de la ruta">
           {sentidos.map((s) => (
             <button
@@ -260,6 +266,7 @@ export function VistaMapa({
         </div>
       )}
 
+      {!rutaAbierta && (
       <div className="ontoy-fichas">
         {pista && <p className="ontoy-pista">{pista}</p>}
         <div className="ontoy-fichas-fila">
@@ -286,6 +293,7 @@ export function VistaMapa({
           ))}
         </div>
       </div>
+      )}
 
       {!rutaEnfocada && rutas.length === 0 && (
         <p className="ontoy-mapa-vacio">Todavía no hay rutas publicadas en esta ciudad.</p>

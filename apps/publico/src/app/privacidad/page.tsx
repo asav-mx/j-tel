@@ -66,8 +66,9 @@ export default function Privacidad() {
           habías dado antes, la usa sin volver a preguntar.
         </p>
         <p>
-          Si das permiso, la app lee tu ubicación para enseñarte las paradas que tienes cerca y para calcular cuánto
-          le falta al camión para llegar hasta donde estás. Los dos cálculos se hacen en tu teléfono. La app no envía
+          Si das permiso, la app lee tu ubicación para enseñarte las paradas que tienes cerca, para marcar dónde
+          estás sobre la ruta que abres y para calcular cuánto le falta al camión para llegar hasta donde estás. Todo
+          eso se calcula en tu teléfono. La app no envía
           tu ubicación a nuestro servidor, no la guarda y no arma una historia de dónde has estado.
         </p>
         <p>
@@ -76,7 +77,7 @@ export default function Privacidad() {
         </p>
         <p>
           Si no das permiso, la app sigue funcionando: ves las rutas, las paradas y los camiones en vivo; sólo no se
-          calculan las paradas cerca de ti ni la llegada hasta ti. Puedes quitar el permiso cuando quieras desde los ajustes de tu teléfono.
+          calculan las paradas cerca de ti, ni dónde estás sobre la ruta, ni la llegada hasta ti. Puedes quitar el permiso cuando quieras desde los ajustes de tu teléfono.
         </p>
       </section>
 

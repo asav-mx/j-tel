@@ -959,3 +959,244 @@
   color: var(--tenue);
   text-underline-offset: 2px;
 }
+
+/* ── la ruta abierta: cabeza teñida (8.8d) ──────────────────────────────
+ * Fondo = color de la ruta. Texto = el que escoge `textoSobreLaRuta` (≥4.5:1).
+ * Un botón activo se LLENA con el color del texto y su letra toma el de la
+ * ruta: el mismo par de colores al revés, con el mismo contraste. */
+.ontoy-cabeza-ruta {
+  background: var(--ruta);
+  color: var(--texto-cabeza);
+  padding: 8px 14px 12px;
+}
+.ontoy-cabeza-ruta-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ontoy-cabeza-ruta-fila + .ontoy-cabeza-ruta-fila {
+  margin-top: 10px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.ontoy-cabeza-ruta-volver {
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-size: 26px;
+  line-height: 1;
+  padding: 0 6px 2px 2px;
+  cursor: pointer;
+}
+.ontoy-cabeza-ruta-nombre {
+  margin: 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  flex: 1;
+  min-width: 0;
+}
+.ontoy-cabeza-ruta-cuantos {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.ontoy-cabeza-ruta-grupo {
+  display: flex;
+  gap: 5px;
+}
+.ontoy-cabeza-ruta-grupo button {
+  border: 1.5px solid var(--texto-cabeza);
+  background: transparent;
+  color: var(--texto-cabeza);
+  border-radius: 9px;
+  padding: 6px 10px;
+  font-family: var(--fuente-mono), monospace;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ontoy-cabeza-ruta-grupo button[aria-pressed="true"] {
+  background: var(--texto-cabeza);
+  color: var(--ruta);
+}
+.ontoy-cabeza-ruta button:focus-visible {
+  outline: 2px solid var(--texto-cabeza);
+  outline-offset: 2px;
+}
+
+/* ── el hilo (8.8) ─────────────────────────────────────────────────────
+ * El VELO del color de la ruta de fondo; el texto, siempre en tinta. */
+.ontoy-hilo {
+  background: color-mix(in srgb, var(--ruta) 9%, var(--fondo));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="dia"]) .ontoy-hilo {
+    background: color-mix(in srgb, var(--ruta) 13%, var(--fondo));
+  }
+}
+:root[data-tema="noche"] .ontoy-hilo {
+  background: color-mix(in srgb, var(--ruta) 13%, var(--fondo));
+}
+.ontoy-hilo-aviso {
+  margin: 12px 18px 0;
+  padding: 9px 12px;
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  background: var(--panel);
+  font-size: 13px;
+}
+.ontoy-hilo-vacio {
+  padding: 18px;
+}
+.ontoy-hilo-linea {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 14px 18px 8px 50px;
+}
+/* La línea de la ruta: su color es identidad. */
+.ontoy-hilo-linea::before {
+  content: "";
+  position: absolute;
+  left: 29px;
+  top: 24px;
+  bottom: 24px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--ruta);
+}
+.ontoy-hilo-renglon {
+  position: relative;
+}
+.ontoy-hilo-parada {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 0;
+  border: 0;
+  background: none;
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* El círculo de la parada, en el color de la ruta; el relleno es el velo. */
+.ontoy-hilo-parada::before {
+  content: "";
+  position: absolute;
+  left: -27px;
+  top: 14px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 2.5px solid var(--ruta);
+}
+.ontoy-hilo-parada.marcada {
+  background: var(--panel);
+  border-radius: 12px;
+  margin-left: -10px;
+  padding-left: 10px;
+  padding-right: 10px;
+  width: calc(100% + 20px);
+  box-shadow: inset 0 0 0 1.5px var(--ruta);
+}
+.ontoy-hilo-parada.marcada::before {
+  left: -17px;
+}
+.ontoy-hilo-nombre {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 600;
+  font-size: 15.5px;
+}
+.ontoy-hilo-estrella {
+  width: 13px;
+  height: 13px;
+  margin-left: 6px;
+  vertical-align: -1px;
+  fill: currentColor;
+}
+.ontoy-hilo-falta {
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+/* Un camión: círculo LLENO del color de la ruta y su latido verde junto a la edad. */
+.ontoy-hilo-unidad {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.ontoy-hilo-unidad::before {
+  content: "";
+  position: absolute;
+  left: -32px;
+  top: 6px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+}
+.ontoy-hilo-unidad.viva::before {
+  background: var(--ruta);
+  box-shadow: 0 0 0 4px var(--panel);
+}
+/* El dato viejo NO se tiñe: gris, anillo hueco (8.8d, 8.9). */
+.ontoy-hilo-unidad.vieja {
+  color: var(--tenue);
+}
+.ontoy-hilo-unidad.vieja::before {
+  background: var(--panel);
+  border: 2.5px solid var(--tenue);
+}
+.ontoy-hilo-edad {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--tenue);
+}
+.ontoy-hilo-aqui {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 6px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1.5px dashed var(--texto);
+}
+.ontoy-hilo-aqui::before {
+  content: "";
+  position: absolute;
+  left: -30px;
+  top: 13px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--texto);
+  box-shadow: 0 0 0 3px var(--panel);
+}
+.ontoy-hilo-aqui-rotulo {
+  flex: 1;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+}
+.ontoy-hilo-porque {
+  margin: 0 18px;
+}
+.ontoy-hilo-promesa {
+  margin: 12px 18px 22px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--linea);
+  font-size: 12.5px;
+  color: var(--tenue);
+}
