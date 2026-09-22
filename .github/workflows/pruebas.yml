@@ -57,6 +57,14 @@ jobs:
       - name: Instalar
         run: pnpm install --frozen-lockfile
 
+      # Antes de compilar, y a propósito: `next/font/google` descarga las
+      # fuentes DURANTE `next build`, y si Google no contesta la compilación se
+      # cae con un `TypeError` que no dice nada (#294 en la web, #493 y #498 en
+      # Ontoy). Si alguien vuelve a importarlo, que se lea aquí con su nombre y
+      # no como un rojo intermitente de red. No necesita dependencias.
+      - name: Ninguna app baja su letra de internet
+        run: node scripts/verificar-fuentes-locales.mjs
+
       - name: Compilar
         run: pnpm build
 
