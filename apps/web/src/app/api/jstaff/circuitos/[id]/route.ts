@@ -76,6 +76,8 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     stopSnapToleranceMeters: number;
     arrivalRangeFloorSeconds: number;
     avgSpeedKmh: number;
+    arrivalTolerancePct: number;
+    corridorExitMinutes: number;
     serviceStartLocal: string;
     serviceEndLocal: string;
     timeZone: string;
@@ -149,12 +151,28 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
       error: "La distancia de pegado de paradas tiene que ser mayor que cero",
       aplicar: (v) => (cambios.stopSnapToleranceMeters = v),
     },
+    {
+      // Hoy sólo se movía con SQL (A4b). Admite decimales: la banda es ±pct % de la promesa.
+      campo: "toleranciaLlegadaPct",
+      error: "La tolerancia de llegada tiene que ser mayor que cero",
+      entero: false,
+      aplicar: (v) => (cambios.arrivalTolerancePct = v),
+    },
+    {
+      campo: "minutosFueraCorredor",
+      error: "Los minutos fuera del corredor tienen que ser mayores que cero",
+      aplicar: (v) => (cambios.corridorExitMinutes = v),
+    },
   ];
 
   for (const p of perillas) {
     const v = numero(p.campo, { entero: p.entero ?? true });
     if (v === null) return volver({ error: p.error });
     if (v !== undefined) p.aplicar(v);
+  }
+  // La base también lo cuida (0051): más de 100 % dejaría la orilla de abajo en negativo.
+  if (cambios.arrivalTolerancePct !== undefined && cambios.arrivalTolerancePct > 100) {
+    return volver({ error: "La tolerancia de llegada no puede pasar de 100 %" });
   }
 
   /*
@@ -207,15 +225,34 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
 
   if (Object.keys(cambios).length === 0) return volver({ error: "No mandaste ningún cambio" });
 
+  /*
+   * **Las reglas de la medición se firman** (0051, A4b — ASAV, 21-sep-2026):
+   * si el envío cambia una —un ajuste, la tolerancia, los minutos fuera del
+   * corredor, el horario, la zona o la fecha de arranque—, pide motivo y queda
+   * en el registro con quién, cuándo y el antes → después LEÍDO DE LA BASE. El
+   * repositorio decide qué cambió; aquí sólo se le pasa quién y por qué, de la
+   * sesión y del formulario. Sin motivo no se guarda nada del envío.
+   */
+  const motivo = String(form.get("motivo") ?? "").trim().slice(0, 280) || null;
   try {
-    const actualizado = await getRepos().circuits.updateCircuit(id, cambios);
-    if (!actualizado) return volver({ error: "No existe ese circuito" });
+    const r = await getRepos().circuits.cambiarCircuito(id, cambios, { motivo, por: g.identidad.userId });
+    if (!r.ok) {
+      if (r.error === "no_existe") return volver({ error: "No existe ese circuito" });
+      if (r.error === "falta_quien") return volver({ error: "Inicia sesión: el cambio de una regla queda firmado." });
+      return volver({
+        error: "No se guardó nada: este cambio mueve una regla de la medición. Di por qué — queda escrito con tu nombre.",
+      });
+    }
+    return volver({
+      ok:
+        r.registrados > 0
+          ? `Guardado · ${r.registrados === 1 ? "1 regla cambiada" : `${r.registrados} reglas cambiadas`}, con su motivo`
+          : "Guardado",
+    });
   } catch {
     // Los CHECK de la base rechazando un valor imposible.
     return volver({ error: "La base rechazó alguno de los valores" });
   }
-
-  return volver({ ok: "Guardado" });
 }
 
 /**

@@ -31,8 +31,17 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     return NextResponse.redirect(url, 303);
   };
 
-  const circuito = await getRepos().circuits.setArrivalRangeEnabled(id, activar);
-  if (!circuito) return volver({ error: "No existe ese circuito" });
+  /*
+   * Firmado (0051, A4b): prender o apagar el tiempo estimado cambia lo que se le
+   * dice al pasajero, y es regla de la medición. Pide motivo y queda escrito.
+   */
+  const motivo = String(form.get("motivo") ?? "").trim().slice(0, 280) || null;
+  const r = await getRepos().circuits.cambiarRangoDeLlegada(id, activar, { motivo, por: g.identidad.userId });
+  if (!r.ok) {
+    if (r.error === "no_existe") return volver({ error: "No existe ese circuito" });
+    if (r.error === "falta_quien") return volver({ error: "Inicia sesión: el cambio queda firmado." });
+    return volver({ error: "No se cambió: di por qué se prende o se apaga el tiempo estimado — queda escrito." });
+  }
 
   return volver({
     ok: activar

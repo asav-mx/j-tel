@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import { proyectarSobreTrazado } from "./trazado.js";
+import { MINUTOS_FUERA_DEL_CORREDOR } from "./jornada.js";
 import { localDateIso, localTimeHHMM, instanteZonificado } from "./tiempo.js";
 
 /**
@@ -571,6 +572,8 @@ export const ORIGEN_DEL_CIRCUITO = {
    * servicio hubiera fallado. Se aprieta con semanas medidas (Asav, 20-sep).
    */
   toleranciaLlegadaPct: 50,
+  /** Minutos seguidos fuera del corredor para que cuente como salida (0051). El mismo de la jornada. */
+  minutosFueraDelCorredor: MINUTOS_FUERA_DEL_CORREDOR,
   velocidadKmh: 20.5,
   colorHex: "#7C5CE0",
   horaInicioLocal: "05:00",

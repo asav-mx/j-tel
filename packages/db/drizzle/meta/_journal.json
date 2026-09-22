@@ -358,6 +358,13 @@
       "when": 1790726400000,
       "tag": "0050_borrar_frecuencia_declarada",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1790812800000,
+      "tag": "0051_reglas_de_la_medicion",
+      "breakpoints": true
     }
   ]
 }

@@ -89,6 +89,7 @@ import {
   circuitUnitAssignments,
   circuitDetectionMarks,
   circuitPromiseTables,
+  circuitRuleChanges,
   circuitPromiseBands,
   circuitStopPasses,
   concessionCarriers,
@@ -6075,6 +6076,51 @@ export type PlanDelCircuitoParaCuenta =
  * si eso dependiera de que cada pantalla se acuerde, el día que alguien no se
  * acuerde el pasado se reescribe en silencio.
  */
+/**
+ * Las reglas de la medición de un circuito (0051, A4b): lo que decide qué cuenta
+ * como «pasó». Cambiar una exige motivo y deja renglón en `circuit_rule_changes`.
+ * El nombre y el color NO están: son identidad, no cambian la medición (ASAV).
+ */
+export const REGLAS_DE_LA_MEDICION = [
+  { campo: "corridorToleranceMeters", columna: "corridor_tolerance_meters" },
+  { campo: "staleAfterSeconds", columna: "stale_after_seconds" },
+  { campo: "serviceConfidenceMinutes", columna: "service_confidence_minutes" },
+  { campo: "avgSpeedKmh", columna: "avg_speed_kmh" },
+  { campo: "arrivalRangeFloorSeconds", columna: "arrival_range_floor_seconds" },
+  { campo: "stopSnapToleranceMeters", columna: "stop_snap_tolerance_meters" },
+  { campo: "arrivalTolerancePct", columna: "arrival_tolerance_pct" },
+  { campo: "corridorExitMinutes", columna: "corridor_exit_minutes" },
+  { campo: "serviceStartLocal", columna: "service_start_local" },
+  { campo: "serviceEndLocal", columna: "service_end_local" },
+  { campo: "timeZone", columna: "time_zone" },
+  { campo: "serviceLaunchDate", columna: "service_launch_date" },
+] as const satisfies ReadonlyArray<{ campo: keyof typeof circuits.$inferSelect; columna: string }>;
+
+/**
+ * ¿Es el mismo valor? Se compara lo que la base guarda contra lo que llega, en
+ * la forma en que la base lo devuelve: una hora `time` vuelve como «05:00:00»
+ * y el formulario manda «05:00»; un número puede venir como texto. Mandar el
+ * valor de hoy no es un cambio y no deja renglón.
+ */
+export function mismoValorDeRegla(guardado: unknown, nuevo: unknown): boolean {
+  if (guardado === null || guardado === undefined || nuevo === null || nuevo === undefined) {
+    return (guardado ?? null) === (nuevo ?? null);
+  }
+  if (typeof guardado === "number" || typeof nuevo === "number") return Number(guardado) === Number(nuevo);
+  const a = String(guardado);
+  const b = String(nuevo);
+  const hora = /^\d{2}:\d{2}(:\d{2})?$/;
+  if (hora.test(a) && hora.test(b)) return a.slice(0, 5) === b.slice(0, 5) && (a.slice(6) || "00") === (b.slice(6) || "00");
+  return a === b;
+}
+
+/** El valor de una regla, como texto para el registro. Una hora sin sus segundos en cero. */
+export function textoDeRegla(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  const t = String(v);
+  return /^\d{2}:\d{2}:00$/.test(t) ? t.slice(0, 5) : t;
+}
+
 export class CircuitRepository {
   constructor(private db: Database) {}
 
@@ -6546,13 +6592,43 @@ export class CircuitRepository {
    * el camión moverse en el mapa. Lo que se calla es el minuto estimado, que
    * depende de una velocidad que todavía no se midió en esta calle.
    */
-  async setArrivalRangeEnabled(id: string, activo: boolean) {
-    const [fila] = await this.db
-      .update(circuits)
-      .set({ arrivalRangeEnabledAt: activo ? new Date() : null, updatedAt: new Date() })
-      .where(eq(circuits.id, id))
-      .returning();
-    return fila ?? null;
+  /**
+   * Prender o apagar el tiempo estimado de llegada, **firmado** (0051, A4b): es
+   * una regla de lo que se le dice al pasajero. Mismo trato que
+   * `cambiarCircuito`: el estado de antes sale de la base, sin motivo o sin
+   * quién no se escribe nada, y pedir el estado que ya tiene no deja renglón ni
+   * mueve su fecha.
+   */
+  async cambiarRangoDeLlegada(
+    id: string,
+    activo: boolean,
+    firma: { motivo: string | null; por: string | null },
+  ): Promise<
+    | { ok: true; circuito: typeof circuits.$inferSelect; registrados: number }
+    | { ok: false; error: "no_existe" | "falta_motivo" | "falta_quien" }
+  > {
+    return this.db.transaction(async (tx) => {
+      const [antes] = await tx.select().from(circuits).where(eq(circuits.id, id)).for("update");
+      if (!antes) return { ok: false as const, error: "no_existe" as const };
+      if ((antes.arrivalRangeEnabledAt !== null) === activo) return { ok: true as const, circuito: antes, registrados: 0 };
+      const motivo = firma.motivo?.trim() ?? "";
+      if (!motivo) return { ok: false as const, error: "falta_motivo" as const };
+      if (!firma.por) return { ok: false as const, error: "falta_quien" as const };
+      const [despues] = await tx
+        .update(circuits)
+        .set({ arrivalRangeEnabledAt: activo ? new Date() : null, updatedAt: new Date() })
+        .where(eq(circuits.id, id))
+        .returning();
+      await tx.insert(circuitRuleChanges).values({
+        circuitId: id,
+        regla: "arrival_range_enabled_at",
+        valorAntes: antes.arrivalRangeEnabledAt ? "encendido" : "apagado",
+        valorDespues: despues!.arrivalRangeEnabledAt ? "encendido" : "apagado",
+        motivo,
+        cambiadoPor: firma.por,
+      });
+      return { ok: true as const, circuito: despues!, registrados: 1 };
+    });
   }
 
   /**
@@ -7037,13 +7113,66 @@ export class CircuitRepository {
     return fila;
   }
 
-  async updateCircuit(id: string, cambios: Partial<typeof circuits.$inferInsert>) {
-    const [fila] = await this.db
-      .update(circuits)
-      .set({ ...cambios, updatedAt: new Date() })
-      .where(eq(circuits.id, id))
-      .returning();
-    return fila ?? null;
+  /**
+   * **Cambiar un circuito, firmando cada regla de la medición que cambie**
+   * (0051, A4b — ASAV, 21-sep-2026). Es la ÚNICA escritura de los campos del
+   * circuito; `updateCircuit` se borró para que no quede una puerta sin
+   * registro (la valla `guardia-reglas-de-la-medicion` lo vigila).
+   *
+   * - **El «antes» sale de la base**, no del formulario: la fila se lee con
+   *   `FOR UPDATE` dentro de la misma transacción que escribe. El «después», del
+   *   `RETURNING`. Sólo se registra lo que de verdad cambió: mandar el valor de
+   *   hoy no deja renglón.
+   * - **Una regla que cambia exige motivo y quién.** Sin alguno de los dos no se
+   *   escribe NADA — ni la regla ni lo demás del envío —: todo o nada.
+   * - El nombre y el color no son reglas (no cambian la medición) y se guardan
+   *   sin renglón.
+   */
+  async cambiarCircuito(
+    id: string,
+    cambios: Partial<typeof circuits.$inferInsert>,
+    firma: { motivo: string | null; por: string | null },
+  ): Promise<
+    | { ok: true; circuito: typeof circuits.$inferSelect; registrados: number }
+    | { ok: false; error: "no_existe" | "falta_motivo" | "falta_quien" }
+  > {
+    return this.db.transaction(async (tx) => {
+      const [antes] = await tx.select().from(circuits).where(eq(circuits.id, id)).for("update");
+      if (!antes) return { ok: false as const, error: "no_existe" as const };
+      const cambian = REGLAS_DE_LA_MEDICION.filter(
+        (r) => r.campo in cambios && !mismoValorDeRegla(antes[r.campo], cambios[r.campo]),
+      );
+      const motivo = firma.motivo?.trim() ?? "";
+      if (cambian.length > 0 && !motivo) return { ok: false as const, error: "falta_motivo" as const };
+      if (cambian.length > 0 && !firma.por) return { ok: false as const, error: "falta_quien" as const };
+      const [despues] = await tx
+        .update(circuits)
+        .set({ ...cambios, updatedAt: new Date() })
+        .where(eq(circuits.id, id))
+        .returning();
+      if (cambian.length > 0) {
+        await tx.insert(circuitRuleChanges).values(
+          cambian.map((r) => ({
+            circuitId: id,
+            regla: r.columna,
+            valorAntes: textoDeRegla(antes[r.campo]),
+            valorDespues: textoDeRegla(despues![r.campo]),
+            motivo,
+            cambiadoPor: firma.por!,
+          })),
+        );
+      }
+      return { ok: true as const, circuito: despues!, registrados: cambian.length };
+    });
+  }
+
+  /** El registro de las reglas de un circuito, lo más nuevo primero. */
+  async listRuleChanges(circuitId: string) {
+    return this.db
+      .select()
+      .from(circuitRuleChanges)
+      .where(eq(circuitRuleChanges.circuitId, circuitId))
+      .orderBy(desc(circuitRuleChanges.cambiadoEn));
   }
 
   async getPaths(circuitId: string) {

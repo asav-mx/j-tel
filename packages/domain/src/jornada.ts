@@ -43,7 +43,11 @@ import { haversineKm } from "./ventana-observacion.js";
  * nadie midió. La frase dice lo que pasó.
  */
 
-/** Minutos seguidos fuera del corredor para que cuente como salida. De fábrica; se calibra con camiones reales. */
+/**
+ * Minutos seguidos fuera del corredor para que cuente como salida — **el valor
+ * de fábrica**. Desde la 0051 cada circuito guarda el suyo
+ * (`corridor_exit_minutes`) y la jornada lee ése; éste es con el que nace.
+ */
 export const MINUTOS_FUERA_DEL_CORREDOR = 3;
 
 export type SentidoDeJornada = "ida" | "vuelta";

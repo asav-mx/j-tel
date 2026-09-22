@@ -140,6 +140,8 @@ export async function cargarJornadaParaJStaff(
     medidoHasta,
     silencioSegundos: circuito.staleAfterSeconds,
     corredorMetros: circuito.corridorToleranceMeters,
+    // Del circuito desde la 0051 (A4b): se calibra con camiones reales y cambiarlo queda firmado.
+    minutosFuera: circuito.corridorExitMinutes,
   });
 
   return {

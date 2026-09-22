@@ -1432,6 +1432,13 @@ export const circuits = pgTable(
      */
     arrivalRangeEnabledAt: timestamp("arrival_range_enabled_at", { withTimezone: true }),
     /**
+     * Cuántos minutos seguidos fuera del corredor cuentan como **salida** en la
+     * jornada de una unidad (0051, A4b). Menos que esto es el brinco del GPS.
+     * Nació como constante (3, PR B) y es columna para calibrarla con camiones
+     * reales; cambiarla queda en `circuit_rule_changes` con su motivo.
+     */
+    corridorExitMinutes: integer("corridor_exit_minutes").notNull().default(ORIGEN_DEL_CIRCUITO.minutosFueraDelCorredor),
+    /**
      * Velocidad EFECTIVA de avance, en km/h: desplazamiento entre tiempo, con
      * las paradas y los semáforos adentro. Es lo que responde «en cuánto
      * llega»; la instantánea no responde eso.
@@ -1713,6 +1720,40 @@ export const circuitUnitAssignments = pgTable(
     uniqueIndex("circuit_unit_assignments_una_vigente")
       .on(table.unitId)
       .where(sql`${table.validTo} IS NULL`),
+  ],
+);
+
+/**
+ * **El registro de las reglas de la medición** (0051, A4b — ASAV, 21-sep-2026):
+ * quién cambió qué regla de un circuito, cuándo, de qué valor a qué valor y
+ * por qué. Las reglas son las que deciden qué cuenta como «pasó»: los ajustes
+ * de medición, la tolerancia de llegada, los minutos fuera del corredor, el
+ * tiempo estimado, y el horario, la zona y la fecha de arranque. El nombre y el
+ * color no entran: no cambian la medición.
+ *
+ * **El «antes» sale de la base, no del formulario** (ASAV): se lee la fila
+ * dentro de la misma transacción que escribe, y sólo se registra lo que de
+ * verdad cambió. El motivo es obligatorio también aquí (CHECK), no sólo en la
+ * pantalla. Nada de lo anterior a la 0051 tiene renglón: no se inventa.
+ */
+export const circuitRuleChanges = pgTable(
+  "circuit_rule_changes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    circuitId: uuid("circuit_id")
+      .notNull()
+      .references(() => circuits.id, { onDelete: "cascade" }),
+    /** El nombre de la columna del circuito que cambió. */
+    regla: text("regla").notNull(),
+    valorAntes: text("valor_antes"),
+    valorDespues: text("valor_despues"),
+    motivo: text("motivo").notNull(),
+    cambiadoPor: text("cambiado_por").notNull(),
+    cambiadoEn: timestamp("cambiado_en", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    // El CHECK del motivo vive en la 0051, como los demás CHECK del esquema.
+    index("circuit_rule_changes_circuito_idx").on(table.circuitId, table.cambiadoEn),
   ],
 );
 
