@@ -110,11 +110,21 @@ function ParadasCercaDeTi({
   alAbrirRuta: (circuitoId: string, parada?: string, sentido?: Sentido) => void;
   alIrAlMapa: () => void;
 }) {
-  const { yo, estado, pedir } = ubicacion;
+  const { yo, estado, pedir, reintentar } = ubicacion;
   const lista = useParadasDeLaCiudad(estado === "concedida");
 
   const cercanas = useMemo(
     () => (yo && lista.datos ? paradasCerca(yo, lista.datos.paradas) : null),
+    [yo, lista.datos],
+  );
+  /*
+   * Lejos de toda parada, la MÁS cercana, a la distancia que sea: así el
+   * pasajero ve que su ubicación sí funcionó, y tiene a dónde ir. Antes sólo
+   * salía «no hay paradas a menos de 1 km» y el botón del Mapa, y se leía como
+   * que la ubicación estaba rota (reporte del 22-sep-2026).
+   */
+  const laMasCercana = useMemo(
+    () => (yo && lista.datos ? (paradasCerca(yo, lista.datos.paradas, { radioM: Infinity, maximo: 1 })[0] ?? null) : null),
     [yo, lista.datos],
   );
   const rutaDe = useMemo(() => {
@@ -147,7 +157,8 @@ function ParadasCercaDeTi({
       <>
         <p className="ontoy-vacio">
           Sin tu ubicación no sabemos qué paradas te quedan cerca, y la app funciona igual: en el Mapa están todas
-          las rutas y sus paradas. Si cambias de idea, el permiso se da desde los ajustes de tu teléfono.
+          las rutas y sus paradas. Si cambias de idea, dale permiso de ubicación a esta app en los ajustes de tu
+          teléfono o de tu navegador.
         </p>
         {alMapa}
       </>
@@ -168,6 +179,20 @@ function ParadasCercaDeTi({
     );
   } else if (estado === "buscando") {
     cuerpo = <p className="ontoy-vacio">Buscando dónde estás…</p>;
+  } else if (estado === "sin-senal") {
+    /* Hay permiso y no hay posición: GPS apagado o sin señal. No es un «no» del pasajero. */
+    cuerpo = (
+      <>
+        <p className="ontoy-vacio">
+          Tu teléfono no nos da tu posición ahorita. Revisa que la ubicación esté prendida, o intenta donde haya
+          mejor señal.
+        </p>
+        <button type="button" className="ontoy-boton" onClick={reintentar}>
+          Reintentar
+        </button>
+        {alMapa}
+      </>
+    );
   } else if (!lista.datos && !lista.error) {
     cuerpo = <p className="ontoy-vacio">Buscando las paradas cerca de ti…</p>;
   } else if (lista.error) {
@@ -184,8 +209,25 @@ function ParadasCercaDeTi({
     cuerpo = (
       <>
         <p className="ontoy-vacio">
-          No hay paradas a menos de {RADIO_CERCA_M / 1000} km de ti. En el Mapa están todas las rutas.
+          No hay paradas a menos de {RADIO_CERCA_M / 1000} km de ti.
+          {laMasCercana && " La más cercana, en línea recta:"}
         </p>
+        {laMasCercana && (
+          <button
+            type="button"
+            className="ontoy-cerca"
+            style={{ ["--ruta" as string]: rutaDe.get(laMasCercana.ruta)?.color_hex ?? "currentColor" }}
+            onClick={() => alAbrirRuta(laMasCercana.ruta, laMasCercana.id, laMasCercana.sentido ?? undefined)}
+          >
+            <span className="ontoy-cerca-info">
+              <span className="ontoy-cerca-nombre">{laMasCercana.nombre}</span>
+              <span className="ontoy-cerca-ruta">
+                Ruta <b>{rutaDe.get(laMasCercana.ruta)?.nombre ?? laMasCercana.ruta}</b> · {sentidoEnPalabras(laMasCercana.sentido)}
+              </span>
+            </span>
+            <span className="ontoy-cerca-distancia mono">{distanciaEnPalabras(laMasCercana.distanciaM)}</span>
+          </button>
+        )}
         {alMapa}
       </>
     );

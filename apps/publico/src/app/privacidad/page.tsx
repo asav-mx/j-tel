@@ -67,7 +67,7 @@ export default function Privacidad() {
         </p>
         <p>
           Si das permiso, la app lee tu ubicación para enseñarte las paradas que tienes cerca, para marcar dónde
-          estás sobre la ruta que abres y para calcular cuánto le falta al camión para llegar hasta donde estás. Todo
+          estás en el mapa y sobre la ruta que abres, y para calcular cuánto le falta al camión para llegar hasta donde estás. Todo
           eso se calcula en tu teléfono. La app no envía
           tu ubicación a nuestro servidor, no la guarda y no arma una historia de dónde has estado.
         </p>

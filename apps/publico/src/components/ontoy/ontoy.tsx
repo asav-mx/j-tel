@@ -341,6 +341,7 @@ export function Ontoy({
             ) : (
           <VistaMapa
               rutaAbierta
+              yo={yo}
             rutas={rutas}
             enfocada={enfocada}
             forma={forma}
@@ -363,6 +364,7 @@ export function Ontoy({
         ) : (
           <VistaMapa
             ciudad={ciudad}
+            yo={yo}
             rutas={rutas}
             enfocada={enfocada}
             forma={forma}

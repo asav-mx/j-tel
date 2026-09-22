@@ -72,6 +72,7 @@ export function VistaMapa({
   alVerTodas,
   rutaAbierta = false,
   ciudad,
+  yo = null,
 }: {
   rutas: RutaDeLaCiudad[];
   enfocada: string | null;
@@ -94,6 +95,14 @@ export function VistaMapa({
   rutaAbierta?: boolean;
   /** Con esto, el mapa es el de la ciudad y no el de una ruta. */
   ciudad?: ModoCiudad;
+  /**
+   * Dónde está el pasajero, **sólo si ya dio permiso** (el mapa nunca pregunta).
+   * Se dibuja como «tú»: en tinta y con su palabra, sin el color de ninguna ruta
+   * — el pasajero no es una ruta (8.8c). Recupera el punto que la cara vieja
+   * (`vista-pasajero.tsx`) dibujaba y que se perdió en #476 (decisión de ASAV,
+   * 22-sep-2026).
+   */
+  yo?: { lat: number; lon: number } | null;
 }) {
   const contenedor = useRef<HTMLDivElement | null>(null);
   const mapa = useRef<import("leaflet").Map | null>(null);
@@ -101,6 +110,7 @@ export function VistaMapa({
   const capaRutas = useRef<import("leaflet").LayerGroup | null>(null);
   const capaParadas = useRef<import("leaflet").LayerGroup | null>(null);
   const capaUnidades = useRef<import("leaflet").LayerGroup | null>(null);
+  const capaYo = useRef<import("leaflet").LayerGroup | null>(null);
   const [listo, setListo] = useState(false);
 
   const rutaEnfocada = rutas.find((r) => r.circuito_id === enfocada) ?? null;
@@ -124,6 +134,8 @@ export function VistaMapa({
       capaRutas.current = leaflet.layerGroup().addTo(m);
       capaParadas.current = leaflet.layerGroup().addTo(m);
       capaUnidades.current = leaflet.layerGroup().addTo(m);
+      // Hasta arriba: «tú» no queda debajo de un camión ni de una parada.
+      capaYo.current = leaflet.layerGroup().addTo(m);
       mapa.current = m;
       /*
        * Leaflet mide su caja al crearse, y en un `flex: 1` esa medida todavía
@@ -249,6 +261,21 @@ export function VistaMapa({
       leaflet.marker([u.lat, u.lon], { icon: icono, keyboard: false }).addTo(capaUnidades.current);
     }
   }, [listo, forma, vivo, sentido]);
+
+  // ── «tú»: dónde está el pasajero, si ya dio permiso ─────────────────────
+  useEffect(() => {
+    const leaflet = L.current;
+    if (!listo || !leaflet || !capaYo.current) return;
+    capaYo.current.clearLayers();
+    if (!yo) return;
+    const icono = leaflet.divIcon({
+      className: "ontoy-tu-icono",
+      html: `<span class="ontoy-tu"><span class="ontoy-tu-punto"></span><span class="ontoy-tu-palabra">tú</span></span>`,
+      iconSize: [0, 0],
+    });
+    // No mueve el mapa: el pasajero decide qué mira; «tú» sólo aparece donde está.
+    leaflet.marker([yo.lat, yo.lon], { icon: icono, keyboard: false, interactive: false }).addTo(capaYo.current);
+  }, [listo, yo]);
 
   // ── El Mapa de la ciudad (PR 3b) ───────────────────────────────────────
   const prendidasClave = ciudad ? [...ciudad.prendidas].sort().join(",") : "";
