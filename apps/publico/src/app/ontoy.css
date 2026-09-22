@@ -799,8 +799,11 @@
   align-items: center;
   gap: 10px;
 }
+/* `min-width: 0`: sin él, un nombre largo no deja encoger la fila de la hoja. */
 .ontoy-hoja-nombre {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   margin: 0;
   font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
   font-weight: 700;
@@ -1014,10 +1017,17 @@
   color: var(--texto-cabeza);
   padding: 8px 14px 12px;
 }
+/*
+ * Envuelve: con un nombre de ruta largo en una pantalla de 320, el contador de
+ * camiones le robaba ancho al nombre y lo partía en cuatro renglones. Al
+ * envolver, el contador baja a su propia línea y el nombre usa el ancho
+ * completo — dos renglones en vez de cuatro, y el mismo texto.
+ */
 .ontoy-cabeza-ruta-fila {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 .ontoy-cabeza-ruta-fila + .ontoy-cabeza-ruta-fila {
   margin-top: 10px;
@@ -1042,15 +1052,45 @@
   flex: 1;
   min-width: 0;
 }
+/*
+ * El contador va SIEMPRE en su propio renglón, debajo del nombre.
+ *
+ * Compartiendo línea le robaba ancho al nombre, y «Oasis – Parroquia Santa
+ * Teresa de Jesús» se partía en cuatro renglones dentro de una pantalla de
+ * 320 px. Bajarlo cuesta un renglón fijo y le devuelve el ancho completo al
+ * nombre de la ruta, que es lo que dice en qué ruta estás parado.
+ */
 .ontoy-cabeza-ruta-cuantos {
+  flex: 1 0 100%;
   font-size: 10.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
+  opacity: 0.9;
 }
+/*
+ * El grupo del sentido lleva «hacia ‹última parada›», y el nombre de una parada
+ * real puede ser «Parroquia Santa Teresa de Jesús». Con `white-space: nowrap` y
+ * sin poder encogerse, los dos botones medían 611 px dentro de una ventana de
+ * 320: **la página entera crecía a 625 px y el navegador se desplazaba de
+ * lado**, dejando la app cortada por la izquierda. No era un rótulo que se
+ * salía: era toda la pantalla corrida.
+ *
+ * `min-width: 0` es lo que faltaba. Un hijo de flex NO se encoge por debajo de
+ * su contenido a menos que se le diga, y el `nowrap` hacía que ese contenido no
+ * tuviera límite. Con esto el botón se recorta con elipsis y **el nombre de la
+ * parada no se toca en el dato**: se recorta donde está el límite, que es la
+ * pantalla.
+ */
 .ontoy-cabeza-ruta-grupo {
   display: flex;
   gap: 5px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* El conmutador Paradas/Mapa lleva palabras cortas: no cede su espacio. */
+.ontoy-cabeza-ruta-modo {
+  flex: 0 0 auto;
 }
 .ontoy-cabeza-ruta-grupo button {
   border: 1.5px solid var(--texto-cabeza);
@@ -1063,6 +1103,9 @@
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ontoy-cabeza-ruta-grupo button[aria-pressed="true"] {
   background: var(--texto-cabeza);
@@ -1157,6 +1200,7 @@
 .ontoy-paradas-nombre {
   flex: 1;
   min-width: 0;
+  overflow-wrap: anywhere;
   font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
   font-weight: 600;
   font-size: 15.5px;
@@ -1383,10 +1427,17 @@
 }
 
 /* La línea del aviso en la lista de paradas de su ruta: discreta, en tinta, tocable. */
+/*
+ * Envuelve: «AVISO DE LA CONCESIÓN» es tan ancho como el título, y a 320 px le
+ * dejaba al aviso una columna de siete renglones. La etiqueta sube a su propia
+ * línea y el título usa el ancho completo. La etiqueta se queda —es la
+ * atribución que pide la 8.13b, y un aviso sin ella no dice quién lo dijo.
+ */
 .ontoy-paradas-aviso-concesion {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 4px 8px;
   width: calc(100% - 36px);
   margin: 12px 18px 0;
   padding: 10px 12px;
@@ -1399,7 +1450,7 @@
   cursor: pointer;
 }
 .ontoy-paradas-aviso-etiqueta {
-  flex: none;
+  flex: 1 0 100%;
   font-size: 9.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
