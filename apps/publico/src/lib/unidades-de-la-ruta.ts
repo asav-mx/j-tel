@@ -32,7 +32,24 @@ export async function unidadesDeLaRuta(slug: string, ahora: Date) {
   const { circuito } = visible;
 
   // La promesa de ESTE momento, de las franjas (la única fuente, 21 sep 2026).
-  const promesa = await promesaDelCircuito(circuito.id, ahora, circuito.timeZone);
+  const [promesa, vigentes] = await Promise.all([
+    promesaDelCircuito(circuito.id, ahora, circuito.timeZone),
+    getRepos().circuits.listAvisosVigentes(circuito.id, ahora),
+  ]);
+  /*
+   * Los avisos de la concesión que valen AHORA (8.13b; 0052). Viajan aquí y no
+   * en la forma: la forma vive una hora en caché, y un aviso retirado tiene que
+   * dejar de verse en la siguiente consulta, no dentro de una hora. Van en
+   * todos los estados —cerrada, por arrancar—: «cambia el horario» importa
+   * justo ahí. Sólo lo que el pasajero lee: ni quién lo capturó ni motivos.
+   */
+  const avisos = vigentes.map((a) => ({
+    id: a.id,
+    titulo: a.titulo,
+    detalle: a.detalle,
+    desde: a.vigenteDesde.toISOString(),
+    hasta: a.vigenteHasta?.toISOString() ?? null,
+  }));
 
   /*
    * La fecha de arranque se resuelve ANTES que el horario, porque manda sobre
@@ -95,6 +112,7 @@ export async function unidadesDeLaRuta(slug: string, ahora: Date) {
        * —verdad observada— y se calla el minuto estimado, que aún no lo es.
        */
       rango_activo: velocidadCalibrada(circuito),
+      avisos,
       unidades,
     });
 

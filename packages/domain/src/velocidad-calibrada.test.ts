@@ -55,7 +55,8 @@ describe("velocidadCalibrada — la valla: nadie más lee el interruptor", () =>
       .filter((f) => /\.(tsx?|mjs|js)$/.test(f))
       .filter((f) => !PERMITIDOS.includes(f) && !esSiembra(f) && !esPrueba(f));
     expect(fuera, "usa velocidadCalibrada() de @jtel/domain en vez de leer la columna").toEqual([]);
-  });
+    // `git grep` sobre todo el repo: con las demás suites corriendo en paralelo tardó 6 s una vez.
+  }, 30_000);
 });
 
 describe("paradasHasta — «a N paradas»", () => {

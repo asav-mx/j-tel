@@ -90,6 +90,7 @@ import {
   circuitDetectionMarks,
   circuitPromiseTables,
   circuitRuleChanges,
+  circuitNotices,
   circuitPromiseBands,
   circuitStopPasses,
   concessionCarriers,
@@ -6629,6 +6630,93 @@ export class CircuitRepository {
       });
       return { ok: true as const, circuito: despues!, registrados: 1 };
     });
+  }
+
+  // ── Los avisos de la concesión al pasajero (0052; Marco 8.13b) ────────
+
+  /**
+   * Capturar un aviso, **firmado**. La validación en palabras vive en
+   * `validarAviso` (@jtel/domain) y la llama la API antes de llegar aquí; aquí
+   * sólo se exige el quién, que no puede venir de otro lado que la sesión.
+   */
+  async crearAviso(
+    circuitId: string,
+    aviso: { titulo: string; detalle: string | null; vigenteDesde: Date; vigenteHasta: Date | null },
+    por: string | null,
+  ): Promise<{ ok: true; aviso: typeof circuitNotices.$inferSelect } | { ok: false; error: "no_existe" | "falta_quien" }> {
+    if (!por) return { ok: false, error: "falta_quien" };
+    const [c] = await this.db.select({ id: circuits.id }).from(circuits).where(eq(circuits.id, circuitId));
+    if (!c) return { ok: false, error: "no_existe" };
+    const [fila] = await this.db
+      .insert(circuitNotices)
+      .values({ circuitId, ...aviso, capturadoPor: por })
+      .returning();
+    return { ok: true, aviso: fila! };
+  }
+
+  /**
+   * Retirar un aviso, **con motivo y firmado**. No se edita ni se borra: un
+   * aviso dicho queda en la historia. Retirar uno que ya estaba retirado no
+   * mueve nada, y uno de OTRO circuito no existe desde aquí.
+   */
+  async retirarAviso(
+    circuitId: string,
+    avisoId: string,
+    firma: { motivo: string | null; por: string | null },
+  ): Promise<{ ok: true; retirado: boolean } | { ok: false; error: "no_existe" | "falta_motivo" | "falta_quien" }> {
+    const motivo = firma.motivo?.trim() ?? "";
+    if (!motivo) return { ok: false, error: "falta_motivo" };
+    if (!firma.por) return { ok: false, error: "falta_quien" };
+    return this.db.transaction(async (tx) => {
+      const [antes] = await tx
+        .select()
+        .from(circuitNotices)
+        .where(and(eq(circuitNotices.id, avisoId), eq(circuitNotices.circuitId, circuitId)))
+        .for("update");
+      if (!antes) return { ok: false as const, error: "no_existe" as const };
+      if (antes.retiradoEn) return { ok: true as const, retirado: false };
+      await tx
+        .update(circuitNotices)
+        .set({ retiradoEn: new Date(), retiradoPor: firma.por, motivoRetiro: motivo })
+        .where(eq(circuitNotices.id, avisoId));
+      return { ok: true as const, retirado: true };
+    });
+  }
+
+  /** Todos los avisos de un circuito, para su expediente en J-Staff: los recientes primero. */
+  async listAvisos(circuitId: string) {
+    return this.db
+      .select()
+      .from(circuitNotices)
+      .where(eq(circuitNotices.circuitId, circuitId))
+      .orderBy(desc(circuitNotices.capturadoEn));
+  }
+
+  /**
+   * Los que el pasajero ve AHORA: no retirados, ya empezados y sin terminar.
+   * Sólo lo que la app necesita —ni quién capturó ni el motivo de nada—, y como
+   * mucho cinco: más que eso ya no es un aviso, es un tablero.
+   */
+  async listAvisosVigentes(circuitId: string, ahora: Date) {
+    return this.db
+      .select({
+        id: circuitNotices.id,
+        titulo: circuitNotices.titulo,
+        detalle: circuitNotices.detalle,
+        vigenteDesde: circuitNotices.vigenteDesde,
+        vigenteHasta: circuitNotices.vigenteHasta,
+      })
+      .from(circuitNotices)
+      .where(
+        and(
+          eq(circuitNotices.circuitId, circuitId),
+          isNull(circuitNotices.retiradoEn),
+          lte(circuitNotices.vigenteDesde, ahora),
+          or(isNull(circuitNotices.vigenteHasta), gt(circuitNotices.vigenteHasta, ahora)),
+        ),
+      )
+      .orderBy(desc(circuitNotices.vigenteDesde))
+      .limit(5);
   }
 
   /**

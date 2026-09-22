@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { promesaAhora, promesaEnPalabras, velocidadCalibrada, type FranjaCapturada } from "@jtel/domain";
+import { promesaAhora, promesaEnPalabras, situacionDelAviso, velocidadCalibrada, type FranjaCapturada } from "@jtel/domain";
 import { ORIGEN_DEL_CIRCUITO } from "@jtel/domain/publico";
 import { loMinimoParaMedir } from "@jtel/services";
 import { getRepos } from "@/lib/db";
@@ -16,6 +16,7 @@ import { IdentidadDelCircuito } from "@/components/casa/identidad-del-circuito";
 import { HistoriaDeReglas } from "@/components/casa/historia-de-reglas";
 import { PromesaDelCircuito } from "@/components/casa/promesa-del-circuito";
 import { UnidadesDelCircuito } from "@/components/casa/unidades-del-circuito";
+import { AvisosDelCircuito, type AvisoEnPantalla } from "@/components/casa/avisos-del-circuito";
 import { correosDeAutores } from "@/lib/casa/autores";
 import { SENTIDO_EN_PALABRAS, distanciasEnPalabras, medirParadas } from "@/lib/casa/paradas-del-circuito";
 import { ALCANCE_SIN_CUENTA, CASAS } from "@/lib/casa/casas";
@@ -55,7 +56,7 @@ export default async function VerCircuitoJStaff({
   const circuito = await repos.circuits.getCircuit(id);
   if (!circuito) notFound();
 
-  const [concesion, trazados, paradas, asignaciones, promesa, asignables, versiones, reglasCambiadas] = await Promise.all([
+  const [concesion, trazados, paradas, asignaciones, promesa, asignables, versiones, reglasCambiadas, avisos] = await Promise.all([
     repos.accounts.findById(circuito.concessionAccountId),
     repos.circuits.getPaths(id),
     repos.circuits.listStopsVigentes(id),
@@ -64,6 +65,7 @@ export default async function VerCircuitoJStaff({
     repos.circuits.listUnidadesAsignables(circuito.concessionAccountId),
     repos.circuits.listPromiseTables(id),
     repos.circuits.listRuleChanges(id),
+    repos.circuits.listAvisos(id),
   ]);
   // Desempate por número económico: con la misma fecha, el orden cambiaba de una carga a otra.
   const vigentes = asignaciones
@@ -75,6 +77,7 @@ export default async function VerCircuitoJStaff({
     ...asignaciones.flatMap((a) => [a.asignadaPor, a.cerradaPor]),
     ...versiones.map((v) => v.capturadaPor),
     ...reglasCambiadas.map((c) => c.cambiadoPor),
+    ...avisos.flatMap((a) => [a.capturadoPor, a.retiradoPor]),
   ]);
   const quien = (idUsuario: string | null) => (idUsuario ? (autores.get(idUsuario) ?? idUsuario) : null);
   const publicado = circuito.publishedAt !== null;
@@ -206,6 +209,27 @@ export default async function VerCircuitoJStaff({
   };
   const cuandoDe = (d: Date) =>
     new Intl.DateTimeFormat("es-MX", { timeZone: zona, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
+
+  /* Los avisos al pasajero (0052): su estado ahora, y quién los capturó o retiró. */
+  /*
+   * Arriba lo que el pasajero ve o va a ver; abajo lo que ya no. Y la vigencia
+   * dice la verdad de cada uno: un aviso retirado no dice «hasta que se retire».
+   */
+  const ORDEN = { en_ontoy: 0, programado: 1, termino: 2, retirado: 3 } as const;
+  const avisosEnPantalla: AvisoEnPantalla[] = avisos
+    .map((a) => ({ a, situacion: situacionDelAviso(a, new Date()) }))
+    .sort((x, y) => ORDEN[x.situacion] - ORDEN[y.situacion] || y.a.capturadoEn.getTime() - x.a.capturadoEn.getTime())
+    .map(({ a, situacion }) => ({
+    id: a.id,
+    titulo: a.titulo,
+    detalle: a.detalle,
+    situacion,
+    vigencia: `${cuandoDe(a.vigenteDesde)} → ${
+      a.retiradoEn ? `retirado ${cuandoDe(a.retiradoEn)}` : a.vigenteHasta ? cuandoDe(a.vigenteHasta) : "hasta que se retire"
+    }`,
+    capturado: `Capturado por ${quien(a.capturadoPor) ?? a.capturadoPor} · ${cuandoDe(a.capturadoEn)}`,
+    retiro: a.retiradoEn ? `Retirado por ${quien(a.retiradoPor) ?? a.retiradoPor} · ${cuandoDe(a.retiradoEn)} · «${a.motivoRetiro}»` : null,
+  }));
 
   const franjas: FranjaCapturada[] = (promesa?.bandas ?? []).map((b) => ({
     diaTipo: b.diaTipo,
@@ -461,6 +485,21 @@ export default async function VerCircuitoJStaff({
             </form>
           </div>
         </Paso>
+
+        {/*
+          Avisos al pasajero (8.13b; 0052). NO es un paso de la cadena: un
+          circuito se publica sin avisos, y la cadena no los pide.
+        */}
+        <section id="avisos" aria-label="Avisos al pasajero" className="mt-6 flex scroll-mt-6 flex-col gap-2 border-t border-[var(--linea)] pt-5">
+          <h2 className="text-[16px]" style={{ fontFamily: "var(--letra-titular)", fontWeight: 700, letterSpacing: "-0.01em" }}>
+            Avisos al pasajero
+          </h2>
+          <p className="text-[13px] text-[var(--tenue)]">
+            Lo que la concesión le dice al pasajero de esta ruta. En Ontoy se lee «según la concesión», con su fecha, en
+            la campana. No se editan: si algo cambia, se retira con su motivo y se captura otro.
+          </p>
+          <AvisosDelCircuito circuitId={id} zona={zona} avisos={avisosEnPantalla} />
+        </section>
       </div>
     </Marco>
   );
