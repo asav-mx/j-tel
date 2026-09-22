@@ -25,6 +25,9 @@ import { VistaRutas, type EstadoDeRuta } from "@/components/ontoy/vista-rutas";
 import { VistaInicio } from "@/components/ontoy/vista-inicio";
 import { LugarReservado } from "@/components/ontoy/lugar-reservado";
 import { Barra, type Lugar } from "@/components/ontoy/barra";
+import { CabezaDeRuta } from "@/components/ontoy/cabeza-de-ruta";
+import { VistaHilo } from "@/components/ontoy/vista-hilo";
+import { armarHilo, haciaDonde } from "@/lib/ontoy/hilo";
 
 /**
  * **Ontoy** — el cascarón de los cuatro lugares (8.8, 22-sep).
@@ -77,6 +80,13 @@ export function Ontoy({
   const [enfocada, setEnfocada] = useState<string | null>(pedida ?? rutas[0]?.circuito_id ?? null);
   const [sentido, setSentido] = useState<Sentido>("ida");
   const [paradaAbierta, setParadaAbierta] = useState<string | null>(null);
+  /**
+   * Una ruta ABIERTA: su cabeza teñida y su hilo o su mapa (8.8, 8.8d). Quien
+   * llega por la liga de una ruta la ve abierta; el Mapa sin ruta abierta es el
+   * de la ciudad.
+   */
+  const [rutaAbierta, setRutaAbierta] = useState<boolean>(pedida !== null);
+  const [modo, setModo] = useState<"hilo" | "mapa">("hilo");
 
   const guardadas = useParadasGuardadas();
   useListaAlDia(vigenteHasta);
@@ -93,16 +103,40 @@ export function Ontoy({
     setParadaAbierta(parada ?? null);
     if (enSentido) setSentido(enSentido);
     setListaAbierta(false);
+    setRutaAbierta(true);
+    setModo("hilo");
     setLugar("mapa");
   }, []);
 
   const irA = useCallback((l: Lugar) => {
     setLugar(l);
     setListaAbierta(false);
-    if (l !== "mapa") setParadaAbierta(null);
+    setRutaAbierta(false);
+    setParadaAbierta(null);
   }, []);
 
   const rutaEnfocada = rutas.find((r) => r.circuito_id === enfocada) ?? null;
+
+  /* El hilo de la ruta abierta: se arma en `lib/ontoy/hilo.ts`, aquí sólo se pide. */
+  const renglones = useMemo(
+    () =>
+      forma
+        ? armarHilo({
+            forma,
+            vivo,
+            sentido,
+            yo,
+            velocidadKmh: velocidad.kmh,
+            trazadoPorSentido,
+            estaGuardada: guardadas.estaGuardada,
+          })
+        : [],
+    [forma, vivo, sentido, yo, velocidad.kmh, trazadoPorSentido, guardadas.estaGuardada],
+  );
+  const nombreDeSentido = useCallback(
+    (s: Sentido) => (forma ? haciaDonde(forma, s, trazadoPorSentido) : null),
+    [forma, trazadoPorSentido],
+  );
   const parada = forma?.paradas.find((p) => p.id === paradaAbierta) ?? null;
 
   /* Lo que la hoja enseña: lo medido arriba, la promesa abajo, nunca fundidos. */
@@ -223,6 +257,54 @@ export function Ontoy({
             alAbrirRuta={(id) => abrirRuta(id)}
             alVolver={() => setListaAbierta(false)}
           />
+        ) : rutaAbierta && rutaEnfocada ? (
+          <>
+            <CabezaDeRuta
+              nombre={rutaEnfocada.nombre}
+              color={rutaEnfocada.color_hex}
+              enVivo={vivo ? vivo.unidades.filter((u) => u.fresco && u.sentido === sentido).length : null}
+              sentido={sentido}
+              nombreDeSentido={nombreDeSentido}
+              modo={modo}
+              alVolver={() => {
+                setRutaAbierta(false);
+                setParadaAbierta(null);
+              }}
+              alCambiarSentido={setSentido}
+              alCambiarModo={setModo}
+            />
+            {modo === "hilo" ? (
+              <VistaHilo
+                renglones={renglones}
+                cargando={!forma || !vivo}
+                aviso={avisoDeLaEscalera(vivo, error)}
+                promesa={promesaEnPalabras(vivo?.promesa ?? rutaEnfocada.promesa ?? null, sentido) ?? ""}
+                color={rutaEnfocada.color_hex}
+                paradaMarcada={paradaAbierta}
+                alTocarParada={setParadaAbierta}
+              />
+            ) : (
+          <VistaMapa
+              rutaAbierta
+            rutas={rutas}
+            enfocada={enfocada}
+            forma={forma}
+            vivo={vivo}
+            error={error}
+            deNoche={deNoche}
+            sentido={sentido}
+            paradaAbierta={paradaAbierta}
+            alEnfocar={(id) => abrirRuta(id)}
+            alCambiarSentido={setSentido}
+            alTocarParada={setParadaAbierta}
+            alReintentar={reintentar}
+            alVerTodas={() => {
+              setParadaAbierta(null);
+              setListaAbierta(true);
+            }}
+          />
+            )}
+          </>
         ) : (
           <VistaMapa
             rutas={rutas}
@@ -233,10 +315,7 @@ export function Ontoy({
             deNoche={deNoche}
             sentido={sentido}
             paradaAbierta={paradaAbierta}
-            alEnfocar={(id) => {
-              setEnfocada(id);
-              setParadaAbierta(null);
-            }}
+            alEnfocar={(id) => abrirRuta(id)}
             alCambiarSentido={setSentido}
             alTocarParada={setParadaAbierta}
             alReintentar={reintentar}
@@ -269,7 +348,7 @@ export function Ontoy({
       {enElMapa && parada && rutaEnfocada && (
         <HojaDeParada
           nombre={parada.nombre}
-          direccion={`Ruta ${rutaEnfocada.nombre} · ${sentido === "ida" ? "ida" : "vuelta"}${
+          direccion={`Ruta ${rutaEnfocada.nombre} · ${nombreDeSentido(sentido) ?? (sentido === "ida" ? "ida" : "vuelta")}${
             hastaMi ? ` · hasta donde estás ${hastaMi}` : ""
           }`}
           llegadas={llegadasDeLaHoja}
@@ -285,6 +364,21 @@ export function Ontoy({
       <Barra activo={lugar} alIr={irA} />
     </div>
   );
+}
+
+/**
+ * Lo que la escalera dice arriba del hilo cuando no hay servicio o no hay red
+ * (8.9). Cada caso dice lo suyo: una ruta cerrada y una red caída son dos cosas.
+ */
+function avisoDeLaEscalera(
+  vivo: { estado: string; abre_a: string; arranca_el: string | null } | null,
+  error: boolean,
+): string | null {
+  if (error) return "No pudimos preguntar ahorita. Lo que ves es lo último que supimos.";
+  if (!vivo) return null;
+  if (vivo.estado === "por_arrancar") return vivo.arranca_el ? `Arranca el ${vivo.arranca_el}` : "Todavía no arranca";
+  if (vivo.estado === "fuera_de_horario") return `Fuera de horario · abre ${vivo.abre_a}`;
+  return null;
 }
 
 /** El logo de Ontoy. Su identidad es de Ontoy, no de la plataforma. */

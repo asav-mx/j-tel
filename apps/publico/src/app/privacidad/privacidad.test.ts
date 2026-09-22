@@ -88,6 +88,13 @@ describe("la declaración para las tiendas sigue al código", () => {
     expect(leer("apps/publico/src/components/ontoy/atajo-de-parada.tsx")).not.toMatch(/useMiUbicacion|useUbicacion/);
     expect(sinComentarios(leer(PAGINA))).toContain("La app no te pide tu ubicación al abrir.");
   });
+
+  it("cada uso de la ubicación está dicho: «aquí estás» en el hilo aparece en la página y en la declaración", () => {
+    expect(leer("apps/publico/src/lib/ontoy/hilo.ts")).toContain('tipo: "aqui"');
+    expect(sinComentarios(leer(PAGINA))).toContain("para marcar dónde");
+    expect(declaracion).toContain("marcar «aquí estás» sobre la ruta abierta");
+    expect(leer("apps/publico/src/lib/ontoy/hilo.ts")).not.toMatch(/fetch\(/);
+  });
 });
 
 describe("el hueco de los íconos", () => {
