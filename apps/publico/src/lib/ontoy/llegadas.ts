@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   avanceSobreTrazado,
+  paradasHasta,
   permisoDeRango,
   rangoDeLlegada,
   velocidadDelCorredor,
@@ -148,6 +149,67 @@ export function dondeCaeLaParada(
 ): number | null {
   if (!trazado) return null;
   return avanceSobreTrazado(parada, trazado, corredorMetros)?.avanceMetros ?? null;
+}
+
+/** Una unidad contada en paradas (8.9b). */
+export interface ParadasDeUnaUnidad {
+  /** Las que le faltan hasta la del pasajero, incluida la suya. Nunca 0. */
+  paradas: number;
+  unidad: string;
+  antiguedadSeg: number;
+  /**
+   * Si su posición es de ahorita. Una vieja **también se cuenta**, pero se dice
+   * en pasado —«iba a 4 paradas»— y sin número grande: es lo último que se vio,
+   * no dónde está (8.9, decisión de ASAV del 22-sep).
+   */
+  fresca: boolean;
+}
+
+/**
+ * **«A N paradas»** — lo que la app dice mientras la velocidad del corredor no
+ * está calibrada (8.9b). Sale sólo de la posición real de cada unidad y del
+ * orden de las paradas sobre el trazado: **ninguna velocidad entra aquí**, así
+ * que no hay llegada inventada.
+ *
+ * Mismas reglas que los minutos: sólo unidades de ESE sentido, dentro del
+ * corredor, que todavía no pasan la parada. Las paradas que cuentan son las de
+ * ese sentido o de los dos, y sólo las que caen en el trazado.
+ *
+ * Primero las frescas, de la más cercana a la más lejana; luego las viejas.
+ */
+export function paradasHastaLaParada(
+  destino: { avanceMetros: number; sentido: Sentido },
+  entrada: {
+    forma: Forma;
+    vivo: Vivo;
+    trazadoPorSentido: Map<Sentido, Array<[number, number]>>;
+  },
+): ParadasDeUnaUnidad[] {
+  const { forma, vivo, trazadoPorSentido } = entrada;
+  const trazado = trazadoPorSentido.get(destino.sentido);
+  if (!trazado) return [];
+
+  const abscisas = forma.paradas
+    .filter((p) => p.sentido === null || p.sentido === destino.sentido)
+    .map((p) => dondeCaeLaParada(p, trazado, forma.corredor_m))
+    .filter((a): a is number => a !== null);
+
+  const salida: ParadasDeUnaUnidad[] = [];
+  for (const u of vivo.unidades) {
+    // Sin sentido no se sabe si viene o va.
+    if (u.sentido !== destino.sentido) continue;
+    const donde = avanceSobreTrazado({ lat: u.lat, lon: u.lon }, trazado, forma.corredor_m);
+    if (!donde) continue;
+    const n = paradasHasta(donde.avanceMetros, destino.avanceMetros, abscisas);
+    if (n !== null) salida.push({ paradas: n, unidad: u.economico, antiguedadSeg: u.antiguedad_seg, fresca: u.fresco });
+  }
+
+  return salida.sort((a, b) => Number(b.fresca) - Number(a.fresca) || a.paradas - b.paradas);
+}
+
+/** «a 1 parada», «a 3 paradas». La cuenta pareja: nunca «llegando». */
+export function paradasEnPalabras(n: number): string {
+  return n === 1 ? "a 1 parada" : `a ${n} paradas`;
 }
 
 /** Un rango en palabras: «4–7 min». Nunca un número solo — sin su rango, miente. */

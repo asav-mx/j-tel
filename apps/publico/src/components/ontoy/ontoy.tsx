@@ -10,6 +10,8 @@ import type { RutaDeLaCiudad, Sentido } from "@/lib/ontoy/forma";
 import {
   dondeCaeLaParada,
   llegadasHasta,
+  paradasEnPalabras,
+  paradasHastaLaParada,
   promesaEnPalabras,
   rangoEnPalabras,
   useVelocidadDelCorredor,
@@ -131,15 +133,41 @@ export function Ontoy({
       { avanceMetros: abscisa, sentido },
       { forma, vivo, velocidadKmh: velocidad.kmh, trazadoPorSentido },
     );
-    if (lista.length === 0) {
-      return [{ rotulo: "Sin unidad a la vista", apoyo: "ahorita no hay ninguna que se pueda medir", vieja: true }];
-    }
-    return lista.slice(0, 3).map((l, i) => ({
+    const enMinutos: LlegadaEnLaHoja[] = lista.slice(0, 3).map((l, i) => ({
       rotulo: rangoEnPalabras(l.rango),
       apoyo: `viene la ${l.unidad} · ${haceNMinutos(l.antiguedadSeg)}`,
       enVivo: i === 0,
       vieja: i > 0,
     }));
+
+    /*
+     * 8.9b: sin minutos, la cuenta de paradas. Y el dato viejo se queda como
+     * dato viejo (8.9): en pasado, con su edad, al final — con o sin minutos.
+     */
+    const porParadas = paradasHastaLaParada({ avanceMetros: abscisa, sentido }, { forma, vivo, trazadoPorSentido });
+    const viejas: LlegadaEnLaHoja[] = porParadas
+      .filter((p) => !p.fresca)
+      .map((p) => ({
+        rotulo: `iba ${paradasEnPalabras(p.paradas)}`,
+        apoyo: `la ${p.unidad} · posición de ${haceNMinutos(p.antiguedadSeg)}`,
+        vieja: true,
+        pasada: true,
+      }));
+    if (enMinutos.length > 0) return [...enMinutos, ...viejas].slice(0, 3);
+
+    const frescas: LlegadaEnLaHoja[] = porParadas
+      .filter((p) => p.fresca)
+      .map((p, i) => ({
+        rotulo: paradasEnPalabras(p.paradas),
+        apoyo: `viene la ${p.unidad} · ${haceNMinutos(p.antiguedadSeg)}`,
+        enVivo: i === 0,
+        vieja: i > 0,
+      }));
+    const todas = [...frescas, ...viejas].slice(0, 3);
+    if (todas.length === 0) {
+      return [{ rotulo: "Sin unidad a la vista", apoyo: "ahorita no hay ninguna que se pueda medir", vieja: true }];
+    }
+    return todas;
   }, [forma, parada, vivo, error, sentido, trazadoPorSentido, velocidad.kmh]);
 
   /* 8.3b: hasta donde está el pasajero, calculado aquí y sin que salga nada. */
