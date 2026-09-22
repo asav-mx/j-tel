@@ -98,6 +98,12 @@ describe("la declaración para las tiendas sigue al código", () => {
     expect(leer("apps/publico/src/lib/ontoy/hilo.ts")).not.toMatch(/fetch\(/);
   });
 
+  it("los avisos ya vistos se guardan en el teléfono, y eso está dicho (PR 4b)", () => {
+    expect(sinComentarios(leer(PAGINA))).toContain("qué avisos de tus rutas ya viste");
+    expect(declaracion).toContain("avisos ya vistos");
+    expect(leer("apps/publico/src/lib/ontoy/avisos-vistos.ts")).not.toMatch(/fetch\(/);
+  });
+
   it("la consulta de las favoritas está dicha, y lleva rutas, no paradas ni ubicación", () => {
     expect(declaracion).toContain("GET /api/circuitos/en-vivo?rutas=");
     expect(sinComentarios(leer(PAGINA))).toContain("cuáles rutas, no cuáles paradas");

@@ -11,7 +11,7 @@ import {
 } from "@/lib/ontoy/paradas-cerca";
 import type { Ubicacion } from "@/lib/ubicacion";
 import { AtajoDeParada } from "@/components/ontoy/atajo-de-parada";
-import { useEnVivo } from "@/lib/ontoy/en-vivo";
+import type { Vivo } from "@/lib/ontoy/forma";
 import { useParadasDeLaCiudad } from "@/lib/ontoy/usar-paradas-de-la-ciudad";
 
 /**
@@ -40,6 +40,7 @@ export function VistaInicio({
   alAbrirRuta,
   alQuitarGuardada,
   alIrAlMapa,
+  enVivo,
 }: {
   rutas: RutaDeLaCiudad[];
   guardadas: ParadaGuardada[];
@@ -50,14 +51,12 @@ export function VistaInicio({
   alAbrirRuta: (circuitoId: string, parada?: string, sentido?: Sentido) => void;
   alQuitarGuardada: (g: ParadaGuardada) => void;
   alIrAlMapa: () => void;
-}) {
-  /*
-   * Los camiones de TODAS las rutas de tus paradas, en una sola consulta cada
-   * 15 s (PR 3b). Antes cada tarjeta sondeaba la suya.
+  /**
+   * Los camiones de TODAS tus rutas, de la consulta única de la raíz (PR 4b):
+   * Inicio ya no pregunta por su cuenta.
    */
-  const rutasGuardadas = useMemo(() => [...new Set(guardadas.map((g) => g.ruta))], [guardadas]);
-  const enVivo = useEnVivo(rutasGuardadas);
-
+  enVivo: { vivos: Map<string, Vivo>; error: boolean; respondio: boolean };
+}) {
   if (!guardadasListas) return <div className="ontoy-vista" />;
 
   return (
