@@ -14,6 +14,16 @@ export const maxDuration = 300;
  * única lectura sin cuenta — sin puerta a internet, detrás de `CRON_SECRET`.
  *
  * `?simular=…` calcula y no escribe, para ver una ronda sin tocar nada.
+ *
+ * ## Sin horario hasta el 29-sep-2026 (decisión de ASAV, 22-sep)
+ *
+ * La ronda estaba en `vercel.json` a las 7:10. **Se le quitó el horario**, no la
+ * ruta: la semana del arranque es de calibración, y el resumen que esto escribe
+ * todavía no lo lee nadie —el planeador llega después—, así que una ronda
+ * diaria sólo agregaría movimiento a una semana que conviene quieta.
+ *
+ * Mientras tanto se corre a mano, con el secreto, cuando haga falta verla. El
+ * 29 vuelve su renglón a `vercel.json`.
  */
 export async function GET(request: Request) {
   const negada = exigirCron(request, "cron/recorridos");
