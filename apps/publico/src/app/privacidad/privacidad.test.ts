@@ -83,7 +83,7 @@ describe("la declaración para las tiendas sigue al código", () => {
     // La única petición a la lista de paradas es un fetch sin nada más que la dirección.
     const inicio = leer("apps/publico/src/lib/ontoy/usar-paradas-de-la-ciudad.ts");
     expect(inicio).toMatch(/fetch\("\/api\/circuitos\/paradas-de-la-ciudad"\)/);
-    expect(leer("apps/publico/src/lib/ontoy/paradas-cerca.ts")).not.toMatch(/fetch\(/);
+    expect(leer("apps/publico/src/lib/ontoy/distancia.ts")).not.toMatch(/fetch\(/);
   });
 
   it("la ubicación no se pide al abrir: Ontoy la lee con pedirAlAbrir en false (decisión del 22-sep)", () => {

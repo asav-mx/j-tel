@@ -758,6 +758,17 @@ La estructura es de la app de la ciudad, no de una cuenta: el pasajero no elige 
 >
 > **Y el orden de esas rutas es materia de la 8.7, no de diseño.** Con ubicación se ordenan por cercanía —la parada más cercana de cada ruta, medida en el teléfono— y cada renglón enseña su distancia, para que el orden se pueda comprobar. **Sin ubicación se ordenan alfabéticamente**, y el encabezado deja de decir «cerca de ti» para decir «Rutas de la ciudad»: tres rutas cualesquiera tituladas «cerca de ti» serían el dato correcto con la afirmación falsa (§D). El orden sin ubicación **no puede salir de rastrear a nadie** —nada de «las más buscadas»—, porque la app no sabe quién eres (8.7).
 
+> ✎ **22-sep-2026, al cierre (ASAV) — tercera y última enmienda del día a la 8.8. Se agrega; las dos de arriba se conservan enteras, incluidas las partes que esto deja atrás.**
+>
+> **Una sola lista en Inicio: el renglón de la ruta dice por dónde se toma.** El renglón de la 8.8 dice que, sin paradas guardadas, Inicio «ofrece las paradas cerca de él». Eso fue una sección aparte, y con las rutas debajo las dos decían lo mismo con los mismos números — la misma ruta, la misma distancia, un bloque encima del otro. Léase ahora:
+>
+> - **Inicio tiene una sola lista**, la de las rutas. Con ubicación, cada renglón nombra **la parada por la que se toma esa ruta y a cuánto está**: «por Hospital General, a 120 m». Tocarlo abre la ruta en el Mapa **con esa parada abierta**.
+> - La sección «Paradas cerca de ti» **deja de existir**. Lo que hacía —cruzar la ubicación con las paradas públicas en el teléfono, sin que nada salga del aparato (8.3b)— lo sigue haciendo el renglón.
+>
+> *Por qué:* nombrar la parada contesta la pregunta completa del pasajero —qué ruta, y dónde la tomo— y de paso **hace comprobable el número**. «A 120 m» suelto es una distancia abstracta; «a 120 m de Hospital General» se verifica parándose ahí, que es lo que la 8.3b pide de todo número que la app calcula sola.
+>
+> **Y la falta de ubicación deja de ser un muro.** Mientras Inicio dependía de la sección de paradas, un permiso negado se llevaba la pantalla: sin ubicación esa sección no tenía nada que enseñar. Con la lista de rutas siempre completa, no tener ubicación es **una nota que explica por qué no hay distancias**, nunca una pantalla vacía. Cada caso sigue diciendo lo suyo —permiso sin pedir, negado, teléfono que no la da, lista que no bajó—, porque juntarlos en «no se pudo» le quitaría al pasajero lo único que le dice si hay algo que él pueda hacer (8.10).
+
 **8.8b No hay tercera vista; hay un atajo.** Se evaluó una tercera vista y dos bastan: lo que el pasajero de todos los días necesita no es otra pantalla sino llegar en un toque a **su parada**. La app permite **guardar una parada** (o más de una), y las guardadas aparecen en **Inicio** (8.8), con su próximo paso ya visible. La parada guardada **vive en el teléfono**, no en el servidor (8.7): guardarla no identifica a nadie. Si con el uso real aparece la necesidad de una tercera vista, se enmienda con evidencia, no antes.
 
 > ✎ **22-sep-2026 (ASAV):** decía «las guardadas aparecen hasta arriba de Rutas»; ahora apuntan a Inicio, para leerse con la 8.8 nueva. Lo de la tercera vista lo contesta el *por qué* de la 8.8 nueva: Inicio es este mismo atajo subido a la portada, e Ir a se aprobó por diseño.
