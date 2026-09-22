@@ -1,18 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import "./ontoy.css";
 import { RegistrarServicio } from "@/components/registrar-servicio";
 
-/*
- * Nunito e IBM Plex Mono **autoalojadas y subconjuntadas**, no por CDN.
- *
- * El prototipo las trae de fonts.googleapis.com, que en producción cuesta dos
- * viajes de red extra —DNS y TLS a otro dominio— antes de que se vea una letra.
- * `next/font/google` las descarga en el build, recorta a latín y las sirve del
- * mismo origen con `font-display: swap`. En un teléfono con datos contados y red
- * lenta es la misma tipografía por bastante menos.
- */
 /*
  * La letra de Ontoy: Archivo para lo que identifica, IBM Plex Sans para lo que
  * se lee de corrido, IBM Plex Mono para toda medición. Es la cara de Ontoy, no
@@ -23,24 +14,45 @@ import { RegistrarServicio } from "@/components/registrar-servicio";
  * TLS a otro dominio— antes de que se vea una letra, y de paso le cuenta a un
  * tercero que alguien abrió la app. En un teléfono con datos contados es la
  * misma tipografía por bastante menos, y sin el tercero.
+ *
+ * ---
+ *
+ * **Por qué son locales y no `next/font/google`** (22-sep-2026).
+ * `next/font/google` DESCARGA los archivos durante `next build`: si Google no
+ * contesta, no falla la tipografía, **falla la compilación** —
+ * `An error occurred in next/font · TypeError: Cannot read properties of null`.
+ * Pasó en CI en #493 y #498, en PRs que no tocaban esta app, y sólo se
+ * distinguía de un defecto propio leyendo el log. La web ya había pagado esa
+ * lección el 12-ago (#294). Los archivos viven en `./fuentes/`: la compilación
+ * no sale a internet, y la valla `scripts/verificar-fuentes-locales.mjs` tumba
+ * CI si alguna app vuelve a importar `next/font/google`.
+ *
+ * Son **byte por byte** los que `next/font/google` servía — ni un glifo ni un
+ * byte más para el pasajero. Se regeneran con `pnpm --filter @jtel/publico fuentes:traer`; ver
+ * `src/app/fuentes/LEEME.md`.
+ *
+ * Archivo e IBM Plex Sans son VARIABLES —un archivo para todos los pesos—, así
+ * que se declara el RANGO que se usa. Declarar pesos sueltos sobre el mismo
+ * archivo haría que el navegador sintetizara el grueso engrosando el delgado.
  */
-const archivo = Archivo({
-  subsets: ["latin"],
-  weight: ["600", "700"],
+const archivo = localFont({
+  src: [{ path: "./fuentes/archivo-variable.woff2", weight: "600 700", style: "normal" }],
   variable: "--fuente-titular",
   display: "swap",
 });
 
-const plexSans = IBM_Plex_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const plexSans = localFont({
+  src: [{ path: "./fuentes/plex-sans-variable.woff2", weight: "400 600", style: "normal" }],
   variable: "--fuente-texto",
   display: "swap",
 });
 
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
+/** Ésta sí viene en un archivo por peso. */
+const plexMono = localFont({
+  src: [
+    { path: "./fuentes/plex-mono-400.woff2", weight: "400", style: "normal" },
+    { path: "./fuentes/plex-mono-500.woff2", weight: "500", style: "normal" },
+  ],
   variable: "--fuente-mono",
   display: "swap",
 });
