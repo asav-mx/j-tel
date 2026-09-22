@@ -9,13 +9,23 @@
  *  2. **Guarda las teselas del mapa** con un tope. Las teselas son de lejos lo
  *     más pesado que baja esta app, y un pasajero recorre casi siempre las
  *     mismas calles.
- *  3. **NO guarda nada de las unidades.** Nunca. Una posición servida de caché
+ *  3. **NO guarda nada de lo vivo.** Nunca. Una posición servida de caché
  *     es una posición vieja dibujada en un mapa en vivo, y eso se lee como «va
- *     llegando» cuando el camión pasó hace veinte minutos. Ese endpoint pasa
- *     derecho a la red, siempre.
+ *     llegando» cuando el camión pasó hace veinte minutos. Las consultas vivas
+ *     (`VIVO`, abajo) pasan derecho a la red, siempre.
+ *
+ * ✎ 22-sep-2026: la consulta de las favoritas (`/api/circuitos/en-vivo`, PR 3b)
+ * nació sin estar en la lista —sólo se exceptuaba `/unidades`— y este archivo
+ * la guardaba en caché: sin red, la app habría enseñado camiones de hace rato
+ * como si fueran de ahora. La lista se volvió explícita, una prueba
+ * (`sw.test.ts`) se cae si una consulta viva nueva no está en ella, y la
+ * versión sube para que los teléfonos borren lo que ya hubieran guardado.
  */
 
-const VERSION = "v1";
+/** Lo vivo: nunca de caché. Si agregas una consulta viva, va aquí (lo exige `sw.test.ts`). */
+const VIVO = ["/unidades", "/api/circuitos/en-vivo"];
+
+const VERSION = "v2";
 const CASCARON = `cascaron-${VERSION}`;
 const TESELAS = `teselas-${VERSION}`;
 
@@ -52,7 +62,7 @@ self.addEventListener("fetch", (evento) => {
 
   /* Lo vivo NO se cachea. Ver la nota 3 de arriba: es la regla que impide
      dibujar un camión donde ya no está. */
-  if (url.pathname.includes("/unidades")) return;
+  if (VIVO.some((v) => url.pathname.includes(v))) return;
 
   /* Teselas del mapa: de caché si están, y si no, de la red guardando copia. */
   if (/^[abc]\.tile\.openstreetmap\.org$/.test(url.hostname)) {
