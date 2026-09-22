@@ -165,6 +165,13 @@ export interface PasoMedido {
   pasoHasta: Date;
   /** El intervalo cerrado contra el paso anterior en esa parada (9.2d). */
   intervalo: { desdeMin: number; hastaMin: number };
+  /**
+   * Quién hizo el paso anterior contra el que se midió el intervalo — de
+   * cualquier unidad (9.2d). `null`: fue el primero del día y el ancla es la
+   * apertura. Lo necesita la jornada para no acusar al camión equivocado: el
+   * intervalo es del SERVICIO en esa parada, no de esta unidad (ASAV, 22-sep).
+   */
+  anteriorUnitId: string | null;
   referencia: Referencia | null;
   estado: EstadoDePromesa;
   motivo: MotivoSinDatos | null;
@@ -378,25 +385,7 @@ export async function armarTorreDelCircuito(
    * por versión (no se pisan), así que sin este filtro una recorrida con
    * detector nuevo contaría cada paso dos veces — «24 de 32» donde hubo 16.
    */
-  const pasosPorParada = new Map<string, PasoVisible[]>();
-  await Promise.all(
-    paradas.map(async (p) => {
-      const filas = await repos.pasosPorParada.listarPasosDeParada(cuentaId, p.stopId, apertura);
-      pasosPorParada.set(
-        p.stopId,
-        filas
-          .filter((f) => f.detectorVersion === VERSION_DEL_DETECTOR)
-          .map((f) => ({
-            stopId: f.stopId,
-            unitId: f.unitId,
-            sentido: f.sentido as Sentido,
-            pasoDesde: f.pasoDesde,
-            pasoHasta: f.pasoHasta,
-          }))
-          .sort((a, b) => a.pasoDesde.getTime() - b.pasoDesde.getTime()),
-      );
-    }),
-  );
+  const pasosPorParada = await leerPasosDelDia(repos, cuentaId, paradas, apertura);
 
   /*
    * UNA pasada sobre los pasos de hoy, y de ella salen el estado de cada
@@ -481,7 +470,44 @@ export async function armarTorreDelCircuito(
   };
 }
 
-interface PasoVisible {
+/**
+ * Los pasos del día, parada por parada, **por el repositorio con muro** y
+ * acotados a partir de `desde` (y hasta `hasta`, si se da: un día pasado no
+ * arrastra los que vinieron después). Sólo la versión del detector que corre:
+ * los pasos apilan por versión, y sin el filtro una recorrida con detector
+ * nuevo contaría cada paso dos veces. La usan la torre y la jornada.
+ */
+export async function leerPasosDelDia(
+  repos: Repositories,
+  cuentaId: string,
+  paradas: ReadonlyArray<{ stopId: string }>,
+  desde: Date,
+  hasta?: Date,
+): Promise<Map<string, PasoVisible[]>> {
+  const pasosPorParada = new Map<string, PasoVisible[]>();
+  await Promise.all(
+    paradas.map(async (p) => {
+      const filas = await repos.pasosPorParada.listarPasosDeParada(cuentaId, p.stopId, desde);
+      pasosPorParada.set(
+        p.stopId,
+        filas
+          .filter((f) => f.detectorVersion === VERSION_DEL_DETECTOR)
+          .filter((f) => !hasta || f.pasoDesde.getTime() <= hasta.getTime())
+          .map((f) => ({
+            stopId: f.stopId,
+            unitId: f.unitId,
+            sentido: f.sentido as Sentido,
+            pasoDesde: f.pasoDesde,
+            pasoHasta: f.pasoHasta,
+          }))
+          .sort((a, b) => a.pasoDesde.getTime() - b.pasoDesde.getTime()),
+      );
+    }),
+  );
+  return pasosPorParada;
+}
+
+export interface PasoVisible {
   stopId: string;
   unitId: string;
   sentido: Sentido;
@@ -798,10 +824,16 @@ async function derivarEsperas(e: {
  * ratificado por ASAV el 21-sep)—; si es el primero del día, la apertura
  * declarada. Es la misma regla de `compararPaso`, con su forma reusada.
  */
-async function medirTodosLosPasos(e: {
+/**
+ * **La vara de la torre, una sola** (exportada el 22-sep para la jornada): cada
+ * paso medido contra el paso anterior en su parada y su sentido, de cualquier
+ * unidad (9.2d), contra la promesa de su franja (9.1c). La jornada la reusa
+ * tal cual —ASAV: «una sola vara»— y sólo cambia cómo la dice.
+ */
+export async function medirTodosLosPasos(e: {
   repos: Repositories;
-  circuito: Circuito;
-  paradas: Parada[];
+  circuito: Pick<Circuito, "id" | "timeZone" | "arrivalTolerancePct">;
+  paradas: ReadonlyArray<{ stopId: string; name: string }>;
   pasosPorParada: Map<string, PasoVisible[]>;
   apertura: Date;
   flujo: FlujoDelServicio;
@@ -823,6 +855,7 @@ async function medirTodosLosPasos(e: {
       const delSentido = pasos.filter((p) => p.sentido === sentido);
       for (const [i, paso] of delSentido.entries()) {
         const ancla = anclaDe(delSentido, i, e.apertura);
+        const anteriorUnitId = delSentido[i - 1]?.unitId ?? null;
         const intervalo = {
           desdeMin: minutosEntre(ancla, paso.pasoDesde),
           hastaMin: minutosEntre(ancla, paso.pasoHasta),
@@ -835,6 +868,7 @@ async function medirTodosLosPasos(e: {
           pasoDesde: paso.pasoDesde,
           pasoHasta: paso.pasoHasta,
           intervalo,
+          anteriorUnitId,
         };
 
         const promesa = await e.repos.circuits.getPromesaEnInstante(

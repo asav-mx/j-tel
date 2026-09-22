@@ -1,7 +1,8 @@
-import { addDaysIso, armarJornada, type Jornada, type PuntoTraza } from "@jtel/domain";
+import { addDaysIso, armarJornada, simplificarTraza, tramosConSenal, type Jornada, type PuntoTraza } from "@jtel/domain";
 import { aperturaDeclaradaEnFecha } from "@jtel/domain/publico";
 import type { Repositories } from "@jtel/db";
 import { VERSION_DEL_DETECTOR } from "./orquestador-de-pasos.js";
+import { leerPasosDelDia, medirTodosLosPasos, type PasoMedido } from "./torre-del-circuito.js";
 
 /**
  * La lectura de la jornada de una unidad — PR B de la ficha de la jornada
@@ -53,6 +54,20 @@ export type JornadaDeUnidad =
       unidad: { id: string; etiqueta: string };
       fecha: string;
       jornada: Jornada;
+      /** Lo que dibuja el mapa de la hoja: la ruta declarada de referencia y la traza medida, cortada en cada silencio. */
+      mapa: {
+        trazados: Array<{ sentido: "ida" | "vuelta"; coordinates: Array<[number, number]> }>;
+        paradas: Array<{ stopId: string; nombre: string; sentido: "ida" | "vuelta" | null; lat: number; lon: number }>;
+        /** Tramos con señal DENTRO del día, simplificados. Entre dos tramos hubo un silencio: no se une. */
+        tramos: Array<Array<{ lat: number; lng: number; at: Date }>>;
+      };
+      /**
+       * Cada paso de ESTA unidad medido con la vara de la torre (una sola,
+       * `medirTodosLosPasos`): el intervalo del SERVICIO en esa parada contra el
+       * paso anterior de cualquier unidad (9.2d). No es veredicto de la unidad
+       * (ASAV, 22-sep): la etiqueta del paso anterior viaja para decirlo.
+       */
+      intervalos: Array<PasoMedido & { anteriorEtiqueta: string | null }>;
     };
 
 export async function cargarJornadaParaJStaff(
@@ -144,11 +159,55 @@ export async function cargarJornadaParaJStaff(
     minutosFuera: circuito.corridorExitMinutes,
   });
 
+  /*
+   * El mapa: sólo lo de DENTRO del día (el margen es evidencia de los bordes,
+   * no recorrido), cortado con el mismo umbral que decidió los silencios, y
+   * simplificado a 5 m —se ve igual y pesa una fracción—. Nunca se une un tramo
+   * con el siguiente: dentro de un silencio no hay trayecto.
+   */
+  const delDia = puntos.filter((p) => p.at.getTime() >= desde.getTime() && p.at.getTime() <= hasta.getTime());
+  const tramos = tramosConSenal(delDia, circuito.staleAfterSeconds).map((t) =>
+    simplificarTraza(t, 5).map((p) => ({ lat: p.lat, lng: p.lng, at: p.at })),
+  );
+
+  /*
+   * Los pasos del SERVICIO en el día, de todas las unidades, leídos como la
+   * concesión dueña (el muro, 9.14), desde la apertura —el ancla del primer
+   * paso— hasta el fin del día. Se miden con la vara de la torre y se quedan
+   * los de esta unidad.
+   */
+  const pasosDelServicio = await leerPasosDelDia(repos, circuito.concessionAccountId, paradas, apertura, hasta);
+  const medidos = await medirTodosLosPasos({
+    repos,
+    circuito,
+    paradas: paradas.map((p) => ({ stopId: p.stopId, name: p.name })),
+    pasosPorParada: pasosDelServicio,
+    apertura,
+    // La concesión dueña ve todos los pasos de su circuito: para ella el flujo es siempre completo (9.14, igual que la torre).
+    flujo: "completo",
+  });
+  const etiquetaDe = new Map(e.asignaciones.map((a) => [a.unitId, a.unitLabel]));
+  const intervalos = medidos
+    .filter((m) => m.unitId === e.unitId)
+    .map((m) => ({ ...m, anteriorEtiqueta: m.anteriorUnitId ? (etiquetaDe.get(m.anteriorUnitId) ?? null) : null }));
+
   return {
     estado: "jornada",
     circuito: { id: circuito.id, nombre: circuito.name, zona },
     unidad: { id: e.unitId, etiqueta: asignaciones[0]!.unitLabel },
     fecha: e.fecha,
     jornada,
+    mapa: {
+      trazados: trazados.map((t) => ({ sentido: t.sentido as "ida" | "vuelta", coordinates: t.coordinates as Array<[number, number]> })),
+      paradas: paradas.map((p) => ({
+        stopId: p.stopId,
+        nombre: p.name,
+        sentido: p.sentido as "ida" | "vuelta" | null,
+        lat: Number(p.latitude),
+        lon: Number(p.longitude),
+      })),
+      tramos,
+    },
+    intervalos,
   };
 }

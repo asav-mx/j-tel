@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AvisoDeError, Encabezado, Renglon, Vacio } from "@/components/casa/expediente";
@@ -22,6 +23,8 @@ import { clases } from "@/components/casa/formulario";
 
 export interface AsignacionEnPantalla {
   id: string;
+  /** La hoja de su jornada (PR C): el día de hoy, o el último en que estuvo asignada. */
+  jornada: string;
   unidad: string;
   transportista: string;
   desde: string;
@@ -116,9 +119,12 @@ export function UnidadesDelCircuito({
                 {a.transportista} · asignada el <span data-medida>{a.desde}</span> ·{" "}
                 {a.asignadaPor ? `por ${a.asignadaPor}` : "sin registro de quién"}
               </span>
+              <Link href={a.jornada} className={`${clases.secundario} ml-auto px-3 py-1.5 text-[13px]`}>
+                Ver jornada →
+              </Link>
               <button
                 type="button"
-                className={`${clases.secundario} ml-auto px-3 py-1.5 text-[13px]`}
+                className={`${clases.secundario} px-3 py-1.5 text-[13px]`}
                 onClick={() => {
                   setSoltando(soltando === a.id ? null : a.id);
                   setMotivo("");
@@ -180,7 +186,10 @@ export function UnidadesDelCircuito({
           {visibles.map((a) => (
             <Renglon key={a.id} pregunta={`${a.unidad} · ${a.transportista}`} tenue>
               {a.desde} → {a.hasta} · {a.cerradaPor ? `soltó ${a.cerradaPor}` : "sin registro de quién"}
-              {a.motivo ? ` · «${a.motivo}»` : ""}
+              {a.motivo ? ` · «${a.motivo}»` : ""} ·{" "}
+              <Link href={a.jornada} className="text-[var(--tinta)] underline underline-offset-2">
+                su último día
+              </Link>
             </Renglon>
           ))}
           {historia.length > HISTORIA_VISIBLE && (

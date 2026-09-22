@@ -222,8 +222,11 @@ export default async function VerCircuitoJStaff({
   const ahora = new Date();
   const ontoyDice = promesaEnPalabras(promesaAhora(promesa ? franjas : null, ahora, zona), null);
   const horaAhora = new Intl.DateTimeFormat("es-MX", { timeZone: zona, weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(ahora);
+  const civil = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: zona }).format(d);
   const enPantalla = (a: (typeof asignaciones)[number]) => ({
     id: a.id,
+    // Vigente: su jornada de hoy. Ya soltada: el día en que se soltó, el último que corrió aquí.
+    jornada: `/casa/jstaff/circuitos/${id}/unidades/${a.unitId}${a.validTo ? `?fecha=${civil(a.validTo)}` : ""}`,
     unidad: a.unitLabel,
     transportista: a.carrierName,
     desde: dia(a.validFrom),

@@ -10,6 +10,7 @@ import {
   circuitPromiseBands,
   circuitPromiseTables,
   circuitStopPasses,
+  circuitDetectionMarks,
   circuitStopVersions,
   circuitStops,
   circuitUnitAssignments,
@@ -18,6 +19,7 @@ import {
   deviceAssignments,
   devices,
   livePositions,
+  telemetryPoints,
   units,
   userMemberships,
 } from "./schema/index.js";
@@ -30,6 +32,7 @@ import {
  *   pnpm --filter @jtel/db escenario-torre --vacio        # el circuito sin capturar
  *   pnpm --filter @jtel/db escenario-torre --sin-unidades # paradas y promesa, ningún camión asignado
  *   pnpm --filter @jtel/db escenario-torre --sin-salir    # camiones asignados, ninguno al aire
+ *   pnpm --filter @jtel/db escenario-torre --jornada      # el día de la 2120, para la hoja de la jornada (PR C)
  *   pnpm --filter @jtel/db escenario-torre --asignar      # + lo que hace falta para ver asignar (PR 2)
  *   pnpm --filter @jtel/db escenario-torre --limpiar
  *
@@ -196,6 +199,99 @@ function horaLocal(ahora: Date, menosMinutos: number): string {
   return deHoy === hoy ? `${hhmm}:00` : "00:01:00";
 }
 
+/**
+ * `--jornada`: el día de la 2120 para ver la hoja de la jornada (PR C). Cuatro
+ * vueltas, una por cada cosa que la hoja tiene que saber decir sin mentir:
+ *
+ *   V1 ida     completa — pasos por las ocho paradas; la 2126 pasó antes por
+ *              cada una (intervalos del servicio), y en Tecnológico pegadita
+ *              (intervalo corto)
+ *   V2 vuelta  incompleta · salió del corredor en López Mateos — 12 min a
+ *              1.1 km de la ruta, medidos
+ *   V3 ida     SIN DATOS — calla 23 min después de López Mateos
+ *   V4 vuelta  todavía no se mide — la marca del detector se quedó a la mitad
+ *
+ * Las posiciones son archivadas (telemetry_points) cada 30 s, en el aparato de
+ * la 2120; los pasos son los que el detector habría sellado.
+ */
+async function sembrarJornada(
+  db: ReturnType<typeof createDb>,
+  ahora: Date,
+  versiones: Array<{ nombre: string; stopId: string; versionId: string }>,
+) {
+  const T0 = ahora.getTime() - 290 * MIN;
+  const t = (min: number) => new Date(T0 + min * MIN);
+  const u2120 = unidadPorLabel.get("2120")!;
+  const u2126 = unidadPorLabel.get("2126")!;
+  const lat = (i: number) => LAT(i);
+  const puntos: Array<typeof telemetryPoints.$inferInsert> = [];
+  /** Posiciones cada 30 s de `de` a `a` minutos, avanzando de la parada i a la j (o quieta fuera de la ruta). */
+  const recorrer = (de: number, a: number, desdeParada: number, hastaParada: number, lonExtra = 0) => {
+    const n = Math.round((a - de) * 2);
+    for (let k = 0; k <= n; k += 1) {
+      const f = n === 0 ? 0 : k / n;
+      puntos.push({
+        carrierAccountId: IDS.carrier,
+        deviceId: APARATO(0),
+        unitId: u2120,
+        imei: "FIXTURE-TORRE-2120",
+        latitude: lat(desdeParada) + (lat(hastaParada) - lat(desdeParada)) * f,
+        longitude: LON + lonExtra,
+        speed: 22,
+        recordedAt: t(de + k / 2),
+        source: "escenario",
+      });
+    }
+  };
+  const pasos: Array<typeof circuitStopPasses.$inferInsert> = [];
+  const paso = (unitId: string, i: number, sentido: "ida" | "vuelta", min: number) => {
+    const v = versiones[i]!;
+    pasos.push({
+      circuitId: IDS.circuito,
+      stopId: v.stopId,
+      stopVersionId: v.versionId,
+      unitId,
+      sentido,
+      pasoDesde: t(min),
+      pasoHasta: new Date(t(min).getTime() + 18_000),
+      huecoSegundos: 18,
+      detectorVersion: "orquestador-v1",
+    });
+  };
+
+  // V1 · ida, completa. La 2126 va 12 min adelante; en Tecnológico, sólo 2.
+  recorrer(-10, 0, 0, 0);
+  recorrer(0, 28, 0, 7);
+  for (let i = 0; i < 8; i += 1) {
+    paso(u2120, i, "ida", 4 * i);
+    paso(u2126, i, "ida", 4 * i - (i === 3 ? 2 : 12));
+  }
+  // V2 · vuelta: pasa de Centro a López Mateos, sale 12 min del corredor, vuelve cerca de Oasis sin pasar por lo que faltaba.
+  recorrer(28.5, 34.5, 7, 7);
+  recorrer(35, 47, 7, 4);
+  for (const [k, i] of [7, 6, 5, 4].entries()) paso(u2120, i, "vuelta", 35 + 4 * k);
+  recorrer(47.5, 48, 4, 4);
+  recorrer(48.5, 60.5, 4, 3, 0.012);
+  recorrer(61, 74, 1, 0);
+  // V3 · ida: Oasis → López Mateos, y calla 23 min.
+  recorrer(74.5, 91, 0, 4);
+  for (let i = 0; i <= 4; i += 1) paso(u2120, i, "ida", 75 + 4 * i);
+  recorrer(115, 128, 7, 7);
+  // V4 · vuelta: Centro y Catedral; el detector se quedó a la mitad.
+  recorrer(128.5, 150, 7, 4);
+  paso(u2120, 7, "vuelta", 130);
+  paso(u2120, 6, "vuelta", 134);
+
+  // Los tramos comparten el minuto de frontera: una posición por instante (el índice único es aparato + hora).
+  const unicos = [...new Map(puntos.map((q) => [(q.recordedAt as Date).getTime(), q])).values()];
+  await db.insert(telemetryPoints).values(unicos);
+  await db.insert(circuitStopPasses).values(pasos);
+  await db
+    .insert(circuitDetectionMarks)
+    .values({ circuitId: IDS.circuito, unitId: u2120, detectorVersion: "orquestador-v1", lastPingAt: t(136) });
+  console.log(`[escenario-torre] jornada · ${unicos.length} posiciones y ${pasos.length} pasos de la 2120 (y la 2126)`);
+}
+
 async function limpiar(db: ReturnType<typeof createDb>) {
   await db.delete(livePositions).where(inArray(livePositions.imei, IMEIS));
   await db.delete(circuits).where(inArray(circuits.id, [IDS.circuito, IDS.circuitoVecino]));
@@ -207,7 +303,7 @@ async function limpiar(db: ReturnType<typeof createDb>) {
 
 async function sembrar(
   db: ReturnType<typeof createDb>,
-  opciones: { compartido: boolean; vacio: boolean; asignar: boolean; sinUnidades: boolean; sinSalir: boolean },
+  opciones: { compartido: boolean; vacio: boolean; asignar: boolean; sinUnidades: boolean; sinSalir: boolean; jornada: boolean },
 ) {
   const ahora = new Date();
   await limpiar(db);
@@ -251,7 +347,8 @@ async function sembrar(
     avgSpeedKmh: 22,
     colorHex: "#b05a0f",
     serviceLaunchDate: null,
-    serviceStartLocal: horaLocal(ahora, 60),
+    // La jornada necesita un día con varias vueltas: abre cinco horas antes.
+    serviceStartLocal: horaLocal(ahora, opciones.jornada ? 300 : 60),
     serviceEndLocal: "23:59:00",
     timeZone: ZONA,
     active: true,
@@ -286,6 +383,12 @@ async function sembrar(
         latitude: LAT(i),
         longitude: LON,
         sentido: null,
+        /*
+         * Hace un mes, no «ahora»: la jornada de un día pasado se evalúa con las
+         * paradas como estaban ESE día (PR B), y una parada nacida hoy no existía
+         * ayer. Con el valor por omisión, la jornada de ayer salía sin vueltas.
+         */
+        validFrom: new Date(ahora.getTime() - 30 * 24 * 3_600_000),
       })
       .returning();
     versiones.push({ nombre, stopId: parada!.id, versionId: version!.id });
@@ -309,7 +412,7 @@ async function sembrar(
       promiseTableId: IDS.promesa,
       diaTipo,
       sentido: null,
-      desdeLocal: horaLocal(ahora, 60),
+      desdeLocal: horaLocal(ahora, opciones.jornada ? 300 : 60),
       hastaLocal: "23:59:00",
       frequencyMinutes: 10,
     })),
@@ -397,7 +500,11 @@ async function sembrar(
       }
     }
   }
-  await db.insert(circuitStopPasses).values(pasos);
+  if (opciones.jornada) {
+    await sembrarJornada(db, ahora, versiones);
+  } else {
+    await db.insert(circuitStopPasses).values(pasos);
+  }
 
   if (opciones.compartido) {
     await db.insert(units).values({ id: DE_OTRO.id, carrierAccountId: IDS.otroCarrier, label: DE_OTRO.label, active: true });
@@ -488,5 +595,6 @@ else
     asignar: args.includes("--asignar"),
     sinUnidades: args.includes("--sin-unidades"),
     sinSalir: args.includes("--sin-salir"),
+    jornada: args.includes("--jornada"),
   });
 process.exit(0);

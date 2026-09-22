@@ -386,3 +386,35 @@
   background: var(--pieza);
   border: 2.2px solid var(--tinta);
 }
+
+/*
+ * El mapa de la jornada (PR C, 22-sep-2026). Es recuerdo, no vida: cero cobre.
+ * La ruta declarada va de referencia, en su color y ancha y suave; la traza
+ * medida, delgada en tinta encima; una salida del corredor, en tinta y
+ * punteada — la forma la distingue, no el color (ficha, corrección 2).
+ */
+.cascaron .mapa-flota .jornada-ruta {
+  stroke-opacity: 0.35;
+  stroke-width: 7px;
+  stroke-linecap: round;
+  fill: none;
+}
+.cascaron .mapa-flota .jornada-traza {
+  stroke: var(--tinta);
+  stroke-width: 2.5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+.cascaron .mapa-flota .jornada-salida {
+  stroke: var(--tinta);
+  stroke-width: 4px;
+  stroke-dasharray: 2 7;
+  stroke-linecap: round;
+  fill: none;
+}
+.cascaron .mapa-flota .jornada-parada {
+  stroke: var(--tinta);
+  stroke-width: 2px;
+  fill: var(--pieza);
+}
