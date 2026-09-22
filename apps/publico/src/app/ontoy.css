@@ -1523,3 +1523,215 @@
 .ontoy-ira-todas {
   margin-top: 14px;
 }
+
+/* ── El filtro del Mapa: la tira, sus controles y su panel (8.8) ──────
+   Los chips viven encima del mapa, que es fondo vivo, así que llevan su
+   propio lienzo y no dependen de qué les tocó abajo. */
+.ontoy-tira-marco {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  z-index: 500;
+  pointer-events: none;
+}
+.ontoy-tira {
+  display: flex;
+  gap: 7px;
+  padding: 4px 14px;
+  overflow-x: auto;
+  pointer-events: auto;
+  /* La tira se desliza de lado: con muchas rutas no cabe, y no se recorta callando. */
+  scrollbar-width: none;
+}
+.ontoy-tira::-webkit-scrollbar {
+  display: none;
+}
+.ontoy-chip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--panel);
+  border: 1.5px solid var(--linea);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--texto);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16);
+}
+.ontoy-chip-punto {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--ruta);
+}
+/*
+ * Apagado cambia TRES cosas, no sólo el color: se atenúa, el punto pierde el
+ * color de la ruta, y `aria-pressed` lo dice. El color de ruta es identidad,
+ * nunca estado (8.8c), así que no puede ser lo único que separe prendida de
+ * apagada.
+ */
+.ontoy-chip.apagado {
+  opacity: 0.55;
+  color: var(--tenue);
+}
+.ontoy-chip.apagado .ontoy-chip-punto {
+  background: var(--tenue);
+}
+/* «+N rutas más» no es una ruta: sin punto de color y con borde punteado. */
+.ontoy-chip-mas {
+  color: var(--tenue);
+  border-style: dashed;
+}
+
+/*
+ * A la IZQUIERDA, y no a la derecha como el boceto.
+ *
+ * Arriba a la derecha vive el crédito del mapa —«© OpenStreetMap»—, que va en
+ * z 800 y **no se mueve**: es la atribución que el proveedor exige y una
+ * decisión ya tomada (#484). Puestos ahí, el crédito caía encima de la diana y
+ * la dejaba muerta: el botón se dibujaba y el toque se lo llevaba el crédito.
+ * Lo enseñó el navegador, no el compilador.
+ */
+.ontoy-ctrl-mapa {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 500;
+  /*
+   * En FILA, no en columna: apilados medían 76 px de alto y se metían debajo
+   * del aviso de red, que vive a 62 px y ocupa el ancho completo. En fila miden
+   * 36 y los dos caben arriba del aviso.
+   */
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ontoy-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  padding: 8px 11px;
+  font-family: var(--fuente-texto), sans-serif;
+  font-weight: 600;
+  font-size: 11.5px;
+  color: var(--texto);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16);
+}
+/* El punto se LLENA cuando está prendido: forma, no sólo color. */
+.ontoy-ctrl-punto {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--tenue);
+  background: transparent;
+}
+.ontoy-ctrl.prendido {
+  border-color: var(--texto);
+}
+.ontoy-ctrl.prendido .ontoy-ctrl-punto {
+  background: var(--texto);
+  border-color: var(--texto);
+}
+.ontoy-ctrl-diana {
+  padding: 8px;
+}
+.ontoy-ctrl-diana svg {
+  width: 17px;
+  height: 17px;
+}
+
+.ontoy-panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 901;
+  background: var(--panel);
+  border-top: 1px solid var(--linea);
+  border-radius: 20px 20px 0 0;
+  box-shadow: var(--sombra-hoja);
+  padding: 14px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  max-height: 72dvh;
+  overflow-y: auto;
+}
+.ontoy-panel-cabeza {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.ontoy-panel-titulo {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+}
+.ontoy-panel-cerrar {
+  flex: none;
+  border: 0;
+  background: none;
+  color: var(--tenue);
+  font-size: 17px;
+  line-height: 1;
+  padding: 4px;
+  cursor: pointer;
+}
+.ontoy-panel-lista {
+  list-style: none;
+  margin: 8px 0 14px;
+  padding: 0;
+}
+.ontoy-panel-lista li + li {
+  border-top: 1px solid var(--linea);
+}
+.ontoy-panel-renglon {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 2px;
+  cursor: pointer;
+}
+.ontoy-panel-renglon input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  accent-color: var(--texto);
+}
+.ontoy-panel-color {
+  flex: none;
+  width: 11px;
+  height: 30px;
+  border-radius: 4px;
+}
+.ontoy-panel-texto {
+  flex: 1;
+  min-width: 0;
+}
+.ontoy-panel-nombre {
+  display: block;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 600;
+  font-size: 14.5px;
+}
+.ontoy-panel-donde {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--tenue);
+}
+.ontoy-panel-pie {
+  margin-top: 10px;
+}
