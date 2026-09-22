@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { promesaAhora, promesaEnPalabras, type FranjaCapturada } from "@jtel/domain";
+import { ORIGEN_DEL_CIRCUITO } from "@jtel/domain/publico";
 import { loMinimoParaMedir } from "@jtel/services";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
@@ -10,6 +11,8 @@ import { AvisoDeError, Renglon, Titular, Vacio } from "@/components/casa/expedie
 import { clases } from "@/components/casa/formulario";
 import { CadenaEnEslabones } from "@/components/casa/cadena-del-circuito";
 import { EditorDelMapa } from "@/components/casa/editor-del-mapa";
+import { AjustesDeMedicion, type Ajuste } from "@/components/casa/ajustes-de-medicion";
+import { IdentidadDelCircuito } from "@/components/casa/identidad-del-circuito";
 import { PromesaDelCircuito } from "@/components/casa/promesa-del-circuito";
 import { UnidadesDelCircuito } from "@/components/casa/unidades-del-circuito";
 import { correosDeAutores } from "@/lib/casa/autores";
@@ -30,8 +33,9 @@ export const dynamic = "force-dynamic";
  *
  * **Escriben desde aquí** Publicar (A1), la promesa y las unidades (A2), y el
  * trazado y las paradas con el editor del mapa de siempre, envuelto sin tocarlo
- * (A3) — siempre con las rutas de siempre. La identidad y los ajustes de
- * medición todavía llevan a la pantalla vieja, que sigue viva: llegan en A4.
+ * (A3), y la identidad y los ajustes de medición (A4) — siempre con las rutas
+ * de siempre. Lo único que sigue en la pantalla vieja es la operación
+ * (`operar`); la vieja entera sigue viva hasta el PR D.
  *
  * **Publicar no exige nada** (ASAV, 21-sep: la decisión escrita en la ruta de
  * publicación se queda). Es acto de quien opera; la cadena enuncia lo que
@@ -92,7 +96,6 @@ export default async function VerCircuitoJStaff({
   const horario = `${circuito.serviceStartLocal.slice(0, 5)}–${circuito.serviceEndLocal.slice(0, 5)}`;
   const dia = (d: Date) =>
     new Intl.DateTimeFormat("es-MX", { timeZone: zona, day: "numeric", month: "short", year: "numeric" }).format(d);
-  const vieja = `/jstaff/circuitos/${id}`;
   const ok = typeof sp.ok === "string" ? sp.ok : null;
   const error = typeof sp.error === "string" ? sp.error : null;
   const porSentido = (s: "ida" | "vuelta") => paradas.filter((p) => p.sentido === s || p.sentido === null).length;
@@ -104,6 +107,63 @@ export default async function VerCircuitoJStaff({
   // La misma tolerancia con la que el editor avisa al pegar: la del pegado de paradas.
   const medidas = medirParadas(paradasConSentido, trazadosDeSentido, circuito.stopSnapToleranceMeters);
   const lejos = medidas.filter((m) => m.lejos).length;
+
+  /*
+   * Los ajustes de medición, cada uno con lo que hace y su valor de fábrica
+   * (ORIGEN_DEL_CIRCUITO, el mismo que pone la base al dar de alta). Los nombres
+   * de campo son los que la ruta de siempre ya lee.
+   */
+  const ajustes: Ajuste[] = [
+    {
+      campo: "corredorEnRutaM",
+      nombre: "Corredor de la ruta",
+      queHace: "A cuántos metros del trazado un camión todavía cuenta como en la ruta: más lejos, ni se publica ni se mide.",
+      unidad: "m",
+      valor: circuito.corridorToleranceMeters,
+      fabrica: ORIGEN_DEL_CIRCUITO.corredorEnRutaMetros,
+    },
+    {
+      campo: "frescuraSeg",
+      nombre: "Dato viejo",
+      queHace: "Desde cuántos segundos sin posición una unidad se pinta apagada; es también el silencio de la jornada.",
+      unidad: "s",
+      valor: circuito.staleAfterSeconds,
+      fabrica: ORIGEN_DEL_CIRCUITO.frescuraSegundos,
+    },
+    {
+      campo: "confianzaMin",
+      nombre: "Ventana de confianza",
+      queHace: "Hasta cuántos minutos sin señal se sigue sosteniendo que la unidad va en la ruta.",
+      unidad: "min",
+      valor: circuito.serviceConfidenceMinutes,
+      fabrica: ORIGEN_DEL_CIRCUITO.confianzaMinutos,
+    },
+    {
+      campo: "velocidadKmh",
+      nombre: "Velocidad del circuito",
+      queHace: "Con la que Ontoy calcula en cuántos minutos llega el camión. Se calibra con la calle.",
+      unidad: "km/h",
+      valor: circuito.avgSpeedKmh,
+      fabrica: ORIGEN_DEL_CIRCUITO.velocidadKmh,
+      decimales: true,
+    },
+    {
+      campo: "pisoRangoSeg",
+      nombre: "Piso del tiempo estimado",
+      queHace: "Lo mínimo que mide el rango de llegada que ve el pasajero, aunque el tráfico diga menos.",
+      unidad: "s",
+      valor: circuito.arrivalRangeFloorSeconds,
+      fabrica: ORIGEN_DEL_CIRCUITO.pisoDelRangoSegundos,
+    },
+    {
+      campo: "pegadoParadasM",
+      nombre: "Pegado de paradas",
+      queHace: "Al poner una parada en el mapa, desde cuántos metros del trazado se avisa que quedó lejos de su calle.",
+      unidad: "m",
+      valor: circuito.stopSnapToleranceMeters,
+      fabrica: ORIGEN_DEL_CIRCUITO.pegadoDeParadasMetros,
+    },
+  ];
 
   const franjas: FranjaCapturada[] = (promesa?.bandas ?? []).map((b) => ({
     diaTipo: b.diaTipo,
@@ -148,25 +208,18 @@ export default async function VerCircuitoJStaff({
         <p className={`text-[14px] ${minimo.listo ? "text-[var(--tenue)]" : ""}`}>{loQueFaltaEnPalabras(minimo)}</p>
 
         <Paso eslabon={eslabon(1)} titulo="Identidad">
-          <Renglon pregunta="Nombre">{circuito.name}</Renglon>
-          <Renglon pregunta="Identificador público" medida>
-            {circuito.publicSlug}
-          </Renglon>
-          <Renglon pregunta="Concesión dueña">{concesion?.name ?? "—"}</Renglon>
-          <Renglon pregunta="Horario de servicio" medida>
-            {horario} · {zona}
-          </Renglon>
-          <Renglon pregunta="Color">
-            <span className="inline-flex items-center gap-2">
-              <span
-                aria-hidden="true"
-                className="inline-block h-3.5 w-3.5 rounded-full border border-[var(--linea)]"
-                style={{ background: circuito.colorHex }}
-              />
-              <span data-medida>{circuito.colorHex}</span>
-            </span>
-          </Renglon>
-          <SeEditaEnLaVieja ruta={vieja} />
+          <IdentidadDelCircuito
+            circuitId={id}
+            nombre={circuito.name}
+            slug={circuito.publicSlug}
+            concesion={concesion?.name ?? "—"}
+            color={circuito.colorHex.toUpperCase()}
+            abre={circuito.serviceStartLocal.slice(0, 5)}
+            cierra={circuito.serviceEndLocal.slice(0, 5)}
+            zona={zona}
+            arrancaEl={circuito.serviceLaunchDate}
+            franjas={franjas}
+          />
         </Paso>
 
         <Paso eslabon={eslabon(2)} titulo="Trazado">
@@ -322,6 +375,7 @@ export default async function VerCircuitoJStaff({
               Ver la operación en la pantalla de siempre →
             </Link>
           </p>
+          <AjustesDeMedicion circuitId={id} ajustes={ajustes} rangoEncendido={circuito.arrivalRangeEnabledAt !== null} />
         </Paso>
 
         <Paso eslabon={eslabon(7)} titulo="Publicar">
@@ -376,17 +430,5 @@ function Paso({ eslabon, titulo, children }: { eslabon: Eslabon; titulo: string;
       </div>
       {children}
     </section>
-  );
-}
-
-/** Mientras el paso no se muda (A2, A3), se edita donde siempre. */
-function SeEditaEnLaVieja({ ruta, que = "Se edita" }: { ruta: string; que?: string }) {
-  return (
-    <p className="text-[13px] text-[var(--tenue)]">
-      {que} en la pantalla de siempre ·{" "}
-      <Link href={ruta} className="text-[var(--tinta)] underline underline-offset-2">
-        abrir →
-      </Link>
-    </p>
   );
 }
