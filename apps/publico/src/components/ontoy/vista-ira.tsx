@@ -14,8 +14,9 @@ import {
  * **Ir a** — la única búsqueda de la app (8.8; ASAV, 22-sep).
  *
  * El pasajero escribe el nombre de una parada o de una ruta y la app se la
- * abre en el Mapa. Debajo del campo vive el único camino a **todas las rutas**
- * de la ciudad.
+ * abre en el Mapa. Y nada más: **«Ir a» es sólo el buscador** (ASAV,
+ * 22-sep-2026). La lista completa de la ciudad vive en Inicio, con sus rutas
+ * ordenadas por cercanía — aquí tenía un botón y allá está la lista de verdad.
  *
  * ## Lo que esta pantalla NO hace todavía, dicho en la pantalla
  *
@@ -50,7 +51,6 @@ export function VistaIrA({
   error,
   alReintentar,
   alAbrirRuta,
-  alVerTodas,
 }: {
   rutas: RutaDeLaCiudad[];
   /** Las paradas públicas de la ciudad. Vacío mientras bajan. */
@@ -61,7 +61,6 @@ export function VistaIrA({
   error: boolean;
   alReintentar: () => void;
   alAbrirRuta: (circuitoId: string, parada?: string, sentido?: "ida" | "vuelta") => void;
-  alVerTodas: () => void;
 }) {
   const [consulta, setConsulta] = useState("");
 
@@ -139,7 +138,8 @@ export function VistaIrA({
             <p className="ontoy-vacio">Buscando…</p>
           ) : sugerencias.length === 0 ? (
             <p className="ontoy-vacio">
-              No encontramos ninguna parada ni ruta con ese nombre. Búscala en la lista completa.
+              No encontramos ninguna parada ni ruta con ese nombre. En <b>Inicio</b> están todas las rutas
+              de la ciudad.
             </p>
           ) : (
             <>
@@ -189,9 +189,6 @@ export function VistaIrA({
             </>
           ))}
 
-        <button type="button" className="ontoy-boton ontoy-boton-segundo ontoy-ira-todas" onClick={alVerTodas}>
-          Ver todas las rutas
-        </button>
       </section>
 
       <p className="ontoy-pie">

@@ -21,7 +21,7 @@ import { useParadasGuardadas } from "@/lib/ontoy/paradas-guardadas";
 import { useForma } from "@/lib/ontoy/ruta-en-vivo";
 import { HojaDeParada, type LlegadaEnLaHoja } from "@/components/ontoy/hoja-de-parada";
 import { VistaMapa } from "@/components/ontoy/vista-mapa";
-import { VistaRutas, type EstadoDeRuta } from "@/components/ontoy/vista-rutas";
+import type { EstadoDeRuta } from "@/lib/ontoy/estado-de-ruta";
 import { VistaInicio } from "@/components/ontoy/vista-inicio";
 import { LugarReservado } from "@/components/ontoy/lugar-reservado";
 import { VistaIrA } from "@/components/ontoy/vista-ira";
@@ -84,11 +84,6 @@ export function Ontoy({
   const { deNoche, alternar: alternarPiel } = useTema();
   const pedida = rutaInicial && rutas.some((r) => r.circuito_id === rutaInicial) ? rutaInicial : null;
   const [lugar, setLugar] = useState<Lugar>(pedida ? "mapa" : "inicio");
-  /**
-   * La lista de todas las rutas, abierta encima de **Ir a** (ASAV, 22-sep).
-   * Vivía encima del Mapa, con una ficha que la abría; ahora hay un solo camino.
-   */
-  const [listaAbierta, setListaAbierta] = useState(false);
   const [enfocada, setEnfocada] = useState<string | null>(pedida ?? rutas[0]?.circuito_id ?? null);
   const [sentido, setSentido] = useState<Sentido>("ida");
   const [paradaAbierta, setParadaAbierta] = useState<string | null>(null);
@@ -172,7 +167,6 @@ export function Ontoy({
     setEnfocada(circuitoId);
     setParadaAbierta(parada ?? null);
     if (enSentido) setSentido(enSentido);
-    setListaAbierta(false);
     setRutaAbierta(true);
     setModo("paradas");
     setLugar("mapa");
@@ -181,7 +175,6 @@ export function Ontoy({
 
   const irA = useCallback((l: Lugar) => {
     setLugar(l);
-    setListaAbierta(false);
     setRutaAbierta(false);
     setParadaAbierta(null);
     setCampanaAbierta(false);
@@ -349,6 +342,7 @@ export function Ontoy({
       {!campanaAbierta && lugar === "inicio" && (
         <VistaInicio
           rutas={rutas}
+          estados={estados}
           guardadas={guardadas.guardadas}
           guardadasListas={guardadas.listo}
           puedeGuardar={guardadas.disponible}
@@ -427,25 +421,16 @@ export function Ontoy({
           />
         ))}
 
-      {!campanaAbierta && lugar === "ira" &&
-        (listaAbierta ? (
-          <VistaRutas
-            rutas={rutas}
-            estados={estados}
-            alAbrirRuta={(id) => abrirRuta(id)}
-            alVolver={() => setListaAbierta(false)}
-          />
-        ) : (
-          <VistaIrA
-            rutas={rutas}
-            paradas={listaDeLaCiudad.datos?.paradas ?? []}
-            paradasListas={listaDeLaCiudad.datos !== null}
-            error={listaDeLaCiudad.error}
-            alReintentar={listaDeLaCiudad.reintentar}
-            alAbrirRuta={abrirRuta}
-            alVerTodas={() => setListaAbierta(true)}
-          />
-        ))}
+      {!campanaAbierta && lugar === "ira" && (
+        <VistaIrA
+          rutas={rutas}
+          paradas={listaDeLaCiudad.datos?.paradas ?? []}
+          paradasListas={listaDeLaCiudad.datos !== null}
+          error={listaDeLaCiudad.error}
+          alReintentar={listaDeLaCiudad.reintentar}
+          alAbrirRuta={abrirRuta}
+        />
+      )}
 
       {!campanaAbierta && lugar === "pase" && (
         <LugarReservado titulo="Tu pase" alIrAlMapa={() => irA("mapa")}>

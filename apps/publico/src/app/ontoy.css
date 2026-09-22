@@ -515,9 +515,45 @@
   color: var(--tenue);
   margin-top: 2px;
 }
+.ontoy-ruta-distancia {
+  flex: none;
+  font-size: 12.5px;
+  color: var(--tenue);
+  white-space: nowrap;
+}
 .ontoy-chevron {
   color: var(--tenue);
   flex: none;
+}
+
+/* ── las rutas en Inicio: el botón que despliega el resto ───────────── */
+.ontoy-desplegar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 12px 14px;
+  margin: 2px 0 0;
+  /* Punteado: no es una acción de la pantalla, es un cajón que se abre. */
+  border: 1.5px dashed var(--linea);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--texto);
+  font-family: var(--fuente-texto), sans-serif;
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.ontoy-desplegar:hover {
+  border-color: var(--texto);
+}
+.ontoy-desplegar-flecha {
+  color: var(--tenue);
+  font-size: 11px;
+}
+.ontoy-rutas-nota {
+  margin-top: 11px;
 }
 
 /* ── mapa ───────────────────────────────────────────────────────────── */

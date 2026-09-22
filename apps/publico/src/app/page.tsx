@@ -4,7 +4,7 @@ import { getRepos } from "@/lib/db";
 import { promesaConSusFronteras } from "@/lib/promesa";
 import { Ontoy } from "@/components/ontoy/ontoy";
 import type { RutaDeLaCiudad, Sentido } from "@/lib/ontoy/forma";
-import type { EstadoDeRuta } from "@/components/ontoy/vista-rutas";
+import type { EstadoDeRuta } from "@/lib/ontoy/estado-de-ruta";
 
 export const dynamic = "force-dynamic";
 
