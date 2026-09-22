@@ -13,6 +13,7 @@ import { CadenaEnEslabones } from "@/components/casa/cadena-del-circuito";
 import { EditorDelMapa } from "@/components/casa/editor-del-mapa";
 import { AjustesDeMedicion, type Ajuste } from "@/components/casa/ajustes-de-medicion";
 import { IdentidadDelCircuito } from "@/components/casa/identidad-del-circuito";
+import { HistoriaDeReglas } from "@/components/casa/historia-de-reglas";
 import { PromesaDelCircuito } from "@/components/casa/promesa-del-circuito";
 import { UnidadesDelCircuito } from "@/components/casa/unidades-del-circuito";
 import { correosDeAutores } from "@/lib/casa/autores";
@@ -54,7 +55,7 @@ export default async function VerCircuitoJStaff({
   const circuito = await repos.circuits.getCircuit(id);
   if (!circuito) notFound();
 
-  const [concesion, trazados, paradas, asignaciones, promesa, asignables, versiones] = await Promise.all([
+  const [concesion, trazados, paradas, asignaciones, promesa, asignables, versiones, reglasCambiadas] = await Promise.all([
     repos.accounts.findById(circuito.concessionAccountId),
     repos.circuits.getPaths(id),
     repos.circuits.listStopsVigentes(id),
@@ -62,6 +63,7 @@ export default async function VerCircuitoJStaff({
     repos.circuits.getPromiseTableVigente(id),
     repos.circuits.listUnidadesAsignables(circuito.concessionAccountId),
     repos.circuits.listPromiseTables(id),
+    repos.circuits.listRuleChanges(id),
   ]);
   // Desempate por número económico: con la misma fecha, el orden cambiaba de una carga a otra.
   const vigentes = asignaciones
@@ -72,6 +74,7 @@ export default async function VerCircuitoJStaff({
   const autores = await correosDeAutores([
     ...asignaciones.flatMap((a) => [a.asignadaPor, a.cerradaPor]),
     ...versiones.map((v) => v.capturadaPor),
+    ...reglasCambiadas.map((c) => c.cambiadoPor),
   ]);
   const quien = (idUsuario: string | null) => (idUsuario ? (autores.get(idUsuario) ?? idUsuario) : null);
   const publicado = circuito.publishedAt !== null;
@@ -163,7 +166,46 @@ export default async function VerCircuitoJStaff({
       valor: circuito.stopSnapToleranceMeters,
       fabrica: ORIGEN_DEL_CIRCUITO.pegadoDeParadasMetros,
     },
+    {
+      campo: "toleranciaLlegadaPct",
+      nombre: "Tolerancia de llegada",
+      queHace: "Qué tan ancha es la banda alrededor de la promesa: con 50 %, «cada 10 min» es EN RANGO de 5 a 15. Es contra lo que la torre dice adelantada o atrasada.",
+      unidad: "%",
+      valor: circuito.arrivalTolerancePct,
+      fabrica: ORIGEN_DEL_CIRCUITO.toleranciaLlegadaPct,
+      decimales: true,
+    },
+    {
+      campo: "minutosFueraCorredor",
+      nombre: "Minutos fuera del corredor",
+      queHace: "Cuántos minutos seguidos lejos del trazado cuentan como salida en la jornada; menos que esto es el brinco del GPS.",
+      unidad: "min",
+      valor: circuito.corridorExitMinutes,
+      fabrica: ORIGEN_DEL_CIRCUITO.minutosFueraDelCorredor,
+    },
   ];
+
+  /*
+   * La historia de las reglas, con el nombre de pantalla de cada una. El nombre
+   * de la columna viaja en el registro; aquí se dice como lo dice el formulario.
+   */
+  const NOMBRE_DE_REGLA: Record<string, string> = {
+    corridor_tolerance_meters: "Corredor de la ruta (m)",
+    stale_after_seconds: "Dato viejo (s)",
+    service_confidence_minutes: "Ventana de confianza (min)",
+    avg_speed_kmh: "Velocidad del circuito (km/h)",
+    arrival_range_floor_seconds: "Piso del tiempo estimado (s)",
+    stop_snap_tolerance_meters: "Pegado de paradas (m)",
+    arrival_tolerance_pct: "Tolerancia de llegada (%)",
+    corridor_exit_minutes: "Minutos fuera del corredor",
+    service_start_local: "Abre a las",
+    service_end_local: "Cierra a las",
+    time_zone: "Zona horaria",
+    service_launch_date: "Arranca el",
+    arrival_range_enabled_at: "Tiempo estimado de llegada",
+  };
+  const cuandoDe = (d: Date) =>
+    new Intl.DateTimeFormat("es-MX", { timeZone: zona, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
 
   const franjas: FranjaCapturada[] = (promesa?.bandas ?? []).map((b) => ({
     diaTipo: b.diaTipo,
@@ -376,6 +418,17 @@ export default async function VerCircuitoJStaff({
             </Link>
           </p>
           <AjustesDeMedicion circuitId={id} ajustes={ajustes} rangoEncendido={circuito.arrivalRangeEnabledAt !== null} />
+          <HistoriaDeReglas
+            cambios={reglasCambiadas.map((c) => ({
+              id: c.id,
+              regla: NOMBRE_DE_REGLA[c.regla] ?? c.regla,
+              antes: c.valorAntes,
+              despues: c.valorDespues,
+              cuando: cuandoDe(c.cambiadoEn),
+              quien: quien(c.cambiadoPor) ?? c.cambiadoPor,
+              motivo: c.motivo,
+            }))}
+          />
         </Paso>
 
         <Paso eslabon={eslabon(7)} titulo="Publicar">

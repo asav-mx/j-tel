@@ -414,6 +414,7 @@ function IdentidadYPublicacion({
           alPrenderlo="La app le dice al pasajero en cuántos minutos pasa el camión, calculado con la velocidad de abajo."
           alApagarlo="El pasajero sigue viendo el camión moverse en el mapa —eso es verdad observada—; lo único que se calla es el número de minutos."
           textoBoton={rangoEncendido ? "Apagar el tiempo estimado" : "Encender el tiempo estimado"}
+          conMotivo
         />
       </div>
 
@@ -470,6 +471,7 @@ function Interruptor({
   alPrenderlo,
   alApagarlo,
   textoBoton,
+  conMotivo = false,
 }: {
   accion: string;
   campoOculto: { nombre: string; valor: string };
@@ -480,6 +482,8 @@ function Interruptor({
   alPrenderlo: string;
   alApagarlo: string;
   textoBoton: string;
+  /** Pide motivo: el tiempo estimado es regla de la medición y queda firmado (0051, A4b). */
+  conMotivo?: boolean;
 }) {
   return (
     <div className="rounded border border-[var(--linea)] bg-[var(--panel2)] p-3">
@@ -519,6 +523,16 @@ function Interruptor({
 
       <form action={accion} method="post" className="mt-3">
         <input type="hidden" name={campoOculto.nombre} value={campoOculto.valor} />
+        {conMotivo ? (
+          <input
+            name="motivo"
+            required
+            maxLength={280}
+            aria-label="Por qué"
+            placeholder="Por qué (queda escrito con tu nombre)"
+            className={`${campo} mb-2`}
+          />
+        ) : null}
         <button type="submit" className={boton}>
           {textoBoton}
         </button>
@@ -713,6 +727,22 @@ function LoQueDeclara({
           </p>
         </div>
 
+        {/*
+          El motivo de la regla (0051, A4b). Horario, zona, fecha de arranque y
+          los ajustes de medición son reglas: cambiarlas queda firmado con quién,
+          cuándo y por qué, y el servidor no guarda sin esto. Se agregó aquí
+          para que esta pantalla siga pudiendo guardar en la calibración.
+        */}
+        <div>
+          <label htmlFor="motivo-declara" className="text-[13px] text-[var(--texto)]">
+            Por qué cambia
+          </label>
+          <input id="motivo-declara" name="motivo" maxLength={280} className={campo} placeholder="Queda escrito con tu nombre" />
+          <p className="mt-1.5 text-[12px] leading-snug text-[var(--tenue)]">
+            Obligatorio si cambia una regla. El nombre y el color no lo piden.
+          </p>
+        </div>
+
         <button type="submit" className={boton}>
           Guardar lo declarado
         </button>
@@ -847,6 +877,22 @@ function ComoSeMide({
             )}
           </div>
         ))}
+
+        {/*
+          El motivo de la regla (0051, A4b). Horario, zona, fecha de arranque y
+          los ajustes de medición son reglas: cambiarlas queda firmado con quién,
+          cuándo y por qué, y el servidor no guarda sin esto. Se agregó aquí
+          para que esta pantalla siga pudiendo guardar en la calibración.
+        */}
+        <div>
+          <label htmlFor="motivo-medicion" className="text-[13px] text-[var(--texto)]">
+            Por qué cambia
+          </label>
+          <input id="motivo-medicion" name="motivo" maxLength={280} className={campo} placeholder="Queda escrito con tu nombre" />
+          <p className="mt-1.5 text-[12px] leading-snug text-[var(--tenue)]">
+            Obligatorio si cambia una regla. El nombre y el color no lo piden.
+          </p>
+        </div>
 
         <button type="submit" className={boton}>
           Guardar la medición

@@ -39,6 +39,21 @@ const marca = `k${Date.now().toString(36)}`;
 let concesionId = "";
 let circuitoId = "";
 
+/*
+ * Desde la 0051 las escrituras del circuito se firman (A4b). Estas pruebas
+ * miden los CHECK y los valores de origen, no el registro — que tiene las
+ * suyas abajo —, así que firman con un motivo de prueba.
+ */
+const FIRMA = { motivo: "prueba de integración", por: "prueba" };
+async function cambiar(id: string, c: Parameters<typeof repos.circuits.cambiarCircuito>[1]) {
+  const r = await repos.circuits.cambiarCircuito(id, c, FIRMA);
+  return r.ok ? r.circuito : null;
+}
+async function rango(id: string, activo: boolean) {
+  const r = await repos.circuits.cambiarRangoDeLlegada(id, activo, FIRMA);
+  return r.ok ? r.circuito : null;
+}
+
 beforeAll(async () => {
   const { cuenta } = await repos.circuits.createConcession({
     name: `Concesión ${marca}`,
@@ -93,7 +108,7 @@ describe("circuits_velocidad_positiva", () => {
   });
 
   it("deja pasar un valor calibrado con decimales", async () => {
-    const c = await repos.circuits.updateCircuit(circuitoId, { avgSpeedKmh: 17.3 });
+    const c = await cambiar(circuitoId, { avgSpeedKmh: 17.3 });
     expect(c?.avgSpeedKmh).toBeCloseTo(17.3, 2);
   });
 });
@@ -114,12 +129,12 @@ describe("circuits_corredor_positivo", () => {
   });
 
   it("deja pasar un corredor ancho para un trazado burdo", async () => {
-    const c = await repos.circuits.updateCircuit(circuitoId, { corridorToleranceMeters: 250 });
+    const c = await cambiar(circuitoId, { corridorToleranceMeters: 250 });
     expect(c?.corridorToleranceMeters).toBe(250);
   });
 
   it("es independiente de la tolerancia de pegado: son dos conceptos", async () => {
-    const c = await repos.circuits.updateCircuit(circuitoId, {
+    const c = await cambiar(circuitoId, {
       corridorToleranceMeters: 150,
       stopSnapToleranceMeters: 25,
     });
@@ -153,10 +168,10 @@ describe("circuits_color_valido", () => {
   });
 
   it("deja pasar el hex de siete, en mayúsculas o minúsculas", async () => {
-    expect((await repos.circuits.updateCircuit(circuitoId, { colorHex: "#5B3EA6" }))?.colorHex).toBe(
+    expect((await cambiar(circuitoId, { colorHex: "#5B3EA6" }))?.colorHex).toBe(
       "#5B3EA6",
     );
-    expect((await repos.circuits.updateCircuit(circuitoId, { colorHex: "#a78bfa" }))?.colorHex).toBe(
+    expect((await cambiar(circuitoId, { colorHex: "#a78bfa" }))?.colorHex).toBe(
       "#a78bfa",
     );
   });
@@ -186,18 +201,18 @@ describe("la fecha de arranque, desde la 0032", () => {
   });
 
   it("se guarda como día civil y regresa igual — sin corrimiento de zona", async () => {
-    const c = await repos.circuits.updateCircuit(circuitoId, { serviceLaunchDate: "2026-09-15" });
+    const c = await cambiar(circuitoId, { serviceLaunchDate: "2026-09-15" });
     expect(c?.serviceLaunchDate).toBe("2026-09-15");
   });
 
   it("se puede vaciar: si el circuito ya arrancó, deja de anunciarse", async () => {
-    await repos.circuits.updateCircuit(circuitoId, { serviceLaunchDate: "2026-09-15" });
-    const limpio = await repos.circuits.updateCircuit(circuitoId, { serviceLaunchDate: null });
+    await cambiar(circuitoId, { serviceLaunchDate: "2026-09-15" });
+    const limpio = await cambiar(circuitoId, { serviceLaunchDate: null });
     expect(limpio?.serviceLaunchDate).toBeNull();
   });
 
   it("acepta una fecha pasada: es el registro de cuándo arrancó, no un error", async () => {
-    const c = await repos.circuits.updateCircuit(circuitoId, { serviceLaunchDate: "2020-01-01" });
+    const c = await cambiar(circuitoId, { serviceLaunchDate: "2020-01-01" });
     expect(c?.serviceLaunchDate).toBe("2020-01-01");
   });
 });
@@ -271,7 +286,7 @@ describe("circuits_confianza_positiva", () => {
   });
 
   it("nace en 15 minutos y se puede afinar", async () => {
-    const c = await repos.circuits.updateCircuit(circuitoId, { serviceConfidenceMinutes: 25 });
+    const c = await cambiar(circuitoId, { serviceConfidenceMinutes: 25 });
     expect(c?.serviceConfidenceMinutes).toBe(25);
   });
 });
@@ -285,18 +300,124 @@ describe("el interruptor del rango", () => {
     });
     expect(nuevo.arrivalRangeEnabledAt).toBeNull();
 
-    const prendido = await repos.circuits.setArrivalRangeEnabled(nuevo.id, true);
+    const prendido = await rango(nuevo.id, true);
     expect(prendido?.arrivalRangeEnabledAt).toBeInstanceOf(Date);
 
-    const apagado = await repos.circuits.setArrivalRangeEnabled(nuevo.id, false);
+    const apagado = await rango(nuevo.id, false);
     expect(apagado?.arrivalRangeEnabledAt).toBeNull();
   });
 
   it("apagar el rango NO despublica: son dos decisiones", async () => {
     await repos.circuits.setCircuitPublished(circuitoId, true);
-    await repos.circuits.setArrivalRangeEnabled(circuitoId, false);
+    await rango(circuitoId, false);
     const c = await repos.circuits.getCircuit(circuitoId);
     expect(c?.publishedAt).not.toBeNull();
     expect(c?.arrivalRangeEnabledAt).toBeNull();
+  });
+});
+
+/*
+ * El registro de las reglas de la medición (0051, A4b). Lo que se prueba es la
+ * ley de ASAV: el «antes» sale de la base, sin motivo no se escribe nada, y
+ * mandar el valor de hoy no deja renglón.
+ */
+describe("cambiarCircuito · el registro de las reglas de la medición", () => {
+  it("una regla que cambia queda con su antes (de la base), su después, quién y por qué", async () => {
+    const antes = (await repos.circuits.getCircuit(circuitoId))!.corridorToleranceMeters;
+    const r = await repos.circuits.cambiarCircuito(circuitoId, { corridorToleranceMeters: antes + 7 }, { motivo: "calibración", por: "user_asav" });
+    expect(r).toMatchObject({ ok: true, registrados: 1 });
+    const [ultimo] = await repos.circuits.listRuleChanges(circuitoId);
+    expect(ultimo).toMatchObject({
+      regla: "corridor_tolerance_meters",
+      valorAntes: String(antes),
+      valorDespues: String(antes + 7),
+      motivo: "calibración",
+      cambiadoPor: "user_asav",
+    });
+  });
+
+  it("sin motivo NO se escribe nada — ni la regla ni el nombre que venía junto", async () => {
+    const c = (await repos.circuits.getCircuit(circuitoId))!;
+    const r = await repos.circuits.cambiarCircuito(
+      circuitoId,
+      { name: "No debe quedar", staleAfterSeconds: c.staleAfterSeconds + 1 },
+      { motivo: "   ", por: "user_asav" },
+    );
+    expect(r).toEqual({ ok: false, error: "falta_motivo" });
+    const despues = (await repos.circuits.getCircuit(circuitoId))!;
+    expect(despues.name).toBe(c.name);
+    expect(despues.staleAfterSeconds).toBe(c.staleAfterSeconds);
+  });
+
+  it("mandar el valor de hoy no es un cambio: no pide motivo ni deja renglón (la hora «05:00» es la «05:00:00» de la base)", async () => {
+    const c = (await repos.circuits.getCircuit(circuitoId))!;
+    const n = (await repos.circuits.listRuleChanges(circuitoId)).length;
+    const r = await repos.circuits.cambiarCircuito(
+      circuitoId,
+      { serviceStartLocal: c.serviceStartLocal.slice(0, 5), avgSpeedKmh: c.avgSpeedKmh },
+      { motivo: null, por: null },
+    );
+    expect(r).toMatchObject({ ok: true, registrados: 0 });
+    expect((await repos.circuits.listRuleChanges(circuitoId)).length).toBe(n);
+  });
+
+  it("el nombre y el color no son reglas: se guardan sin motivo y sin renglón", async () => {
+    const n = (await repos.circuits.listRuleChanges(circuitoId)).length;
+    const r = await repos.circuits.cambiarCircuito(circuitoId, { colorHex: "#2E6A4E" }, { motivo: null, por: null });
+    expect(r).toMatchObject({ ok: true, registrados: 0 });
+    expect((await repos.circuits.listRuleChanges(circuitoId)).length).toBe(n);
+  });
+
+  it("el horario y la fecha de arranque SÍ son reglas", async () => {
+    const r = await repos.circuits.cambiarCircuito(
+      circuitoId,
+      { serviceEndLocal: "21:45", serviceLaunchDate: "2026-10-01" },
+      { motivo: "arranque de Oasis", por: "user_asav" },
+    );
+    expect(r).toMatchObject({ ok: true, registrados: 2 });
+    const reglas = (await repos.circuits.listRuleChanges(circuitoId)).slice(0, 2).map((x) => x.regla).sort();
+    expect(reglas).toEqual(["service_end_local", "service_launch_date"]);
+  });
+
+  it("la tolerancia de llegada y los minutos fuera del corredor tienen escritura, y la base los cuida", async () => {
+    const r = await repos.circuits.cambiarCircuito(
+      circuitoId,
+      { arrivalTolerancePct: 35, corridorExitMinutes: 4 },
+      { motivo: "calibración", por: "user_asav" },
+    );
+    expect(r).toMatchObject({ ok: true, registrados: 2 });
+    await expect(
+      repos.circuits.cambiarCircuito(circuitoId, { arrivalTolerancePct: 150 }, { motivo: "x", por: "user_asav" }),
+    ).rejects.toThrow();
+    await expect(
+      repos.circuits.cambiarCircuito(circuitoId, { corridorExitMinutes: 0 }, { motivo: "x", por: "user_asav" }),
+    ).rejects.toThrow();
+  });
+
+  it("el tiempo estimado se firma; pedir el estado que ya tiene no deja renglón ni mueve su fecha", async () => {
+    await rango(circuitoId, false);
+    const n = (await repos.circuits.listRuleChanges(circuitoId)).length;
+    expect(await repos.circuits.cambiarRangoDeLlegada(circuitoId, true, { motivo: null, por: "user_asav" })).toEqual({
+      ok: false,
+      error: "falta_motivo",
+    });
+    const r = await repos.circuits.cambiarRangoDeLlegada(circuitoId, true, { motivo: "velocidad calibrada", por: "user_asav" });
+    expect(r).toMatchObject({ ok: true, registrados: 1 });
+    const fecha = r.ok ? r.circuito.arrivalRangeEnabledAt : null;
+    const otra = await repos.circuits.cambiarRangoDeLlegada(circuitoId, true, { motivo: null, por: null });
+    expect(otra).toMatchObject({ ok: true, registrados: 0 });
+    expect(otra.ok ? otra.circuito.arrivalRangeEnabledAt : null).toEqual(fecha);
+    const [ultimo] = await repos.circuits.listRuleChanges(circuitoId);
+    expect(ultimo).toMatchObject({ regla: "arrival_range_enabled_at", valorAntes: "apagado", valorDespues: "encendido" });
+    expect((await repos.circuits.listRuleChanges(circuitoId)).length).toBe(n + 1);
+  });
+
+  it("la columna nueva nace en 3 para un circuito nuevo — el mismo número de antes", async () => {
+    const nuevo = await repos.circuits.createCircuit({
+      concessionAccountId: concesionId,
+      name: `Minutos ${Date.now()}`,
+      publicSlug: `minutos-${Date.now()}`,
+    });
+    expect(nuevo.corridorExitMinutes).toBe(3);
   });
 });

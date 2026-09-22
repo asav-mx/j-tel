@@ -50,6 +50,15 @@ export function IdentidadDelCircuito({
   const [inicio, setInicio] = useState(abre);
   const [fin, setFin] = useState(cierra);
   const [tono, setTono] = useState(color);
+  const [zonaNueva, setZonaNueva] = useState(zona);
+  const [arranque, setArranque] = useState(arrancaEl ?? "");
+  /*
+   * El horario, la zona y la fecha de arranque son reglas de la medición (ASAV,
+   * 21-sep): mueven la apertura y el cierre del día. Si cambian, se pide motivo
+   * aquí —el servidor lo exige igual y lee el antes de la base—. Nombre y color
+   * no son reglas: se guardan sin motivo.
+   */
+  const cambiaUnaRegla = inicio !== abre || fin !== cierra || zonaNueva !== zona || arranque !== (arrancaEl ?? "");
 
   const fuera = franjas.filter((f) => !franjaDentroDelHorario(f, inicio, fin));
   const etiqueta = "flex flex-col gap-1.5 text-[13px] font-semibold";
@@ -117,15 +126,33 @@ export function IdentidadDelCircuito({
 
         <label className={etiqueta}>
           Zona horaria
-          <input name="zonaHoraria" defaultValue={zona} required className={clases.campo} />
+          <input name="zonaHoraria" value={zonaNueva} onChange={(e) => setZonaNueva(e.target.value)} required className={clases.campo} />
         </label>
 
         <label className={etiqueta}>
           Arranca el
-          <input type="date" name="arrancaEl" defaultValue={arrancaEl ?? ""} className={`${clases.campo.replace("w-full ", "")} w-auto`} />
+          <input
+            type="date"
+            name="arrancaEl"
+            value={arranque}
+            onChange={(e) => setArranque(e.target.value)}
+            className={`${clases.campo.replace("w-full ", "")} w-auto`}
+          />
           <span className={clases.ayuda}>Vacío: el circuito ya opera. Nunca se rellena con hoy.</span>
         </label>
 
+        {cambiaUnaRegla && (
+          <label className="flex flex-col gap-1.5 text-[13px] font-semibold">
+            Por qué cambia el horario, la zona o el arranque
+            <input
+              name="motivo"
+              required
+              maxLength={280}
+              className={clases.campo}
+              placeholder="Mueve la apertura y el cierre del día: queda escrito con tu nombre"
+            />
+          </label>
+        )}
         <div>
           <button type="submit" className={clases.primario}>
             Guardar la identidad

@@ -14,9 +14,9 @@ import { clases } from "@/components/casa/formulario";
  * `/rango`); esta pantalla sólo le manda `volver`. Un campo que no se toca se
  * manda con su valor de hoy: la ruta lo reescribe igual, sin efecto.
  *
- * **Todavía no guarda quién cambió qué ni por qué.** Llega en A4b con motivo
- * obligatorio (ASAV, 21-sep: un cambio de regla lleva quién, cuándo y por qué,
- * como la promesa y las asignaciones), antes de la semana de calibración.
+ * **Cada cambio lleva motivo y queda firmado** (0051, A4b — ASAV, 21-sep: un
+ * cambio de regla lleva quién, cuándo y por qué, como la promesa y las
+ * asignaciones). El servidor lo exige; el antes → después lo lee de la base.
  */
 
 export interface Ajuste {
@@ -72,9 +72,18 @@ export function AjustesDeMedicion({
             </label>
           );
         })}
+        <label className="flex flex-col gap-1.5 text-[13px] font-semibold">
+          Por qué cambia
+          <input
+            name="motivo"
+            required
+            maxLength={280}
+            className={clases.campo}
+            placeholder="Queda escrito con tu nombre, junto al antes y el después"
+          />
+        </label>
         <p className={clases.ayuda}>
-          Cambiar un ajuste cambia lo que se mide y se dice de aquí en adelante; no reescribe nada guardado. Todavía no
-          queda registro de quién lo cambió: llega con A4b, con su motivo.
+          Cambiar un ajuste cambia lo que se mide y se dice de aquí en adelante; no reescribe nada guardado.
         </p>
         <div>
           <button type="submit" className={clases.primario}>
@@ -100,9 +109,19 @@ export function AjustesDeMedicion({
               : "Ontoy enseña el camión moverse y calla los minutos: se enciende cuando la velocidad ya se calibró contra la calle."}
           </span>
         </span>
-        <button type="submit" className={rangoEncendido ? clases.secundario : clases.primario}>
-          {rangoEncendido ? "Apagar" : "Encender"}
-        </button>
+        <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <input
+            name="motivo"
+            required
+            maxLength={280}
+            aria-label="Por qué se prende o se apaga"
+            placeholder="Por qué (queda escrito)"
+            className={`${clases.campo.replace("w-full ", "")} min-w-[220px] flex-1`}
+          />
+          <button type="submit" className={rangoEncendido ? clases.secundario : clases.primario}>
+            {rangoEncendido ? "Apagar" : "Encender"}
+          </button>
+        </span>
       </form>
     </div>
   );

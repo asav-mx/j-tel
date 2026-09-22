@@ -32,6 +32,7 @@ function repos(opts: {
           serviceEndLocal: "22:00:00",
           staleAfterSeconds: 180,
           corridorToleranceMeters: 150,
+          corridorExitMinutes: 3,
           ...opts.circuito,
         };
   const r = {
@@ -139,6 +140,12 @@ describe("cargarJornadaParaJStaff · el día de servicio", () => {
     const r = repos({ circuito: null });
     expect((await pedir(r)).estado).toBe("no_existe");
     expect(r.llamadas.pasos).toEqual([]);
+  });
+
+  it("los minutos fuera del corredor salen del circuito, no de una constante (0051)", async () => {
+    const j = await pedir(repos({ circuito: { corridorExitMinutes: 7 } }));
+    if (j.estado !== "jornada") throw new Error("se esperaba jornada");
+    expect(j.jornada.umbrales.minutosFuera).toBe(7);
   });
 
   it("la jornada no trae chofer: es de la unidad", async () => {
