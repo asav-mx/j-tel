@@ -1,34 +1,43 @@
 /**
- * Qué trozo del fotograma se analiza — el arreglo del 23-sep-2026.
+ * Qué trozo del fotograma se analiza, y de qué tamaño.
  *
- * ## Por qué existe este archivo
+ * ## Escalar y recortar no son lo mismo, y confundirlos ya costó dos rondas
  *
- * El lector no leía con teléfonos de verdad. La causa, medida: **encogía cada
- * fotograma a 480 px de lado** antes de buscarle el código. Nuestro QR tiene 67
- * módulos, y con el desenfoque normal de una cámara —el que deja un pulso o un
- * enfoque a medias— jsQR necesita **4 píxeles por módulo**, o sea que el código
- * tiene que ocupar **268 px del cuadro analizado**. Con un cuadro de 480 px eso
- * obliga a que el QR llene el 56 % del ancho de la cámara: el teléfono casi
- * pegado al lente. A la distancia de una puerta de camión ocupa cerca del 8 %,
- * que da menos de 1 px por módulo. Imposible, no difícil.
+ * **Escalar** 1080 → 640 reparte los mismos 67 módulos del código en menos
+ * píxeles: pierde densidad, y ése fue el defecto que impedía leer con teléfonos
+ * de verdad (23-sep, primera ronda).
  *
- * La medición está en `leer-qr.test.ts`, con desenfoque de verdad.
+ * **Recortar** 640 del centro de 1080 se queda con píxeles **nativos**: cada
+ * módulo sigue midiendo lo mismo, sólo se mira una ventana más chica. Cuesta
+ * 2.8 veces menos y no pierde ni un píxel por módulo. La distancia a la que el
+ * lector funciona **no cambia** al recortar; lo único que cambia es cuánta
+ * puntería pide.
  *
- * ## Lo que hace ahora
+ * Aquí eso ya no se puede equivocar: {@link Encuadre} tiene **un solo número**.
+ * El trozo que se toma del fotograma y el lienzo donde se analiza son el mismo
+ * tamaño por construcción, así que no hay dónde meter un escalado.
  *
- * **Recorta en vez de escalar.** Toma el cuadrado centrado del fotograma a su
- * resolución nativa. De un 1280×720 salen 720×720 reales; de un 1920×1080,
- * 1080×1080. Sólo hay tope para no analizar un 4K entero, y ese tope está muy
- * por encima de lo que da un teléfono.
+ * ## Por qué el recorte se mueve solo
  *
- * **Y es el mismo cuadrado que se ve.** La caja de la cámara es cuadrada y
- * recorta con `object-fit: cover`, así que lo que encuadra el chofer es
- * exactamente lo que se analiza. Antes la mira eran 128 px decorativos mientras
- * se analizaba el fotograma entero: apuntar no servía de nada.
+ * Un recorte fijo no sirve para todos los aparatos. En el teléfono de ASAV,
+ * analizar 1080×1080 tardaba **entre 100 y 1130 ms** —6 o 7 cuadros por
+ * segundo—, y con la cámara enfocando de vez en cuando, la ventana para atrapar
+ * un cuadro nítido era diminuta. Un recorte chico fijo, en cambio, le quitaría
+ * alcance a un teléfono rápido.
+ *
+ * Así que el lector **se mide a sí mismo** y ajusta el recorte para que un
+ * barrido quepa en {@link PRESUPUESTO_MS}. Más cuadros por segundo es más
+ * oportunidades de que uno caiga justo cuando la cámara enfocó.
  */
 
-/** Tope del cuadro analizado. No encoge nada que dé un teléfono; sólo evita un 4K. */
-export const TOPE_DEL_ANALISIS = 1080;
+/** Con qué recorte arranca, antes de saber qué tan rápido es el aparato. */
+export const RECORTE_INICIAL = 640;
+/** Nunca más chico: por debajo de esto la puntería que pide es irrazonable. */
+export const RECORTE_MINIMO = 480;
+/** Nunca más grande: de aquí para arriba no compra alcance, sólo tarda. */
+export const RECORTE_MAXIMO = 900;
+/** Lo que debería tardar un barrido. De aquí sale el ajuste. */
+export const PRESUPUESTO_MS = 120;
 
 /** Cuántos píxeles por módulo pide jsQR con el desenfoque de una cámara real. */
 export const PIXELES_POR_MODULO = 4;
@@ -37,32 +46,63 @@ export interface Encuadre {
   /** De dónde se recorta, en el fotograma original. */
   readonly ox: number;
   readonly oy: number;
+  /**
+   * El lado del recorte **y** el del lienzo que se analiza: son el mismo
+   * número a propósito. Uno a uno, sin escalar nunca.
+   */
   readonly lado: number;
-  /** El lado del cuadro que se analiza. Igual a `lado` salvo que haya tope. */
-  readonly analisis: number;
 }
 
-/** El cuadrado centrado del fotograma, sin encoger salvo que pase del tope. */
+/**
+ * El cuadrado centrado del fotograma, del tamaño pedido y **a resolución
+ * nativa**. Si el fotograma es más chico que el recorte, manda el fotograma.
+ */
 export function cuadroDeAnalisis(
   ancho: number,
   alto: number,
-  tope: number = TOPE_DEL_ANALISIS,
+  recorte: number = RECORTE_INICIAL,
 ): Encuadre | null {
-  if (!Number.isFinite(ancho) || !Number.isFinite(alto) || ancho < 1 || alto < 1) return null;
-  const lado = Math.floor(Math.min(ancho, alto));
+  if (![ancho, alto, recorte].every((n) => Number.isFinite(n) && n >= 1)) return null;
+  const lado = Math.floor(Math.min(ancho, alto, recorte));
   return {
     ox: Math.floor((ancho - lado) / 2),
     oy: Math.floor((alto - lado) / 2),
     lado,
-    analisis: Math.min(lado, tope),
   };
 }
 
 /**
- * Qué tan grande tiene que verse el código dentro del cuadro para que se lea.
- * No decide nada: es el número que la línea de diagnóstico del lector enseña,
- * para que una prueba fallida en la calle vuelva con un dato y no con «no
- * engancha».
+ * El recorte para el siguiente barrido, según lo que tardó el anterior.
+ *
+ * Baja rápido y sube despacio: quedarse lento es peor que quedarse corto de
+ * alcance, porque sin cuadros no hay ninguna oportunidad de atrapar uno nítido.
+ * Los pasos son pequeños para que no oscile entre dos tamaños.
  */
-export const fraccionQueNecesitaElCodigo = (analisis: number, modulos = 67): number =>
-  (modulos * PIXELES_POR_MODULO) / analisis;
+export function siguienteRecorte(actual: number, ms: number): number {
+  const objetivo =
+    ms > PRESUPUESTO_MS * 1.3
+      ? actual * 0.85
+      : ms < PRESUPUESTO_MS * 0.6
+        ? actual * 1.1
+        : actual;
+  return Math.round(Math.min(RECORTE_MAXIMO, Math.max(RECORTE_MINIMO, objetivo)));
+}
+
+/**
+ * Qué parte de la caja de la cámara ocupa la mira, entre 0 y 1.
+ *
+ * Se dibuja del tamaño del recorte **mínimo**, no del que esté en uso: así la
+ * mira **nunca se mueve** mientras alguien apunta, y lo que quede dentro de
+ * ella está siempre dentro de lo que se analiza, aunque el recorte crezca. La
+ * promesa «lo que ves es lo que se lee» se cumple por el lado seguro.
+ */
+export const fraccionDeLaMira = (ladoDelFotograma: number): number =>
+  Math.min(1, RECORTE_MINIMO / Math.max(1, ladoDelFotograma));
+
+/**
+ * Qué tan grande tiene que verse el código dentro del recorte para que se lea.
+ * No decide nada: alimenta la línea de diagnóstico, para que una prueba fallida
+ * en la calle vuelva con un dato y no con «no engancha».
+ */
+export const fraccionQueNecesitaElCodigo = (lado: number, modulos = 67): number =>
+  (modulos * PIXELES_POR_MODULO) / lado;
