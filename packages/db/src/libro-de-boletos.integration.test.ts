@@ -325,6 +325,31 @@ describe("el lector robado", () => {
     expect(registro!.renglonesRechazados).toBe(1);
   });
 
+  /*
+   * La columna del paso es `uuid`. Un id con otra forma no se puede ni
+   * consultar: sin apartarlo antes, Postgres tumba el lote entero con 22P02 y
+   * el lector recibe un 500 sin saber cuál renglón lo causó — incluidos los
+   * buenos que venían en el mismo lote.
+   */
+  it("un id de paso que no es un uuid se rechaza con su motivo, y el resto del lote entra", async () => {
+    const lector = await altaDeLector();
+    const bueno = folioNuevo();
+    const malo = folioNuevo();
+
+    const r = await entregar(lector, [
+      pasoQr(bueno),
+      pasoQr(malo, { paso: "no-soy-un-uuid" }),
+    ]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.nuevos).toBe(1);
+    expect(r.rechazados).toEqual([
+      { paso: "no-soy-un-uuid", folio: malo, motivo: "renglon_mal_formado" },
+    ]);
+    expect(await renglonesDe(bueno)).toHaveLength(1);
+    expect(await renglonesDe(malo)).toHaveLength(0);
+  });
+
   it("un folio que no cuadra con su boleto se rechaza", async () => {
     const lector = await altaDeLector();
     const folio = folioNuevo();

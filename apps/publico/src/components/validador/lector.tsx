@@ -99,7 +99,18 @@ function idDePasoNuevo(): string {
   try {
     return crypto.randomUUID();
   } catch {
-    return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 14)}`;
+    /*
+     * El respaldo **también tiene que ser un uuid**, no un id cualquiera: la
+     * columna del libro es `uuid`, y un id con otra forma no se rechaza con un
+     * motivo — revienta la consulta entera con un 500. Y el respaldo es
+     * justamente el camino del aparato viejo o del origen sin https, que es
+     * donde menos se va a notar.
+     */
+    const azar = () => Math.floor(Math.random() * 16).toString(16);
+    const bloque = (n: number) => Array.from({ length: n }, azar).join("");
+    /* La versión (4) y la variante (8–b) van fijas, como manda el formato. */
+    const variante = "89ab"[Math.floor(Math.random() * 4)];
+    return `${bloque(8)}-${bloque(4)}-4${bloque(3)}-${variante}${bloque(3)}-${bloque(12)}`;
   }
 }
 

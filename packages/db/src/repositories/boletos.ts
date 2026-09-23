@@ -67,6 +67,16 @@ export type ResultadoDeSincronizacion =
       readonly syncId?: string;
     };
 
+/**
+ * Un `paso` tiene que ser un uuid **antes de que toque la base**.
+ *
+ * No es formalismo: la columna es `uuid`, y un id con otra forma no se rechaza
+ * con un motivo — revienta la consulta con `22P02` y se lleva el lote entero,
+ * incluidos los renglones buenos. Un lector con un error así merece que le
+ * digan cuál renglón, no un 500.
+ */
+const ES_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** El error de llave duplicada de Postgres, que aquí significa una cosa concreta. */
 const ES_DUPLICADO = (e: unknown) => (e as { cause?: { code?: string } })?.cause?.code === "23505";
 
@@ -314,7 +324,10 @@ export class LibroDeBoletosRepository {
           await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${folio}))`);
         }
 
-        const pasos = lote.pasos.map((p) => p.paso);
+        /* Lo que ni siquiera puede consultarse se aparta aquí, antes de la
+           primera consulta, y vuelve como rechazo con su motivo. */
+        const malFormados = lote.pasos.filter((p) => !ES_UUID.test(p.paso));
+        const pasos = lote.pasos.filter((p) => ES_UUID.test(p.paso)).map((p) => p.paso);
         const yaEstaban = new Set(
           pasos.length === 0
             ? []
@@ -360,11 +373,15 @@ export class LibroDeBoletosRepository {
           );
         };
 
-        const rechazados: RenglonRechazado[] = [];
+        const rechazados: RenglonRechazado[] = malFormados.map((p) => ({
+          paso: p.paso,
+          folio: p.folio,
+          motivo: "renglon_mal_formado" as const,
+        }));
         const porInsertar: Array<typeof ticketOperations.$inferInsert & { folio: string }> = [];
 
         for (const p of lote.pasos) {
-          if (yaEstaban.has(p.paso)) continue;
+          if (yaEstaban.has(p.paso) || !ES_UUID.test(p.paso)) continue;
 
           const cuando = new Date(p.cuando);
           const unidad = unidadEn(cuando);
