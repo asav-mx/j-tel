@@ -144,6 +144,15 @@ const lat = (i: number, n: number) => 31.7 + (i / Math.max(1, n - 1)) * 0.05;
 
 async function limpiar(db: ReturnType<typeof createDb>) {
   await db.delete(livePositions).where(inArray(livePositions.imei, IMEIS));
+  /*
+   * Borrar la cuenta se lleva sus circuitos por cascada, pero **ya no sus
+   * paradas**: desde la 0055 esa referencia es RESTRICT, porque cada parada
+   * tiene un letrero de lámina atornillado a un poste. Sin esta línea, limpiar
+   * el escenario falla con un 23503 — y eso es la restricción haciendo su
+   * trabajo, no un error del guion.
+   */
+  await db.delete(circuitStops).where(inArray(circuitStops.circuitId, SEMILLAS.map((s) => s.id)));
+
   try {
     await db.delete(accounts).where(inArray(accounts.id, Object.values(CUENTAS)));
   } catch (e) {
