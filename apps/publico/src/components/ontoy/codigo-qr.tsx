@@ -6,13 +6,20 @@ import { encode } from "uqr";
 /**
  * El QR del pase, dibujado aquí mismo.
  *
- * **Corrección de errores M, no L.** Con L el código sale de 51 cuadritos de
- * lado y con M de 59 — cuadritos más chicos—, pero M aguanta que se pierda un
- * 15 % del código y L sólo un 7 %. Lo que de verdad rompe una lectura en un
- * camión no es el tamaño: es **un reflejo sobre la pantalla del teléfono**, y
- * eso es justo lo que la corrección de errores arregla. A 59 cuadritos en la
- * caja de 216 px, cada uno mide 3.7 px, muy por encima de donde una cámara
- * empieza a dudar.
+ * **Corrección de errores M, no L.** Con L el código sale de 63 cuadritos de
+ * lado y con M de 67 — cuatro más—, pero M aguanta que se pierda un 15 % del
+ * código y L sólo un 7 %. Lo que de verdad rompe una lectura en un camión no es
+ * el tamaño: es **un reflejo sobre la pantalla del teléfono**, y eso es justo lo
+ * que la corrección de errores arregla. A 67 cuadritos en la caja de 216 px,
+ * cada uno mide 3.2 px, y la prueba de `leer-qr.test.ts` comprueba que se lee
+ * incluso más chico que eso.
+ *
+ * ✎ 23-sep-2026: este comentario decía 51 y 59 cuadritos, y 3.7 px. Estaba mal:
+ * la medición se hizo con un texto de puras mayúsculas, que un QR codifica a
+ * 5.5 bits por carácter en modo alfanumérico, mientras que nuestro base64url
+ * lleva minúsculas y cae a modo byte, con 8. Medido con la carga real, el
+ * empaque baja el código de 91 cuadritos a 67 —no de 81 a 59—, así que la
+ * ganancia es mayor de lo que decía y el costo de elegir M, menor.
  *
  * Un solo `<path>` y no 1 700 `<rect>`: el navegador de un teléfono barato
  * agradece el árbol chico, y esto se redibuja cada 5 segundos.

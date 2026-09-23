@@ -21,6 +21,10 @@
     "./boleto-empaque": {
       "types": "./dist/boleto-empaque.d.ts",
       "import": "./dist/boleto-empaque.js"
+    },
+    "./validador": {
+      "types": "./dist/validador.d.ts",
+      "import": "./dist/validador.js"
     }
   },
   "scripts": {
