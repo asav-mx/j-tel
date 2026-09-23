@@ -158,3 +158,31 @@ sincronicen. Dentro de un mismo aparato la detección es absoluta; entre
 aparatos es **diferida**, y salta al sincronizar —que es justo lo que ya dice el
 P3—. El P1 escribe esa distinción en sus funciones y en sus pruebas: promete lo
 que puede sostener, no más.
+
+### 6.4 · Decidido por Asav el 23-sep-2026, sobre el plan del P1
+
+Las dos preguntas de §6.3, contestadas. **Mandan sobre el resto de esta ficha.**
+
+**La librería de firma: `@noble/curves` (Ed25519).** Elegida por dónde corre el
+código, no por moda: el validador verifica **en el navegador de un teléfono
+cualquiera y sin red**, y una implementación en JavaScript puro quita la
+pregunta de si el aparato la soporta. Se descartaron WebCrypto nativo —Ed25519
+llegó tarde a los navegadores, y falla justo en los teléfonos de la gente que va
+a usar Ontoy— y `jose`, cuyo JWT es varias veces más largo que un boleto a la
+medida, y aquí el largo es lo que tarda una cámara en enganchar el código.
+
+**a) Tolerancia de deriva de reloj: ±2 min** (ventana de 30 s, 4 ventanas hacia
+cada lado). Una captura de pantalla sirve **4 min 30 s**, y ese número está
+calculado en una sola constante del código con su prueba, para que moverlo se
+lea en voz alta. Razón de Asav: la ventana sólo alcanza para el mismo camión,
+donde el validador ya recuerda lo quemado y lo rechaza —así que ser generoso
+cuesta poco—, y ±30 s castigaría a gente honesta con el reloj corrido.
+
+**b) Doble uso: se dice tal cual** (opción A). Absoluto dentro de un aparato,
+diferido entre aparatos hasta sincronizar. Acotarlo atando el boleto a un
+circuito o a una franja **se decide en el P3**, cuando se sepa cada cuánto
+sincronizan los lectores de verdad: fijar hoy ese número sería inventarlo antes
+de medirlo.
+
+**Construido en el PR P1** (`packages/domain/src/boleto.ts` y
+`boleto-llave.ts`), con la valla de la §1 en `scripts/verificar-sin-cobro.mjs`.

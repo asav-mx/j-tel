@@ -65,6 +65,14 @@ jobs:
       - name: Ninguna app baja su letra de internet
         run: node scripts/verificar-fuentes-locales.mjs
 
+      # La raya de Ontoy 3.0 (docs/Ficha-Construccion-Ontoy-3-Pagos.md, §1): los
+      # pagos se construyen para probar la mecánica, NO para cobrar, y no se
+      # toca dinero real hasta que responda el abogado. Una regla que sólo vive
+      # en un documento se rompe sin que nadie lo note; ésta se lee aquí, en el
+      # PR que la rompió. Como la de las fuentes, no necesita dependencias.
+      - name: Nada en el repo puede cobrar dinero real
+        run: node scripts/verificar-sin-cobro.mjs
+
       - name: Compilar
         run: pnpm build
 

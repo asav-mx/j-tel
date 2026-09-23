@@ -6,7 +6,7 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
-    "test": "turbo test && pnpm env:test && pnpm fuentes:test",
+    "test": "turbo test && pnpm env:test && pnpm fuentes:test && pnpm cobro:test",
     "env:pull": "pnpm dlx vercel@latest env pull .env",
     "env:check": "node scripts/verificar-env.mjs",
     "diff:check": "node scripts/verificar-diff-completo.mjs",
@@ -16,7 +16,9 @@
     "db:generate": "pnpm --filter @jtel/db generate",
     "db:migrate": "pnpm --filter @jtel/db migrate",
     "db:seed": "pnpm --filter @jtel/db seed",
-    "db:studio": "pnpm --filter @jtel/db studio"
+    "db:studio": "pnpm --filter @jtel/db studio",
+    "cobro:check": "node scripts/verificar-sin-cobro.mjs",
+    "cobro:test": "node --test scripts/verificar-sin-cobro.test.mjs"
   },
   "devDependencies": {
     "turbo": "^2.5.4",
