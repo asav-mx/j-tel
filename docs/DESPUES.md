@@ -226,6 +226,7 @@ de estas leyes está mal escrita, y se corrige la entrada.
 | [El buscador no entiende calle y número](#el-buscador-no-entiende-calle-y-número) | Cuando emparejar direcciones no exija sacar el destino del teléfono |
 | [¿Sigue siendo exacta «no se envía a ningún servidor»?](#sigue-siendo-exacta-no-se-envía-a-ningún-servidor) | ✅ **Contestada el 6 de septiembre**: la frase se retiró |
 | [El pasajero como usuario](#el-pasajero-como-usuario) | Cuando la app tenga uso real |
+| [El barrido de desborde de texto no corre solo](#el-barrido-de-desborde-de-texto-no-corre-solo) | 🟢 Manual por decisión (22-sep) — **se automatiza cuando Ontoy vaya a tiendas** |
 | [Sensores más allá del GPS](#sensores-más-allá-del-gps) | Cuando exista la suite del concesionario |
 | [Mapas de demanda](#mapas-de-demanda) | Después de los sensores |
 
@@ -3038,3 +3039,47 @@ construye nada citándolas. **Tiene que pasar antes de que una pantalla las nece
 las que sobrevivan entran al skill o al Marco.
 
 **Dónde toca.** `docs/Trampas-De-Medicion.md`, Parte 2, y el Marco.
+
+## El barrido de desborde de texto no corre solo
+
+**Qué es.** La comprobación de que **ningún texto de Ontoy rompe el marco** en un
+teléfono angosto está escrita y se corrió, pero **es un procedimiento manual**: pide
+un navegador de verdad y un servidor vivo, así que no está en CI. Hoy su valor
+depende de que alguien se acuerde de correrla.
+
+Lo que mide, para que se pueda rehacer sin adivinar:
+
+1. si **la página entera** desborda (`scrollWidth > clientWidth` de la raíz);
+2. si **algún elemento sale del marco** de la ventana;
+3. si **algún elemento desborda horizontalmente** por dentro.
+
+Y **descuenta dos falsos positivos**, que es lo que separa un detector útil de uno
+que grita:
+
+- **las teselas y capas de Leaflet**, que salen del marco *a propósito* y las recorta
+  su propio contenedor: contarlas pintaría de rojo cada pantalla con mapa;
+- **lo que se recorta con elipsis declarada** (`text-overflow: ellipsis` con
+  `overflow: hidden`), que **es el arreglo, no el defecto** — un botón que se corta a
+  propósito no es un botón que se sale.
+
+La matriz que se corrió: 8 pantallas × 2 anchos (320 y 390 px) × 2 pieles = 32
+corridas, contra la base desechable sembrada con nombres de parada largos **reales**
+y un aviso de 80 caracteres, que es el máximo que permite la 0052 — el peor caso
+legal, no una cadena de relleno.
+
+**Por qué se aplazó.** Decisión de ASAV del 22 de septiembre de 2026: **no se
+automatiza antes del arranque del 28.** Meter un navegador al pipeline es su propio
+costo y su propia fuente de intermitencias, y la semana del arranque conviene lo más
+quieta posible — la misma razón por la que el cron de recorridos se quedó sin horario.
+El barrido ya encontró lo suyo (#518) y el arreglo está en `main`.
+
+**Qué lo desbloquea.** **Que Ontoy vaya a tiendas.** Mientras la app se abre desde el
+navegador, un desborde lo ve quien la usa y se corrige el mismo día. Publicada en una
+tienda, entre el defecto y el arreglo hay una revisión de Apple o de Google, y
+entonces una valla que corre sola deja de ser un lujo. Cuando eso se decida, esta
+entrada se convierte en su propia ficha, con el costo en el pipeline escrito.
+
+**Dónde toca.** `apps/publico/src/app/ontoy.css` (donde viven los arreglos del #518) y
+la ficha de salidas `docs/Ficha-Salidas-App-Pasajero.md`, que ya pregunta por los
+320 px. El guion del barrido **no está en el repo**: vivió en el worktree del #518, y
+se rehace desde las tres medidas y las dos exclusiones de arriba.
