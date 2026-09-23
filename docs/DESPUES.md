@@ -2,12 +2,20 @@
 
 > **Este archivo es el backlog, y solo el backlog. Sin orden y sin fechas.**
 >
-> Desde el 3 de agosto de 2026 el orden vive **únicamente** en
-> [`docs/PLAN.md`](PLAN.md): qué se construye, en qué secuencia y qué desbloquea
-> qué. Aquí solo vive **qué falta y por qué se aplazó**.
+> El orden vive **únicamente** en
+> [`docs/jtel-plan-de-desarrollo.md`](jtel-plan-de-desarrollo.md): qué se
+> construye, en qué secuencia y qué desbloquea qué. Aquí solo vive **qué falta y
+> por qué se aplazó**.
 >
 > Los tres documentos vivos son el `Marco-Limpio-J-Telemetry-MAESTRO.md` (la
-> ley), `PLAN.md` (el orden) y este (el backlog). Ninguno más.
+> ley), el **plan de desarrollo** (el orden) y este (el backlog). Ninguno más.
+>
+> ✎ **23 de septiembre de 2026.** Hasta hoy este encabezado mandaba a
+> `docs/PLAN.md`, que fue el orden del 3 de agosto al 15. Aquel documento se
+> archivó **sin editar** en [`docs/archivo/PLAN.md`](archivo/PLAN.md) y lo que
+> seguía abierto de él pasó como renglón al plan vivo, con puntero a su sección.
+> **Las menciones a `PLAN.md` que quedan en el cuerpo de este archivo hablan de
+> aquel documento**, y por eso no se reescribieron: son de cuando se escribieron.
 
 Backlog de J-Telemetry. Aquí vive todo lo que se decidió **no** construir todavía,
 con la razón por la que se aplazó y qué tiene que pasar para retomarlo.
@@ -18,7 +26,7 @@ cuando alguien decidió aplazar algo concreto, y sale cuando se construye.
 **El Marco Maestro manda sobre este archivo.** Si una entrada choca con
 `docs/marco-limpio/Marco-Limpio-J-Telemetry-MAESTRO.md`, gana el Marco.
 
-**Este archivo dice qué falta; `PLAN.md` dice por dónde se empieza.**
+**Este archivo dice qué falta; el plan de desarrollo dice por dónde se empieza.**
 Una entrada de aquí no lleva prioridad escrita a propósito — el orden vive allá,
 en tramos con su compuerta. Si buscas qué construir hoy, esa es la lectura;
 esta es la que te dice por qué esa entrada existe y qué la desbloquea.
@@ -2584,7 +2592,7 @@ frente de producto entero.
 
 ## El orden recomendado
 
-> ⛔ **Se movió.** El orden vive ahora en [`docs/PLAN.md`](PLAN.md) §4, en
+> ⛔ **Se movió.** El orden vive ahora en [`docs/archivo/PLAN.md`](archivo/PLAN.md) §4, en
 > tramos con su compuerta, y es el único lugar donde vive.
 >
 > Lo que decía aquí —el corte del 1 de agosto de 2026— quedó viejo el 3 de
@@ -2601,7 +2609,7 @@ frente de producto entero.
 
 Lo aplazado del frente del transporte público concesionado. **No es transporte
 especial**: no confundir con `Vision-Modo-Pasajero-jid.md`, que es el modo pasajero
-de Tecma y las plantas. El orden de este frente vive en [`PLAN.md`](PLAN.md) §4,
+de Tecma y las plantas. El orden de este frente vive en [`docs/archivo/PLAN.md`](archivo/PLAN.md) §4,
 en el «Tramo JB».
 
 ## El mapa de las paradas reales de Juárez

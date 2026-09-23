@@ -1,6 +1,6 @@
 > # ⛔ SUPERSEDED — este documento ya no manda
 >
-> **Reemplazado el 3 de agosto de 2026 por [`docs/PLAN.md`](../PLAN.md) (el
+> **Reemplazado el 3 de agosto de 2026 por [`docs/archivo/PLAN.md`](../archivo/PLAN.md) (el
 > orden) y [`docs/DESPUES.md`](../DESPUES.md) (el backlog).** No se edita y no
 > se sigue.
 >

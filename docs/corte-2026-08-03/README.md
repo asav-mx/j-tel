@@ -14,12 +14,16 @@ viejo, se corrige en el documento vivo, no en la foto.
 
 Al momento del corte los cinco eran byte a byte idénticos a su original vivo:
 
-| Foto (aquí) | Documento vivo |
+✎ **23 de septiembre de 2026:** `PLAN-v1.md` y `Plan-Camino-a-v1.md` dejaron de
+ser documentos vivos — se archivaron, sin editar, en `docs/archivo/`. Aquí sólo
+se movió a dónde apuntan los dos enlaces de la tabla; **la foto no se tocó**.
+
+| Foto (aquí) | Documento vivo, o dónde quedó |
 |---|---|
-| `PLAN-v1.md` | [`docs/PLAN-v1.md`](../PLAN-v1.md) |
+| `PLAN-v1.md` | [`docs/archivo/PLAN-v1.md`](../archivo/PLAN-v1.md) |
 | `DESPUES.md` | [`docs/DESPUES.md`](../DESPUES.md) |
 | `Mapa-Producto-J-Telemetry.md` | [`docs/Mapa-Producto-J-Telemetry.md`](../Mapa-Producto-J-Telemetry.md) |
-| `Plan-Camino-a-v1.md` | [`docs/Plan-Camino-a-v1.md`](../Plan-Camino-a-v1.md) |
+| `Plan-Camino-a-v1.md` | [`docs/archivo/Plan-Camino-a-v1.md`](../archivo/Plan-Camino-a-v1.md) |
 | `Anexo-Estado-J-Telemetry.md` | [`docs/marco-limpio/Anexo-Estado-J-Telemetry.md`](../marco-limpio/Anexo-Estado-J-Telemetry.md) |
 
 ## Quién manda

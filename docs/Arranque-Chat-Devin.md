@@ -36,7 +36,8 @@ atajarlo es barata — leer en orden, y después **contar de vuelta**.
 >    `docs/`. Pídeme el rango si no es obvio; hoy el corte útil son del #359 al #381.
 >    **Ojo con el salto:** el #363 y el #379 no existen. `gh pr view` contesta «Could
 >    not resolve», y eso no es un PR que se perdió.
-> 3. Las secciones del **frente activo** en `docs/PLAN.md` y `docs/DESPUES.md`.
+> 3. El **plan vivo** completo — `docs/jtel-plan-de-desarrollo.md` — y las secciones
+>    del frente activo en `docs/DESPUES.md`.
 > 4. El **estado actual de main**.
 >
 > Cuando termines, dime **en tus palabras** —no citando— qué encontraste. Y te voy a
@@ -53,7 +54,7 @@ El orden importa: cada capa explica por qué la siguiente está escrita como est
 |---|---|---|
 | **1** | `docs/marco-limpio/Marco-Limpio-J-Telemetry-MAESTRO.md`, **completo** | Es la única fuente de verdad. Sin las secciones **D** (un dato correcto que miente), **E** (lo correcto se ve peor que lo falso) y **F** (dónde se prueba sin mentir), el chat va a proponer cosas que el repo lleva meses rechazando — y a bloquearse en cosas que el repo permite |
 | **2** | Las **fichas del frente activo** en `docs/` | Cada una guarda un defecto encontrado *mirando*, no compilando, y la valla que le pusieron. Es donde vive lo que ninguna prueba dice |
-| **3** | `docs/PLAN.md` — el tramo activo | El orden y lo decidido. **PLAN es lo que sí se va a hacer** |
+| **3** | `docs/jtel-plan-de-desarrollo.md` — **el plan vivo, y el único** | El orden y lo decidido. **El plan es lo que sí se va a hacer.** Desde el 23-sep-2026 `docs/PLAN.md` está archivado sin editar en `docs/archivo/`; lo que seguía abierto de él es un renglón del plan vivo, con puntero a su sección |
 | **4** | `docs/DESPUES.md` — las secciones del tramo | **DESPUES es lo que decidimos NO hacer**, con su razón y su desbloqueo. Confundir los dos hace que el chat reabra decisiones cerradas |
 | **5** | Los **PRs mergeados recientes** | Las descripciones traen el razonamiento que no cabe en el código. Leer sólo el diff es leer la mitad |
 | **6** | El **estado de main** | Ver las trampas de abajo antes de creerle a `git log` |
