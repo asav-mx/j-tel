@@ -1,3 +1,7 @@
+/* La zona de las pruebas es UTC, y vive aquí para que no se pueda perder
+   al correr vitest a mano. Ver el archivo: cuesta un rojo que parece del
+   producto. */
+import "../../scripts/zona-de-las-pruebas.mjs";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
