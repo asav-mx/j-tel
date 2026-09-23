@@ -36,6 +36,7 @@ import {
   zoomActual,
   type CapacidadesDeLaCamara,
 } from "@/lib/validador/camara";
+import { LARGO_DE_LA_HUELLA, huellaDeLlave } from "@jtel/domain";
 import { folioDelCodigoDictado } from "@/lib/validador/codigo-dictado";
 import { detalleDeUnPaseBueno, tituloDeUnPaseBueno } from "@/lib/validador/palabras";
 import { useJornadaDelLector, diaDeHoy } from "@/lib/validador/jornada-del-lector";
@@ -390,7 +391,16 @@ export function Lector() {
               <b>Este lector no está registrado en J-Tel.</b> Lee y decide igual, pero lo que
               acepte no se va a poder entregar hasta que alguien lo dé de alta con esta llave:
             </p>
+            {/*
+              La huella, grande: los últimos seis. Es lo que se compara a ojo
+              contra la pantalla de J-Staff (ASAV, 23-sep-2026). Los 64
+              caracteres siguen abajo, porque son los que se pegan; cotejar
+              esos 64 mirando dos pantallas es la tarea que nadie hace bien.
+            */}
+            <p className="val-huella-rotulo">Huella · últimos {LARGO_DE_LA_HUELLA}</p>
+            <p className="val-huella mono">{huellaDeLlave(identidad.llavePublica)}</p>
             <code className="mono">{identidad.llavePublica}</code>
+            <CompartirLlave llave={identidad.llavePublica} />
           </div>
         )}
 
@@ -594,6 +604,65 @@ function palabrasDeLaEntrega(
     minute: "2-digit",
   });
   return `Al corriente con J-Tel · última entrega ${hora}`;
+}
+
+/**
+ * **Compartir la llave** — la hoja de compartir del teléfono (ASAV, 23-sep-2026).
+ *
+ * Quien instala el lector está en un camión y quien lo da de alta está frente a
+ * una computadora. Sin esto, la llave se pasa dictándola o a fotos: 64
+ * caracteres hexadecimales dictados es la peor forma posible de mover un dato
+ * que no perdona un error.
+ *
+ * `navigator.share` no existe en todos lados —escritorio, navegadores viejos—,
+ * así que hay respaldo al portapapeles, y si tampoco, el botón **no se dibuja**
+ * en vez de fingir que hizo algo. La llave sigue a la vista para copiarla a
+ * mano: esto es un atajo, no la única puerta.
+ */
+function CompartirLlave({ llave }: { llave: string }) {
+  const [hecho, setHecho] = useState<"compartido" | "copiado" | null>(null);
+  const [sePuede, setSePuede] = useState(false);
+
+  /* Se pregunta al montar, no al dibujar: el servidor no tiene `navigator`, y
+     preguntarle en el primer dibujo daría un HTML distinto del que el
+     navegador arma después. */
+  useEffect(() => {
+    setSePuede(
+      typeof navigator !== "undefined" &&
+        (typeof navigator.share === "function" || typeof navigator.clipboard?.writeText === "function"),
+    );
+  }, []);
+
+  if (!sePuede) return null;
+
+  const compartir = async () => {
+    const texto = `Llave del lector J-Tel: ${llave}`;
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({ title: "Llave del lector", text: texto });
+        setHecho("compartido");
+        return;
+      }
+      await navigator.clipboard.writeText(llave);
+      setHecho("copiado");
+    } catch {
+      /* Cancelar la hoja de compartir lanza, y cancelar no es un error: no se
+         dice nada, porque no pasó nada. */
+    }
+  };
+
+  return (
+    <div className="val-compartir">
+      <button type="button" className="val-boton" onClick={() => void compartir()}>
+        Compartir llave
+      </button>
+      {hecho && (
+        <span className="val-compartir-hecho mono">
+          {hecho === "compartido" ? "compartida" : "copiada al portapapeles"}
+        </span>
+      )}
+    </div>
+  );
 }
 
 function Semaforo({ fase, resultado }: { fase: Fase; resultado: ResultadoDelLector | null }) {

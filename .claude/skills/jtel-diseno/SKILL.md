@@ -95,6 +95,21 @@ Ratificados el 16 de septiembre de 2026 (boceto de «las dos familias»). Un dis
 
 **Regla de extensión:** cuando haga falta un estado nuevo, se inventa una **forma** nueva, no un color nuevo. Si dos estados comparten forma y se distinguen sólo por color, está mal.
 
+### Los lectores de boletos: cajas con muesca
+
+Ratificados por ASAV el 23 de septiembre de 2026, sobre boceto. Un lector **lee**: su caja trae la ranura por donde mira. Es la **quinta familia** y no comparte forma con ninguna otra.
+
+| Estado | Glifo | Por qué esa forma | Tinta |
+|---|---|---|---|
+| En unidad | Caja con muesca, llena | Montado y hablando | `--senal` |
+| En bodega | Caja con muesca, hueca | Existe, espera camión | `--tenue` |
+| **Mudo** | Caja con muesca, **cortada** | Montado, y **4 h de servicio** sin entregar nada | `--tenue` |
+| De baja | Caja con muesca, tachada | Su historia queda; **su llave ya no vale** | `--tenue` |
+
+**Por qué no reusa el cuadro del GPS**, que es la pregunta obvia: **un camión trae los dos**, y el día que el expediente de una unidad los enseñe juntos, un cuadro lleno diría «GPS instalado» y «lector instalado» a la vez. Es exactamente la trampa que las hojas vinieron a evitar con los papeles, y ya costó una vez.
+
+**El mudo no lleva cobre.** Dejó de cambiar: el cobre es del dato que cambia mientras alguien lo mira. Y se cuenta en **horas de servicio del circuito**, no de reloj — un camión dormido en el patio no está mudo, está apagado.
+
 ### La vigencia de un papel
 
 Los papeles del expediente (Marco, Pieza 6 §H; `docs/Ficha-Expedientes.md` §4) tienen cinco estados. Aprobados por ASAV el 16 de septiembre de 2026. Son la **tercera familia de formas**: las unidades son flechas y círculos (se mueven), los dispositivos son cuadros (se instalan) y los papeles son **hojas** —rectángulo vertical con la esquina superior derecha doblada—. No usan el cuadrado: ya es del dispositivo, y en el cuarto de Expedientes las dos familias aparecen juntas; un cuadro lleno diría «vigente» y «en unidad» a la vez. Boceto: https://claude.ai/artifact/RcGFprV2kaHpSRoqqmvwnS
@@ -119,7 +134,7 @@ Los papeles del expediente (Marco, Pieza 6 §H; `docs/Ficha-Expedientes.md` §4)
 
 ### Los sellos: el veredicto de un hecho (hexágonos)
 
-Ratificados por ASAV el 18 de septiembre de 2026 con Vernier V1 (`docs/Ficha-Construccion-Vernier-V1.md` §4). Son la **cuarta familia de formas**: las unidades son flechas y círculos (se mueven), los dispositivos cuadros (se instalan), los papeles hojas (se vencen) y los veredictos **hexágonos** (se sellan). Ninguna otra familia usa el hexágono.
+Ratificados por ASAV el 18 de septiembre de 2026 con Vernier V1 (`docs/Ficha-Construccion-Vernier-V1.md` §4). Son la **cuarta familia de formas**: las unidades son flechas y círculos (se mueven), los dispositivos cuadros (se instalan), los papeles hojas (se vencen) y los veredictos **hexágonos** (se sellan). La quinta llegó después: los lectores de boletos, cajas **con muesca** (leen). Ninguna otra familia usa el hexágono.
 
 | Veredicto | Glifo | Por qué esa forma | Color |
 |---|---|---|---|

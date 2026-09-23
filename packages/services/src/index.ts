@@ -32,3 +32,5 @@ export * from "./torre-del-circuito.js";
 export * from "./lo-minimo-para-medir.js";
 export * from "./jornada-de-unidad.js";
 export * from "./resumen-de-recorridos.js";
+export * from "./acciones-lector.js";
+export * from "./cuarto-lectores.js";
