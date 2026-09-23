@@ -4,7 +4,7 @@ import { createDb } from "./index.js";
 import { createRepositories } from "./repositories/index.js";
 import { resolveSeedDatabaseUrl } from "./seed-guard.js";
 import type { ContractPolicy } from "@jtel/domain";
-import { localDateIso } from "@jtel/domain";
+import { localDateIso, addDaysIso } from "@jtel/domain";
 
 for (const p of ["../../.env", ".env"]) {
   if (existsSync(p)) {
@@ -421,14 +421,15 @@ async function seed() {
     activeDays: [1, 2, 3, 4, 5, 6],
   });
 
-  const weekAgo = new Date(today);
-  weekAgo.setDate(weekAgo.getDate() - 7);
-  const weekAhead = new Date(today);
-  weekAhead.setDate(weekAhead.getDate() + 7);
+  /* El seed es el único llamador del generador que corre en una laptop y no
+     en Vercel, así que era el único que ya veía la trampa de la zona. Con el
+     rango en fechas civiles deja de importar dónde se corra. */
+  const semanaAtrasIso = addDaysIso(todayIso, -7);
+  const semanaAdelanteIso = addDaysIso(todayIso, 7);
 
-  await repos.occurrences.generateForProfile(tecmaProfile.id, weekAgo, weekAhead);
-  await repos.occurrences.generateForProfile(campusProfile.id, weekAgo, weekAhead);
-  await repos.occurrences.generateForProfile(honeywellProfile.id, weekAgo, weekAhead);
+  await repos.occurrences.generateForProfile(tecmaProfile.id, semanaAtrasIso, semanaAdelanteIso);
+  await repos.occurrences.generateForProfile(campusProfile.id, semanaAtrasIso, semanaAdelanteIso);
+  await repos.occurrences.generateForProfile(honeywellProfile.id, semanaAtrasIso, semanaAdelanteIso);
 
   await repos.memberships.create({
     accountId: jstaff.id,

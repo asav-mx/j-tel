@@ -19,6 +19,9 @@ import {
 import { eq, inArray, sql } from "drizzle-orm";
 import {
   contractPolicySchema,
+  addDaysIso,
+  localDateIso,
+  JTTEL_TZ,
   type ContractPolicy,
   type OperationalScope,
 } from "@jtel/domain";
@@ -315,7 +318,7 @@ describe("deleteBeyondHorizon — guarda de compliance_fact", () => {
   });
 });
 
-describe("generateForProfile — alineación de calendario (TZ=UTC simula Vercel)", () => {
+describe("generateForProfile — alineación de calendario", () => {
   /**
    * Regresión del bug de zona horaria en el generador de ocurrencias.
    *
@@ -341,12 +344,15 @@ describe("generateForProfile — alineación de calendario (TZ=UTC simula Vercel
     if (profiles.length === 0) return;
     const profile = profiles[0]!; // activeDays=[1,2,3,4,5] (L-V)
 
-    // fromDate = sáb 2026-08-22T00:00:00Z, toDate = lun 2026-08-24T00:00:00Z
-    // — mismos instantes que construye renewRollingWindow con startOfDay en UTC.
-    const from = new Date("2026-08-22T00:00:00.000Z");
-    const to = new Date("2026-08-24T00:00:00.000Z");
-
-    const result = await repos.occurrences.generateForProfile(profile.id, from, to);
+    // El rango son fechas civiles: sáb-22 a lun-24 de agosto de 2026. Desde el
+    // arreglo del 23-sep-2026 no hay instante que interpretar, y por eso esta
+    // prueba ya no depende de en qué zona corra —ver el caso de abajo, que lo
+    // comprueba a propósito—.
+    const result = await repos.occurrences.generateForProfile(
+      profile.id,
+      "2026-08-22",
+      "2026-08-24",
+    );
 
     try {
       // Solo lunes-24 es día hábil en el rango → debe generarse exactamente 1.
@@ -369,6 +375,61 @@ describe("generateForProfile — alineación de calendario (TZ=UTC simula Vercel
           .where(inArray(serviceOccurrences.id, result.createdIds));
       }
     }
+  });
+
+  /**
+   * **El mismo caso, con el proceso creyendo que vive en Juárez.**
+   *
+   * Hasta el 23-sep-2026 el generador decidía su rango con `setHours`, que lee
+   * la zona de la máquina: este mismo rango arrancaba en `2026-08-21` —un
+   * viernes que nadie pidió— y generaba un día de servicio que después se
+   * verificaba y se sellaba como cualquier otro. No mordía sólo porque los
+   * llamadores viven en Vercel, que corre en UTC, y **nada en el repo lo
+   * afirmaba**.
+   *
+   * Por eso esta prueba mueve la zona a propósito: la suite entera corre en
+   * UTC (#530) y sin esto no existiría ninguna corrida que destape la trampa.
+   * Node invalida su caché de zona al escribir `process.env.TZ`, así que las
+   * fechas que se creen dentro del `try` la ven. Se restaura en el `finally`,
+   * y la última comprobación es justamente que se restauró.
+   */
+  it("con el proceso fuera de UTC da el mismo día: el rango ya no depende de la máquina", async () => {
+    const db = createDb(DATABASE_URL);
+    const repos = createRepositories(db);
+
+    const tecma = await repos.accounts.findBySlug("tecma");
+    if (!tecma) return;
+    const profiles = await repos.profiles.findForClient(tecma.id);
+    if (profiles.length === 0) return;
+    const profile = profiles[0]!;
+
+    const zonaDeLaSuite = process.env.TZ;
+    let result: Awaited<ReturnType<typeof repos.occurrences.generateForProfile>> | undefined;
+    try {
+      process.env.TZ = "America/Ciudad_Juarez";
+      expect(new Date("2026-08-22T00:00:00.000Z").getTimezoneOffset()).not.toBe(0);
+
+      result = await repos.occurrences.generateForProfile(profile.id, "2026-08-22", "2026-08-24");
+
+      expect(result.createdIds.length).toBe(1);
+      const [row] = await db
+        .select({ serviceDate: serviceOccurrences.serviceDate })
+        .from(serviceOccurrences)
+        .where(eq(serviceOccurrences.id, result.createdIds[0]!));
+      /* Con el código viejo salía "2026-08-21": el viernes de la trampa. */
+      expect(row?.serviceDate).toBe("2026-08-24");
+    } finally {
+      process.env.TZ = zonaDeLaSuite;
+      if (result && result.createdIds.length > 0) {
+        await db
+          .delete(serviceOccurrences)
+          .where(inArray(serviceOccurrences.id, result.createdIds));
+      }
+    }
+
+    /* La suite sigue en UTC para todo lo que venga después. */
+    expect(process.env.TZ).toBe("UTC");
+    expect(new Date().getTimezoneOffset()).toBe(0);
   });
 });
 
@@ -1558,12 +1619,10 @@ describe("C21 · la revisión de horas límite", () => {
     const [perfil] = await db.select().from(serviceProfiles).where(eq(serviceProfiles.active, true));
     expect(perfil).toBeTruthy();
 
-    const desde = new Date();
-    desde.setUTCDate(desde.getUTCDate() + 20);
-    const hasta = new Date(desde);
-    hasta.setUTCDate(hasta.getUTCDate() + 5);
+    const desdeIso = addDaysIso(localDateIso(new Date(), JTTEL_TZ), 20);
+    const hastaIso = addDaysIso(desdeIso, 5);
 
-    const generado = await repos.occurrences.generateForProfile(perfil!.id, desde, hasta);
+    const generado = await repos.occurrences.generateForProfile(perfil!.id, desdeIso, hastaIso);
     creadas.push(...generado.createdIds);
     // El generador de verdad tiene que haber producido algo, o todo lo de
     // abajo mide sobre vacío.

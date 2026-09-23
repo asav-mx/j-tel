@@ -161,6 +161,38 @@ la trampa, y toca el generador del motor.
 
 ---
 
+## Qué pasó después (añadido el 23-sep-2026, al cerrar las dos)
+
+**Las dos decisiones se tomaron y las dos están hechas.**
+
+**(a) La valla** entró en el #530: la zona vive en `scripts/zona-de-las-pruebas.mjs`,
+que importa cada `vitest*.config.ts`. Ya no existe una forma de correr la suite sin
+ella.
+
+**(b) El código** es este arreglo. El rango del generador viaja en **fechas civiles
+`YYYY-MM-DD`** de punta a punta: `generateForProfile` recibe dos strings, la vigencia
+del contrato se compara como string, el horizonte rodante sale de `addDaysIso`, y el
+único `Date` que se arma para consultar la base sale de `dayForDateQuery` —mediodía
+UTC, el mismo día civil en cualquier zona entre UTC-12 y UTC+12—. `startOfDay` y
+`addDays` **dejaron de existir**.
+
+**La alarma** que pidió Asav vive en `packages/domain/src/zona-del-proceso.ts` y la
+dispara `renewRollingWindow`, que es la operación del motor que corre todos los días.
+Avisa una vez por proceso y **no tumba nada**: con las fechas civiles el motor sigue
+calculando bien, y lo que la alarma dice es que una suposición que sostuvo mucho
+código dejó de valer.
+
+**La prueba que lo sostiene** está en `packages/db/src/integration.test.ts`: corre el
+mismo caso de la Parte 1 con `process.env.TZ` movido a `America/Ciudad_Juarez` desde
+dentro de la prueba, porque la suite entera corre en UTC y sin eso no habría ninguna
+corrida que destape la trampa. Comprobada al revés: reponiendo el camino viejo
+(`setHours` + `toISOString`), genera **2** ocurrencias en vez de 1 —la de más es el
+`2026-08-21`, el viernes que nadie pidió— y la prueba se pone roja. El caso que ya
+existía, que corre en UTC, sigue verde con el código roto: por eso hacía falta el
+nuevo.
+
+---
+
 ## Lo que se midió, para que se pueda repetir
 
 - Las dos corridas de la Parte 1, con y sin `TZ=UTC`, sobre la misma rama de prueba.
