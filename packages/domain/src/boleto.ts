@@ -37,11 +37,18 @@ import type { LlaveDeFirma } from "./boleto-llave.js";
  * pasajero están sincronizados cuando no hay red.
  *
  * Esa tolerancia **es** el tiempo que una captura sigue sirviendo:
- * `(2 × 4 + 1) × 30 s = 4 min 30 s`. Asav eligió **±2 min** sobre tres opciones
+ * `(2 × 24 + 1) × 5 s = 4 min 5 s`. Asav eligió **±2 min** sobre tres opciones
  * (±30 s, ±2 min, ±5 min) sabiendo el costo de cada lado: menos tolerancia
  * cierra la puerta a la captura pero rechaza boletos buenos de teléfonos con el
  * reloj corrido —gente honesta—, y más tolerancia alcanza para mandar la
  * captura a otra ruta.
+ *
+ * **El periodo de rotación son 5 s** (Asav, 23-sep-2026, al abrir el prototipo
+ * del pase). El P1 nació con 30 s porque la ficha sólo decía «cada pocos
+ * segundos»; el prototipo rota cada 5 s, su anillo de cuenta regresiva dura 5 s
+ * y su texto en pantalla dice «cada 5 s». La tolerancia —lo que Asav decidió—
+ * **no se movió**: son ±2 min en las dos versiones. Lo que se alineó fue el
+ * periodo, para que el código, el anillo y el texto digan el mismo número.
  *
  * Lo que abarató ser generoso: el validador **recuerda lo que quemó**, así que
  * una captura reusada en el mismo camión falla siempre, sin importar la
@@ -64,13 +71,13 @@ import type { LlaveDeFirma } from "./boleto-llave.js";
 // El reloj
 
 /** Cada cuánto rota el código del QR. */
-export const VENTANA_MS = 30_000;
+export const VENTANA_MS = 5_000;
 
 /**
- * Cuántas ventanas hacia cada lado acepta el validador: 4 × 30 s = **±2 min**
- * de deriva de reloj (Asav, 23-sep-2026). Ver la cabecera del módulo.
+ * Cuántas ventanas hacia cada lado acepta el validador: 24 × 5 s = **±2 min**
+ * exactos de deriva de reloj (Asav, 23-sep-2026). Ver la cabecera del módulo.
  */
-export const TOLERANCIA_VENTANAS = 4;
+export const TOLERANCIA_VENTANAS = 24;
 
 /**
  * Cuánto tiempo sigue sirviendo una captura de pantalla, en milisegundos.
