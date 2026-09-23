@@ -36,12 +36,15 @@ import { BandaRd } from "@/components/ontoy/banda-rd";
  * afirma lo que no comprobó.
  */
 export function VistaPase({
+  volverAlInicio,
   pase,
   disponible,
   alComprar,
   alMostrar,
   alAlternarCuenta,
 }: {
+  /** Sube de uno cada vez que se toca «Pase» en la barra. Ver `ontoy.tsx`. */
+  volverAlInicio: number;
   pase: Pase;
   disponible: boolean;
   alComprar: (viajes: number) => void;
@@ -51,6 +54,13 @@ export function VistaPase({
   const [pantalla, setPantalla] = useState<"pase" | "qr" | "comprar">("pase");
   const [boleto, setBoleto] = useState<BoletoDelTelefono | null>(null);
   const [papelAbierto, setPapelAbierto] = useState(false);
+
+  /* La barra es la salida de cualquier pantalla (8.10), también de ésta. */
+  useEffect(() => {
+    if (volverAlInicio === 0) return;
+    setPantalla("pase");
+    setBoleto(null);
+  }, [volverAlInicio]);
 
   const disponibles = viajesDisponibles(pase);
   const porConfirmar = viajesPorConfirmar(pase);
@@ -255,14 +265,21 @@ function PantallaQr({ boleto, alVolver }: { boleto: BoletoDelTelefono; alVolver:
           <i style={{ width: `${(restante / VENTANA_MS) * 100}%` }} />
         </div>
 
-        <p className="ontoy-qr-folio mono">FOLIO {folio}</p>
         <p className="ontoy-qr-nota">
-          El código cambia solo <b>cada 5 s</b> y sirve una vez. Funciona <b>sin señal</b>: el lector
-          lo revisa en el camión.
+          Cambia <b>cada 5 s</b>, sirve una vez y funciona <b>sin señal</b>.
         </p>
+
+        {/*
+          Se enseña UNA sola forma del boleto, y es la que se dicta.
+          Antes había dos: «FOLIO ONT-27554731» arriba y «2755 4731» abajo — el
+          mismo dato dos veces, y quien tenía que dictar intentaba las letras,
+          que el teclado del lector no tiene. El folio no se perdió: sigue en
+          Movimientos, que es donde alguien lo busca.
+        */}
         <p className="ontoy-qr-dictar">
-          Si la cámara no puede, dicta: <b className="mono">{codigoParaDictar(folio)}</b>
+          Si la cámara no puede, dicta estos <b>8 números</b>:
         </p>
+        <p className="ontoy-qr-numeros mono">{codigoParaDictar(folio)}</p>
 
         <button type="button" className="ontoy-boton ontoy-boton-segundo" onClick={alVolver}>
           ‹ Volver al pase

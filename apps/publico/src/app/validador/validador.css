@@ -112,9 +112,20 @@
   color: var(--val-tenue);
 }
 
+/*
+ * **Cuadrada, y ése es el punto.** El cuadro que se ve tiene que ser el que se
+ * analiza: el lector recorta el cuadrado centrado del fotograma
+ * (`encuadre.ts`), y `object-fit: cover` sobre una caja cuadrada enseña
+ * exactamente ese mismo cuadrado. Antes era `width:100%; height:190px` — una
+ * franja ancha y bajita que en la computadora obligaba a alejar tanto el
+ * teléfono que ya no se leía, y que además no correspondía con lo que se leía.
+ */
 .val-camara {
   position: relative;
-  min-height: 190px;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  aspect-ratio: 1 / 1;
   border-radius: 14px;
   border: 1px solid var(--val-linea);
   background: #171b20;
@@ -124,7 +135,7 @@
 }
 .val-video {
   width: 100%;
-  height: 190px;
+  height: 100%;
   object-fit: cover;
   display: block;
 }
@@ -132,19 +143,25 @@
 .val-lienzo {
   display: none;
 }
+/* La mira cubre TODO el cuadro, porque todo el cuadro es lo que se analiza. */
 .val-mira {
   position: absolute;
-  width: 128px;
-  height: 128px;
+  inset: 10px;
   border: 2px dashed #4a525b;
-  border-radius: 14px;
+  border-radius: 12px;
   display: grid;
-  place-items: center;
-  padding: 8px;
+  place-items: end center;
+  padding: 10px;
   text-align: center;
   font-size: 11px;
   line-height: 1.45;
   color: var(--val-tenue);
+  pointer-events: none;
+}
+.val-mira span {
+  background: rgba(20, 23, 27, 0.72);
+  border-radius: 6px;
+  padding: 3px 8px;
 }
 .val-encender {
   position: absolute;
@@ -227,6 +244,15 @@
   background: var(--val-panel);
   padding: 12px;
 }
+.val-teclado-rotulo {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--val-tenue);
+}
+.val-teclado-rotulo b {
+  color: var(--val-tinta);
+}
 .val-teclado-pantalla {
   margin: 0 0 9px;
   padding: 12px;
@@ -286,4 +312,18 @@
   font-size: 11.5px;
   line-height: 1.55;
   color: var(--val-tenue);
+}
+
+/*
+ * La línea de diagnóstico. Apagada y chica: no es para el chofer, es para quien
+ * prueba el aparato — dice con qué resolución está midiendo, para que un fallo
+ * en la calle vuelva con un dato en vez de con «no engancha».
+ */
+.val-diagnostico {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: var(--val-tenue);
+  opacity: 0.85;
 }
