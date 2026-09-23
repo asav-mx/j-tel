@@ -60,6 +60,24 @@ export const DOMINIOS_VIEJOS = ["juarezbus.digital", "www.juarezbus.digital"];
 /** Dónde vive Ontoy. De variable para poder probar el traslado sin desplegar. */
 export const SITIO = process.env.NEXT_PUBLIC_SITIO ?? "https://ontoy.app";
 
+/**
+ * **La primera semana la redirección es TEMPORAL.** Decisión de ASAV,
+ * 23-sep-2026.
+ *
+ * Un 307 se puede deshacer; **un 308 no**. El navegador que ve un permanente
+ * deja de preguntar al dominio viejo —ése es justamente su valor— y si la
+ * mudanza sale mal, revertir el despliegue no despega a nadie: el teléfono ya
+ * no vuelve a pedirle a `juarezbus.digital`, y el único arreglo es esperar a
+ * que caduque su caché o pedirle a cada persona que la borre. En un producto
+ * que se usa en la parada del camión, eso no es una opción.
+ *
+ * Así que la mudanza entra en temporal, se comprueba con teléfonos reales, y
+ * **cuando esté probada un 308 se pone en un PR de una línea**: este valor a
+ * `true`. El procedimiento (`docs/Procedimiento-Dominio-Ontoy-App.md`) dice
+ * cuándo.
+ */
+export const REDIRECCION_PERMANENTE = false;
+
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../.."),
   transpilePackages: ["@jtel/db", "@jtel/domain"],
@@ -79,9 +97,8 @@ const nextConfig: NextConfig = {
    * firewall, que durante cuatro semanas estuvo escrito en un documento y no
    * existía en ninguna parte. Aquí se lee en el diff y lo cuida una prueba.
    *
-   * `permanent` es 308: el navegador lo recuerda y deja de pedirle al dominio
-   * viejo. Es lo correcto para una mudanza —no volvemos— y es también lo que
-   * hace que un letrero impreso viejo siga sirviendo años.
+   * Arranca **temporal (307)** a propósito, hasta que la mudanza esté probada
+   * en teléfonos reales; ver `REDIRECCION_PERMANENTE` arriba.
    *
    * **La ruta se conserva**: un QR pegado en un poste que apunte a
    * `juarezbus.digital/c/zaragoza-centro` tiene que abrir esa misma ruta en
@@ -92,7 +109,7 @@ const nextConfig: NextConfig = {
       source: "/:ruta*",
       has: [{ type: "host" as const, value: host }],
       destination: `${SITIO}/:ruta*`,
-      permanent: true,
+      permanent: REDIRECCION_PERMANENTE,
     }));
   },
 };

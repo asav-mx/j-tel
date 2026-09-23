@@ -25,7 +25,7 @@ está cubierto y qué no:
 
 - **La redirección del dominio viejo** vive en `apps/publico/next.config.ts`,
   conserva la ruta (`/c/zaragoza-centro` llega a `/c/zaragoza-centro`, no a la
-  portada) y es permanente (308). La cuida
+  portada) y arranca **temporal (307)**, a propósito — ver el paso 6. La cuida
   `apps/publico/src/lib/mudanza-de-dominio.test.ts`.
 - **El dominio canónico** de lo que Next arma en absoluto sale de
   `NEXT_PUBLIC_SITIO`, con `https://ontoy.app` por omisión.
@@ -111,9 +111,9 @@ efecto: se hornean en la compilación.
 # El dominio nuevo contesta, y sin sesión.
 curl -s -o /dev/null -w "%{http_code}\n" https://ontoy.app/
 
-# El viejo redirige, permanente, y CONSERVA la ruta.
+# El viejo redirige y CONSERVA la ruta.
 curl -s -o /dev/null -w "%{http_code} → %{redirect_url}\n" https://juarezbus.digital/c/zaragoza-centro
-# esperado: 308 → https://ontoy.app/c/zaragoza-centro
+# esperado: 307 → https://ontoy.app/c/zaragoza-centro   (308 después del paso 6)
 ```
 
 Y a ojo, en un teléfono: abrir `ontoy.app`, ver una ruta con camiones, y
@@ -125,6 +125,37 @@ La regla de límite de tasa es **del proyecto**, no del dominio, así que **sigu
 valiendo tal cual** y no hay que volver a ponerla: `j-tel-publico` ya la tiene
 para `/api/circuitos/` (y le falta la de `/api/boletos/`, que espera al P3.5).
 Ver `Procedimiento-Firewall-Publico.md`.
+
+## 6 · Una semana en temporal, y sólo entonces el permanente
+
+**Decisión de ASAV, 23-sep-2026.** La redirección entra **temporal (307)** y se
+queda así **la primera semana**. Recién cuando la mudanza esté probada se sube a
+**permanente (308)**, en un PR de una línea: `REDIRECCION_PERMANENTE = true` en
+`apps/publico/next.config.ts`.
+
+**Por qué en ese orden, y no al revés.** Los dos códigos mandan al usuario al
+mismo lugar; la diferencia es **qué recuerda el teléfono**. El 308 le dice al
+navegador *deja de preguntarle al dominio viejo*, y eso es justamente su valor:
+el letrero impreso sigue sirviendo sin un salto extra. Pero también es su
+riesgo, porque **un 308 equivocado no se revierte**: revertir el despliegue no
+despega a nadie —el teléfono ya no vuelve a pedirle a `juarezbus.digital`—, y
+el único arreglo es esperar a que caduque su caché o pedirle a cada persona que
+la borre. En un producto que se usa parado en la banqueta esperando el camión,
+eso no es una opción. El 307 no se guarda: si algo sale mal, se revierte el
+despliegue y todo el mundo vuelve al dominio viejo en la siguiente carga.
+
+**Qué hay que ver antes de subirlo a 308** —esto es la prueba, no el
+calendario—:
+
+- `ontoy.app` abre en **un teléfono de verdad** (no sólo en `curl`), muestra una
+  ruta con camiones y su mapa.
+- `juarezbus.digital/c/‹alguna-ruta›` cae en la misma ruta en `ontoy.app`.
+- **El lector del camión** (`/validador`) abre en `ontoy.app`, acepta un boleto
+  y entrega sus pasos.
+- El certificado del dominio nuevo está emitido (Vercel lo muestra en verde) y
+  **no hay avisos de dominio inválido**.
+
+Mientras tanto, el 307 cuesta un salto por visita y nada más.
 
 ---
 
@@ -149,7 +180,7 @@ Lo que sí se puede hacer, en este orden:
 
 **Y una pestaña que ya estuviera abierta con el dominio viejo va a fallar al
 hablar con el servidor, hasta que se recargue.** Sus peticiones salen al host
-viejo, el 308 las manda a `ontoy.app`, y el navegador **no sigue una redirección
+viejo, la redirección las manda a `ontoy.app`, y el navegador **no sigue una redirección
 a otro origen en una petición del programa** sin permiso explícito de CORS. Se
 ve como «la app dejó de responder» y se arregla recargando.
 
