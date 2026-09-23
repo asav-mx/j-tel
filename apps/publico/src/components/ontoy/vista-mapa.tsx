@@ -7,17 +7,29 @@ import { fondoDelMapa } from "@/lib/ontoy/mapa-base";
 import { haloParaLaTraza } from "@/lib/ontoy/contraste-de-ruta";
 import { pistaDelMapa } from "@/lib/ontoy/pista-del-mapa";
 import { useTinteDelMapa } from "@/lib/tinte-del-mapa";
-import { trazoDeLaRuta } from "@/lib/ontoy/trazo-de-la-ruta";
 import type { Forma, RutaDeLaCiudad, Sentido, Vivo } from "@/lib/ontoy/forma";
+import type { ParadaDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
+import type { RutaOrdenada } from "@/lib/ontoy/rutas-cerca";
+import { TiraDeRutas } from "@/components/ontoy/tira-de-rutas";
 
 /**
- * **El Mapa de la ciudad** — tus rutas favoritas en vivo (8.8; Ontoy 2.0, PR 3b).
+ * **El Mapa de la ciudad** — el pasajero decide qué rutas ve (8.8; ASAV, 22-sep).
  *
- * Todas las rutas dibujadas (las líneas vienen con la portada: no cuestan una
- * petición); las favoritas —las rutas de tus paradas guardadas— resaltadas y
- * con sus camiones, que llegan todos juntos por una sola consulta
- * (`useEnVivo`); tus paradas guardadas marcadas. Tocar una ruta, un camión o
- * una parada guardada abre sus paradas.
+ * Abajo, **una tira de chips**: uno por ruta cercana, todas prendidas al abrir.
+ * Tocar un chip prende o apaga esa ruta en el mapa, y «+N rutas más» abre el
+ * panel de las lejanas. Arriba, el interruptor de **Paradas** —los puntitos de
+ * las rutas prendidas— y, si el pasajero dio ubicación, la diana que centra el
+ * mapa donde está.
+ *
+ * **Nada de esto pide nada al servidor.** Las líneas vienen con la portada y
+ * las paradas con la lista pública de la ciudad; prender y apagar es mostrar y
+ * ocultar lo que ya está en el teléfono. Tampoco se guarda: al volver a abrir
+ * el Mapa, todas las de la tira están prendidas otra vez (8.7).
+ *
+ * Los camiones en vivo siguen siendo los de **tus favoritas y la ruta abierta**
+ * —los que trae la consulta única—, no los de cualquier ruta que prendas: pedir
+ * los de todas costaría una consulta por ruta cada quince segundos. Lo vivo
+ * aparece al abrir la ruta, que es cuando importa.
  *
  * > ✎ **Aquí ya no está la ficha «Todas las rutas»** (ASAV, 22-sep). A la lista
  * > completa se llegaba por dos caminos —esta ficha y el lugar «Ir a»—, y dos
@@ -25,11 +37,20 @@ import type { Forma, RutaDeLaCiudad, Sentido, Vivo } from "@/lib/ontoy/forma";
  * > misma. Queda uno: el de **Ir a**. El Mapa vuelve a ser sólo el mapa.
  */
 export interface ModoCiudad {
-  favoritas: string[];
+  /** Las de los chips, en orden; se dibujan las que estén prendidas. */
+  tira: RutaOrdenada[];
   prendidas: Set<string>;
+  /** Cuántas quedan fuera de la tira, para el chip de «+N rutas más». */
+  cuantasMas: number;
   vivos: Map<string, Vivo>;
   guardadas: Array<{ id: string; ruta: string; nombre: string; lat: number; lon: number }>;
+  /** Las paradas públicas de la ciudad; los puntitos salen de aquí. */
+  paradas: ParadaDeLaCiudad[];
+  /** El interruptor de los puntitos de parada. */
+  verParadas: boolean;
   alAlternar: (ruta: string) => void;
+  alAlternarParadas: () => void;
+  alAbrirPanel: () => void;
   alAbrirRuta: (ruta: string, parada?: string) => void;
 }
 
@@ -115,6 +136,9 @@ export function VistaMapa({
   const capaParadas = useRef<import("leaflet").LayerGroup | null>(null);
   const capaUnidades = useRef<import("leaflet").LayerGroup | null>(null);
   const capaYo = useRef<import("leaflet").LayerGroup | null>(null);
+  const capaParadasCiudad = useRef<import("leaflet").LayerGroup | null>(null);
+  /** El encuadre se hace una vez por apertura del Mapa, no en cada filtro. */
+  const yaEncuadro = useRef(false);
   const [listo, setListo] = useState(false);
 
   const rutaEnfocada = rutas.find((r) => r.circuito_id === enfocada) ?? null;
@@ -148,6 +172,7 @@ export function VistaMapa({
         .addTo(m);
       capaRutas.current = leaflet.layerGroup().addTo(m);
       capaParadas.current = leaflet.layerGroup().addTo(m);
+      capaParadasCiudad.current = leaflet.layerGroup().addTo(m);
       capaUnidades.current = leaflet.layerGroup().addTo(m);
       // Hasta arriba: «tú» no queda debajo de un camión ni de una parada.
       capaYo.current = leaflet.layerGroup().addTo(m);
@@ -295,47 +320,79 @@ export function VistaMapa({
   // ── El Mapa de la ciudad (PR 3b) ───────────────────────────────────────
   const prendidasClave = ciudad ? [...ciudad.prendidas].sort().join(",") : "";
 
-  // Las líneas de todas; las favoritas prendidas, resaltadas y tocables.
+  /**
+   * Las rutas prendidas, y **sólo** ésas.
+   *
+   * Antes se dibujaban todas —las favoritas fuertes y el resto al 25% como
+   * contexto—, y ese apagado escondía el mapa entero de quien no tenía
+   * favoritas. Con la tira de chips el pasajero decide qué ve, así que ya no
+   * hay dos clases de línea: **prendida se dibuja, apagada no se dibuja.** Un
+   * estado que se ve en el chip no necesita además un tono a medias que lo
+   * insinúe en el mapa.
+   */
   useEffect(() => {
     const leaflet = L.current;
     const m = mapa.current;
     if (!listo || !leaflet || !m || !capaRutas.current || !ciudad) return;
     capaRutas.current.clearLayers();
     const puntos: Array<[number, number]> = [];
-    const todos: Array<[number, number]> = [];
-    /* Con qué fuerza va cada una, y por qué: `lib/ontoy/trazo-de-la-ruta.ts`. */
-    const hayPrendidas = ciudad.prendidas.size > 0;
-    // Primero las de contexto y encima las prendidas: una línea tenue no tapa a una viva.
-    const orden = [...rutas].sort((a, b) => Number(ciudad.prendidas.has(a.circuito_id)) - Number(ciudad.prendidas.has(b.circuito_id)));
-    for (const r of orden) {
-      const viva = ciudad.prendidas.has(r.circuito_id);
-      const trazo = trazoDeLaRuta(viva, hayPrendidas);
+    for (const r of rutas) {
+      if (!ciudad.prendidas.has(r.circuito_id)) continue;
       const halo = haloParaLaTraza(r.color_hex, lienzo);
       for (const t of r.trazados) {
         if (t.sentido !== "ida") continue; // ida y vuelta suelen compartir calle; la ruta abierta enseña las dos
         const latlngs = t.coordenadas.map(([lon, lat]) => [lat, lon] as [number, number]);
-        todos.push(...latlngs);
-        if (trazo.conHalo && halo > 0) {
-          leaflet.polyline(latlngs, { color: lienzo, weight: 5 + halo, opacity: 0.9, interactive: false }).addTo(capaRutas.current);
+        if (halo > 0) {
+          leaflet.polyline(latlngs, { color: lienzo, weight: 7, opacity: 0.9, interactive: false }).addTo(capaRutas.current);
         }
-        const linea = leaflet.polyline(latlngs, {
-          color: r.color_hex,
-          weight: trazo.grosor,
-          opacity: trazo.opacidad,
-          interactive: trazo.tocable,
-        });
-        if (trazo.tocable) {
-          linea.bindTooltip(r.nombre, { sticky: true, opacity: 0.95 }).on("click", () => ciudad.alAbrirRuta(r.circuito_id));
-          puntos.push(...latlngs);
-        }
-        linea.addTo(capaRutas.current);
+        leaflet
+          .polyline(latlngs, { color: r.color_hex, weight: 5, opacity: 0.95 })
+          .bindTooltip(r.nombre, { sticky: true, opacity: 0.95 })
+          .on("click", () => ciudad.alAbrirRuta(r.circuito_id))
+          .addTo(capaRutas.current);
+        puntos.push(...latlngs);
       }
     }
-    const encuadre = puntos.length > 1 ? puntos : todos;
-    if (encuadre.length > 1) m.fitBounds(leaflet.latLngBounds(encuadre).pad(0.12));
-    // Sin `ciudad` en la lista a propósito: cambia cada 15 s con los camiones, y re-encuadrar el mapa
-    // cada sondeo le movería la vista a quien la está mirando. Encuadra cuando cambian las prendidas.
+    /*
+     * Encuadra UNA vez, al abrir el Mapa. Re-encuadrar en cada chip le movería
+     * la vista al pasajero justo mientras filtra, que es cuando más está
+     * mirando — la misma razón por la que «tú» no mueve el mapa.
+     */
+    if (!yaEncuadro.current && puntos.length > 1) {
+      m.fitBounds(leaflet.latLngBounds(puntos).pad(0.12));
+      yaEncuadro.current = true;
+    }
+    // Sin `ciudad` en la lista a propósito: cambia cada 15 s con los camiones.
   }, [listo, rutas, lienzo, prendidasClave, !!ciudad]);
+
+  /**
+   * Los puntitos de parada de las rutas prendidas, tras su interruptor.
+   *
+   * Salen de la lista pública que la app ya bajó (`paradas-de-la-ciudad`): **no
+   * cuestan una petición** y no llevan nada del pasajero. Sin el interruptor,
+   * el mapa con varias rutas se llena de puntos y deja de leerse.
+   */
+  useEffect(() => {
+    const leaflet = L.current;
+    if (!listo || !leaflet || !capaParadasCiudad.current || !ciudad) return;
+    capaParadasCiudad.current.clearLayers();
+    if (!ciudad.verParadas) return;
+    const color = new Map(rutas.map((r) => [r.circuito_id, r.color_hex]));
+    for (const p of ciudad.paradas) {
+      if (!ciudad.prendidas.has(p.ruta)) continue;
+      leaflet
+        .circleMarker([p.lat, p.lon], {
+          radius: 4.5,
+          color: lienzo,
+          weight: 2,
+          fillColor: color.get(p.ruta) ?? lienzo,
+          fillOpacity: 1,
+        })
+        .bindTooltip(p.nombre, { direction: "top", opacity: 0.95 })
+        .on("click", () => ciudad.alAbrirRuta(p.ruta, p.id))
+        .addTo(capaParadasCiudad.current);
+    }
+  }, [listo, rutas, lienzo, prendidasClave, ciudad?.verParadas, ciudad?.paradas, !!ciudad]);
 
   // Tus paradas guardadas, con su estrella en el nombre.
   useEffect(() => {
@@ -352,7 +409,7 @@ export function VistaMapa({
     }
   }, [listo, ciudad, rutas, lienzo]);
 
-  // Los camiones de las favoritas prendidas, los dos sentidos, con su edad.
+  // Los camiones de tus favoritas, los dos sentidos, con su edad.
   useEffect(() => {
     const leaflet = L.current;
     if (!listo || !leaflet || !capaUnidades.current || !ciudad) return;
@@ -419,31 +476,44 @@ export function VistaMapa({
       )}
 
       {ciudad && (
-        <div className="ontoy-fichas">
-          {ciudad.favoritas.length === 0 && (
-            <p className="ontoy-pista">Guarda una parada y aquí verás su ruta en vivo.</p>
-          )}
-          <div className="ontoy-fichas-fila">
-            {ciudad.favoritas.map((id) => {
-              const r = rutas.find((x) => x.circuito_id === id);
-              if (!r) return null;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  className="ontoy-ficha"
-                  style={{ ["--ruta" as string]: r.color_hex }}
-                  aria-pressed={ciudad.prendidas.has(id)}
-                  aria-label={`${r.nombre}: ${ciudad.prendidas.has(id) ? "en vivo en el mapa; tocar para ocultar" : "oculta; tocar para verla en vivo"}`}
-                  onClick={() => ciudad.alAlternar(id)}
-                >
-                  <span className="ontoy-ficha-punto" aria-hidden="true" />
-                  {r.nombre} ★
-                </button>
-              );
-            })}
+        <>
+          <div className="ontoy-ctrl-mapa">
+            <button
+              type="button"
+              className={`ontoy-ctrl${ciudad.verParadas ? " prendido" : ""}`}
+              aria-pressed={ciudad.verParadas}
+              onClick={ciudad.alAlternarParadas}
+            >
+              {/* El estado no lo carga solo el color: va el punto lleno/hueco y el aria-pressed. */}
+              <span className="ontoy-ctrl-punto" aria-hidden="true" />
+              Paradas
+            </button>
+            {yo && (
+              <button
+                type="button"
+                className="ontoy-ctrl ontoy-ctrl-diana"
+                aria-label="Centrar el mapa donde estás"
+                onClick={() => {
+                  const m = mapa.current;
+                  if (m) m.setView([yo.lat, yo.lon], Math.max(m.getZoom(), 15));
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3.2" />
+                  <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" />
+                </svg>
+              </button>
+            )}
           </div>
-        </div>
+
+          <TiraDeRutas
+            tira={ciudad.tira}
+            prendidas={ciudad.prendidas}
+            cuantasMas={ciudad.cuantasMas}
+            alAlternar={ciudad.alAlternar}
+            alAbrirPanel={ciudad.alAbrirPanel}
+          />
+        </>
       )}
 
       {!rutaAbierta && !ciudad && (

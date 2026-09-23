@@ -29,7 +29,10 @@ import { Barra, type Lugar } from "@/components/ontoy/barra";
 import { CabezaDeRuta } from "@/components/ontoy/cabeza-de-ruta";
 import { VistaParadas } from "@/components/ontoy/vista-paradas";
 import { armarParadas, haciaDonde } from "@/lib/ontoy/paradas-de-la-ruta";
-import { rutasEnVivo, rutasFavoritas } from "@/lib/ontoy/favoritas";
+import { rutasFavoritas } from "@/lib/ontoy/favoritas";
+import { ordenarRutas } from "@/lib/ontoy/rutas-cerca";
+import { armarLaTira } from "@/lib/ontoy/tira-de-rutas";
+import { PanelDeRutas } from "@/components/ontoy/panel-de-rutas";
 import { useEnVivo } from "@/lib/ontoy/en-vivo";
 import { rutasDeLaConsulta } from "@/lib/ontoy/consulta-de-la-raiz";
 import { avisosDeTusRutas, hayAvisosNuevos } from "@/lib/ontoy/avisos";
@@ -109,15 +112,21 @@ export function Ontoy({
   useContarApertura(enElMapa && rutaAbierta ? enfocada : null);
 
   /*
-   * Tus favoritas, en vivo y en UNA consulta cada 15 s (PR 3b, decisión de ASAV):
-   * sólo las prendidas, y ninguna petición si no hay.
+   * El filtro del Mapa (ASAV, 22-sep): qué rutas se dibujan. `apagadas` son las
+   * que el pasajero apagó tocando su chip; `agregadas`, las lejanas que escogió
+   * en el panel. **Ninguna de las dos se guarda**: al volver a abrir el Mapa,
+   * todas las de la tira están prendidas otra vez (8.7).
    */
   const [apagadas, setApagadas] = useState<Set<string>>(new Set());
+  const [agregadas, setAgregadas] = useState<Set<string>>(new Set());
+  const [verParadas, setVerParadas] = useState(true);
+  const [panelAbierto, setPanelAbierto] = useState(false);
+
+  /* Las favoritas siguen decidiendo de qué rutas se piden camiones (PR 3b). */
   const favoritas = useMemo(
     () => rutasFavoritas(guardadas.guardadas, rutas.map((r) => r.circuito_id)),
     [guardadas.guardadas, rutas],
   );
-  const prendidas = useMemo(() => rutasEnVivo(favoritas, apagadas), [favoritas, apagadas]);
 
   /*
    * **La consulta única de la raíz** (PR 4b, decisión de ASAV): tus favoritas y
@@ -148,13 +157,15 @@ export function Ontoy({
     if (campanaAbierta) marcarVistos(avisos.map((a) => a.id));
   }, [campanaAbierta, avisos, marcarVistos]);
   /*
-   * La lista pública de paradas: la piden el Mapa de la ciudad (para marcar tus
-   * guardadas) y **Ir a** (para emparejar lo que escribes). Una sola bajada,
-   * cacheada por el hook: entrar y salir de Ir a no vuelve a pedirla.
+   * La lista pública de paradas. Una sola bajada, cacheada por el hook.
+   *
+   * ✎ **22-sep-2026 (ASAV): también al abrir el Mapa**, y no sólo si hay
+   * paradas guardadas. La piden los puntitos de parada del filtro, y un
+   * interruptor que aparece o desaparece según si diste ubicación es peor que
+   * una petición más. Es un `GET` **sin parámetros, igual para todos y con
+   * caché largo**: no lleva nada del pasajero y no lo identifica (8.7).
    */
-  const listaDeLaCiudad = useParadasDeLaCiudad(
-    (enLaCiudad && guardadas.guardadas.length > 0) || lugar === "ira",
-  );
+  const listaDeLaCiudad = useParadasDeLaCiudad(lugar === "mapa" || lugar === "ira");
   const paradasGuardadasEnElMapa = useMemo(() => {
     const todas = listaDeLaCiudad.datos?.paradas ?? [];
     return guardadas.guardadas.flatMap((g) => {
@@ -188,7 +199,7 @@ export function Ontoy({
    * camión se borraba y se volvía a pintar bajo el dedo del pasajero — lo
    * enseñó la revisión en el navegador, cuando el toque no le atinaba.
    */
-  const alternarFavorita = useCallback(
+  const alternarRuta = useCallback(
     (ruta: string) =>
       setApagadas((antes) => {
         const siguiente = new Set(antes);
@@ -198,16 +209,41 @@ export function Ontoy({
       }),
     [],
   );
+  const agregarRutas = useCallback(
+    (ids: string[]) => setAgregadas((antes) => new Set([...antes, ...ids])),
+    [],
+  );
+
+  /*
+   * La tira: las cercanas primero (por distancia con ubicación, alfabéticas sin
+   * ella) más las que el pasajero sumó desde el panel. La regla y su porqué,
+   * en `lib/ontoy/tira-de-rutas.ts`.
+   */
+  const paradasDeLaCiudad = listaDeLaCiudad.datos?.paradas ?? [];
+  const ordenDeLasRutas = useMemo(
+    () => ordenarRutas(rutas, paradasDeLaCiudad, ubicacion.yo).rutas,
+    [rutas, paradasDeLaCiudad, ubicacion.yo],
+  );
+  const filtro = useMemo(
+    () => armarLaTira(ordenDeLasRutas, agregadas, apagadas),
+    [ordenDeLasRutas, agregadas, apagadas],
+  );
+
   const ciudad = useMemo(
     () => ({
-      favoritas,
-      prendidas: new Set(prendidas),
+      tira: filtro.tira,
+      prendidas: filtro.prendidas,
+      cuantasMas: filtro.resto.length,
       vivos: enVivo.vivos,
       guardadas: paradasGuardadasEnElMapa,
-      alAlternar: alternarFavorita,
+      paradas: paradasDeLaCiudad,
+      verParadas,
+      alAlternar: alternarRuta,
+      alAlternarParadas: () => setVerParadas((v) => !v),
+      alAbrirPanel: () => setPanelAbierto(true),
       alAbrirRuta: (ruta: string, parada?: string) => abrirRuta(ruta, parada),
     }),
-    [favoritas, prendidas, enVivo.vivos, paradasGuardadasEnElMapa, alternarFavorita, abrirRuta],
+    [filtro, enVivo.vivos, paradasGuardadasEnElMapa, paradasDeLaCiudad, verParadas, alternarRuta, abrirRuta],
   );
 
   /* Las paradas de la ruta abierta: se arma en `lib/ontoy/paradas-de-la-ruta.ts`, aquí sólo se pide. */
@@ -438,6 +474,14 @@ export function Ontoy({
           </p>
           <p>Mientras, pagas tu camión como siempre. Nada de esta app te pide cuenta ni dinero.</p>
         </LugarReservado>
+      )}
+
+      {!campanaAbierta && enLaCiudad && panelAbierto && (
+        <PanelDeRutas
+          resto={filtro.resto}
+          alCerrar={() => setPanelAbierto(false)}
+          alAgregar={agregarRutas}
+        />
       )}
 
       {!campanaAbierta && enElMapa && parada && rutaEnfocada && (

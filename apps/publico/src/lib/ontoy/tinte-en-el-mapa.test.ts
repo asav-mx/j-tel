@@ -1,28 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { trazoDeLaRuta } from "./trazo-de-la-ruta";
-
-describe("con qué fuerza se dibuja cada ruta", () => {
-  it("con una prendida: ella fuerte, las demás de fondo", () => {
-    expect(trazoDeLaRuta(true, true).opacidad).toBe(0.95);
-    expect(trazoDeLaRuta(false, true).opacidad).toBe(0.25);
-  });
-
-  /*
-   * EL DEFECTO. Sin paradas guardadas no hay favoritas, y ése es el estado de
-   * todo pasajero nuevo: antes, TODAS sus rutas salían de fondo y el mapa se
-   * veía sin rutas. No hay una viva a la que no tapar, así que no hay a quién
-   * apagarle nada.
-   */
-  it("sin ninguna prendida: TODAS fuertes — es el mapa de un pasajero nuevo", () => {
-    expect(trazoDeLaRuta(false, false)).toEqual(trazoDeLaRuta(true, true));
-  });
-
-  it("una línea de fondo no se toca: tocarla abriría una ruta que no se ve", () => {
-    expect(trazoDeLaRuta(false, true).tocable).toBe(false);
-    expect(trazoDeLaRuta(false, false).tocable).toBe(true);
-  });
-});
 
 /*
  * La valla del teñido, que lee el fuente.
@@ -38,8 +15,14 @@ describe("con qué fuerza se dibuja cada ruta", () => {
  * ⚠ Y se midió mal la primera vez. La versión anterior buscaba el texto en el
  * archivo entero, así que **comentar la línea la dejaba en verde**: el defecto
  * volvía y la valla no se enteraba. Los comentarios se quitan antes de medir,
- * que es lo que la hace fallar cuando debe. Probado quitando la llamada de
+ * que es lo que la hace fallar cuando debe. Probada quitando la llamada de
  * verdad y viéndola caer.
+ *
+ * ✎ **22-sep-2026:** este archivo cubría además `trazoDeLaRuta`, la regla de
+ * con qué fuerza se dibujaba cada ruta. Esa regla **la reemplazó la tira de
+ * chips**: ahora una ruta se dibuja o no se dibuja, sin tonos a medias, y lo
+ * que protegía —que un pasajero sin favoritas viera sus rutas— lo garantiza el
+ * estado inicial, probado en `tira-de-rutas.test.ts`.
  */
 const sinComentarios = (s: string) =>
   s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");

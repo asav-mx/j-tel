@@ -769,6 +769,18 @@ La estructura es de la app de la ciudad, no de una cuenta: el pasajero no elige 
 >
 > **Y la falta de ubicación deja de ser un muro.** Mientras Inicio dependía de la sección de paradas, un permiso negado se llevaba la pantalla: sin ubicación esa sección no tenía nada que enseñar. Con la lista de rutas siempre completa, no tener ubicación es **una nota que explica por qué no hay distancias**, nunca una pantalla vacía. Cada caso sigue diciendo lo suyo —permiso sin pedir, negado, teléfono que no la da, lista que no bajó—, porque juntarlos en «no se pudo» le quitaría al pasajero lo único que le dice si hay algo que él pueda hacer (8.10).
 
+> ✎ **22-sep-2026, al cierre del día (ASAV) — cuarta enmienda a la 8.8, sobre el MAPA. Se agrega; lo de arriba se conserva.**
+>
+> **El pasajero decide qué rutas ve en el Mapa.** El renglón del Mapa dice que «enseña sus rutas favoritas en vivo y cualquier ruta que abra». Léase ahora:
+>
+> - Abajo, **una tira de chips**, uno por ruta. Tocar uno **prende o apaga** esa ruta en el mapa. Abren prendidas **las de la tira** —las cercanas—, no las de la ciudad entera: con cuarenta encimadas el mapa deja de ser un mapa. Las lejanas entran por un panel de **casillas**, y entran prendidas porque el pasajero las escogió.
+> - Arriba, el **interruptor de las paradas** (los puntitos de las rutas prendidas) y, con ubicación, la **diana** que centra el mapa donde está.
+> - El panel es una **lista con casillas y no un buscador**: la app tiene **una sola búsqueda**, en «Ir a», y se quedó con una a propósito al retirar `/buscar`.
+>
+> **Prender y apagar no pide nada y no se guarda.** Es mostrar y ocultar lo que ya bajó. Al volver a abrir el Mapa, todas las de la tira están prendidas otra vez: **que no haya memoria es la decisión**, porque guardar qué rutas mira el pasajero sería empezar a saber quién es (8.7).
+>
+> **Lo vivo no cambia.** Los camiones siguen siendo los de tus favoritas y la ruta abierta —los de la consulta única—, no los de cualquier ruta que prendas: pedir los de todas costaría una consulta por ruta cada quince segundos. Lo vivo aparece **al abrir la ruta**, que es cuando importa.
+
 **8.8b No hay tercera vista; hay un atajo.** Se evaluó una tercera vista y dos bastan: lo que el pasajero de todos los días necesita no es otra pantalla sino llegar en un toque a **su parada**. La app permite **guardar una parada** (o más de una), y las guardadas aparecen en **Inicio** (8.8), con su próximo paso ya visible. La parada guardada **vive en el teléfono**, no en el servidor (8.7): guardarla no identifica a nadie. Si con el uso real aparece la necesidad de una tercera vista, se enmienda con evidencia, no antes.
 
 > ✎ **22-sep-2026 (ASAV):** decía «las guardadas aparecen hasta arriba de Rutas»; ahora apuntan a Inicio, para leerse con la 8.8 nueva. Lo de la tercera vista lo contesta el *por qué* de la 8.8 nueva: Inicio es este mismo atajo subido a la portada, e Ir a se aprobó por diseño.
