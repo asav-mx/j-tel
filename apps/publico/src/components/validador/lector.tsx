@@ -10,6 +10,8 @@ import {
   TOPE_SIN_SENAL,
   codigosDictados,
   porSincronizar,
+  rechazadosPorJTel,
+  sinSenalAceptados,
   validadosHoy,
   validarCodigoDictado,
   validarPresentacion,
@@ -37,6 +39,8 @@ import {
 import { folioDelCodigoDictado } from "@/lib/validador/codigo-dictado";
 import { detalleDeUnPaseBueno, tituloDeUnPaseBueno } from "@/lib/validador/palabras";
 import { useJornadaDelLector, diaDeHoy } from "@/lib/validador/jornada-del-lector";
+import { useIdentidadDelLector } from "@/lib/validador/identidad-del-lector";
+import { useEntregaDelLector } from "@/lib/validador/sincronizar";
 import { despertarElSonido, pip } from "@/lib/validador/pip";
 
 /**
@@ -83,8 +87,25 @@ const MS_DE_RESPIRO = 30;
 
 type Fase = "apagado" | "leyendo" | "veredicto";
 
+/**
+ * El id de un paso, que lo hace idempotente al entregarlo (P3.5).
+ *
+ * Se inventa **aquí**, en la pantalla, y no en `@jtel/domain/validador`: aquel
+ * módulo es puro y se prueba por serlo. `randomUUID` no está en los navegadores
+ * viejos ni fuera de un origen seguro, así que hay salida de respaldo — un id
+ * que no se repita es lo único que se le pide.
+ */
+function idDePasoNuevo(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 14)}`;
+  }
+}
+
 export function Lector() {
   const { jornada, guardar } = useJornadaDelLector();
+  const { identidad, preguntarQuienSoy } = useIdentidadDelLector();
   const [fase, setFase] = useState<Fase>("apagado");
   const [resultado, setResultado] = useState<ResultadoDelLector | null>(null);
   const [camaraFallo, setCamaraFallo] = useState<string | null>(null);
@@ -138,6 +159,25 @@ export function Lector() {
     };
   }, []);
 
+  /*
+   * La entrega (P3.5). El aparato decide sin red; esto sólo cuenta lo que ya
+   * pasó, así que vive aparte de todo lo que decide.
+   */
+  const { estado: entrega } = useEntregaDelLector({ jornada, identidad, haySenal, guardar });
+
+  /*
+   * ¿Cómo me llamo? Se pregunta al tener señal, y se insiste mientras nadie lo
+   * haya registrado: quien lo da de alta lo hace con el aparato ya encendido, y
+   * pedirle que lo reinicie para que se entere sería una instrucción de más.
+   */
+  useEffect(() => {
+    if (!haySenal) return;
+    void preguntarQuienSoy();
+    if (identidad?.lectorId) return;
+    const reloj = setInterval(() => void preguntarQuienSoy(), 30_000);
+    return () => clearInterval(reloj);
+  }, [haySenal, identidad?.lectorId, preguntarQuienSoy]);
+
   const mostrar = useCallback(
     (nuevo: ResultadoDelLector, siguiente: JornadaDelLector) => {
       guardar(siguiente);
@@ -167,6 +207,7 @@ export function Lector() {
         llavePublicaDeJTel: LLAVE_DE_LABORATORIO.publica,
         ahora: Date.now(),
         haySenal: haySenalViva.current,
+        idDelPaso: idDePasoNuevo(),
       });
       mostrar(veredicto, despues);
     },
@@ -290,6 +331,7 @@ export function Lector() {
       ahora: Date.now(),
       haySenal: haySenalViva.current,
       laCamaraFallo: puedeDictar,
+      idDelPaso: idDePasoNuevo(),
     });
     setTeclado(null);
     mostrar(veredicto, despues);
@@ -297,7 +339,8 @@ export function Lector() {
 
   if (!jornada) return <div className="val" aria-busy="true" />;
 
-  const sinSenalHoy = porSincronizar(jornada);
+  const porEntregar = porSincronizar(jornada);
+  const noAceptados = rechazadosPorJTel(jornada);
 
   return (
     <div className="val">
@@ -306,7 +349,9 @@ export function Lector() {
       </p>
 
       <header className="val-cabeza">
-        <span className="val-aparato mono">{jornada.aparato} · PUERTA DELANTERA</span>
+        <span className="val-aparato mono">
+          {identidad?.label ?? jornada.aparato} · PUERTA DELANTERA
+        </span>
         <span className={`val-senal mono ${haySenal ? "" : "val-senal-fuera"}`}>
           <i aria-hidden="true" />
           {haySenal ? "CON SEÑAL" : "SIN SEÑAL"}
@@ -317,8 +362,26 @@ export function Lector() {
 
       <div className="val-cuerpo">
         <p className="val-unidad mono">
-          Unidad sin asignar · lector de laboratorio
+          {identidad?.lectorId
+            ? "Lector registrado en J-Tel · lector de laboratorio"
+            : "Unidad sin asignar · lector de laboratorio"}
         </p>
+
+        {/*
+          Sin registrar, el lector SIGUE leyendo y quemando: sin red ya decidía
+          solo, y quedarse mudo por un trámite dejaría gente abajo. Lo que no
+          puede es entregar, y eso se dice con todas sus letras — junto con la
+          llave, que es lo que necesita quien lo va a dar de alta.
+        */}
+        {identidad && !identidad.lectorId && (
+          <div className="val-sin-registrar">
+            <p>
+              <b>Este lector no está registrado en J-Tel.</b> Lee y decide igual, pero lo que
+              acepte no se va a poder entregar hasta que alguien lo dé de alta con esta llave:
+            </p>
+            <code className="mono">{identidad.llavePublica}</code>
+          </div>
+        )}
 
         {/*
           Tocar la imagen enfoca ahí. En los aparatos que no conocen el punto de
@@ -432,15 +495,17 @@ export function Lector() {
             <dt>Validados hoy</dt>
             <dd>{validadosHoy(jornada)}</dd>
           </div>
+          {/* Lo que el tope mira es esto: lo que nadie fuera de este aparato
+              conoce todavía. Lo entregado deja de ocupar lugar (P3.5). */}
           <div>
-            <dt>Por sincronizar</dt>
-            <dd>{sinSenalHoy}</dd>
+            <dt>Por entregar</dt>
+            <dd>
+              {porEntregar} de {TOPE_SIN_SENAL}
+            </dd>
           </div>
           <div>
-            <dt>Sin señal</dt>
-            <dd>
-              {sinSenalHoy} de {TOPE_SIN_SENAL}
-            </dd>
+            <dt>Aceptados sin señal</dt>
+            <dd>{sinSenalAceptados(jornada)}</dd>
           </div>
           <div>
             <dt>Dictados</dt>
@@ -449,6 +514,17 @@ export function Lector() {
             </dd>
           </div>
         </dl>
+
+        <p className="val-entrega mono">
+          {palabrasDeLaEntrega(entrega, porEntregar, Boolean(identidad?.lectorId))}
+        </p>
+
+        {noAceptados > 0 && (
+          <p className="val-entrega val-entrega-mal mono">
+            {noAceptados === 1 ? "1 renglón que J-Tel no aceptó" : `${noAceptados} renglones que J-Tel no aceptó`}
+            . Quedan marcados y no se vuelven a mandar.
+          </p>
+        )}
 
         {diagnostico && (
           <p className="val-diagnostico mono">
@@ -465,6 +541,48 @@ export function Lector() {
       </div>
     </div>
   );
+}
+
+/**
+ * Cómo va la entrega, en una línea, y **sin afirmar de más**.
+ *
+ * «Al corriente» sólo se dice cuando de verdad no queda nada por entregar. Con
+ * renglones pendientes y sin fallas, lo honesto es decir que faltan — un
+ * aparato que dijera «todo bien» con cinco pasos sin subir sería la trampa del
+ * Marco §D con el dato correcto al lado.
+ */
+function palabrasDeLaEntrega(
+  estado: ReturnType<typeof useEntregaDelLector>["estado"],
+  porEntregar: number,
+  registrado: boolean,
+): string {
+  /*
+   * Sin registro no hay entrega posible, y eso manda sobre todo lo demás.
+   *
+   * Se vio en la pantalla y no en el código: sin esta rama, un lector sin
+   * registrar que aceptaba tres pases decía «3 sin entregar, se suben en cuanto
+   * haya señal» —con señal de sobra y sin nada que pudiera subir—. El dato era
+   * correcto y la frase, falsa: la trampa del Marco §D.
+   */
+  if (!registrado || estado.que === "sin_registrar") {
+    return porEntregar > 0
+      ? `${porEntregar} sin entregar, y este lector no está registrado: no se pueden subir todavía.`
+      : "Sin registrar: nada de lo que acepte se va a poder entregar todavía.";
+  }
+  if (estado.que === "entregando") return "Entregando a J-Tel…";
+  if (estado.que === "falla") {
+    const segundos = Math.max(0, Math.ceil((estado.reintentoEn - Date.now()) / 1000));
+    return `No se pudo entregar (${estado.motivo}). Reintento en ${segundos} s.`;
+  }
+  if (porEntregar > 0) {
+    return `${porEntregar} sin entregar. Se suben en cuanto haya señal.`;
+  }
+  if (estado.ultima === null) return "Todavía no hay nada que entregar.";
+  const hora = new Date(estado.ultima).toLocaleTimeString("es-MX", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `Al corriente con J-Tel · última entrega ${hora}`;
 }
 
 function Semaforo({ fase, resultado }: { fase: Fase; resultado: ResultadoDelLector | null }) {

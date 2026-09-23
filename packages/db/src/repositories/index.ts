@@ -32,6 +32,7 @@ import { routeWindowSizing } from "../ventana-ocurrencia.js";
 import { consultaUltimoPuntoPorImei } from "../ultimo-punto-por-imei.js";
 import { VernierRepository } from "./vernier.js";
 import { PausasRepository, fueraPorPausa } from "./pausas.js";
+import { LibroDeBoletosRepository } from "./boletos.js";
 import {
   resumirUnidadDia,
   HUECO_MINUTOS_POR_DEFECTO,
@@ -9725,6 +9726,8 @@ export function createRepositories(db: Database) {
     vernier: new VernierRepository(db),
     pausas: new PausasRepository(db),
     pasosPorParada: new PasoPorParadaRepository(db),
+    /** El libro de boletos de Ontoy y sus lectores (0054, P3.5). */
+    libroDeBoletos: new LibroDeBoletosRepository(db),
   };
 }
 

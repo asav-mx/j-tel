@@ -2304,6 +2304,212 @@ export const routeTraversalMeasurements = pgTable(
 
 export type RouteTraversalMeasurement = typeof routeTraversalMeasurements.$inferSelect;
 
+/* ══════════════════════════════════════════════════════════════════════════
+ * El libro de boletos de Ontoy y sus lectores — 0054, Ontoy 3.0 · PR P3.5.
+ *
+ * **Nada de aquí cobra.** Boletos de laboratorio, firmados con la llave de
+ * pruebas, con dinero de mentira (`docs/Ficha-Construccion-Ontoy-3-Pagos.md`
+ * §1). La valla de `scripts/verificar-sin-cobro.mjs` está para que siga así: en
+ * estas cuatro tablas no hay una sola columna de importe, y no es un olvido.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * **Los lectores del camión.** Concepto propio, no `devices` (decisión de Asav,
+ * 23-sep-2026).
+ *
+ * La razón no es de gusto: `device_assignments_unidad_una_vigente` (0039) dice
+ * **una unidad, un aparato**, y un camión trae GPS **y** lector a la vez.
+ * Reusar `devices` obligaría a aflojar el candado que le dice al archivador de
+ * qué unidad es cada punto. Además un lector no tiene IMEI, no transmite a
+ * Compás, y el cotejo (6.7) lo acusaría por no aparecer allá.
+ *
+ * Misma **ley** que los aparatos (6.5): baja con fecha y motivo obligatorios, y
+ * **la fila no se borra** — sus quemados siguen apuntando aquí.
+ */
+export const validators = pgTable("validators", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  carrierAccountId: uuid("carrier_account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "restrict" }),
+  /**
+   * La llave pública Ed25519 del lector, en hex. Con su privada —que no sale
+   * del aparato— firma cada lote que entrega, así que no hay secreto
+   * compartido que se pegue en un chat. **La baja la revoca en el instante.**
+   */
+  llavePublica: text("llave_publica").notNull(),
+  /** Consecutivo global del nombre (6.3): se asigna una vez y no se renumera. */
+  consecutivo: integer("consecutivo").notNull(),
+  label: text("label").notNull(),
+  altaEn: timestamp("alta_en", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  altaPor: text("alta_por"),
+  /** La baja, con fecha y motivo. Las dos juntas o ninguna (CHECK en la 0054). */
+  bajaEn: timestamp("baja_en", { withTimezone: true, mode: "date" }),
+  bajaMotivo: text("baja_motivo"),
+  bajaPor: text("baja_por"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("validators_llave_publica_unica").on(table.llavePublica),
+  uniqueIndex("validators_consecutivo_unico").on(table.consecutivo),
+]);
+
+/**
+ * **Lector en unidad, con vigencia.** Espejo de `deviceAssignments`: asignar,
+ * soltar y dar de baja sin borrar la fila, con quién y por qué al cerrar.
+ *
+ * **Esto sí cae en cascada**, como `circuitUnitAssignments`: es plan. El libro
+ * no, y ésa es toda la diferencia entre las dos tablas.
+ */
+export const validatorAssignments = pgTable("validator_assignments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  validatorId: uuid("validator_id")
+    .notNull()
+    .references(() => validators.id, { onDelete: "cascade" }),
+  unitId: uuid("unit_id")
+    .notNull()
+    .references(() => units.id, { onDelete: "cascade" }),
+  validFrom: timestamp("valid_from", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  validTo: timestamp("valid_to", { withTimezone: true, mode: "date" }),
+  asignadaPor: text("asignada_por"),
+  cerradaPor: text("cerrada_por"),
+  motivoCierre: text("motivo_cierre"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("validator_assignments_lector_una_vigente")
+    .on(table.validatorId)
+    .where(sql`${table.validTo} IS NULL`),
+  /**
+   * Una unidad, un lector. Con dos vigentes, el libro atribuiría el mismo
+   * quemado a un aparato o a otro según cuál leyera primero.
+   */
+  uniqueIndex("validator_assignments_unidad_una_vigente")
+    .on(table.unitId)
+    .where(sql`${table.validTo} IS NULL`),
+  index("validator_assignments_lector_idx").on(table.validatorId, table.validFrom),
+  index("validator_assignments_unidad_idx").on(table.unitId, table.validFrom),
+]);
+
+/** Cómo terminó una entrega. `text` y no enum: ver la cabecera de la 0054. */
+export type ResultadoDeEntrega =
+  | "aceptado"
+  | "aceptado_con_rechazos"
+  | "rechazado_firma"
+  | "rechazado_lector_de_baja";
+
+/**
+ * **Cada vez que un lector habla**, traiga o no traiga quemados.
+ *
+ * El latido de un camión vacío es una entrega aceptada de cero renglones
+ * (decisión de Asav, 23-sep): **un camión sin pasajeros no es un lector mudo**,
+ * y sin latido las dos cosas se verían igual desde el servidor.
+ *
+ * Inmutable como el libro: aquí queda el intento de un lector dado de baja, y
+ * un registro que se puede borrar no es registro.
+ */
+export const validatorSyncs = pgTable("validator_syncs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  validatorId: uuid("validator_id")
+    .notNull()
+    .references(() => validators.id, { onDelete: "restrict" }),
+  recibidoEn: timestamp("recibido_en", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  resultado: text("resultado").$type<ResultadoDeEntrega>().notNull(),
+  renglonesEnviados: integer("renglones_enviados").notNull().default(0),
+  /** Los que entraron al libro. En un reenvío es 0: la idempotencia no duplica. */
+  renglonesNuevos: integer("renglones_nuevos").notNull().default(0),
+  /** Los que el servidor no aceptó. El porqué de cada uno va en `detalle`. */
+  renglonesRechazados: integer("renglones_rechazados").notNull().default(0),
+  /** La firma del lote como llegó. Se guarda también cuando no verifica. */
+  firma: text("firma"),
+  detalle: jsonb("detalle").$type<Record<string, unknown>>().notNull().default({}),
+}, (table) => [
+  index("validator_syncs_lector_idx").on(table.validatorId, table.recibidoEn),
+]);
+
+/** Qué dice un renglón del libro. `text` con CHECK, no enum (trampa de la 0025). */
+export type TipoDeOperacion =
+  /** J-Tel emitió el boleto. **Vacío hasta que J-Tel emita de su lado.** */
+  | "emitido"
+  /** Un lector lo quemó, con la firma de J-Tel verificada. */
+  | "quemado"
+  /** Alguien **dijo** traer este folio, dictado. No verifica nada. */
+  | "reclamo_dictado"
+  /** El servidor vio el mismo folio quemado en más de un aparato. */
+  | "doble_uso_detectado"
+  /** La caja cuadró el viaje. Lo llenará el P4. */
+  | "conciliado";
+
+/**
+ * **El libro de operaciones de boletos.** Sólo `INSERT`: un trigger de la 0054
+ * rechaza `UPDATE`, `DELETE` y `TRUNCATE` con el código `JT054`.
+ *
+ * **No es `ledgerEntries`**, que es la bitácora del árbitro y cuelga de un
+ * `tripId` y un `serviceOccurrenceId` obligatorios. Un boleto de Ontoy no tiene
+ * ni viaje contratado ni ocurrencia de servicio.
+ *
+ * ## Guarda lo observado, y lo dice en los nombres
+ *
+ * `unidadAsignadaId` y `circuitoAsignadoId` salen de las asignaciones vigentes
+ * al momento del quemado, y una asignación es **plan** (corrección de Asav,
+ * 23-sep). El circuito **recorrido** se derivará del GPS y no vive aquí. Sin
+ * asignación, null: no consta, y no se inventa el camión.
+ *
+ * **A quién le toca el dinero no se decide aquí**: no hay importe, ni
+ * transportista, ni concesión. El reparto es de la Pieza 10 (8.14).
+ *
+ * ## Dos relojes
+ *
+ * `quemadoEn` es el del lector, que sin red puede venir corrido y no hay con
+ * qué ajustarlo. `recibidoEn` es el del servidor, y ése sí consta. Una sola
+ * columna tendría que mentir en un lado.
+ */
+export const ticketOperations = pgTable("ticket_operations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  kind: text("kind").$type<TipoDeOperacion>().notNull(),
+  folio: text("folio").notNull(),
+  validatorId: uuid("validator_id").references(() => validators.id, { onDelete: "restrict" }),
+  unidadAsignadaId: uuid("unidad_asignada_id").references(() => units.id, { onDelete: "restrict" }),
+  circuitoAsignadoId: uuid("circuito_asignado_id").references(() => circuits.id, {
+    onDelete: "restrict",
+  }),
+  conSenal: boolean("con_senal"),
+  /**
+   * La firma de J-Tel sobre el boleto, re-verificada al recibir el lote — un
+   * lector robado no puede inventar folios (corrección de Asav, 23-sep).
+   *
+   * **El cuerpo del boleto no se guarda**: lleva la llave del portador y el
+   * instante de emisión, que es el mismo para los diez viajes de una compra.
+   * Guardarlo dejaría agrupados los boletos de una persona, que es justo la
+   * liga que la decisión (e1) evitó.
+   */
+  firmaDelBoleto: text("firma_del_boleto"),
+  quemadoEn: timestamp("quemado_en", { withTimezone: true, mode: "date" }),
+  /** La fecha local del lector: su jornada, la que topa a 20 sin señal. */
+  diaDelLector: date("dia_del_lector"),
+  recibidoEn: timestamp("recibido_en", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  /**
+   * El id que el lector le puso al paso. Con él, reenviar un lote no duplica
+   * renglones **ni levanta un doble uso falso**.
+   */
+  pasoDelLector: uuid("paso_del_lector"),
+  syncId: uuid("sync_id").references(() => validatorSyncs.id, { onDelete: "restrict" }),
+  detalle: jsonb("detalle").$type<Record<string, unknown>>().notNull().default({}),
+}, (table) => [
+  /**
+   * La idempotencia va por **lector y paso**, nunca por folio a secas: por
+   * folio, el segundo lector que quema el mismo boleto se vería como un reenvío
+   * y el doble uso desaparecería en silencio.
+   */
+  uniqueIndex("ticket_operations_paso_unico")
+    .on(table.validatorId, table.pasoDelLector)
+    .where(sql`${table.pasoDelLector} IS NOT NULL`),
+  index("ticket_operations_folio_idx").on(table.folio, table.kind),
+  index("ticket_operations_lector_idx").on(table.validatorId, table.recibidoEn),
+]);
+
+export type Validator = typeof validators.$inferSelect;
+export type ValidatorAssignment = typeof validatorAssignments.$inferSelect;
+export type ValidatorSync = typeof validatorSyncs.$inferSelect;
+export type TicketOperation = typeof ticketOperations.$inferSelect;
+
 export const clientCarrierAuthorizationsRelations = relations(
   clientCarrierAuthorizations,
   ({ one }) => ({

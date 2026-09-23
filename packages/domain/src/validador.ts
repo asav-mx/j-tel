@@ -3,6 +3,7 @@ import {
   quemar,
   verificarBoleto,
   MEMORIA_VACIA,
+  type BoletoSellado,
   type MemoriaDeQuemados,
   type Presentacion,
   type Rechazo,
@@ -71,11 +72,42 @@ export type ViaDelPaso = "qr" | "codigo_dictado";
 
 /** Un paso aceptado, tal como queda en el aparato. No se borra. */
 export interface RegistroDePaso {
+  /**
+   * El id que este aparato le pone al paso, desde el P3.5.
+   *
+   * Es lo que hace que entregar el mismo lote dos veces no escriba dos
+   * renglones en el libro de J-Tel. **Lo pone quien llama**, no esta función:
+   * inventarlo aquí metería azar en un módulo que se prueba por ser puro, y la
+   * prueba dejaría de poder fijar lo que sale.
+   */
+  readonly id: string;
   readonly folio: string;
   readonly cuando: number;
   readonly via: ViaDelPaso;
   /** Si el lector tenía señal cuando lo aceptó. */
   readonly conSenal: boolean;
+  /**
+   * Cuándo J-Tel acusó recibo de este paso (P3.5). Sin marca, todavía no le
+   * consta a nadie fuera de este aparato — que es justo lo que el tope cuenta.
+   */
+  readonly entregadoEn?: number;
+  /**
+   * Por qué J-Tel no lo aceptó, si no lo aceptó (P3.5).
+   *
+   * Un renglón rechazado **también queda entregado**: reintentarlo para siempre
+   * sería un lazo que nunca cierra, y el aparato acabaría cargando basura toda
+   * su vida. Se marca y se dice en la pantalla, porque un renglón que J-Tel no
+   * quiso es algo que el chofer tiene derecho a ver.
+   */
+  readonly rechazoDeJTel?: string;
+  /**
+   * El boleto que se leyó, guardado para poder entregarlo (P3.5).
+   *
+   * El servidor vuelve a comprobar la firma de J-Tel al recibirlo, así que el
+   * aparato tiene que conservarlo hasta que lo acusen. **La vía dictada no lo
+   * tiene**: ahí nunca hubo boleto, sólo ocho dígitos dichos en voz alta.
+   */
+  readonly boleto?: BoletoSellado;
 }
 
 /** Lo que un lector sabe de su propio día. */
@@ -104,10 +136,73 @@ export const codigosDictados = (j: JornadaDelLector): number =>
   j.pasos.filter((p) => p.via === "codigo_dictado").length;
 
 /**
- * Lo que falta por contarle a J-Tel. Con señal se sube en el momento; sin ella
- * se acumula, y es justo lo que el tope limita.
+ * Lo que falta por contarle a J-Tel: los pasos sin acuse.
+ *
+ * **Cambió en el P3.5, y el número que el tope mira cambió con él.** Hasta el
+ * P3 esto era «los aceptados sin señal», porque no había a dónde entregarlos y
+ * las dos cosas eran la misma. Ahora que el lector sincroniza, dejan de serlo:
+ * un paso aceptado en un túnel y entregado diez minutos después **ya le consta
+ * a J-Tel**, y seguir contándolo llenaría el día de un lector que sí está
+ * hablando —dejando gente abajo por una cuenta vieja.
+ *
+ * Lo que el tope siempre quiso contar, dicho por la cabecera del módulo, son
+ * «cuántos boletos podrían pasar en dos camiones distintos antes de que alguien
+ * lo note». Eso es exactamente esto: los que nadie fuera de este aparato
+ * conoce.
+ *
+ * Los pasos de {@link sinSenalAceptados} siguen contándose aparte, para la
+ * pantalla: cuántos se aceptaron a ciegas hoy es otra pregunta, y se responde.
  */
-export const porSincronizar = (j: JornadaDelLector): number => sinSenalAceptados(j);
+export const porSincronizar = (j: JornadaDelLector): number =>
+  j.pasos.filter((p) => !p.entregadoEn).length;
+
+/**
+ * Marca como entregados los pasos que J-Tel acusó. Devuelve otra jornada: la
+ * memoria de quemados **no se toca** —lo quemado sigue quemado— y ningún paso
+ * se borra.
+ */
+export function marcarEntregados(
+  j: JornadaDelLector,
+  ids: readonly string[],
+  cuando: number,
+): JornadaDelLector {
+  if (ids.length === 0) return j;
+  const entregados = new Set(ids);
+  return {
+    ...j,
+    pasos: j.pasos.map((p) => (entregados.has(p.id) && !p.entregadoEn ? { ...p, entregadoEn: cuando } : p)),
+  };
+}
+
+/**
+ * Marca los renglones que J-Tel **no** aceptó: quedan entregados y con su
+ * motivo a la vista.
+ *
+ * Que un rechazo cuente como entregado no es darlo por bueno — es no volver a
+ * mandarlo. Un renglón que J-Tel rechaza hoy lo va a rechazar siempre (su
+ * boleto no lo firmó J-Tel, o el folio no cuadra con él), así que reintentarlo
+ * sólo llenaría el lote de basura y el tope de lugares ocupados para siempre.
+ */
+export function marcarRechazadoPorJTel(
+  j: JornadaDelLector,
+  rechazos: ReadonlyArray<{ id: string; motivo: string }>,
+  cuando: number,
+): JornadaDelLector {
+  if (rechazos.length === 0) return j;
+  const porId = new Map(rechazos.map((r) => [r.id, r.motivo]));
+  return {
+    ...j,
+    pasos: j.pasos.map((p) =>
+      porId.has(p.id) && !p.entregadoEn
+        ? { ...p, entregadoEn: cuando, rechazoDeJTel: porId.get(p.id)! }
+        : p,
+    ),
+  };
+}
+
+/** Los renglones que J-Tel no aceptó. Se dicen; no se esconden. */
+export const rechazadosPorJTel = (j: JornadaDelLector): number =>
+  j.pasos.filter((p) => p.rechazoDeJTel).length;
 
 export type MotivoDelLector =
   | Rechazo
@@ -117,7 +212,14 @@ export type MotivoDelLector =
   | "la_camara_si_podia";
 
 export type ResultadoDelLector =
-  | { readonly pasa: true; readonly folio: string; readonly via: ViaDelPaso; readonly conSenal: boolean }
+  | {
+      readonly pasa: true;
+      readonly folio: string;
+      readonly via: ViaDelPaso;
+      readonly conSenal: boolean;
+      /** El id con el que este paso viajará a J-Tel, y que lo hace idempotente. */
+      readonly idDelPaso: string;
+    }
   | { readonly pasa: false; readonly motivo: MotivoDelLector };
 
 export interface Lectura {
@@ -131,13 +233,18 @@ function aceptar(
   via: ViaDelPaso,
   conSenal: boolean,
   ahora: number,
+  idDelPaso: string,
+  boleto?: BoletoSellado,
 ): Lectura {
   return {
-    resultado: { pasa: true, folio, via, conSenal },
+    resultado: { pasa: true, folio, via, conSenal, idDelPaso },
     jornada: {
       ...jornada,
       quemados: quemar(jornada.quemados, folio, ahora),
-      pasos: [...jornada.pasos, { folio, cuando: ahora, via, conSenal }],
+      pasos: [
+        ...jornada.pasos,
+        { id: idDelPaso, folio, cuando: ahora, via, conSenal, ...(boleto ? { boleto } : {}) },
+      ],
     },
   };
 }
@@ -161,6 +268,8 @@ export function validarPresentacion(
     llavePublicaDeJTel: Uint8Array;
     ahora: number;
     haySenal: boolean;
+    /** El id del paso, que pone quien llama (ver `RegistroDePaso.id`). */
+    idDelPaso: string;
   },
 ): Lectura {
   const { jornada, ahora, haySenal } = contexto;
@@ -170,10 +279,18 @@ export function validarPresentacion(
     quemados: jornada.quemados,
   });
   if (!veredicto.pasa) return rechazar(jornada, veredicto.motivo);
-  if (!haySenal && sinSenalAceptados(jornada) >= TOPE_SIN_SENAL) {
+  if (!haySenal && porSincronizar(jornada) >= TOPE_SIN_SENAL) {
     return rechazar(jornada, "tope_sin_senal");
   }
-  return aceptar(jornada, veredicto.folio, "qr", haySenal, ahora);
+  return aceptar(
+    jornada,
+    veredicto.folio,
+    "qr",
+    haySenal,
+    ahora,
+    contexto.idDelPaso,
+    presentacion.boleto,
+  );
 }
 
 /**
@@ -192,6 +309,8 @@ export function validarCodigoDictado(
     haySenal: boolean;
     /** El lector sólo abre esta vía después de no poder leer con la cámara. */
     laCamaraFallo: boolean;
+    /** El id del paso, que pone quien llama (ver `RegistroDePaso.id`). */
+    idDelPaso: string;
   },
 ): Lectura {
   const { jornada, ahora, haySenal, laCamaraFallo } = contexto;
@@ -202,10 +321,10 @@ export function validarCodigoDictado(
   if (estaQuemado(jornada.quemados, folio)) {
     return rechazar(jornada, "ya_quemado_en_este_aparato");
   }
-  if (!haySenal && sinSenalAceptados(jornada) >= TOPE_SIN_SENAL) {
+  if (!haySenal && porSincronizar(jornada) >= TOPE_SIN_SENAL) {
     return rechazar(jornada, "tope_sin_senal");
   }
-  return aceptar(jornada, folio, "codigo_dictado", haySenal, ahora);
+  return aceptar(jornada, folio, "codigo_dictado", haySenal, ahora, contexto.idDelPaso);
 }
 
 /** Qué le dice el aparato al chofer. Corto: hay una fila detrás. */

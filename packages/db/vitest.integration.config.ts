@@ -43,6 +43,7 @@ export default defineConfig({
       "src/promesa-por-franja.integration.test.ts",
       "src/paso-por-parada.integration.test.ts",
       "src/avisos.integration.test.ts",
+      "src/libro-de-boletos.integration.test.ts",
     ],
     // Escriben en la misma rama desechable: en paralelo se pisan.
     fileParallelism: false,

@@ -26,6 +26,7 @@
     "escenario-vernier": "tsx src/escenario-vernier.ts",
     "escenario-torre": "tsx src/escenario-torre.ts",
     "escenario-ontoy": "tsx src/escenario-ontoy.ts",
+    "escenario-lector": "tsx src/escenario-lector.ts",
     "studio": "drizzle-kit studio",
     "test": "TZ=UTC vitest run",
     "test:integration": "TZ=UTC vitest run --config vitest.integration.config.ts",

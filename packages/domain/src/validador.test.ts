@@ -19,6 +19,7 @@ import {
   sinSenalAceptados,
   codigosDictados,
   porSincronizar,
+  marcarEntregados,
   type JornadaDelLector,
 } from "./validador.js";
 
@@ -41,19 +42,29 @@ function boletoNuevo(semilla: string): Presentacion {
   return presentarBoleto(sellado, portador, MEDIODIA);
 }
 
+/*
+ * El id del paso lo pone quien llama (P3.5): el módulo es puro y no inventa
+ * azar. Aquí va un contador, para que lo que sale de cada prueba sea fijo.
+ */
+let numeroDePaso = 0;
+const idDePaso = () => `paso-${++numeroDePaso}`;
+
 const conSenal = (jornada: JornadaDelLector) => ({
   jornada,
   llavePublicaDeJTel: LLAVE,
   ahora: MEDIODIA,
   haySenal: true,
+  idDelPaso: idDePaso(),
 });
 
 describe("la vía buena: el QR", () => {
   it("un boleto bueno pasa y queda registrado", () => {
     const { resultado, jornada } = validarPresentacion(boletoNuevo("1"), conSenal(LECTOR()));
-    expect(resultado).toEqual({ pasa: true, folio: "ONT-00000001", via: "qr", conSenal: true });
+    expect(resultado).toMatchObject({ pasa: true, folio: "ONT-00000001", via: "qr", conSenal: true });
     expect(validadosHoy(jornada)).toBe(1);
-    expect(porSincronizar(jornada)).toBe(0);
+    /* Recién aceptado, todavía no le consta a nadie más: falta entregarlo. */
+    expect(porSincronizar(jornada)).toBe(1);
+    expect(jornada.pasos[0]?.id).toBe(resultado.pasa ? resultado.idDelPaso : "");
   });
 
   it("el segundo paso del mismo boleto no pasa", () => {
@@ -106,7 +117,8 @@ describe("el tope sin señal — la ventana del doble uso", () => {
       jornada = validarPresentacion(boletoNuevo(`c${i}`), conSenal(jornada)).jornada;
     }
     expect(validadosHoy(jornada)).toBe(TOPE_SIN_SENAL + 3);
-    expect(porSincronizar(jornada)).toBe(0);
+    /* Aceptados con señal, pero entregados todavía no: eso lo dice el P3.5. */
+    expect(porSincronizar(jornada)).toBe(TOPE_SIN_SENAL + 3);
   });
 
   /* Primero la criptografía: un boleto falso no debe llevarse la explicación
@@ -132,12 +144,68 @@ describe("el tope sin señal — la ventana del doble uso", () => {
   });
 });
 
+/*
+ * Lo que el P3.5 le agregó al lector: cada paso lleva su id, y el tope cuenta
+ * lo que J-Tel todavía no acusó.
+ */
+describe("lo entregado deja de contar para el tope", () => {
+  it("un paso entregado libera lugar; uno sin entregar no", () => {
+    let jornada = LECTOR();
+    const ids: string[] = [];
+    for (let i = 0; i < TOPE_SIN_SENAL; i++) {
+      const paso = validarPresentacion(boletoNuevo(`e${i}`), {
+        ...conSenal(jornada),
+        haySenal: false,
+      });
+      if (paso.resultado.pasa) ids.push(paso.resultado.idDelPaso);
+      jornada = paso.jornada;
+    }
+    /* Con el día lleno, el siguiente no entra. */
+    expect(
+      validarPresentacion(boletoNuevo("lleno"), { ...conSenal(jornada), haySenal: false }).resultado,
+    ).toEqual({ pasa: false, motivo: "tope_sin_senal" });
+
+    /* J-Tel acusa recibo de cinco: esos cinco ya le constan a alguien más. */
+    jornada = marcarEntregados(jornada, ids.slice(0, 5), MEDIODIA + 1000);
+    expect(porSincronizar(jornada)).toBe(TOPE_SIN_SENAL - 5);
+    expect(
+      validarPresentacion(boletoNuevo("despues"), { ...conSenal(jornada), haySenal: false })
+        .resultado.pasa,
+    ).toBe(true);
+
+    /* Y los pasos del día siguen ahí: entregar no borra nada. */
+    expect(validadosHoy(jornada)).toBe(TOPE_SIN_SENAL);
+  });
+
+  it("marcar un id que no existe no cambia nada, y no se marca dos veces", () => {
+    const { jornada, resultado } = validarPresentacion(boletoNuevo("m1"), conSenal(LECTOR()));
+    expect(resultado.pasa).toBe(true);
+    if (!resultado.pasa) return;
+
+    expect(marcarEntregados(jornada, [], MEDIODIA)).toBe(jornada);
+    expect(marcarEntregados(jornada, ["no-existe"], MEDIODIA).pasos[0]?.entregadoEn).toBeUndefined();
+
+    const una = marcarEntregados(jornada, [resultado.idDelPaso], MEDIODIA);
+    const otra = marcarEntregados(una, [resultado.idDelPaso], MEDIODIA + 99_999);
+    /* La hora del primer acuse es la que vale, como el primer quemado. */
+    expect(otra.pasos[0]?.entregadoEn).toBe(MEDIODIA);
+  });
+
+  it("los ids de dos pasos del mismo lector son distintos", () => {
+    const uno = validarPresentacion(boletoNuevo("i1"), conSenal(LECTOR()));
+    const dos = validarPresentacion(boletoNuevo("i2"), conSenal(uno.jornada));
+    const idDe = (r: typeof uno.resultado) => (r.pasa ? r.idDelPaso : null);
+    expect(idDe(uno.resultado)).not.toBe(idDe(dos.resultado));
+  });
+});
+
 describe("la vía dictada — acotada por tres lados", () => {
   const dictando = (jornada: JornadaDelLector) => ({
     jornada,
     ahora: MEDIODIA,
     haySenal: true,
     laCamaraFallo: true,
+    idDelPaso: idDePaso(),
   });
 
   it("no se abre si la cámara sí podía", () => {
@@ -150,7 +218,7 @@ describe("la vía dictada — acotada por tres lados", () => {
 
   it("queda marcado como dictado, no como QR", () => {
     const { resultado, jornada } = validarCodigoDictado("ONT-00000001", dictando(LECTOR()));
-    expect(resultado).toEqual({
+    expect(resultado).toMatchObject({
       pasa: true,
       folio: "ONT-00000001",
       via: "codigo_dictado",

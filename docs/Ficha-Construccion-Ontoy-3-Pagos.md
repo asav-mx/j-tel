@@ -186,3 +186,87 @@ de medirlo.
 
 **Construido en el PR P1** (`packages/domain/src/boleto.ts` y
 `boleto-llave.ts`), con la valla de la §1 en `scripts/verificar-sin-cobro.mjs`.
+
+---
+
+## 7 · El PR P3.5 — el libro de viajes y la sincronización (23-sep-2026)
+
+**No estaba en la §4 de esta ficha, y hace falta.** La ficha iba del P3 (el
+lector) al P4 (la caja), y entre los dos faltaba lo que hace que el ciclo
+cierre: **los pagos no tenían lado servidor**. Nada se guardaba en la base, el
+boleto vivía sólo en el teléfono y lo quemado sólo en la memoria del lector, así
+que en la prueba física el pase enseñaba siempre el mismo boleto, el lector
+decía «ya se usó hoy» y no había cómo salir de ahí.
+
+### 7.1 · Lo que se construyó
+
+- **`ticket_operations`, el libro** (migración 0054): renglones que **sólo se
+  insertan** —un trigger rechaza `UPDATE`, `DELETE` y `TRUNCATE`—, con lo
+  observado en cada quemado: lector, unidad asignada, circuito asignado, hora
+  del lector y hora del servidor. **No es `ledger_entries`**, que es la bitácora
+  del árbitro y cuelga de un viaje y una ocurrencia que un boleto no tiene.
+- **`validators` y `validator_assignments`**: los lectores, con la ley 6.5 de
+  los aparatos (baja con fecha y motivo, la fila no se borra) pero **concepto
+  propio**.
+- **`validator_syncs`**: cada vez que un lector habla, traiga o no quemados.
+- **La sincronización**: el lector firma su lote, el servidor re-verifica la
+  firma de J-Tel de cada boleto y **levanta el doble uso entre aparatos**.
+- **El cierre del ciclo**: el pase pregunta por sus folios en uso, pasa a
+  `confirmado` —el estado que el P2 dejó declarado y vacío— y ofrece el
+  siguiente.
+
+### 7.2 · Decidido por Asav el 23-sep-2026
+
+**a) Sincronización oportunista (A1).** Sube en cuanto hay señal; reintenta con
+esperas crecientes hasta un minuto. **Lector mudo = 4 h de servicio sin
+contacto**, en una sola constante con su prueba
+(`HORAS_DE_SERVICIO_PARA_MUDO`), **provisional hasta medir**. De servicio y no
+de reloj: un camión dormido en el patio no está mudo. **El lector late aunque no
+traiga quemados** — un camión vacío no es un lector mudo.
+
+**b) Concepto propio para el lector**, no `devices`. La razón es dura:
+`device_assignments_unidad_una_vigente` (0039) dice *una unidad, un aparato*, y
+un camión trae GPS **y** lector; reusar `devices` obligaría a aflojar el candado
+que le dice al archivador de qué unidad es cada punto.
+
+**c) A qué se ata un viaje para el reparto: sólo se anota.** El libro guarda lo
+observado, que es lo que el reparto necesitará, **sin decidirlo**. Es de la
+Pieza 10 (8.14) y no se construye aquí. El boleto sigue naciendo con
+`cualquier-circuito`.
+
+**d) La escritura entra por `apps/publico`** (opción d1), con su regla de
+firewall en `docs/Procedimiento-Firewall-Publico.md`. Lo que decide quién
+escribe **no es una sesión, es la firma del lote**.
+
+**e) El pase pregunta en claro (e1), y sólo por los folios en uso.** El servidor
+**no guarda las consultas**. La declaración de datos se actualizó antes del
+merge (`docs/Ontoy-Declaracion-De-Datos.md`).
+
+### 7.3 · Las tres correcciones de Asav, y lo que cada una cambió
+
+1. **«Circuito asignado», no «el que servía».** Sale de
+   `circuit_unit_assignments`, que es **plan**; el circuito recorrido se
+   derivará del GPS y no vive en el libro. La columna se llama como lo que es.
+2. **El libro no pierde renglones.** Sus referencias van **directo** a `units` y
+   `circuits` con `ON DELETE RESTRICT` —`circuit_unit_assignments` sí cae en
+   cascada, y colgar de ella habría dejado que borrar un circuito se llevara
+   viajes quemados—, y la base rechaza `UPDATE`, `DELETE` y `TRUNCATE` con su
+   prueba que lo intenta y falla. **Costo aceptado:** una unidad con viajes en
+   el libro ya no se puede borrar, ni la cuenta que la contiene.
+3. **Lector robado.** La baja **revoca su llave en el instante**: sus lotes se
+   rechazan y el intento queda registrado en `validator_syncs`. Y cada quemado
+   viaja con el boleto entero para que el servidor **re-verifique la firma de
+   J-Tel**: la llave del lector es suya, pero la de J-Tel no.
+
+### 7.4 · Lo que el P3.5 dejó abierto
+
+- **La caja (P4)** sigue siendo el siguiente PR: la pantalla de «Hoy», el
+  balance por transportista, la perilla de comisión y la salud de los lectores.
+  El libro ya declara el renglón `conciliado` para que el P4 no tenga que
+  migrarlo.
+- **`emitido` está declarado y vacío**, como estuvo `confirmado` hasta hoy: lo
+  llenará J-Tel el día que emita los boletos de su lado en vez del teléfono.
+- **La pantalla de «Lectores»** es del P4. Mientras tanto, el alta se hace con
+  `pnpm --filter @jtel/db escenario-lector`, sólo contra la desechable.
+- **El número de las 4 h** se revisa cuando alguien mida cuánto dura un tramo
+  sin cobertura en la ciudad.

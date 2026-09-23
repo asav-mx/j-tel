@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LLAVE_DE_LABORATORIO,
   crearPortador,
@@ -13,6 +13,8 @@ import {
   PASE_VACIO,
   agregarCompra,
   boletoParaMostrar,
+  confirmarQuemados,
+  foliosPorConfirmar,
   marcarMostrado,
   type BoletoDelTelefono,
   type Pase,
@@ -166,5 +168,73 @@ export function useElPase() {
     guardar({ ...pase, cuenta: pase.cuenta ? null : "m···@gmail.com" });
   }, [pase, guardar]);
 
-  return { pase, disponible, listo, comprar, mostrar, alternarCuenta };
+  return { pase, disponible, listo, comprar, mostrar, alternarCuenta, guardar };
+}
+
+/**
+ * **El cierre del ciclo** — Ontoy 3.0 · PR P3.5.
+ *
+ * Cuando hay señal, el pase pregunta por los boletos que enseñó y nadie le
+ * confirmó. Los que el lector ya entregó pasan a `confirmado`, su renglón deja
+ * de decir «sin confirmar», y el siguiente viaje queda listo para mostrarse.
+ *
+ * ## Lo que se pregunta, y cada cuánto
+ *
+ * **Sólo los folios en uso** (decisión de Asav, e1) y **sólo cuando hay
+ * alguno**: un pase sin nada en el aire no le pregunta nada a nadie. Se
+ * insiste cada {@link CADA_CUANTO_PREGUNTA_MS} porque del otro lado falta un
+ * paso más —que el lector sincronice—, y eso puede tardar lo que tarde el
+ * camión en salir del túnel.
+ *
+ * ## Lo que NO se hace si el servidor no contesta
+ *
+ * Nada. El boleto se queda «sin confirmar», que es lo único que se puede
+ * afirmar: que no haya red no es prueba de que no te dejaron subir.
+ */
+export const CADA_CUANTO_PREGUNTA_MS = 20_000;
+
+export function useConfirmacionDelPase(args: {
+  pase: Pase;
+  listo: boolean;
+  guardar: (p: Pase) => Pase;
+}) {
+  const { pase, listo, guardar } = args;
+  const paseVivo = useRef(pase);
+  paseVivo.current = pase;
+
+  const preguntar = useCallback(async () => {
+    const actual = paseVivo.current;
+    const folios = foliosPorConfirmar(actual);
+    if (folios.length === 0) return;
+    try {
+      const r = await fetch("/api/boletos/estado", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ folios }),
+      });
+      if (!r.ok) return;
+      const dicho = (await r.json()) as { quemados?: string[] };
+      if (!Array.isArray(dicho?.quemados) || dicho.quemados.length === 0) return;
+      const siguiente = confirmarQuemados(paseVivo.current, dicho.quemados);
+      if (siguiente !== paseVivo.current) guardar(siguiente);
+    } catch {
+      /* Sin red, el pase sigue diciendo que no sabe. */
+    }
+  }, [guardar]);
+
+  useEffect(() => {
+    if (!listo) return;
+    if (foliosPorConfirmar(pase).length === 0) return;
+    void preguntar();
+    const reloj = setInterval(() => void preguntar(), CADA_CUANTO_PREGUNTA_MS);
+    const alVolverLaSenal = () => void preguntar();
+    window.addEventListener("online", alVolverLaSenal);
+    return () => {
+      clearInterval(reloj);
+      window.removeEventListener("online", alVolverLaSenal);
+    };
+    /* `pase` entra en las dependencias sólo por su cuenta de pendientes: lo que
+       importa es empezar a preguntar cuando aparece el primero y dejar de
+       hacerlo cuando se acaba el último. */
+  }, [listo, pase, preguntar]);
 }

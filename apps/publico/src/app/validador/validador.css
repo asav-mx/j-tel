@@ -347,6 +347,50 @@
 }
 
 /*
+ * Cómo va la entrega a J-Tel (P3.5). Va apagada porque no es un veredicto —el
+ * veredicto es el semáforo— pero **no tan apagada que no se lea**: el chofer
+ * necesita poder ver que el aparato lleva rato sin poder hablar.
+ */
+.val-entrega {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--val-tenue);
+}
+.val-entrega-mal {
+  /* El mismo rojo con el que ya se escribe un rechazo, no uno nuevo. */
+  color: var(--val-mal-letra);
+}
+
+/*
+ * El aviso de lector sin registrar. Con borde y con su llave a la vista: quien
+ * lo da de alta la tiene que poder copiar de la pantalla del aparato.
+ */
+.val-sin-registrar {
+  border-radius: 12px;
+  border: 1px solid var(--val-linea);
+  background: var(--val-panel);
+  padding: 11px 13px;
+}
+.val-sin-registrar p {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--val-tenue);
+}
+.val-sin-registrar b {
+  color: var(--val-tinta);
+}
+.val-sin-registrar code {
+  display: block;
+  font-size: 10.5px;
+  line-height: 1.5;
+  word-break: break-all;
+  color: var(--val-tinta);
+  user-select: all;
+}
+
+/*
  * La línea de diagnóstico. Apagada y chica: no es para el chofer, es para quien
  * prueba el aparato — dice con qué resolución está midiendo, para que un fallo
  * en la calle vuelva con un dato en vez de con «no engancha».

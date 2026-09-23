@@ -21,6 +21,7 @@ import {
   quemar,
   estaQuemado,
   cotejarQuemados,
+  boletoLoFirmoJTel,
   type BoletoSellado,
   type Presentacion,
 } from "./boleto.js";
@@ -321,5 +322,55 @@ describe("un solo uso — entre aparatos, diferido hasta sincronizar", () => {
     ]);
     const [hallazgo] = cotejarQuemados(lectores);
     expect(hallazgo?.pasos).toHaveLength(2);
+  });
+});
+
+/*
+ * La firma de J-Tel, suelta — lo que el servidor vuelve a mirar cuando un
+ * lector entrega sus quemados (P3.5).
+ */
+describe("re-verificar sólo la firma de J-Tel", () => {
+  it("un boleto de J-Tel pasa", () => {
+    expect(boletoLoFirmoJTel(boletoDePrueba(), LLAVE_DE_LABORATORIO.publica)).toBe(true);
+  });
+
+  /* El caso que existe para esto: un lector robado firma su lote con su propia
+     llave —que es suya— y mete folios que J-Tel nunca emitió. */
+  it("un boleto que firmó otro no pasa, aunque el lote venga bien firmado", () => {
+    expect(boletoLoFirmoJTel(boletoDePrueba(LLAVE_DEL_FALSIFICADOR), LLAVE_DE_LABORATORIO.publica)).toBe(
+      false,
+    );
+  });
+
+  it("un cuerpo alterado después de firmar no pasa", () => {
+    const bueno = boletoDePrueba();
+    const alterado: BoletoSellado = { ...bueno, cuerpo: { ...bueno.cuerpo, folio: "ONT-99999999" } };
+    expect(boletoLoFirmoJTel(alterado, LLAVE_DE_LABORATORIO.publica)).toBe(false);
+  });
+
+  it("un cuerpo mal formado no pasa, y no explota", () => {
+    const bueno = boletoDePrueba();
+    const roto = { ...bueno, cuerpo: { ...bueno.cuerpo, folio: "con\nsalto" } };
+    expect(boletoLoFirmoJTel(roto, LLAVE_DE_LABORATORIO.publica)).toBe(false);
+    expect(boletoLoFirmoJTel(undefined as unknown as BoletoSellado, LLAVE_DE_LABORATORIO.publica)).toBe(
+      false,
+    );
+  });
+
+  /* No mira el vencimiento a propósito: sin red, el único reloj de aquel
+     momento era el del aparato, y volver a juzgarlo con el del servidor sería
+     juzgar con una hora que nadie tenía. */
+  it("no juzga si venció: eso lo decidió el lector con su reloj", () => {
+    const vencido = emitirBoleto(
+      {
+        folio: "ONT-00000042",
+        ruta: "cualquier-circuito",
+        emitido: MEDIODIA - 20_000,
+        vence: MEDIODIA - 10_000,
+        portador: PORTADOR.publica,
+      },
+      LLAVE_DE_LABORATORIO,
+    );
+    expect(boletoLoFirmoJTel(vencido, LLAVE_DE_LABORATORIO.publica)).toBe(true);
   });
 });

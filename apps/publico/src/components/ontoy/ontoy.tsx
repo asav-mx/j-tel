@@ -40,7 +40,7 @@ import { registrarSondeo, TELEFONO_INICIAL, type EstadoDelTelefono } from "@/lib
 import { useAvisosVistos } from "@/lib/ontoy/avisos-vistos";
 import { VistaAvisos } from "@/components/ontoy/vista-avisos";
 import { useParadasDeLaCiudad } from "@/lib/ontoy/usar-paradas-de-la-ciudad";
-import { useElPase } from "@/lib/ontoy/pase-del-telefono";
+import { useElPase, useConfirmacionDelPase } from "@/lib/ontoy/pase-del-telefono";
 
 /**
  * **Ontoy** — el cascarón de los cuatro lugares (8.8, 22-sep).
@@ -102,6 +102,14 @@ export function Ontoy({
 
   const guardadas = useParadasGuardadas();
   const elPase = useElPase();
+  /*
+   * El cierre del ciclo (P3.5): con señal, el pase pregunta por los boletos que
+   * enseñó y nadie confirmó. Vive aquí arriba y no dentro de la pestaña para
+   * que la respuesta llegue aunque el pasajero esté mirando el mapa — el
+   * lector sincroniza cuando el camión sale del túnel, no cuando alguien abre
+   * una pantalla.
+   */
+  useConfirmacionDelPase({ pase: elPase.pase, listo: elPase.listo, guardar: elPase.guardar });
   useListaAlDia(vigenteHasta);
   const enElMapa = lugar === "mapa";
   /** El Mapa de la ciudad (PR 3b): en el Mapa, sin ruta abierta. */

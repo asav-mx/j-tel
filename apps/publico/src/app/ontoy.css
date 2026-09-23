@@ -1870,6 +1870,58 @@
 .ontoy-pase-pendiente b {
   color: var(--texto);
 }
+
+/*
+ * Lo confirmado por el lector (P3.5).
+ *
+ * **Sin verde.** El verde es del latido y de nada más (la ley de arriba); un
+ * viaje confirmado no está vivo, está cerrado. Lo que lo distingue del renglón
+ * de al lado es la tinta plena y el borde, no un color de veredicto — y la
+ * palabra «confirmado», que es la que de verdad lo dice.
+ */
+.ontoy-pase-confirmado {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--panel2);
+  border: 1px solid var(--linea);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--texto);
+}
+
+/* El sello de la pantalla del QR cuando el viaje ya consta. */
+.ontoy-qr-usado {
+  width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--panel2);
+  border: 1px solid var(--linea);
+  text-align: center;
+}
+.ontoy-qr-usado p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--tenue);
+}
+.ontoy-qr-usado p:last-child {
+  margin-bottom: 0;
+}
+.ontoy-qr-usado b {
+  color: var(--texto);
+}
+.ontoy-qr-usado-sello {
+  display: inline-block;
+  padding: 7px 14px;
+  border: 2px solid var(--texto);
+  border-radius: 8px;
+  font-size: 15px;
+  letter-spacing: 0.22em;
+  color: var(--texto);
+  /* Como un sello de tinta puesto a mano, no como un botón. */
+  transform: rotate(-4deg);
+}
 .ontoy-pase-nota {
   margin: 9px 0 0;
   font-size: 12px;
