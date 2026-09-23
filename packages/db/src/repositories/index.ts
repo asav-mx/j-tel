@@ -6635,6 +6635,56 @@ export class CircuitRepository {
   }
 
   /**
+   * **La parada que señala un QR impreso**, o `null`.
+   *
+   * La puerta de `/p/‹qr_slug›`. Devuelve tres situaciones y nada más, porque
+   * son las tres que la app sabe decir:
+   *
+   * - `vigente` — la parada sirve: su hoja se abre.
+   * - `retirada` — la parada ya no está en servicio. El letrero **sigue
+   *   atornillado al poste**, y quien lo escanea merece saber por qué y qué
+   *   ruta era. Retirar no borra (la fila sigue, con su fecha).
+   * - `null` — el slug no existe, **o su circuito no está publicado**. Los dos
+   *   se contestan igual a propósito: lo no publicado no existe para la app
+   *   (8.4), y distinguirlo de un slug inventado sería decir que existe.
+   *
+   * El filtro de publicación va **en la consulta**, como en
+   * `getPublishedCircuitBySlug` y por la misma razón: aquí la línea que habría
+   * que borrar para abrir la fuga deja la función sin sentido.
+   *
+   * El nombre sale de la versión **vigente** de la parada; una retirada ya no
+   * tiene versión abierta, así que se toma la última que valió — que es
+   * justamente el nombre que está impreso en el letrero.
+   */
+  async paradaPublicaPorQrSlug(qrSlug: string) {
+    const [fila] = await this.db
+      .select({
+        qrSlug: circuitStops.qrSlug,
+        retiredAt: circuitStops.retiredAt,
+        rutaSlug: circuits.publicSlug,
+        rutaNombre: circuits.name,
+        nombre: circuitStopVersions.name,
+        validFrom: circuitStopVersions.validFrom,
+      })
+      .from(circuitStops)
+      .innerJoin(circuits, eq(circuits.id, circuitStops.circuitId))
+      .leftJoin(circuitStopVersions, eq(circuitStopVersions.stopId, circuitStops.id))
+      .where(and(eq(circuitStops.qrSlug, qrSlug), isNotNull(circuits.publishedAt)))
+      /* La vigente primero (validTo nulo), y entre las cerradas la más
+         reciente: el nombre que está impreso en la lámina. */
+      .orderBy(sql`${circuitStopVersions.validTo} IS NOT NULL`, desc(circuitStopVersions.validFrom))
+      .limit(1);
+
+    if (!fila) return null;
+    return {
+      situacion: fila.retiredAt ? ("retirada" as const) : ("vigente" as const),
+      qrSlug: fila.qrSlug,
+      nombre: fila.nombre,
+      ruta: { slug: fila.rutaSlug, nombre: fila.rutaNombre },
+    };
+  }
+
+  /**
    * Los circuitos que la app del pasajero puede enseñar.
    *
    * Solo lo publicado, y solo lo que un pasajero necesita para escoger: nombre

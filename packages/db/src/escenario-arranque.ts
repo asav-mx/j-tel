@@ -145,8 +145,13 @@ function enDias(dias: number): string {
 }
 
 async function limpiar(db: ReturnType<typeof createDb>) {
-  // El circuito cae por cascada: trazados, paradas, versiones y asignaciones.
+  // El circuito se lleva por cascada sus trazados y asignaciones, pero NO sus
+  // paradas: desde la 0055 esa referencia es RESTRICT, porque cada parada tiene
+  // un letrero de lámina atornillado a un poste. Aquí se borran a mano, que es
+  // lo correcto para un escenario de prueba y lo que se vuelve imposible de
+  // hacer por descuido en producción.
   await db.delete(livePositions).where(inArray(livePositions.imei, [IMEI_ENSAYO, IMEI_PATIO]));
+  await db.delete(circuitStops).where(eq(circuitStops.circuitId, IDS.circuito));
   await db.delete(circuits).where(eq(circuits.id, IDS.circuito));
   await db.delete(accounts).where(eq(accounts.id, IDS.concesion));
   // Unidades y aparatos cuelgan del carrier; borrarlo se los lleva.

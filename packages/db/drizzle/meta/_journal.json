@@ -386,6 +386,13 @@
       "when": 1791072000000,
       "tag": "0054_libro_de_boletos",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1791158400000,
+      "tag": "0055_el_circuito_no_se_borra",
+      "breakpoints": true
     }
   ]
 }
