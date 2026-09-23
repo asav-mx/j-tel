@@ -32,6 +32,16 @@ import { deHex, type IdentidadDelLector } from "./identidad-del-lector";
  * J-Tel rechaza hoy lo rechazará siempre, y reintentarlo sería un lazo que no
  * cierra.
  *
+ * ## Una jornada por lote, y la más vieja primero
+ *
+ * Un lote lleva **un día** —así lo firma y así lo recibe el libro—, y el
+ * aparato puede estar cargando varias jornadas si pasó días sin señal (ver
+ * `jornadasQueSeGuardan`). Cada vuelta entrega **la jornada más vieja que
+ * todavía deba algo**: lo que más tiempo lleva esperando sale primero, y es
+ * también lo que primero libera lugar en la memoria del aparato.
+ *
+ * Cuando no queda nada que deber, el latido sale con la jornada de hoy.
+ *
  * ## Lo que esto NO hace
  *
  * No decide nada del boleto. Cuando este módulo corre, el veredicto ya lo dio
@@ -64,13 +74,28 @@ interface Respuesta {
   error?: string;
 }
 
+/**
+ * Cuál de las jornadas del aparato toca entregar: **la más vieja que deba
+ * algo**, y si ninguna debe, la de hoy —que es la que late—.
+ */
+export function laQueToca(
+  jornadas: readonly JornadaDelLector[],
+  hoy: string,
+): JornadaDelLector | null {
+  const deudoras = jornadas
+    .filter((j) => porSincronizar(j) > 0)
+    .sort((a, b) => a.dia.localeCompare(b.dia));
+  return deudoras[0] ?? jornadas.find((j) => j.dia === hoy) ?? null;
+}
+
 export function useEntregaDelLector(args: {
-  jornada: JornadaDelLector | null;
+  jornadas: readonly JornadaDelLector[];
+  hoy: string;
   identidad: IdentidadDelLector | null;
   haySenal: boolean;
   guardar: (j: JornadaDelLector) => void;
 }) {
-  const { jornada, identidad, haySenal, guardar } = args;
+  const { jornadas, hoy, identidad, haySenal, guardar } = args;
   const [estado, setEstado] = useState<EstadoDeLaEntrega>({ que: "reposo", ultima: null });
 
   /* Los vivos: el temporizador no puede quedarse con la jornada de hace rato. */
@@ -78,8 +103,11 @@ export function useEntregaDelLector(args: {
   const identidadViva = useRef<IdentidadDelLector | null>(null);
   const entregando = useRef(false);
   const intentos = useRef(0);
-  jornadaViva.current = jornada;
+  jornadaViva.current = laQueToca(jornadas, hoy);
   identidadViva.current = identidad;
+
+  /** Lo que el aparato debe entre TODAS sus jornadas. */
+  const debe = jornadas.reduce((n, j) => n + porSincronizar(j), 0);
 
   const entregar = useCallback(async () => {
     const actual = jornadaViva.current;
@@ -154,13 +182,12 @@ export function useEntregaDelLector(args: {
     }
   }, [guardar]);
 
-  /* En cuanto hay señal y hay algo que contar. */
+  /* En cuanto hay señal y hay algo que contar, en cualquiera de sus jornadas. */
   useEffect(() => {
-    if (!haySenal || !jornada || !identidad?.lectorId) return;
-    if (porSincronizar(jornada) === 0) return;
+    if (!haySenal || debe === 0 || !identidad?.lectorId) return;
     const t = setTimeout(() => void entregar(), 0);
     return () => clearTimeout(t);
-  }, [haySenal, jornada, identidad?.lectorId, entregar]);
+  }, [haySenal, debe, identidad?.lectorId, entregar]);
 
   /* El reintento, y el latido: un solo reloj que se pregunta qué toca. */
   useEffect(() => {

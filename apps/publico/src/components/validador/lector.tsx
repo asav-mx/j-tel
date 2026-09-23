@@ -9,6 +9,7 @@ import {
   TOPE_CODIGO_DICTADO,
   TOPE_SIN_SENAL,
   codigosDictados,
+  porEntregarEnTodas,
   porSincronizar,
   rechazadosPorJTel,
   sinSenalAceptados,
@@ -115,7 +116,7 @@ function idDePasoNuevo(): string {
 }
 
 export function Lector() {
-  const { jornada, guardar } = useJornadaDelLector();
+  const { jornada, todas, guardar, memoriaLlena } = useJornadaDelLector();
   const { identidad, preguntarQuienSoy } = useIdentidadDelLector();
   const [fase, setFase] = useState<Fase>("apagado");
   const [resultado, setResultado] = useState<ResultadoDelLector | null>(null);
@@ -174,7 +175,13 @@ export function Lector() {
    * La entrega (P3.5). El aparato decide sin red; esto sólo cuenta lo que ya
    * pasó, así que vive aparte de todo lo que decide.
    */
-  const { estado: entrega } = useEntregaDelLector({ jornada, identidad, haySenal, guardar });
+  const { estado: entrega } = useEntregaDelLector({
+    jornadas: todas,
+    hoy: diaDeHoy(),
+    identidad,
+    haySenal,
+    guardar,
+  });
 
   /*
    * ¿Cómo me llamo? Se pregunta al tener señal, y se insiste mientras nadie lo
@@ -350,8 +357,30 @@ export function Lector() {
 
   if (!jornada) return <div className="val" aria-busy="true" />;
 
-  const porEntregar = porSincronizar(jornada);
-  const noAceptados = rechazadosPorJTel(jornada);
+  /*
+   * Lo que se debe y lo que no aceptaron se cuentan en **todas** las jornadas
+   * que el aparato carga, no sólo en la de hoy: un lector que pasó días sin
+   * señal debe lo de esos días, y esconderlo detrás de «hoy» sería un número
+   * correcto que afirma algo falso.
+   */
+  /*
+   * **Dos números distintos, y a propósito.**
+   *
+   * `porEntregarHoy` es el que va **con su umbral** (`de 20`): el tope que
+   * decide si el lector sigue aceptando es por lector y **por día**, así que
+   * ponerle al lado un total de varios días sería el número correcto
+   * afirmando algo falso — la trampa del Marco §D. Se vio en la pantalla, no
+   * en el código: decía «3 de 20» con la jornada de hoy vacía.
+   *
+   * `porEntregarEnElAparato` es lo que el aparato le debe a J-Tel contando
+   * todas sus jornadas. Ése es el que manda en la línea de la entrega y en el
+   * aviso de los días que se arrastran, donde no hay umbral que confundir y
+   * esconderlo detrás de «hoy» sí sería mentir.
+   */
+  const porEntregarHoy = porSincronizar(jornada);
+  const porEntregarEnElAparato = porEntregarEnTodas(todas);
+  const noAceptados = todas.reduce((n, j) => n + rechazadosPorJTel(j), 0);
+  const diasQueDeben = todas.filter((j) => j.dia !== jornada.dia && porSincronizar(j) > 0).length;
 
   return (
     <div className="val">
@@ -511,7 +540,7 @@ export function Lector() {
           <div>
             <dt>Por entregar</dt>
             <dd>
-              {porEntregar} de {TOPE_SIN_SENAL}
+              {porEntregarHoy} de {TOPE_SIN_SENAL}
             </dd>
           </div>
           <div>
@@ -527,7 +556,7 @@ export function Lector() {
         </dl>
 
         <p className="val-entrega mono">
-          {palabrasDeLaEntrega(entrega, porEntregar, Boolean(identidad?.lectorId))}
+          {palabrasDeLaEntrega(entrega, porEntregarEnElAparato, Boolean(identidad?.lectorId))}
         </p>
 
         {noAceptados > 0 && (
@@ -549,6 +578,31 @@ export function Lector() {
           Jornada del {diaDeHoy()}. Lo aceptado sin señal no le consta a ningún otro lector hasta
           que haya red: si un boleto pasó en dos camiones, salta al sincronizar — no antes.
         </p>
+
+        {/*
+          Lo que se arrastra de días anteriores **se dice**. Un aparato que
+          guarda callado lo de tres días atrás y enseña sólo «hoy» da un número
+          correcto que afirma algo falso, y el chofer no puede pedir ayuda por
+          algo que no ve.
+        */}
+        {diasQueDeben > 0 && (
+          <p className="val-nota">
+            Se guardan {diasQueDeben === 1 ? "también los pasos de otro día" : `también los pasos de ${diasQueDeben} días`}{" "}
+            que nadie ha acusado. No se borran: salen en cuanto haya red, los más viejos primero.
+          </p>
+        )}
+
+        {/*
+          Y si de verdad ya no cabe, se dice en lugar de tirarlo. Lo aceptado
+          sigue aquí; lo que se pierde es lo de una recarga, y se pierde
+          habiéndolo avisado.
+        */}
+        {memoriaLlena && (
+          <p className="val-memoria-llena">
+            La memoria del aparato está llena. Nada se ha borrado, pero si recargas esta pantalla
+            se pierde lo que no esté entregado. Busca señal: al entregar se libera lugar solo.
+          </p>
+        )}
       </div>
     </div>
   );
