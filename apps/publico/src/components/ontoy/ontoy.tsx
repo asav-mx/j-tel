@@ -23,7 +23,7 @@ import { HojaDeParada, type LlegadaEnLaHoja } from "@/components/ontoy/hoja-de-p
 import { VistaMapa } from "@/components/ontoy/vista-mapa";
 import type { EstadoDeRuta } from "@/lib/ontoy/estado-de-ruta";
 import { VistaInicio } from "@/components/ontoy/vista-inicio";
-import { LugarReservado } from "@/components/ontoy/lugar-reservado";
+import { VistaPase } from "@/components/ontoy/vista-pase";
 import { VistaIrA } from "@/components/ontoy/vista-ira";
 import { Barra, type Lugar } from "@/components/ontoy/barra";
 import { CabezaDeRuta } from "@/components/ontoy/cabeza-de-ruta";
@@ -40,6 +40,7 @@ import { registrarSondeo, TELEFONO_INICIAL, type EstadoDelTelefono } from "@/lib
 import { useAvisosVistos } from "@/lib/ontoy/avisos-vistos";
 import { VistaAvisos } from "@/components/ontoy/vista-avisos";
 import { useParadasDeLaCiudad } from "@/lib/ontoy/usar-paradas-de-la-ciudad";
+import { useElPase } from "@/lib/ontoy/pase-del-telefono";
 
 /**
  * **Ontoy** — el cascarón de los cuatro lugares (8.8, 22-sep).
@@ -47,8 +48,9 @@ import { useParadasDeLaCiudad } from "@/lib/ontoy/usar-paradas-de-la-ciudad";
  * **Inicio · Mapa · Ir a · Pase**, con la barra abajo. La app abre en Inicio,
  * contestando: la parada guardada con su próximo camión, o las paradas cerca
  * del pasajero. Quien llega por la liga de una ruta abre en el Mapa con esa
- * ruta enfocada. **Ir a** y **Pase** son lugares reservados hasta que existan
- * el planeador (8.16) y la cartera (8.14).
+ * ruta enfocada. **Pase** es la cartera (8.14; Ontoy 3.0 · PR P2): viajes de
+ * laboratorio, con su banda de R&D. **Ir a** es el buscador, y el planeador
+ * (8.16) llega con el cierre de Ontoy 2.0.
  *
  * ## Toda pantalla tiene su salida (8.10)
  *
@@ -99,6 +101,7 @@ export function Ontoy({
   const [modo, setModo] = useState<"paradas" | "mapa">("paradas");
 
   const guardadas = useParadasGuardadas();
+  const elPase = useElPase();
   useListaAlDia(vigenteHasta);
   const enElMapa = lugar === "mapa";
   /** El Mapa de la ciudad (PR 3b): en el Mapa, sin ruta abierta. */
@@ -468,12 +471,13 @@ export function Ontoy({
       )}
 
       {!campanaAbierta && lugar === "pase" && (
-        <LugarReservado titulo="Tu pase" alIrAlMapa={() => irA("mapa")}>
-          <p>
-            Aquí va a vivir tu pase para pagar el camión con el teléfono. <b>Llega después.</b>
-          </p>
-          <p>Mientras, pagas tu camión como siempre. Nada de esta app te pide cuenta ni dinero.</p>
-        </LugarReservado>
+        <VistaPase
+          pase={elPase.pase}
+          disponible={elPase.disponible}
+          alComprar={elPase.comprar}
+          alMostrar={elPase.mostrar}
+          alAlternarCuenta={elPase.alternarCuenta}
+        />
       )}
 
       {!campanaAbierta && enLaCiudad && panelAbierto && (

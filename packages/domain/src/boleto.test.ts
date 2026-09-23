@@ -169,10 +169,10 @@ describe("emitir y verificar, sin red", () => {
 describe("el código rotante y la deriva del reloj", () => {
   /* El número que Asav eligió, fijado. Si alguien mueve la tolerancia, esta
      prueba dice en voz alta cuánto acaba de durar una captura de pantalla. */
-  it("una captura sirve 4 min 30 s, que es la tolerancia de ±2 min decidida", () => {
-    expect(VENTANA_MS).toBe(30_000);
+  it("rota cada 5 s, tolera ±2 min exactos, y una captura sirve 4 min 5 s", () => {
+    expect(VENTANA_MS).toBe(5_000);
     expect(TOLERANCIA_VENTANAS * VENTANA_MS).toBe(2 * 60 * 1000);
-    expect(VIDA_DE_UNA_CAPTURA_MS).toBe(4 * 60 * 1000 + 30 * 1000);
+    expect(VIDA_DE_UNA_CAPTURA_MS).toBe(4 * 60 * 1000 + 5 * 1000);
   });
 
   it("acepta justo en el borde de la tolerancia y rechaza una ventana más allá", () => {
@@ -192,7 +192,7 @@ describe("el código rotante y la deriva del reloj", () => {
   });
 
   /* La historia completa: alguien fotografía el QR y se lo manda a otro. */
-  it("una captura deja de servir en otro validador pasados los 4 min 30 s", () => {
+  it("una captura deja de servir en otro validador pasados los 4 min 5 s", () => {
     const captura = presentarBoleto(boletoDePrueba(), PORTADOR, MEDIODIA);
     const otroValidador = { ...CONTEXTO, ahora: MEDIODIA + VIDA_DE_UNA_CAPTURA_MS };
     expect(verificarBoleto(captura, otroValidador)).toEqual({
