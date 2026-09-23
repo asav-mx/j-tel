@@ -25,7 +25,7 @@
 /** Lo vivo: nunca de caché. Si agregas una consulta viva, va aquí (lo exige `sw.test.ts`). */
 const VIVO = ["/unidades", "/api/circuitos/en-vivo"];
 
-const VERSION = "v2";
+const VERSION = "v3";
 const CASCARON = `cascaron-${VERSION}`;
 const TESELAS = `teselas-${VERSION}`;
 
@@ -35,7 +35,12 @@ const TOPE_TESELAS = 300;
 
 self.addEventListener("install", (evento) => {
   evento.waitUntil(
-    caches.open(CASCARON).then((c) => c.addAll(["/", "/icono.svg", "/manifest.webmanifest"])),
+    /* `/validador` entra al cascarón porque el lector del camión TIENE que abrir
+       sin red: es su caso normal, no su excepción. Si no estuviera aquí, un
+       chofer en un tramo sin señal recargaría y se quedaría sin lector. */
+    caches
+      .open(CASCARON)
+      .then((c) => c.addAll(["/", "/validador", "/icono.svg", "/manifest.webmanifest"])),
   );
   self.skipWaiting();
 });

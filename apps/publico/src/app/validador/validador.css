@@ -1,0 +1,289 @@
+/*
+ * El lector del camión — Ontoy 3.0 · PR P3.
+ *
+ * **Oscuro fijo, y es una excepción firmada.** La ley del skill dice que
+ * ninguna pantalla se da por terminada sin verse en las dos pieles. Ésta no la
+ * cumple a propósito (ASAV, 23-sep-2026): no es una pantalla que alguien abra,
+ * es un instrumento de a bordo, y nadie le pone modo claro al tablero de un
+ * camión. Por eso sus colores son suyos y no salen de los tokens de Ontoy: no
+ * responden a `data-tema` ni a `prefers-color-scheme`.
+ *
+ * Lo que sí cumple, porque no es de piel sino de honestidad: el estado no lo
+ * carga el color solo. El semáforo lleva su palabra —SUBE / NO PASA— y el panel
+ * dice el motivo con letras. Un chofer con el sol de Juárez de frente no ve
+ * verde ni rojo; lee.
+ */
+
+.val {
+  --val-fondo: #14171b;
+  --val-panel: #1b2026;
+  --val-linea: #2e353c;
+  --val-tinta: #ede8df;
+  --val-tenue: #98a2ab;
+  --val-ok: #1d8a5c;
+  --val-ok-letra: #3dbe86;
+  --val-mal: #b3402a;
+  --val-mal-letra: #e06a50;
+
+  min-height: 100dvh;
+  background: var(--val-fondo);
+  color: var(--val-tinta);
+  display: flex;
+  flex-direction: column;
+}
+
+.val-banda {
+  margin: 0;
+  padding: 8px 14px;
+  background: #000;
+  color: #f2e6cf;
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+}
+
+.val-cabeza {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--val-linea);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--val-tenue);
+}
+.val-aparato {
+  color: var(--val-tinta);
+}
+.val-senal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.val-senal i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--val-ok-letra);
+}
+/* Sin señal no es sólo otro color: el punto se vuelve un anillo hueco. */
+.val-senal-fuera i {
+  background: transparent;
+  border: 2px solid var(--val-mal-letra);
+}
+
+.val-led {
+  margin: 0;
+  padding: 20px 14px;
+  text-align: center;
+  background: #20262c;
+  font-family: var(--fuente-titular), sans-serif;
+  font-weight: 800;
+  font-size: 21px;
+  letter-spacing: 0.04em;
+}
+.val-led-lee {
+  background: #3a424b;
+}
+.val-led-ok {
+  background: var(--val-ok);
+  color: #fff;
+}
+.val-led-mal {
+  background: var(--val-mal);
+  color: #fff;
+}
+
+.val-cuerpo {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.val-unidad {
+  margin: 0;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--val-tenue);
+}
+
+.val-camara {
+  position: relative;
+  min-height: 190px;
+  border-radius: 14px;
+  border: 1px solid var(--val-linea);
+  background: #171b20;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+.val-video {
+  width: 100%;
+  height: 190px;
+  object-fit: cover;
+  display: block;
+}
+/* El lienzo es donde se mira el cuadro; no se enseña. */
+.val-lienzo {
+  display: none;
+}
+.val-mira {
+  position: absolute;
+  width: 128px;
+  height: 128px;
+  border: 2px dashed #4a525b;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--val-tenue);
+}
+.val-encender {
+  position: absolute;
+  border: 0;
+  border-radius: 12px;
+  padding: 14px 18px;
+  background: var(--val-tinta);
+  color: #14171b;
+  font-family: var(--fuente-titular), sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.val-sin-camara {
+  position: absolute;
+  margin: 0;
+  padding: 0 18px;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--val-mal-letra);
+}
+
+.val-panel {
+  border-radius: 12px;
+  border: 1px solid var(--val-linea);
+  background: var(--val-panel);
+  padding: 11px 13px;
+}
+.val-panel-titulo {
+  margin: 0;
+  font-family: var(--fuente-titular), sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.25;
+}
+.val-panel-ok .val-panel-titulo {
+  color: var(--val-ok-letra);
+}
+.val-panel-mal .val-panel-titulo {
+  color: var(--val-mal-letra);
+}
+.val-panel-detalle {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--val-tenue);
+}
+
+.val-acciones {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.val-boton {
+  flex: 1 1 140px;
+  border-radius: 10px;
+  border: 1px solid #3a424b;
+  background: var(--val-panel);
+  color: var(--val-tinta);
+  padding: 10px 11px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.val-boton:disabled {
+  color: var(--val-tenue);
+  border-color: var(--val-linea);
+  cursor: not-allowed;
+}
+.val-pista {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--val-tenue);
+}
+
+.val-teclado {
+  border-radius: 12px;
+  border: 1px solid var(--val-linea);
+  background: var(--val-panel);
+  padding: 12px;
+}
+.val-teclado-pantalla {
+  margin: 0 0 9px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #0e1113;
+  border: 1px solid var(--val-linea);
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--val-ok-letra);
+}
+.val-teclado-rejilla {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin-bottom: 9px;
+}
+.val-tecla {
+  border-radius: 10px;
+  border: 1px solid #3a424b;
+  background: #232a31;
+  color: var(--val-tinta);
+  padding: 13px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.val-tecla:disabled {
+  color: var(--val-tenue);
+  cursor: not-allowed;
+}
+
+.val-pie {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: 12px;
+  border: 1px solid var(--val-linea);
+  background: var(--val-panel);
+}
+.val-pie dt {
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--val-tenue);
+}
+.val-pie dd {
+  margin: 2px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+.val-nota {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--val-tenue);
+}
