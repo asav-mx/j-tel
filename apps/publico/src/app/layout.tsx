@@ -65,6 +65,13 @@ const plexMono = localFont({
 const NOMBRE = process.env.NEXT_PUBLIC_APP_NOMBRE ?? "Transporte público";
 
 export const metadata: Metadata = {
+  /*
+   * Dónde vive Ontoy: `ontoy.app` (ASAV, 23-sep-2026). Con esto, todo lo que
+   * Next arma en absoluto —lo que se comparte por WhatsApp, lo que lee un
+   * buscador— apunta al dominio de la plataforma y no al de un transportista.
+   * La misma variable que `next.config.ts`, para que no haya dos verdades.
+   */
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITIO ?? "https://ontoy.app"),
   title: NOMBRE,
   description: "Dónde viene tu camión, en vivo.",
   manifest: "/manifest.webmanifest",
