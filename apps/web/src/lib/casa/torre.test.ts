@@ -110,6 +110,20 @@ describe("textoDeEspera — el único reloj que corre frente a quien mira", () =
     expect(textoDeEspera(espera(19.1, "atrasada"))).toBe("19m 06s");
   });
 
+  /*
+   * EL STRING DEL REPORTE. Una espera de 803.53 min salía como «803m 32s» —
+   * son 13 h 23 min y nadie los lee así. Los segundos servían para ver crecer
+   * una alarma de minutos; pasada la hora no dicen nada.
+   */
+  it("pasada la HORA los segundos estorban: se escribe como duración", () => {
+    expect(textoDeEspera(espera(803.5333, "atrasada"))).toBe("13 h 23 min");
+  });
+
+  it("el corte es la hora en punto, y por debajo el reloj sigue corriendo", () => {
+    expect(textoDeEspera(espera(59.9, "atrasada"))).toBe("59m 54s");
+    expect(textoDeEspera(espera(60, "atrasada"))).toBe("1 h 0 min");
+  });
+
   it("sin espera que medir, un hueco declarado", () => {
     expect(textoDeEspera(espera(null, "sin_datos"))).toBe("—");
   });
