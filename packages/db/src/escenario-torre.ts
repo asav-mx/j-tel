@@ -32,6 +32,7 @@ import {
  *   pnpm --filter @jtel/db escenario-torre --vacio        # el circuito sin capturar
  *   pnpm --filter @jtel/db escenario-torre --sin-unidades # paradas y promesa, ningún camión asignado
  *   pnpm --filter @jtel/db escenario-torre --sin-salir    # camiones asignados, ninguno al aire
+ *   pnpm --filter @jtel/db escenario-torre --apretado     # 17 paradas con nombres largos reales
  *   pnpm --filter @jtel/db escenario-torre --jornada      # el día de la 2120, para la hoja de la jornada (PR C)
  *   pnpm --filter @jtel/db escenario-torre --asignar      # + lo que hace falta para ver asignar (PR 2)
  *   pnpm --filter @jtel/db escenario-torre --limpiar
@@ -133,7 +134,7 @@ const ZONA = (() => {
 const OPERADOR = "escenario-torre-operador";
 
 const LON = -106.45;
-const PARADAS = [
+const PARADAS_CORTAS = [
   "Oasis",
   "Zaragoza",
   "Independencia",
@@ -143,10 +144,39 @@ const PARADAS = [
   "Catedral",
   "Centro",
 ];
+
+/**
+ * `--apretado`: **17 paradas con nombres reales de largo real.**
+ *
+ * Existe porque el carril se rompía justo aquí y no había forma de verlo: con
+ * ocho nombres cortos todo cabe, y el defecto —los rótulos encaramados— sólo
+ * aparece con la densidad de un circuito de verdad. Una pantalla que no se
+ * puede ver apretada se revisa siempre en su caso fácil.
+ */
+const PARADAS_APRETADAS = [
+  "Oasis",
+  "Parroquia Santa Teresa de Jesús",
+  "Fraccionamiento Praderas del Sur Segunda Etapa",
+  "Hospital General de Zona núm. 35",
+  "Central de Autobuses Los Ángeles",
+  "Zaragoza",
+  "Independencia",
+  "Tecnológico",
+  "López Mateos",
+  "Plaza Insurgentes",
+  "16 de Septiembre",
+  "Mercado Cuauhtémoc",
+  "Catedral",
+  "Av. de las Torres",
+  "Colonia Azteca",
+  "Pradera Dorada",
+  "Centro",
+];
+
+let PARADAS: string[] = PARADAS_CORTAS;
 /** Una recta de norte a sur; la vuelta es la misma al revés. */
 const LAT = (i: number) => 31.7 + i * 0.006;
-const TRAZADO_IDA: Array<[number, number]> = PARADAS.map((_, i) => [LON, LAT(i)]);
-const TRAZADO_VUELTA = [...TRAZADO_IDA].reverse();
+const trazadoIda = () => PARADAS.map((_, i) => [LON, LAT(i)] as [number, number]);
 
 const CAMIONES = [
   { id: "f3000000-0000-4000-8000-00000000001a", label: "2120", imei: "FIXTURE-TORRE-2120" },
@@ -303,9 +333,13 @@ async function limpiar(db: ReturnType<typeof createDb>) {
 
 async function sembrar(
   db: ReturnType<typeof createDb>,
-  opciones: { compartido: boolean; vacio: boolean; asignar: boolean; sinUnidades: boolean; sinSalir: boolean; jornada: boolean },
+  opciones: { compartido: boolean; vacio: boolean; asignar: boolean; sinUnidades: boolean; sinSalir: boolean; jornada: boolean; apretado: boolean },
 ) {
   const ahora = new Date();
+  /* `--apretado` cambia el catálogo de paradas antes de sembrar nada. */
+  PARADAS = opciones.apretado ? PARADAS_APRETADAS : PARADAS_CORTAS;
+  const ida = trazadoIda();
+  const vuelta = [...ida].reverse();
   await limpiar(db);
 
   await db.insert(accounts).values([
@@ -361,8 +395,8 @@ async function sembrar(
   }
 
   await db.insert(circuitPaths).values([
-    { circuitId: IDS.circuito, sentido: "ida", coordinates: TRAZADO_IDA, pointCount: TRAZADO_IDA.length, lengthMeters: 4670 },
-    { circuitId: IDS.circuito, sentido: "vuelta", coordinates: TRAZADO_VUELTA, pointCount: TRAZADO_VUELTA.length, lengthMeters: 4670 },
+    { circuitId: IDS.circuito, sentido: "ida", coordinates: ida, pointCount: ida.length, lengthMeters: 4670 },
+    { circuitId: IDS.circuito, sentido: "vuelta", coordinates: vuelta, pointCount: vuelta.length, lengthMeters: 4670 },
   ]);
 
   /* Las paradas sirven los DOS sentidos (`sentido: null`): así la torre dibuja
@@ -596,5 +630,6 @@ else
     sinUnidades: args.includes("--sin-unidades"),
     sinSalir: args.includes("--sin-salir"),
     jornada: args.includes("--jornada"),
+    apretado: args.includes("--apretado"),
   });
 process.exit(0);

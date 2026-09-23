@@ -219,18 +219,41 @@ export function textoDeReferencia(referencia: Referencia | null): string {
 }
 
 /**
+ * Una duración en palabras, legible en cualquier magnitud.
+ *
+ * Bajo la hora, minutos. Pasada la hora, **horas y minutos**: `13 h 23 min`.
+ * Los intervalos se escriben como intervalos y nunca con formato de hora del
+ * día, que se leería como un instante.
+ */
+export function duracionEnPalabras(minutos: number): string {
+  const m = Math.max(0, Math.floor(minutos));
+  if (m < 60) return `${m} min`;
+  return `${Math.floor(m / 60)} h ${m % 60} min`;
+}
+
+/** Pasada la hora, los segundos dejan de decir algo. */
+const MINUTOS_CON_SEGUNDOS = 60;
+
+/**
  * La espera en palabras.
  *
  * Dentro del rango se dice en minutos y ya. **Pasada la orilla se le agregan
  * los segundos**, y no es adorno: ése es el único reloj de la torre que corre
  * frente a quien la mira, y verlo avanzar es la diferencia entre un dato y una
  * alarma que crece.
+ *
+ * ✎ **Con un tope** (22-sep-2026). Los segundos servían para ver crecer una
+ * espera de minutos; en una de trece horas no dicen nada y vuelven el número
+ * ilegible — el reporte traía `803m 32s`, que son 13 h 23 min y nadie lo lee
+ * así. Pasada la hora se escribe como duración. **La precisión no puede crecer
+ * con la magnitud**: el reloj que hay que ver avanzar es el que todavía se
+ * puede corregir por radio, no el de un circuito parado desde la mañana.
  */
 export function textoDeEspera(espera: EsperaDeParada): string {
   if (espera.minutos === null) return "—";
   const total = Math.max(0, Math.floor(espera.minutos * 60));
-  if (espera.estado !== "atrasada") return `${Math.floor(total / 60)} min`;
   const m = Math.floor(total / 60);
+  if (espera.estado !== "atrasada" || m >= MINUTOS_CON_SEGUNDOS) return duracionEnPalabras(m);
   const s = total % 60;
   return `${m}m ${s < 10 ? "0" : ""}${s}s`;
 }
