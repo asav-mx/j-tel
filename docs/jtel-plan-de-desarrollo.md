@@ -1,6 +1,12 @@
 # J-Tel — Plan de desarrollo
 
-Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para saber el estado.** Se actualiza al cerrar cada pieza. Acompaña al Marco (`docs/marco-limpio/`) y al mapa de la casa (`docs/Mapa-De-La-Casa.md`). Sustituye a `Plan-Desarrollo-Orden-Frentes.md` (15 de agosto), archivado sin editar en `docs/archivo/`. Última actualización: 19 de septiembre de 2026.
+Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para saber el estado.** Se actualiza al cerrar cada pieza. Acompaña al Marco (`docs/marco-limpio/`) y al mapa de la casa (`docs/Mapa-De-La-Casa.md`). Sustituye a `Plan-Desarrollo-Orden-Frentes.md` (15 de agosto), archivado sin editar en `docs/archivo/`. Última actualización: 23 de septiembre de 2026.
+
+> **Éste es el único plan vivo** (decisión de Asav, 23-sep-2026). `PLAN.md`,
+> `PLAN-v1.md` y `Plan-Camino-a-v1.md` se movieron a `docs/archivo/` **sin
+> editarles una letra**: lo que siga abierto de ellos vive ahora como renglón
+> aquí abajo, con puntero a su sección. Un documento archivado se lee por su
+> razonamiento, no por su estado — el estado está aquí.
 
 ---
 
@@ -47,7 +53,16 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 - Muro entre cuentas **dentro del motor**: verificación, reverificación y el backfill de duraciones leen la evidencia filtrando por la cuenta del servicio que juzgan (#441). Medido en producción el 17-sep-2026 antes de cerrar: cero IMEIs con puntos en más de una cuenta, así que no movió ningún veredicto ya sellado. El 18-sep se borró la lectura sin cuenta del repositorio: ya no existe la puerta, no sólo está cerrada. Lo cuida una prueba-guardia que barre todos los paquetes y pone en rojo cualquier lectura sin cuenta que se reintroduzca.
 - La pausa de la verificación de un contrato (#447 / 0041): se pausa y se reanuda como evento, con quién, desde cuándo vale y motivo; lo sellado no se toca y lo no medido durante la pausa jamás se genera hacia atrás. **En uso:** los cuatro contratos quedaron pausados el 19-sep, con vigencia desde el 18-sep (se registró después y los eventos no se editan, así que no vale desde el 5). Los dos de Tecma, por el corte del proveedor de GPS; PRUEBA REAL y Honeywell, porque nunca operaron de verdad. Al pausar se borraron 1095 ocurrencias sin hecho.
 
-**El Marco: 7 piezas.** Pieza 6 (Compás, el cimiento), enmienda del expediente (§H, 6.30–6.33), Pieza 7 (la modalidad del servicio).
+**El Marco: 9 piezas.** Pieza 6 (Compás, el cimiento), enmienda del expediente (§H, 6.30–6.33), Pieza 7 (la modalidad del servicio), **Pieza 8** (la app del pasajero público) y **Pieza 9** (el cumplimiento del circuito), las dos ratificadas el 19-sep y consolidadas con sus enmiendas el 22 (#455, #498).
+
+**Del 20 al 23 de septiembre — lo que entró mientras la cadena esperaba el arranque:**
+
+- **La torre y el detector de pasos, completos.** El detector con su comparación (0045, 0046, #469), el orquestador que lo corre solo (0047, #471), el muro de los pasos que se abre por la unidad (9.14, #472), la puerta de posiciones con muro por cuenta y su derivación (#473, #474) y el radar (#475). Y la promesa por franja horaria como **única fuente** (0044, #466; #481, #482), con quién capturó cada versión (0049, #483) y el borrado de `circuits.declared_frequency_minutes` (0050, #485).
+- **Circuitos en la casa nueva de J-Staff** (A1–A4, #494–#497) y **las reglas de la medición firmadas** (0051, #499): quién, cuándo, por qué y el antes → después leído de la base. La pantalla vieja sigue viva hasta el PR D.
+- **Ontoy 2.0 — la app del pasajero, rehecha y publicada.** La barra de cuatro lugares (#503), «a N paradas» mientras la velocidad no esté calibrada (#504), el hilo de la ruta con su piso de contraste (#505), el Mapa de la ciudad con las favoritas en una sola consulta (#506), los avisos de la concesión firmados (0052, #507) con su campana (#510), las rutas en Inicio ordenadas por cercanía (#516, #517), el filtro del Mapa (#519) y el resumen de recorridos por tramo (0053, #511, #512). **Está publicada y abierta:** `https://www.juarezbus.digital/` contesta 200 sin sesión (comprobado el 23-sep). **Falta el planeador**, que es su último eslabón y espera recorridos medidos después del 28.
+- **La jornada de una unidad** (#493, #500): el día de una unidad en su circuito, sólo con lo medido y **SIN DATOS ante la duda**. Es recuerdo, así que va sin cobre.
+- **El lazo de re-verificación**, diagnosticado (#459, #461) y cerrado: el árbitro se rinde, cuenta sin escribir y hay llave (0043, #463). Y la carrera de `saveFact` —13 702 reventones que eran un `!`— arreglada (#460).
+- **Ontoy 3.0 · pagos, en laboratorio.** Ver abajo: salió de la cola el 22-sep y no está en la cadena.
 
 ---
 
@@ -163,6 +178,16 @@ Se atienden entre eslabones porque se agravan con el arranque:
 - **Las cifras en cero** y **Protomaps antes de las 80 unidades**.
 - **Cuántos GPS aguanta el sistema.** Nunca se ha medido. Se simula la carga de 50, 200 y 500 unidades contra una base desechable. No es urgente; es una pregunta abierta que conviene no contestar de memoria.
 
+### Ontoy 3.0 · pagos — fuera de la cadena, en laboratorio
+
+**Salió de la cola el 22 de septiembre de 2026**, donde estaba como «cuentas de pasajero y cartera de pago, pieza propia con abogado». Se adelantó porque la cadena esperaba el arranque y esto es **mecánica aislada**: no toca el motor, no toca el árbitro y no toca la app publicada.
+
+**La raya, que manda sobre todo lo demás:** se construye con **datos falsos** para probar la mecánica, **nunca dinero real de una persona real** hasta que responda el abogado. Sin procesador, sin banco, sin cuenta. Lo vigila una valla en CI (`pnpm cobro:check`) que se cae si aparece un SDK de pagos. Ficha: `docs/Ficha-Construccion-Ontoy-3-Pagos.md`.
+
+Lo que está en `main`: el **boleto firmado** que se verifica sin red (#523), el **pase del pasajero** con su QR rotante (#524) y el **lector del camión** (#525, #526, #527). Abierto: el **libro de boletos y la sincronización** (#528) — la primera pieza con migración (0054) y con lado servidor.
+
+**Y el orden que esto cambió: la Pieza 10 va ANTES del P4.** La caja de J-Staff reparte dinero entre transportistas, y **a qué se ata un viaje para repartirlo no está decidido** — el libro guarda lo observado y no lo decide. Escribir la caja sin esa pieza sería inventar el reparto en una pantalla, que es exactamente lo que el Marco no deja hacer.
+
 ### Fuera de la cadena, y sigue vivo
 
 La cadena es el arranque, no el plan entero. Estos dos frentes no entran en ella y no se cancelan:
@@ -183,7 +208,7 @@ La piel vieja se apaga el 30-nov: las direcciones redirigen a la casa nueva y na
 Lo que se nos ocurre mientras avanzamos. No interrumpe la cadena.
 
 - El vigilante que avisa (Lenore sobre la torre): cuando haya frecuencia real medida que vigilar.
-- Las cuentas de pasajero y la cartera de pago (Pieza 8.14): pieza propia, con abogado.
+- ~~Las cuentas de pasajero y la cartera de pago (Pieza 8.14)~~ → **salió de la cola el 22 de septiembre de 2026.** Ver «Ontoy 3.0 · pagos» abajo.
 - Guardar posiciones de pasajeros (8.15): pieza propia, con abogado y sus seis condiciones.
 - El árbitro del circuito, etapa 2 (9.12): sólo tras semanas de medición con servicio real.
 - Comparar circuitos entre sí (9.10): igual.
@@ -193,9 +218,45 @@ Los **pendientes con nombre** de abajo siguen vivos y no se repiten aquí.
 
 ---
 
+## Lo que quedó abierto del PLAN viejo
+
+**Inventario del 23-sep-2026, al archivar `PLAN.md`.** Se hizo por estructura
+—sus tramos, sus bloqueos y su lista de causas— **no releyendo sus 5 242
+líneas**: lo que cada renglón dice de sí mismo es lo que se traslada, y el
+detalle se queda allá, que para eso se archivó completo.
+
+**Nada de esto está cancelado.** Lo que no tenía fecha sigue sin tenerla, y lo
+que la cadena del arranque no toca, no se toca.
+
+| Qué sigue abierto | Dónde está el detalle | Estado al archivarlo |
+|---|---|---|
+| **Tramo 3 — arreglar el árbitro.** Las 26 causas medidas del motor, contadas por lo que su propia tabla dice de cada una: **19 sin construir**, **4 partidas o a medias** (C1, C17, C20, C24), **2 cerradas** (C12, C15) y **1 que dejó de ser causa** (C10) | `docs/archivo/PLAN.md` §4 «Tramo 3» y §5.1 con la medición de cada una | Abierto. La regla que lo gobierna sigue en pie: **una causa por PR, y nunca dos términos de `servedRoute` en el mismo** |
+| **Tramo 4 — que el hecho se baste a sí mismo.** Un hecho sellado no carga todo lo que hizo falta para producirlo: geocerca, variantes, ventana de evidencia, nombres y densidad | `docs/archivo/PLAN.md` §4 «Tramo 4» | Abierto, y **bloqueante para la definición de v1**. Su propia tabla avisa que en la mitad sin copia congelada **cero no es una medición, es ausencia de memoria** |
+| **Tramo 5 — ver y explicar.** El expediente del no cumplido con los dos trazos encimados, el diff estructural y las cifras de juicio | `docs/archivo/PLAN.md` §4 «Tramo 5» | Abierto. Parte se cubrió por otro camino (el archivero y las actas de Vernier); el corazón —los dos trazos y el diff— no |
+| **Tramo 6 — re-verificar y sostener** | `docs/archivo/PLAN.md` §4 «Tramo 6» | Abierto, y espera al 3 y al 4 |
+| **Tramo 7 — vendible.** Login real sin bypass, Lenore-vigía y narradora, el interruptor de J-Staff, las altas de usuarios | `docs/archivo/PLAN.md` §4 «Tramo 7» | Abierto. El **interruptor de J-Staff** y las **altas por invitación o solicitud** ya se nombran en este plan como frentes propios |
+| **Tramo JB — transporte concesionado** | `docs/archivo/PLAN.md` §4 «Tramo JB» | **Es la cadena del arranque de este documento.** Se siguió por aquí, no por allá |
+| **T2 — el correo, y son dos cosas.** (a) Resend con dominio verificado; (b) que exista `hola@j-telemetry.com` | `docs/archivo/PLAN.md` §3.1 | Abierto. Sigue vivo en este plan como «los avisos que no llegan» |
+| **T4 — rotar `neondb_owner`.** La mitad de lectura se rotó el 10-ago; la del dueño no | `docs/archivo/PLAN.md` §3.1 y `docs/Procedimiento-Credenciales.md` | Abierto, con procedimiento escrito |
+| **T6 — tres identidades de prueba en Clerk**, para abrir las tres caras a la vez | `docs/archivo/PLAN.md` §3.1 y `Ficha-Identidades-De-Prueba.md` | Abierto |
+| **Las decisiones D1–D9 de Asav** que siguen sin cerrarse | `docs/archivo/PLAN.md` §3.2 | Abiertas. D9 (el modelo de altas) ya está decidido y vive aquí, en el Tramo 7 |
+| **Lo que NO entra a v1** | `docs/archivo/PLAN.md` §6 | Se queda donde está: es una lista de fronteras, no de trabajo |
+
+**Los dos archivos que acompañan a `PLAN.md`** —`PLAN-v1.md` (el plan de olas,
+anterior al 3-ago) y `Plan-Camino-a-v1.md`— se archivan **sin inventario
+propio**: `PLAN.md` los reemplazó en su momento y lo que sobrevivía de ellos ya
+había pasado por él. Se guardan porque su razonamiento se cita en fichas del
+Marco que siguen vivas.
+
+---
+
 ## Pendientes con nombre (anotados para no perderse)
 
-- **Una prueba que no prueba nada, y nadie se había enterado.** `integration.test.ts > generateForProfile — alineación de calendario > rango sáb-22 a lun-24 ago-2026` falla en `origin/main` sin tocar nada (comprobado el 19-sep, sesión del lazo de re-verificación). Depende de los datos de la rama desechable, que es compartida entre sesiones, y CI no la corre —sólo corre contra la rama de pruebas de integración cuando alguien la invoca a mano—. Antes de tocarla: medir qué dato de la desechable cambió y por qué, y decidir si la prueba se arregla o si la desechable necesita un guardián de datos fijos.
+- ✎ **La trampa de la hora — y el pendiente que decía aquí era falso.** Este renglón afirmaba que `integration.test.ts > generateForProfile — alineación de calendario` **fallaba en `origin/main` sin tocar nada**, y culpaba a los datos de la rama desechable. **No falla, y no eran los datos.** La suite exige `TZ=UTC`, que vivía sólo en el script del paquete; correrla con `npx vitest` —para filtrar un archivo— la pierde, y entonces se pone roja. Diagnosticado el 23-sep (**#529**) y cerrado por el lado de la valla: la zona vive ahora en la configuración de vitest y no se puede perder (**#530**).
+
+  **Lo que sí quedó abierto, y es lo que importa:** el generador de ocurrencias **decide su rango en la zona de la máquina** (`setHours`) y lo devuelve a UTC (`toISOString`). Con un `Date` en medianoche UTC —que es justo el `from` de la renovación diaria— el rango arranca **un día antes**. Hoy no muerde porque los tres llamadores viven en Vercel, que corre en UTC, y **nada en el repo lo afirma ni lo comprueba**. El arreglo son dos cosas juntas: **fechas civiles explícitas** en el rango (`localDateIso`/`addDaysIso`, que ya existen y ya son puras) **y una alarma si el proceso no corre en UTC**. PR propio, **después del 29 de septiembre** (Asav, 23-sep).
+
+- **El registro de entradas de la compuerta de atención.** Hoy J-Staff cruza entre cuentas **sin dejar huella**: la compuerta existe como lugar del menú y no tiene registro. Está escrito en `docs/Mapa-De-La-Casa.md` §4 y se trae aquí para que tenga fecha de disparo, no sólo mención. **Su disparador: antes de una segunda persona en J-Staff, o antes de la primera pregunta de un cliente — lo que llegue primero.** Mientras tanto vale la decisión del 21-sep: **J-Staff no escribe como otra cuenta**; una aportación la crea sólo el transportista, y el día que J-Staff necesite escribir de parte de alguien, será por la compuerta **con** registro.
 - **La bitácora de correcciones de identidad.** Corregir una unidad sobrescribe (decisión del 18-sep para C4-e): renombrar un número económico cambia cómo se lee toda su historia, y no queda registro de cómo se llamaba antes. No es decorativa. La pantalla lo avisa al corregir.
 - **Nombre único de usuario por cuenta** — la regla de C4-e alcanza a los usuarios, pero hoy no existe ninguna alta de usuarios y el nombre vive en Clerk. Entra con el Tramo 7 (altas por invitación o solicitud aprobada desde J-Staff).
 - **El evento de cambio de cuenta.** Hoy mover un dispositivo entre cuentas no deja fecha, así que no se puede decir «sin registro en esta cuenta». Cuando se construya (J-Staff), que sea un evento con fecha, y que el 6.14 lo diga al enmendarse.
