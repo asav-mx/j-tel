@@ -187,11 +187,22 @@ export function Ontoy({
     setCampanaAbierta(false);
   }, []);
 
+  /**
+   * Tocar un lugar de la barra **siempre** regresa a su pantalla de entrada,
+   * incluso el lugar en el que ya estás.
+   *
+   * Sin esto, el Pase tenía una pantalla sin salida de verdad: desde el código
+   * QR, tocar «Pase» en la barra no hacía nada —ya estabas en «pase»— y la
+   * única salida era un botón que el código grande empujaba fuera de la vista.
+   * La 8.10 dice que la barra es la salida de cualquier pantalla; ahora lo es.
+   */
+  const [volverAlInicioDelLugar, setVolverAlInicioDelLugar] = useState(0);
   const irA = useCallback((l: Lugar) => {
     setLugar(l);
     setRutaAbierta(false);
     setParadaAbierta(null);
     setCampanaAbierta(false);
+    setVolverAlInicioDelLugar((n) => n + 1);
   }, []);
 
   const rutaEnfocada = rutas.find((r) => r.circuito_id === enfocada) ?? null;
@@ -472,6 +483,7 @@ export function Ontoy({
 
       {!campanaAbierta && lugar === "pase" && (
         <VistaPase
+          volverAlInicio={volverAlInicioDelLugar}
           pase={elPase.pase}
           disponible={elPase.disponible}
           alComprar={elPase.comprar}

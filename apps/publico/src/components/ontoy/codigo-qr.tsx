@@ -11,8 +11,10 @@ import { encode } from "uqr";
  * código y L sólo un 7 %. Lo que de verdad rompe una lectura en un camión no es
  * el tamaño: es **un reflejo sobre la pantalla del teléfono**, y eso es justo lo
  * que la corrección de errores arregla. A 67 cuadritos en la caja de 216 px,
- * cada uno mide 3.2 px, y la prueba de `leer-qr.test.ts` comprueba que se lee
- * incluso más chico que eso.
+ * cada uno medía 3.2 px. La caja creció a ~335 px el 23-sep-2026 y cada cuadrito
+ * pasa a ~5 px — no por estética: lo que decide si el lector engancha son los
+ * píxeles que le llegan a SU cámara, y ésos salen de qué tan grande se enseña
+ * esto. Ver `lib/validador/encuadre.ts`.
  *
  * ✎ 23-sep-2026: este comentario decía 51 y 59 cuadritos, y 3.7 px. Estaba mal:
  * la medición se hizo con un texto de puras mayúsculas, que un QR codifica a

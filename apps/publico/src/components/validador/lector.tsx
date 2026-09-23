@@ -17,6 +17,7 @@ import {
   type ResultadoDelLector,
 } from "@jtel/domain/validador";
 import { leerQr } from "@/lib/validador/leer-qr";
+import { cuadroDeAnalisis } from "@/lib/validador/encuadre";
 import { folioDelCodigoDictado } from "@/lib/validador/codigo-dictado";
 import { detalleDeUnPaseBueno, tituloDeUnPaseBueno } from "@/lib/validador/palabras";
 import { useJornadaDelLector, diaDeHoy } from "@/lib/validador/jornada-del-lector";
@@ -53,10 +54,16 @@ import { despertarElSonido, pip } from "@/lib/validador/pip";
 
 /** Cuánto se queda el veredicto en pantalla antes de volver a leer. */
 const MS_DEL_VEREDICTO = 2600;
-/** Cada cuánto se mira un cuadro de la cámara. */
-const MS_ENTRE_CUADROS = 120;
-/** A cuánto se encoge el cuadro antes de buscarle el código. */
-const LADO_DEL_ANALISIS = 480;
+
+/**
+ * Respiro mínimo entre dos barridos.
+ *
+ * No es un intervalo: el barrido se vuelve a agendar **cuando termina el
+ * anterior**. A resolución nativa un barrido puede tardar más que el intervalo,
+ * y con `setInterval` los trabajos se encimarían hasta congelar la pantalla del
+ * chofer — justo cuando más resolución hay, que es cuando más falta hace.
+ */
+const MS_DE_RESPIRO = 30;
 
 type Fase = "apagado" | "leyendo" | "veredicto";
 
@@ -69,6 +76,20 @@ export function Lector() {
   const [senalSimuladaFuera, setSenalSimuladaFuera] = useState(false);
   const [enLinea, setEnLinea] = useState(true);
   const [teclado, setTeclado] = useState<string | null>(null);
+  /**
+   * Lo que el lector está midiendo, en crudo.
+   *
+   * Existe porque una prueba en la calle que vuelve como «no engancha» no se
+   * puede arreglar. Con esto vuelve como «1280×720 · analiza 720×720 · 6/s», y
+   * eso ya dice si el teléfono no da resolución o si el problema es otro. Es un
+   * instrumento de laboratorio: que diga cómo está midiendo es correcto.
+   */
+  const [diagnostico, setDiagnostico] = useState<{
+    ancho: number;
+    alto: number;
+    analisis: number;
+    ms: number;
+  } | null>(null);
 
   const video = useRef<HTMLVideoElement | null>(null);
   const lienzo = useRef<HTMLCanvasElement | null>(null);
@@ -130,8 +151,16 @@ export function Lector() {
   const encender = useCallback(async () => {
     despertarElSonido();
     try {
+      /* Se pide cámara grande a propósito: sin esto el navegador entrega lo
+         que quiere —suele ser 640×480— y no alcanza para leer el código a la
+         distancia de una puerta. `ideal` y no `exact`: si el aparato no puede,
+         que dé lo que tenga en vez de no dar nada. */
       const flujo = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
       });
       if (video.current) {
         video.current.srcObject = flujo;
@@ -154,26 +183,53 @@ export function Lector() {
     return () => clearInterval(reloj);
   }, [fase, camaraFallo]);
 
-  /* El barrido de cuadros. */
+  /*
+   * El barrido de cuadros: **recorta el cuadrado centrado a resolución nativa**
+   * y le busca el código ahí. Antes encogía el fotograma entero a 480 px y por
+   * eso no leía con teléfonos de verdad — ver `encuadre.ts`.
+   */
   useEffect(() => {
     if (fase === "apagado" || camaraFallo) return;
-    const buscar = () => {
-      if (faseViva.current !== "leyendo") return;
+    let vivo = true;
+    let siguiente: ReturnType<typeof setTimeout> | undefined;
+
+    const barrer = () => {
+      if (!vivo) return;
       const v = video.current;
       const c = lienzo.current;
-      if (!v || !c || v.readyState < 2 || !v.videoWidth) return;
-      const escala = Math.min(1, LADO_DEL_ANALISIS / Math.max(v.videoWidth, v.videoHeight));
-      c.width = Math.round(v.videoWidth * escala);
-      c.height = Math.round(v.videoHeight * escala);
-      const pincel = c.getContext("2d", { willReadFrequently: true });
-      if (!pincel) return;
-      pincel.drawImage(v, 0, 0, c.width, c.height);
-      const cuadro = pincel.getImageData(0, 0, c.width, c.height);
-      const texto = leerQr(cuadro.data, c.width, c.height);
-      if (texto) conLoLeido(texto);
+      const encuadre = v && v.readyState >= 2 ? cuadroDeAnalisis(v.videoWidth, v.videoHeight) : null;
+
+      if (faseViva.current === "leyendo" && v && c && encuadre) {
+        const arranque = performance.now();
+        c.width = encuadre.analisis;
+        c.height = encuadre.analisis;
+        const pincel = c.getContext("2d", { willReadFrequently: true });
+        if (pincel) {
+          pincel.drawImage(
+            v,
+            encuadre.ox, encuadre.oy, encuadre.lado, encuadre.lado,
+            0, 0, encuadre.analisis, encuadre.analisis,
+          );
+          const cuadro = pincel.getImageData(0, 0, encuadre.analisis, encuadre.analisis);
+          const texto = leerQr(cuadro.data, encuadre.analisis, encuadre.analisis);
+          setDiagnostico({
+            ancho: v.videoWidth,
+            alto: v.videoHeight,
+            analisis: encuadre.analisis,
+            ms: Math.round(performance.now() - arranque),
+          });
+          if (texto) conLoLeido(texto);
+        }
+      }
+      /* Se agenda cuando terminó, no cada tantos ms: ver `MS_DE_RESPIRO`. */
+      if (vivo) siguiente = setTimeout(barrer, MS_DE_RESPIRO);
     };
-    const reloj = setInterval(buscar, MS_ENTRE_CUADROS);
-    return () => clearInterval(reloj);
+
+    barrer();
+    return () => {
+      vivo = false;
+      if (siguiente) clearTimeout(siguiente);
+    };
   }, [fase, camaraFallo, conLoLeido]);
 
   const puedeDictar = Boolean(camaraFallo) || segundosSinLeer >= SEGUNDOS_ANTES_DE_DICTAR;
@@ -227,8 +283,11 @@ export function Lector() {
             </button>
           )}
           {fase === "leyendo" && !camaraFallo && (
+            /* La mira es TODO el cuadro, porque todo el cuadro es lo que se
+               analiza. Antes eran 128 px decorativos dentro de un fotograma que
+               se leía entero: apuntar no servía de nada. */
             <div className="val-mira" aria-hidden="true">
-              Muestra el código del pase aquí
+              <span>Llena este cuadro con el código</span>
             </div>
           )}
           {camaraFallo && <p className="val-sin-camara">{camaraFallo}</p>}
@@ -292,6 +351,14 @@ export function Lector() {
             </dd>
           </div>
         </dl>
+
+        {diagnostico && (
+          <p className="val-diagnostico mono">
+            cámara {diagnostico.ancho}×{diagnostico.alto} · analiza {diagnostico.analisis}×
+            {diagnostico.analisis} · {diagnostico.ms} ms
+            {diagnostico.ms > 0 && ` · ${Math.round(1000 / (diagnostico.ms + 30))}/s`}
+          </p>
+        )}
 
         <p className="val-nota">
           Jornada del {diaDeHoy()}. Lo aceptado sin señal no le consta a ningún otro lector hasta
@@ -369,6 +436,9 @@ function Teclado({
     : "— — — —  — — — —";
   return (
     <div className="val-teclado">
+      <p className="val-teclado-rotulo">
+        Dicta <b>los 8 números</b> del pase. Sin letras.
+      </p>
       <p className="val-teclado-pantalla mono" aria-live="polite">
         {mostrado}
       </p>

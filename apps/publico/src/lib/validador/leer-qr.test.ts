@@ -9,6 +9,7 @@ import {
 } from "@jtel/domain/boleto";
 import { empacarPresentacion, desempacarPresentacion } from "@jtel/domain/boleto-empaque";
 import { leerQr } from "./leer-qr";
+import { PIXELES_POR_MODULO } from "./encuadre";
 
 /**
  * **La vuelta completa: escribir el QR y volverlo a leer.**
@@ -104,5 +105,58 @@ describe("el tamaño del código, fijado", () => {
   it("con la carga real son 67 cuadritos de lado, no más", () => {
     const { size } = encode(empacarPresentacion(paseDePrueba()), { ecc: "M" });
     expect(size).toBeLessThanOrEqual(67);
+  });
+});
+
+/** Desenfoque de caja: lo que deja un pulso, un enfoque a medias, un camión andando. */
+function desenfocar(px: Uint8ClampedArray, lado: number, radio: number): Uint8ClampedArray {
+  const salida = new Uint8ClampedArray(px);
+  for (let y = 0; y < lado; y++) {
+    for (let x = 0; x < lado; x++) {
+      let suma = 0;
+      let n = 0;
+      for (let dy = -radio; dy <= radio; dy++) {
+        for (let dx = -radio; dx <= radio; dx++) {
+          const yy = y + dy;
+          const xx = x + dx;
+          if (yy < 0 || xx < 0 || yy >= lado || xx >= lado) continue;
+          suma += px[(yy * lado + xx) * 4]!;
+          n++;
+        }
+      }
+      const i = (y * lado + x) * 4;
+      salida[i] = salida[i + 1] = salida[i + 2] = suma / n;
+    }
+  }
+  return salida;
+}
+
+describe("cuántos píxeles por módulo hace falta de verdad", () => {
+  /*
+   * **El número que explicó por qué el lector no leía en la calle.**
+   *
+   * Con una imagen perfecta jsQR saca nuestro QR hasta con 1 px por módulo, y
+   * por eso la prueba de la cámara falsa pasaba mientras dos teléfonos de
+   * verdad fallaban: un lienzo dibujado no tiene desenfoque. Medido con
+   * desenfoque de radio 2 px —el normal de una cámara que no acabó de
+   * enfocar— el umbral sube a 4, cuatro veces más resolución.
+   *
+   * De aquí sale `PIXELES_POR_MODULO` en `encuadre.ts`, y de ahí que el lector
+   * ya no encoja el fotograma.
+   */
+  it("con desenfoque de cámara pide 4 px por módulo, no 1", () => {
+    const texto = empacarPresentacion(paseDePrueba());
+    const conBorde = (n: number) => {
+      const { pixeles, lado } = comoLoVeLaCamara(texto, n);
+      return { pixeles: desenfocar(pixeles, lado, 2), lado };
+    };
+
+    const flojo = conBorde(2);
+    expect(leerQr(flojo.pixeles, flojo.lado, flojo.lado)).toBeNull();
+
+    for (const n of [PIXELES_POR_MODULO, PIXELES_POR_MODULO + 2]) {
+      const holgado = conBorde(n);
+      expect(leerQr(holgado.pixeles, holgado.lado, holgado.lado), `${n} px por módulo`).toBe(texto);
+    }
   });
 });
