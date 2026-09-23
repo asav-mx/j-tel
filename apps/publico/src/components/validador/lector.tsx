@@ -17,7 +17,23 @@ import {
   type ResultadoDelLector,
 } from "@jtel/domain/validador";
 import { leerQr } from "@/lib/validador/leer-qr";
-import { cuadroDeAnalisis } from "@/lib/validador/encuadre";
+import {
+  RECORTE_INICIAL,
+  cuadroDeAnalisis,
+  fraccionDeLaMira,
+  siguienteRecorte,
+} from "@/lib/validador/encuadre";
+import {
+  SIN_CAPACIDADES,
+  ZOOM_DE_ARRANQUE,
+  aplicarZoom,
+  describirCapacidades,
+  enfocarEn,
+  leerCapacidades,
+  pedirEnfoqueContinuo,
+  zoomActual,
+  type CapacidadesDeLaCamara,
+} from "@/lib/validador/camara";
 import { folioDelCodigoDictado } from "@/lib/validador/codigo-dictado";
 import { detalleDeUnPaseBueno, tituloDeUnPaseBueno } from "@/lib/validador/palabras";
 import { useJornadaDelLector, diaDeHoy } from "@/lib/validador/jornada-del-lector";
@@ -87,18 +103,27 @@ export function Lector() {
   const [diagnostico, setDiagnostico] = useState<{
     ancho: number;
     alto: number;
-    analisis: number;
+    lado: number;
     ms: number;
   } | null>(null);
+  const [capacidades, setCapacidades] = useState<CapacidadesDeLaCamara>(SIN_CAPACIDADES);
+  const [zoom, setZoom] = useState<number | null>(null);
+  /** El tamaño del recorte, que el propio lector ajusta según lo que tarda. */
+  const [recorte, setRecorte] = useState(RECORTE_INICIAL);
+  /** Qué parte de la caja ocupa la mira. Se fija con el primer fotograma. */
+  const [mira, setMira] = useState(1);
 
   const video = useRef<HTMLVideoElement | null>(null);
   const lienzo = useRef<HTMLCanvasElement | null>(null);
+  const pista = useRef<MediaStreamTrack | null>(null);
+  const recorteVivo = useRef(RECORTE_INICIAL);
   const jornadaViva = useRef<JornadaDelLector | null>(null);
   const faseViva = useRef<Fase>("apagado");
   const haySenalViva = useRef(true);
 
   const haySenal = enLinea && !senalSimuladaFuera;
   jornadaViva.current = jornada;
+  recorteVivo.current = recorte;
   faseViva.current = fase;
   haySenalViva.current = haySenal;
 
@@ -166,6 +191,24 @@ export function Lector() {
         video.current.srcObject = flujo;
         await video.current.play();
       }
+
+      /* Lo que el aparato deje hacer, se hace; lo que no, no tumba nada. */
+      const suPista = flujo.getVideoTracks()[0] ?? null;
+      pista.current = suPista;
+      if (suPista) {
+        const puede = leerCapacidades(suPista);
+        setCapacidades(puede);
+        if (puede.enfoqueContinuo) await pedirEnfoqueContinuo(suPista);
+        if (puede.zoom) {
+          /* Con zoom el chofer puede ALEJARSE hasta donde la cámara enfoca, y
+             el código sigue llenando la mira. Es la salida al mínimo de
+             enfoque, que es físico y no se negocia. */
+          const objetivo = Math.min(puede.zoom.max, Math.max(puede.zoom.min, ZOOM_DE_ARRANQUE));
+          await aplicarZoom(suPista, objetivo);
+          setZoom(zoomActual(suPista) ?? objetivo);
+        }
+      }
+
       setCamaraFallo(null);
       setFase("leyendo");
     } catch {
@@ -197,27 +240,30 @@ export function Lector() {
       if (!vivo) return;
       const v = video.current;
       const c = lienzo.current;
-      const encuadre = v && v.readyState >= 2 ? cuadroDeAnalisis(v.videoWidth, v.videoHeight) : null;
+      const encuadre =
+        v && v.readyState >= 2
+          ? cuadroDeAnalisis(v.videoWidth, v.videoHeight, recorteVivo.current)
+          : null;
 
       if (faseViva.current === "leyendo" && v && c && encuadre) {
         const arranque = performance.now();
-        c.width = encuadre.analisis;
-        c.height = encuadre.analisis;
+        /* Uno a uno: el trozo que se toma y el lienzo miden lo mismo. Nunca
+           se escala — ése fue el defecto que impedía leer (ver `encuadre.ts`). */
+        c.width = encuadre.lado;
+        c.height = encuadre.lado;
         const pincel = c.getContext("2d", { willReadFrequently: true });
         if (pincel) {
           pincel.drawImage(
             v,
             encuadre.ox, encuadre.oy, encuadre.lado, encuadre.lado,
-            0, 0, encuadre.analisis, encuadre.analisis,
+            0, 0, encuadre.lado, encuadre.lado,
           );
-          const cuadro = pincel.getImageData(0, 0, encuadre.analisis, encuadre.analisis);
-          const texto = leerQr(cuadro.data, encuadre.analisis, encuadre.analisis);
-          setDiagnostico({
-            ancho: v.videoWidth,
-            alto: v.videoHeight,
-            analisis: encuadre.analisis,
-            ms: Math.round(performance.now() - arranque),
-          });
+          const cuadro = pincel.getImageData(0, 0, encuadre.lado, encuadre.lado);
+          const texto = leerQr(cuadro.data, encuadre.lado, encuadre.lado);
+          const ms = Math.round(performance.now() - arranque);
+          setDiagnostico({ ancho: v.videoWidth, alto: v.videoHeight, lado: encuadre.lado, ms });
+          setMira(fraccionDeLaMira(Math.min(v.videoWidth, v.videoHeight)));
+          setRecorte((antes) => siguienteRecorte(antes, ms));
           if (texto) conLoLeido(texto);
         }
       }
@@ -274,7 +320,24 @@ export function Lector() {
           Unidad sin asignar · lector de laboratorio
         </p>
 
-        <div className="val-camara">
+        {/*
+          Tocar la imagen enfoca ahí. En los aparatos que no conocen el punto de
+          enfoque, el toque vuelve a pedir enfoque continuo, que en muchos basta
+          para que el autoenfoque arranque otra vez.
+        */}
+        <div
+          className="val-camara"
+          onClick={(e) => {
+            const suPista = pista.current;
+            if (!suPista || fase === "apagado") return;
+            const caja = e.currentTarget.getBoundingClientRect();
+            void enfocarEn(
+              suPista,
+              (e.clientX - caja.left) / caja.width,
+              (e.clientY - caja.top) / caja.height,
+            );
+          }}
+        >
           <video ref={video} className="val-video" playsInline muted />
           <canvas ref={lienzo} className="val-lienzo" />
           {fase === "apagado" && (
@@ -283,11 +346,15 @@ export function Lector() {
             </button>
           )}
           {fase === "leyendo" && !camaraFallo && (
-            /* La mira es TODO el cuadro, porque todo el cuadro es lo que se
-               analiza. Antes eran 128 px decorativos dentro de un fotograma que
-               se leía entero: apuntar no servía de nada. */
-            <div className="val-mira" aria-hidden="true">
-              <span>Llena este cuadro con el código</span>
+            /* La mira se dibuja del tamaño del recorte MÍNIMO, no del que está
+               en uso: así no se mueve mientras alguien apunta, y lo que quede
+               dentro está siempre dentro de lo analizado. */
+            <div
+              className="val-mira"
+              aria-hidden="true"
+              style={{ ["--mira" as string]: `${Math.round(mira * 100)}%` }}
+            >
+              <span>Llena este cuadro · toca para enfocar</span>
             </div>
           )}
           {camaraFallo && <p className="val-sin-camara">{camaraFallo}</p>}
@@ -302,6 +369,37 @@ export function Lector() {
             alEnviar={mandarDictado}
             alCerrar={() => setTeclado(null)}
           />
+        )}
+
+        {capacidades.zoom && fase !== "apagado" && (
+          <div className="val-zoom">
+            <span>
+              Si se ve borroso, <b>aléjate</b> y sube el zoom: la cámara no enfoca tan cerca.
+            </span>
+            <div className="val-zoom-botones">
+              {([-0.5, 0.5] as const).map((paso) => (
+                <button
+                  key={paso}
+                  type="button"
+                  className="val-boton"
+                  onClick={() => {
+                    const suPista = pista.current;
+                    const rango = capacidades.zoom;
+                    if (!suPista || !rango) return;
+                    const destino = Math.min(
+                      rango.max,
+                      Math.max(rango.min, (zoom ?? rango.min) + paso),
+                    );
+                    void aplicarZoom(suPista, destino).then(() =>
+                      setZoom(zoomActual(suPista) ?? destino),
+                    );
+                  }}
+                >
+                  {paso < 0 ? "− zoom" : "+ zoom"}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
         <div className="val-acciones">
@@ -354,9 +452,9 @@ export function Lector() {
 
         {diagnostico && (
           <p className="val-diagnostico mono">
-            cámara {diagnostico.ancho}×{diagnostico.alto} · analiza {diagnostico.analisis}×
-            {diagnostico.analisis} · {diagnostico.ms} ms
-            {diagnostico.ms > 0 && ` · ${Math.round(1000 / (diagnostico.ms + 30))}/s`}
+            cámara {diagnostico.ancho}×{diagnostico.alto} · recorta {diagnostico.lado} ·{" "}
+            {diagnostico.ms} ms · {Math.round(1000 / (diagnostico.ms + 30))}/s ·{" "}
+            {describirCapacidades(capacidades, zoom)}
           </p>
         )}
 
