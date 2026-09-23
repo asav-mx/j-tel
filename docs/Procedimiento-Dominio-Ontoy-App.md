@@ -30,7 +30,8 @@ está cubierto y qué no:
 - **El dominio canónico** de lo que Next arma en absoluto sale de
   `NEXT_PUBLIC_SITIO`, con `https://ontoy.app` por omisión.
 - **El nombre de la app** ya salía de `NEXT_PUBLIC_APP_NOMBRE`: el código no
-  conoce nombres propios y sigue sin conocerlos.
+  conoce nombres propios y sigue sin conocerlos. En producción **ya vale
+  `Ontoy`** — comprobado contra el sitio vivo, no leído del código.
 
 **Lo que NO está en el repo, y por eso existe esta hoja:** el DNS, el dominio
 dado de alta en el proyecto de Vercel, y la variable del nombre. Eso vive en
@@ -88,16 +89,25 @@ DNS sin propagar.
 
 ## 3 · La variable del nombre
 
-En **Settings → Environment Variables** del mismo proyecto, en los tres
-entornos:
-
 ```
 NEXT_PUBLIC_APP_NOMBRE = Ontoy
 ```
 
-Hoy no está puesta, así que la app se llama «Transporte público» —el valor por
-omisión del código—. **Es variable y no código a propósito:** el día que la app
-sirva a otra ciudad con otro nombre, eso se cambia sin desplegar.
+✎ **Corrección del 23-sep-2026, la misma tarde.** Este párrafo decía «hoy no
+está puesta, así que la app se llama Transporte público». **Es falso, y lo
+desmiente producción:** la variable existe en el proyecto `j-tel-publico` con
+destino *Production*, y `https://www.juarezbus.digital/` contesta hoy con
+`<title>Ontoy</title>`. Lo escribí leyendo el código —que trae «Transporte
+público» por omisión— en vez de preguntarle al producto. Es la trampa que este
+repo ya tiene nombre: dato correcto, afirmación falsa.
+
+**Entonces qué falta aquí:** la variable está en **Production** y **no** en
+*Preview* ni en *Development*, así que una copia de prueba **sí** dice
+«Transporte público». Si se quiere que las copias de prueba se vean como el
+producto, se agrega a esos dos entornos. No es urgente y no bloquea la mudanza.
+
+**Es variable y no código a propósito:** el día que la app sirva a otra ciudad
+con otro nombre, eso se cambia sin desplegar.
 
 Si además se quiere mover el dominio canónico sin tocar código (para probar el
 traslado en un preview, por ejemplo), es `NEXT_PUBLIC_SITIO`.
