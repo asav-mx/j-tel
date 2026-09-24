@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { useNivel } from "./nivel-contexto";
+import { OntoyEn3D } from "./ontoy-3d/ontoy-en-3d";
 import { useOjosVivos } from "./ojos-vivos";
 import {
   CaraDeOntoy,
@@ -62,7 +63,14 @@ export function MarcaDelHero() {
         interactivo={!quieto}
       />
       <div className="landing-hero-ontoy">
-        <CaraDeOntoy titulo="Ontoy" ojoIzq={ontoyIzq} ojoDer={ontoyDer} />
+        {/*
+         * El 3D se monta ENCIMA de este 2D y sólo lo tapa cuando ya está
+         * dibujado. En los niveles medio y bajo no llega nunca, y lo que se ve
+         * es exactamente esto.
+         */}
+        <OntoyEn3D>
+          <CaraDeOntoy titulo="Ontoy" ojoIzq={ontoyIzq} ojoDer={ontoyDer} />
+        </OntoyEn3D>
       </div>
     </div>
   );

@@ -421,6 +421,41 @@ body:has(.landing) {
 }
 
 /*
+ * El 2D y el 3D, uno encima del otro en la misma celda.
+ *
+ * Es una rejilla de una sola celda y los dos la ocupan: así el hueco mide lo
+ * que mide el 2D —que es lo que hay desde el primer cuadro— y **nada de
+ * alrededor se mueve** cuando el 3D acaba de bajar y lo tapa.
+ */
+.landing-ontoy-3d {
+  display: grid;
+  width: 100%;
+  height: 100%;
+}
+
+.landing-ontoy-3d > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+.landing-ontoy-2d {
+  display: grid;
+  place-items: center;
+}
+
+.landing-ontoy-lienzo {
+  /* Sin esto, el canvas de three no tiene contra qué medirse y sale de 0×0. */
+  width: 100%;
+  height: 100%;
+}
+
+.landing-ontoy-lienzo canvas {
+  display: block;
+  /* El 3D se toca: es donde Ontoy se ríe y hace sus trucos. */
+  cursor: pointer;
+}
+
+/*
  * Lo que la portada dice, debajo de la línea: a la izquierda qué es y el
  * título, a la derecha la frase y el botón. La línea es de 2 px y de carbón —
  * no es un borde de tarjeta, es el renglón que separa el nombre de lo que el
