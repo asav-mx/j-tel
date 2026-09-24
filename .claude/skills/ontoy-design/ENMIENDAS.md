@@ -49,20 +49,33 @@ Tampoco nombra las notificaciones. Propuesta a falta del visto bueno de Asav: t�
 «¿Ontás? Mira cuándo pasa tu camión.» · CTA «Ver las rutas» (la misma palabra que ya usa la
 app) + «Instálala gratis».
 
-## (c) Dónde vive cada cosa en ontoy.app — 23-sep-2026
+## (c) Dónde vive cada cosa en ontoy.app — 23-sep, **cambiado el 25-sep-2026**
 
-Decisión de Asav, que cierra el «pendiente técnico» del §12 del handoff:
+⚠ **La landing NO va en `/conoce`: va en la raíz.** Esta enmienda decía lo contrario hasta
+el 25 de septiembre, y lo que manda es `docs/Ontoy-Direcciones.md`, que es el documento del
+tema y está al día.
 
 | Dirección | Qué |
 |---|---|
-| `ontoy.app/` | **La app.** Es el `start_url` del manifiesto: lo que abre el ícono instalado |
+| `ontoy.app/` | **La landing.** Para quien todavía no conoce Ontoy |
+| `ontoy.app/rutas` | **La app.** Es el `start_url` del manifiesto: lo que abre el ícono instalado |
 | `ontoy.app/c/‹ruta›` | Una ruta, para compartir |
 | `ontoy.app/p/‹parada›` | Lo que abre el QR del poste |
 | `ontoy.app/validador` | El lector del camión |
-| `ontoy.app/conoce` | **La landing** |
+| `ontoy.app/privacidad` | Qué se guarda y qué no |
 
-**La regla detrás:** ninguna dirección que un pasajero guarde, instale o escanee cambia
-después. Quien escanea un letrero o toca el ícono quiere su camión, no una portada.
+**La regla detrás no cambió:** ninguna dirección que un pasajero guarde, instale o escanee
+cambia después.
+
+**Lo que cambió es cuál dirección sostiene esa regla.** Primero se decidió la app en la raíz,
+porque el `start_url` se graba al instalar y mudarlo después le cambiaría el destino al ícono
+de quien ya la tenía. El 25-sep Asav lo cambió: *la gente escribe «ontoy.app» y nada más*. El
+argumento viejo era cierto y **se resolvió por fecha en vez de por dirección** — la app se
+mudó a `/rutas` de inmediato (#550), mientras casi nadie la tiene instalada, y no el día que
+la landing entrara. Cuando la landing tomó la raíz, el `start_url` ya decía `/rutas` desde
+hacía semanas y ningún ícono cambió de destino.
+
+Lo cuida `apps/publico/src/app/direcciones.test.ts`.
 
 ---
 
