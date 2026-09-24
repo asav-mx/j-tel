@@ -10,6 +10,13 @@ import type { MetadataRoute } from "next";
  * escala a cualquier pantalla; los PNG existen porque las tiendas y el empaque
  * de Android los exigen en tamaños fijos (192 y 512, y el de máscara).
  *
+ * **`start_url` es `/rutas`, no la raíz** (ASAV, 25-sep-2026). La gente escribe
+ * «ontoy.app» y nada más, así que la raíz va a ser de la landing y la app vive en
+ * `/rutas`. El `start_url` **se graba al instalar**, así que se mueve AHORA —
+ * mientras casi nadie la tiene instalada— y no el día que la landing entre: así
+ * ningún ícono ya instalado cambia de destino. Mientras la landing no exista, la
+ * raíz sigue enseñando la app. Ver `docs/Ontoy-Direcciones.md`.
+ *
  * **El hueco de la identidad ya se llenó** (23-sep-2026). Los archivos tienen
  * nombre fijo en `public/iconos/`, y la identidad entró reemplazándolos sin tocar
  * el código, que era exactamente para lo que se dejaron así. Hoy son Ontoy
@@ -31,7 +38,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: nombre,
     short_name: nombre,
     description: "Dónde viene tu camión, en vivo.",
-    start_url: "/",
+    start_url: "/rutas",
     display: "standalone",
     orientation: "portrait",
     background_color: "#EDE9E1",
