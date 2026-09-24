@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
+  LARGO_DE_LA_HUELLA,
   PALABRAS_DE_ERROR_DE_LECTOR,
   PREFIJO_DE_LECTOR,
+  huellaDeLlave,
   llavePublicaBienFormada,
   nombreDeLector,
   procedeAsignarLector,
@@ -38,6 +40,29 @@ describe("la llave del lector", () => {
     expect(llavePublicaBienFormada("a".repeat(63))).toBe(false);
     expect(llavePublicaBienFormada("z".repeat(64))).toBe(false);
     expect(llavePublicaBienFormada("")).toBe(false);
+  });
+});
+
+describe("la huella que se compara a ojo", () => {
+  it("son los últimos seis caracteres de la llave", () => {
+    expect(huellaDeLlave("a".repeat(58) + "9f3c1d")).toBe("9f3c1d");
+    expect(LARGO_DE_LA_HUELLA).toBe(6);
+  });
+
+  /* Una huella de una llave que no es llave no se enseña: sería decir «éste es
+     el aparato» de algo que ni siquiera se pudo registrar. */
+  it("una llave mal formada no tiene huella", () => {
+    expect(huellaDeLlave("no-es-hex")).toBe("");
+    expect(huellaDeLlave("a".repeat(63))).toBe("");
+    expect(huellaDeLlave("")).toBe("");
+  });
+
+  it("dos llaves distintas casi nunca comparten huella, y cuando la comparten no es la llave", () => {
+    const una = "a".repeat(58) + "9f3c1d";
+    const otra = "b".repeat(58) + "9f3c1d";
+    expect(huellaDeLlave(una)).toBe(huellaDeLlave(otra));
+    /* Por eso lo que se guarda y se compara de verdad es la llave entera. */
+    expect(una).not.toBe(otra);
   });
 });
 

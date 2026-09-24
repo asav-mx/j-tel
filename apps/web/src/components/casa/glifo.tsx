@@ -26,6 +26,16 @@
  *   · desconectado   cuadro cortado — montado, y más de 24 h callado
  *   · de baja        cuadro tachado — su historia queda, él ya no cuenta
  *
+ *   LECTORES — leen: cuadros CON MUESCA (ratificados por ASAV, 23 sep 2026)
+ *   · en unidad      caja llena — montado y hablando
+ *   · en bodega      caja hueca — existe, espera camión
+ *   · mudo           caja cortada — montado, y 4 h de servicio sin hablar
+ *   · de baja        caja tachada — su historia queda; su llave ya no vale
+ *   La muesca es lo único que la separa del cuadro del GPS, y alcanza: **un
+ *   camión trae los dos**, y el día que el expediente de una unidad los enseñe
+ *   juntos, un cuadro lleno no puede querer decir dos cosas. Es la misma
+ *   trampa que las hojas vinieron a evitar con los papeles.
+ *
  *   PAPELES — se vencen: hojas con la esquina doblada
  *   · vencido         hoja hueca tachada con una diagonal
  *   · por vencer      hoja a medio llenar, en diagonal
@@ -67,6 +77,11 @@ export type EstadoGlifo =
   | "dispositivo-en-bodega"
   | "dispositivo-desconectado"
   | "dispositivo-de-baja"
+  // Lectores (Ontoy 3.0 · P3.5)
+  | "lector-en-unidad"
+  | "lector-en-bodega"
+  | "lector-mudo"
+  | "lector-de-baja"
   // Papeles
   | "papel-vencido"
   | "papel-por-vencer"
@@ -94,6 +109,10 @@ const EN_PALABRAS: Record<EstadoGlifo, string> = {
   "dispositivo-en-bodega": "En bodega",
   "dispositivo-desconectado": "Desconectado",
   "dispositivo-de-baja": "De baja",
+  "lector-en-unidad": "En unidad",
+  "lector-en-bodega": "En bodega",
+  "lector-mudo": "Mudo",
+  "lector-de-baja": "De baja",
   "papel-vencido": "Vencido",
   "papel-por-vencer": "Por vencer",
   "papel-falta": "Falta",
@@ -132,6 +151,9 @@ function tintaDe(estado: EstadoGlifo): string {
       return "var(--ladrillo)";
     case "en-movimiento":
     case "dispositivo-en-unidad":
+    /* El lector montado y hablando también está vivo. El mudo NO: dejó de
+       cambiar, y el cobre es del dato que cambia mientras alguien lo mira. */
+    case "lector-en-unidad":
       return "var(--senal)";
     case "papel-vencido":
     case "papel-por-vencer":
@@ -171,7 +193,10 @@ export function Glifo({
   tinta?: "tinta" | "senal";
 }) {
   const color = tinta ? `var(--${tinta})` : tintaDe(estado);
-  const familia = estado.startsWith("papel-") || estado.startsWith("dispositivo-") ? 40 : 24;
+  const familia =
+    estado.startsWith("papel-") || estado.startsWith("dispositivo-") || estado.startsWith("lector-")
+      ? 40
+      : 24;
   // Un id por instancia para el recorte de «por vencer»: dos glifos en la misma
   // página con el mismo id se pisarían el recorte.
   const recorte = `hoja-${estado}-${Math.round(rumbo)}-${tamano}`;
@@ -256,6 +281,51 @@ export function Glifo({
           <rect x="10.5" y="10.5" width="19" height="19" rx="3.5" fill="none" stroke="currentColor" strokeWidth="2.2" />
           <line x1="13" y1="13" x2="27" y2="27" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
           <line x1="27" y1="13" x2="13" y2="27" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+        </>
+      )}
+
+      {/* ── Lectores: la misma caja del dispositivo, con su muesca ── */}
+      {estado === "lector-en-unidad" && (
+        <path
+          d="M13.5 10 h2.5 v4 h8 v-4 h2.5 a3.5 3.5 0 0 1 3.5 3.5 v13 a3.5 3.5 0 0 1 -3.5 3.5 h-13 a3.5 3.5 0 0 1 -3.5 -3.5 v-13 a3.5 3.5 0 0 1 3.5 -3.5 Z"
+          fill="currentColor"
+        />
+      )}
+      {estado === "lector-en-bodega" && (
+        <path
+          d="M13.5 10.5 h2.5 v4 h8 v-4 h2.5 a3.5 3.5 0 0 1 3.5 3.5 v12.5 a3.5 3.5 0 0 1 -3.5 3.5 h-13 a3.5 3.5 0 0 1 -3.5 -3.5 v-12.5 a3.5 3.5 0 0 1 3.5 -3.5 Z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinejoin="round"
+        />
+      )}
+      {estado === "lector-mudo" && (
+        <>
+          <path
+            d="M13.5 10.5 h2.5 v4 h8 v-4 h2.5 a3.5 3.5 0 0 1 3.5 3.5 v5.5 h-20 v-5.5 a3.5 3.5 0 0 1 3.5 -3.5 Z"
+            fill="currentColor"
+          />
+          <path
+            d="M10 23.5 h20 v3 a3.5 3.5 0 0 1 -3.5 3.5 h-13 a3.5 3.5 0 0 1 -3.5 -3.5 Z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinejoin="round"
+          />
+        </>
+      )}
+      {estado === "lector-de-baja" && (
+        <>
+          <path
+            d="M13.5 10.5 h2.5 v4 h8 v-4 h2.5 a3.5 3.5 0 0 1 3.5 3.5 v12.5 a3.5 3.5 0 0 1 -3.5 3.5 h-13 a3.5 3.5 0 0 1 -3.5 -3.5 v-12.5 a3.5 3.5 0 0 1 3.5 -3.5 Z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinejoin="round"
+          />
+          <line x1="13.5" y1="14" x2="26.5" y2="27" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+          <line x1="26.5" y1="14" x2="13.5" y2="27" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
         </>
       )}
 

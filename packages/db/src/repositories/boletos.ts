@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne, notInArray, sql } from "drizzle-orm";
 import { MOTIVO_SISTEMA, llavePublicaBienFormada, nombreDeLector } from "@jtel/domain";
 import { boletoLoFirmoJTel } from "@jtel/domain/boleto";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@jtel/domain/sincronizacion";
 import type { Database } from "../index.js";
 import {
+  accounts,
   circuitUnitAssignments,
   circuits,
   ticketOperations,
@@ -140,6 +141,123 @@ export class LibroDeBoletosRepository {
       .where(eq(validators.llavePublica, llavePublica))
       .limit(1);
     return lector ?? null;
+  }
+
+  /**
+   * **El inventario de lectores de toda la plataforma**, en una consulta.
+   *
+   * J-Staff no pregunta «¿cómo está esta cuenta?» sino «¿está sana la
+   * plataforma?» (decisión de Asav, 23-sep-2026), así que la lista no se parte
+   * por transportista: cada lector dice de quién es.
+   *
+   * Trae el horario del circuito que el plan le asigna a su unidad porque de
+   * ahí sale si está mudo, y preguntarlo lector por lector serían tantas
+   * consultas como aparatos. La regla —qué es estar mudo— no vive aquí: es de
+   * `@jtel/domain`, y esta consulta sólo junta con qué contestarla.
+   */
+  async inventarioDeLectores() {
+    const asignacionVigente = this.db
+      .select()
+      .from(validatorAssignments)
+      .where(isNull(validatorAssignments.validTo))
+      .as("asignacion_vigente");
+    const circuitoVigente = this.db
+      .select()
+      .from(circuitUnitAssignments)
+      .where(isNull(circuitUnitAssignments.validTo))
+      .as("circuito_vigente");
+
+    return this.db
+      .select({
+        id: validators.id,
+        label: validators.label,
+        llavePublica: validators.llavePublica,
+        carrierAccountId: validators.carrierAccountId,
+        carrier: accounts.name,
+        altaEn: validators.altaEn,
+        bajaEn: validators.bajaEn,
+        bajaMotivo: validators.bajaMotivo,
+        unitId: asignacionVigente.unitId,
+        unidad: units.label,
+        circuitId: circuitoVigente.circuitId,
+        circuito: circuits.name,
+        inicioLocal: circuits.serviceStartLocal,
+        finLocal: circuits.serviceEndLocal,
+        zona: circuits.timeZone,
+        /* La última entrega ACEPTADA. Una rechazada no es contacto útil: el
+           aparato habló y no dejó nada. */
+        ultimaEntrega: sql<Date | null>`(
+          SELECT max(s.recibido_en) FROM ${validatorSyncs} s
+           WHERE s.validator_id = ${validators.id}
+             AND s.resultado IN ('aceptado', 'aceptado_con_rechazos'))`,
+      })
+      .from(validators)
+      .innerJoin(accounts, eq(accounts.id, validators.carrierAccountId))
+      .leftJoin(asignacionVigente, eq(asignacionVigente.validatorId, validators.id))
+      .leftJoin(units, eq(units.id, asignacionVigente.unitId))
+      .leftJoin(circuitoVigente, eq(circuitoVigente.unitId, asignacionVigente.unitId))
+      .leftJoin(circuits, eq(circuits.id, circuitoVigente.circuitId))
+      .orderBy(asc(validators.consecutivo));
+  }
+
+  /**
+   * Las unidades a las que se le puede asignar un lector: **activas, de esa
+   * cuenta y libres**.
+   *
+   * Una unidad que ya trae lector no se ofrece: `procedeAsignarLector` la
+   * rechazaría, y un botón que la regla va a rechazar es una promesa falsa
+   * (6.19). La que trae el lector que se está moviendo tampoco — asignarlo
+   * donde ya está partiría su historia en dos sin que nada cambiara.
+   */
+  async unidadesAsignables(carrierAccountId: string) {
+    const ocupadas = this.db
+      .select({ unitId: validatorAssignments.unitId })
+      .from(validatorAssignments)
+      .where(isNull(validatorAssignments.validTo));
+    return this.db
+      .select({ id: units.id, label: units.label })
+      .from(units)
+      .where(
+        and(
+          eq(units.carrierAccountId, carrierAccountId),
+          eq(units.active, true),
+          notInArray(units.id, ocupadas),
+        ),
+      )
+      .orderBy(asc(units.label));
+  }
+
+  /** Dónde está montado ahora un lector, o null si está en bodega. */
+  async asignacionVigenteDeLector(validatorId: string) {
+    const [fila] = await this.db
+      .select({ id: validatorAssignments.id, unitId: validatorAssignments.unitId, unidad: units.label })
+      .from(validatorAssignments)
+      .innerJoin(units, eq(units.id, validatorAssignments.unitId))
+      .where(
+        and(eq(validatorAssignments.validatorId, validatorId), isNull(validatorAssignments.validTo)),
+      )
+      .limit(1);
+    return fila ?? null;
+  }
+
+  /**
+   * Una unidad por su id, **sin filtrar por cuenta**: quien pregunta es
+   * J-Staff, que cruza cuentas por oficio. La cuenta viene en la respuesta
+   * para que quien decida pueda comparar — que es justo lo que hace falta para
+   * no montar un lector en el camión de otro transportista.
+   */
+  async unidadPorId(unitId: string) {
+    const [fila] = await this.db
+      .select({
+        id: units.id,
+        label: units.label,
+        carrierAccountId: units.carrierAccountId,
+        active: units.active,
+      })
+      .from(units)
+      .where(eq(units.id, unitId))
+      .limit(1);
+    return fila ?? null;
   }
 
   async lectoresDeLaCuenta(carrierAccountId: string) {
