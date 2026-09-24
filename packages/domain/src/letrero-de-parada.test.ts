@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CASA_DE_ONTOY,
+  etiquetaCortaDeLaRuta,
   direccionDelLetrero,
   direccionDelLetreroEnPalabras,
   PUERTA_DEL_LETRERO,
@@ -45,5 +46,30 @@ describe("la dirección del letrero de una parada", () => {
     expect(direccionDelLetrero("zgz-01", "https://preview.example/")).toBe(
       "https://preview.example/p/zgz-01",
     );
+  });
+});
+
+describe("la etiqueta corta de la ruta, para la placa de Tino", () => {
+  it("un nombre corto va tal cual", () => {
+    expect(etiquetaCortaDeLaRuta("51")).toBe("51");
+    expect(etiquetaCortaDeLaRuta("C4")).toBe("C4");
+    expect(etiquetaCortaDeLaRuta("Oasis")).toBe("Oasis");
+  });
+
+  it("un nombre largo va en iniciales, y no apretado hasta ser una mancha", () => {
+    // Éste es el caso que salió mal en la primera captura: apretado con
+    // `textLength` a los 14 mm de la placa, era una raya gris.
+    expect(etiquetaCortaDeLaRuta("Oasis – Parroquia Santa Teresa de Jesús")).toBe("OJ");
+    expect(etiquetaCortaDeLaRuta("Zaragoza–Centro")).toBe("ZC");
+    expect(etiquetaCortaDeLaRuta("Poniente – Centro")).toBe("PC");
+  });
+
+  it("una sola palabra larga da sus dos primeras letras", () => {
+    expect(etiquetaCortaDeLaRuta("Panamericana")).toBe("PA");
+  });
+
+  it("no revienta con lo que no tiene letras", () => {
+    expect(etiquetaCortaDeLaRuta("···············")).toBe("··");
+    expect(etiquetaCortaDeLaRuta("   ")).toBe("");
   });
 });

@@ -419,63 +419,117 @@
   fill: var(--pieza);
 }
 
-/* ─── El letrero de una parada ────────────────────────────────────────────────
+/* ─── El letrero de una parada · el 1b de «Ontoy QR» ─────────────────────────
    La única pantalla del producto cuyo destino es el papel: se imprime, se
    plastifica y se atornilla a un poste. Por eso no tiene piel oscura —una piel
-   oscura en papel es un cartucho de tinta— y por eso sus medidas están en
-   centímetros y no en píxeles: lo que importa es desde cuántos metros engancha
-   el código, no cómo se ve en un monitor. */
+   oscura en papel es un cartucho de tinta y un código que no engancha— y por
+   eso sus medidas están en centímetros y no en píxeles: lo que importa es desde
+   cuántos metros engancha el código, no cómo se ve en un monitor.
+   Los módulos van en carbón sobre blanco, nunca en naranja ni en el color de la
+   ruta: muchos teléfonos no los leen. */
 .letrero {
   width: 21.59cm; /* carta, vertical */
   min-height: 27.94cm;
   box-sizing: border-box;
-  padding: 2.2cm 2cm;
   background: #ffffff;
-  color: #000000;
+  color: #2a2e37;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
+  overflow: hidden;
   /* En pantalla se ve como una hoja sobre la mesa; al imprimir, el borde se va. */
   border: 1px solid var(--linea);
   margin: 0 auto 1.5rem;
 }
 
-.letrero-marca {
+/* La banda del color de la ruta, a sangre. Es lo primero que se ve desde lejos,
+   y lo que hace que dos rutas en el mismo paradero no se confundan. */
+.letrero-banda {
+  height: 1.1cm;
+  flex: none;
+}
+
+.letrero-cuerpo {
+  flex: 1;
+  box-sizing: border-box;
+  padding: 1.6cm 2cm 2cm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.letrero-encabezado {
+  display: flex;
+  align-items: center;
+  gap: 0.9cm;
+  width: 100%;
+}
+
+.letrero-tino {
+  width: 3.4cm;
+  height: 3.4cm;
+  flex: none;
+  display: block;
+}
+
+.letrero-dicho {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35cm;
+  min-width: 0;
+}
+
+.letrero-pregunta {
   font-family: var(--letra-titular);
   font-weight: 800;
-  font-size: 0.9cm;
-  letter-spacing: -0.02em;
-  margin: 0 0 1.4cm;
+  font-size: 1.35cm;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+/* El color es identidad (8.8c) y NUNCA va solo: la placa lleva el nombre. */
+.letrero-ruta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.3cm;
+  margin: 0;
+}
+
+/* La placa con el nombre completo de la ruta. **Se parte antes de salirse de la
+   hoja**: un nombre como «Oasis – Parroquia Santa Teresa de Jesús» cabe raspando,
+   y el siguiente más largo se iría al borde del papel — donde la guillotina de la
+   imprenta no perdona. `min-width: 0` es lo que permite que un hijo de un flex
+   se encoja por debajo de su contenido; sin él, `max-width` no hace nada aquí. */
+.letrero-placa {
+  font-family: var(--letra-titular);
+  font-weight: 800;
+  font-size: 0.62cm;
+  line-height: 1.15;
+  color: #ffffff;
+  background: #2a2e37;
+  border-radius: 0.18cm;
+  padding: 0.16cm 0.3cm;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .letrero-parada {
-  font-family: var(--letra-titular);
-  font-weight: 800;
-  font-size: 1.5cm;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  margin: 0 0 0.5cm;
-}
-
-/* El color es identidad (8.8c) y NUNCA va solo: el nombre lo acompaña siempre.
-   Quien no distingue colores lee el mismo dato que todos. */
-.letrero-ruta {
   font-family: var(--letra-lectura);
-  font-size: 0.75cm;
-  display: flex;
-  align-items: center;
-  gap: 0.35cm;
-  margin: 0 0 1.2cm;
+  font-size: 0.62cm;
+  color: #4a4f5a;
 }
 
-.letrero-punto {
-  width: 0.55cm;
-  height: 0.55cm;
-  border-radius: 999px;
-  /* Un borde negro fino: un color claro sobre papel blanco se pierde solo. */
-  border: 1px solid #000000;
-  display: inline-block;
+/* Ontoy va ENCIMA del código, centrado, con su hueco blanco debajo. Medido: a
+   22 % del lado le quita el 4 % de los cuadritos, y H aguanta cerca del 30 %. */
+.letrero-codigo {
+  position: relative;
+  width: 9.8cm;
+  height: 9.8cm;
+  margin: 1.5cm 0 1.2cm;
+  display: grid;
+  place-items: center;
 }
 
 /* 9 cm: la ficha pide 8 como mínimo, y el mínimo no es la medida de diseño.
@@ -489,18 +543,28 @@
   background: #ffffff;
 }
 
-.letrero-invita {
-  font-family: var(--letra-lectura);
-  font-size: 0.7cm;
-  margin: 1.2cm 0 0.5cm;
+.letrero-ontoy {
+  position: absolute;
+  width: 1.85cm;
+  height: 1.85cm;
+  pointer-events: none;
 }
 
 /* Para quien no trae cámara, no sabe escanear o tiene la pantalla rota. */
 .letrero-direccion {
   font-family: var(--letra-medida);
-  font-size: 0.65cm;
+  font-size: 0.6cm;
   letter-spacing: 0.01em;
-  margin: 0;
+  color: #4a4f5a;
+  margin: 0 0 auto;
+}
+
+.letrero-marca {
+  font-family: var(--letra-titular);
+  font-weight: 800;
+  font-size: 0.85cm;
+  letter-spacing: -0.02em;
+  margin: 1.2cm 0 0;
 }
 
 /* Lo que sólo sirve en pantalla y estorba en papel. */

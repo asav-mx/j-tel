@@ -13,16 +13,23 @@ export const dynamic = "force-dynamic";
  * `?parada=‹qr_slug›`, saca sólo ésa — que es el «Imprimir letrero» de un
  * renglón de la lista.
  *
- * ## Sólo de circuitos publicados
+ * ## Sí se imprime de un circuito sin publicar, con su aviso
  *
- * Un letrero pegado en la calle que no abre nada es **una promesa falsa**, y
- * quien la lee está parado esperando un camión. Mientras el circuito no esté
- * publicado esta pantalla no enseña hojas: dice por qué y ofrece el camino de
- * vuelta al expediente, donde vive el interruptor.
+ * **Decisión de ASAV, 23-sep-2026, que voltea la del punto 6 de la ficha.**
+ * Antes esta pantalla no enseñaba hojas de un circuito sin publicar: un letrero
+ * que no abre nada es una promesa falsa. El argumento sigue siendo cierto y no
+ * alcanzaba, porque le faltaba el calendario: **imprimir, plastificar, repartir
+ * y atornillar toma días.** Exigir la publicación antes de imprimir obliga a
+ * publicar el circuito —y por lo tanto a prometerle algo a un pasajero— días
+ * antes de que haya un solo letrero en un poste.
  *
- * Es la misma frontera que respeta Ontoy al resolver el QR (`/p/‹qr_slug›`): lo
- * no publicado no existe para la app (8.4). Si aquí se pudiera imprimir, la
- * lámina saldría de la impresora prometiendo algo que el servidor niega.
+ * Así que se imprime, y el aviso va **en la pantalla**, donde lo lee quien
+ * manda a la impresora y todavía puede decidir. La lámina sale igual.
+ *
+ * **Lo que NO cambia es lo que contesta el código** mientras el circuito siga
+ * sin publicar: `/p/‹qr_slug›` dice «Este letrero todavía no está activo», el
+ * mismo texto exacto que un código inventado. Lo no publicado no existe para la
+ * app (8.4), y distinguirlo de un slug inventado sería confirmar que existe.
  *
  * ## Sólo las vigentes
  *
@@ -45,24 +52,6 @@ export default async function LetrerosDelCircuito({
 
   const unaSola = typeof sp.parada === "string" ? sp.parada : null;
   const vuelta = `/casa/jstaff/circuitos/${id}`;
-
-  if (!circuito.publishedAt) {
-    return (
-      <main className="mx-auto max-w-[21.59cm] px-4 py-10">
-        <h1 className="text-[22px] font-semibold">Todavía no se imprime</h1>
-        <p className="mt-3 text-[15px] text-[var(--tenue)]">
-          «{circuito.name}» no está publicado. Un letrero atornillado a un poste que no abre nada
-          es una promesa falsa: quien lo escanea está parado esperando el camión. Publica el
-          circuito y vuelve.
-        </p>
-        <p className="mt-6">
-          <Link href={vuelta} className="underline underline-offset-2">
-            Volver a {circuito.name}
-          </Link>
-        </p>
-      </main>
-    );
-  }
 
   const paradas = await repos.circuits.listStopsVigentes(id);
   const aImprimir = unaSola ? paradas.filter((p) => p.qrSlug === unaSola) : paradas;
@@ -99,6 +88,17 @@ export default async function LetrerosDelCircuito({
           la página: el código mide 9 cm de lado a propósito, y encogerlo le quita el metro de
           distancia desde el que engancha.
         </p>
+        {!circuito.publishedAt && (
+          /* En tinta y con su frase, sin cobre: un aviso no es un dato vivo. Y no
+             bloquea — imprimir, repartir y pegar toma días. */
+          <p role="status" className="mt-4 rounded-lg border border-[var(--linea)] p-3 text-[15px]">
+            <span className="font-semibold">«{circuito.name}» todavía no está publicado.</span>{" "}
+            Se imprime igual, porque imprimir, repartir y atornillar toma días. Pero hasta que lo
+            publiques, un teléfono que escanee estos códigos va a leer «Este letrero todavía no
+            está activo» — el mismo texto que un código inventado, para no revelar que la ruta
+            existe.
+          </p>
+        )}
         <p className="mt-4">
           <Link href={vuelta} className="underline underline-offset-2">
             Volver a {circuito.name}
