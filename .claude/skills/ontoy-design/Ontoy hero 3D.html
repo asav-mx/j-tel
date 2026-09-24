@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ontoy 3D · hero</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<style>html,body{margin:0;height:100%;background:transparent;overflow:hidden;cursor:pointer}canvas{display:block}</style>
+</head><body>
+<script type="module">
+import * as THREE from 'three';
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(innerWidth < 600 ? 1.5 : 2, devicePixelRatio)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace; document.body.append(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, 1, 0.01, 10); camera.position.set(0, 0.035, 0.66); camera.lookAt(0, -0.012, 0);
+scene.add(new THREE.HemisphereLight('#ffffff', '#d8cdbd', 1.25));
+const key = new THREE.DirectionalLight('#ffffff', 1.7); key.position.set(0.5, 0.9, 0.7); key.castShadow = true; key.shadow.mapSize.set(1024, 1024);
+Object.assign(key.shadow.camera, { left: -0.3, right: 0.3, top: 0.3, bottom: -0.3, near: 0.1, far: 3 }); scene.add(key);
+const fill = new THREE.DirectionalLight('#fff1e0', 0.5); fill.position.set(-0.7, 0.2, 0.4); scene.add(fill);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShadowMaterial({ opacity: 0.16 })); floor.rotation.x = -Math.PI / 2; floor.position.y = -0.116; floor.receiveShadow = true; scene.add(floor);
+const M = {
+  naranja:  new THREE.MeshStandardMaterial({ name: 'ontoy-naranja', color: '#F6A15B', roughness: 0.55, metalness: 0 }),
+  blanco:   new THREE.MeshStandardMaterial({ name: 'ojo-blanco', color: '#FFFFFF', roughness: 0.25, metalness: 0 }),
+  carbon:   new THREE.MeshStandardMaterial({ name: 'carbon', color: '#2A2E37', roughness: 0.35, metalness: 0 }),
+  boca:     new THREE.MeshStandardMaterial({ name: 'boca-interior', color: '#7A2E2A', roughness: 0.6, metalness: 0 }),
+  pantalla: new THREE.MeshStandardMaterial({ name: 'pantalla', color: '#F6A15B', emissive: '#F6A15B', emissiveIntensity: 0.35, roughness: 0.3, metalness: 0 }),
+  crema:    new THREE.MeshStandardMaterial({ name: 'banqueta', color: '#EDE9E1', emissive: '#EDE9E1', emissiveIntensity: 0.3, roughness: 0.4, metalness: 0 }),
+};
+
+// Pebble: taller, slightly squared, gentle asymmetry
+const RX = 0.09, RY = 0.102, RZ = 0.074;
+const sq = (a) => Math.sign(a) * Math.pow(Math.abs(a), 0.82);
+const lump = (x, y, z) => 1 + 0.03 * Math.sin(x * 2.3 + 1.2) * Math.cos(y * 1.9) + 0.02 * Math.sin(z * 2.1 + y * 1.7);
+function surfZ(x, y) { const k = 1 - Math.pow(Math.abs(x / RX), 1 / 0.82 * 2) - Math.pow(Math.abs(y / RY), 1 / 0.82 * 2); return RZ * Math.pow(Math.max(k, 0), 0.41); }
+
+const ontoy = new THREE.Group(); ontoy.name = 'Ontoy';
+const cuerpo = new THREE.Group(); cuerpo.name = 'cuerpo-grupo'; ontoy.add(cuerpo);
+
+const g = new THREE.SphereGeometry(1, 96, 72);
+const p = g.attributes.position, v = new THREE.Vector3();
+for (let k = 0; k < p.count; k++) {
+  v.fromBufferAttribute(p, k);
+  const l = lump(v.x, v.y, v.z);
+  let x = sq(v.x) * RX * l, y = sq(v.y) * RY * l, z = sq(v.z) * RZ * l;
+  if (y < -0.082) y = -0.082 + (y + 0.082) * 0.4;
+  x *= 1 - 0.07 * (y / RY);
+  p.setXYZ(k, x, y, z);
+}
+g.computeVertexNormals();
+const body = new THREE.Mesh(g, M.naranja); body.name = 'cuerpo'; body.castShadow = true; cuerpo.add(body);
+
+for (const [s, x] of [['izq', -0.038], ['der', 0.042]]) {
+  const f = new THREE.Mesh(new THREE.SphereGeometry(0.025, 48, 32), M.naranja);
+  f.name = 'pie-' + s; f.scale.set(1.2, 0.55, 1.35); f.position.set(x, -0.102, 0.018); f.castShadow = true; ontoy.add(f);
+}
+
+// Floating hands (not attached)
+const manoIzq = new THREE.Mesh(new THREE.SphereGeometry(0.02, 40, 28), M.naranja);
+manoIzq.name = 'mano-izq'; manoIzq.scale.set(0.85, 1, 0.9); manoIzq.position.set(0.118, -0.02, 0.02); manoIzq.castShadow = true; ontoy.add(manoIzq);
+
+const cel = new THREE.Group(); cel.name = 'smartphone';
+const caja = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.066, 0.006), M.carbon); caja.name = 'cel-cuerpo';
+const pant = new THREE.Mesh(new THREE.PlaneGeometry(0.031, 0.058), M.pantalla); pant.name = 'cel-pantalla'; pant.position.z = 0.0031;
+const mini = new THREE.Mesh(new THREE.CircleGeometry(0.009, 32), M.crema); mini.name = 'cel-app-ontoy'; mini.position.set(0, 0.004, 0.0033); mini.scale.set(1, 1.1, 1);
+cel.add(caja, pant, mini);
+for (const x of [-0.0035, 0.0035]) { const e = new THREE.Mesh(new THREE.CircleGeometry(0.002, 20), M.carbon); e.name = 'cel-app-ojo'; e.position.set(x, 0.006, 0.0035); cel.add(e); }
+const manoDer = new THREE.Mesh(new THREE.SphereGeometry(0.02, 40, 28), M.naranja);
+manoDer.name = 'mano-der'; manoDer.scale.set(1, 0.85, 0.9); manoDer.position.set(0.004, -0.026, -0.008); manoDer.castShadow = true; cel.add(manoDer);
+cel.position.set(-0.07, -0.02, 0.105); cel.lookAt(0, 0.045, 0.02); cel.rotateZ(0.12);
+ontoy.add(cel);
+
+// Face (separate parts, so every future reaction reuses the same body)
+const ojos = [];
+for (const [s, x, y, r] of [['izq', -0.029, 0.035, 0.029], ['der', 0.031, 0.039, 0.029]]) {
+  const eg = new THREE.Group(); eg.name = 'ojo-' + s;
+  eg.position.set(x, y, surfZ(x, y) - 0.008);
+  const w = new THREE.Mesh(new THREE.SphereGeometry(r, 48, 32), M.blanco); w.name = 'ojo-blanco-' + s; w.scale.set(1, 1, 0.62);
+  const pu = new THREE.Mesh(new THREE.SphereGeometry(r * 0.52, 40, 28), M.carbon); pu.name = 'pupila-' + s; pu.scale.set(1, 1, 0.5);
+  const br = new THREE.Mesh(new THREE.SphereGeometry(r * 0.13, 20, 14), M.blanco); br.name = 'brillo-' + s;
+  eg.add(w, pu, br); cuerpo.add(eg); ojos.push({ eg, pu, br, r });
+}
+const bx = 0.004, by = -0.016;
+const mouth = new THREE.Group(); mouth.name = 'boca';
+mouth.position.set(bx, by, surfZ(bx, by) + 0.001);
+const mo = new THREE.Mesh(new THREE.SphereGeometry(0.016, 40, 28), M.carbon); mo.name = 'boca-contorno'; mo.scale.set(1, 1.25, 0.2);
+const cav = new THREE.Mesh(new THREE.SphereGeometry(0.0142, 40, 28), M.boca); cav.name = 'boca-interior'; cav.scale.set(1, 1.22, 0.22); cav.position.z = 0.0012;
+const mi = new THREE.Mesh(new THREE.SphereGeometry(0.0088, 32, 24), new THREE.MeshStandardMaterial({ name: 'lengua', color: '#D9666B', roughness: 0.55, metalness: 0 })); mi.name = 'lengua'; mi.scale.set(1.1, 0.55, 0.3); mi.position.set(0, -0.0095, 0.0032);
+mouth.add(mo, cav, mi); cuerpo.add(mouth);
+const sonrisa = new THREE.Mesh(new THREE.TorusGeometry(0.01, 0.0028, 14, 40, Math.PI), M.carbon);
+const sonY0 = 0; sonrisa.name = 'boca-sonrisa'; sonrisa.rotation.z = Math.PI; sonrisa.position.set(bx, by + 0.006, surfZ(bx, by) + 0.001); cuerpo.add(sonrisa); const sonY = sonrisa.position.y;
+const linea = new THREE.Mesh(new THREE.CapsuleGeometry(0.0028, 0.012, 8, 16), M.carbon);
+linea.name = 'boca-linea'; linea.rotation.z = Math.PI / 2; linea.position.set(bx, by, surfZ(bx, by) + 0.001); cuerpo.add(linea);
+
+
+const pivot = new THREE.Group(); pivot.add(ontoy); scene.add(pivot);
+cuerpo.rotation.z = -0.04;
+function size() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+addEventListener('resize', size); size();
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let tg = { x: 0.3, y: -0.1, e: 0 }, cur = { x: 0.3, y: -0.1, e: 0 };
+const t0 = performance.now(); let last = t0, ph = 0;
+let lastAct = 0, buses = null, obra = null, asb = 0, vis = true, loco = 0, animo = 0, am = 0;
+addEventListener('message', (ev) => { const d = ev.data; if (!d) return; if (d.tipo === 'cursor') { tg = { x: d.x, y: d.y, e: d.e }; lastAct = (performance.now() - t0) / 1000; } if (d.tipo === 'buses') buses = d.list; if (d.tipo === 'obra') obra = d; if (d.tipo === 'vis') vis = d.v; if (d.tipo === 'loco') loco = d.f; if (d.tipo === 'animo') animo = d.v; if (d.tipo === 'nivel' && d.v === 'medio') { renderer.setPixelRatio(1); renderer.shadowMap.enabled = false; size(); } });
+addEventListener('pointermove', (ev) => { tg = { x: (ev.clientX / innerWidth - 0.5) * 2, y: (ev.clientY / innerHeight - 0.45) * 2, e: 1 }; lastAct = (performance.now() - t0) / 1000; });
+const celParts = cel.children.filter(c => c !== manoDer).map(m => [m, m.position.y, m.rotation.x]);
+const acro = new THREE.Group(); acro.name = 'acrobacias'; pivot.remove(ontoy); acro.add(ontoy); pivot.add(acro);
+const TRUCOS = [['backflip', 0.95], ['mortal lateral', 0.95], ['giro', 0.8], ['doble backflip', 1.35], ['tornillo', 1.15], ['rebote de pared', 1.2]];
+let combo = { n: 0, at: -9 }, en = 0, lastClick = -9, cola = [], truco = null, ti = 0, hy = 0, trk = 0, camZ = 0.66, camY = 0.035;
+addEventListener('pointerdown', () => {
+  const t = (performance.now() - t0) / 1000;
+  combo.n = t - combo.at < 1.6 ? Math.min(combo.n + 1, 60) : 1; combo.at = t; lastClick = t; lastAct = t;
+  en = Math.min(1, en + 0.22);
+  if (!reduce && combo.n >= 6 && cola.length < 3) cola.push(TRUCOS[(combo.n - 6) % TRUCOS.length]);
+});
+const ss = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+const lerp = (a, b, k) => a + (b - a) * k;
+const io = (p) => p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+function frame(n) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (n - last) / 1000); last = n; const t = (n - t0) / 1000;
+  const k = 1 - Math.exp(-dt * 6), ke = 1 - Math.exp(-dt * 3.5);
+  const idle = reduce ? 0 : t - lastAct;
+  const aburr = ss((idle - 5) / 1.5), juega = ss((idle - 13) / 1.5);
+  let bx = tg.x, by = tg.y;
+  if (buses) { let best = null; for (const b of buses) if (Math.abs(b.x) < 2.6 && (!best || Math.abs(b.x) < Math.abs(best.x))) best = b; if (best) { bx = Math.max(-1.4, Math.min(1.4, best.x)); by = Math.max(-1.4, Math.min(1.4, best.y)); } else { bx = Math.sin(t * 0.7) * 0.8; by = 1.1; } }
+  const tp = ((idle - 13) % 1.7 + 1.7) % 1.7 / 1.7, toss = 4 * tp * (1 - tp) * juega;
+  const gx = lerp(lerp(tg.x, bx, aburr), -0.75, juega), gy = lerp(lerp(tg.y, by, aburr), 0.25 - toss * 2.6, juega);
+  am += ((reduce ? 0 : animo) - am) * (1 - Math.exp(-dt * 1.8));
+  const triste = Math.max(0, -am) * (1 - tg.e), feliz = Math.max(0, am);
+  const ge = Math.max(lerp(tg.e, 0, aburr), feliz * 0.45);
+  const of = reduce ? 0 : (obra ? obra.f : 0);
+  asb += (of - asb) * (1 - Math.exp(-dt * (of ? 5 : 1.3)));
+  const gx2 = obra ? lerp(gx, obra.x, asb) : gx, gy2 = obra ? lerp(gy, obra.y, asb) : gy;
+  cur.x += (gx2 - cur.x) * k; cur.y += (gy2 + triste * 0.9 - cur.y) * k; cur.e += (ge - cur.e) * ke;
+  const e = cur.e; ph += dt * (4 + e * 7);
+  // energía: sube con cada click y baja despacito, sin cortes
+  if (t - lastClick > 0.6 && !truco) en = Math.max(0, en - dt * (0.22 + en * 0.2));
+  const L = reduce ? 0 : ss(en * 1.35);
+  const hyT = !reduce && ((combo.n >= 5 && t - lastClick < 2.2) || loco) ? 1 : 0;
+  hy += (hyT - hy) * (1 - Math.exp(-dt * (hyT ? 5 : 1.6)));
+  if (!truco && cola.length) { truco = cola.shift(); ti = 0; }
+  let jx = 0, jy = 0, rx = 0, ry = 0, rz = 0, sq = 1;
+  if (truco) {
+    ti += dt / truco[1]; const p = Math.min(1, ti), E = io(p), arc = 4 * p * (1 - p), PI2 = Math.PI * 2;
+    switch (truco[0]) {
+      case 'backflip': jy = arc * 0.075; rx = -PI2 * E; break;
+      case 'mortal lateral': jy = arc * 0.07; rz = PI2 * E; break;
+      case 'giro': jy = arc * 0.055; ry = PI2 * E; break;
+      case 'doble backflip': jy = arc * 0.11; rx = -2 * PI2 * E; break;
+      case 'tornillo': jy = arc * 0.09; rx = -PI2 * E; ry = PI2 * E; break;
+      case 'rebote de pared': { const a = Math.sin(Math.PI * p); jx = a * 0.1; jy = arc * 0.07; rz = -a * 0.7 + (p > 0.5 ? PI2 * io((p - 0.5) * 2) : 0); break; }
+    }
+    const edge = Math.min(p, 1 - p); sq = 1 - 0.2 * Math.max(0, 1 - edge / 0.1);
+    if (p >= 1) truco = null;
+  }
+  trk += ((truco ? 1 : 0) - trk) * (1 - Math.exp(-dt * (truco ? 6 : 2.2)));
+  const hopH = Math.abs(Math.sin(t * 17)) * 0.032 * hy * (1 - trk);
+  acro.position.set(jx, jy + hopH, 0); acro.rotation.set(rx, ry, rz);
+  const sqH = 1 - Math.max(0, 0.12 - Math.abs(Math.sin(t * 17)) * 0.12) * hy * (1 - trk);
+  const S = Math.min(sq, sqH); acro.scale.set(1 + (1 - S) * 0.6, S, 1 + (1 - S) * 0.6);
+  camZ = lerp(camZ, 0.66 + trk * 0.3 + hy * 0.12, 1 - Math.exp(-dt * 3)); camY = lerp(camY, 0.035 + trk * 0.035 + hy * 0.02, 1 - Math.exp(-dt * 3));
+  camera.position.set(0, camY, camZ); camera.lookAt(0, -0.012 + trk * 0.03, 0);
+  const follow = 1 - trk;
+  pivot.rotation.y = Math.max(-0.6, Math.min(0.6, cur.x * 0.55)) * follow;
+  pivot.rotation.x = Math.max(-0.25, Math.min(0.25, cur.y * 0.18)) * follow;
+  const mx = Math.max(-0.45, Math.min(0.45, cur.x * 0.45)) * follow, my = lerp(Math.max(-0.42, Math.min(0.42, -cur.y * 0.42)), 0.35, trk);
+  ojos.forEach(({ pu, br, r }) => { pu.position.set(mx * r, my * r, r * 0.48); br.position.set(mx * r + r * 0.18, my * r + r * 0.16, r * 0.66); });
+  const b = t % 3.6, blink = reduce ? 1 : (b > 3.35 ? Math.abs(Math.cos((b - 3.35) / 0.25 * Math.PI)) : 1);
+  const closed = Math.max(L, hy, aburr * (1 - juega) * 0.45, triste * 0.4) * (1 - trk) * (1 - asb);
+  const open = Math.max(0.08, blink * (1 + e * 0.12)) * (1 + trk * 0.2 + asb * 0.22);
+  ojos.forEach(o => o.eg.scale.y = Math.max(0.1, lerp(open, 0.14, closed)));
+  const mOpen = Math.max(L, hy, trk, asb * 0.85, e > 0.35 ? (e - 0.35) / 0.65 : 0);
+  mouth.visible = mOpen > 0.04; sonrisa.visible = !mouth.visible && (e > 0.1 || juega > 0.5 || triste > 0.35); sonrisa.rotation.z = triste > 0.35 ? 0 : Math.PI; sonrisa.position.y = triste > 0.35 ? sonY - 0.012 : sonY; linea.visible = !mouth.visible && !sonrisa.visible && aburr > 0.5;
+  mouth.scale.set(1 + L * 0.5 + hy * 0.3, (0.35 + mOpen * 0.95) * (1 + (reduce ? 0 : Math.sin(t * 16) * 0.22 * Math.max(L, hy))), 1);
+  const sx = reduce ? 0 : Math.sin(t * 44) * 0.004 * L * (1 + hy) * (1 - trk);
+  const hop = reduce ? 0 : (Math.abs(Math.sin(ph)) * 0.004 * e + Math.abs(Math.sin(t * 2.2)) * 0.002) * (1 - L);
+  cuerpo.position.set(sx, hop, 0);
+  cuerpo.rotation.z = -0.04 + (reduce ? 0 : Math.sin(t * 14) * 0.06 * hy * (1 - trk));
+  manoIzq.position.set(0.118, -0.02 + (reduce ? 0 : Math.sin(t * 28) * 0.02 * Math.max(L, hy) + Math.sin(ph) * 0.02 * e * (1 - L) + Math.sin(t * 1.8) * 0.003) + e * 0.02 + trk * 0.05, 0.02);
+  cel.position.y = -0.02 + hop * 0.6 + trk * 0.03;
+  celParts.forEach(([m, y0, r0]) => { m.position.y = y0 + toss * 0.075; m.rotation.x = r0 + (juega > 0.01 ? tp * Math.PI * 2 * juega : 0); });
+  if (vis) renderer.render(scene, camera);
+}
+requestAnimationFrame(frame);
+</script>
+</body></html>
