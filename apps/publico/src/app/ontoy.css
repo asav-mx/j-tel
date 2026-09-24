@@ -25,53 +25,77 @@
  * tiene sus propios valores: la clara no es la oscura con los fondos volteados.
  */
 
+/*
+ * ── LOS PAPELES ──────────────────────────────────────────────────────
+ *
+ * Arriba está la paleta (`tokens-ontoy.css`): los colores con su nombre. Aquí
+ * se reparte **qué papel juega cada uno** en cada piel. Son cosas distintas a
+ * propósito: la paleta no se voltea de noche —carbón sigue siendo carbón—, lo
+ * que cambia es quién hace de fondo y quién de texto.
+ *
+ * Toda la piel de abajo —dos mil líneas— habla de papeles y no de colores. Por
+ * eso cambiar de identidad costó este bloque y no el archivo entero.
+ *
+ * **Ningún valor de aquí es un hex.** Si hace falta un color que no está en la
+ * paleta, entra por `tokens/colors.css` del skill o por su `ENMIENDAS.md`; no
+ * se escribe aquí. Lo cuida `piel-de-ontoy.test.ts`.
+ */
 :root {
-  --fondo: #efebe3;
-  --panel: #ffffff;
-  --panel2: #f6f2ea;
-  --linea: rgba(26, 32, 38, 0.15);
-  --texto: #22282e;
-  --tenue: #5d6a74;
-  /* El verde del latido. SÓLO ahí. */
-  --vivo: #1d8a5c;
+  --fondo: var(--banqueta);
+  --panel: var(--hueso);
+  --panel2: var(--papel);
+  --linea: var(--arena);
+  --texto: var(--carbon);
   /*
-   * El cobre: SÓLO donde hay vida — el dato que cambia mientras alguien lo
-   * mira (skill `jtel-diseno`). En Ontoy eso es, por ahora, una sola cosa: el
-   * anillo que cuenta los 5 segundos del código del pase. Mide 3.91:1 sobre
-   * `--fondo`; es gráfico y no texto, así que su piso es 3:1.
+   * El texto apagado va en `--carbon-2`, **no en `--gris`**, y es una decisión
+   * medida (enmienda (e) del skill, ASAV 24-sep).
    *
-   * No entró el morado del prototipo del pase: es el color de un transportista,
-   * y la plataforma no se viste de uno —el siguiente concesionario vería a su
-   * competencia, y un pasajero de otra línea abriría la app pintada del rival
-   * (ASAV, 23-sep-2026).
+   * `--gris` da **4.16:1 sobre `--banqueta`** y el piso del texto es 4.5. Sobre
+   * `--hueso` da 4.55 y sí pasa: está calibrado para las superficies, no para el
+   * fondo de la página — y la línea de contexto del encabezado va justo sobre el
+   * fondo. `--carbon-2` da 6.78 y 7.42.
+   *
+   * Cuesta jerarquía: el apagado queda más oscuro de lo dibujado. Se paga, y se
+   * dice por qué: esto se lee de pie, en la calle, con sol.
    */
-  --senal: #b05a0f;
+  --tenue: var(--carbon-2);
+  /*
+   * La sombra de la hoja es lo único que no sale de la paleta, y no es color: es
+   * profundidad. Se queda en rgba porque un token opaco no puede difuminarse.
+   */
   --sombra-hoja: 0 -18px 48px rgba(30, 35, 40, 0.22);
 }
 
+/*
+ * ── La noche ─────────────────────────────────────────────────────────
+ *
+ * Azul noche `#1E2B4D` de la identidad (handoff §4), que reemplaza al gris
+ * pizarra con el que la app nació. El texto apagado va en `--arena-2` (7.80:1
+ * sobre `--noche`): `--gris` ahí da 2.77 y no se lee.
+ *
+ * `--linea` toma `--noche-3`, que es el tercer azul de la paleta y no una
+ * transparencia: de noche una línea blanca al 14 % se ve distinta según qué le
+ * tocó debajo, y aquí debajo hay mapa.
+ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema="dia"]) {
-    --fondo: #2b323b;
-    --panel: #343d48;
-    --panel2: #3d4753;
-    --linea: rgba(255, 255, 255, 0.14);
-    --texto: #efebe4;
-    --tenue: #a8b2bc;
-    --vivo: #34c77b;
-    --senal: #ffa24d;
+    --fondo: var(--noche);
+    --panel: var(--noche-2);
+    --panel2: var(--noche-3);
+    --linea: var(--noche-3);
+    --texto: var(--hueso);
+    --tenue: var(--arena-2);
     --sombra-hoja: 0 -18px 48px rgba(0, 0, 0, 0.5);
   }
 }
 
 :root[data-tema="noche"] {
-  --fondo: #2b323b;
-  --panel: #343d48;
-  --panel2: #3d4753;
-  --linea: rgba(255, 255, 255, 0.14);
-  --texto: #efebe4;
-  --tenue: #a8b2bc;
-  --vivo: #34c77b;
-  --senal: #ffa24d;
+  --fondo: var(--noche);
+  --panel: var(--noche-2);
+  --panel2: var(--noche-3);
+  --linea: var(--noche-3);
+  --texto: var(--hueso);
+  --tenue: var(--arena-2);
   --sombra-hoja: 0 -18px 48px rgba(0, 0, 0, 0.5);
 }
 
@@ -92,9 +116,27 @@
   font-size: 15px;
   line-height: 1.45;
 }
-.ontoy .mono,
-.ontoy [class*="mono"] {
-  font-family: var(--fuente-mono), ui-monospace, monospace;
+/*
+ * **`.cifra` — lo que se lee como medida.** Se llamaba `.mono` mientras la
+ * familia era IBM Plex Mono; el sistema de Ontoy no tiene monoespaciada, así
+ * que la familia se fue y el nombre habría quedado mintiendo.
+ *
+ * Lo que la clase de verdad hace **no era la familia**: es `tabular-nums`, que
+ * hace que las cifras midan lo mismo y no bailen al cambiar. Un «3′» que se
+ * convierte en «12′» sin mover lo que tiene al lado es la razón de que esto
+ * exista, y eso Instrument Sans lo da igual.
+ */
+.ontoy .cifra,
+/*
+ * El lector entra al selector, y no entraba antes. Sus dos etiquetas traían
+ * `mono` desde que nacieron **sin que hiciera nada**: la regla colgaba de
+ * `.ontoy` y la raíz del lector es `.val`, así que la clase estaba puesta y
+ * muerta. Se arregla aquí porque el `Estandar de pantallas.md` §E dice que la
+ * pantalla del lector **que ve quien sube** lleva el universo, y la huella del
+ * aparato —seis hexadecimales que alguien coteja mirando— es justo lo que
+ * `tabular-nums` existe para sostener.
+ */
+.val .cifra {
   font-variant-numeric: tabular-nums;
 }
 
@@ -176,7 +218,7 @@
   stroke-linejoin: round;
 }
 .ontoy-barra-palabra {
-  font-family: var(--fuente-mono), monospace;
+  font-family: var(--fuente-texto), system-ui, sans-serif;
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.1em;
@@ -305,7 +347,7 @@
   padding: 16px 18px 6px;
 }
 .ontoy-seccion-titulo {
-  font-family: var(--fuente-mono), monospace;
+  font-family: var(--fuente-texto), system-ui, sans-serif;
   font-size: 10px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -463,7 +505,7 @@
   gap: 10px;
 }
 .ontoy-et {
-  font-family: var(--fuente-mono), monospace;
+  font-family: var(--fuente-texto), system-ui, sans-serif;
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -602,7 +644,7 @@
   background: transparent;
   color: var(--tenue);
   cursor: pointer;
-  font-family: var(--fuente-mono), monospace;
+  font-family: var(--fuente-texto), system-ui, sans-serif;
   font-size: 11.5px;
   padding: 7px 13px;
   border-radius: 8px;
@@ -754,7 +796,7 @@
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
-  font-family: var(--fuente-mono), monospace;
+  font-family: var(--fuente-texto), system-ui, sans-serif;
   paint-order: stroke;
   -webkit-text-stroke: 3px var(--fondo);
 }
@@ -1105,7 +1147,7 @@
   color: var(--texto-cabeza);
   border-radius: 9px;
   padding: 6px 10px;
-  font-family: var(--fuente-mono), monospace;
+  font-family: var(--fuente-texto), system-ui, sans-serif;
   font-size: 11.5px;
   font-weight: 500;
   cursor: pointer;
@@ -1948,7 +1990,7 @@
   color: var(--tenue);
 }
 .ontoy-pase-rotulo {
-  font-family: var(--fuente-mono), monospace;
+  font-family: var(--fuente-texto), system-ui, sans-serif;
   font-size: 10px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -2005,10 +2047,11 @@
 /*
  * Blanca en las dos pieles: un QR se lee por contraste, y sobre un fondo
  * oscuro una cámara duda. No es un descuido del tema — es la razón de que la
- * caja exista.
+ * caja exista. `--blanco` es el token de la paleta que NO cambia de piel, que
+ * es justo lo que hace falta aquí.
  */
 .ontoy-qr-caja {
-  background: #ffffff;
+  background: var(--blanco);
   border-radius: 16px;
   padding: 12px;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);

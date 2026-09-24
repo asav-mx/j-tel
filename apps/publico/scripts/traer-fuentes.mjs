@@ -28,7 +28,7 @@
  * pesos, así que se guarda UNO por familia y el rango se declara donde se usa.
  * IBM Plex Mono es la excepción: trae un archivo por peso.
  *
- * Licencias: las cuatro familias, SIL OFL 1.1 — permiten redistribuir los
+ * Licencias: las dos familias, SIL OFL 1.1 — permiten redistribuir los
  * archivos dentro del proyecto.
  */
 import { writeFile, mkdir } from "node:fs/promises";
@@ -43,26 +43,27 @@ const UA =
 const DESTINO = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "app", "fuentes");
 
 /**
- * Las dos letras de Ontoy, y son dos porque hoy hay dos caras.
+ * **Las dos letras de Ontoy, y ahora son las mismas en las dos caras.**
  *
- * - **La app** (`app/layout.tsx`): Archivo + IBM Plex — decisión de ASAV, 21-sep.
- * - **La landing** (`app/landing/`): Bricolage Grotesque + Instrument Sans, que
- *   es lo que piden los tokens del sistema de diseño
- *   (`.claude/skills/ontoy-design/tokens/typography.css`) y con lo que está
- *   dibujada la landing aprobada.
+ * Bricolage Grotesque para lo que identifica —títulos, placas y cifras— e
+ * Instrument Sans para lo que se lee. Es lo que piden los tokens del sistema de
+ * diseño (`.claude/skills/ontoy-design/tokens/typography.css`) y con lo que
+ * están dibujadas la landing y la app aprobadas.
  *
- * Que sean distintas es a propósito y es temporal: la app cambia a los tokens
- * en su propio PR. Mientras tanto, **ningún archivo se descarga dos veces**: el
- * navegador sólo baja los de la página que abrió, y nadie abre las dos a la vez.
+ * **Archivo, IBM Plex Sans e IBM Plex Mono salieron del repo.** Eran la letra
+ * del prototipo del 21-sep y la app era su única lectora; la landing ya nació
+ * con éstas. Se fueron con sus archivos: un `.woff2` que nadie declara no se
+ * sirve, pero sí se clona, se revisa y se cree vigente.
+ *
+ * Si algún día hiciera falta volver a bajarlas, la línea era
+ * `{ familia: "Archivo", pesos: [600, 700], variable: true, nombre: "archivo" }`
+ * — y las de IBM Plex, iguales con sus pesos.
  *
  * `consulta` existe porque Bricolage Grotesque tiene **dos ejes** —`opsz` y
  * `wght`—, y Google quiere los dos nombrados en orden alfabético o devuelve un
- * 400. Las demás se arman con sus pesos y ya.
+ * 400. Instrument Sans se arma con sus pesos y ya.
  */
 const FAMILIAS = [
-  { familia: "Archivo", pesos: [600, 700], variable: true, nombre: "archivo" },
-  { familia: "IBM Plex Sans", pesos: [400, 500, 600], variable: true, nombre: "plex-sans" },
-  { familia: "IBM Plex Mono", pesos: [400, 500], variable: false, nombre: "plex-mono" },
   {
     familia: "Bricolage Grotesque",
     pesos: [600, 800],

@@ -109,7 +109,7 @@ export function VistaPase({
             <span className="ontoy-pase-viajes">
               {disponibles} <small>{disponibles === 1 ? "viaje" : "viajes"}</small>
             </span>
-            <button type="button" className="ontoy-pase-chip mono" onClick={alAlternarCuenta}>
+            <button type="button" className="ontoy-pase-chip cifra" onClick={alAlternarCuenta}>
               {pase.cuenta ? `CUENTA · ${pase.cuenta}` : "AL PORTADOR"}
             </button>
           </div>
@@ -149,7 +149,7 @@ export function VistaPase({
           </p>
 
           <p className="ontoy-pase-tarifa">
-            Tarifa vigente <b className="mono">${TARIFA_MXN}.00</b> · la fija el gobierno del estado
+            Tarifa vigente <b className="cifra">${TARIFA_MXN}.00</b> · la fija el gobierno del estado
           </p>
         </div>
 
@@ -204,7 +204,7 @@ export function VistaPase({
           </p>
         )}
 
-        <h3 className="ontoy-pase-rotulo mono">Movimientos</h3>
+        <h3 className="ontoy-pase-rotulo cifra">Movimientos</h3>
         {pase.movimientos.length === 0 ? (
           <p className="ontoy-vacio">Todavía no hay movimientos.</p>
         ) : (
@@ -231,12 +231,12 @@ function RenglonDeMovimiento({ movimiento }: { movimiento: Movimiento }) {
   return (
     <li className="ontoy-pase-mov">
       <span className="ontoy-pase-mov-que">
-        <span className="mono ontoy-pase-mov-hora">{hora}</span> · {movimiento.que}
+        <span className="cifra ontoy-pase-mov-hora">{hora}</span> · {movimiento.que}
         {movimiento.porConfirmar && (
           <span className="ontoy-pase-mov-pendiente"> · sin confirmar</span>
         )}
       </span>
-      <span className="mono ontoy-pase-mov-cambio">
+      <span className="cifra ontoy-pase-mov-cambio">
         {movimiento.cambio > 0 ? `+${movimiento.cambio}` : movimiento.cambio}
       </span>
     </li>
@@ -293,10 +293,10 @@ function PantallaQr({
         <section className="ontoy-seccion ontoy-qr">
           <h2 className="ontoy-seccion-titulo">Viaje usado</h2>
           <div className="ontoy-qr-usado">
-            <p className="ontoy-qr-usado-sello mono">USADO</p>
+            <p className="ontoy-qr-usado-sello cifra">USADO</p>
             <p>
               El lector entregó tu viaje y <b>ya consta</b>. Folio{" "}
-              <span className="mono">{folio}</span>.
+              <span className="cifra">{folio}</span>.
             </p>
             <p className="ontoy-qr-nota">
               {hayOtro
@@ -344,7 +344,7 @@ function PantallaQr({
         <p className="ontoy-qr-dictar">
           Si la cámara no puede, dicta estos <b>8 números</b>:
         </p>
-        <p className="ontoy-qr-numeros mono">{codigoParaDictar(folio)}</p>
+        <p className="ontoy-qr-numeros cifra">{codigoParaDictar(folio)}</p>
 
         <button type="button" className="ontoy-boton ontoy-boton-segundo" onClick={alVolver}>
           ‹ Volver al pase
@@ -380,7 +380,7 @@ function PantallaComprar({
               </span>
               <span className="ontoy-paquete-apodo">{p.apodo}</span>
             </span>
-            <span className="ontoy-paquete-precio mono">${precioDe(p.viajes)}</span>
+            <span className="ontoy-paquete-precio cifra">${precioDe(p.viajes)}</span>
           </button>
         ))}
 

@@ -385,15 +385,15 @@ export function Lector() {
 
   return (
     <div className="val">
-      <p className="val-banda mono">
+      <p className="val-banda cifra">
         R&amp;D interno · datos falsos · este lector no cobra dinero real
       </p>
 
       <header className="val-cabeza">
-        <span className="val-aparato mono">
+        <span className="val-aparato cifra">
           {identidad?.label ?? jornada.aparato} · PUERTA DELANTERA
         </span>
-        <span className={`val-senal mono ${haySenal ? "" : "val-senal-fuera"}`}>
+        <span className={`val-senal cifra ${haySenal ? "" : "val-senal-fuera"}`}>
           <i aria-hidden="true" />
           {haySenal ? "CON SEÑAL" : "SIN SEÑAL"}
         </span>
@@ -402,7 +402,7 @@ export function Lector() {
       <Semaforo fase={fase} resultado={resultado} />
 
       <div className="val-cuerpo">
-        <p className="val-unidad mono">
+        <p className="val-unidad cifra">
           {identidad?.lectorId
             ? "Lector registrado en J-Tel · lector de laboratorio"
             : "Unidad sin asignar · lector de laboratorio"}
@@ -427,8 +427,8 @@ export function Lector() {
               esos 64 mirando dos pantallas es la tarea que nadie hace bien.
             */}
             <p className="val-huella-rotulo">Huella · últimos {LARGO_DE_LA_HUELLA}</p>
-            <p className="val-huella mono">{huellaDeLlave(identidad.llavePublica)}</p>
-            <code className="mono">{identidad.llavePublica}</code>
+            <p className="val-huella cifra">{huellaDeLlave(identidad.llavePublica)}</p>
+            <code className="cifra">{identidad.llavePublica}</code>
             <CompartirLlave llave={identidad.llavePublica} />
           </div>
         )}
@@ -540,7 +540,7 @@ export function Lector() {
           </p>
         )}
 
-        <dl className="val-pie mono">
+        <dl className="val-pie cifra">
           <div>
             <dt>Validados hoy</dt>
             <dd>{validadosHoy(jornada)}</dd>
@@ -565,19 +565,19 @@ export function Lector() {
           </div>
         </dl>
 
-        <p className="val-entrega mono">
+        <p className="val-entrega cifra">
           {palabrasDeLaEntrega(entrega, porEntregarEnElAparato, Boolean(identidad?.lectorId))}
         </p>
 
         {noAceptados > 0 && (
-          <p className="val-entrega val-entrega-mal mono">
+          <p className="val-entrega val-entrega-mal cifra">
             {noAceptados === 1 ? "1 renglón que J-Tel no aceptó" : `${noAceptados} renglones que J-Tel no aceptó`}
             . Quedan marcados y no se vuelven a mandar.
           </p>
         )}
 
         {diagnostico && (
-          <p className="val-diagnostico mono">
+          <p className="val-diagnostico cifra">
             cámara {diagnostico.ancho}×{diagnostico.alto} · recorta {diagnostico.lado} ·{" "}
             {diagnostico.ms} ms · {Math.round(1000 / (diagnostico.ms + 30))}/s ·{" "}
             {describirCapacidades(capacidades, zoom)}
@@ -711,7 +711,7 @@ function CompartirLlave({ llave }: { llave: string }) {
         Compartir llave
       </button>
       {hecho && (
-        <span className="val-compartir-hecho mono">
+        <span className="val-compartir-hecho cifra">
           {hecho === "compartido" ? "compartida" : "copiada al portapapeles"}
         </span>
       )}
@@ -756,7 +756,7 @@ function Panel({ fase, resultado }: { fase: Fase; resultado: ResultadoDelLector 
       <div className="val-panel val-panel-ok">
         <p className="val-panel-titulo">{tituloDeUnPaseBueno(resultado)}</p>
         <p className="val-panel-detalle">
-          <span className="mono">{resultado.folio}</span> · {detalleDeUnPaseBueno(resultado)}
+          <span className="cifra">{resultado.folio}</span> · {detalleDeUnPaseBueno(resultado)}
         </p>
       </div>
     );
@@ -789,7 +789,7 @@ function Teclado({
       <p className="val-teclado-rotulo">
         Dicta <b>los 8 números</b> del pase. Sin letras.
       </p>
-      <p className="val-teclado-pantalla mono" aria-live="polite">
+      <p className="val-teclado-pantalla cifra" aria-live="polite">
         {mostrado}
       </p>
       <div className="val-teclado-rejilla">
@@ -797,7 +797,7 @@ function Teclado({
           <button
             key={t}
             type="button"
-            className="val-tecla mono"
+            className="val-tecla cifra"
             onClick={() => {
               if (t === "borrar") alTeclear(tecleado.slice(0, -1));
               else if (t === "ok") alEnviar();

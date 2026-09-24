@@ -49,7 +49,7 @@ export function VistaAvisos({
               style={{ ["--ruta" as string]: a.color }}
               onClick={() => alAbrirRuta(a.ruta)}
             >
-              <span className="ontoy-aviso-cuando mono">
+              <span className="ontoy-aviso-cuando cifra">
                 {fechaDelAviso(a.desde, a.zona, ahora)} · según la concesión
               </span>
               <span className="ontoy-aviso-ruta">
@@ -57,7 +57,7 @@ export function VistaAvisos({
               </span>
               <span className="ontoy-aviso-titulo">{a.titulo}</span>
               {a.detalle && <span className="ontoy-aviso-detalle">{a.detalle}</span>}
-              {a.hasta && <span className="ontoy-aviso-hasta mono">hasta el {fechaDelAviso(a.hasta, a.zona, ahora).replace(/^(Hoy|Ayer) /, (m) => m.toLowerCase())}</span>}
+              {a.hasta && <span className="ontoy-aviso-hasta cifra">hasta el {fechaDelAviso(a.hasta, a.zona, ahora).replace(/^(Hoy|Ayer) /, (m) => m.toLowerCase())}</span>}
             </button>
           ))
         )}
@@ -69,7 +69,7 @@ export function VistaAvisos({
           <h2 className="ontoy-seccion-titulo">Tu teléfono</h2>
           {[...telefono].reverse().map((a, i) => (
             <div key={`${a.tipo}-${a.desde}-${i}`} className="ontoy-aviso ontoy-aviso-telefono">
-              <span className="ontoy-aviso-cuando mono">
+              <span className="ontoy-aviso-cuando cifra">
                 {a.hasta ? `${hora(a.desde)}–${hora(a.hasta)}` : `desde las ${hora(a.desde)}`} · tu teléfono
               </span>
               <span className="ontoy-aviso-titulo">

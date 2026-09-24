@@ -106,7 +106,7 @@ export function HojaDeParada({
         {/* Lo MEDIDO. */}
         {llegadas.map((l, i) => (
           <div key={i} className={`ontoy-llegada${l.vieja ? " vieja" : ""}${l.pasada ? " pasada" : ""}`}>
-            <span className="ontoy-llegada-rotulo mono">{l.rotulo}</span>
+            <span className="ontoy-llegada-rotulo cifra">{l.rotulo}</span>
             <span className="ontoy-llegada-apoyo">
               {l.enVivo && <span className="ontoy-punto-vivo" aria-hidden="true" />}
               {l.pasada && <span className="ontoy-punto-viejo" aria-hidden="true" />}

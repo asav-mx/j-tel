@@ -140,7 +140,7 @@ export function AtajoDeParada({
       <div className="ontoy-atajo-eta">
         {proxima ? (
           <>
-            <span className="ontoy-eta-num mono">{rangoEnPalabras(proxima.rango)}</span>
+            <span className="ontoy-eta-num cifra">{rangoEnPalabras(proxima.rango)}</span>
             <span className="ontoy-eta-apoyo">
               <span className="ontoy-punto-vivo" aria-hidden="true" />
               viene la <b>{proxima.unidad}</b> · {haceNMinutos(proxima.antiguedadSeg)}
@@ -148,7 +148,7 @@ export function AtajoDeParada({
           </>
         ) : frescaEnParadas ? (
           <>
-            <span className="ontoy-eta-num mono">{paradasEnPalabras(frescaEnParadas.paradas)}</span>
+            <span className="ontoy-eta-num cifra">{paradasEnPalabras(frescaEnParadas.paradas)}</span>
             <span className="ontoy-eta-apoyo">
               <span className="ontoy-punto-vivo" aria-hidden="true" />
               viene la <b>{frescaEnParadas.unidad}</b> · {haceNMinutos(frescaEnParadas.antiguedadSeg)}
@@ -161,7 +161,7 @@ export function AtajoDeParada({
           */
           <span className="ontoy-eta-vieja">
             la <b>{viejaEnParadas.unidad}</b> iba {paradasEnPalabras(viejaEnParadas.paradas)}
-            <span className="ontoy-eta-edad mono">
+            <span className="ontoy-eta-edad cifra">
               <span className="ontoy-punto-viejo" aria-hidden="true" />
               posición de {haceNMinutos(viejaEnParadas.antiguedadSeg)}
             </span>
@@ -175,7 +175,7 @@ export function AtajoDeParada({
         <>
           <div className="ontoy-atajo-tuyo">
             <span className="ontoy-et">Hasta donde estás</span>
-            <b className="mono">{rangoEnPalabras(hastaMi.rango)}</b>
+            <b className="cifra">{rangoEnPalabras(hastaMi.rango)}</b>
           </div>
           {/*
             El PARA QUÉ, donde se usa. La cara vieja lo decía y la nueva lo

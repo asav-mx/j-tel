@@ -77,6 +77,65 @@ hacía semanas y ningún ícono cambió de destino.
 
 Lo cuida `apps/publico/src/app/direcciones.test.ts`.
 
+
+## (d) Dos colores que la paleta no traía: el latido y el cobre — 24-sep-2026
+
+**Decisión de ASAV, 24-sep-2026,** al llevar los tokens a la app. `tokens/colors.css` no
+tiene con qué pintar dos cosas que la app del pasajero **ya enseña** y que no son de
+Ontoy: son de J-Tel, y llegan con sus reglas puestas. Se escriben aquí en vez de colarse
+como dos hex sueltos en el CSS de la app, que es lo que la regla «nunca inventes un hex»
+existe para impedir.
+
+| Token | Día | Noche | Qué es |
+|---|---|---|---|
+| `--vivo` | `#1D8A5C` | `#34C77B` | **El latido.** Marca que el dato está vivo **ahora** |
+| `--senal` | `#B05A0F` | `#FFA24D` | **El cobre de J-Tel:** el dato que cambia mientras alguien lo mira |
+
+**Las reglas que vienen con ellos, y son las que importan:**
+
+- **El verde es del latido y de nada más.** No es un veredicto, no significa «bien», no se
+  usa de acento. Un punto verde junto a «Sin servicio» estaría contradiciendo la frase que
+  acompaña.
+- **El cobre es de J-Tel, no de Ontoy**, y por eso **nunca va en el mismo elemento que el
+  naranja**. El naranja es Ontoy —la marca del pasajero— y el cobre es la plataforma
+  diciendo «esto se está moviendo»: juntos en una misma pieza, el pasajero leería dos
+  marcas peleando por el mismo objeto. En la app hoy el cobre es **una sola cosa**: el
+  anillo que cuenta los cinco segundos del código del pase.
+- **Los dos son gráficos, no texto**, así que su piso de contraste es 3:1. Medido sobre los
+  fondos de la paleta: `--vivo` da 3.58:1 sobre Banqueta y 3.92:1 sobre Hueso; `--senal`,
+  4.02:1 y 4.40:1. De noche sobre Azul noche, 6.37:1 y 6.98:1.
+- **Tienen par de día y de noche**, a diferencia de `--ruta`. Ésa es la trampa del #370:
+  `--ruta` y `--ruta-claro` **no** tienen par en la paleta de noche a propósito, porque los
+  inyecta el componente que sabe de qué ruta habla. Éstos no se inyectan: son del tema.
+
+**Dónde quedan escritos.** En `apps/publico/src/app/tokens-ontoy.css`, junto al resto de la
+paleta, marcados como lo que son: los dos únicos que no salen de `tokens/colors.css`. Si el
+skill se vuelve a exportar con ellos adentro, esta enmienda se borra y el comentario del
+archivo apunta al token.
+
+**Lo que esta enmienda NO hace:** no mete el cobre ni el verde a la identidad de Ontoy. Un
+dibujo de Ontoy, de Tino o de Cami no los lleva nunca.
+
+## (e) El gris del sistema no alcanza sobre el fondo de la página — 24-sep-2026
+
+`--gris` (`#6B6F78`) mide **4.16:1 sobre `--banqueta`**, y el piso del texto es 4.5. Sobre
+`--hueso` mide 4.55 y sí pasa: está calibrado para las **superficies**, no para el fondo.
+
+La Anatomía común del `Estandar de pantallas.md` manda la línea de contexto de 13 px en
+`--gris`, y esa línea va debajo del título, sobre el fondo de la página. Ahí no alcanza.
+
+**Decisión de ASAV, 24-sep-2026:** el texto apagado va en **`--carbon-2`** de día (6.78:1
+sobre banqueta, 7.42 sobre hueso) y en **`--arena-2`** de noche (7.80:1 sobre Azul noche).
+*«El texto se tiene que leer en la calle; la ley de contraste gana a la delicadeza del
+dibujo.»*
+
+`--gris` **no se borra ni se cambia de valor**: sigue siendo el token del sistema y sirve
+donde la superficie es hueso o papel. Lo que cambia es dónde se puede usar, y eso lo mide
+una prueba (`piel-de-ontoy.test.ts`), no la buena memoria de quien escriba la siguiente
+pantalla.
+
+La landing llegó a la misma cuenta por su lado (#555) y usa el mismo `--carbon-2`.
+
 ---
 
 ## Notas del repo (no son enmiendas: son cosas que este repo ya decidió)

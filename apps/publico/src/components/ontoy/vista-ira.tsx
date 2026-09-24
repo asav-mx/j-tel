@@ -152,7 +152,7 @@ export function VistaIrA({
                         className="ontoy-ira-sugerencia"
                         onClick={() => alAbrirRuta(s.circuitoSlug, s.paradaId, s.sentido ?? undefined)}
                       >
-                        <span className="ontoy-ira-que mono">Parada</span>
+                        <span className="ontoy-ira-que cifra">Parada</span>
                         <span className="ontoy-ira-texto">
                           <span className="ontoy-ira-nombre">{s.nombre}</span>
                           {/*
@@ -170,7 +170,7 @@ export function VistaIrA({
                         className="ontoy-ira-sugerencia"
                         onClick={() => alAbrirRuta(s.slug)}
                       >
-                        <span className="ontoy-ira-que mono">Ruta</span>
+                        <span className="ontoy-ira-que cifra">Ruta</span>
                         <span className="ontoy-ira-texto">
                           <span className="ontoy-ira-nombre">{s.nombre}</span>
                           <span className="ontoy-ira-donde">toda la ruta, con sus paradas</span>

@@ -47,7 +47,7 @@ export function CabezaDeRuta({
         </button>
         <h2 className="ontoy-cabeza-ruta-nombre">{nombre}</h2>
         {enVivo !== null && (
-          <span className="ontoy-cabeza-ruta-cuantos mono">
+          <span className="ontoy-cabeza-ruta-cuantos cifra">
             {enVivo === 0 ? "sin camiones en vivo" : enVivo === 1 ? "1 camión en vivo" : `${enVivo} camiones en vivo`}
           </span>
         )}
