@@ -6,6 +6,8 @@ import { CaraDeOntoy } from "@/components/landing/ontoy";
 import { MarcaDelHero } from "@/components/landing/marca-del-hero";
 import { Calle } from "@/components/landing/calle/calle";
 import { ProveedorDeNivel } from "@/components/landing/nivel-contexto";
+import { LaPreguntaDeSiempre } from "@/components/landing/secciones/pregunta-de-siempre";
+import { TuColor } from "@/components/landing/secciones/tu-color";
 
 /**
  * **La landing de `ontoy.app`** — la raíz, para quien todavía no conoce Ontoy.
@@ -175,6 +177,10 @@ export default function Landing() {
          * calle.
          */}
         <Calle />
+
+        <LaPreguntaDeSiempre />
+
+        <TuColor />
 
         <footer className="landing-pie">
           <div className="landing-caja">
