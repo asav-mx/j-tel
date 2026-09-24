@@ -66,9 +66,75 @@ Dónde vamos y qué sigue. **Fuente única: cualquier chat nuevo lee esto para s
 
 ---
 
+## El límite de la versión 1 de Ontoy — 1 de octubre de 2026
+
+**Decisión de ASAV del 25 de septiembre de 2026.** Ontoy **no se lanza por partes**: sale
+completo, como versión 1.
+
+| | |
+|---|---|
+| **Lanzamiento** | **jueves 1 de octubre** |
+| **Ensayo general** | **martes 29.** Si no pasa, la fecha se mueve |
+| **Congelamiento** | desde la **noche del martes 29**: sólo arreglos, nada nuevo |
+
+Reemplaza el lanzamiento del domingo 28, y con él la regla de «después del 29»: meter todo
+**después** del arranque es peor que antes, porque si algo se rompe conviene que se rompa un
+viernes y no con pasajeros un martes.
+
+### Qué entra
+
+Landing en la raíz de `ontoy.app` · app en `/rutas` con el manifiesto abriendo ahí · identidad
+completa (los tokens del skill `ontoy-design`) · el mapa nuevo (ropa + Tino + Cami desde arriba
++ el pasajero) · caritas de estado en Inicio · Tino en la hoja de parada · «Ir a» con la
+identidad · reacciones que nacen **de un dato o de un toque** · pantallas vacías con Ontoy · el
+QR de las paradas funcionando · la mudanza a `ontoy.app` (#534).
+
+### Qué NO entra, y por qué el «no» es la parte importante
+
+| Fuera | Por qué |
+|---|---|
+| **El planeador** | Necesita recorridos medidos. Es el último eslabón de la app, no el primero |
+| **«Llega en 2 min»** | Depende de medición en vivo que todavía no se sostiene |
+| **«Cami lleno»** | Ídem: es una pieza dibujada, no un dato que exista |
+| **El barrio** (tiendita, tacos, semáforo…) | Es para escenas y redes, no para el mapa en vivo |
+
+Los tres primeros son la misma regla del Marco escrita cuatro veces: **no se promete lo que no
+se midió.** El cuarto es la frontera del universo: en el mapa en vivo el barrio va sólo con
+referencias reales.
+
+**La lista viva de pendientes está en Notion («Ontoy versión 1»), no aquí.** Lo que este
+documento guarda es el **límite** —qué entra, qué no y por qué—, porque eso es una decisión y las
+decisiones viven en el repo. Una lista de pendientes copiada en dos lados se separa; un límite no.
+
+### Dos constructores en paralelo
+
+Una rama por tarea, por área, todo por PR. **Las áreas no se cruzan**, que es lo único que hace
+que dos construyan a la vez sin pisarse:
+
+| Quién | Su área |
+|---|---|
+| **Claude Code, con ASAV** | Las pantallas de la app: Inicio, la hoja de parada, «Ir a», las vacías, «Pronto me verás en la calle». Y los tokens del skill, que salen primero en un PR chico |
+| **El otro constructor** | El mapa (Tino, Cami desde arriba, el pasajero), la landing en la raíz, y lo técnico |
+
+El mapa arranca **cuando la cadena del viernes 26 esté en `main`**: toca `vista-mapa.tsx`, y
+salir de un `main` ya asentado ahorra un rebase. La landing puede empezar antes — no choca con
+nada.
+
+### Mientras tanto
+
+Uno o dos camiones dan vueltas al circuito **midiendo tiempos**. Oasis–Centro **no lleva
+pasajeros** hasta el 1 de octubre: su `service_launch_date` es esa fecha, y Ontoy la enseña
+«por arrancar» sin prometer frecuencia. **La medición no se detiene por eso** — el detector de
+pasos filtra por asignación vigente, unidad activa y circuito activo, y no lee la fecha de
+arranque.
+
+---
+
 ## Lo que sigue, en orden
 
 **Reordenado el 19 de septiembre de 2026 por un dato nuevo:** las 8 unidades **arrancan la semana del 28 de septiembre**, con **dos días de prueba entre el 22 y el 25**. Todo lo que sigue cuelga de esas dos fechas.
+
+> ✎ **25 de septiembre:** esas dos fechas siguen valiendo para **las unidades**, que ya andan dando vueltas midiendo tiempos. Lo que se movió es **Oasis–Centro con pasajeros y Ontoy**: los dos el **1 de octubre**, y con el alcance cerrado — ver «El límite de la versión 1» arriba. Así que donde abajo se lea «después del 29» como regla de calendario, manda la sección de arriba.
 
 **La regla de esta cadena.** Se avanza de eslabón en eslabón y **no se salta ninguno**. Lo que se nos ocurra en el camino no entra: se manda a la **cola** del final, con una línea de por qué. La cola se revisa entre eslabones, nunca en medio.
 
