@@ -2,8 +2,9 @@
  * LA LANDING de `ontoy.app` — la portada, para quien todavía no conoce Ontoy.
  *
  * Es otra cara que la app: la app es para el que ya está parado en la parada
- * con prisa; esto es para el que oyó el nombre y quiere saber qué es. Por eso
- * tiene su propia letra y su propio aire, y por eso vive en su propio archivo.
+ * con prisa; esto es para el que oyó el nombre y quiere saber qué es. Comparte
+ * con ella la letra y la paleta —las dos salen del mismo sistema de diseño—,
+ * pero no su piel, y por eso vive en su propio archivo.
  *
  * ## Los tokens son los del sistema de diseño, y no se inventan
  *
@@ -23,11 +24,16 @@
  * ## Por qué los tokens NO están en `:root`
  *
  * Porque no estamos solos en el documento. El layout de la app importa
- * `globals.css` y `ontoy.css` para todas las páginas, y los dos declaran sus
- * propias variables en `:root` — entre ellas **`--ruta` y `--gris`, que también
- * existen en la paleta de Ontoy con otro valor**. Declarar los de la landing en
- * `:root` los dejaría puestos en la app entera, y la app se vería teñida por
- * una portada que nadie abrió.
+ * `globals.css`, `tokens-ontoy.css` y `ontoy.css` para todas las páginas, y
+ * entre los tres declaran en `:root` **`--ruta` y `--gris` — con valores
+ * distintos entre sí**: `--gris` es `#7d8aa3` en `globals.css` y `#6b6f78` en
+ * `tokens-ontoy.css`. Declarar los de la landing ahí arriba los dejaría puestos
+ * en la app entera, y la app se vería teñida por una portada que nadie abrió.
+ *
+ * `tokens-ontoy.css` a propósito **no trae `--ruta`**, porque un azul por
+ * omisión en `:root` fue el modo de falla del #370. La landing sí lo declara,
+ * pero dentro de `.landing`: aquí el color de ruta no es el de ninguna ruta
+ * real, es el de la ilustración.
  *
  * Así que todo cuelga de `.landing`. Lo que la landing define, se queda en la
  * landing.
@@ -122,13 +128,18 @@
   --pupila: var(--carbon);
 
   /*
-   * La letra. Las variables las pone `next/font/local` desde `letra.ts`: los
-   * `.woff2` viven en el repo y **la compilación no sale a internet** por
-   * ellos. La valla `scripts/verificar-fuentes-locales.mjs` tumba CI si alguna
-   * app vuelve a importar `next/font/google`.
+   * La letra **es la misma que la de la app**, y desde el #559 lo es de verdad:
+   * ese PR migró la app a los tokens del skill y se quedó con las dos familias
+   * que la landing había traído. Así que aquí no se declara ninguna fuente —
+   * se usan las variables que `layout.tsx` ya pone en el `<html>`.
+   *
+   * Declararlas otra vez con otro nombre generaría un segundo juego de
+   * `@font-face` sobre los mismos archivos, y dos nombres de familia para la
+   * misma letra: el sitio donde la landing y la app empezarían a divergir sin
+   * que nadie lo decidiera.
    */
-  --titular: var(--fuente-bricolage), "Bricolage Grotesque", sans-serif;
-  --cuerpo: var(--fuente-instrument), "Instrument Sans", sans-serif;
+  --titular: var(--fuente-titular), "Bricolage Grotesque", sans-serif;
+  --cuerpo: var(--fuente-texto), "Instrument Sans", sans-serif;
 
   /*
    * Formas: todo redondo y amable, y **sin sombras** — los bordes son de 1 px
@@ -374,21 +385,31 @@ body:has(.landing) {
 }
 
 /*
- * El wordmark a tamaño de portada.
+ * El wordmark a tamaño de portada — el del diseño: hasta 250 px.
  *
- * **El tope es 200 px y no 250, y lo puso la medición.** «¿Ontoy?» ocupa unas
- * 4.7 veces su tamaño de letra: a 250 px mide ~1180 px y no deja lugar para
- * Ontoy dentro de los 1232 de la caja, así que el flex lo mandaba a la fila de
- * abajo y el hero se partía en dos. A 200 px mide ~945 y los dos caben en el
- * mismo renglón, que es como está dibujado el hero.
+ * **`flex: 0 1 auto` es lo que hace que esto funcione, y costó una medición mal
+ * hecha descubrirlo.** Con `1 1 auto` la caja del wordmark se estiraba hasta
+ * llenar el espacio sobrante —912 px, el mismo número con la letra a 100 o a
+ * 250— y el texto se quedaba alineado a la izquierda dentro de ella, dejando un
+ * hueco enorme antes de Ontoy que parecía un problema de tamaño y no lo era.
+ * Con `0 1 auto` la caja mide el texto, y `space-between` los separa de verdad.
+ *
+ * Medido en el navegador con un clon fuera de flujo (dentro del flex, medir la
+ * caja mide el hueco): **«¿Ontoy?» ocupa 3.593 veces su tamaño de letra**, y la
+ * razón es la misma a 100, 150, 200 y 250 px. A 250 son 898 px, que con los 300
+ * de Ontoy y los 20 del hueco suman 1218 de los 1232 de la caja: **cabe**.
+ *
+ * Por debajo de unos 540 px de ventana ya no caben los dos, y entonces el
+ * `wrap` los pone uno encima de otro — que es como se ve en teléfono, y está
+ * bien así.
  */
 .landing-wordmark-gigante {
   display: flex;
   align-items: baseline;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   font-family: var(--titular);
   font-weight: 800;
-  font-size: clamp(72px, 15vw, 200px);
+  font-size: clamp(84px, 17.5vw, 250px);
   line-height: 0.9;
   letter-spacing: -0.045em;
   color: var(--carbon);
@@ -408,6 +429,41 @@ body:has(.landing) {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+/*
+ * El 2D y el 3D, uno encima del otro en la misma celda.
+ *
+ * Es una rejilla de una sola celda y los dos la ocupan: así el hueco mide lo
+ * que mide el 2D —que es lo que hay desde el primer cuadro— y **nada de
+ * alrededor se mueve** cuando el 3D acaba de bajar y lo tapa.
+ */
+.landing-ontoy-3d {
+  display: grid;
+  width: 100%;
+  height: 100%;
+}
+
+.landing-ontoy-3d > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+.landing-ontoy-2d {
+  display: grid;
+  place-items: center;
+}
+
+.landing-ontoy-lienzo {
+  /* Sin esto, el canvas de three no tiene contra qué medirse y sale de 0×0. */
+  width: 100%;
+  height: 100%;
+}
+
+.landing-ontoy-lienzo canvas {
+  display: block;
+  /* El 3D se toca: es donde Ontoy se ríe y hace sus trucos. */
+  cursor: pointer;
 }
 
 /*
@@ -468,6 +524,851 @@ body:has(.landing) {
 .landing-tiendas {
   font: 600 13px/1.3 var(--cuerpo);
   color: var(--texto-2);
+}
+
+/* ─── La calle ─────────────────────────────────────────────────────────── */
+
+/*
+ * La franja de calle que cruza debajo del hero.
+ *
+ * Va a **todo el ancho de la ventana** y no dentro de la caja de 1280: es una
+ * calle, y una calle que se acaba antes del filo de la pantalla es una maqueta
+ * de calle. El `slice` del SVG recorta en vez de deformar, así que en pantalla
+ * ancha se ve más calle y en teléfono menos — que es justo lo que hace una
+ * calle de verdad.
+ *
+ * ## El alto crece con el ancho, y el número no es decorativo
+ *
+ * `12.5vw` es exactamente 150/1200, la proporción del `viewBox`. Con una altura
+ * fija de 150, el `slice` escalaba por el ancho y **recortaba por arriba y por
+ * abajo**: a 1440 se comía 15 px de cada lado y **le cortaba la cabeza a
+ * Tino**, que es la pieza que más importa de toda la escena. Creciendo en la
+ * misma proporción, la escala vertical y la horizontal coinciden y no se
+ * recorta nada de alto.
+ *
+ * Por debajo de 1200 se queda en 150 —una calle más baja que eso deja de
+ * leerse— y ahí sí recorta a lo ancho. Por eso se ancla a la derecha: ver.
+ */
+.landing-calle {
+  position: relative;
+  height: clamp(150px, 12.5vw, 240px);
+  overflow: hidden;
+  background: var(--calle);
+  border-bottom: 10px solid var(--arena);
+  box-shadow: inset 0 -3px 0 var(--arena-2);
+}
+
+.landing-calle svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ─── La pregunta de siempre ───────────────────────────────────────────── */
+
+/* El renglón chico en versalitas que titula una sección sin gritar. */
+.landing-rotulo {
+  font: 700 13px/1.3 var(--cuerpo);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--texto-2);
+}
+
+.landing-pregunta {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding-block: 72px 80px;
+}
+
+.landing-bocadillos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 28px 20px;
+  /*
+   * Al pie: los tres globos son de alto distinto y lo que tiene que alinearse
+   * es quién habla, no dónde empieza el globo.
+   */
+  align-items: end;
+}
+
+.landing-bocadillo {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* El globo, con su piquito abajo a la izquierda. */
+.landing-globo {
+  position: relative;
+  background: var(--superficie);
+  color: var(--texto);
+  border-radius: var(--r-tarjeta);
+  padding: 18px 20px;
+  font-family: var(--titular);
+  font-weight: 800;
+  font-size: clamp(20px, 2vw, 26px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  box-shadow: 0 0 0 1px var(--borde);
+}
+
+.landing-globo::after {
+  content: "";
+  position: absolute;
+  left: 26px;
+  bottom: -9px;
+  width: 18px;
+  height: 18px;
+  background: var(--superficie);
+  transform: rotate(45deg);
+  border-radius: 0 0 4px 0;
+  box-shadow: 1px 1px 0 var(--borde);
+}
+
+/* El de Ontoy es el único que sabe, y el único oscuro. */
+.landing-globo-ontoy,
+.landing-globo-ontoy::after {
+  background: var(--carbon);
+  color: var(--texto-en-oscuro);
+  box-shadow: none;
+}
+
+.landing-quien {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-inline-start: 10px;
+  font: 700 14px/1 var(--cuerpo);
+  color: var(--texto-2);
+}
+
+.landing-quien svg {
+  width: 46px;
+  height: auto;
+  flex: none;
+}
+
+/* ─── Tu ruta, tu color ────────────────────────────────────────────────── */
+
+.landing-color {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
+  gap: 40px;
+  align-items: center;
+  padding-block: 88px 112px;
+  border-top: 1px solid var(--borde);
+}
+
+.landing-color-dicho {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.landing-muestras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.landing-muestra {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  /* Un aro del lienzo por dentro: separa la muestra del fondo sin teñirla. */
+  box-shadow: inset 0 0 0 3px var(--lienzo);
+  transition: box-shadow 0.2s var(--curva);
+}
+
+.landing-muestra[aria-pressed="true"] {
+  box-shadow:
+    inset 0 0 0 3px var(--lienzo),
+    0 0 0 2px var(--carbon);
+}
+
+.landing-muestra svg {
+  width: 22px;
+  height: 22px;
+}
+
+.landing-nota-color {
+  font: 400 14px/1.45 var(--cuerpo);
+  color: var(--texto-2);
+}
+
+.landing-campo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  font: 700 13px/1 var(--cuerpo);
+  color: var(--texto-2);
+}
+
+.landing-campo input {
+  width: 80px;
+  padding: 10px 12px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--r-placa);
+  background: var(--superficie);
+  color: var(--texto);
+  font: 800 18px/1 var(--titular);
+  text-align: center;
+}
+
+/* Cami y Tino, a tamaño de muestra, sobre su tarjeta. */
+.landing-color-muestra {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6%;
+  background: var(--superficie);
+  border-radius: 40px;
+  box-shadow: 0 0 0 1px var(--borde);
+  padding: 36px 24px 0;
+  aspect-ratio: 5 / 4;
+  overflow: hidden;
+}
+
+.landing-color-muestra svg {
+  width: 44%;
+  height: auto;
+  display: block;
+}
+
+/* ─── Personajes ──────────────────────────────────────────────────────── */
+
+/*
+ * La única sección oscura de la portada, y no por variar: los ojos son blancos
+ * con pupila carbón, y sobre banqueta el blanco casi no se separa del fondo.
+ * Sobre carbón la mirada es lo primero que se ve — que es de lo que trata.
+ *
+ * Va con márgenes laterales y esquinas redondeadas, como una tarjeta grande:
+ * así se lee como un aparte y no como que la página cambió de piel.
+ */
+.landing-personajes {
+  background: var(--carbon);
+  color: var(--texto-en-oscuro);
+  margin-inline: clamp(8px, 1.4vw, 20px);
+  border-radius: clamp(28px, 3vw, 44px);
+}
+
+.landing-personajes-caja {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding-block: clamp(56px, 7vw, 96px);
+}
+
+.landing-personajes h2 {
+  color: var(--blanco);
+}
+
+/* Sobre carbón, el rótulo y el lead necesitan sus propios tonos. */
+.landing-rotulo-claro {
+  color: var(--arena-2);
+}
+
+.landing-lead-claro {
+  color: var(--arena);
+}
+
+.landing-lead-claro strong {
+  color: var(--blanco);
+}
+
+.landing-personajes-dicho {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.landing-miradas-dibujo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(24px, 5vw, 64px);
+}
+
+.landing-miradas-dibujo figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex: 0 1 180px;
+}
+
+.landing-miradas-dibujo svg {
+  width: 100%;
+  max-width: 180px;
+  height: auto;
+  display: block;
+}
+
+.landing-miradas-dibujo figcaption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font: 400 14px/1.3 var(--cuerpo);
+  color: var(--arena-2);
+}
+
+.landing-miradas-dibujo figcaption b {
+  font-family: var(--titular);
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--blanco);
+}
+
+/*
+ * Las pupilas se mueven con una transición, no con un bucle: son seis destinos
+ * fijos y el navegador interpola entre ellos mejor que nosotros. Con
+ * `reduced-motion` la regla de arriba la apaga y el cambio es instantáneo, que
+ * es lo correcto: lo que importa es DÓNDE mira, no el viaje.
+ */
+.landing-pupilas {
+  transition: transform 0.45s var(--curva);
+}
+
+.landing-miradas-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /*
+   * 170 y no 200: con 200 las seis miradas se quedaban en 1244 px por cuatro
+   * píxeles, y la sexta —«cerrados», que es la que más importa— caía sola en
+   * otra fila como si fuera una nota al pie.
+   */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  gap: 8px;
+}
+
+.landing-miradas-lista button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--r-tienda);
+  background: transparent;
+  color: var(--arena);
+  text-align: start;
+  cursor: pointer;
+  font: 400 14px/1.35 var(--cuerpo);
+  transition: background 0.2s var(--curva);
+}
+
+.landing-miradas-lista button b {
+  font: 700 13px/1.3 var(--cuerpo);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--arena-2);
+}
+
+.landing-miradas-lista button:hover {
+  background: var(--asfalto);
+}
+
+/*
+ * La escogida se marca con FONDO y con el texto en blanco, no sólo con un
+ * color de acento: sobre carbón, un acento de color sería lo único que la
+ * distingue, y el estado no puede vivir del color solo.
+ */
+/*
+ * El borde va en arena-2 (7.62:1 sobre carbón) y no en gris (2.70): si el
+ * borde está, que se vea. El estado no depende de él —lo marcan el fondo y el
+ * texto en blanco—, pero un borde que nadie distingue es ruido, no refuerzo.
+ */
+.landing-miradas-lista button[aria-pressed="true"] {
+  background: var(--asfalto);
+  color: var(--blanco);
+  border-color: var(--arena-2);
+}
+
+.landing-miradas-lista button[aria-pressed="true"] b {
+  color: var(--blanco);
+}
+
+/* El foco del teclado, en claro: sobre carbón el carbón no se ve. */
+.landing-personajes :focus-visible {
+  outline-color: var(--arena);
+}
+
+/* ─── El recorrido ────────────────────────────────────────────────────── */
+
+.landing-recorrido {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding-block: clamp(72px, 9vw, 112px);
+}
+
+.landing-recorrido-dicho {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.landing-recorrido-cuerpo {
+  display: grid;
+  grid-template-columns: minmax(200px, 300px) 1fr;
+  gap: clamp(24px, 4vw, 56px);
+  align-items: start;
+}
+
+/*
+ * El hilo se queda pegado arriba mientras las tarjetas pasan: de eso va la
+ * sección — tú bajas, Cami baja, y el hilo es el que mide las dos cosas. Si se
+ * fuera con el scroll, Cami se saldría de la pantalla en la segunda tarjeta.
+ */
+.landing-recorrido-hilo {
+  position: sticky;
+  top: 88px;
+  align-self: start;
+}
+
+.landing-hilo {
+  width: 100%;
+  height: auto;
+  max-height: min(70vh, 640px);
+  display: block;
+}
+
+/* En teléfono el hilo se va: dos columnas de 180 px no son ni una ni otra. */
+@media (max-width: 820px) {
+  .landing-recorrido-cuerpo {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-recorrido-hilo {
+    display: none;
+  }
+}
+
+.landing-paradas {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(48px, 7vw, 88px);
+}
+
+.landing-parada {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.landing-parada-n {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 700 13px/1 var(--cuerpo);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-2);
+}
+
+.landing-parada-n span {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--carbon);
+  color: var(--blanco);
+  font: 800 13px/1 var(--titular);
+  letter-spacing: 0;
+}
+
+.landing-parada h3 {
+  font-size: clamp(26px, 3vw, 38px);
+  line-height: 1.02;
+}
+
+.landing-parada p {
+  font: 400 17px/1.5 var(--cuerpo);
+  color: var(--texto-2);
+  max-width: 56ch;
+  text-wrap: pretty;
+}
+
+.landing-parada p strong {
+  font-weight: 600;
+  color: var(--texto);
+}
+
+/* ─── Las demos de cada parada ─────────────────────────────────────────── */
+
+.landing-demo {
+  margin-top: 8px;
+  background: var(--superficie);
+  border-radius: var(--r-tarjeta);
+  box-shadow: 0 0 0 1px var(--borde);
+  padding: 18px 20px;
+  max-width: 460px;
+}
+
+/* La chapa del número de ruta: color de ruta, y nunca va sola (8.8c). */
+.landing-chapa {
+  display: inline-grid;
+  place-items: center;
+  min-width: 38px;
+  height: 30px;
+  padding-inline: 8px;
+  border-radius: var(--r-placa);
+  background: var(--ruta);
+  color: var(--sobre-ruta);
+  font: 800 15px/1 var(--titular);
+  flex: none;
+}
+
+.landing-chapa-chica {
+  min-width: 28px;
+  height: 22px;
+  font-size: 12px;
+}
+
+.landing-demo b {
+  display: block;
+  font: 600 16px/1.3 var(--cuerpo);
+  color: var(--texto);
+}
+
+.landing-demo small {
+  display: block;
+  font: 400 13px/1.4 var(--cuerpo);
+  color: var(--texto-2);
+}
+
+.landing-demo-parada {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.landing-demo-parada > div:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+
+/* La cuenta, grande: es lo que se lee de lejos y con una mano ocupada. */
+.landing-cuenta {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font: 800 34px/1 var(--titular);
+  color: var(--texto);
+}
+
+.landing-cuenta span {
+  font: 600 13px/1 var(--cuerpo);
+  color: var(--texto-2);
+}
+
+.landing-demo-buscar label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--r-pastilla);
+  background: var(--lienzo);
+}
+
+.landing-lupa svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  color: var(--texto-2);
+}
+
+.landing-demo-buscar input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  font: 400 15px/1 var(--cuerpo);
+  color: var(--texto);
+}
+
+.landing-demo-buscar input:focus {
+  outline: none;
+}
+
+.landing-demo-buscar ul {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.landing-demo-buscar li {
+  padding: 10px 4px;
+  border-top: 1px solid var(--borde);
+}
+
+.landing-vacio {
+  font: 400 14px/1.45 var(--cuerpo);
+  color: var(--texto-2);
+}
+
+.landing-pie-demo {
+  margin-top: 10px;
+  font: 400 12px/1.4 var(--cuerpo);
+  color: var(--texto-2);
+}
+
+.landing-demo-guardadas {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.landing-demo-guardadas > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.landing-demo-guardadas small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+/* La estrella de guardada va en la tinta, no en un color de acento: guardar no es un estado del servicio. */
+.landing-estrella {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--texto);
+}
+
+.landing-demo-yaviene {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.landing-yaviene-dicho b {
+  font-family: var(--titular);
+  font-weight: 800;
+  font-size: 20px;
+}
+
+.landing-cosquillas {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+.landing-cosquillas svg {
+  width: 74px;
+  height: 74px;
+  display: block;
+}
+
+.landing-tocalo {
+  font: 700 12px/1 var(--cuerpo);
+  color: var(--texto-2);
+  text-align: center;
+}
+
+.landing-demo-aviso > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.landing-aviso-firma {
+  font: 400 12px/1.4 var(--cuerpo);
+  color: var(--texto-2);
+  margin-bottom: 10px;
+}
+
+/* ─── Instalar ────────────────────────────────────────────────────────── */
+
+/*
+ * La última sección, oscura y **pegada al pie**: sólo redondea arriba, para
+ * que se lea como el suelo de la página y no como otra tarjeta.
+ */
+.landing-instalar {
+  background: var(--carbon);
+  color: var(--texto-en-oscuro);
+  margin-inline: clamp(8px, 1.4vw, 20px);
+  border-radius: clamp(28px, 3vw, 44px) clamp(28px, 3vw, 44px) 0 0;
+  margin-top: clamp(56px, 8vw, 104px);
+}
+
+.landing-instalar-caja {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 48px;
+  align-items: center;
+  padding-block: clamp(56px, 8vw, 104px);
+}
+
+.landing-instalar h2 {
+  color: var(--blanco);
+}
+
+.landing-instalar-dicho {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+/* Sobre carbón el botón se invierte: hueso de fondo y carbón de texto. */
+.landing-boton-claro {
+  background: var(--hueso);
+  color: var(--carbon);
+}
+
+.landing-boton-claro:hover {
+  background: var(--blanco);
+}
+
+.landing-tiendas-cajas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/*
+ * Las tiendas son cajas MUERTAS, no botones: no llevan a ningún lado porque
+ * todavía no hay a dónde llevar. Un botón que no hace nada es peor que una
+ * etiqueta que lo dice.
+ */
+.landing-tienda {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 9px 16px;
+  border: 1px solid var(--gris);
+  border-radius: var(--r-tienda);
+  color: var(--arena-2);
+}
+
+.landing-tienda small {
+  font: 400 11px/1.2 var(--cuerpo);
+}
+
+.landing-tienda b {
+  font: 700 14px/1.2 var(--cuerpo);
+  color: var(--arena);
+}
+
+.landing-dormido {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.landing-despertar {
+  position: relative;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.landing-despertar svg {
+  width: clamp(140px, 22vw, 200px);
+  height: auto;
+  display: block;
+}
+
+.landing-zetas {
+  position: absolute;
+  top: -8px;
+  inset-inline-end: -6px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--arena-2);
+  font-family: var(--titular);
+  font-weight: 800;
+  transition: opacity 0.3s var(--curva);
+}
+
+/* Despierto, las zetas se van: seguir roncando con los ojos abiertos sería raro. */
+.landing-zetas[data-durmiendo="false"] {
+  opacity: 0;
+}
+
+.landing-zetas i {
+  font-style: normal;
+}
+
+.landing-zetas i:nth-child(1) {
+  font-size: 14px;
+}
+
+.landing-zetas i:nth-child(2) {
+  font-size: 19px;
+}
+
+.landing-zetas i:nth-child(3) {
+  font-size: 25px;
+}
+
+.landing-refunfuño {
+  font: 700 14px/1 var(--cuerpo);
+  color: var(--arena-2);
+}
+
+.landing-nota-dormido {
+  font: 400 14px/1.5 var(--cuerpo);
+  color: var(--arena);
+  max-width: 42ch;
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.landing-nota-dormido strong {
+  font-weight: 600;
+  color: var(--blanco);
+}
+
+.landing-instalar :focus-visible {
+  outline-color: var(--arena);
+}
+
+/*
+ * El pie, cuando va debajo de la sección oscura, se queda sin su línea de
+ * arriba: la sección ya es un borde, y dos seguidos son un renglón de más.
+ */
+.landing-instalar + .landing-pie {
+  border-top: 0;
+  margin-top: 0;
 }
 
 /* ─── El pie ───────────────────────────────────────────────────────────── */
