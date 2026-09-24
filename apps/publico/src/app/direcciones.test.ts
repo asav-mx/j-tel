@@ -61,7 +61,7 @@ export function direccionDeLaCarpeta(carpeta: string): string {
 /** Las direcciones que ya existen y que un pasajero puede tener guardada. */
 const RESERVADAS = [
   { direccion: "/rutas", que: "la app: Inicio, y el `start_url` del manifiesto" },
-  { direccion: "/", que: "hoy la app; va a ser la landing" },
+  { direccion: "/", que: "la landing" },
   { direccion: "/c/[slug]", que: "una ruta, para compartir por mensaje" },
   { direccion: "/validador", que: "el lector del camión" },
   { direccion: "/privacidad", que: "qué se guarda y qué no" },
@@ -105,21 +105,36 @@ describe("las direcciones de Ontoy no se mueven", () => {
     expect(SERVIDAS).toContain("/rutas");
   });
 
-  it("la app vive en `/rutas` y es la RAÍZ la que reenvía, no al revés", () => {
+  it("la app vive en `/rutas`, y la landing no se la llevó al tomar la raíz", () => {
     /*
-     * La trampa que esto cierra: si la app viviera en `app/page.tsx` y `/rutas`
-     * reenviara, el día que la raíz se vuelva la landing **`/rutas` se volvería
-     * la landing con ella**, y el ícono instalado de todos abriría una portada
-     * en vez de su camión.
+     * **Ésta es la prueba que la mudanza de la raíz vino a hacer posible**, y
+     * la que antes decía otra cosa.
      *
-     * Así que la app vive en `rutas/page.tsx` y la raíz es un reenvío de una
-     * línea. Cuando la landing entre, lo que se reemplaza es la raíz, y no se
-     * lleva nada.
+     * Hasta que la landing entró, aquí se exigía que `page.tsx` fuera un
+     * reenvío a `./rutas/page`. Ese reenvío existía **para este día**: si la
+     * app hubiera vivido en `app/page.tsx` y `/rutas` hubiera reenviado, la
+     * landing al tomar la raíz **se habría llevado `/rutas` con ella** y el
+     * ícono instalado de todos abriría una portada en vez de su camión.
+     *
+     * Así que lo que se midió antes fue la preparación, y lo que se mide ahora
+     * es el resultado: la app **sigue** en `rutas/page.tsx`, con su consulta y
+     * todo, y la raíz **ya no es** la app.
      */
-    const raiz = readFileSync(path.join(APP, "page.tsx"), "utf8");
-    expect(raiz).toMatch(/from\s+"\.\/rutas\/page"/);
     const app = readFileSync(path.join(APP, "rutas/page.tsx"), "utf8");
     expect(app, "la app de verdad tiene que estar en rutas/page.tsx").toContain(
+      "listPublishedCircuits",
+    );
+
+    /*
+     * Y la raíz no puede volver a ser la app por accidente. Las dos formas de
+     * que eso pase son reexportarla —como hacía el reenvío— o copiarle la
+     * consulta; las dos se ven en el archivo.
+     */
+    const raiz = readFileSync(path.join(APP, "page.tsx"), "utf8");
+    expect(raiz, "la raíz ya no reenvía a la app: es la landing").not.toMatch(
+      /from\s+"\.\/rutas\/page"/,
+    );
+    expect(raiz, "la raíz no consulta circuitos: eso es la app").not.toContain(
       "listPublishedCircuits",
     );
   });
