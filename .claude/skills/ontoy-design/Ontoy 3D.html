@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ontoy 3D · ¡Ya viene!</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;height:100%;background:#EDE9E1;color:#2A2E37;font-family:'Instrument Sans',sans-serif}
+  a{color:#2A2E37}a:hover{color:#C8702A}
+  three-d-stage:not(:defined){visibility:hidden}
+  three-d-stage{display:block;width:100vw;height:100vh}
+  .cap{position:fixed;top:24px;left:28px;display:flex;flex-direction:column;gap:4px;pointer-events:none}
+  .cap h1{margin:0;font:800 34px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-.02em}
+  .cap p{margin:0;font-size:14px;color:#4A4F5A}
+  .ctl{position:fixed;top:24px;right:28px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:60vw}
+  .ctl button{font:600 13px 'Instrument Sans',sans-serif;border:0;border-radius:999px;padding:9px 14px;background:#fff;color:#2A2E37;cursor:pointer}
+  .ctl button[aria-pressed="true"]{background:#F6A15B}
+</style>
+</head>
+<body>
+<three-d-stage name="ontoy" background="#EDE9E1" autorotate></three-d-stage>
+<div class="cap"><h1>Ontoy</h1><p>Juguete suave · 21 cm · arrastra para girar</p></div>
+<div class="ctl" id="ctl"></div>
+<script src="three-d-stage.js"></script>
+<script type="module">
+const stage = document.querySelector('three-d-stage');
+const { THREE } = await stage.ready;
+
+const M = {
+  naranja:  new THREE.MeshStandardMaterial({ name: 'ontoy-naranja', color: '#F6A15B', roughness: 0.55, metalness: 0 }),
+  blanco:   new THREE.MeshStandardMaterial({ name: 'ojo-blanco', color: '#FFFFFF', roughness: 0.25, metalness: 0 }),
+  carbon:   new THREE.MeshStandardMaterial({ name: 'carbon', color: '#2A2E37', roughness: 0.35, metalness: 0 }),
+  boca:     new THREE.MeshStandardMaterial({ name: 'boca-interior', color: '#7A2E2A', roughness: 0.6, metalness: 0 }),
+  pantalla: new THREE.MeshStandardMaterial({ name: 'pantalla', color: '#F6A15B', emissive: '#F6A15B', emissiveIntensity: 0.35, roughness: 0.3, metalness: 0 }),
+  crema:    new THREE.MeshStandardMaterial({ name: 'banqueta', color: '#EDE9E1', emissive: '#EDE9E1', emissiveIntensity: 0.3, roughness: 0.4, metalness: 0 }),
+};
+
+// Pebble: taller, slightly squared, gentle asymmetry
+const RX = 0.09, RY = 0.102, RZ = 0.074;
+const sq = (a) => Math.sign(a) * Math.pow(Math.abs(a), 0.82);
+const lump = (x, y, z) => 1 + 0.03 * Math.sin(x * 2.3 + 1.2) * Math.cos(y * 1.9) + 0.02 * Math.sin(z * 2.1 + y * 1.7);
+function surfZ(x, y) { const k = 1 - Math.pow(Math.abs(x / RX), 1 / 0.82 * 2) - Math.pow(Math.abs(y / RY), 1 / 0.82 * 2); return RZ * Math.pow(Math.max(k, 0), 0.41); }
+
+const ontoy = new THREE.Group(); ontoy.name = 'Ontoy';
+const cuerpo = new THREE.Group(); cuerpo.name = 'cuerpo-grupo'; ontoy.add(cuerpo);
+
+const g = new THREE.SphereGeometry(1, 96, 72);
+const p = g.attributes.position, v = new THREE.Vector3();
+for (let k = 0; k < p.count; k++) {
+  v.fromBufferAttribute(p, k);
+  const l = lump(v.x, v.y, v.z);
+  let x = sq(v.x) * RX * l, y = sq(v.y) * RY * l, z = sq(v.z) * RZ * l;
+  if (y < -0.082) y = -0.082 + (y + 0.082) * 0.4;
+  x *= 1 - 0.07 * (y / RY);
+  p.setXYZ(k, x, y, z);
+}
+g.computeVertexNormals();
+const body = new THREE.Mesh(g, M.naranja); body.name = 'cuerpo'; body.castShadow = true; cuerpo.add(body);
+
+for (const [s, x] of [['izq', -0.038], ['der', 0.042]]) {
+  const f = new THREE.Mesh(new THREE.SphereGeometry(0.025, 48, 32), M.naranja);
+  f.name = 'pie-' + s; f.scale.set(1.2, 0.55, 1.35); f.position.set(x, -0.102, 0.018); f.castShadow = true; ontoy.add(f);
+}
+
+// Floating hands (not attached)
+const manoIzq = new THREE.Mesh(new THREE.SphereGeometry(0.02, 40, 28), M.naranja);
+manoIzq.name = 'mano-izq'; manoIzq.scale.set(0.85, 1, 0.9); manoIzq.position.set(0.118, -0.02, 0.02); manoIzq.castShadow = true; ontoy.add(manoIzq);
+
+const cel = new THREE.Group(); cel.name = 'smartphone';
+const caja = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.066, 0.006), M.carbon); caja.name = 'cel-cuerpo';
+const pant = new THREE.Mesh(new THREE.PlaneGeometry(0.031, 0.058), M.pantalla); pant.name = 'cel-pantalla'; pant.position.z = 0.0031;
+const mini = new THREE.Mesh(new THREE.CircleGeometry(0.009, 32), M.crema); mini.name = 'cel-app-ontoy'; mini.position.set(0, 0.004, 0.0033); mini.scale.set(1, 1.1, 1);
+cel.add(caja, pant, mini);
+for (const x of [-0.0035, 0.0035]) { const e = new THREE.Mesh(new THREE.CircleGeometry(0.002, 20), M.carbon); e.name = 'cel-app-ojo'; e.position.set(x, 0.006, 0.0035); cel.add(e); }
+const manoDer = new THREE.Mesh(new THREE.SphereGeometry(0.02, 40, 28), M.naranja);
+manoDer.name = 'mano-der'; manoDer.scale.set(1, 0.85, 0.9); manoDer.position.set(0.004, -0.026, -0.008); manoDer.castShadow = true; cel.add(manoDer);
+cel.position.set(-0.07, -0.02, 0.105); cel.lookAt(0, 0.045, 0.02); cel.rotateZ(0.12);
+ontoy.add(cel);
+
+// Face (separate parts, so every future reaction reuses the same body)
+const ojos = [];
+for (const [s, x, y, r] of [['izq', -0.029, 0.035, 0.029], ['der', 0.031, 0.039, 0.029]]) {
+  const eg = new THREE.Group(); eg.name = 'ojo-' + s;
+  eg.position.set(x, y, surfZ(x, y) - 0.008);
+  const w = new THREE.Mesh(new THREE.SphereGeometry(r, 48, 32), M.blanco); w.name = 'ojo-blanco-' + s; w.scale.set(1, 1, 0.62);
+  const pu = new THREE.Mesh(new THREE.SphereGeometry(r * 0.52, 40, 28), M.carbon); pu.name = 'pupila-' + s; pu.scale.set(1, 1, 0.5);
+  const br = new THREE.Mesh(new THREE.SphereGeometry(r * 0.13, 20, 14), M.blanco); br.name = 'brillo-' + s;
+  eg.add(w, pu, br); cuerpo.add(eg); ojos.push({ eg, pu, br, r });
+}
+const bx = 0.004, by = -0.016;
+const mouth = new THREE.Group(); mouth.name = 'boca';
+mouth.position.set(bx, by, surfZ(bx, by) + 0.001);
+const mo = new THREE.Mesh(new THREE.SphereGeometry(0.016, 40, 28), M.carbon); mo.name = 'boca-contorno'; mo.scale.set(1, 1.25, 0.2);
+const cav = new THREE.Mesh(new THREE.SphereGeometry(0.0142, 40, 28), M.boca); cav.name = 'boca-interior'; cav.scale.set(1, 1.22, 0.22); cav.position.z = 0.0012;
+const mi = new THREE.Mesh(new THREE.SphereGeometry(0.0088, 32, 24), new THREE.MeshStandardMaterial({ name: 'lengua', color: '#D9666B', roughness: 0.55, metalness: 0 })); mi.name = 'lengua'; mi.scale.set(1.1, 0.55, 0.3); mi.position.set(0, -0.0095, 0.0032);
+mouth.add(mo, cav, mi); cuerpo.add(mouth);
+const sonrisa = new THREE.Mesh(new THREE.TorusGeometry(0.01, 0.0028, 14, 40, Math.PI), M.carbon);
+sonrisa.name = 'boca-sonrisa'; sonrisa.rotation.z = Math.PI; sonrisa.position.set(bx, by + 0.006, surfZ(bx, by) + 0.001); cuerpo.add(sonrisa);
+const linea = new THREE.Mesh(new THREE.CapsuleGeometry(0.0028, 0.012, 8, 16), M.carbon);
+linea.name = 'boca-linea'; linea.rotation.z = Math.PI / 2; linea.position.set(bx, by, surfZ(bx, by) + 0.001); cuerpo.add(linea);
+
+const EXP = {
+  'original':     { mira: [0, 0],         parpado: 1,    boca: null },
+  'revisa el cel':{ mira: [-0.4, -0.4],   parpado: 0.9,  boca: 'sonrisa' },
+  'mira la calle':{ mira: [0.42, 0.05],   parpado: 1,    boca: null },
+  'espera':       { mira: [0, -0.3],      parpado: 0.5,  boca: 'linea' },
+  '¡ya viene!':   { mira: [0.05, 0.42],   parpado: 1.08, boca: 'abierta' },
+};
+let exp = 'original', anim = true;
+function aplicar() {
+  const e = EXP[exp];
+  ojos.forEach(({ pu, br, r }) => {
+    pu.position.set(e.mira[0] * r, e.mira[1] * r, r * 0.48);
+    br.position.set(e.mira[0] * r + r * 0.18, e.mira[1] * r + r * 0.16, r * 0.66);
+  });
+  mouth.visible = e.boca === 'abierta'; sonrisa.visible = e.boca === 'sonrisa'; linea.visible = e.boca === 'linea';
+  document.querySelector('.cap h1').textContent = 'Ontoy · ' + exp;
+}
+cuerpo.rotation.z = -0.04;
+aplicar();
+stage.setObject(ontoy);
+
+const ctl = document.getElementById('ctl');
+const mk = (label, pressed, fn) => { const b = document.createElement('button'); b.textContent = label; b.setAttribute('aria-pressed', pressed); b.onclick = () => fn(b); ctl.append(b); return b; };
+const expBtns = Object.keys(EXP).map(k => mk(k, k === exp, () => { exp = k; expBtns.forEach(x => x.setAttribute('aria-pressed', x.textContent === k)); aplicar(); }));
+mk('animación', true, (b) => { anim = !anim; b.setAttribute('aria-pressed', anim); });
+
+const t0 = performance.now();
+(function tick() {
+  requestAnimationFrame(tick);
+  const t = (performance.now() - t0) / 1000, e = EXP[exp];
+  let blink = 1, talk = 1, hop = 0, fl = 0;
+  if (anim) {
+    const b = t % 3.6; blink = b > 3.35 ? Math.abs(Math.cos((b - 3.35) / 0.25 * Math.PI)) : 1;
+    talk = 0.55 + 0.45 * Math.abs(Math.cos((t % 2.2) / 2.2 * Math.PI * 2));
+    hop = Math.abs(Math.sin(t * 2.2)) * 0.003; fl = Math.sin(t * 1.8) * 0.004;
+  }
+  ojos.forEach(o => o.eg.scale.y = Math.max(0.08, blink * e.parpado));
+  mouth.scale.set(1, talk, 1);
+  cuerpo.position.y = hop; cuerpo.scale.set(1 + hop, 1 - hop * 1.4, 1 + hop);
+  manoIzq.position.y = -0.02 + fl;
+})();
+</script>
+</body>
+</html>
