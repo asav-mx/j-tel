@@ -15,15 +15,17 @@ export const maxDuration = 300;
  *
  * `?simular=…` calcula y no escribe, para ver una ronda sin tocar nada.
  *
- * ## Sin horario hasta el 29-sep-2026 (decisión de ASAV, 22-sep)
+ * ## Estuvo sin horario del 22 al 29 de septiembre de 2026
  *
- * La ronda estaba en `vercel.json` a las 7:10. **Se le quitó el horario**, no la
- * ruta: la semana del arranque es de calibración, y el resumen que esto escribe
- * todavía no lo lee nadie —el planeador llega después—, así que una ronda
- * diaria sólo agregaría movimiento a una semana que conviene quieta.
+ * La semana del arranque era de calibración y este resumen **todavía no lo lee
+ * nadie** —el planeador llega después—, así que se le quitó el horario, no la
+ * ruta (#513, decisión de ASAV del 22-sep). **Su renglón volvió a
+ * `vercel.json` el 29**, a la misma hora que tenía: `10 7 * * *`.
  *
- * Mientras tanto se corre a mano, con el secreto, cuando haga falta verla. El
- * 29 vuelve su renglón a `vercel.json`.
+ * Se deja escrito en vez de borrarlo: quien mire el historial de `vercel.json`
+ * y vea el renglón irse y volver merece encontrar aquí por qué, sin tener que
+ * abrir dos PRs. Y `?simular=…` sigue siendo la forma de ver una ronda sin
+ * escribir, con horario o sin él.
  */
 export async function GET(request: Request) {
   const negada = exigirCron(request, "cron/recorridos");
