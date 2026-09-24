@@ -11,7 +11,7 @@
  */
 export function BandaRd() {
   return (
-    <p className="ontoy-banda-rd mono">
+    <p className="ontoy-banda-rd cifra">
       R&amp;D interno · datos falsos · nada de esto cobra dinero real · las reglas de ley son
       suposiciones hasta el abogado
     </p>

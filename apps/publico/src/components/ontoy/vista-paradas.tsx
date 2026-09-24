@@ -63,7 +63,7 @@ export function VistaParadas({
       {aviso && <p className="ontoy-paradas-aviso">{aviso}</p>}
       {avisos.length > 0 && (
         <button type="button" className="ontoy-paradas-aviso-concesion" onClick={alVerAvisos}>
-          <span className="ontoy-paradas-aviso-etiqueta mono">Aviso de la concesión</span>
+          <span className="ontoy-paradas-aviso-etiqueta cifra">Aviso de la concesión</span>
           <span className="ontoy-paradas-aviso-titulo">
             {avisos[0]!.titulo}
             {avisos.length > 1 && <> · y {avisos.length - 1} más</>}
@@ -96,7 +96,7 @@ export function VistaParadas({
                         </svg>
                       )}
                     </span>
-                    {r.falta && <span className="ontoy-paradas-falta mono">{r.falta}</span>}
+                    {r.falta && <span className="ontoy-paradas-falta cifra">{r.falta}</span>}
                   </button>
                 </li>
               );
@@ -104,7 +104,7 @@ export function VistaParadas({
             if (r.tipo === "unidad") {
               return (
                 <li key={`u-${r.economico}-${i}`} className={`ontoy-paradas-renglon ontoy-paradas-unidad${r.fresca ? " viva" : " vieja"}`}>
-                  <span className="mono">Unidad {r.economico}</span>
+                  <span className="cifra">Unidad {r.economico}</span>
                   <span className="ontoy-paradas-edad">
                     {r.fresca ? (
                       <>
@@ -121,7 +121,7 @@ export function VistaParadas({
             return (
               <li key="aqui" className="ontoy-paradas-renglon ontoy-paradas-aqui">
                 <span className="ontoy-paradas-aqui-rotulo">Aquí estás</span>
-                {r.falta && <span className="ontoy-paradas-falta mono">el próximo, {r.falta}</span>}
+                {r.falta && <span className="ontoy-paradas-falta cifra">el próximo, {r.falta}</span>}
               </li>
             );
           })}

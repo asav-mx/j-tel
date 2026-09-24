@@ -1,0 +1,121 @@
+/*
+ * LA PALETA DE ONTOY — copiada de `.claude/skills/ontoy-design/tokens/colors.css`.
+ *
+ * **Nunca se inventa un hex.** Si falta un color, se agrega **allá** primero, o
+ * entra por `ENMIENDAS.md` del skill. Este archivo no decide colores: los trae.
+ * Lo cuida `piel-de-ontoy.test.ts`, que lee los dos archivos y compara token por
+ * token — si alguien retoca un valor aquí, se cae.
+ *
+ * ## Qué NO se trajo, y es la parte que importa
+ *
+ * **Los colores de ruta de muestra** — `--ruta`, `--ruta-51`, `--ruta-morada`.
+ * En el skill son ejemplos para maquetas; en la app el color de una ruta **sale
+ * del dato** (`color_hex` del circuito) y lo inyecta el componente que sabe de
+ * qué ruta habla. Traerlos dejaría un azul por omisión puesto en `:root`, y ése
+ * es exactamente el modo de falla del #370: `--ruta` y `--ruta-claro` son los
+ * dos únicos tokens de esta app **sin par en la paleta de noche, a propósito**,
+ * así que un valor por omisión se queda con el tono de DÍA en los dos temas
+ * mientras el texto de encima sí sigue al tema — blanco sobre blanco, sin
+ * romper nada y sin que ninguna prueba lo vea.
+ *
+ * **Y `--pasajero`**, que en el skill vale `var(--noche)`. El color final del
+ * «tú estás aquí» sigue por confirmar (handoff §9b: 12b carbón o 12d azul
+ * noche), y el mapa todavía no lo dibuja. Entra con el PR del mapa, no antes.
+ *
+ * ## Los dos que no salen del skill
+ *
+ * `--vivo` y `--senal` son de **J-Tel**, no de Ontoy, y llegan por la enmienda
+ * (d) de `ENMIENDAS.md` — con sus reglas, que no son de estilo:
+ *
+ *  - **El verde es del latido y de nada más.** No es veredicto, no es «bien», no
+ *    se usa de acento.
+ *  - **El cobre nunca va en el mismo elemento que el naranja.** El naranja es la
+ *    marca del pasajero y el cobre es la plataforma diciendo «esto se mueve»;
+ *    juntos en una pieza son dos marcas peleando por el mismo objeto.
+ *
+ * ## Por qué van en `:root` y no colgando de `.ontoy`
+ *
+ * Porque esta app tiene tres caras que los quieren todas: la app del pasajero,
+ * la pantalla del lector que ve quien sube (`Estandar de pantallas.md` §E — si
+ * el pasajero la ve, lleva el universo) y las de estado completo. La landing sí
+ * cuelga los suyos de `.landing`, y tiene razón para hacerlo: nació cuando la
+ * app todavía traía otra paleta en `:root` y las dos se habrían pisado. Con este
+ * PR los valores son los mismos en los dos lados, así que su copia pasa a ser
+ * redundante — se puede borrar desde su lado, que es de otro frente.
+ */
+
+:root {
+  /* ── Neutros. El 90 % de todo. ──────────────────────────────────── */
+  --carbon: #2a2e37;
+  --carbon-2: #4a4f5a;
+  --gris: #6b6f78;
+  --asfalto: #3a4150;
+  --llanta: #15171c;
+  --hueso: #f7f3ec;
+  --papel: #f4f0e9;
+  --banqueta: #ede9e1;
+  --arena-clara: #e2dcd1;
+  --arena: #dcd5c8;
+  --arena-2: #c9c1b3;
+  --blanco: #ffffff;
+
+  /*
+   * ── Marca: SÓLO Ontoy ───────────────────────────────────────────
+   * Ninguna otra cosa del sistema lleva naranja, y la lista de colores de ruta
+   * de J-Staff no ofrece tonos que peleen con él (enmienda (a)).
+   */
+  --ontoy: #f6a15b;
+  --ontoy-sombra: #c8702a;
+
+  /* Las reacciones de Ontoy: sus propios acentos, no de la interfaz. */
+  --ontoy-rubor: #e36f8c;
+  --ontoy-lagrima: #7fb8f0;
+  --ontoy-estrella: #f2c14e;
+
+  /* ── Noche: la piel oscura y el ícono de noche ───────────────────── */
+  --noche: #1e2b4d;
+  --noche-2: #26365e;
+  --noche-3: #324673;
+
+  /*
+   * ── Barrio: objetos SIN ruta. Nunca naranja, nunca en la interfaz ──
+   * Los símbolos de la app salen de aquí (`CLAUDE.md` del skill, 24-sep):
+   * objetos con ojos en color de barrio; señales sin ojos, en carbón.
+   */
+  --maiz: #f2c14e;
+  --nopal: #5fb36b;
+  --rosa: #e36f8c;
+  --agua: #2fa6a0;
+  --madera: #8a6a52;
+  --pasto: #d3e4c9;
+  --lagrima: #7fb8f0;
+
+  /*
+   * ── Los dos de J-Tel (enmienda (d)) ─────────────────────────────
+   * No salen de `tokens/colors.css`. Son gráficos y no texto, así que su piso
+   * es 3:1 — medido en `piel-de-ontoy.test.ts`.
+   */
+  --vivo: #1d8a5c;
+  --senal: #b05a0f;
+}
+
+/*
+ * La noche cambia SÓLO lo que tiene que cambiar: los dos de J-Tel.
+ *
+ * El resto de la paleta no se voltea — `--carbon` sigue siendo carbón y
+ * `--hueso` sigue siendo hueso. Lo que cambia de piel es **qué papel juega cada
+ * uno**, y eso se decide en `ontoy.css`, no aquí: de día el fondo es banqueta y
+ * el texto carbón; de noche el fondo es `--noche` y el texto hueso. Una paleta
+ * que se voltea a sí misma deja de poder nombrar sus colores.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="dia"]) {
+    --vivo: #34c77b;
+    --senal: #ffa24d;
+  }
+}
+
+:root[data-tema="noche"] {
+  --vivo: #34c77b;
+  --senal: #ffa24d;
+}

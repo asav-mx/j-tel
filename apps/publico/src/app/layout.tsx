@@ -1,59 +1,62 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import "./tokens-ontoy.css";
 import "./ontoy.css";
 import { RegistrarServicio } from "@/components/registrar-servicio";
 
 /*
- * La letra de Ontoy: Archivo para lo que identifica, IBM Plex Sans para lo que
- * se lee de corrido, IBM Plex Mono para toda medición. Es la cara de Ontoy, no
- * la de la plataforma (decisión de ASAV, 21-sep).
+ * La letra de Ontoy: **Bricolage Grotesque** para lo que identifica —títulos,
+ * placas y cifras— e **Instrument Sans** para todo lo que se lee. Son las de
+ * `tokens/typography.css` del skill `ontoy-design`, que es con lo que está
+ * dibujada la app aprobada.
  *
- * Autoalojadas y subconjuntadas, no por CDN: el prototipo las trae de
- * fonts.googleapis.com, que en producción cuesta dos viajes de red extra —DNS y
- * TLS a otro dominio— antes de que se vea una letra, y de paso le cuenta a un
- * tercero que alguien abrió la app. En un teléfono con datos contados es la
- * misma tipografía por bastante menos, y sin el tercero.
+ * **Reemplazan a Archivo + IBM Plex Sans + IBM Plex Mono**, que era la letra
+ * del prototipo del 21-sep. Los tres archivos se fueron del repo: la app era su
+ * única lectora y `apps/web` tiene los suyos aparte.
  *
- * ---
+ * **Y con ellos se fue la monoespaciada, que no tiene reemplazo a propósito.**
+ * El sistema de Ontoy no tiene mono. Lo que la mono de verdad daba —que las
+ * cifras midan lo mismo y no bailen al cambiar— no era la familia sino
+ * `tabular-nums`, y eso Instrument Sans lo da igual. La clase pasó de `.mono` a
+ * `.cifra` por lo mismo: un nombre que dice «monoespaciada» sobre una letra que
+ * no lo es se cuela de vuelta al siguiente cambio.
  *
- * **Por qué son locales y no `next/font/google`** (22-sep-2026).
- * `next/font/google` DESCARGA los archivos durante `next build`: si Google no
- * contesta, no falla la tipografía, **falla la compilación** —
- * `An error occurred in next/font · TypeError: Cannot read properties of null`.
- * Pasó en CI en #493 y #498, en PRs que no tocaban esta app, y sólo se
+ * ## Autoalojadas, y no es preferencia
+ *
+ * `next/font/google` **descarga los archivos durante `next build`**: si Google
+ * no contesta, no falla la tipografía — **falla la compilación**
+ * (`An error occurred in next/font · TypeError: Cannot read properties of
+ * null`). Pasó en CI en #493 y #498, en PRs que no tocaban esta app, y sólo se
  * distinguía de un defecto propio leyendo el log. La web ya había pagado esa
- * lección el 12-ago (#294). Los archivos viven en `./fuentes/`: la compilación
- * no sale a internet, y la valla `scripts/verificar-fuentes-locales.mjs` tumba
- * CI si alguna app vuelve a importar `next/font/google`.
+ * lección el 12-ago (#294). Los archivos viven en `./fuentes/` y la valla
+ * `scripts/verificar-fuentes-locales.mjs` tumba CI si alguna app vuelve a
+ * importarlo. Se regeneran con `pnpm --filter @jtel/publico fuentes:traer`.
  *
- * Son **byte por byte** los que `next/font/google` servía — ni un glifo ni un
- * byte más para el pasajero. Se regeneran con `pnpm --filter @jtel/publico fuentes:traer`; ver
- * `src/app/fuentes/LEEME.md`.
+ * ## Las dos son VARIABLES
  *
- * Archivo e IBM Plex Sans son VARIABLES —un archivo para todos los pesos—, así
- * que se declara el RANGO que se usa. Declarar pesos sueltos sobre el mismo
- * archivo haría que el navegador sintetizara el grueso engrosando el delgado.
+ * Un archivo para todos los pesos, así que se declara el **rango**. Declarar
+ * pesos sueltos sobre el mismo archivo haría que el navegador sintetizara el
+ * grueso engrosando el delgado — y el titular de Ontoy vive del grueso.
+ *
+ * Bricolage trae además el eje `opsz`, y **no se fija**: es lo que hace que un
+ * título de 28 px y una placa de 14 estén dibujados cada uno para su tamaño.
+ * Lo que cuesta está medido en `src/app/fuentes/LEEME.md`.
+ *
+ * **La landing declara estas dos mismas familias por su lado**
+ * (`components/landing/letra.ts`), y el navegador no baja nada dos veces: Next
+ * sirve el mismo archivo y son dos páginas distintas. Juntarlas es una limpieza
+ * de una línea del lado de la landing, que es otro frente.
  */
-const archivo = localFont({
-  src: [{ path: "./fuentes/archivo-variable.woff2", weight: "600 700", style: "normal" }],
+const bricolage = localFont({
+  src: [{ path: "./fuentes/bricolage-variable.woff2", weight: "600 800", style: "normal" }],
   variable: "--fuente-titular",
   display: "swap",
 });
 
-const plexSans = localFont({
-  src: [{ path: "./fuentes/plex-sans-variable.woff2", weight: "400 600", style: "normal" }],
+const instrumentSans = localFont({
+  src: [{ path: "./fuentes/instrument-sans-variable.woff2", weight: "400 700", style: "normal" }],
   variable: "--fuente-texto",
-  display: "swap",
-});
-
-/** Ésta sí viene en un archivo por peso. */
-const plexMono = localFont({
-  src: [
-    { path: "./fuentes/plex-mono-400.woff2", weight: "400", style: "normal" },
-    { path: "./fuentes/plex-mono-500.woff2", weight: "500", style: "normal" },
-  ],
-  variable: "--fuente-mono",
   display: "swap",
 });
 
@@ -92,18 +95,26 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   // Sin `maximumScale`: bloquear el zoom en una app que se usa en la calle deja
   // fuera a quien no ve de cerca. La accesibilidad gana al pixel perfect.
-  // El día toma Banqueta `#EDE9E1` de la identidad de Ontoy, el mismo del manifiesto.
-  // La noche se queda como estaba: el azul noche `#1E2B4D` de la identidad entra con el PR
-  // de los tokens, cuando la piel oscura de la app deje de ser gris pizarra.
+  /*
+   * Los dos fondos de la identidad: **Banqueta `#EDE9E1`** de día y **Azul noche
+   * `#1E2B4D`** de noche (handoff §4). El `#141225` de antes era el morado del
+   * prototipo, que era lo único que quedaba de la piel vieja asomándose por la
+   * barra del sistema — el color que el teléfono pinta arriba y abajo de la app
+   * instalada, justo pegado a la pantalla.
+   *
+   * Van en literal y no en `var()` a propósito: esto lo lee el sistema
+   * operativo, no el navegador, y ahí no hay hoja de estilos que resolver. Lo
+   * cuida `piel-de-ontoy.test.ts`, que compara los dos contra la paleta.
+   */
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#EDE9E1" },
-    { media: "(prefers-color-scheme: dark)", color: "#141225" },
+    { media: "(prefers-color-scheme: dark)", color: "#1E2B4D" },
   ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-MX" className={`${archivo.variable} ${plexSans.variable} ${plexMono.variable}`}>
+    <html lang="es-MX" className={`${bricolage.variable} ${instrumentSans.variable}`}>
       <body>
         {children}
         <RegistrarServicio />

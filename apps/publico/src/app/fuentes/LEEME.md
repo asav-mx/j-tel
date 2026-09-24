@@ -25,45 +25,55 @@ antes de compilar y **se cae si cualquier app vuelve a importar
 
 ## Qué hay aquí
 
-**La app y la landing no usan la misma letra**, y es a propósito. La app va con
-Archivo + IBM Plex (decisión de ASAV, 21-sep). La landing va con Bricolage
-Grotesque + Instrument Sans, que es lo que declaran los tokens del sistema de
-diseño (`.claude/skills/ontoy-design/tokens/typography.css`) y con lo que está
-dibujada la landing aprobada. Es temporal: la app cambia a los tokens en su
-propio PR.
-
-**Nadie baja las seis.** El navegador sólo pide los archivos que la página que
-abrió declara, y son dos páginas distintas: quien entra a la landing baja dos
-archivos, quien abre la app baja los otros cuatro.
-
-### De la app
-
-| Archivo | Familia | Pesos declarados | Papel | sha256 |
-|---|---|---|---|---|
-| `archivo-variable.woff2` | Archivo | 600–700 (variable) | lo que identifica | `7150c0ec5ad35645` |
-| `plex-sans-variable.woff2` | IBM Plex Sans | 400–600 (variable) | lo que se lee de corrido | `056e4e2459f57a00` |
-| `plex-mono-400.woff2` | IBM Plex Mono | 400 | toda medición | `c36f509c0a8f9f85` |
-| `plex-mono-500.woff2` | IBM Plex Mono | 500 | toda medición | `a76f53ca6612e7b3` |
-
-### De la landing
+**La app y la landing usan la misma letra, y es un archivo por familia.** Antes
+no: la app iba con Archivo + IBM Plex (prototipo del 21-sep) y la landing nació
+con las de los tokens. Desde el PR de los tokens la app también, así que las
+tres del prototipo salieron del repo — un `.woff2` que nadie declara no se
+sirve, pero sí se clona, se revisa y se cree vigente.
 
 | Archivo | Familia | Pesos declarados | Papel | Bytes | sha256 |
 |---|---|---|---|---|---|
-| `bricolage-variable.woff2` | Bricolage Grotesque | 600–800 (variable) | títulos, placas y números | 76 868 | `85f55a58a31e61a2` |
+| `bricolage-variable.woff2` | Bricolage Grotesque | 600–800 (variable) | títulos, placas y cifras | 76 868 | `85f55a58a31e61a2` |
 | `instrument-sans-variable.woff2` | Instrument Sans | 400–700 (variable) | el texto | 29 904 | `6219bc4bfdfc5d9b` |
 
-**Por qué Bricolage pesa 77 KB y no 41.** Tiene **dos ejes**: el peso y `opsz`
-—el tamaño óptico, que reajusta el dibujo de la letra según de qué tamaño se
-vaya a ver—. Pidiéndolo con `opsz` fijo, Google sirve **41 236 bytes**: 36 KB
-menos. Pero la landing aprobada no declara `opsz` en ningún lado, así que el
-navegador usa `font-optical-sizing: auto` y lo mueve solo — y eso es lo que
-hace que el título de 76 px y la placa de 14 px estén dibujados cada uno para
-su tamaño. Fijarlo dibujaría los titulares del hero con el trazo pensado para
-texto chico.
+**Lo que el pasajero baja bajó.** Antes, quien abría la app pedía cuatro
+archivos —95 292 bytes entre Archivo, Plex Sans y las dos Plex Mono—. Ahora pide
+dos: **106 772**. Son **11 480 bytes más**, y de dónde salen está abajo.
 
-Los 36 KB son el precio de los titulares, y se paga **una vez**: es la portada,
-no la app que se abre en la parada todos los días. Si algún día pesan más de lo
-que valen, el cambio es un renglón en `FAMILIAS` dentro del guion.
+**Y ya no se baja dos veces.** Quien entra por la portada y toca «Ver las rutas»
+traía seis archivos entre las dos páginas; ahora son los mismos dos, servidos de
+la misma URL: la segunda página no pide nada.
+
+### Los 36 KB de Bricolage, que ahora los paga la app
+
+Bricolage tiene **dos ejes**: el peso y `opsz` —el tamaño óptico, que reajusta
+el dibujo según de qué tamaño se vaya a ver—. Pidiéndolo con `opsz` **fijo**,
+Google sirve **41 236 bytes**: 36 KB menos. No se fija, y el navegador lo mueve
+solo con `font-optical-sizing: auto`.
+
+**Cuando esto era sólo de la landing, el argumento era fácil:** es la portada,
+se paga una vez, y los titulares de 76 px viven de ese eje. **Ahora lo paga
+también la app que alguien abre en la parada todos los días**, y ahí el rango es
+más angosto —de la placa de 14 px al número de 40—, así que el eje rinde menos.
+
+Se queda sin fijar, por dos razones y conviene tenerlas escritas:
+
+1. **Fijarlo pediría un segundo archivo.** Los bytes de `opsz` fijo son otros,
+   así que la app y la landing dejarían de compartir descarga: 41 KB para la app
+   **más** 77 KB para la portada, y quien pase por las dos baja los dos. Sale
+   peor que los 36 KB.
+2. **La placa es lo que más se lee y lo más chico que hay.** Es donde el tamaño
+   óptico se nota, y es el elemento que el pasajero mira de pie, a un metro.
+
+Si algún día pesan más de lo que valen, el cambio es un renglón en `FAMILIAS`
+dentro del guion — y entonces hay que medir de nuevo las dos cuentas de arriba.
+
+### La monoespaciada se fue y no tiene reemplazo
+
+El sistema de Ontoy no tiene mono. Lo que IBM Plex Mono de verdad daba en esta
+app no era la familia sino **`tabular-nums`** —que las cifras midan lo mismo y
+no bailen al cambiar—, y eso Instrument Sans lo da igual. Vive en la clase
+`.cifra` de `ontoy.css`, que hasta este PR se llamaba `.mono`.
 
 **Son byte por byte los que `next/font/google` servía** antes del cambio: el
 pasajero no descarga ni un byte más.
