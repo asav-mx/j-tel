@@ -13,7 +13,7 @@ import { CaraDeLaRuta, TinoDeLaLamina } from "@/components/casa/ontoy-impreso";
  * banda del color de la ruta, Tino, «¿Cuándo pasa? Escanea.», el código en un
  * recuadro blanco redondeado con los módulos en **puntitos** carbón, las tres
  * esquinas como **ojos redondeados** que miran al centro, la cara de la ruta en
- * medio, la dirección escrita y el pie con la marca.
+ * medio y la dirección escrita.
  *
  * Es la única pantalla del producto cuyo destino no es una pantalla, y eso decide
  * su forma: fondo claro fijo —una piel oscura en papel es un cartucho de tinta—,
@@ -248,8 +248,9 @@ export function LetreroDeParada({
             </svg>
           </div>
 
+          {/* La dirección escrita, y nada debajo: ya dice `ontoy.app` en su
+              primera palabra, y un pie repitiéndola se leía doble (ASAV, 24-sep). */}
           <p className="letrero-direccion">{direccionDelLetreroEnPalabras(parada.qrSlug, sitio)}</p>
-          <p className="letrero-pie">ontoy.app</p>
         </div>
       </div>
     </section>

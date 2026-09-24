@@ -573,7 +573,9 @@
 }
 
 /* Para quien no trae cámara, no sabe escanear o tiene la pantalla rota.
-   En la letra de la marca, no en monoespaciada (ASAV, 24-sep-2026). */
+   En la letra de la marca, no en monoespaciada (ASAV, 24-sep-2026).
+   Es lo último de la hoja: el pie que repetía `ontoy.app` se quitó porque la
+   dirección ya lo dice en su primera palabra. */
 .letrero-direccion {
   font-family: var(--letra-titular);
   font-weight: 800;
@@ -583,14 +585,6 @@
   margin: 0;
 }
 
-/* La marca, y nada más. La voz de Ontoy —sus frases— se define después, y una
-   frase atornillada a un poste no se puede cambiar de opinión (ASAV, 24-sep). */
-.letrero-pie {
-  font-family: var(--letra-lectura);
-  font-size: 0.42cm;
-  color: #6b6f78;
-  margin: 0.45cm 0 0;
-}
 
 /* Lo que sólo sirve en pantalla y estorba en papel. */
 .solo-pantalla {
