@@ -325,7 +325,10 @@ export function renderAvisos(
  * verificación" es como el propio correo ya la nombra en su día limpio.
  */
 const ETIQUETA_CHEQUEO: Record<Chequeo["id"], string> = {
-  gps: "Dato de GPS",
+  /* ✎ Era «Dato de GPS» (#470). Lo que se vigila no es si hay dato, sino si
+     calla alguien de quien se espera oír: una flota estacionada tiene el dato
+     viejo y no pasa nada. */
+  flota: "Unidades en turno",
   archivador: "Archivador",
   marcas: "Marcas de agua",
   alertas: "Alertas críticas",
