@@ -17,14 +17,18 @@ import Link from "next/link";
  * que la publicación es la respuesta, y con dos intentos sabe cuál de las dos le
  * tocó.
  *
- * ## Y por qué «todavía»
+ * ## Y por qué «QR» y por qué «todavía»
  *
- * **Decisión de ASAV, 23-sep-2026.** Desde el 23-sep un letrero se puede imprimir
- * de un circuito sin publicar, porque imprimir, repartir y atornillar toma días.
- * Así que este texto es lo que va a leer un pasajero **de un letrero recién
- * pegado, que sí va a servir en unos días** — y también lo que lee quien teclea
- * un código que no existe. «Todavía» es lo único honesto que sirve para los dos:
- * no promete una fecha, no niega la parada, y no confirma nada.
+ * **«QR» y no «letrero» (ASAV, 24-sep-2026): es lo que la persona acaba de
+ * escanear.** Frente al poste hay una lámina, sí, pero lo que hizo con el
+ * teléfono fue escanear un código — y el texto le contesta a esa acción.
+ *
+ * **«Todavía» es del 23-sep.** Desde entonces un QR se puede imprimir de un
+ * circuito sin publicar, porque imprimir, repartir y atornillar toma días. Así
+ * que este texto es lo que va a leer un pasajero **de un QR recién pegado, que sí
+ * va a servir en unos días** — y también lo que lee quien teclea un código que no
+ * existe. «Todavía» es lo único honesto que sirve para los dos: no promete una
+ * fecha, no niega la parada, y no confirma nada.
  *
  * No se disculpa ni echa culpas, y **no es un 404 mudo**: le habla a alguien
  * parado en una esquina de Juárez y le ofrece la única salida que hay.
@@ -32,7 +36,7 @@ import Link from "next/link";
 export default function LetreroNoActivo() {
   return (
     <main className="puerta">
-      <h1>Este letrero todavía no está activo</h1>
+      <h1>Este QR todavía no está activo</h1>
       <p>
         Revisa que el código esté bien escrito. Mientras, abre el inicio para ver las rutas que
         ya puedes seguir.

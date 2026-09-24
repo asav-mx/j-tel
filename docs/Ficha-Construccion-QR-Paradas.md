@@ -34,7 +34,7 @@ El QR es la única pieza de Ontoy que **se imprime en lámina y se atornilla**. 
 |---|---|
 | d | **El diseño es el 1b de «Ontoy QR»**: banda del color de la ruta, Tino, «¿Cuándo pasa? Escanea.», módulos carbón sobre blanco, Ontoy al centro, corrección **H**, 8 cm de mínimo. Sale del skill `ontoy-design`. |
 | e | **Sí se imprime de un circuito sin publicar**, con el aviso en pantalla. Voltea el punto 6 de abajo: imprimir, repartir y atornillar toma días, y exigir la publicación antes obliga a prometerle algo a un pasajero días antes de que haya un letrero en un poste. |
-| f | **El QR de un circuito no publicado dice «Este letrero todavía no está activo»** — el **mismo texto** que un código inventado, para no revelar nada (8.4). |
+| f | **El QR de un circuito no publicado dice «Este QR todavía no está activo»** — el **mismo texto** que un código inventado, para no revelar nada (8.4). La frase era «Este letrero…» y cambió el 24-sep: es lo que la persona acaba de escanear. |
 
 **Lo que la (e) NO cambia:** lo que contesta el código. Un circuito sin publicar sigue respondiendo igual que un slug inventado. Lo que cambia es que la impresora no espera a la publicación.
 

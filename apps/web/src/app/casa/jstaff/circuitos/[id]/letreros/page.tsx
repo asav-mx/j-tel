@@ -31,7 +31,7 @@ export const dynamic = "force-dynamic";
  * manda a la impresora y todavía puede decidir. La lámina sale igual.
  *
  * **Lo que NO cambia es lo que contesta el código** mientras el circuito siga
- * sin publicar: `/p/‹qr_slug›` dice «Este letrero todavía no está activo», el
+ * sin publicar: `/p/‹qr_slug›` dice «Este QR todavía no está activo», el
  * mismo texto exacto que un código inventado. Lo no publicado no existe para la
  * app (8.4), y distinguirlo de un slug inventado sería confirmar que existe.
  *
@@ -156,8 +156,8 @@ export default async function LetrerosDelCircuito({
           <p role="status" className="mt-4 rounded-lg border border-[var(--linea)] p-3 text-[15px]">
             <span className="font-semibold">«{circuito.name}» todavía no está publicado.</span>{" "}
             Se imprime igual, porque imprimir, repartir y atornillar toma días. Pero hasta que lo
-            publiques, un teléfono que escanee estos códigos va a leer «Este letrero todavía no
-            está activo» — el mismo texto que un código inventado, para no revelar que la ruta
+            publiques, un teléfono que escanee estos códigos va a leer «Este QR todavía no está
+            activo» — el mismo texto que un código inventado, para no revelar que la ruta
             existe.
           </p>
         )}

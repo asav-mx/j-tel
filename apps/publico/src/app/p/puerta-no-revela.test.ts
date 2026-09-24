@@ -41,11 +41,12 @@ describe("la puerta del letrero no revela nada", () => {
     }
   });
 
-  it("y dice «todavía no está activo», que sirve para los dos casos", () => {
-    // «Todavía» es lo único que vale para un letrero recién pegado de un
+  it("y dice «Este QR todavía no está activo», que sirve para los dos casos", () => {
+    // «QR» y no «letrero» porque es lo que la persona acaba de escanear (ASAV,
+    // 24-sep). Y «todavía» es lo único que vale para un QR recién pegado de un
     // circuito que aún no se publica Y para un código inventado: no promete una
     // fecha, no niega la parada, y no confirma ninguna de las dos.
-    expect(fuente("not-found.tsx")).toContain("Este letrero todavía no está activo");
+    expect(fuente("not-found.tsx")).toContain("Este QR todavía no está activo");
   });
 
   it("la página del QR manda los dos casos al MISMO sitio: un solo notFound()", () => {
