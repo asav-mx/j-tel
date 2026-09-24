@@ -38,6 +38,22 @@ dado de alta en el proyecto de Vercel, y la variable del nombre. Eso vive en
 paneles, no aparece en ningún PR, y si nadie lo escribe se olvida — la misma
 lección del límite del firewall.
 
+### Y qué dirección tiene cada cosa (decidido el 23-sep-2026)
+
+Esta hoja mueve la **casa**; cuál es el cuarto de cada cosa lo decidió ASAV el
+mismo día, y vive en **`docs/Ontoy-Direcciones.md`** con su propia valla
+(`apps/publico/src/app/direcciones.test.ts`), que entró antes del 28 a propósito.
+
+Lo que hay que saber aquí, porque cambia lo que se comprueba en el paso 4:
+
+- **La app se queda en la raíz.** `ontoy.app/` es Inicio, y el `start_url` del
+  manifiesto sigue siendo `/`. La mudanza **no mueve ninguna dirección**: sólo
+  cambia el dominio de todas.
+- **La landing vive en `ontoy.app/conoce`**, y se escribe después del 29. El día de
+  la mudanza esa dirección **todavía no contesta**, y eso es lo esperado: no es un
+  defecto de la mudanza.
+- Por eso el `curl` del paso 4 prueba la raíz y `/c/‹ruta›`, no una portada.
+
 ---
 
 ## 1 · Agregar el dominio en Vercel
