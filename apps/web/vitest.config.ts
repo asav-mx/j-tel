@@ -42,5 +42,27 @@ export default defineConfig({
      * `pnpm --filter @jtel/web test:integration`.
      */
     exclude: ["node_modules/**", "src/**/*.integration.test.ts"],
+    /*
+     * **El tope que faltaba en la suite de unitarias.**
+     *
+     * Las de integración de este mismo paquete ya subían a 30 s; ésta se quedó
+     * con los 5 s por omisión, y el 23-sep-2026 tumbó un PR que no tocaba una
+     * sola línea de `apps/web`: `rutas-cron.test.ts` expiró en el
+     * `await ruta.modulo()` —un `import()` dinámico de una ruta de Next, de lo
+     * más caro que hay aquí— mientras el runner iba frío y cargado. Esa misma
+     * corrida tardó **53 s** sólo en recolectar los archivos.
+     *
+     * Medido: en una máquina caliente, ese archivo entero —30 pruebas— corre
+     * en **861 ms**. En CI pasó de 5 000. El hueco no es del código: es del
+     * runner.
+     *
+     * Un tope que se cruza con la carga del día **no mide lo que dice medir**,
+     * y su rojo es peor que no tenerlo: se arregla re-lanzando, y eso enseña a
+     * no creerle a la suite. Es la misma lección que `packages/db` ya pagó.
+     *
+     * 15 s y no 30: aquí no hay red de por medio, así que es ~17 veces el
+     * costo medido y sigue cayendo rápido si una prueba de verdad se cuelga.
+     */
+    testTimeout: 15_000,
   },
 });
