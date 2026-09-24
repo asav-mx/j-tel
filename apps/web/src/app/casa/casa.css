@@ -427,8 +427,19 @@
    cuántos metros engancha el código, no cómo se ve en un monitor.
    Los módulos van en carbón sobre blanco, nunca en naranja ni en el color de la
    ruta: muchos teléfonos no los leen. */
+/*
+ * ⚠ **El alto de la hoja NO es el alto de la página.** Esto medía 27.94 cm de
+ * alto —la carta completa— y al imprimir se iba a una segunda página: el área
+ * imprimible es la carta MENOS los márgenes del driver, y con los de Safari
+ * (media pulgada por lado) quedan 25.4 cm. El pie caía fuera.
+ *
+ * Así que el tamaño de papel sólo se finge **en pantalla**, para que se vea como
+ * una hoja sobre la mesa. Al imprimir, la hoja deja de tener alto propio y lo que
+ * manda es el contenido, presupuestado para caber en **25.4 × 19.05 cm** — el
+ * peor caso de márgenes, no el mejor.
+ */
 .letrero {
-  width: 21.59cm; /* carta, vertical */
+  width: 21.59cm; /* carta, vertical — sólo en pantalla */
   min-height: 27.94cm;
   box-sizing: border-box;
   padding: 1.6cm;
@@ -444,6 +455,12 @@
    ⚠ Asav la pidió «color banqueta» (#EDE9E1); la hoja de diseño la trae en
    **Hueso** (#F7F3EC). Se siguió la hoja, que es lo que dijo copiar. Son vecinos
    y cambiarlo es esta línea. */
+/*
+ * `print-color-adjust: exact` y no es decoración: la banda del color de la ruta y
+ * el Hueso de la tarjeta son **fondos**, y los navegadores los tiran cuando
+ * «imprimir fondos» está apagado —que es como viene por omisión—. Sin esto, de
+ * la imprenta salen láminas blancas sin banda, que es justo lo que se ve de lejos.
+ */
 .letrero-tarjeta {
   flex: 1;
   display: flex;
@@ -452,19 +469,23 @@
   border-radius: 1cm;
   box-shadow: 0 0 0 1px #dcd5c8;
   overflow: hidden;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 /* La banda del color de la ruta, a sangre. Es lo primero que se ve desde lejos,
    y lo que hace que dos rutas en el mismo paradero no se confundan. */
 .letrero-banda {
-  height: 1.1cm;
+  height: 0.9cm;
   flex: none;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 .letrero-cuerpo {
   flex: 1;
   box-sizing: border-box;
-  padding: 1.3cm 1.4cm 1.4cm;
+  padding: 1cm 1.2cm 1.1cm;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -473,13 +494,13 @@
 .letrero-encabezado {
   display: flex;
   align-items: center;
-  gap: 0.8cm;
+  gap: 0.7cm;
   width: 100%;
 }
 
 .letrero-tino {
-  width: 3.2cm;
-  height: 3.2cm;
+  width: 2.6cm;
+  height: 2.6cm;
   flex: none;
   display: block;
 }
@@ -541,8 +562,8 @@
 .letrero-caja-del-codigo {
   background: #ffffff;
   border-radius: 0.7cm;
-  padding: 0.35cm;
-  margin: 1.1cm 0 0.9cm;
+  padding: 0.3cm;
+  margin: 0.8cm 0 0.7cm;
 }
 
 .letrero-qr {
@@ -568,7 +589,7 @@
   font-family: var(--letra-lectura);
   font-size: 0.42cm;
   color: #6b6f78;
-  margin: 0.5cm 0 0;
+  margin: 0.45cm 0 0;
 }
 
 /* Lo que sólo sirve en pantalla y estorba en papel. */
@@ -577,18 +598,35 @@
   max-width: 21.59cm;
 }
 
+/* Márgenes propios y chicos: los del driver son media pulgada y se comen el
+   presupuesto. Con `@page` el área imprimible queda en 19.59 × 25.94 cm; el
+   contenido está presupuestado para el peor caso (19.05 × 25.4), así que cabe
+   aunque un navegador ignore esto. */
+@page {
+  size: letter portrait;
+  margin: 10mm;
+}
+
 @media print {
   .solo-pantalla {
     display: none;
   }
 
+  /* Aquí la hoja deja de medir una página: el contenido manda. Forzar 27.94 cm
+     de alto es lo que la partía en dos. */
   .letrero {
     border: 0;
     margin: 0;
+    padding: 0;
     width: auto;
-    min-height: auto;
+    min-height: 0;
     /* Una parada por página, y la última sin una página en blanco detrás. */
     break-after: page;
+    break-inside: avoid;
+  }
+
+  .letrero-tarjeta {
+    break-inside: avoid;
   }
 
   .letrero:last-child {

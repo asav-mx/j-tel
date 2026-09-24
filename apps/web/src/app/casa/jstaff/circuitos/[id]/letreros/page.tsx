@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
+import { DescargarPdf } from "@/components/casa/descargar-pdf";
 import {
   LetreroDeParada,
   type FormaDeLasEsquinas,
@@ -119,10 +120,18 @@ export default async function LetrerosDelCircuito({
             : `${aImprimir.length} QR de ${circuito.name}`}
         </h1>
         <p className="mt-2 text-[15px] text-[var(--tenue)]">
-          Una hoja por parada, tamaño carta. Imprime con el navegador (⌘P) al 100 %, sin ajustar a
-          la página: el código mide <strong>13 cm</strong> de lado a propósito, y encogerlo le
-          quita el metro de distancia desde el que engancha.
+          Una hoja por parada, tamaño carta, <strong>una página por parada</strong>. El código mide{" "}
+          <strong>13 cm</strong> de lado a propósito: al imprimir va al <strong>100 %</strong>, sin
+          «ajustar a la página», porque encogerlo le quita el metro de distancia desde el que
+          engancha.
         </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <DescargarPdf que={aImprimir.length === 1 ? "de esta parada" : "de las " + aImprimir.length} />
+          <span className="text-[14px] text-[var(--tenue)]">
+            Se abre el diálogo de impresión: escoge «Guardar como PDF». Es el archivo que pide la
+            imprenta — vectorial, tamaño carta, con la letra incrustada.
+          </span>
+        </div>
         <div className="mt-3 rounded-lg border border-[var(--linea)] p-3 text-[15px]">
           <p className="font-semibold">
             Esta hoja:{" "}
