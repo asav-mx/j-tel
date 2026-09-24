@@ -6264,6 +6264,26 @@ export class CircuitRepository {
    * una sola consulta con cuatro LEFT JOIN multiplicaría filas por cada
    * combinación de trazado × parada × unidad.
    */
+  /**
+   * El color que ya tiene cada OTRO circuito, para poder avisar si se repite.
+   *
+   * **Avisa, no bloquea** (ASAV, 23-sep-2026): el color de una ruta es el que los
+   * camiones traen pintados en la calle, y si dos concesionarios pintaron el
+   * mismo azul, la app no puede inventar que son distintos. Lo que sí puede es
+   * decírselo a quien captura, que es el que sabe si es a propósito.
+   *
+   * Consulta propia y chica en vez de colgarse de `resumenDeCircuitosParaJStaff`:
+   * ése trae trazados, paradas, asignaciones y promesas en cinco consultas, y
+   * aquí sólo hacen falta dos columnas.
+   */
+  async coloresDeOtrosCircuitos(exceptoCircuitId: string) {
+    return this.db
+      .select({ id: circuits.id, name: circuits.name, colorHex: circuits.colorHex })
+      .from(circuits)
+      .where(ne(circuits.id, exceptoCircuitId))
+      .orderBy(circuits.name);
+  }
+
   async resumenDeCircuitosParaJStaff() {
     const [lista, trazados, paradas, asignadas, promesas] = await Promise.all([
       this.db

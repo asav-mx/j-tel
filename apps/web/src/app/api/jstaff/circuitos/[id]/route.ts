@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { porQueNoSirveParaUnaRuta } from "@jtel/domain";
 import { getRepos } from "@/lib/db";
 import { exigir } from "@/lib/guardia-api";
 import { destinoDeVuelta } from "@/lib/casa/volver";
@@ -94,9 +95,15 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
    */
   const color = String(form.get("colorHex") ?? "").trim();
   if (color) {
-    if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
-      return volver({ error: "El color va en formato #RRGGBB" });
-    }
+    /*
+     * La regla del color vive en el dominio y se sostiene AQUÍ, no en la
+     * pantalla: el selector de pastillas no ofrece un tono del naranja de
+     * Ontoy, pero un formulario viejo en una pestaña abierta, o un `curl`,
+     * mandan lo que quieran. Una regla que sólo vive en el navegador no es una
+     * regla (enmienda (a) de ASAV, 23-sep-2026).
+     */
+    const noSirve = porQueNoSirveParaUnaRuta(color);
+    if (noSirve) return volver({ error: noSirve });
     cambios.colorHex = color.toUpperCase();
   }
 

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { franjaDentroDelHorario, type FranjaCapturada } from "@jtel/domain";
+import { franjaDentroDelHorario, porQueNoSirveParaUnaRuta, type FranjaCapturada } from "@jtel/domain";
 import { Renglon } from "@/components/casa/expediente";
 import { clases } from "@/components/casa/formulario";
+import { SelectorDeColorDeRuta } from "@/components/casa/selector-de-color-de-ruta";
 
 /**
  * La identidad de un circuito, editable desde el expediente de J-Staff (PR A4
@@ -35,6 +36,7 @@ export function IdentidadDelCircuito({
   zona,
   arrancaEl,
   franjas,
+  otrosCircuitos,
 }: {
   circuitId: string;
   nombre: string;
@@ -46,10 +48,12 @@ export function IdentidadDelCircuito({
   zona: string;
   arrancaEl: string | null;
   franjas: FranjaCapturada[];
+  /** Los otros circuitos y su color, para avisar si se repite. */
+  otrosCircuitos: { name: string; colorHex: string }[];
 }) {
   const [inicio, setInicio] = useState(abre);
   const [fin, setFin] = useState(cierra);
-  const [tono, setTono] = useState(color);
+  const [tono, setTono] = useState(color.toUpperCase());
   const [zonaNueva, setZonaNueva] = useState(zona);
   const [arranque, setArranque] = useState(arrancaEl ?? "");
   /*
@@ -58,6 +62,7 @@ export function IdentidadDelCircuito({
    * aquí —el servidor lo exige igual y lee el antes de la base—. Nombre y color
    * no son reglas: se guardan sin motivo.
    */
+  const colorBloqueado = porQueNoSirveParaUnaRuta(tono) !== null;
   const cambiaUnaRegla = inicio !== abre || fin !== cierra || zonaNueva !== zona || arranque !== (arrancaEl ?? "");
 
   const fuera = franjas.filter((f) => !franjaDentroDelHorario(f, inicio, fin));
@@ -79,26 +84,7 @@ export function IdentidadDelCircuito({
           <input name="nombre" defaultValue={nombre} required className={clases.campo} />
         </label>
 
-        <label className={etiqueta}>
-          Color de la ruta
-          <span className="flex items-center gap-2">
-            <input
-              type="color"
-              aria-label="Escoger el color"
-              value={tono}
-              onChange={(e) => setTono(e.target.value.toUpperCase())}
-              className="h-10 w-12 cursor-pointer rounded-lg border border-[var(--linea)] bg-[var(--papel)]"
-            />
-            <input
-              name="colorHex"
-              value={tono}
-              onChange={(e) => setTono(e.target.value)}
-              pattern="#[0-9a-fA-F]{6}"
-              className={`${clases.campo.replace("w-full ", "")} w-[130px] font-[family-name:var(--letra-medida)]`}
-            />
-          </span>
-          <span className={clases.ayuda}>Identidad de la ruta, nunca estado: así se conoce en la calle (8.8c).</span>
-        </label>
+        <SelectorDeColorDeRuta tono={tono} setTono={setTono} otrosCircuitos={otrosCircuitos} />
 
         <fieldset className="flex flex-col gap-1.5">
           <legend className="text-[13px] font-semibold">Horario de servicio</legend>
@@ -154,7 +140,10 @@ export function IdentidadDelCircuito({
           </label>
         )}
         <div>
-          <button type="submit" className={clases.primario}>
+          {/* Apagado mientras el color no se pueda guardar: el servidor lo
+              rechazaría igual, y dejar apretar el botón para que lo diga él
+              convierte una regla en un viaje de ida y vuelta. */}
+          <button type="submit" disabled={colorBloqueado} className={clases.primario}>
             Guardar la identidad
           </button>
         </div>
