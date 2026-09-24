@@ -85,10 +85,11 @@ describe("los íconos de Ontoy", () => {
     expect(m.theme_color).toBe("#EDE9E1");
   });
 
-  it("la app se queda en la raíz: es la dirección que el ícono instalado guarda", () => {
+  it("el ícono instalado abre `/rutas`, que es donde vive la app", () => {
     // Un `start_url` distinto no se nota al desplegar y sí en el teléfono de
-    // quien ya la instaló: su ícono abriría otra cosa. La decisión de dónde vive
-    // cada dirección de ontoy.app tiene su propio documento y su propia valla.
-    expect(manifest().start_url).toBe("/");
+    // quien ya la instaló: su ícono abriría otra cosa. Por eso se movió AHORA y
+    // no el día que entre la landing (ASAV, 25-sep). La decisión de dónde vive
+    // cada dirección tiene su propio documento y su propia valla.
+    expect(manifest().start_url).toBe("/rutas");
   });
 });

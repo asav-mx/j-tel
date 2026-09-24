@@ -92,7 +92,7 @@ contestar la petición).
 | **Compartidos con terceros** | **Revisar con el tercero del mapa**: mientras sea OSM, el teléfono le pide teselas directo, con su IP. Google considera «compartir» enviar datos a un tercero; lo prudente es declarar **Ubicación aproximada → compartida → funcionalidad de la app**, con la nota de que es la zona de la tesela, no la ubicación. **Con Protomaps, esta fila desaparece.** | Ver «el tercero» arriba |
 | ¿Los datos se cifran en tránsito? | **Sí** | Todo va por HTTPS |
 | ¿Se puede pedir que se borren? | **No aplica / no hay cuenta**: no hay nada ligado a una persona que borrar; lo del teléfono lo borra el pasajero | — |
-| Enlace a la política de privacidad | `https://‹dominio›/privacidad` | Espera el dominio |
+| Enlace a la política de privacidad | `https://ontoy.app/privacidad` | **El dominio se decidió el 23-sep: `ontoy.app`** (`Procedimiento-Dominio-Ontoy-App.md`). Vale en cuanto el DNS apunte |
 
 ## 3. App Store — «Privacidad de la app»
 
@@ -106,7 +106,7 @@ empresas para publicidad).
 | **Datos de uso → Interacción con el producto** | **Recopilado**, **no vinculado** a la identidad, **no usado para rastreo**, propósito **Análisis** |
 | Contacto, salud, finanzas, contenido del usuario, historial de búsqueda y de navegación, identificadores, compras, diagnósticos | **No recopilados** |
 | ¿Rastreo? | **No** |
-| URL de la política | `https://‹dominio›/privacidad` |
+| URL de la política | `https://ontoy.app/privacidad` |
 
 La etiqueta resultante debería leer: **«Datos no vinculados a ti: Datos de uso»** (y, mientras
 el mapa sea de OSM, **Ubicación**). Nada en «Datos usados para rastrearte».
@@ -115,7 +115,10 @@ el mapa sea de OSM, **Ubicación**). Nada en «Datos usados para rastrearte».
 
 ## 4. Lo que falta antes de enviar
 
-1. **El dominio** (TWA y la URL de la política).
+1. ~~**El dominio**~~ → **decidido el 23-sep-2026: `ontoy.app`.** Falta
+   apuntarlo cuando Unstoppable Domains termine el registro
+   (`Procedimiento-Dominio-Ontoy-App.md`). El TWA nace ahí, no se migra después.
+   El dominio viejo, `juarezbus.digital`, redirige y no se apaga.
 2. **`NEXT_PUBLIC_CONTACTO_PRIVACIDAD`** en Vercel: la página dice «el correo de contacto
    todavía no está configurado» mientras no exista, y ambas tiendas exigen un contacto.
 3. **Decidir el mapa del lanzamiento** (Protomaps): cambia las filas del tercero.
