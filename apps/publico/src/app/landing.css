@@ -2,8 +2,9 @@
  * LA LANDING de `ontoy.app` — la portada, para quien todavía no conoce Ontoy.
  *
  * Es otra cara que la app: la app es para el que ya está parado en la parada
- * con prisa; esto es para el que oyó el nombre y quiere saber qué es. Por eso
- * tiene su propia letra y su propio aire, y por eso vive en su propio archivo.
+ * con prisa; esto es para el que oyó el nombre y quiere saber qué es. Comparte
+ * con ella la letra y la paleta —las dos salen del mismo sistema de diseño—,
+ * pero no su piel, y por eso vive en su propio archivo.
  *
  * ## Los tokens son los del sistema de diseño, y no se inventan
  *
@@ -23,11 +24,16 @@
  * ## Por qué los tokens NO están en `:root`
  *
  * Porque no estamos solos en el documento. El layout de la app importa
- * `globals.css` y `ontoy.css` para todas las páginas, y los dos declaran sus
- * propias variables en `:root` — entre ellas **`--ruta` y `--gris`, que también
- * existen en la paleta de Ontoy con otro valor**. Declarar los de la landing en
- * `:root` los dejaría puestos en la app entera, y la app se vería teñida por
- * una portada que nadie abrió.
+ * `globals.css`, `tokens-ontoy.css` y `ontoy.css` para todas las páginas, y
+ * entre los tres declaran en `:root` **`--ruta` y `--gris` — con valores
+ * distintos entre sí**: `--gris` es `#7d8aa3` en `globals.css` y `#6b6f78` en
+ * `tokens-ontoy.css`. Declarar los de la landing ahí arriba los dejaría puestos
+ * en la app entera, y la app se vería teñida por una portada que nadie abrió.
+ *
+ * `tokens-ontoy.css` a propósito **no trae `--ruta`**, porque un azul por
+ * omisión en `:root` fue el modo de falla del #370. La landing sí lo declara,
+ * pero dentro de `.landing`: aquí el color de ruta no es el de ninguna ruta
+ * real, es el de la ilustración.
  *
  * Así que todo cuelga de `.landing`. Lo que la landing define, se queda en la
  * landing.
@@ -122,13 +128,18 @@
   --pupila: var(--carbon);
 
   /*
-   * La letra. Las variables las pone `next/font/local` desde `letra.ts`: los
-   * `.woff2` viven en el repo y **la compilación no sale a internet** por
-   * ellos. La valla `scripts/verificar-fuentes-locales.mjs` tumba CI si alguna
-   * app vuelve a importar `next/font/google`.
+   * La letra **es la misma que la de la app**, y desde el #559 lo es de verdad:
+   * ese PR migró la app a los tokens del skill y se quedó con las dos familias
+   * que la landing había traído. Así que aquí no se declara ninguna fuente —
+   * se usan las variables que `layout.tsx` ya pone en el `<html>`.
+   *
+   * Declararlas otra vez con otro nombre generaría un segundo juego de
+   * `@font-face` sobre los mismos archivos, y dos nombres de familia para la
+   * misma letra: el sitio donde la landing y la app empezarían a divergir sin
+   * que nadie lo decidiera.
    */
-  --titular: var(--fuente-bricolage), "Bricolage Grotesque", sans-serif;
-  --cuerpo: var(--fuente-instrument), "Instrument Sans", sans-serif;
+  --titular: var(--fuente-titular), "Bricolage Grotesque", sans-serif;
+  --cuerpo: var(--fuente-texto), "Instrument Sans", sans-serif;
 
   /*
    * Formas: todo redondo y amable, y **sin sombras** — los bordes son de 1 px

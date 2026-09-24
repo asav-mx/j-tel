@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./landing.css";
-import { bricolage, instrumentSans } from "@/components/landing/letra";
 import { CaraDeOntoy } from "@/components/landing/ontoy";
 import { MarcaDelHero } from "@/components/landing/marca-del-hero";
 import { Calle } from "@/components/landing/calle/calle";
@@ -88,7 +87,7 @@ const SECCIONES = [
 
 export default function Landing() {
   return (
-    <div className={`landing ${bricolage.variable} ${instrumentSans.variable}`}>
+    <div className="landing">
       {/*
        * El nivel de rendimiento se averigua UNA vez y baja por contexto. Esto
        * es cliente, pero lo que envuelve no: el título, la frase y el botón
