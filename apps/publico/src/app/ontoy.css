@@ -752,64 +752,133 @@
   font-size: 13px;
 }
 
-/* ── las unidades sobre el mapa ─────────────────────────────────────── */
-.ontoy-unidad {
+/* ── los muñecos del mapa: Cami y Tino (§9, escalón 2) ─────────────────
+ *
+ * Reemplazan al punto y al circulito de antes. El escalón 1 —la ropa del
+ * mapa— es otro frente: aquí sólo vive lo que va encima.
+ */
+
+/*
+ * **Cami**, desde arriba y del color de su ruta.
+ *
+ * El `div` del marcador mide 44×44 —el área de toque del estándar— y Cami se
+ * centra dentro. Antes el marcador medía cero y el dibujo se le salía por
+ * encima: se veía y no se podía tocar, que es lo que dejaba la hoja de Cami
+ * fuera del alcance de un dedo.
+ */
+.ontoy-cami {
   position: relative;
+  width: 100%;
+  height: 100%;
   display: grid;
   place-items: center;
-  transform: translate(-50%, -50%);
 }
-.ontoy-unidad-punto {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--ruta);
-  border: 2px solid var(--panel);
+/*
+ * **Sólo el cuerpo gira.** El giro lo pone el atributo `style` del SVG con los
+ * grados del GPS; aquí va lo que no depende del dato.
+ *
+ * `transform-origin: center` es lo que hace que gire sobre sí mismo en vez de
+ * orbitar su esquina, y la transición suaviza el salto entre dos fixes — el
+ * estándar lo pide para la posición y vale igual para el rumbo: un camión que
+ * pega un brinco de 90° se lee como un error, no como una vuelta.
+ */
+.ontoy-cami-cuerpo {
   display: block;
+  transform-origin: center;
+  transition: transform var(--t-med, 0.45s) var(--ease, cubic-bezier(0.2, 0, 0, 1));
 }
-/* Dato viejo: se APAGA y CAMBIA DE FORMA — hueca, sin latido (8.9). */
-.ontoy-unidad.vieja .ontoy-unidad-punto {
-  background: transparent;
-  border: 2.5px solid var(--tenue);
+/*
+ * **Dato viejo: se apaga Y cambia de forma** (8.9). Sin el color, la diferencia
+ * sigue estando — que es la regla de no confiarle un estado sólo al color.
+ */
+.ontoy-cami.vieja .ontoy-cami-cuerpo {
+  opacity: 0.4;
+  filter: grayscale(0.85);
 }
-.ontoy-anillo {
-  position: absolute;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 2px solid var(--ruta);
-  animation: ontoy-anillo 2s ease-out infinite;
-}
-@keyframes ontoy-anillo {
-  0% {
-    opacity: 0.6;
-    transform: scale(0.6);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.9);
-  }
-}
-.ontoy-unidad-num,
-.ontoy-unidad-edad {
+.ontoy-cami-num,
+.ontoy-cami-edad {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
   font-family: var(--fuente-texto), system-ui, sans-serif;
+  /* El rótulo va sobre el mapa, que es fondo vivo: sin contorno se pierde. */
   paint-order: stroke;
   -webkit-text-stroke: 3px var(--fondo);
 }
-.ontoy-unidad-num {
-  top: -20px;
-  font-size: 10px;
-  font-weight: 500;
+.ontoy-cami-num {
+  /* Espejo de la edad: el cuerpo empieza en ~−0.5, así que el rótulo va encima. */
+  top: -16px;
+  font-size: 10.5px;
+  font-weight: 600;
   color: var(--texto);
+  /*
+   * **Con tope de ancho.** Un económico normal son cuatro cifras —«2120»— pero
+   * nada obliga a que lo sea: en la base desechable hay unidades cuyo rótulo es
+   * el IMEI del aparato, y la captura enseñó una cruzando media pantalla por
+   * encima de dos paradas. Se recorta en vez de empujar: lo que el rótulo
+   * existe para decir son las primeras cifras.
+   */
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.ontoy-unidad-edad {
-  top: 14px;
-  font-size: 8.5px;
+/*
+ * La edad nunca falta y nunca gira: sin ella el dato no se muestra.
+ *
+ * **Va debajo del cuerpo, no encima**, y el margen sale de una medición que me
+ * costó tres intentos: el dibujo mide 45 px de alto, pero **girado su caja
+ * crece a 53** —a 25° son 30·sen25 + 45·cos25— y el borde de abajo se corre con
+ * el rumbo. La primera captura enseñaba «hace» y el resto tapado; a 34 px y a
+ * 47 px seguía rozando. A 52 px libra el peor giro.
+ *
+ * Lo que esto enseña, y vale más que el número: **el ancho de un elemento
+ * girado no es el ancho de su dibujo**, y calcularlo de cabeza no funcionó
+ * ninguna de las dos veces.
+ */
+.ontoy-cami-edad {
+  top: 52px;
+  font-size: 9px;
   color: var(--tenue);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ontoy-cami-cuerpo {
+    transition: none;
+  }
+}
+
+/*
+ * **Tino**, en cada parada de la ruta abierta.
+ *
+ * Su caja de toque también mide 44×44, y el ancla del marcador la corre para
+ * que sea **la base del poste** la que cae en la parada: lo que marca el lugar
+ * es donde apoya, no donde está la cabeza.
+ */
+.ontoy-tino {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.ontoy-tino svg {
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.28));
+}
+/* La parada abierta es la única que se agranda: dice cuál estás mirando. */
+.ontoy-tino-icono.abierta .ontoy-tino svg {
+  transform: scale(1.25);
+}
+.ontoy-tino-estrella {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--maiz);
+  -webkit-text-stroke: 2px var(--fondo);
+  paint-order: stroke;
 }
 
 /* ── la hoja de una parada (8.10: siempre hay salida) ───────────────── */
@@ -941,8 +1010,7 @@
 
 /* Se mueve sólo lo que está vivo — y ni eso, si el teléfono pidió calma. */
 @media (prefers-reduced-motion: reduce) {
-  .ontoy-punto-vivo,
-  .ontoy-anillo {
+  .ontoy-punto-vivo {
     animation: none;
   }
 }
@@ -1339,28 +1407,40 @@
   color: var(--tenue);
 }
 
-/* ── «tú» en el mapa: el pasajero, en tinta y con su palabra ──────────────
- * Sin el color de ninguna ruta (el pasajero no es una ruta, 8.8c) y sin
- * latido (no es un camión). Un anillo del papel lo separa del mapa. */
-.ontoy-tu {
+/* ── «tú» en el mapa: EL PASAJERO, con su linterna ───────────────────────
+ *
+ * Era un punto de tinta con la palabra «tú». Ahora es el personajito del
+ * universo (handoff §1: «"Tú estás aquí" = el pasajero»; Ontoy no señala datos
+ * en vivo, su pin es sólo de marketing).
+ *
+ * **Sin el color de ninguna ruta** —el pasajero no va en ninguna (8.8c)— y
+ * **sin latido**: no es un camión. Va en Azul noche, que es de Ontoy.
+ *
+ * El cono de la linterna lo dibuja el SVG **sólo si hay rumbo medido**; aquí no
+ * hay nada que lo supla, a propósito.
+ */
+.ontoy-pasajero {
   position: absolute;
-  /* El CENTRO DEL PUNTO va en la posición, no el centro del conjunto punto + palabra:
-     centrado el conjunto, el punto caía corrido a la izquierda (lo enseñó la captura). */
-  transform: translate(-8px, -50%);
+  /* El CENTRO DEL MUÑECO va en la posición, no el centro del conjunto con la
+     palabra: centrado el conjunto, el muñeco caía corrido a la izquierda (lo
+     enseñó la captura del #476). */
+  transform: translate(-18px, -50%);
   display: flex;
   align-items: center;
   gap: 5px;
+  /*
+   * No se toca: es dónde estás, no algo que abrir. Y así no le roba el toque a
+   * un Cami o a un Tino que le queden debajo — que es exactamente lo que pasa
+   * cuando el pasajero está parado en su parada.
+   */
   pointer-events: none;
 }
-.ontoy-tu-punto {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--texto);
-  box-shadow: 0 0 0 3px var(--panel), 0 1px 4px rgba(0, 0, 0, 0.35);
+.ontoy-pasajero svg {
   flex: none;
+  display: block;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
 }
-.ontoy-tu-palabra {
+.ontoy-pasajero-palabra {
   font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
   font-weight: 700;
   font-size: 12px;
@@ -1369,6 +1449,69 @@
   border-radius: 6px;
   padding: 1px 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+/* ── la hoja de Cami: sus próximas paradas ───────────────────────────────
+ *
+ * Misma hoja que la de una parada —mismo asa, misma salida, mismo radio—
+ * porque es el mismo gesto sobre el mismo mapa. Lo que cambia es qué contesta.
+ */
+
+/*
+ * **La placa**, con la franja de su ruta abajo. Es lo que cumple «el color
+ * nunca va solo» (8.8c): el número lo acompaña siempre, y el color entra por
+ * una franja de 3 px en vez de pintar el fondo — sobre carbón el número se lee
+ * igual con cualquier color de ruta, sin tener que calcularle el contraste.
+ */
+.ontoy-placa {
+  display: inline-block;
+  background: var(--texto);
+  color: var(--panel);
+  border-radius: var(--r-plate, 7px);
+  padding: 4px 10px 5px;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+  box-shadow: inset 0 -3px 0 var(--ruta);
+}
+
+/* Dato viejo: la hoja entera se apaga, como el muñeco en el mapa. */
+.ontoy-hoja-cami.vieja .ontoy-cami-paradas {
+  opacity: 0.65;
+}
+
+.ontoy-cami-paradas {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+.ontoy-cami-parada {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--linea);
+}
+.ontoy-cami-parada:last-child {
+  border-bottom: none;
+}
+.ontoy-cami-parada-nombre {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--texto);
+  /* Un nombre de parada puede ser «Parroquia Santa Teresa de Jesús». */
+  min-width: 0;
+}
+/*
+ * La cuenta va en `cifra` —tabular— para que «a 1 parada» y «a 10 paradas» no
+ * muevan la columna cuando el camión avanza mientras la hoja está abierta.
+ */
+.ontoy-cami-parada-cuenta {
+  flex: none;
+  font-size: 13px;
+  color: var(--tenue);
 }
 
 /* ── la campana (8.13b) ───────────────────────────────────────────────── */
