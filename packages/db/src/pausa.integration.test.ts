@@ -41,6 +41,8 @@ const DIA = 86_400_000;
 const AHORA = new Date();
 /** Medianoche UTC de hace `n` días más seis horas: medianoche en Juárez (UTC-6 en septiembre). */
 const hace = (n: number, hh = 0) => new Date(Date.UTC(AHORA.getUTCFullYear(), AHORA.getUTCMonth(), AHORA.getUTCDate()) - n * DIA + (6 + hh) * 3_600_000);
+/* El generador recibe fechas civiles, no instantes: el día de `hace(n)`. */
+const haceIso = (n: number) => hace(n).toISOString().slice(0, 10);
 const fecha = (d: Date) => new Date(d.getTime() - 6 * 3_600_000).toISOString().slice(0, 10);
 
 const ids = { carrier: "", cliente: "", contrato: "", perfil: "", rs: "" };
@@ -188,7 +190,7 @@ describe("la pausa, contra la base", () => {
   });
 
   it("la generación no inventa nada dentro de la pausa", async () => {
-    const { createdIds } = await repos.occurrences.generateForProfile(ids.perfil, hace(20), hace(-3));
+    const { createdIds } = await repos.occurrences.generateForProfile(ids.perfil, haceIso(20), haceIso(-3));
     const creadas = await db
       .select({ deadline: serviceOccurrences.expectedDeadline })
       .from(serviceOccurrences)
@@ -218,7 +220,7 @@ describe("la pausa, contra la base", () => {
     await repos.pausas.reanudar(ids.contrato, { kind: "human", id: "user_prueba" }, new Date());
     const cola = await enCola();
     expect(cola).toEqual(new Set([occ.pendienteViejo, occ.sinHechoAntes]));
-    const { createdIds } = await repos.occurrences.generateForProfile(ids.perfil, hace(20), hace(1));
+    const { createdIds } = await repos.occurrences.generateForProfile(ids.perfil, haceIso(20), haceIso(1));
     const creadas = await db.select({ deadline: serviceOccurrences.expectedDeadline }).from(serviceOccurrences).where(
       inArray(serviceOccurrences.id, createdIds.length ? createdIds : ["00000000-0000-0000-0000-000000000000"]),
     );

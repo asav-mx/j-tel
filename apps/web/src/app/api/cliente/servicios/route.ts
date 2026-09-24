@@ -7,7 +7,7 @@ import {
   operationalScopeFromContract,
   parseOperationalScope,
   scopedRowMatches,
-  dayForDateQuery,
+  esFechaCivil,
 } from "@jtel/domain";
 import { configApiBack } from "@/lib/config-api-back";
 import { contractMatchesScope } from "@/lib/operational-scope";
@@ -81,17 +81,17 @@ export async function POST(request: Request) {
     if (!perfilDestino || perfilDestino.contract?.clientAccountId !== client.id) {
       return back(request, client.slug, formScope, { error: "Perfil no encontrado." });
     }
-    // Mediodía UTC vía la función canónica: construir la fecha a mano la
-    // resolvería en la zona del proceso, que es el defecto que corrió los
-    // deadlines seis horas. Aquí solo acota un rango, pero el patrón no se
-    // repite ni donde no muerde.
-    const from = dayForDateQuery(fromDate);
-    const to = dayForDateQuery(toDate);
-    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
+    // El rango viaja como **fecha civil**, que es lo que el campo del
+    // formulario ya manda (`<input type="date">` escribe `YYYY-MM-DD`).
+    // Convertirlo a `Date` aquí sólo servía para que el generador lo volviera
+    // a partir en dos, y era donde se colaba la zona del proceso: el día lo
+    // decide el calendario, y el instante lo pone después la zona del
+    // contrato (arreglo del 23-sep-2026).
+    if (!esFechaCivil(fromDate) || !esFechaCivil(toDate) || fromDate > toDate) {
       return back(request, client.slug, redirectScope, { error: "Rango de fechas inválido." });
     }
     try {
-      const result = await repos.occurrences.generateForProfile(profileId, from, to, {
+      const result = await repos.occurrences.generateForProfile(profileId, fromDate, toDate, {
         rollingDays: 30,
       });
       if (result.createdIds.length === 0 && result.skippedExisting > 0) {

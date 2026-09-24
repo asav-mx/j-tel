@@ -797,6 +797,8 @@ export * from "./avisos.js";
 export * from "./recorridos.js";
 export * from "./slugs-reservados.js";
 export * from "./tiempo.js";
+/* La alarma de la zona del proceso (diagnóstico del 23-sep-2026). */
+export * from "./zona-del-proceso.js";
 export * from "./trazado.js";
 export * from "./jornada.js";
 export * from "./sello.js";

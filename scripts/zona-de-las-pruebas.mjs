@@ -25,9 +25,12 @@
  * dejaría pasar justo los defectos que la zona destapa.
  *
  * Lo que **no** hace esto: quitar la dependencia del generador de ocurrencias
- * respecto de la zona de la máquina, que es real y sigue viva. Eso es la
- * opción (b) del diagnóstico, tiene PR propio y va después del 29 de
- * septiembre. Esto sólo asegura que la suite no mienta mientras tanto.
+ * respecto de la zona de la máquina. Ésa era la opción (b) del diagnóstico y
+ * **ya está cerrada**: el rango viaja en fechas civiles y ni `setHours` ni
+ * `toISOString` deciden un día. Esto sigue haciendo falta por lo suyo —que la
+ * suite mida la zona en la que corre el producto— y porque la prueba que
+ * destapa la trampa mueve la zona a propósito **desde dentro**, y necesita
+ * saber a cuál volver.
  *
  * ## Por qué asignar `process.env.TZ` funciona
  *

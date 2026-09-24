@@ -114,6 +114,24 @@ export function instanteZonificado(
  *   `string → Date`  (esta función, para armar consultas a la BD)
  *   `Date → string`  (`localDateIso`, para resolver "qué día es")
  */
+/**
+ * ¿Es una fecha civil `YYYY-MM-DD` que existe de verdad?
+ *
+ * `2026-02-30` tiene la forma y no existe; `new Date` la aceptaría corriéndola
+ * al 2 de marzo sin decir nada. Se comprueba rearmándola en UTC y viendo si
+ * salió la misma — cero dependencia del reloj del proceso.
+ *
+ * Vive aquí, y no junto a quien la usa, porque desde el arreglo del 23-sep-2026
+ * la fecha civil es **el tipo con el que viaja un día** por el motor: la puerta
+ * de entrada de cada llamador tiene que poder comprobarla.
+ */
+export function esFechaCivil(valor: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false;
+  const [y, m, d] = valor.split("-").map(Number);
+  const f = new Date(Date.UTC(y!, m! - 1, d!));
+  return f.getUTCFullYear() === y && f.getUTCMonth() === m! - 1 && f.getUTCDate() === d;
+}
+
 export function dayForDateQuery(fechaIso: string): Date {
   return new Date(`${fechaIso}T12:00:00.000Z`);
 }

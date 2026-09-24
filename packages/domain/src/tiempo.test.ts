@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { instanteZonificado, JTTEL_TZ, tipoDeDiaLocal, ventanaDelDia } from "./tiempo.js";
+import { esFechaCivil, instanteZonificado, JTTEL_TZ, tipoDeDiaLocal, ventanaDelDia } from "./tiempo.js";
 
 describe("ventanaDelDia · el día como caso de ventana", () => {
   it("va de la medianoche civil al último milisegundo del mismo día, en la zona", () => {
@@ -44,5 +44,29 @@ describe("tipoDeDiaLocal · entre semana, sábado o domingo — nunca los siete"
     // 2026-09-19T02:00Z es sábado en UTC, pero en Juárez (UTC-6) todavía son
     // las 20:00 del viernes.
     expect(tipoDeDiaLocal(new Date("2026-09-19T02:00:00Z"), JTTEL_TZ)).toBe("entre_semana");
+  });
+});
+
+describe("esFechaCivil · la puerta de entrada del día", () => {
+  it("acepta una fecha civil bien formada", () => {
+    expect(esFechaCivil("2026-08-22")).toBe(true);
+    expect(esFechaCivil("2028-02-29")).toBe(true); // bisiesto de verdad
+  });
+
+  /*
+   * La razón de existir de la comprobación: `new Date("2026-02-30")` no falla,
+   * la corre al 2 de marzo sin decir nada. Un rango que se corre solo es
+   * exactamente la familia de defectos que este arreglo cierra.
+   */
+  it("rechaza un día que no existe aunque tenga la forma", () => {
+    expect(esFechaCivil("2026-02-30")).toBe(false);
+    expect(esFechaCivil("2026-13-01")).toBe(false);
+    expect(esFechaCivil("2027-02-29")).toBe(false);
+  });
+
+  it("rechaza todo lo que no sea AAAA-MM-DD", () => {
+    for (const v of ["", "22-08-2026", "2026-8-22", "2026-08-22T00:00:00Z", "hoy", "2026/08/22"]) {
+      expect(esFechaCivil(v)).toBe(false);
+    }
   });
 });

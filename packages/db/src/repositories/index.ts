@@ -114,7 +114,8 @@ import type {
   CreateServiceProfileInput,
 } from "@jtel/domain";
 import { routeLengthKm } from "@jtel/domain";
-import { localDateIso, JTTEL_TZ, civilDatesInRange, addDaysIso } from "@jtel/domain";
+import { localDateIso, JTTEL_TZ, civilDatesInRange, addDaysIso, dayForDateQuery } from "@jtel/domain";
+import { revisarZonaDelProceso, zonaDeEsteProceso } from "@jtel/domain";
 import { fechaDeVencimientoAGuardar, type ReglaDeTipo } from "@jtel/domain";
 import { caeEnPausa, intervalosDePausa } from "@jtel/domain";
 
@@ -2540,6 +2541,33 @@ export type ConteoPorEstado = {
   sin_hecho: number;
 };
 
+/**
+ * **La alarma de la zona.** Pedida por Asav el 23-sep-2026, junto con el
+ * arreglo de las fechas civiles.
+ *
+ * El producto se escribió suponiendo que el motor corre en UTC —es lo que hace
+ * Vercel— y **nada en el repo lo afirmaba ni lo comprobaba**. Con el rango ya
+ * en fechas civiles el generador no depende de la zona; lo que la alarma dice
+ * es que una suposición que sostuvo mucho código dejó de valer, y que conviene
+ * mirar lo que todavía no se haya revisado.
+ *
+ * **Avisa y no se cae**: tumbar el arranque por esto dejaría sin servicio a
+ * toda la plataforma por una advertencia. Y avisa **una vez por proceso**: una
+ * máquina fuera de UTC lo sigue estando en cada corrida, y repetirlo por
+ * renovación sólo llenaría el registro.
+ */
+let zonaYaAvisada = false;
+
+function avisoDeZonaDelProceso(): string | undefined {
+  const veredicto = revisarZonaDelProceso(zonaDeEsteProceso());
+  if (veredicto.enUtc) return undefined;
+  if (!zonaYaAvisada) {
+    zonaYaAvisada = true;
+    console.warn(`[zona del proceso] ${veredicto.mensaje}`);
+  }
+  return veredicto.mensaje;
+}
+
 export class OccurrenceRepository {
   constructor(private db: Database) {}
 
@@ -2638,36 +2666,46 @@ export class OccurrenceRepository {
   /** Horizonte operativo por defecto (días hacia adelante desde hoy). */
   static readonly ROLLING_DAYS = 30;
 
-  private startOfDay(d: Date): Date {
-    const x = new Date(d);
-    x.setHours(0, 0, 0, 0);
-    return x;
-  }
-
-  private addDays(d: Date, days: number): Date {
-    const x = this.startOfDay(d);
-    x.setDate(x.getDate() + days);
-    return x;
-  }
-
   /**
-   * Fecha civil YYYY-MM-DD en zona del despliegue.
-   * Operaciones del sistema (cron, rolling window) no tienen contrato
-   * en contexto → usan JTTEL_TZ.
+   * **Hoy, como fecha civil.** Las operaciones del sistema —el cron, la
+   * ventana rodante, el horizonte de borrado— no tienen un contrato en
+   * contexto, así que su «hoy» es el de la zona del despliegue (`JTTEL_TZ`),
+   * nunca el del reloj de la máquina que corre el proceso.
+   *
+   * Aquí vivían `startOfDay` y `addDays`, que hacían `setHours(0,0,0,0)` sobre
+   * un `Date`: eso decide el día **en la zona de la máquina**. Con un `Date`
+   * que venía en medianoche UTC, `setHours` local y `toISOString` no se
+   * cancelaban y el rango arrancaba **un día antes** — un día de servicio que
+   * nadie pidió, que se verificaba y se sellaba como cualquier otro. No mordía
+   * porque los tres llamadores viven en Vercel, que corre en UTC, y **nada en
+   * el repo afirmaba eso**. Diagnóstico del 23-sep-2026:
+   * `docs/Diagnostico-Rango-Del-Generador-2026-09-23.md`.
    */
-  private toIsoDate(d: Date): string {
-    return localDateIso(d, JTTEL_TZ);
+  private hoyIso(): string {
+    return localDateIso(new Date(), JTTEL_TZ);
   }
 
   /**
-   * Genera ocurrencias para un perfil en [fromDate, toDate].
+   * Genera ocurrencias para un perfil en `[desdeIso, hastaIso]`.
    * Siempre acota a la vigencia del contrato.
    * Si `rollingDays` está definido, también acota el fin a hoy + rollingDays.
+   *
+   * **El rango son fechas civiles `YYYY-MM-DD`, no instantes** (arreglo del
+   * 23-sep-2026). Un servicio no ocurre «a las 00:00 de algo»: ocurre **el
+   * martes**, y el instante de su hora límite lo pone después
+   * `computeExpectedDeadline` con la zona del contrato, explícita. Mientras el
+   * rango viajó como `Date`, alguien tenía que decidir en qué zona leerlo, y
+   * quien lo decidía era el reloj de la máquina. Un string de fecha civil no
+   * tiene esa pregunta: dice el día y nada más.
+   *
+   * Es también por qué el tipo cambió en vez de aceptar las dos formas —
+   * recibir un `Date` obligaría a volver a elegir una zona aquí dentro, que es
+   * exactamente la trampa. El compilador señala a cada llamador.
    */
   async generateForProfile(
     profileId: string,
-    fromDate: Date,
-    toDate: Date,
+    desdeIso: string,
+    hastaIso: string,
     options?: { rollingDays?: number },
   ) {
     const profile = await this.db.query.serviceProfiles.findFirst({
@@ -2688,27 +2726,33 @@ export class OccurrenceRepository {
     const anticipation = policy.arrivalAnticipationMinutes ?? 15;
     const activeDays = profile.activeDays ?? [1, 2, 3, 4, 5];
 
-    const contractFrom = new Date(`${profile.contract.validFrom}T00:00:00`);
-    const contractTo = new Date(`${profile.contract.validTo}T00:00:00`);
-    const rangeStart = this.startOfDay(fromDate);
-    let rangeEnd = this.startOfDay(toDate);
+    /* La vigencia del contrato ya son fechas civiles en la base: se comparan
+       como strings, que para `YYYY-MM-DD` es comparar calendarios. */
+    const contractFrom = profile.contract.validFrom;
+    const contractTo = profile.contract.validTo;
+    let rangeEndIso = hastaIso;
 
     if (options?.rollingDays != null) {
-      const rollingEnd = this.addDays(new Date(), options.rollingDays);
-      if (rangeEnd > rollingEnd) rangeEnd = rollingEnd;
+      const rollingEndIso = addDaysIso(this.hoyIso(), options.rollingDays);
+      if (rangeEndIso > rollingEndIso) rangeEndIso = rollingEndIso;
     }
 
-    const start = rangeStart < contractFrom ? contractFrom : rangeStart;
-    const end = rangeEnd > contractTo ? contractTo : rangeEnd;
-    if (start > end) {
+    const startIso = desdeIso < contractFrom ? contractFrom : desdeIso;
+    const endIso = rangeEndIso > contractTo ? contractTo : rangeEndIso;
+    if (startIso > endIso) {
       return { createdIds: [] as string[], skippedExisting: 0, clamped: true as const };
     }
 
     const kmlVersion = await this.db.query.routeKmlVersions.findFirst({
       where: and(
         eq(routeKmlVersions.routeId, routeShift!.routeId),
-        lte(routeKmlVersions.validFrom, end),
-        or(isNull(routeKmlVersions.validTo), gte(routeKmlVersions.validTo, start)),
+        /* La pareja canónica del `string → Date`: mediodía UTC, que es el
+           mismo día civil en cualquier zona entre UTC-12 y UTC+12. */
+        lte(routeKmlVersions.validFrom, dayForDateQuery(endIso)),
+        or(
+          isNull(routeKmlVersions.validTo),
+          gte(routeKmlVersions.validTo, dayForDateQuery(startIso)),
+        ),
       ),
       orderBy: (v, { desc }) => [desc(v.validFrom)],
     });
@@ -2743,8 +2787,6 @@ export class OccurrenceRepository {
     const pausas = intervalosDePausa(await new PausasRepository(this.db).eventosDe(profile.contractId));
 
     const rows: Row[] = [];
-    const startIso = start.toISOString().slice(0, 10);
-    const endIso = end.toISOString().slice(0, 10);
     for (const serviceDate of civilDatesInRange(startIso, endIso, activeDays)) {
       // La zona SIEMPRE explícita. Sin ella el deadline sale distinto según
       // dónde corra el generador —una laptop en Juárez o un cron de Vercel en
@@ -2804,9 +2846,7 @@ export class OccurrenceRepository {
     return {
       createdIds: inserted.map((o) => o.id),
       skippedExisting: rows.length - inserted.length,
-      clamped:
-        rangeStart.getTime() !== start.getTime() ||
-        this.startOfDay(toDate).getTime() !== end.getTime(),
+      clamped: startIso !== desdeIso || endIso !== hastaIso,
     };
   }
 
@@ -2819,9 +2859,11 @@ export class OccurrenceRepository {
     // en que corre la función — correcto en verano (00:00 Juárez = 06:00 UTC)
     // y en invierno (23:00 Juárez = 06:00 UTC, un día antes del UTC date).
     // addDaysIso: aritmética puramente UTC (setUTCDate), sin setHours ni TZ local.
-    const todayIso = localDateIso(new Date(), JTTEL_TZ);
+    const todayIso = this.hoyIso();
     const horizonIso = addDaysIso(todayIso, days);
-    const today = new Date(`${todayIso}T00:00:00.000Z`); // solo para comparación Date con `from`
+    /* La renovación es la operación del motor que corre todos los días: si
+       algo va a notar que la máquina no está en UTC, es ésta. */
+    const avisoDeZona = avisoDeZonaDelProceso();
 
     const profiles = await this.db.query.serviceProfiles.findMany({
       where: eq(serviceProfiles.active, true),
@@ -2846,7 +2888,6 @@ export class OccurrenceRepository {
 
       const targetIso =
         contract.validTo < horizonIso ? contract.validTo : horizonIso;
-      const target = new Date(`${targetIso}T00:00:00`);
 
       const [maxRow] = await this.db
         .select({
@@ -2855,13 +2896,17 @@ export class OccurrenceRepository {
         .from(serviceOccurrences)
         .where(eq(serviceOccurrences.serviceProfileId, profile.id));
 
-      let from = today;
+      /* Se sigue desde el día siguiente al último generado, o desde hoy si ese
+         día ya pasó. Todo en fechas civiles: antes este camino armaba un `Date`
+         parseado en local y lo comparaba contra otro en medianoche UTC, y el
+         que mordía era justo el del perfil nuevo o rezagado. */
+      let fromIso = todayIso;
       if (maxRow?.maxDate) {
-        const next = this.addDays(new Date(`${String(maxRow.maxDate).slice(0, 10)}T00:00:00`), 1);
-        if (next > from) from = next;
+        const siguienteIso = addDaysIso(String(maxRow.maxDate).slice(0, 10), 1);
+        if (siguienteIso > fromIso) fromIso = siguienteIso;
       }
 
-      if (from > target) {
+      if (fromIso > targetIso) {
         summary.push({
           profileId: profile.id,
           profileName: profile.name,
@@ -2871,7 +2916,7 @@ export class OccurrenceRepository {
         continue;
       }
 
-      const result = await this.generateForProfile(profile.id, from, target, {
+      const result = await this.generateForProfile(profile.id, fromIso, targetIso, {
         rollingDays: days,
       });
       summary.push({
@@ -2879,7 +2924,7 @@ export class OccurrenceRepository {
         profileName: profile.name,
         created: result.createdIds.length,
         skipped: result.skippedExisting,
-        from: from.toISOString().slice(0, 10),
+        from: fromIso,
         to: targetIso,
       });
     }
@@ -2890,6 +2935,9 @@ export class OccurrenceRepository {
       horizon: horizonIso,
       profiles: summary,
       totalCreated: summary.reduce((n, s) => n + s.created, 0),
+      /* Sólo aparece cuando hay algo que decir: lo que no aplica, no se
+         muestra. En UTC esta llave no existe en la respuesta. */
+      ...(avisoDeZona ? { avisoDeZona } : {}),
     };
   }
 
@@ -3041,7 +3089,7 @@ export class OccurrenceRepository {
    * protegidas por la guarda (tenían hecho de cumplimiento).
    */
   async deleteBeyondHorizon(days: number = OccurrenceRepository.ROLLING_DAYS, plantGroupId?: string) {
-    const lastKept = this.toIsoDate(this.addDays(new Date(), days));
+    const lastKept = addDaysIso(this.hoyIso(), days);
 
     let candidates: { id: string; factId: string | null }[];
     if (plantGroupId) {

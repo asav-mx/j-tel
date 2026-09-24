@@ -17,6 +17,7 @@
  */
 
 import { nombreComparable } from "./unidad-acciones.js";
+import { esFechaCivil } from "./tiempo.js";
 
 /** Lo más largo que se guarda como nombre de un chofer. */
 export const NOMBRE_DE_CHOFER_MAX = 120;
@@ -61,14 +62,6 @@ export const PALABRAS_DE_CHOFER: Record<Exclude<ErrorDeChofer, "nombre_repetido"
 
 export const palabrasDeChoferRepetido = (nombre: string) => `Ya hay un chofer llamado «${nombre}» en esta cuenta.`;
 export const palabrasDeLicenciaRepetida = (licencia: string) => `La licencia ${licencia} ya es de otro chofer de esta cuenta.`;
-
-/** Una fecha civil que existe de verdad: `2026-02-30` no pasa. */
-function esFechaCivil(valor: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false;
-  const [y, m, d] = valor.split("-").map(Number);
-  const f = new Date(Date.UTC(y!, m! - 1, d!));
-  return f.getUTCFullYear() === y && f.getUTCMonth() === m! - 1 && f.getUTCDate() === d;
-}
 
 export type IdentidadDeChofer = { nombre: string; licencia: string };
 
