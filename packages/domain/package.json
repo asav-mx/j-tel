@@ -25,6 +25,10 @@
     "./validador": {
       "types": "./dist/validador.d.ts",
       "import": "./dist/validador.js"
+    },
+    "./vigilante": {
+      "types": "./dist/quien-deberia-hablar.d.ts",
+      "import": "./dist/quien-deberia-hablar.js"
     }
   },
   "scripts": {

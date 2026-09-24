@@ -1,11 +1,35 @@
 # Ontoy — los íconos: qué archivo va dónde
 
-**El hueco de la identidad.** Ontoy (Parte B) deja los íconos con **nombre fijo**. La
-identidad de Ontoy la define Asav; cuando exista, se reemplazan estos archivos
-**con el mismo nombre y el mismo tamaño**, y no se toca código.
+**El hueco de la identidad se llenó el 23 de septiembre de 2026.** Ontoy (Parte B) dejó los
+íconos con **nombre fijo** para que la identidad entrara reemplazando archivos, sin tocar
+código. Funcionó: entró sin que `manifest.ts` ni `layout.tsx` cambiaran una sola ruta.
 
-Hoy todos son **provisionales**: el camión azul sobre fondo oscuro, dibujado desde
-`icono.svg`.
+Hoy son **Ontoy «¡Ya viene!»** —ojos arriba, boca abierta, manos flotantes— en naranja
+`#F6A15B` sobre Banqueta `#EDE9E1`.
+
+**De dónde salen.** La fuente es `.claude/skills/ontoy-design/export/iconos/`, y de ahí se
+copian con el mismo nombre. Dos cosas se les hacen al copiar, y las dos están medidas:
+
+- **A los SVG se les quitan los metadatos C2PA** de la herramienta de diseño: 7 736 bytes de
+  procedencia sobre 907 de dibujo. El dibujo queda byte por byte igual.
+- **El `apple-touch-icon.png` se aplana sobre Banqueta.** La exportación lo entrega con las
+  esquinas transparentes. iOS no maneja alfa aquí —compone lo transparente sobre **negro**— y
+  encima le pone su propia máscara redondeada, con una curva distinta a la del archivo. Cuánto
+  negro se asoma depende de esa curva: **medido, entre 8 y 296 pixeles** según qué superelipse
+  use iOS (con la más citada son 8, ninguno negro puro; con una más suave, 296). No es un
+  desastre visible, y tampoco es algo que convenga dejar a la suerte de una curva ajena.
+  Aplanado es exactamente el mismo dibujo con su fondo puesto, cuesta 4 KB y quita el riesgo
+  completo. Es además lo que esta ficha ya pedía antes de que pasara.
+
+**El azul noche `#1E2B4D` todavía no entra.** Es el color de noche de la identidad y está
+aprobado, pero la piel oscura de la app sigue siendo el gris pizarra de `ontoy.css`. Poner la
+barra del teléfono en azul marino encima de una app gris se lee como un defecto, no como
+identidad. Entra con el PR que cambie la piel por los tokens del skill (decisión de ASAV,
+23-sep-2026).
+
+**El ícono viejo** —el camión azul sobre `#0f1418`— quedó archivado en
+`docs/archivo/ontoy-icono-provisional/`. No se edita ni se vuelve a usar: se guarda porque fue
+lo que estuvo instalado en los teléfonos que probaron la app antes del arranque.
 
 ## En la app (`apps/publico/public/`)
 
@@ -32,6 +56,6 @@ lee).
 | App Store | Ícono de la app | 1024 × 1024 PNG, **sin transparencia ni esquinas redondeadas** (Apple las pone) |
 | App Store | Capturas | por tamaño de pantalla (6.7″ y 5.5″ como mínimo) |
 
-**El empaque para Android (TWA) no está en esta ficha:** espera a que Asav decida el
-dominio. iOS queda dicho, no hecho (ver la memoria de Ontoy: empaquetar la PWA tal
+**El empaque para Android (TWA) no está en esta ficha:** el dominio ya está decidido
+—`ontoy.app`, con la app en la raíz— pero el registro no termina todavía. iOS queda dicho, no hecho (ver la memoria de Ontoy: empaquetar la PWA tal
 cual no pasa la regla 4.2 de Apple).

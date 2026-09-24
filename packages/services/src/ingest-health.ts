@@ -4,6 +4,7 @@
  */
 import type { Repositories } from "@jtel/db";
 import { SIN_SENAL_MINUTOS } from "@jtel/domain";
+import { palabrasDeLaFlota, veredictoDeLaFlota } from "@jtel/domain/vigilante";
 
 /**
  * El mismo número que usa la torre para marcar una unidad sin señal, leído del
@@ -12,6 +13,13 @@ import { SIN_SENAL_MINUTOS } from "@jtel/domain";
  */
 const DEFAULT_STALE_MINUTES = SIN_SENAL_MINUTOS;
 
+/**
+ * ✎ **Ya no decide nada** (#470, 23-sep-2026). Era el horario de la casa,
+ * escrito a mano, y con él un camión apagado en el patio era una emergencia.
+ * Ahora el turno sale del **horario del circuito**, que es el mismo que
+ * gobierna lo que Ontoy le promete al pasajero. Se conserva porque se reporta
+ * en el resumen del cron y hay quien lo lee, pero no abre ni cierra alertas.
+ */
 /** Lunes–sábado 05:00–22:00 America/Ciudad_Juarez (UTC-6 sin DST en práctica MX). */
 export function isOperationalHours(now = new Date(), timeZone = "America/Ciudad_Juarez"): boolean {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -59,6 +67,15 @@ export class IngestHealthService {
     let alertsCreated = 0;
     let alertsResolved = 0;
 
+    /*
+     * **Quién debería estar hablando** (#470). Antes esto preguntaba «¿entró
+     * un punto de este carrier en 15 minutos?», y una flota estacionada
+     * contestaba que no — tres días de alertas críticas por camiones apagados,
+     * y una abierta para el carrier bueno porque su único camión se detuvo
+     * dieciséis minutos.
+     */
+    const flota = await this.repos.telemetry.unidadesQueDeberianHablar();
+
     for (const carrier of carriers) {
       const watermark = await this.repos.telemetry.getWatermark(carrier.id);
       const watermarkAgeMinutes = watermark
@@ -67,11 +84,19 @@ export class IngestHealthService {
       const latestPointAgeMinutes = await this.repos.telemetry.latestPointAgeMinutes(carrier.id);
       const pointsLastHour = await this.repos.telemetry.countPointsSince(carrier.id, oneHourAgo);
 
+      /*
+       * El veredicto es **de sus unidades en turno**, no del carrier entero.
+       * «Dormida» y «al día» no abren alerta; sólo «calla» — y entonces el
+       * mensaje nombra a la unidad, su circuito y desde cuándo, que es lo que
+       * alguien necesita para ir a ver el camión.
+       */
+      const suyas = flota.filter((u) => u.carrierAccountId === carrier.id);
+      const veredicto = veredictoDeLaFlota(suyas, now, staleMinutes);
+      const stale = veredicto.que === "calla";
       const age =
-        latestPointAgeMinutes ??
-        watermarkAgeMinutes ??
-        (operationalHours ? Number.POSITIVE_INFINITY : 0);
-      const stale = operationalHours && age > staleMinutes;
+        veredicto.que === "calla"
+          ? Math.max(...veredicto.callan.map((u) => u.minutosSinHablar ?? Number.MAX_SAFE_INTEGER))
+          : (latestPointAgeMinutes ?? watermarkAgeMinutes ?? 0);
 
       let alertCreated = false;
       if (stale) {
@@ -84,12 +109,14 @@ export class IngestHealthService {
             carrierAccountId: carrier.id,
             kind: "heartbeat_stale",
             severity: "critical",
-            message: `Ingesta detenida > ${staleMinutes} min para ${carrier.name} (último punto hace ${Math.round(age)} min)`,
+            message: `${carrier.name}: ${palabrasDeLaFlota(veredicto)} · umbral ${staleMinutes} min`,
             metadata: {
               staleMinutesThreshold: staleMinutes,
               latestPointAgeMinutes,
               watermarkAgeMinutes,
               pointsLastHour,
+              unidadesEnTurno: suyas.length,
+              callan: veredicto.que === "calla" ? veredicto.callan.map((u) => u.unidad) : [],
             },
           });
           alertCreated = true;

@@ -36,6 +36,9 @@ const repositorios = (
       listWatermarks: vi.fn(async () => [
         { carrierAccountId: "carrier-1", lastRecordedAt: haceMin(2), updatedAt: haceMin(1) },
       ]),
+      /* Quién debería estar hablando (#470): sin esto el chequeo de la flota
+         se declara no medido y el resumen sale enfermo por otra razón. */
+      unidadesQueDeberianHablar: vi.fn(async () => []),
     },
     ingestAlerts: {
       listUnresolved: vi.fn(async () => []),

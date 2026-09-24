@@ -1,3 +1,9 @@
+import {
+  palabrasDeLaFlota,
+  veredictoDeLaFlota,
+  type UnidadEsperada,
+} from "@jtel/domain/vigilante";
+
 /**
  * Evaluación de salud de la plataforma — función pura.
  *
@@ -69,6 +75,14 @@ export type MuestraSalud = {
    * días de silencio.
    */
   verificacion?: { fallosMudos: number; masAntiguoHoras: number | null };
+  /**
+   * Las unidades de las que el producto espera oír algo (#470).
+   *
+   * Opcional para no romper a quien ya llamaba a `evaluarSalud`, pero **cuando
+   * falta, el chequeo se declara `no_medido`** en vez de darse por bueno. Un
+   * vigilante que calla lo que no midió es el que dejó pasar 35 días.
+   */
+  flota?: readonly UnidadEsperada[];
 };
 
 /**
@@ -93,7 +107,7 @@ export type EstadoSalud = "sano" | "enfermo";
 export type EstadoChequeo = EstadoSalud | "no_medido";
 
 export type Chequeo = {
-  id: "gps" | "archivador" | "marcas" | "alertas" | "verificacion";
+  id: "flota" | "archivador" | "marcas" | "alertas" | "verificacion";
   estado: EstadoChequeo;
   /** Frase lista para leer: la medición SIEMPRE junto a su umbral. */
   lectura: string;
@@ -147,21 +161,56 @@ export function evaluarSalud(
     });
   }
 
-  if (muestra.marcas.length > 0) {
-    // Se reporta el PEOR carrier: uno atorado es un problema aunque los demás
-    // vayan bien, y un promedio lo escondería.
-    const gps = Math.max(
-      ...muestra.marcas.map((m) => minutosDesde(muestra.ahora, m.lastRecordedAt)),
-    );
+  /*
+   * **El chequeo de la flota reemplaza al de GPS** (#470, 23-sep-2026).
+   *
+   * El viejo tomaba el PEOR carrier —«uno atorado es un problema aunque los
+   * demás vayan bien»— y con eso una flota estacionada declaraba enferma a la
+   * plataforma: tres días de gritos y veinte comentarios en un issue por unos
+   * camiones apagados en el patio. Y su frase decía «dato de GPS más nuevo
+   * hace 68.7 h» cuando el dato más nuevo tenía 0.3 h: medía el peor carrier
+   * y decía «el más nuevo». Número correcto, oración falsa.
+   *
+   * La pregunta correcta no es «¿hay dato?» sino **«¿calla alguien que
+   * debería estar hablando?»**. La respuesta vive en `veredictoDeLaFlota`, que
+   * es puro y se prueba sin base.
+   */
+  if (muestra.flota === undefined) {
     chequeos.push({
-      id: "gps",
-      estado: gps > umbrales.gpsMaxMinutos ? "enfermo" : "sano",
-      lectura: `dato de GPS más nuevo ${texto(gps)} · umbral ${umbrales.gpsMaxMinutos} min`,
-      minutos: un(gps),
+      id: "flota",
+      estado: "no_medido",
+      lectura: "no se pudo leer qué unidades deberían estar hablando",
+      minutos: null,
       umbralMinutos: umbrales.gpsMaxMinutos,
     });
+  } else {
+    const v = veredictoDeLaFlota(muestra.flota, muestra.ahora, umbrales.gpsMaxMinutos);
+    chequeos.push({
+      id: "flota",
+      estado: v.que === "calla" ? "enfermo" : "sano",
+      lectura: `${palabrasDeLaFlota(v)} · umbral ${umbrales.gpsMaxMinutos} min`,
+      /* La peor de las que callan; con la flota dormida no hay número que dar. */
+      minutos:
+        v.que === "calla"
+          ? un(Math.max(...v.callan.map((u) => u.minutosSinHablar ?? Number.MAX_SAFE_INTEGER)))
+          : null,
+      umbralMinutos: umbrales.gpsMaxMinutos,
+    });
+  }
 
-    const archivador = Math.max(
+  if (muestra.marcas.length > 0) {
+    /*
+     * **El archivador es UN proceso, así que se mira la escritura más
+     * reciente, no la más vieja.** Antes era `Math.max` de las antigüedades —el
+     * peor carrier— y eso confundía dos preguntas: «¿el archivador está vivo?»
+     * y «¿este carrier tiene dato?». Un carrier cuya flota duerme no le da al
+     * archivador nada que escribir, y su marca se queda quieta aunque el
+     * proceso esté corriendo cada diez minutos para los demás.
+     *
+     * La pregunta que este chequeo hace es la primera. La segunda ya la
+     * contesta el chequeo de la flota, que es donde pertenece.
+     */
+    const archivador = Math.min(
       ...muestra.marcas.map((m) => minutosDesde(muestra.ahora, m.updatedAt)),
     );
     chequeos.push({
@@ -257,10 +306,18 @@ export function diagnostico(r: ResultadoSalud): string {
   const ver = r.chequeos.find((c) => c.id === "verificacion");
   if (ver && ver.estado !== "sano") return ver.lectura;
 
-  const gps = r.chequeos.find((c) => c.id === "gps");
+  const flota = r.chequeos.find((c) => c.id === "flota");
   const arch = r.chequeos.find((c) => c.id === "archivador");
-  if (!gps || !arch) return "sin marcas de agua que evaluar";
-  if (gps.estado === "sano") return "ingesta al día";
-  if (arch.estado === "sano") return "dato atrasado, pero el archivador está escribiendo: poniéndose al día";
-  return "dato atrasado y el archivador callado: la ingesta está detenida";
+  if (!flota) return "no se pudo mirar la flota";
+  /*
+   * El diagnóstico **repite la lectura de la flota** en vez de resumirla. Ésa
+   * ya nombra la unidad, su circuito y desde cuándo calla; cualquier resumen
+   * que escribiera aquí sería una segunda frase que puede separarse de la
+   * primera — y la que se separó fue «dato de GPS más nuevo hace 68.7 h» con
+   * dato de hace 18 minutos (#470).
+   */
+  if (flota.estado !== "sano") return flota.lectura;
+  if (arch && arch.estado !== "sano")
+    return "las unidades en turno hablan, pero el archivador no escribe: lo que entra no se está guardando";
+  return "las unidades en turno están al día";
 }

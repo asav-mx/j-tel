@@ -1,6 +1,6 @@
 ---
 name: jtel-diseno
-description: Lenguaje visual y reglas de interfaz de J-Telemetry (repo asav-mx/j-tel). Úsalo SIEMPRE que se diseñe, construya, revise o modifique cualquier pantalla, componente, gráfico, tabla, correo o vista de J-Tel — Compás·flota, Vernier, J-Staff, las apps de pasajero o el landing. Aplícalo aunque la petición no hable de diseño; vale igual para "agrega una columna", "haz el endpoint y su pantalla", "arregla este componente", "muestra los veredictos", "hazme un gráfico", "mapa", "playback", "alertas", "reportes". Si el trabajo produce algo que un humano va a ver dentro de J-Tel, este skill aplica. REEMPLAZA al skill j-telemetry-ui, borrado el 15 de septiembre de 2026.
+description: Lenguaje visual y reglas de interfaz de J-Telemetry (repo asav-mx/j-tel). Úsalo SIEMPRE que se diseñe, construya, revise o modifique cualquier pantalla, componente, gráfico, tabla, correo o vista de J-Tel — Compás·flota, Vernier, J-Staff, las apps de pasajero o el landing. Aplícalo aunque la petición no hable de diseño; vale igual para "agrega una columna", "haz el endpoint y su pantalla", "arregla este componente", "muestra los veredictos", "hazme un gráfico", "mapa", "playback", "alertas", "reportes". Si el trabajo produce algo que un humano va a ver dentro de J-Tel, este skill aplica. NO aplica a la cara del pasajero de ¿Ontoy? (`apps/publico`, la landing de ontoy.app y el letrero impreso del QR): desde el 23 de septiembre de 2026 ésa tiene su propio skill, `ontoy-design`, con su identidad y sus personajes. REEMPLAZA al skill j-telemetry-ui, borrado el 15 de septiembre de 2026.
 ---
 
 # J-Tel — Lenguaje de interfaz
@@ -306,8 +306,8 @@ Mismo idioma, distinto aire. No es la misma pantalla con permisos apagados.
 | **Vernier — planta** | Vive la operación diaria | Detalle por servicio. Más densa, pero sigue siendo piezas |
 | **Vernier — corporativo** | Ve todas sus plantas | Panorama. Comparar, no operar |
 | **J-Staff** | El operador de la plataforma | Puede ser más cruda: aquí el usuario es experto y quiere el razonamiento completo |
-| **Apps de pasajero** | Público | Lo más calmado de todo: una decisión por pantalla |
-| **Landing** | Público | Excepción total. No trata datos ni veredictos; puede ser todo lo expresivo que quiera |
+| **Apps de pasajero** | Público | Lo más calmado de todo: una decisión por pantalla. **→ Reemplazado para ¿Ontoy? por el skill `ontoy-design` (23-sep-2026):** su identidad, sus colores y sus personajes mandan ahí. Lo que sigue valiendo de este skill son las reglas de honestidad, que no son de estilo |
+| **Landing** | Público | Excepción total. No trata datos ni veredictos; puede ser todo lo expresivo que quiera. **Éste es el de j-telemetry.com**; el de Ontoy vive en `ontoy.app/conoce` y es del skill `ontoy-design` |
 
 ---
 
