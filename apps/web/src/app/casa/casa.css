@@ -419,89 +419,172 @@
   fill: var(--pieza);
 }
 
-/* ─── El letrero de una parada ────────────────────────────────────────────────
+/* ─── El letrero de una parada · el 1b de «Ontoy QR» ─────────────────────────
    La única pantalla del producto cuyo destino es el papel: se imprime, se
    plastifica y se atornilla a un poste. Por eso no tiene piel oscura —una piel
-   oscura en papel es un cartucho de tinta— y por eso sus medidas están en
-   centímetros y no en píxeles: lo que importa es desde cuántos metros engancha
-   el código, no cómo se ve en un monitor. */
+   oscura en papel es un cartucho de tinta y un código que no engancha— y por
+   eso sus medidas están en centímetros y no en píxeles: lo que importa es desde
+   cuántos metros engancha el código, no cómo se ve en un monitor.
+   Los módulos van en carbón sobre blanco, nunca en naranja ni en el color de la
+   ruta: muchos teléfonos no los leen. */
+/*
+ * ⚠ **El alto de la hoja NO es el alto de la página.** Esto medía 27.94 cm de
+ * alto —la carta completa— y al imprimir se iba a una segunda página: el área
+ * imprimible es la carta MENOS los márgenes del driver, y con los de Safari
+ * (media pulgada por lado) quedan 25.4 cm. El pie caía fuera.
+ *
+ * Así que el tamaño de papel sólo se finge **en pantalla**, para que se vea como
+ * una hoja sobre la mesa. Al imprimir, la hoja deja de tener alto propio y lo que
+ * manda es el contenido, presupuestado para caber en **25.4 × 19.05 cm** — el
+ * peor caso de márgenes, no el mejor.
+ */
 .letrero {
-  width: 21.59cm; /* carta, vertical */
+  width: 21.59cm; /* carta, vertical — sólo en pantalla */
   min-height: 27.94cm;
   box-sizing: border-box;
-  padding: 2.2cm 2cm;
+  padding: 1.6cm;
   background: #ffffff;
-  color: #000000;
+  color: #2a2e37;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
   /* En pantalla se ve como una hoja sobre la mesa; al imprimir, el borde se va. */
   border: 1px solid var(--linea);
   margin: 0 auto 1.5rem;
 }
 
-.letrero-marca {
+/* La tarjeta del 1b: Hueso con su orilla de arena, esquinas de 30.
+   ⚠ Asav la pidió «color banqueta» (#EDE9E1); la hoja de diseño la trae en
+   **Hueso** (#F7F3EC). Se siguió la hoja, que es lo que dijo copiar. Son vecinos
+   y cambiarlo es esta línea. */
+/*
+ * `print-color-adjust: exact` y no es decoración: la banda del color de la ruta y
+ * el Hueso de la tarjeta son **fondos**, y los navegadores los tiran cuando
+ * «imprimir fondos» está apagado —que es como viene por omisión—. Sin esto, de
+ * la imprenta salen láminas blancas sin banda, que es justo lo que se ve de lejos.
+ */
+.letrero-tarjeta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #f7f3ec;
+  border-radius: 1cm;
+  box-shadow: 0 0 0 1px #dcd5c8;
+  overflow: hidden;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* La banda del color de la ruta, a sangre. Es lo primero que se ve desde lejos,
+   y lo que hace que dos rutas en el mismo paradero no se confundan. */
+.letrero-banda {
+  height: 0.9cm;
+  flex: none;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.letrero-cuerpo {
+  flex: 1;
+  box-sizing: border-box;
+  padding: 1cm 1.2cm 1.1cm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.letrero-encabezado {
+  display: flex;
+  align-items: center;
+  gap: 0.7cm;
+  width: 100%;
+}
+
+.letrero-tino {
+  width: 2.6cm;
+  height: 2.6cm;
+  flex: none;
+  display: block;
+}
+
+.letrero-dicho {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35cm;
+  min-width: 0;
+}
+
+.letrero-pregunta {
   font-family: var(--letra-titular);
   font-weight: 800;
-  font-size: 0.9cm;
-  letter-spacing: -0.02em;
-  margin: 0 0 1.4cm;
+  font-size: 1.25cm;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+/* El color es identidad (8.8c) y NUNCA va solo: la placa lleva el nombre. */
+.letrero-ruta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.3cm;
+  margin: 0;
+}
+
+/* La placa con el nombre completo de la ruta. **Se parte antes de salirse de la
+   hoja**: un nombre como «Oasis – Parroquia Santa Teresa de Jesús» cabe raspando,
+   y el siguiente más largo se iría al borde del papel — donde la guillotina de la
+   imprenta no perdona. `min-width: 0` es lo que permite que un hijo de un flex
+   se encoja por debajo de su contenido; sin él, `max-width` no hace nada aquí. */
+.letrero-placa {
+  font-family: var(--letra-titular);
+  font-weight: 800;
+  font-size: 0.58cm;
+  line-height: 1.15;
+  color: #ffffff;
+  background: #2a2e37;
+  border-radius: 0.18cm;
+  padding: 0.16cm 0.3cm;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .letrero-parada {
+  font-family: var(--letra-lectura);
+  font-size: 0.58cm;
+  color: #4a4f5a;
+}
+
+/* El recuadro blanco redondeado del 1b, con el código dentro.
+   13 cm: los puntitos cuestan margen y el precio son ~3 cm — medido, ver
+   `letrero-de-parada.tsx`. En una carta con 1.6+1.4 cm de margen quedan 17.2 cm
+   útiles, así que cabe con holgura. */
+.letrero-caja-del-codigo {
+  background: #ffffff;
+  border-radius: 0.7cm;
+  padding: 0.3cm;
+  margin: 0.8cm 0 0.7cm;
+}
+
+.letrero-qr {
+  width: 13cm;
+  height: 13cm;
+  display: block;
+}
+
+/* Para quien no trae cámara, no sabe escanear o tiene la pantalla rota.
+   En la letra de la marca, no en monoespaciada (ASAV, 24-sep-2026).
+   Es lo último de la hoja: el pie que repetía `ontoy.app` se quitó porque la
+   dirección ya lo dice en su primera palabra. */
+.letrero-direccion {
   font-family: var(--letra-titular);
   font-weight: 800;
-  font-size: 1.5cm;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  margin: 0 0 0.5cm;
-}
-
-/* El color es identidad (8.8c) y NUNCA va solo: el nombre lo acompaña siempre.
-   Quien no distingue colores lee el mismo dato que todos. */
-.letrero-ruta {
-  font-family: var(--letra-lectura);
-  font-size: 0.75cm;
-  display: flex;
-  align-items: center;
-  gap: 0.35cm;
-  margin: 0 0 1.2cm;
-}
-
-.letrero-punto {
-  width: 0.55cm;
-  height: 0.55cm;
-  border-radius: 999px;
-  /* Un borde negro fino: un color claro sobre papel blanco se pierde solo. */
-  border: 1px solid #000000;
-  display: inline-block;
-}
-
-/* 9 cm: la ficha pide 8 como mínimo, y el mínimo no es la medida de diseño.
-   Es lo que decide si engancha de pie, a un metro del poste. */
-.letrero-qr {
-  width: 9cm;
-  height: 9cm;
-  display: block;
-  /* La zona tranquila que el estándar pide alrededor del código. */
-  padding: 0.4cm;
-  background: #ffffff;
-}
-
-.letrero-invita {
-  font-family: var(--letra-lectura);
-  font-size: 0.7cm;
-  margin: 1.2cm 0 0.5cm;
-}
-
-/* Para quien no trae cámara, no sabe escanear o tiene la pantalla rota. */
-.letrero-direccion {
-  font-family: var(--letra-medida);
-  font-size: 0.65cm;
-  letter-spacing: 0.01em;
+  font-size: 0.62cm;
+  letter-spacing: -0.01em;
+  color: #2a2e37;
   margin: 0;
 }
+
 
 /* Lo que sólo sirve en pantalla y estorba en papel. */
 .solo-pantalla {
@@ -509,18 +592,35 @@
   max-width: 21.59cm;
 }
 
+/* Márgenes propios y chicos: los del driver son media pulgada y se comen el
+   presupuesto. Con `@page` el área imprimible queda en 19.59 × 25.94 cm; el
+   contenido está presupuestado para el peor caso (19.05 × 25.4), así que cabe
+   aunque un navegador ignore esto. */
+@page {
+  size: letter portrait;
+  margin: 10mm;
+}
+
 @media print {
   .solo-pantalla {
     display: none;
   }
 
+  /* Aquí la hoja deja de medir una página: el contenido manda. Forzar 27.94 cm
+     de alto es lo que la partía en dos. */
   .letrero {
     border: 0;
     margin: 0;
+    padding: 0;
     width: auto;
-    min-height: auto;
+    min-height: 0;
     /* Una parada por página, y la última sin una página en blanco detrás. */
     break-after: page;
+    break-inside: avoid;
+  }
+
+  .letrero-tarjeta {
+    break-inside: avoid;
   }
 
   .letrero:last-child {
