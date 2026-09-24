@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#EDE9E1;color:#2A2E37;font-family:'Instrument Sans',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#2A2E37;text-decoration-color:#8B6CC9;text-underline-offset:3px}
+a:hover{color:#4A4F5A}
+</style>
+</helmet>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="L-ontoy" viewBox="0 0 120 120">
+      <ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse>
+      <path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+      <circle cx="50" cy="52" r="11" fill="#fff"></circle><circle cx="76" cy="50" r="11" fill="#fff"></circle>
+      <circle cx="50" cy="52" r="6" fill="#2A2E37" transform="{{ lkB }}"></circle><circle cx="76" cy="50" r="6" fill="#2A2E37" transform="{{ lkB }}"></circle>
+      <circle cx="14" cy="80" r="6" fill="#F6A15B"></circle><circle cx="108" cy="78" r="6" fill="#F6A15B"></circle>
+    </symbol>
+    <symbol id="L-icono" viewBox="0 0 120 120">
+      <ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse>
+      <path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+      <circle cx="50" cy="50" r="12" fill="#fff"></circle><circle cx="76" cy="48" r="12" fill="#fff"></circle>
+      <circle cx="51" cy="45" r="6" fill="#2A2E37"></circle><circle cx="77" cy="43" r="6" fill="#2A2E37"></circle>
+      <ellipse cx="63" cy="75" rx="5" ry="6" fill="#2A2E37"></ellipse>
+    <circle cx="12" cy="58" r="6" fill="#F6A15B"></circle><circle cx="110" cy="54" r="6" fill="#F6A15B"></circle></symbol>
+    <symbol id="L-paradito" viewBox="0 0 120 120">
+      <rect x="57" y="36" width="6" height="72" fill="#2A2E37"></rect><rect x="46" y="106" width="28" height="7" rx="3.5" fill="#2A2E37"></rect>
+      <circle cx="60" cy="38" r="26" fill="currentColor"></circle>
+      <circle cx="51" cy="36" r="7.5" fill="#fff"></circle><circle cx="69" cy="36" r="7.5" fill="#fff"></circle>
+      <circle cx="51" cy="36" r="4" fill="#2A2E37" transform="{{ lk }}"></circle><circle cx="69" cy="36" r="4" fill="#2A2E37" transform="{{ lk }}"></circle>
+      <rect x="31" y="70" width="58" height="26" rx="6.5" fill="#2A2E37"></rect>
+      <text x="46" y="87.5" text-anchor="middle" fill="#fff" style="font:800 11px 'Bricolage Grotesque',sans-serif">51</text>
+      <rect x="58.5" y="76" width="1.4" height="14" fill="#fff" opacity=".5"></rect>
+      <text x="74" y="87" text-anchor="middle" fill="#fff" style="font:800 9px 'Bricolage Grotesque',sans-serif">3′</text>
+      <circle cx="31" cy="83" r="6" fill="currentColor"></circle><circle cx="89" cy="83" r="6" fill="currentColor"></circle>
+    </symbol>
+    <symbol id="L-cami" viewBox="0 0 120 120">
+      <rect x="32" y="90" width="14" height="12" rx="4" fill="#2A2E37"></rect><rect x="74" y="90" width="14" height="12" rx="4" fill="#2A2E37"></rect>
+      <rect x="26" y="14" width="68" height="80" rx="16" fill="currentColor"></rect>
+      <rect x="40" y="19" width="40" height="13" rx="4" fill="#F7F3EC"></rect><text x="60" y="29" text-anchor="middle" fill="#2A2E37" style="font:800 10px 'Bricolage Grotesque',sans-serif">51</text>
+      <rect x="32" y="36" width="56" height="30" rx="10" fill="#2A2E37"></rect>
+      <ellipse cx="49" cy="51" rx="9.5" ry="7" fill="#fff"></ellipse><ellipse cx="71" cy="51" rx="9.5" ry="7" fill="#fff"></ellipse>
+      <ellipse cx="49" cy="51" rx="4.4" ry="4.6" fill="#2A2E37" transform="{{ lk }}"></ellipse><ellipse cx="71" cy="51" rx="4.4" ry="4.6" fill="#2A2E37" transform="{{ lk }}"></ellipse>
+      <circle cx="42" cy="80" r="5" fill="#F7F3EC"></circle><circle cx="78" cy="80" r="5" fill="#F7F3EC"></circle>
+      <circle cx="14" cy="66" r="6" fill="currentColor"></circle><circle cx="106" cy="66" r="6" fill="currentColor"></circle>
+    </symbol>
+    <symbol id="L-cami-top" viewBox="0 0 80 120">
+      <rect x="9" y="22" width="8" height="16" rx="3" fill="#2A2E37"></rect><rect x="63" y="22" width="8" height="16" rx="3" fill="#2A2E37"></rect><rect x="9" y="84" width="8" height="16" rx="3" fill="#2A2E37"></rect><rect x="63" y="84" width="8" height="16" rx="3" fill="#2A2E37"></rect>
+      <rect x="14" y="8" width="52" height="104" rx="16" fill="currentColor"></rect><rect x="20" y="12" width="40" height="22" rx="9" fill="#2A2E37"></rect>
+      <ellipse cx="32" cy="23" rx="7.5" ry="5.8" fill="#fff"></ellipse><ellipse cx="48" cy="23" rx="7.5" ry="5.8" fill="#fff"></ellipse><circle cx="32" cy="20.5" r="3.4" fill="#2A2E37"></circle><circle cx="48" cy="20.5" r="3.4" fill="#2A2E37"></circle>
+      <rect x="27" y="52" width="26" height="22" rx="6" fill="#F7F3EC"></rect>
+    </symbol>
+    <symbol id="L-pasajero" viewBox="0 0 60 60">
+      <path d="M30 30 L14 4 A30 30 0 0 1 46 4 Z" fill="#4F7FD8" opacity=".22"></path><circle cx="30" cy="34" r="14" fill="#fff"></circle><circle cx="30" cy="34" r="11.5" fill="#4F7FD8"></circle>
+      <circle cx="25.5" cy="31" r="3.6" fill="#fff"></circle><circle cx="34.5" cy="31" r="3.6" fill="#fff"></circle><circle cx="25.8" cy="29.4" r="2" fill="#2A2E37"></circle><circle cx="34.8" cy="29.4" r="2" fill="#2A2E37"></circle>
+      <circle cx="12" cy="40" r="4" fill="#4F7FD8"></circle><circle cx="48" cy="40" r="4" fill="#4F7FD8"></circle>
+    </symbol>
+    <symbol id="L-mini-tienda" viewBox="0 0 60 56"><rect x="4" y="16" width="52" height="38" rx="3" fill="#F2C14E"></rect><rect x="4" y="16" width="52" height="8" fill="#E36F8C"></rect><rect x="8" y="6" width="44" height="10" rx="3" fill="#2A2E37"></rect><rect x="10" y="30" width="18" height="14" rx="3" fill="#2A2E37"></rect><rect x="34" y="30" width="12" height="24" rx="2" fill="#2A2E37"></rect><circle cx="15" cy="37" r="3.2" fill="#fff"></circle><circle cx="23" cy="37" r="3.2" fill="#fff"></circle><circle cx="16" cy="37" r="1.8" fill="#2A2E37"></circle><circle cx="24" cy="37" r="1.8" fill="#2A2E37"></circle></symbol>
+    <symbol id="L-mini-escuela" viewBox="0 0 80 72"><rect x="10" y="30" width="62" height="40" fill="#F2C14E"></rect><path d="M6 32 L41 10 L76 32 Z" fill="#2A2E37"></path><rect x="4" y="4" width="2.5" height="66" fill="#2A2E37"></rect><rect x="6.5" y="5" width="12" height="8" fill="#E36F8C"></rect><rect x="16" y="40" width="10" height="9" rx="2" fill="#3A4150"></rect><rect x="56" y="40" width="10" height="9" rx="2" fill="#3A4150"></rect><rect x="35" y="48" width="12" height="22" rx="2" fill="#3A4150"></rect><circle cx="35" cy="30" r="4" fill="#fff"></circle><circle cx="47" cy="30" r="4" fill="#fff"></circle><circle cx="36" cy="30" r="2.2" fill="#2A2E37"></circle><circle cx="48" cy="30" r="2.2" fill="#2A2E37"></circle></symbol>
+    <symbol id="L-mini-farmacia" viewBox="0 0 66 62"><rect x="6" y="22" width="54" height="38" fill="#DCD5C8"></rect><rect x="2" y="12" width="62" height="13" rx="4" fill="#5FB36B"></rect><rect x="46" y="6" width="16" height="16" rx="4" fill="#F7F3EC"></rect><rect x="52" y="8.5" width="4" height="11" fill="#5FB36B"></rect><rect x="48.5" y="12" width="11" height="4" fill="#5FB36B"></rect><rect x="12" y="32" width="20" height="16" rx="3" fill="#3A4150"></rect><rect x="38" y="32" width="14" height="28" rx="2" fill="#3A4150"></rect><circle cx="18" cy="40" r="3.2" fill="#fff"></circle><circle cx="26" cy="40" r="3.2" fill="#fff"></circle><circle cx="19" cy="40" r="1.8" fill="#2A2E37"></circle><circle cx="27" cy="40" r="1.8" fill="#2A2E37"></circle></symbol>
+    <symbol id="L-mini-arbol" viewBox="0 0 52 56"><rect x="22" y="32" width="8" height="24" rx="2" fill="#2A2E37"></rect><circle cx="14" cy="30" r="12" fill="#5FB36B"></circle><circle cx="38" cy="30" r="12" fill="#5FB36B"></circle><circle cx="26" cy="20" r="18" fill="#5FB36B"></circle><circle cx="20" cy="22" r="4.2" fill="#fff"></circle><circle cx="32" cy="22" r="4.2" fill="#fff"></circle><circle cx="21" cy="22" r="2.3" fill="#2A2E37"></circle><circle cx="33" cy="22" r="2.3" fill="#2A2E37"></circle></symbol>
+    <symbol id="L-mini-tacos" viewBox="0 0 60 56"><rect x="29" y="4" width="2" height="12" fill="#2A2E37"></rect><path d="M8 18 A22 14 0 0 1 52 18 Z" fill="#E36F8C"></path><rect x="10" y="24" width="40" height="22" rx="5" fill="#2FA6A0"></rect><rect x="6" y="20" width="48" height="5" rx="2.5" fill="#2A2E37"></rect><text x="30" y="43" text-anchor="middle" fill="#fff" style="font:800 6px 'Bricolage Grotesque',sans-serif">TACOS</text><circle cx="24" cy="32" r="4" fill="#fff"></circle><circle cx="36" cy="32" r="4" fill="#fff"></circle><circle cx="25" cy="32" r="2.2" fill="#2A2E37"></circle><circle cx="37" cy="32" r="2.2" fill="#2A2E37"></circle><circle cx="18" cy="50" r="5" fill="#2A2E37"></circle><circle cx="42" cy="50" r="5" fill="#2A2E37"></circle></symbol>
+  </defs>
+</svg>
+
+<div onMouseMove="{{ onMove }}" onTouchMove="{{ onMove }}" style="display:flex;flex-direction:column;min-height:100vh">
+
+  <header style="position:sticky;top:0;z-index:5;background:#EDE9E1">
+    <div style="max-width:1160px;margin:0 auto;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px">
+      <a href="#" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+        <span style="width:40px;height:40px;border-radius:11px;background:#fff;display:grid;place-items:center;box-shadow:inset 0 0 0 1px #DCD5C8"><svg viewBox="0 0 120 120" style="width:78%"><use href="#L-icono" width="120" height="120"></use></svg></span>
+        <span style="font:800 24px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.02em">¿Ontoy?</span>
+      </a>
+      <nav style="display:flex;align-items:center;gap:22px;font-size:15px;font-weight:600">
+        <sc-if value="{{ ancho }}" hint-placeholder-val="{{ true }}">
+          <a href="#como" style="text-decoration:none">Cómo funciona</a>
+          <a href="#instalar" style="text-decoration:none">Instalar</a>
+        </sc-if>
+        <a href="/" style="text-decoration:none;background:#2A2E37;color:#fff;padding:10px 16px;border-radius:999px" style-hover="background:#3A4150;color:#fff">Abrir Ontoy</a>
+      </nav>
+    </div>
+  </header>
+
+  <section data-screen-label="Hero" style="max-width:1160px;margin:0 auto;padding:40px 24px 72px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:48px;align-items:center;width:100%;box-sizing:border-box">
+    <div style="display:flex;flex-direction:column;gap:22px">
+      <div style="display:flex;align-items:center;gap:8px;font:600 14px 'Instrument Sans';color:#4A4F5A"><span style="width:8px;height:8px;border-radius:50%;background:#5FB36B"></span>Camiones en vivo, en tu ciudad</div>
+      <h1 style="margin:0;font:800 clamp(44px,7vw,84px)/0.92 'Bricolage Grotesque',sans-serif;letter-spacing:-0.035em;text-wrap:balance">{{ titulo }}</h1>
+      <p style="margin:0;max-width:520px;font-size:clamp(17px,2vw,20px);line-height:1.5;color:#4A4F5A;text-wrap:pretty">Dile a dónde quieres llegar: Ontoy te dice qué camión tomar, dónde subirte y cuándo pasa, en vivo. Sin cuenta y sin descargar nada.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px">
+        <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;background:#2A2E37;color:#fff;padding:16px 24px;border-radius:999px;font:700 17px 'Instrument Sans'" style-hover="background:#3A4150;color:#fff">Planea tu viaje <span style="font-size:20px">→</span></a>
+        <a href="#instalar" style="display:flex;align-items:center;text-decoration:none;background:#fff;color:#2A2E37;padding:16px 24px;border-radius:999px;font:700 17px 'Instrument Sans';box-shadow:inset 0 0 0 1.5px #DCD5C8" style-hover="box-shadow:inset 0 0 0 1.5px #2A2E37">Instalar en tu teléfono</a>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <sc-for list="{{ tiendas }}" as="t" hint-placeholder-count="2">
+          <a href="{{ t.href }}" style="display:flex;flex-direction:column;gap:1px;text-decoration:none;border-radius:12px;padding:8px 14px;background:{{ t.bg }};color:{{ t.fg }};opacity:{{ t.op }}">
+            <span style="font-size:11px;font-weight:600">{{ t.pre }}</span>
+            <span style="font:800 15px/1.1 'Bricolage Grotesque',sans-serif">{{ t.nombre }}</span>
+          </a>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="position:relative;display:grid;place-items:center;padding:20px 0 0">
+      <div style="position:absolute;left:0;bottom:-10px;width:30%;max-width:170px;z-index:2">
+        <svg ref="{{ heroRef }}" onClick="{{ onRisa }}" viewBox="-12 -24 144 144" style="width:100%;display:block;cursor:pointer;overflow:visible" aria-label="Ontoy: hazle cosquillas">
+          <g transform="{{ hShake }}"><ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+            <sc-if value="{{ hRisa }}" hint-placeholder-val="{{ false }}"><path d="M40 54 q10 -10 20 0 M66 52 q10 -10 20 0" fill="none" stroke="#2A2E37" stroke-width="3.6" stroke-linecap="round"></path></sc-if>
+            <sc-if value="{{ hOjos }}" hint-placeholder-val="{{ true }}"><circle cx="50" cy="52" r="{{ hEr }}" fill="#fff"></circle><circle cx="76" cy="50" r="{{ hEr }}" fill="#fff"></circle><circle cx="50" cy="52" r="6" fill="#2A2E37" transform="{{ hEye }}"></circle><circle cx="76" cy="50" r="6" fill="#2A2E37" transform="{{ hEye }}"></circle></sc-if>
+            <ellipse cx="63" cy="{{ hMy }}" rx="{{ hMrx }}" ry="{{ hMry }}" fill="#2A2E37"></ellipse>
+            <sc-if value="{{ hLagrimas }}" hint-placeholder-val="{{ false }}"><ellipse cx="34" cy="{{ hTy }}" rx="3" ry="4.5" fill="#7FB8F0"></ellipse><ellipse cx="92" cy="{{ hTy }}" rx="3" ry="4.5" fill="#7FB8F0"></ellipse></sc-if>
+          </g>
+          <circle cx="{{ hLx }}" cy="{{ hLy }}" r="7" fill="#F6A15B"></circle><circle cx="{{ hRx }}" cy="{{ hRy }}" r="7" fill="#F6A15B"></circle>
+          <sc-if value="{{ hRisa }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ hJaV0 }}" hint-placeholder-val="{{ false }}"><text x="60" y="-10" text-anchor="middle" fill="#2A2E37" style="font:800 12px 'Bricolage Grotesque',sans-serif">¡ja ja!</text></sc-if><sc-if value="{{ hJaV1 }}" hint-placeholder-val="{{ false }}"><text x="60" y="-10" text-anchor="middle" fill="#2A2E37" style="font:800 12px 'Bricolage Grotesque',sans-serif">¡jajaja!</text></sc-if><sc-if value="{{ hJaV2 }}" hint-placeholder-val="{{ false }}"><text x="60" y="-10" text-anchor="middle" fill="#2A2E37" style="font:800 12px 'Bricolage Grotesque',sans-serif">¡JAJAJA!</text></sc-if><sc-if value="{{ hJaV3 }}" hint-placeholder-val="{{ false }}"><text x="60" y="-10" text-anchor="middle" fill="#2A2E37" style="font:800 12px 'Bricolage Grotesque',sans-serif">¡ya, ya! jaja</text></sc-if><sc-if value="{{ hJaV4 }}" hint-placeholder-val="{{ false }}"><text x="60" y="-10" text-anchor="middle" fill="#2A2E37" style="font:800 12px 'Bricolage Grotesque',sans-serif">¡me haces llorar! jaja</text></sc-if><sc-if value="{{ hJaV5 }}" hint-placeholder-val="{{ false }}"><text x="60" y="-10" text-anchor="middle" fill="#2A2E37" style="font:800 12px 'Bricolage Grotesque',sans-serif">¡basta! JAJAJA</text></sc-if></sc-if>
+        </svg>
+      </div>
+      <div style="width:min(100%,340px);aspect-ratio:9/18.5;background:#2A2E37;border-radius:44px;padding:10px;box-sizing:border-box">
+        <div style="position:relative;width:100%;height:100%;border-radius:36px;overflow:hidden;background:#EDE9E1">
+          <svg viewBox="0 0 320 640" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%">
+            <rect width="320" height="640" fill="#EDE9E1"></rect>
+            <rect x="14" y="14" width="96" height="140" rx="14" fill="#E2DCD1"></rect><rect x="138" y="14" width="168" height="140" rx="14" fill="#E2DCD1"></rect>
+            <rect x="14" y="182" width="96" height="176" rx="14" fill="#D3E4C9"></rect><circle cx="44" cy="222" r="12" fill="#5FB36B"></circle><circle cx="82" cy="262" r="12" fill="#5FB36B"></circle><circle cx="50" cy="310" r="12" fill="#5FB36B"></circle>
+            <rect x="138" y="182" width="168" height="176" rx="14" fill="#E2DCD1"></rect>
+            <rect x="14" y="386" width="96" height="240" rx="14" fill="#E2DCD1"></rect><rect x="138" y="386" width="168" height="240" rx="14" fill="#E2DCD1"></rect>
+            <rect x="110" y="0" width="28" height="640" fill="#F7F3EC"></rect><rect x="0" y="154" width="320" height="28" fill="#F7F3EC"></rect><rect x="0" y="358" width="320" height="28" fill="#F7F3EC"></rect>
+            <path d="M124 -10 V168 H330" fill="none" stroke="#EDE9E1" stroke-width="16" stroke-linejoin="round"></path>
+            <path d="M124 -10 V168 H330" fill="none" stroke="#8B6CC9" stroke-width="9" stroke-linejoin="round"></path>
+            <path d="M-10 372 H124 V650" fill="none" stroke="#EDE9E1" stroke-width="12" stroke-linejoin="round"></path>
+            <path d="M-10 372 H124 V650" fill="none" stroke="#2FA6A0" stroke-width="6" stroke-linejoin="round"></path>
+            <use href="#L-paradito" x="226" y="112" width="52" height="52" style="color:#8B6CC9"></use>
+            <use href="#L-paradito" x="40" y="320" width="44" height="44" style="color:#2FA6A0"></use>
+            <use href="#L-mini-tienda" x="160" y="40" width="56" height="52"></use>
+            <use href="#L-mini-escuela" x="168" y="420" width="76" height="70"></use>
+            <use href="#L-mini-farmacia" x="26" y="440" width="64" height="60"></use>
+            <use href="#L-mini-arbol" x="236" y="270" width="52" height="56"></use>
+            <use href="#L-mini-arbol" x="250" y="520" width="44" height="48"></use>
+            <use href="#L-mini-tacos" x="30" y="40" width="58" height="54"></use>
+            <g transform="{{ cami2Map }}"><use href="#L-cami-top" x="-13" y="-19" width="26" height="39" style="color:#2FA6A0"></use></g>
+            <g transform="{{ camiMap }}"><use href="#L-cami-top" x="-15" y="-22" width="30" height="45" style="color:#8B6CC9"></use></g>
+            <use href="#L-pasajero" x="222" y="196" width="46" height="46"></use>
+          </svg>
+          <div style="position:absolute;top:14px;left:14px;right:14px;display:flex;align-items:center;gap:8px;background:#fff;border-radius:16px;padding:10px 12px;font-size:13px;font-weight:600;color:#4A4F5A"><span style="font-size:15px">⌕</span>¿A dónde vas?</div>
+          <div style="position:absolute;left:12px;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;background:#fff;border-radius:20px;padding:14px">
+            <div style="font:700 11px 'Instrument Sans';letter-spacing:.08em;text-transform:uppercase;color:#6B6F78">Tu próximo camión</div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="background:#2A2E37;color:#fff;border-radius:8px;padding:4px 9px;font:800 16px 'Bricolage Grotesque',sans-serif">51</span>
+              <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">Av. Tecnológico</div><div style="font-size:12px;color:#6B6F78">según la concesión</div></div>
+              <div style="font:800 26px/1 'Bricolage Grotesque',sans-serif">{{ mins }}<span style="font-size:14px"> min</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="como" data-screen-label="Cómo funciona" style="background:#fff">
+    <div style="max-width:1160px;margin:0 auto;padding:80px 24px;display:flex;flex-direction:column;gap:40px">
+      <h2 style="margin:0;font:800 clamp(34px,4.5vw,52px)/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;max-width:720px;text-wrap:balance">Tres pasos y llegas.</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:18px">
+        <div style="background:#F4F0E9;border-radius:28px;padding:26px;display:flex;flex-direction:column;gap:16px">
+          <div style="height:150px;display:grid;place-items:center"><svg viewBox="0 0 120 120" style="height:100%;color:#4F7FD8"><use href="#L-paradito" width="120" height="120"></use></svg></div>
+          <div style="font:800 14px 'Bricolage Grotesque';color:#6B6F78">01</div>
+          <div style="font:800 24px/1.1 'Bricolage Grotesque',sans-serif">Dime a dónde vas</div>
+          <p style="margin:0;font-size:16px;line-height:1.5;color:#4A4F5A">Escribe tu destino o toca tu parada. Ontoy te dice qué ruta tomar y dónde subirte.</p>
+        </div>
+        <div style="background:#F4F0E9;border-radius:28px;padding:26px;display:flex;flex-direction:column;gap:16px">
+          <div style="height:150px;display:grid;place-items:center"><svg viewBox="0 0 120 120" style="height:100%;color:#8B6CC9"><use href="#L-cami" width="120" height="120"></use></svg></div>
+          <div style="font:800 14px 'Bricolage Grotesque';color:#6B6F78">02</div>
+          <div style="font:800 24px/1.1 'Bricolage Grotesque',sans-serif">Ve dónde viene</div>
+          <p style="margin:0;font-size:16px;line-height:1.5;color:#4A4F5A">Cami avanza en el mapa con su posición real. Si no hay dato, te lo decimos: nunca inventamos.</p>
+        </div>
+        <div style="background:#F4F0E9;border-radius:28px;padding:26px;display:flex;flex-direction:column;gap:16px">
+          <div style="height:150px;display:grid;place-items:center">
+            <svg ref="{{ stepRef }}" onClick="{{ onSalto }}" viewBox="-16 -40 152 160" style="height:150px;width:auto;max-width:100%;cursor:pointer;overflow:visible" aria-label="Ontoy: dale click">
+              <g transform="{{ sJump }}"><ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+                <circle cx="50" cy="52" r="11" fill="#fff"></circle><circle cx="76" cy="50" r="11" fill="#fff"></circle>
+                <circle cx="50" cy="52" r="6" fill="#2A2E37" transform="{{ sEye }}"></circle><circle cx="76" cy="50" r="6" fill="#2A2E37" transform="{{ sEye }}"></circle>
+                <sc-if value="{{ sMareo }}" hint-placeholder-val="{{ false }}"><path d="M50 52 m-7 0 a7 7 0 1 1 7 7 a4 4 0 1 1 -4 -4 M76 50 m-7 0 a7 7 0 1 1 7 7 a4 4 0 1 1 -4 -4" fill="none" stroke="#2A2E37" stroke-width="2.4" transform="{{ sMareoT }}"></path></sc-if>
+                <path d="{{ sSmile }}" opacity="{{ sSmileOp }}" fill="none" stroke="#2A2E37" stroke-width="3.2" stroke-linecap="round"></path>
+                <circle cx="{{ sLx }}" cy="{{ sLy }}" r="7" fill="#F6A15B"></circle><circle cx="{{ sRx }}" cy="{{ sRy }}" r="7" fill="#F6A15B"></circle>
+              </g>
+              <sc-if value="{{ sMas }}" hint-placeholder-val="{{ false }}"><path d="M-10 40 l2 5 5 .7 -3.6 3.5 .9 5 -4.3 -2.3 -4.3 2.3 .9 -5 -3.6 -3.5 5 -.7 Z M124 30 l2 5 5 .7 -3.6 3.5 .9 5 -4.3 -2.3 -4.3 2.3 .9 -5 -3.6 -3.5 5 -.7 Z M60 -36 l2.4 5.6 5.6 .8 -4 4 .8 5.6 -4.8 -2.4 -4.8 2.4 .8 -5.6 -4 -4 5.6 -.8 Z" fill="#8B6CC9"></path></sc-if>
+              <sc-if value="{{ sEstrellas }}" hint-placeholder-val="{{ false }}"><path d="M8 -6 l3 7 7 1 -5 5 1 7 -6 -3 -6 3 1 -7 -5 -5 7 -1 Z M110 -18 l2.4 5.6 5.6 .8 -4 4 .8 5.6 -4.8 -2.4 -4.8 2.4 .8 -5.6 -4 -4 5.6 -.8 Z" fill="#F2C14E"></path></sc-if>
+            </svg>
+          </div>
+          <div style="font:800 14px 'Bricolage Grotesque';color:#6B6F78">03</div>
+          <div style="font:800 24px/1.1 'Bricolage Grotesque',sans-serif">¡Ya viene!</div>
+          <p style="margin:0;font-size:16px;line-height:1.5;color:#4A4F5A">Ontoy te avisa cuando tu camión está por llegar, para que salgas a tiempo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-screen-label="La banda" style="max-width:1160px;margin:0 auto;padding:80px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:40px;align-items:center;width:100%;box-sizing:border-box">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <h2 style="margin:0;font:800 clamp(34px,4.5vw,52px)/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;text-wrap:balance">Conoce {{ banda }}</h2>
+      <p style="margin:0;font-size:18px;line-height:1.5;color:#4A4F5A;text-wrap:pretty">Ontoy se asoma a ver si ya viene. Paradito espera en tu esquina con su placa. Cami se pinta del color de su ruta. Mueve el cursor: te están viendo.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:center"><div style="background:#fff;border-radius:26px;aspect-ratio:1;width:100%;display:grid;place-items:center"><svg ref="{{ bandaRef }}" onClick="{{ onGuino }}" viewBox="-6 -30 132 150" style="width:84%;cursor:pointer;overflow:visible" aria-label="Ontoy: dale click">
+          <g transform="{{ bTilt }}"><ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+            <ellipse cx="38" cy="68" rx="7" ry="4.5" fill="#E36F8C" opacity="{{ bRubor }}"></ellipse><ellipse cx="88" cy="66" rx="7" ry="4.5" fill="#E36F8C" opacity="{{ bRubor }}"></ellipse>
+            <sc-if value="{{ bGuino }}" hint-placeholder-val="{{ false }}"><path d="M40 53 q10 6 20 0" fill="none" stroke="#2A2E37" stroke-width="3.4" stroke-linecap="round"></path></sc-if>
+            <sc-if value="{{ bSinGuino }}" hint-placeholder-val="{{ true }}"><circle cx="50" cy="52" r="11" fill="#fff"></circle><circle cx="50" cy="52" r="6" fill="#2A2E37" transform="{{ bEye }}"></circle></sc-if>
+            <circle cx="76" cy="50" r="11" fill="#fff"></circle><circle cx="76" cy="50" r="6" fill="#2A2E37" transform="{{ bEye }}"></circle>
+            <path d="M54 75 q9 6 18 0" opacity="{{ bSonrisa }}" fill="none" stroke="#2A2E37" stroke-width="3" stroke-linecap="round"></path>
+            <circle cx="{{ bLx }}" cy="{{ bLy }}" r="{{ bHr }}" fill="#F6A15B"></circle><circle cx="{{ bRx }}" cy="{{ bRy }}" r="{{ bHr }}" fill="#F6A15B"></circle>
+          </g>
+          <sc-for list="{{ bCors }}" as="c" hint-placeholder-count="0"><path d="M60 10 c-4 -6 -12 -2 -9 4 l9 9 9 -9 c3 -6 -5 -10 -9 -4 Z" fill="#E36F8C" opacity="{{ c.op }}" transform="{{ c.t }}"></path></sc-for>
+          <sc-if value="{{ bHayTxt }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ bTxV0 }}" hint-placeholder-val="{{ false }}"><text x="118" y="-10" text-anchor="end" fill="#2A2E37" style="font:800 14px 'Bricolage Grotesque',sans-serif">¡ay!</text></sc-if><sc-if value="{{ bTxV1 }}" hint-placeholder-val="{{ false }}"><text x="118" y="-10" text-anchor="end" fill="#2A2E37" style="font:800 14px 'Bricolage Grotesque',sans-serif">¡ay, ya!</text></sc-if><sc-if value="{{ bTxV2 }}" hint-placeholder-val="{{ false }}"><text x="118" y="-10" text-anchor="end" fill="#2A2E37" style="font:800 14px 'Bricolage Grotesque',sans-serif">¡me apenas!</text></sc-if><sc-if value="{{ bTxV3 }}" hint-placeholder-val="{{ false }}"><text x="118" y="-10" text-anchor="end" fill="#2A2E37" style="font:800 14px 'Bricolage Grotesque',sans-serif">¡basta! &gt;///&lt;</text></sc-if></sc-if>
+        </svg></div><div style="font:800 18px 'Bricolage Grotesque'">Ontoy</div></div>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:center"><div style="background:#fff;border-radius:26px;aspect-ratio:1;width:100%;display:grid;place-items:center"><svg viewBox="0 0 120 120" style="width:78%;color:#4F7FD8"><use href="#L-paradito" width="120" height="120"></use></svg></div><div style="font:800 18px 'Bricolage Grotesque'">Paradito</div></div>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:center"><div style="background:#fff;border-radius:26px;aspect-ratio:1;width:100%;display:grid;place-items:center"><svg viewBox="0 0 120 120" style="width:78%;color:#8B6CC9"><use href="#L-cami" width="120" height="120"></use></svg></div><div style="font:800 18px 'Bricolage Grotesque'">Cami</div></div>
+    </div>
+  </section>
+
+  <section data-screen-label="La calle de Ontoy" style="max-width:1160px;margin:0 auto;padding:0 24px 80px;display:flex;flex-direction:column;gap:22px;width:100%;box-sizing:border-box">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px">
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:640px">
+        <h2 style="margin:0;font:800 clamp(34px,4.5vw,52px)/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;text-wrap:balance">La calle de Ontoy</h2>
+        <p style="margin:0;font-size:18px;line-height:1.5;color:#4A4F5A;text-wrap:pretty">La tiendita, la farmacia, el semáforo: todo el barrio está pendiente. Cuando llega Cami, se emociona hasta el árbol.</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2A2E37;color:#F7F3EC;border-radius:999px;padding:10px 18px;font:700 15px 'Instrument Sans'"><span style="background:#8B6CC9;color:#fff;border-radius:6px;padding:2px 8px;font:800 13px 'Bricolage Grotesque',sans-serif">51</span><span>{{ fase }}</span></div>
+    </div>
+    <div style="background:#fff;border-radius:28px;overflow:hidden">
+      <svg viewBox="0 0 900 330" style="display:block;width:100%;height:auto">
+        <rect width="900" height="330" fill="#F7F3EC"></rect>
+        <rect x="0" y="244" width="900" height="10" fill="#DCD5C8"></rect><rect x="0" y="254" width="900" height="76" fill="#2A2E37"></rect>
+        <rect x="20" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="140" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="260" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="380" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="500" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="620" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="740" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="860" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect>
+        <rect x="40" y="150" width="140" height="94" fill="#F2C14E"></rect><rect x="50" y="132" width="120" height="22" rx="5" fill="#2A2E37"></rect>
+        <text x="110" y="147.5" text-anchor="middle" fill="#F7F3EC" style="font:700 10px 'Instrument Sans',sans-serif;letter-spacing:.5px">ABARROTES LUPITA</text>
+        <rect x="40" y="156" width="140" height="14" fill="#E36F8C"></rect><rect x="50" y="180" width="44" height="32" rx="5" fill="#2A2E37"></rect><rect x="106" y="180" width="30" height="64" rx="3" fill="#2A2E37"></rect><rect x="144" y="180" width="28" height="32" rx="5" fill="#2A2E37"></rect>
+        <circle cx="64" cy="196" r="7" fill="#fff"></circle><circle cx="80" cy="196" r="7" fill="#fff"></circle><circle cx="{{ e1a }}" cy="196" r="3.8" fill="#2A2E37"></circle><circle cx="{{ e1b }}" cy="196" r="3.8" fill="#2A2E37"></circle>
+        <sc-if value="{{ ya }}" hint-placeholder-val="{{ false }}"><ellipse cx="72" cy="207" rx="3" ry="3.6" fill="#F2C14E"></ellipse></sc-if>
+        <rect x="244" y="150" width="12" height="96" rx="3" fill="#2A2E37"></rect><circle cx="222" cy="150" r="26" fill="#5FB36B"></circle><circle cx="278" cy="150" r="26" fill="#5FB36B"></circle><circle cx="250" cy="128" r="40" fill="#5FB36B"></circle>
+        <circle cx="240" cy="132" r="8.5" fill="#fff"></circle><circle cx="262" cy="132" r="8.5" fill="#fff"></circle><circle cx="{{ e2a }}" cy="132" r="4.6" fill="#2A2E37"></circle><circle cx="{{ e2b }}" cy="132" r="4.6" fill="#2A2E37"></circle>
+        <sc-if value="{{ ya }}" hint-placeholder-val="{{ false }}"><ellipse cx="251" cy="150" rx="4" ry="5" fill="#2A2E37"></ellipse></sc-if>
+        <rect x="310" y="168" width="100" height="76" fill="#DCD5C8"></rect><rect x="304" y="150" width="112" height="22" rx="5" fill="#5FB36B"></rect>
+        <text x="360" y="165.5" text-anchor="middle" fill="#fff" style="font:800 11px 'Bricolage Grotesque',sans-serif">FARMACIA</text>
+        <rect x="320" y="184" width="36" height="28" rx="4" fill="#3A4150"></rect><rect x="366" y="184" width="30" height="60" rx="3" fill="#3A4150"></rect>
+        <circle cx="331" cy="198" r="6" fill="#fff"></circle><circle cx="345" cy="198" r="6" fill="#fff"></circle><circle cx="{{ e3a }}" cy="198" r="3.2" fill="#2A2E37"></circle><circle cx="{{ e3b }}" cy="198" r="3.2" fill="#2A2E37"></circle>
+        <rect x="447" y="150" width="6" height="96" fill="#2A2E37"></rect><rect x="434" y="104" width="32" height="60" rx="10" fill="#2A2E37"></rect>
+        <circle cx="450" cy="118" r="7" fill="#E36F8C"></circle><circle cx="450" cy="134" r="7" fill="#4A505C"></circle><circle cx="450" cy="150" r="7" fill="#4A505C"></circle>
+        <rect x="436" y="174" width="28" height="18" rx="6" fill="#2FA6A0"></rect><circle cx="445" cy="183" r="4.6" fill="#fff"></circle><circle cx="455" cy="183" r="4.6" fill="#fff"></circle><circle cx="{{ e4a }}" cy="183" r="2.5" fill="#2A2E37"></circle><circle cx="{{ e4b }}" cy="183" r="2.5" fill="#2A2E37"></circle>
+        <rect x="557" y="140" width="6" height="104" fill="#2A2E37"></rect><rect x="546" y="242" width="28" height="7" rx="3.5" fill="#2A2E37"></rect>
+        <circle cx="560" cy="140" r="26" fill="#8B6CC9"></circle><circle cx="551" cy="138" r="7.5" fill="#fff"></circle><circle cx="569" cy="138" r="7.5" fill="#fff"></circle>
+        <circle cx="{{ e5a }}" cy="{{ e5y }}" r="4" fill="#2A2E37"></circle><circle cx="{{ e5b }}" cy="{{ e5y }}" r="4" fill="#2A2E37"></circle>
+        <sc-if value="{{ ya }}" hint-placeholder-val="{{ false }}"><ellipse cx="560" cy="154" rx="3.6" ry="4.4" fill="#2A2E37"></ellipse></sc-if>
+        <g transform="{{ plT }}"><rect x="527" y="172" width="66" height="26" rx="6.5" fill="#2A2E37"></rect><rect x="559" y="178" width="1.4" height="14" fill="#fff" opacity=".5"></rect><text x="543" y="189.5" text-anchor="middle" fill="{{ plC }}" style="font:800 12px 'Bricolage Grotesque',sans-serif">51</text><sc-if value="{{ plV0 }}" hint-placeholder-val="{{ false }}"><text x="576" y="189.5" text-anchor="middle" fill="{{ plC }}" style="font:800 12px 'Bricolage Grotesque',sans-serif">3′</text></sc-if><sc-if value="{{ plV1 }}" hint-placeholder-val="{{ false }}"><text x="576" y="189.5" text-anchor="middle" fill="{{ plC }}" style="font:800 12px 'Bricolage Grotesque',sans-serif">1′</text></sc-if><sc-if value="{{ plV2 }}" hint-placeholder-val="{{ false }}"><text x="576" y="189.5" text-anchor="middle" fill="{{ plC }}" style="font:800 12px 'Bricolage Grotesque',sans-serif">¡ya!</text></sc-if><circle cx="527" cy="185" r="6.5" fill="#8B6CC9"></circle><circle cx="593" cy="185" r="6.5" fill="#8B6CC9"></circle></g>
+        <g opacity="{{ paxOp }}"><use href="#L-pasajero" x="{{ pax1 }}" y="{{ paxY }}" width="44" height="44"></use><use href="#L-pasajero" x="{{ pax2 }}" y="{{ paxY }}" width="40" height="40"></use></g>
+        <g transform="{{ oT }}"><ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+          <circle cx="50" cy="52" r="11" fill="#fff"></circle><circle cx="76" cy="50" r="11" fill="#fff"></circle><circle cx="{{ oEa }}" cy="{{ oEy }}" r="6" fill="#2A2E37"></circle><circle cx="{{ oEb }}" cy="{{ oEy2 }}" r="6" fill="#2A2E37"></circle>
+          <sc-if value="{{ oAbierta }}" hint-placeholder-val="{{ false }}"><ellipse cx="63" cy="76" rx="7" ry="8" fill="#2A2E37"></ellipse></sc-if>
+          <sc-if value="{{ oSonrisa }}" hint-placeholder-val="{{ false }}"><path d="M52 74 q11 10 22 0" fill="none" stroke="#2A2E37" stroke-width="3.2" stroke-linecap="round"></path></sc-if>
+          <circle cx="10" cy="{{ oHl }}" r="7" fill="#F6A15B"></circle><circle cx="112" cy="{{ oHr }}" r="7" fill="#F6A15B"></circle>
+        </g>
+        <g transform="{{ camiT }}">
+          <rect x="0" y="170" width="150" height="72" rx="16" fill="#8B6CC9"></rect><rect x="0" y="218" width="150" height="6" fill="#F7F3EC"></rect>
+          <rect x="12" y="180" width="24" height="24" rx="5" fill="#2A2E37"></rect><rect x="42" y="180" width="24" height="24" rx="5" fill="#2A2E37"></rect><rect x="72" y="180" width="24" height="24" rx="5" fill="#2A2E37"></rect>
+          <rect x="104" y="178" width="38" height="34" rx="8" fill="#2A2E37"></rect><rect x="112" y="162" width="26" height="10" rx="3" fill="#F7F3EC"></rect>
+          <text x="125" y="170.5" text-anchor="middle" fill="#2A2E37" style="font:800 8px 'Bricolage Grotesque',sans-serif">51</text>
+          <ellipse cx="116" cy="193" rx="7.2" ry="5.4" fill="#fff"></ellipse><ellipse cx="131" cy="193" rx="7.2" ry="5.4" fill="#fff"></ellipse>
+          <circle cx="{{ cm1 }}" cy="{{ cmY }}" r="3.2" fill="#2A2E37"></circle><circle cx="{{ cm2 }}" cy="{{ cmY }}" r="3.2" fill="#2A2E37"></circle>
+          <sc-if value="{{ ya }}" hint-placeholder-val="{{ false }}"><ellipse cx="124" cy="205" rx="3.4" ry="4" fill="#F7F3EC"></ellipse></sc-if>
+          <sc-if value="{{ seVa }}" hint-placeholder-val="{{ false }}"><path d="M118 203 q6 5 12 0" fill="none" stroke="#F7F3EC" stroke-width="2.4" stroke-linecap="round"></path></sc-if>
+          <circle cx="34" cy="244" r="12" fill="#2A2E37"></circle><circle cx="34" cy="244" r="5" fill="#F7F3EC"></circle><circle cx="118" cy="244" r="12" fill="#2A2E37"></circle><circle cx="118" cy="244" r="5" fill="#F7F3EC"></circle>
+          <circle cx="160" cy="{{ cmH }}" r="7" fill="#8B6CC9"></circle>
+        </g>
+      </svg>
+    </div>
+  </section>
+
+  <section id="instalar" data-screen-label="Instalar" style="background:#1E2B4D;color:#F7F3EC">
+    <div style="max-width:1160px;margin:0 auto;padding:80px 24px;display:flex;flex-direction:column;gap:36px">
+      <div style="display:flex;flex-direction:column;gap:12px;max-width:720px">
+        <h2 style="margin:0;font:800 clamp(34px,4.5vw,52px)/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;color:#fff">Tenla en tu pantalla de inicio</h2>
+        <p style="margin:0;font-size:18px;line-height:1.5;color:#C9D1E4">Funciona como app desde hoy, sin tienda. Pesa casi nada y abre al instante.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px">
+        <div style="background:#26365E;border-radius:26px;padding:24px;display:flex;flex-direction:column;gap:14px">
+          <div style="font:800 22px 'Bricolage Grotesque';color:#fff">iPhone</div>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:16px;line-height:1.45">
+            <div style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#F7F3EC;color:#1E2B4D;display:grid;place-items:center;font:800 14px 'Bricolage Grotesque'">1</span><span>Abre ontoy.app en Safari.</span></div>
+            <div style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#F7F3EC;color:#1E2B4D;display:grid;place-items:center;font:800 14px 'Bricolage Grotesque'">2</span><span>Toca Compartir.</span></div>
+            <div style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#F7F3EC;color:#1E2B4D;display:grid;place-items:center;font:800 14px 'Bricolage Grotesque'">3</span><span>Elige «Agregar a inicio».</span></div>
+          </div>
+        </div>
+        <div style="background:#26365E;border-radius:26px;padding:24px;display:flex;flex-direction:column;gap:14px">
+          <div style="font:800 22px 'Bricolage Grotesque';color:#fff">Android</div>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:16px;line-height:1.45">
+            <div style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#F7F3EC;color:#1E2B4D;display:grid;place-items:center;font:800 14px 'Bricolage Grotesque'">1</span><span>Abre ontoy.app en Chrome.</span></div>
+            <div style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#F7F3EC;color:#1E2B4D;display:grid;place-items:center;font:800 14px 'Bricolage Grotesque'">2</span><span>Toca el menú ⋮.</span></div>
+            <div style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#F7F3EC;color:#1E2B4D;display:grid;place-items:center;font:800 14px 'Bricolage Grotesque'">3</span><span>Elige «Instalar app».</span></div>
+          </div>
+        </div>
+        <div style="background:#26365E;border-radius:26px;padding:24px;display:flex;flex-direction:column;gap:14px">
+          <div style="font:800 22px 'Bricolage Grotesque';color:#fff">Computadora</div>
+          <p style="margin:0;font-size:16px;line-height:1.5">Abre ontoy.app en tu navegador. En Chrome o Edge puedes instalarla con el ícono de la barra de direcciones.</p>
+          <a href="/" style="align-self:flex-start;text-decoration:none;background:#F7F3EC;color:#1E2B4D;padding:12px 18px;border-radius:999px;font:700 15px 'Instrument Sans'" style-hover="background:#fff;color:#1E2B4D">Abrir Ontoy →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-screen-label="Confianza" style="max-width:1160px;margin:0 auto;padding:80px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px;width:100%;box-sizing:border-box">
+    <div style="background:#fff;border-radius:26px;padding:26px;display:flex;flex-direction:column;gap:10px">
+      <div style="font:800 22px/1.15 'Bricolage Grotesque',sans-serif">Sin cuenta</div>
+      <p style="margin:0;font-size:16px;line-height:1.5;color:#4A4F5A">Tus paradas guardadas se quedan en tu teléfono. <a href="/privacidad">Qué datos usa y para qué</a>.</p>
+    </div>
+    <div style="background:#fff;border-radius:26px;padding:26px;display:flex;flex-direction:column;gap:10px">
+      <div style="font:800 22px/1.15 'Bricolage Grotesque',sans-serif">La hora de verdad</div>
+      <p style="margin:0;font-size:16px;line-height:1.5;color:#4A4F5A">Lo que ves sale de la posición real del camión. Cada aviso dice quién lo dijo y desde cuándo.</p>
+    </div>
+    <div style="background:#fff;border-radius:26px;padding:26px;display:flex;align-items:center;gap:16px">
+      <div style="flex:none;width:64px"><svg viewBox="0 0 120 120" style="width:100%;color:#4F7FD8"><use href="#L-paradito" width="120" height="120"></use></svg></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="font:800 22px/1.15 'Bricolage Grotesque',sans-serif">Búscala en tu parada</div>
+        <p style="margin:0;font-size:16px;line-height:1.5;color:#4A4F5A">Si ves a Paradito con su QR, tu ruta ya está. Escanéalo y listo.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer style="margin-top:auto;background:#2A2E37;color:#C9CDD6">
+    <div style="max-width:1160px;margin:0 auto;padding:40px 24px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:20px">
+      <div style="display:flex;align-items:center;gap:12px"><span style="width:44px;height:44px;border-radius:12px;background:#EDE9E1;display:grid;place-items:center"><svg viewBox="0 0 120 120" style="width:78%"><use href="#L-icono" width="120" height="120"></use></svg></span><span style="font:800 26px 'Bricolage Grotesque';color:#fff;letter-spacing:-0.02em">¿Ontoy?</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:20px;font-size:14px">
+        <a href="/privacidad" style="color:#F7F3EC">Privacidad</a>
+        <span>Horarios y avisos según cada concesión</span>
+        <span>ontoy.app</span>
+      </div>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;titulo&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;¿Ontás? Ontoy te lleva.&quot;,&quot;¿Sabes ontás? Ontoy te lleva.&quot;,&quot;¿A dónde vas? Ontoy te lleva.&quot;,&quot;Dime a dónde vas. Yo te digo cómo.&quot;,&quot;Tú dime a dónde, Ontoy te dice cómo.&quot;],&quot;default&quot;:&quot;¿Ontás? Ontoy te lleva.&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;tiendas&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;próximamente&quot;,&quot;publicada&quot;],&quot;default&quot;:&quot;próximamente&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;seguirCursor&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;nombreBanda&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;al equipo&quot;,&quot;a la palomilla&quot;,&quot;a los de la parada&quot;,&quot;a la cuadrilla&quot;,&quot;a los cuates de la esquina&quot;],&quot;default&quot;:&quot;al equipo&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { t: 0 };
+  cur = { lx: 0.3, ly: 0.1, hero: { e: 0, dx: 0.4, dy: -0.2 }, step: { e: 0, dx: 0, dy: 0 }, bnd: { e: 0, dx: 0, dy: 0 } };
+  tg = JSON.parse(JSON.stringify(this.cur));
+  ph = { h: 0, s: 0 };
+  combo = {};
+  clic(key) {
+    const now = this.state.t, c = this.combo[key];
+    const n = c && now - c.at < 1.4 ? Math.min(c.n + 1, 8) : 1;
+    this.combo[key] = { n, at: now };
+    this.setState({ [key + 'At']: now, [key + 'N']: n });
+  }
+  suaviza(dt) {
+    const k = 1 - Math.exp(-dt * 7), ke = 1 - Math.exp(-dt * 4);
+    const L = (a, b, f) => a + (b - a) * f;
+    this.cur.lx = L(this.cur.lx, this.tg.lx, k); this.cur.ly = L(this.cur.ly, this.tg.ly, k);
+    for (const n of ['hero', 'step', 'bnd']) { const c = this.cur[n], g = this.tg[n]; c.dx = L(c.dx, g.dx, k); c.dy = L(c.dy, g.dy, k); c.e = L(c.e, g.e, ke); }
+    this.ph.h += dt * (5 + this.cur.hero.e * 7); this.ph.s += dt * (4 + this.cur.step.e * 4);
+  }
+  componentDidMount() {
+    this.onRz = () => this.setState({ w: window.innerWidth });
+    this.onRz(); window.addEventListener('resize', this.onRz);
+    this.reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const t0 = performance.now();
+    let last = t0;
+    const loop = (n) => { const dt = Math.min(0.05, (n - last) / 1000); last = n; this.suaviza(dt); this.setState({ t: (n - t0) / 1000 }); this.raf = requestAnimationFrame(loop); };
+    if (!this.reduce) this.raf = requestAnimationFrame(loop);
+  }
+  componentWillUnmount() { cancelAnimationFrame(this.raf); window.removeEventListener('resize', this.onRz); }
+  cerca(el, x, y) {
+    if (!el) return { e: 0, dx: 0, dy: 0 };
+    const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const dx = x - cx, dy = y - cy, d = Math.hypot(dx, dy), n = d || 1;
+    const e = Math.max(0, Math.min(1, 1 - (d - r.width * 0.45) / 380));
+    const m = d < 24 ? 0 : Math.min(1, (d - 24) / 140);
+    return { e, dx: dx / n * m, dy: dy / n * m };
+  }
+  banda(t) {
+    // "La banda": shy — blushes, leans toward you, and covers its face peek-a-boo when you get very close; click = wink + heart
+    const B = this.cur.bnd;
+    const e = B.e;
+    const N = this.state.guinoN || 1, dur = 1.3 + N * 0.25;
+    const g = this.state.guinoAt != null ? t - this.state.guinoAt : 9, gu = g < dur;
+    const cover0 = gu && N >= 3 ? 1 : 0;
+    const lerp = (a, b, k) => a + (b - a) * k;
+    const bob = Math.sin(t * 2.2) * 1.2;
+    const cover = Math.max(Math.max(0, Math.min(1, (e - 0.6) / 0.3)), (this.state.guinoAt != null && t - this.state.guinoAt < 1.3 + (this.state.guinoN || 1) * 0.25 && (this.state.guinoN || 1) >= 3) ? 1 : 0);
+    const peek = cover * (0.5 + 0.5 * Math.sin(t * 2.6));
+    return {
+      bTilt: `rotate(${(B.dx * e * 9 + (gu && N >= 4 ? Math.sin(t * 18) * 4 : 0)).toFixed(1)} 60 96) translate(0 ${(-e * 3).toFixed(1)}) scale(${(gu && N >= 5 ? 0.94 + 0.03 * Math.sin(t * 20) : 1).toFixed(3)})`,
+      bRubor: Math.min(1, e * 1.3 + (gu ? 0.4 + N * 0.15 : 0)).toFixed(2), bSonrisa: (e > 0.2 || gu) ? 1 : 0,
+      bGuino: gu, bSinGuino: !gu,
+      bEye: `translate(${(B.dx * 4.2).toFixed(2)} ${(B.dy * 4.2).toFixed(2)})`,
+      bLx: lerp(14, 50 + peek * -10, cover).toFixed(1), bLy: (lerp(80, 52, cover) + bob).toFixed(1),
+      bRx: lerp(108, 76 + peek * 10, cover).toFixed(1), bRy: (lerp(78, 50, cover) - bob).toFixed(1),
+      bHr: (7 + cover * 5).toFixed(1),
+      bCors: gu ? Array.from({ length: Math.min(N, 6) }, (_, i) => { const gg = Math.max(0, g - i * 0.12), sx = (i - (Math.min(N, 6) - 1) / 2) * 16; return { op: Math.max(0, 1 - gg / dur).toFixed(2), t: `translate(${(sx + Math.sin(gg * 6 + i) * 4).toFixed(1)} ${(-gg * (28 + i * 6)).toFixed(1)}) scale(${(1 + (N >= 4 ? 0.3 : 0)).toFixed(2)})` }; }) : [],
+      bHayTxt: gu && N >= 2, bTxt: ['', '', '¡ay!', '¡ay, ya!', '¡me apenas!', '¡basta! >///<', '¡basta! >///<', '¡basta! >///<'][N - 1],
+      bTiltExtra: 0,
+    };
+  }
+  renderVals() {
+    const seguir = this.props.seguirCursor ?? true;
+    const t = this.state.t, { lx, ly } = this.cur;
+    const H = this.cur.hero, S = this.cur.step;
+    const onMove = (ev) => {
+      if (!seguir) return;
+      const p = ev.touches ? ev.touches[0] : ev;
+      this.tg = { lx: Math.max(-1, Math.min(1, (p.clientX / window.innerWidth - 0.5) * 2.2)), ly: Math.max(-1, Math.min(1, (p.clientY / window.innerHeight - 0.45) * 2.4)),
+        hero: this.cerca(this.heroEl, p.clientX, p.clientY), bnd: this.cerca(this.bandaEl, p.clientX, p.clientY), step: this.cerca(this.stepEl, p.clientX, p.clientY) };
+      if (this.reduce) { this.cur = JSON.parse(JSON.stringify(this.tg)); this.forceUpdate(); }
+    };
+    const tr = (k) => `translate(${(lx * k).toFixed(2)} ${(ly * k).toFixed(2)})`;
+    // hero Ontoy: closer = more excited; click = tickles
+    const RN = this.state.risaN || 1, rd = 1.4 + RN * 0.35;
+    const risa = this.state.risaAt != null && t - this.state.risaAt < rd;
+    const he = H.e, P = this.ph.h, amp = 1 + (RN - 1) * 0.45;
+    const hShake = risa ? `translate(${(Math.sin(t * 48) * 2.6 * amp).toFixed(1)} ${(-Math.abs(Math.sin(t * 22)) * 4 * amp).toFixed(1)}) rotate(${(RN >= 4 ? Math.sin(t * 16) * (RN - 3) * 5 : 0).toFixed(1)} 60 96)` : `translate(0 ${(-Math.abs(Math.sin(P)) * he * 5).toFixed(1)})`;
+    const hands = risa ? (RN >= 3 ? [16 + Math.sin(t * 30) * 8, 60 + Math.cos(t * 26) * 22, 104 - Math.sin(t * 30) * 8, 60 - Math.cos(t * 26) * 22] : [30 + Math.sin(t * 40) * 2, 86, 94 - Math.sin(t * 40) * 2, 86])
+      : [14 - he * 6, 80 - he * 34 + Math.sin(P) * he * 14, 108 + he * 6, 78 - he * 34 + Math.sin(P + 1.6) * he * 14];
+    const hJa = ['¡ja ja!', '¡jajaja!', '¡JAJAJA!', '¡ya, ya! jaja', '¡me haces llorar! jaja', '¡basta! JAJAJA', '¡basta! JAJAJA', '¡basta! JAJAJA'][RN - 1];
+    // step-03 Ontoy: different reaction — jumps and grins; click = big jump with stars
+    const SN = this.state.saltoN || 1, sd = 0.8 + SN * 0.12;
+    const salto = this.state.saltoAt != null ? (t - this.state.saltoAt) : 9;
+    const se = S.e, big = salto < sd ? Math.sin(Math.PI * salto / sd) : 0;
+    const giro = salto < sd && SN >= 3 ? (salto / sd) * 360 * (SN >= 6 ? 2 : 1) : big * 12;
+    const mareo = SN >= 5 && salto >= sd && salto < sd + 1.6;
+    const jy = -Math.abs(Math.sin(this.ph.s)) * se * 16 - big * (34 + (SN - 1) * 10);
+    const sSmile = `M${(56 - se * 6).toFixed(1)} 74 q${(7 + se * 6).toFixed(1)} ${(se * 12 + big * 6).toFixed(1)} ${(14 + se * 12).toFixed(1)} 0`;
+    const up = Math.max(se, big);
+    // phone map
+    const k = (t % 14) / 14; let x, y, ang;
+    if (k < 0.55) { const q = k / 0.55; x = 124; y = -30 + q * 198; ang = 180; } else { const q = (k - 0.55) / 0.45; x = 124 + q * 220; y = 168; ang = 90; }
+    const k2 = ((t + 6) % 12) / 12; let x2, y2, a2;
+    if (k2 < 0.35) { const q = k2 / 0.35; x2 = -30 + q * 154; y2 = 372; a2 = 90; } else { const q = (k2 - 0.35) / 0.65; x2 = 124; y2 = 372 + q * 300; a2 = 180; }
+    const mins = k < 0.3 ? 3 : k < 0.5 ? 2 : 1;
+    // street
+    const T = 13, c = t % T, ease = (v) => 1 - Math.pow(1 - v, 3), STOP = 470, START = -220, END = 1000;
+    let cx0, fase, stopped = false;
+    if (c < 5) { cx0 = START + (STOP - START) * ease(c / 5); fase = c < 3 ? 'Cami viene en camino' : '¡Ya casi!'; }
+    else if (c < 9) { cx0 = STOP; stopped = true; fase = c < 6 ? '¡Ya llegó!' : 'Suban, suban'; }
+    else { const q = (c - 9) / 3.5; cx0 = STOP + (END - STOP) * q * q; fase = 'Se va · buen viaje'; }
+    const near = c < 9 && cx0 > 60, seVa = c >= 9;
+    const look = (ox, m) => Math.max(-1, Math.min(1, (cx0 + 125 - ox) / 160)) * m;
+    const L = stopped ? 1 : c > 4.4 && c < 5 ? (c - 4.4) / 0.6 : 0;
+    const board = Math.max(0, Math.min(1, (c - 6) / 2));
+    const paxOp = c < 6 ? 1 : c < 8 ? 1 - board : c < 12.4 ? 0 : Math.min(1, (c - 12.4) / 0.5);
+    const oe = stopped ? 1 : near ? 0.5 : seVa ? 0.35 : 0;
+    const oj = -Math.abs(Math.sin(t * 7)) * oe * 16;
+    const ol = look(760, 4.5);
+    const V = {
+      ancho: (this.state.w ?? 1000) >= 560, onMove, lk: tr(2.6), lkB: tr(4.2), mins,
+      banda: this.props.nombreBanda ?? 'al equipo',
+      camiMap: `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang})`, cami2Map: `translate(${x2.toFixed(1)} ${y2.toFixed(1)}) rotate(${a2})`,
+      tiendas: ['App Store', 'Google Play'].map(nombre => (this.props.tiendas ?? 'próximamente') === 'publicada'
+        ? { nombre, pre: 'Descárgala en', href: '#', bg: '#2A2E37', fg: '#fff', op: 1 }
+        : { nombre, pre: 'Próximamente en', href: '#instalar', bg: 'transparent', fg: '#4A4F5A', op: 0.75 }),
+      heroRef: (el) => { this.heroEl = el; }, bandaRef: (el) => { this.bandaEl = el; },
+      onGuino: () => this.clic('guino'),
+      titulo: this.props.titulo ?? '¿Ontás? Ontoy te lleva.',
+      ...this.banda(t), stepRef: (el) => { this.stepEl = el; },
+      onRisa: () => this.clic('risa'), onSalto: () => this.clic('salto'),
+      hRisa: risa, hOjos: !risa, hShake, hJa, hLagrimas: risa && RN >= 3, hTy: (62 + ((t * 40) % 16)).toFixed(1), hEr: 11 + he * 2,
+      hEye: `translate(${(H.dx * 4.6).toFixed(2)} ${(H.dy * 4.6).toFixed(2)})`,
+      hMy: risa ? 76 : 77, hMrx: risa ? 11 + Math.min(RN, 5) : (4 + he * 4).toFixed(1), hMry: risa ? 9 + Math.min(RN, 5) : (he < 0.08 ? 0 : (1 + he * 8 * (0.75 + 0.25 * Math.sin(t * 10)))).toFixed(1),
+      hLx: hands[0].toFixed(1), hLy: hands[1].toFixed(1), hRx: hands[2].toFixed(1), hRy: hands[3].toFixed(1),
+      sJump: `translate(0 ${jy.toFixed(1)}) rotate(${giro.toFixed(1)} 60 60)`, sEye: `translate(${(S.dx * 4.6).toFixed(2)} ${(S.dy * 4.6 - big * 3).toFixed(2)})`,
+      sSmile, sSmileOp: (se > 0.06 || big > 0 || mareo) ? 1 : 0, sEstrellas: salto < sd, sMas: salto < sd && SN >= 2, sMareo: mareo, sMareoT: `rotate(${(t * 400 % 360).toFixed(0)} 63 51)`,
+      sLx: (14 - up * 4).toFixed(1), sLy: (80 - up * 70 + Math.sin(t * 9) * up * 6).toFixed(1), sRx: (106 + up * 4).toFixed(1), sRy: (78 - up * 70 + Math.sin(t * 9 + 2) * up * 6).toFixed(1),
+      fase, ya: stopped, seVa,
+      e1a: 64 + look(72, 3.2), e1b: 80 + look(72, 3.2), e2a: 240 + look(251, 3.9), e2b: 262 + look(251, 3.9), e3a: 331 + look(338, 2.7), e3b: 345 + look(338, 2.7), e4a: 445 + look(450, 2.1), e4b: 455 + look(450, 2.1),
+      e5a: 551 + look(560, 3.4), e5b: 569 + look(560, 3.4), e5y: 138 - L * 2.5,
+      plT: `translate(0 ${(-L * 70).toFixed(1)})`, plC: stopped ? '#B69CF0' : '#FFFFFF', plTxt: stopped ? '¡ya!' : (near && c > 3 ? '1′' : '3′'),
+      pax1: (598 + (556 - 598) * board).toFixed(1), pax2: (632 + (566 - 632) * board).toFixed(1), paxY: (202 + board * 14).toFixed(1), paxOp: paxOp.toFixed(2),
+      oT: `translate(700 ${(150 + oj).toFixed(1)}) scale(.78)`, oEa: (50 + ol).toFixed(1), oEb: (76 + ol).toFixed(1), oEy: stopped ? 47 : 52, oEy2: stopped ? 45 : 50,
+      oAbierta: stopped, oSonrisa: seVa, oHl: (80 - oe * 60 + Math.sin(t * 12) * oe * 8).toFixed(1), oHr: (78 - oe * 60 + Math.sin(t * 12 + 2) * oe * 8).toFixed(1),
+      camiT: `translate(${cx0.toFixed(1)} ${(52 + (stopped ? -Math.abs(Math.sin(t * 6)) * 3 : Math.sin(t * 30) * 0.6)).toFixed(1)})`,
+      cm1: 116 + (stopped ? 0 : seVa ? -2 : 2.5), cm2: 131 + (stopped ? 0 : seVa ? -2 : 2.5), cmY: stopped ? 190.5 : 193,
+      cmH: (214 + (stopped ? Math.sin(t * 12) * 9 : 0)).toFixed(1),
+    };
+    ["3′","1′","¡ya!"].forEach((v, k) => { V['plV' + k] = V.plTxt === v; });
+    ["¡ja ja!","¡jajaja!","¡JAJAJA!","¡ya, ya! jaja","¡me haces llorar! jaja","¡basta! JAJAJA"].forEach((v, k) => { V['hJaV' + k] = V.hJa === v; });
+    ["¡ay!","¡ay, ya!","¡me apenas!","¡basta! >///<"].forEach((v, k) => { V['bTxV' + k] = V.bTxt === v; });
+    return V;
+  }
+}
+</script>
+</body>
+</html>

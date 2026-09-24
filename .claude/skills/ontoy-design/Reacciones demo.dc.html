@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#EDE9E1;color:#2A2E37;font-family:'Instrument Sans',sans-serif}a{color:#2A2E37}a:hover{color:#C8702A}</style>
+</helmet>
+<div style="max-width:1100px;margin:0 auto;padding:48px 28px;display:flex;flex-direction:column;gap:20px">
+  <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="font:600 13px 'Instrument Sans';letter-spacing:.12em;text-transform:uppercase;color:#6B6F78">Demo · simulación</div>
+      <h1 style="margin:0;font:800 clamp(32px,5vw,52px)/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.02em">Todos reaccionan cuando viene Cami</h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;background:#2A2E37;color:#F7F3EC;border-radius:999px;padding:10px 18px;font:700 15px 'Instrument Sans'">
+      <span style="background:#4F7FD8;color:#fff;border-radius:6px;padding:2px 8px;font:800 13px 'Bricolage Grotesque',sans-serif">51</span>
+      <span>{{ fase }}</span>
+    </div>
+  </div>
+  <div style="background:#fff;border-radius:28px;overflow:hidden">
+    <svg viewBox="0 0 800 330" style="display:block;width:100%;height:auto">
+      <rect x="0" y="0" width="800" height="330" fill="#F7F3EC"></rect>
+      <rect x="0" y="244" width="800" height="10" fill="#DCD5C8"></rect>
+      <rect x="0" y="254" width="800" height="76" fill="#2A2E37"></rect>
+      <rect x="20" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="140" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="260" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="380" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="500" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="620" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="740" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect>
+
+      <rect x="110" y="150" width="140" height="94" fill="#F2C14E"></rect>
+      <rect x="120" y="132" width="120" height="22" rx="5" fill="#2A2E37"></rect>
+      <text x="180" y="147.5" text-anchor="middle" fill="#F7F3EC" style="font:700 10px 'Instrument Sans',sans-serif;letter-spacing:.5px">ABARROTES LUPITA</text>
+      <rect x="110" y="156" width="140" height="14" fill="#E36F8C"></rect>
+      <rect x="120" y="180" width="44" height="32" rx="5" fill="#2A2E37"></rect>
+      <rect x="176" y="180" width="30" height="64" rx="3" fill="#2A2E37"></rect>
+      <rect x="214" y="180" width="28" height="32" rx="5" fill="#2A2E37"></rect>
+      <circle cx="134" cy="196" r="7" fill="#fff"></circle><circle cx="150" cy="196" r="7" fill="#fff"></circle>
+      <circle cx="{{ tl1 }}" cy="196" r="3.8" fill="#2A2E37"></circle><circle cx="{{ tl2 }}" cy="196" r="3.8" fill="#2A2E37"></circle>
+      <sc-if value="{{ ya }}" hint-placeholder-val="{{ false }}"><ellipse cx="142" cy="207" rx="3" ry="3.6" fill="#F2C14E"></ellipse></sc-if>
+
+      <rect x="324" y="150" width="14" height="96" rx="3" fill="#2A2E37"></rect>
+      <circle cx="300" cy="150" r="26" fill="#5FB36B"></circle><circle cx="362" cy="150" r="26" fill="#5FB36B"></circle><circle cx="331" cy="128" r="40" fill="#5FB36B"></circle>
+      <circle cx="320" cy="132" r="8.5" fill="#fff"></circle><circle cx="342" cy="132" r="8.5" fill="#fff"></circle>
+      <circle cx="{{ ar1 }}" cy="132" r="4.6" fill="#2A2E37"></circle><circle cx="{{ ar2 }}" cy="132" r="4.6" fill="#2A2E37"></circle>
+      <sc-if value="{{ ya }}" hint-placeholder-val="{{ false }}"><ellipse cx="331" cy="150" rx="4" ry="5" fill="#2A2E37"></ellipse></sc-if>
+
+      <rect x="437" y="150" width="6" height="96" fill="#2A2E37"></rect><rect x="426" y="242" width="28" height="6" rx="3" fill="#2A2E37"></rect>
+      <rect x="424" y="104" width="32" height="60" rx="10" fill="#2A2E37"></rect>
+      <circle cx="440" cy="118" r="7" fill="#E36F8C"></circle><circle cx="440" cy="134" r="7" fill="#4A505C"></circle><circle cx="440" cy="150" r="7" fill="#4A505C"></circle>
+      <rect x="426" y="174" width="28" height="18" rx="6" fill="#8B6CC9"></rect>
+      <circle cx="435" cy="183" r="4.6" fill="#fff"></circle><circle cx="445" cy="183" r="4.6" fill="#fff"></circle>
+      <circle cx="{{ se1 }}" cy="183" r="2.5" fill="#2A2E37"></circle><circle cx="{{ se2 }}" cy="183" r="2.5" fill="#2A2E37"></circle>
+
+      <rect x="577" y="140" width="6" height="104" fill="#2A2E37"></rect><rect x="566" y="242" width="28" height="7" rx="3.5" fill="#2A2E37"></rect>
+      <circle cx="580" cy="{{ pdY }}" r="26" fill="#4F7FD8"></circle>
+      <circle cx="571" cy="{{ pdEy }}" r="7.5" fill="#fff"></circle><circle cx="589" cy="{{ pdEy }}" r="7.5" fill="#fff"></circle>
+      <circle cx="{{ pd1 }}" cy="{{ pdPy }}" r="4" fill="#2A2E37"></circle><circle cx="{{ pd2 }}" cy="{{ pdPy }}" r="4" fill="#2A2E37"></circle>
+      <sc-if value="{{ ya }}" hint-placeholder-val="{{ false }}"><ellipse cx="580" cy="{{ pdMy }}" rx="3.6" ry="4.4" fill="#2A2E37"></ellipse></sc-if>
+      <rect x="551" y="{{ plY }}" width="58" height="26" rx="6.5" fill="#2A2E37"></rect>
+      <text x="566" y="{{ plT }}" text-anchor="middle" fill="{{ plC }}" style="font:800 12px 'Bricolage Grotesque',sans-serif">51</text>
+      <text x="594" y="{{ plT }}" text-anchor="middle" fill="{{ plC }}" style="font:800 12px 'Bricolage Grotesque',sans-serif">{{ plTxt }}</text>
+      <circle cx="551" cy="{{ plH }}" r="6.5" fill="#4F7FD8"></circle><circle cx="609" cy="{{ plH }}" r="6.5" fill="#4F7FD8"></circle>
+
+      <path d="M680 196 L660 150 A50 50 0 0 1 700 150 Z" fill="#4F7FD8" opacity=".2" transform="{{ beam }}"></path>
+      <circle cx="680" cy="214" r="19" fill="#fff"></circle><circle cx="680" cy="214" r="16" fill="#4F7FD8"></circle>
+      <circle cx="674" cy="209" r="5" fill="#fff"></circle><circle cx="686" cy="209" r="5" fill="#fff"></circle>
+      <circle cx="{{ ps1 }}" cy="208" r="2.8" fill="#2A2E37"></circle><circle cx="{{ ps2 }}" cy="208" r="2.8" fill="#2A2E37"></circle>
+      <sc-if value="{{ ya }}" hint-placeholder-val="{{ false }}"><ellipse cx="680" cy="222" rx="2.8" ry="3.4" fill="#2A2E37"></ellipse></sc-if>
+      <circle cx="654" cy="{{ ph1 }}" r="5.5" fill="#4F7FD8"></circle><circle cx="706" cy="{{ ph2 }}" r="5.5" fill="#4F7FD8"></circle>
+
+      <g transform="{{ camiT }}">
+        <rect x="0" y="170" width="150" height="72" rx="16" fill="#4F7FD8"></rect>
+        <rect x="0" y="218" width="150" height="6" fill="#F7F3EC"></rect>
+        <rect x="12" y="180" width="24" height="24" rx="5" fill="#2A2E37"></rect><rect x="42" y="180" width="24" height="24" rx="5" fill="#2A2E37"></rect><rect x="72" y="180" width="24" height="24" rx="5" fill="#2A2E37"></rect>
+        <rect x="104" y="178" width="38" height="34" rx="8" fill="#2A2E37"></rect>
+        <rect x="112" y="162" width="26" height="10" rx="3" fill="#F7F3EC"></rect>
+        <text x="125" y="170.5" text-anchor="middle" fill="#2A2E37" style="font:800 8px 'Bricolage Grotesque',sans-serif">51</text>
+        <circle cx="116" cy="193" r="6" fill="#fff"></circle><circle cx="131" cy="193" r="6" fill="#fff"></circle>
+        <circle cx="{{ cm1 }}" cy="193" r="3.2" fill="#2A2E37"></circle><circle cx="{{ cm2 }}" cy="193" r="3.2" fill="#2A2E37"></circle>
+        <sc-if value="{{ camiSonrisa }}" hint-placeholder-val="{{ true }}"><path d="M117 203 q7 5 14 0" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"></path></sc-if>
+        <sc-if value="{{ camiBoca }}" hint-placeholder-val="{{ false }}"><ellipse cx="124" cy="205" rx="3" ry="3.6" fill="#F7F3EC"></ellipse></sc-if>
+        <circle cx="34" cy="244" r="12" fill="#2A2E37"></circle><circle cx="34" cy="244" r="5" fill="#F7F3EC"></circle>
+        <circle cx="118" cy="244" r="12" fill="#2A2E37"></circle><circle cx="118" cy="244" r="5" fill="#F7F3EC"></circle>
+        <circle cx="160" cy="{{ cmH }}" r="7" fill="#4F7FD8"></circle>
+      </g>
+    </svg>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;font-size:14px;line-height:1.45;color:#4A4F5A">
+    <div style="background:#fff;border-radius:18px;padding:16px"><strong style="color:#2A2E37">Lejos:</strong> todos voltean a ver hacia donde viene Cami.</div>
+    <div style="background:#fff;border-radius:18px;padding:16px"><strong style="color:#2A2E37">Cerca:</strong> el pasajero mueve las manitas y la linterna apunta al camión.</div>
+    <div style="background:#fff;border-radius:18px;padding:16px"><strong style="color:#2A2E37">¡Ya llegó!:</strong> Paradito alza la placa y cambia a «¡ya!»; el barrio abre la boca; Cami saluda.</div>
+    <div style="background:#fff;border-radius:18px;padding:16px"><strong style="color:#2A2E37">Regla:</strong> solo con la posición real de Cami. Sin dato, nadie reacciona.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;velocidad&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:0.25,&quot;max&quot;:2,&quot;step&quot;:0.25,&quot;default&quot;:1,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  state = { t: 0 };
+  componentDidMount() {
+    const t0 = performance.now();
+    const loop = (now) => { this.setState({ t: (now - t0) / 1000 }); this.raf = requestAnimationFrame(loop); };
+    this.raf = requestAnimationFrame(loop);
+  }
+  componentWillUnmount() { cancelAnimationFrame(this.raf); }
+  renderVals() {
+    const speed = this.props.velocidad ?? 1;
+    const T = 12, t = this.state.t * speed, c = t % T;
+    const ease = (x) => 1 - Math.pow(1 - x, 3);
+    const STOP = 395, START = -180, END = 900;
+    let x, fase, stopped = false;
+    if (c < 6) { x = START + (STOP - START) * ease(c / 6); fase = c < 3.5 ? 'Cami viene en camino' : '¡Ya casi!'; }
+    else if (c < 8.5) { x = STOP; stopped = true; fase = '¡Ya llegó!'; }
+    else { const k = (c - 8.5) / 3.5; x = STOP + (END - STOP) * k * k; fase = 'Se va · buen viaje'; }
+    const cx = x + 125;
+    const dist = 580 - cx;
+    const near = dist < 260 && c < 8.5;
+    const ya = stopped;
+    const look = (ox, max) => Math.max(-1, Math.min(1, (cx - ox) / 160)) * max;
+    const lift = ya ? 1 : Math.max(0, Math.min(1, (c - 5.4) / 0.6)) * (c < 8.5 ? 1 : 0);
+    const L = (lift < 0 ? 0 : lift);
+    const pd = look(580, 3.4), pdUp = L * -2.5;
+    const wave = near ? Math.sin(t * 14) * 7 : 0;
+    const ang = Math.max(-40, Math.min(40, (cx - 680) / 6));
+    return {
+      fase,
+      ya,
+      camiBoca: stopped,
+      camiSonrisa: c >= 8.5,
+      camiT: `translate(${x.toFixed(1)} ${(52 + (stopped ? -Math.abs(Math.sin(t * 6)) * 3 : Math.sin(t * 30) * 0.6)).toFixed(1)})`,
+      cm1: 116 + (stopped ? 0 : 2.5), cm2: 131 + (stopped ? 0 : 2.5),
+      cmH: 214 + (stopped ? Math.sin(t * 12) * 8 : 0),
+      tl1: 134 + look(142, 3.2), tl2: 150 + look(142, 3.2),
+      ar1: 320 + look(331, 3.9), ar2: 342 + look(331, 3.9),
+      se1: 435 + look(440, 2.1), se2: 445 + look(440, 2.1),
+      pdY: 140 + L * 14, pdEy: 138 + L * 14, pdPy: 138 + L * 14 + pdUp, pdMy: 156 + L * 14,
+      pd1: 571 + pd, pd2: 589 + pd,
+      plY: 172 - L * 70, plT: 189.5 - L * 70, plH: 185 - L * 70,
+      plC: ya ? '#4F7FD8' : '#FFFFFF', plTxt: ya ? '¡ya!' : (near ? '1′' : '3′'),
+      ps1: 674 + look(680, 2.2), ps2: 686 + look(680, 2.2),
+      ph1: 220 - (near ? Math.abs(wave) : 0), ph2: 220 - (near ? Math.abs(Math.sin(t * 14 + 1.5) * 7) : 0),
+      beam: `rotate(${ang.toFixed(1)} 680 214)`,
+    };
+  }
+}
+</script>
+</body>
+</html>

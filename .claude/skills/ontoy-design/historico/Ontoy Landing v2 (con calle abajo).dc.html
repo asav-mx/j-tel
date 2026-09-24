@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>¿Ontoy? · Sabes cuándo pasa tu camión</title>
+<meta name="description" content="Ontoy te dice cuándo pasa tu camión, qué ruta te lleva y en qué parada subirte. Gratis, sin cuenta, desde tu navegador.">
+<meta name="theme-color" content="#EDE9E1">
+<meta property="og:title" content="¿Ontás? Ontoy te lleva.">
+<meta property="og:description" content="Sabes cuándo pasa tu camión. De verdad. Gratis y sin cuenta.">
+<meta property="og:image" content="https://ontoy.app/icono-512.png">
+<meta property="og:url" content="https://ontoy.app">
+<link rel="icon" type="image/svg+xml" href="./export/iconos/icono.svg">
+<link rel="apple-touch-icon" href="./export/iconos/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#EDE9E1;color:#2A2E37;font-family:'Instrument Sans',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#2A2E37;text-decoration-color:#8B6CC9;text-underline-offset:3px}
+a:hover{color:#4A4F5A}
+</style>
+</helmet>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="L-ontoy" viewBox="0 0 120 120">
+      <ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse>
+      <path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+      <circle cx="50" cy="52" r="11" fill="#fff"></circle><circle cx="76" cy="50" r="11" fill="#fff"></circle>
+      <circle cx="50" cy="52" r="6" fill="#2A2E37" transform="{{ lkB }}"></circle><circle cx="76" cy="50" r="6" fill="#2A2E37" transform="{{ lkB }}"></circle>
+      <circle cx="14" cy="80" r="6" fill="#F6A15B"></circle><circle cx="108" cy="78" r="6" fill="#F6A15B"></circle>
+    </symbol>
+    <symbol id="L-icono" viewBox="0 0 120 120">
+      <ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse>
+      <path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+      <circle cx="50" cy="50" r="12" fill="#fff"></circle><circle cx="76" cy="48" r="12" fill="#fff"></circle>
+      <circle cx="51" cy="45" r="6" fill="#2A2E37"></circle><circle cx="77" cy="43" r="6" fill="#2A2E37"></circle>
+      <ellipse cx="63" cy="75" rx="5" ry="6" fill="#2A2E37"></ellipse>
+    </symbol>
+    <symbol id="L-paradito" viewBox="0 0 120 120">
+      <rect x="57" y="36" width="6" height="72" fill="#2A2E37"></rect><rect x="46" y="106" width="28" height="7" rx="3.5" fill="#2A2E37"></rect>
+      <circle cx="60" cy="38" r="26" fill="currentColor"></circle>
+      <circle cx="51" cy="36" r="7.5" fill="#fff"></circle><circle cx="69" cy="36" r="7.5" fill="#fff"></circle>
+      <circle cx="51" cy="36" r="4" fill="#2A2E37" transform="{{ lk }}"></circle><circle cx="69" cy="36" r="4" fill="#2A2E37" transform="{{ lk }}"></circle>
+      <rect x="31" y="70" width="58" height="26" rx="6.5" fill="#2A2E37"></rect>
+      <text x="46" y="87.5" text-anchor="middle" fill="#fff" style="font:800 11px 'Bricolage Grotesque',sans-serif">51</text>
+      <rect x="58.5" y="76" width="1.4" height="14" fill="#fff" opacity=".5"></rect>
+      <text x="74" y="87" text-anchor="middle" fill="#fff" style="font:800 9px 'Bricolage Grotesque',sans-serif">3′</text>
+      <circle cx="31" cy="83" r="6" fill="currentColor"></circle><circle cx="89" cy="83" r="6" fill="currentColor"></circle>
+    </symbol>
+    <symbol id="L-cami" viewBox="0 0 120 120">
+      <rect x="32" y="90" width="14" height="12" rx="4" fill="#2A2E37"></rect><rect x="74" y="90" width="14" height="12" rx="4" fill="#2A2E37"></rect>
+      <rect x="26" y="14" width="68" height="80" rx="16" fill="currentColor"></rect>
+      <rect x="40" y="19" width="40" height="13" rx="4" fill="#F7F3EC"></rect><text x="60" y="29" text-anchor="middle" fill="#2A2E37" style="font:800 10px 'Bricolage Grotesque',sans-serif">51</text>
+      <rect x="32" y="36" width="56" height="30" rx="10" fill="#2A2E37"></rect>
+      <ellipse cx="49" cy="51" rx="9.5" ry="7" fill="#fff"></ellipse><ellipse cx="71" cy="51" rx="9.5" ry="7" fill="#fff"></ellipse>
+      <ellipse cx="49" cy="51" rx="4.4" ry="4.6" fill="#2A2E37" transform="{{ lk }}"></ellipse><ellipse cx="71" cy="51" rx="4.4" ry="4.6" fill="#2A2E37" transform="{{ lk }}"></ellipse>
+      <circle cx="42" cy="80" r="5" fill="#F7F3EC"></circle><circle cx="78" cy="80" r="5" fill="#F7F3EC"></circle>
+      <circle cx="14" cy="66" r="6" fill="currentColor"></circle><circle cx="106" cy="66" r="6" fill="currentColor"></circle>
+    </symbol>
+    <symbol id="L-cami-top" viewBox="0 0 80 120">
+      <rect x="9" y="22" width="8" height="16" rx="3" fill="#2A2E37"></rect><rect x="63" y="22" width="8" height="16" rx="3" fill="#2A2E37"></rect><rect x="9" y="84" width="8" height="16" rx="3" fill="#2A2E37"></rect><rect x="63" y="84" width="8" height="16" rx="3" fill="#2A2E37"></rect>
+      <rect x="14" y="8" width="52" height="104" rx="16" fill="currentColor"></rect><rect x="20" y="12" width="40" height="22" rx="9" fill="#2A2E37"></rect>
+      <ellipse cx="32" cy="23" rx="7.5" ry="5.8" fill="#fff"></ellipse><ellipse cx="48" cy="23" rx="7.5" ry="5.8" fill="#fff"></ellipse><circle cx="32" cy="20.5" r="3.4" fill="#2A2E37"></circle><circle cx="48" cy="20.5" r="3.4" fill="#2A2E37"></circle>
+      <rect x="27" y="52" width="26" height="22" rx="6" fill="#F7F3EC"></rect>
+    </symbol>
+    <symbol id="L-pasajero" viewBox="0 0 60 60">
+      <path d="M30 30 L14 4 A30 30 0 0 1 46 4 Z" fill="#4F7FD8" opacity=".22"></path><circle cx="30" cy="34" r="14" fill="#fff"></circle><circle cx="30" cy="34" r="11.5" fill="#4F7FD8"></circle>
+      <circle cx="25.5" cy="31" r="3.6" fill="#fff"></circle><circle cx="34.5" cy="31" r="3.6" fill="#fff"></circle><circle cx="25.8" cy="29.4" r="2" fill="#2A2E37"></circle><circle cx="34.8" cy="29.4" r="2" fill="#2A2E37"></circle>
+      <circle cx="12" cy="40" r="4" fill="#4F7FD8"></circle><circle cx="48" cy="40" r="4" fill="#4F7FD8"></circle>
+    </symbol>
+    <symbol id="L-mini-tienda" viewBox="0 0 60 56"><rect x="4" y="16" width="52" height="38" rx="3" fill="#F2C14E"></rect><rect x="4" y="16" width="52" height="8" fill="#E36F8C"></rect><rect x="8" y="6" width="44" height="10" rx="3" fill="#2A2E37"></rect><rect x="10" y="30" width="18" height="14" rx="3" fill="#2A2E37"></rect><rect x="34" y="30" width="12" height="24" rx="2" fill="#2A2E37"></rect><circle cx="15" cy="37" r="3.2" fill="#fff"></circle><circle cx="23" cy="37" r="3.2" fill="#fff"></circle><circle cx="16" cy="37" r="1.8" fill="#2A2E37"></circle><circle cx="24" cy="37" r="1.8" fill="#2A2E37"></circle></symbol>
+    <symbol id="L-mini-escuela" viewBox="0 0 80 72"><rect x="10" y="30" width="62" height="40" fill="#F2C14E"></rect><path d="M6 32 L41 10 L76 32 Z" fill="#2A2E37"></path><rect x="4" y="4" width="2.5" height="66" fill="#2A2E37"></rect><rect x="6.5" y="5" width="12" height="8" fill="#E36F8C"></rect><rect x="16" y="40" width="10" height="9" rx="2" fill="#3A4150"></rect><rect x="56" y="40" width="10" height="9" rx="2" fill="#3A4150"></rect><rect x="35" y="48" width="12" height="22" rx="2" fill="#3A4150"></rect><circle cx="35" cy="30" r="4" fill="#fff"></circle><circle cx="47" cy="30" r="4" fill="#fff"></circle><circle cx="36" cy="30" r="2.2" fill="#2A2E37"></circle><circle cx="48" cy="30" r="2.2" fill="#2A2E37"></circle></symbol>
+    <symbol id="L-mini-farmacia" viewBox="0 0 66 62"><rect x="6" y="22" width="54" height="38" fill="#DCD5C8"></rect><rect x="2" y="12" width="62" height="13" rx="4" fill="#5FB36B"></rect><rect x="46" y="6" width="16" height="16" rx="4" fill="#F7F3EC"></rect><rect x="52" y="8.5" width="4" height="11" fill="#5FB36B"></rect><rect x="48.5" y="12" width="11" height="4" fill="#5FB36B"></rect><rect x="12" y="32" width="20" height="16" rx="3" fill="#3A4150"></rect><rect x="38" y="32" width="14" height="28" rx="2" fill="#3A4150"></rect><circle cx="18" cy="40" r="3.2" fill="#fff"></circle><circle cx="26" cy="40" r="3.2" fill="#fff"></circle><circle cx="19" cy="40" r="1.8" fill="#2A2E37"></circle><circle cx="27" cy="40" r="1.8" fill="#2A2E37"></circle></symbol>
+    <symbol id="L-mini-arbol" viewBox="0 0 52 56"><rect x="22" y="32" width="8" height="24" rx="2" fill="#2A2E37"></rect><circle cx="14" cy="30" r="12" fill="#5FB36B"></circle><circle cx="38" cy="30" r="12" fill="#5FB36B"></circle><circle cx="26" cy="20" r="18" fill="#5FB36B"></circle><circle cx="20" cy="22" r="4.2" fill="#fff"></circle><circle cx="32" cy="22" r="4.2" fill="#fff"></circle><circle cx="21" cy="22" r="2.3" fill="#2A2E37"></circle><circle cx="33" cy="22" r="2.3" fill="#2A2E37"></circle></symbol>
+    <symbol id="L-mini-tacos" viewBox="0 0 60 56"><rect x="29" y="4" width="2" height="12" fill="#2A2E37"></rect><path d="M8 18 A22 14 0 0 1 52 18 Z" fill="#E36F8C"></path><rect x="10" y="24" width="40" height="22" rx="5" fill="#2FA6A0"></rect><rect x="6" y="20" width="48" height="5" rx="2.5" fill="#2A2E37"></rect><text x="30" y="43" text-anchor="middle" fill="#fff" style="font:800 6px 'Bricolage Grotesque',sans-serif">TACOS</text><circle cx="24" cy="32" r="4" fill="#fff"></circle><circle cx="36" cy="32" r="4" fill="#fff"></circle><circle cx="25" cy="32" r="2.2" fill="#2A2E37"></circle><circle cx="37" cy="32" r="2.2" fill="#2A2E37"></circle><circle cx="18" cy="50" r="5" fill="#2A2E37"></circle><circle cx="42" cy="50" r="5" fill="#2A2E37"></circle></symbol>
+  </defs>
+</svg>
+
+<div onMouseMove="{{ onMove }}" onTouchMove="{{ onMove }}" style="display:flex;flex-direction:column;min-height:100vh;background:#EDE9E1">
+
+  <header style="position:sticky;top:0;z-index:5;background:#EDE9E1;box-shadow:0 1px 0 #DCD5C8">
+    <div style="max-width:1200px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px">
+      <a href="#" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+        <span style="width:40px;height:40px;border-radius:11px;background:#F7F3EC;display:grid;place-items:center;box-shadow:inset 0 0 0 1px #DCD5C8"><svg viewBox="0 0 120 120" style="width:80%"><use href="#L-icono" width="120" height="120"></use></svg></span>
+        <span style="font:800 24px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">¿Ontoy?</span>
+      </a>
+      <nav style="display:flex;align-items:center;gap:22px;font-size:15px;font-weight:600">
+        <sc-if value="{{ ancho }}" hint-placeholder-val="{{ true }}">
+          <a href="#hace" style="text-decoration:none">Qué hace</a>
+          <a href="#equipo" style="text-decoration:none">El equipo</a>
+          <a href="#instalar" style="text-decoration:none">Instalar</a>
+        </sc-if>
+        <a href="/" style="text-decoration:none;background:#2A2E37;color:#fff;padding:10px 16px;border-radius:999px" style-hover="background:#3A4150;color:#fff">Planea tu viaje</a>
+      </nav>
+    </div>
+  </header>
+
+  <section data-screen-label="Hero" style="max-width:1200px;margin:0 auto;padding:28px 24px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:40px;align-items:center;width:100%;box-sizing:border-box">
+    <div style="display:flex;flex-direction:column;gap:22px">
+      <div style="align-self:flex-start;display:flex;align-items:center;gap:8px;background:#2A2E37;color:#F7F3EC;border-radius:999px;padding:7px 14px 7px 8px;font:700 13px 'Instrument Sans'"><span style="width:22px;height:22px;border-radius:50%;background:#EDE9E1;display:grid;place-items:center"><svg viewBox="0 0 120 120" style="width:86%"><use href="#L-icono" width="120" height="120"></use></svg></span>Bienvenido al universo de ¿Ontoy?</div>
+      <h1 style="margin:0;font:800 clamp(52px,7.4vw,96px)/0.9 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;letter-spacing:-0.04em;text-wrap:balance">{{ titulo }}</h1>
+      <p style="margin:0;max-width:540px;font-size:clamp(18px,2vw,21px);line-height:1.5;color:#4A4F5A;text-wrap:pretty">Dile a dónde quieres llegar. Ontoy te dice qué camión tomar, dónde subirte y cuándo pasa, con la posición real del camión. Nada de esperar a ciegas.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px">
+        <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;background:#2A2E37;color:#fff;padding:17px 26px;border-radius:999px;font:700 17px 'Instrument Sans'" style-hover="background:#3A4150;color:#fff">Planea tu viaje <span style="font-size:20px">→</span></a>
+        <a href="#instalar" style="display:flex;align-items:center;text-decoration:none;background:#F7F3EC;color:#2A2E37;padding:17px 26px;border-radius:999px;font:700 17px 'Instrument Sans';box-shadow:inset 0 0 0 2px #2A2E37" style-hover="background:#fff">Instálala gratis</a>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:18px;font-size:14px;font-weight:600;color:#4A4F5A">
+        <span>✓ Sin cuenta</span><span>✓ Sin descargar</span><span>✓ En vivo</span>
+      </div>
+    </div>
+    <div style="position:relative;display:grid;place-items:center;padding-top:10px">
+      <div style="position:absolute;left:-4%;bottom:-18px;width:52%;max-width:300px;aspect-ratio:1/1.15;z-index:2">
+        <iframe ref="{{ ifrRef }}" src="Ontoy hero 3D.html" title="Ontoy en 3D" allowtransparency="true" style="width:100%;height:100%;border:0;background:transparent;display:block"></iframe>
+      </div>
+      <div style="width:min(100%,340px,calc((100svh - 300px) * 0.486));min-width:min(100%,275px);aspect-ratio:9/18.5;background:#2A2E37;border-radius:44px;padding:10px;box-sizing:border-box">
+        <div style="position:relative;width:100%;height:100%;border-radius:36px;overflow:hidden;background:#EDE9E1">
+          <svg viewBox="0 0 320 640" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%">
+            <rect width="320" height="640" fill="#EDE9E1"></rect>
+            <rect x="14" y="14" width="96" height="140" rx="14" fill="#E2DCD1"></rect><rect x="138" y="14" width="168" height="140" rx="14" fill="#E2DCD1"></rect>
+            <rect x="14" y="182" width="96" height="176" rx="14" fill="#D3E4C9"></rect><circle cx="44" cy="222" r="12" fill="#5FB36B"></circle><circle cx="82" cy="262" r="12" fill="#5FB36B"></circle><circle cx="50" cy="310" r="12" fill="#5FB36B"></circle>
+            <rect x="138" y="182" width="168" height="176" rx="14" fill="#E2DCD1"></rect>
+            <rect x="14" y="386" width="96" height="240" rx="14" fill="#E2DCD1"></rect><rect x="138" y="386" width="168" height="240" rx="14" fill="#E2DCD1"></rect>
+            <rect x="110" y="0" width="28" height="640" fill="#F7F3EC"></rect><rect x="0" y="154" width="320" height="28" fill="#F7F3EC"></rect><rect x="0" y="358" width="320" height="28" fill="#F7F3EC"></rect>
+            <path d="M124 -10 V168 H330" fill="none" stroke="#EDE9E1" stroke-width="16" stroke-linejoin="round"></path>
+            <path d="M124 -10 V168 H330" fill="none" stroke="#8B6CC9" stroke-width="9" stroke-linejoin="round"></path>
+            <path d="M-10 372 H124 V650" fill="none" stroke="#EDE9E1" stroke-width="12" stroke-linejoin="round"></path>
+            <path d="M-10 372 H124 V650" fill="none" stroke="#2FA6A0" stroke-width="6" stroke-linejoin="round"></path>
+            <use href="#L-paradito" x="226" y="112" width="52" height="52" style="color:#8B6CC9"></use>
+            <use href="#L-paradito" x="40" y="320" width="44" height="44" style="color:#2FA6A0"></use>
+            <use href="#L-mini-tienda" x="160" y="40" width="56" height="52"></use>
+            <use href="#L-mini-escuela" x="168" y="420" width="76" height="70"></use>
+            <use href="#L-mini-farmacia" x="26" y="440" width="64" height="60"></use>
+            <use href="#L-mini-arbol" x="236" y="270" width="52" height="56"></use>
+            <use href="#L-mini-arbol" x="250" y="520" width="44" height="48"></use>
+            <use href="#L-mini-tacos" x="30" y="40" width="58" height="54"></use>
+            <g transform="{{ cami2Map }}"><use href="#L-cami-top" x="-13" y="-19" width="26" height="39" style="color:#2FA6A0"></use></g>
+            <g transform="{{ camiMap }}"><use href="#L-cami-top" x="-15" y="-22" width="30" height="45" style="color:#8B6CC9"></use></g>
+            <use href="#L-pasajero" x="222" y="196" width="46" height="46"></use>
+          </svg>
+          <div style="position:absolute;top:14px;left:14px;right:14px;display:flex;align-items:center;gap:8px;background:#fff;border-radius:16px;padding:10px 12px;font-size:13px;font-weight:600;color:#4A4F5A"><span style="font-size:15px">⌕</span>¿A dónde vas?</div>
+          <div style="position:absolute;left:12px;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;background:#fff;border-radius:20px;padding:14px">
+            <div style="font:700 11px 'Instrument Sans';letter-spacing:.08em;text-transform:uppercase;color:#6B6F78">Tu próximo camión</div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="background:#2A2E37;color:#fff;border-radius:8px;padding:4px 9px;font:800 16px 'Bricolage Grotesque',sans-serif">51</span>
+              <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">Av. Tecnológico</div><div style="font-size:12px;color:#6B6F78">según la concesión</div></div>
+              <div style="font:800 26px/1 'Bricolage Grotesque',sans-serif">{{ mins }}<span style="font-size:14px"> min</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div ref="{{ roadRef }}" aria-hidden="true" style="background:#2A2E37;height:150px;position:relative;overflow:hidden">
+    <svg viewBox="0 0 1200 150" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%">
+      <rect x="-200" y="0" width="1600" height="42" fill="#DCD5C8"></rect><rect x="-200" y="41" width="1600" height="3" fill="#C9C1B3"></rect>
+      <rect x="20" y="95" width="50" height="4" rx="2" fill="#F7F3EC" opacity=".8"></rect><rect x="130" y="95" width="50" height="4" rx="2" fill="#F7F3EC" opacity=".8"></rect><rect x="240" y="95" width="50" height="4" rx="2" fill="#F7F3EC" opacity=".8"></rect><rect x="350" y="95" width="50" height="4" rx="2" fill="#F7F3EC" opacity=".8"></rect><rect x="460" y="95" width="50" height="4" rx="2" fill="#F7F3EC" opacity=".8"></rect><rect x="570" y="95" width="50" height="4" rx="2" fill="#F7F3EC" opacity=".8"></rect><rect x="680" y="95" width="50" height="4" rx="2" fill="#F7F3EC" opacity=".8"></rect><rect x="790" y="95" width="50" height="4" rx="2" fill="#F7F3EC" opacity=".8"></rect><rect x="900" y="95" width="50" height="4" rx="2" fill="#F7F3EC" opacity=".8"></rect><rect x="1010" y="95" width="50" height="4" rx="2" fill="#F7F3EC" opacity=".8"></rect><rect x="1120" y="95" width="50" height="4" rx="2" fill="#F7F3EC" opacity=".8"></rect><rect x="1230" y="95" width="50" height="4" rx="2" fill="#F7F3EC" opacity=".8"></rect>
+      <g>
+        <ellipse cx="{{ bX }}" cy="{{ bY }}" rx="30" ry="8" fill="#15171C" opacity="{{ bOp }}"></ellipse>
+        <ellipse cx="{{ bX }}" cy="{{ bY }}" rx="28" ry="7" fill="#3A4150" opacity="{{ pOp }}"></ellipse>
+        <g transform="{{ c1T }}"><rect x="-14" y="-4" width="28" height="5" rx="2" fill="#2A2E37"></rect><path d="M-11 -3 L-4 -34 L4 -34 L11 -3 Z" fill="#F2C14E"></path><rect x="-8.2" y="-20" width="16.4" height="5" fill="#F7F3EC"></rect><circle cx="-3.2" cy="-26" r="2.8" fill="#fff"></circle><circle cx="3.2" cy="-26" r="2.8" fill="#fff"></circle><circle cx="{{ cpA }}" cy="-26" r="1.5" fill="#2A2E37"></circle><circle cx="{{ cpB }}" cy="-26" r="1.5" fill="#2A2E37"></circle></g>
+        <g transform="{{ c2T }}"><rect x="-14" y="-4" width="28" height="5" rx="2" fill="#2A2E37"></rect><path d="M-11 -3 L-4 -34 L4 -34 L11 -3 Z" fill="#F2C14E"></path><rect x="-8.2" y="-20" width="16.4" height="5" fill="#F7F3EC"></rect><circle cx="-3.2" cy="-26" r="2.8" fill="#fff"></circle><circle cx="3.2" cy="-26" r="2.8" fill="#fff"></circle><circle cx="{{ cpA }}" cy="-26" r="1.5" fill="#2A2E37"></circle><circle cx="{{ cpB }}" cy="-26" r="1.5" fill="#2A2E37"></circle></g>
+        <g transform="{{ wT }}"><ellipse cx="-6" cy="-2" rx="4.5" ry="2.6" fill="#2A2E37"></ellipse><ellipse cx="6" cy="-2" rx="4.5" ry="2.6" fill="#2A2E37"></ellipse><circle cx="0" cy="-17" r="13" fill="#5FB36B"></circle><path d="M-12 -23 A12 12 0 0 1 12 -23 Z" fill="#F2C14E"></path><rect x="-15" y="-24.5" width="30" height="3.5" rx="1.7" fill="#F2C14E"></rect><circle cx="-4.5" cy="-14" r="3.6" fill="#fff"></circle><circle cx="4.5" cy="-14" r="3.6" fill="#fff"></circle><circle cx="{{ wpA }}" cy="{{ wpY }}" r="1.9" fill="#2A2E37"></circle><circle cx="{{ wpB }}" cy="{{ wpY }}" r="1.9" fill="#2A2E37"></circle><circle cx="16" cy="-9" r="4.2" fill="#5FB36B"></circle><g transform="{{ hamT }}"><rect x="-22" y="-16" width="3" height="16" rx="1.5" fill="#8A6A52"></rect><rect x="-27" y="-19" width="13" height="6" rx="2" fill="#2A2E37"></rect><circle cx="-18" cy="0" r="4.2" fill="#5FB36B"></circle></g></g>
+      </g>
+      <g transform="{{ v0T }}"><rect x="0" y="10" width="64" height="22" rx="9" fill="#C9CDD6"></rect><path d="M14 10 Q18 0 30 0 H42 Q52 0 56 10 Z" fill="#C9CDD6"></path><rect x="20" y="3" width="12" height="8" rx="2" fill="#2A2E37" opacity=".85"></rect><rect x="35" y="3" width="13" height="8" rx="2" fill="#2A2E37" opacity=".85"></rect><rect x="58" y="16" width="6" height="5" rx="2" fill="#F2C14E"></rect><circle cx="15" cy="33" r="7" fill="#15171C"></circle><circle cx="15" cy="33" r="2.6" fill="#8A8F9A"></circle><circle cx="50" cy="33" r="7" fill="#15171C"></circle><circle cx="50" cy="33" r="2.6" fill="#8A8F9A"></circle></g>
+      <g transform="{{ v1T }}"><rect x="0" y="10" width="64" height="22" rx="9" fill="#6B7180"></rect><path d="M14 10 Q18 0 30 0 H42 Q52 0 56 10 Z" fill="#6B7180"></path><rect x="20" y="3" width="12" height="8" rx="2" fill="#2A2E37" opacity=".85"></rect><rect x="35" y="3" width="13" height="8" rx="2" fill="#2A2E37" opacity=".85"></rect><rect x="58" y="16" width="6" height="5" rx="2" fill="#F2C14E"></rect><circle cx="15" cy="33" r="7" fill="#15171C"></circle><circle cx="15" cy="33" r="2.6" fill="#8A8F9A"></circle><circle cx="50" cy="33" r="7" fill="#15171C"></circle><circle cx="50" cy="33" r="2.6" fill="#8A8F9A"></circle></g>
+      <g transform="{{ v2T }}"><rect x="0" y="10" width="64" height="22" rx="9" fill="#F7F3EC"></rect><path d="M14 10 Q18 0 30 0 H42 Q52 0 56 10 Z" fill="#F7F3EC"></path><rect x="20" y="3" width="12" height="8" rx="2" fill="#2A2E37" opacity=".85"></rect><rect x="35" y="3" width="13" height="8" rx="2" fill="#2A2E37" opacity=".85"></rect><rect x="58" y="16" width="6" height="5" rx="2" fill="#F2C14E"></rect><circle cx="15" cy="33" r="7" fill="#15171C"></circle><circle cx="15" cy="33" r="2.6" fill="#8A8F9A"></circle><circle cx="50" cy="33" r="7" fill="#15171C"></circle><circle cx="50" cy="33" r="2.6" fill="#8A8F9A"></circle></g>
+      <g transform="{{ v3T }}"><rect x="0" y="10" width="64" height="22" rx="9" fill="#9AA0AB"></rect><path d="M14 10 Q18 0 30 0 H42 Q52 0 56 10 Z" fill="#9AA0AB"></path><rect x="20" y="3" width="12" height="8" rx="2" fill="#2A2E37" opacity=".85"></rect><rect x="35" y="3" width="13" height="8" rx="2" fill="#2A2E37" opacity=".85"></rect><rect x="58" y="16" width="6" height="5" rx="2" fill="#F2C14E"></rect><circle cx="15" cy="33" r="7" fill="#15171C"></circle><circle cx="15" cy="33" r="2.6" fill="#8A8F9A"></circle><circle cx="50" cy="33" r="7" fill="#15171C"></circle><circle cx="50" cy="33" r="2.6" fill="#8A8F9A"></circle></g>
+      <g transform="{{ v4T }}"><rect x="0" y="10" width="64" height="22" rx="9" fill="#B8AE9C"></rect><path d="M14 10 Q18 0 30 0 H42 Q52 0 56 10 Z" fill="#B8AE9C"></path><rect x="20" y="3" width="12" height="8" rx="2" fill="#2A2E37" opacity=".85"></rect><rect x="35" y="3" width="13" height="8" rx="2" fill="#2A2E37" opacity=".85"></rect><rect x="58" y="16" width="6" height="5" rx="2" fill="#F2C14E"></rect><circle cx="15" cy="33" r="7" fill="#15171C"></circle><circle cx="15" cy="33" r="2.6" fill="#8A8F9A"></circle><circle cx="50" cy="33" r="7" fill="#15171C"></circle><circle cx="50" cy="33" r="2.6" fill="#8A8F9A"></circle></g>
+      <g transform="{{ v5T }}"><rect x="0" y="10" width="64" height="22" rx="9" fill="#4A4F5A"></rect><path d="M14 10 Q18 0 30 0 H42 Q52 0 56 10 Z" fill="#4A4F5A"></path><rect x="20" y="3" width="12" height="8" rx="2" fill="#2A2E37" opacity=".85"></rect><rect x="35" y="3" width="13" height="8" rx="2" fill="#2A2E37" opacity=".85"></rect><rect x="58" y="16" width="6" height="5" rx="2" fill="#F2C14E"></rect><circle cx="15" cy="33" r="7" fill="#15171C"></circle><circle cx="15" cy="33" r="2.6" fill="#8A8F9A"></circle><circle cx="50" cy="33" r="7" fill="#15171C"></circle><circle cx="50" cy="33" r="2.6" fill="#8A8F9A"></circle></g>
+      <g transform="{{ v6T }}"><rect x="0" y="10" width="64" height="22" rx="9" fill="#DCD5C8"></rect><path d="M14 10 Q18 0 30 0 H42 Q52 0 56 10 Z" fill="#DCD5C8"></path><rect x="20" y="3" width="12" height="8" rx="2" fill="#2A2E37" opacity=".85"></rect><rect x="35" y="3" width="13" height="8" rx="2" fill="#2A2E37" opacity=".85"></rect><rect x="58" y="16" width="6" height="5" rx="2" fill="#F2C14E"></rect><circle cx="15" cy="33" r="7" fill="#15171C"></circle><circle cx="15" cy="33" r="2.6" fill="#8A8F9A"></circle><circle cx="50" cy="33" r="7" fill="#15171C"></circle><circle cx="50" cy="33" r="2.6" fill="#8A8F9A"></circle></g>
+      <g transform="{{ stCamiT }}"><rect x="0" y="12" width="120" height="44" rx="12" fill="#8B6CC9"></rect><rect x="0" y="42" width="120" height="4" fill="#F7F3EC"></rect><rect x="10" y="19" width="18" height="16" rx="4" fill="#2A2E37"></rect><rect x="33" y="19" width="18" height="16" rx="4" fill="#2A2E37"></rect><rect x="56" y="19" width="18" height="16" rx="4" fill="#2A2E37"></rect><rect x="84" y="17" width="28" height="22" rx="6" fill="#2A2E37"></rect><ellipse cx="92" cy="28" rx="5" ry="3.8" fill="#fff"></ellipse><ellipse cx="104" cy="28" rx="5" ry="3.8" fill="#fff"></ellipse><circle cx="94" cy="28" r="2.2" fill="#2A2E37"></circle><circle cx="106" cy="28" r="2.2" fill="#2A2E37"></circle><circle cx="26" cy="58" r="9" fill="#1C1F26"></circle><circle cx="26" cy="58" r="3.5" fill="#F7F3EC"></circle><circle cx="94" cy="58" r="9" fill="#1C1F26"></circle><circle cx="94" cy="58" r="3.5" fill="#F7F3EC"></circle><rect x="84" y="3" width="28" height="12" rx="3" fill="#2A2E37"></rect><text x="98" y="12.4" text-anchor="middle" fill="#fff" style="font:800 9.5px 'Bricolage Grotesque',sans-serif">51</text></g>
+      <g>
+        <rect x="120" y="9" width="80" height="32" fill="#F7F3EC"></rect><rect x="118" y="1" width="84" height="9" rx="2" fill="#2A2E37"></rect><text x="160" y="8" text-anchor="middle" fill="#fff" style="font:800 6.5px 'Bricolage Grotesque',sans-serif;letter-spacing:.06em">TIENDITA</text>
+        <path d="M118 10 H202 V15 Q197 19 192 15 Q187 19 182 15 Q177 19 172 15 Q167 19 162 15 Q157 19 152 15 Q147 19 142 15 Q137 19 132 15 Q127 19 122 15 Q120 17 118 15 Z" fill="#E36F8C"></path>
+        <rect x="128" y="20" width="34" height="15" rx="3" fill="#2A2E37"></rect><circle cx="140" cy="27" r="3.6" fill="#fff"></circle><circle cx="151" cy="27" r="3.6" fill="#fff"></circle><circle cx="{{ tdE1 }}" cy="27.3" r="1.9" fill="#2A2E37"></circle><circle cx="{{ tdE2 }}" cy="27.3" r="1.9" fill="#2A2E37"></circle>
+        <rect x="172" y="21" width="18" height="20" rx="2" fill="#4A4F5A"></rect>
+        <rect x="378" y="22" width="4" height="19" fill="#8A6A52"></rect><circle cx="380" cy="14" r="11" fill="#5FB36B"></circle><circle cx="372" cy="20" r="7.5" fill="#4E9C5A"></circle><circle cx="388" cy="20" r="7.5" fill="#4E9C5A"></circle>
+        <rect x="559" y="7" width="2.5" height="34" fill="#2A2E37"></rect><rect x="552" y="4" width="16" height="5" rx="2" fill="#4A4F5A"></rect><circle cx="560" cy="10.5" r="3" fill="#F2C14E" opacity="{{ faroOp }}"></circle>
+        <path d="M682 16 Q706 1 730 16 Z" fill="#E36F8C"></path><rect x="705" y="15" width="2" height="10" fill="#2A2E37"></rect><rect x="688" y="24" width="38" height="13" rx="3" fill="#F2C14E"></rect><text x="707" y="33" text-anchor="middle" fill="#2A2E37" style="font:800 6.5px 'Bricolage Grotesque',sans-serif">TACOS</text><circle cx="694" cy="38.5" r="3" fill="#2A2E37"></circle><circle cx="720" cy="38.5" r="3" fill="#2A2E37"></circle>
+        <rect x="1148" y="22" width="4" height="19" fill="#8A6A52"></rect><circle cx="1150" cy="14" r="11" fill="#5FB36B"></circle><circle cx="1142" cy="20" r="7.5" fill="#4E9C5A"></circle><circle cx="1158" cy="20" r="7.5" fill="#4E9C5A"></circle>
+      </g>
+      <g transform="{{ px0T }}" opacity="{{ px0Op }}"><rect x="-6" y="-16" width="12" height="15" rx="6" fill="#2FA6A0"></rect><circle cx="-2.6" cy="-11" r="2.3" fill="#fff"></circle><circle cx="2.6" cy="-11" r="2.3" fill="#fff"></circle><circle cx="-3.3" cy="-11" r="1.2" fill="#2A2E37"></circle><circle cx="1.9" cy="-11" r="1.2" fill="#2A2E37"></circle><g transform="{{ px0H }}"><circle cx="-9.5" cy="-7" r="2.3" fill="#5FB36B"></circle><circle cx="9.5" cy="-7" r="2.3" fill="#5FB36B"></circle></g></g><g transform="{{ px1T }}" opacity="{{ px1Op }}"><rect x="-6" y="-16" width="12" height="15" rx="6" fill="#F2C14E"></rect><circle cx="-2.6" cy="-11" r="2.3" fill="#fff"></circle><circle cx="2.6" cy="-11" r="2.3" fill="#fff"></circle><circle cx="-3.3" cy="-11" r="1.2" fill="#2A2E37"></circle><circle cx="1.9" cy="-11" r="1.2" fill="#2A2E37"></circle><g transform="{{ px1H }}"><circle cx="-9.5" cy="-7" r="2.3" fill="#F2C14E"></circle><circle cx="9.5" cy="-7" r="2.3" fill="#F2C14E"></circle></g></g><g transform="{{ px2T }}" opacity="{{ px2Op }}"><rect x="-6" y="-16" width="12" height="15" rx="6" fill="#DCD5C8"></rect><circle cx="-2.6" cy="-11" r="2.3" fill="#fff"></circle><circle cx="2.6" cy="-11" r="2.3" fill="#fff"></circle><circle cx="-3.3" cy="-11" r="1.2" fill="#2A2E37"></circle><circle cx="1.9" cy="-11" r="1.2" fill="#2A2E37"></circle><g transform="{{ px2H }}"><circle cx="-9.5" cy="-7" r="2.3" fill="#DCD5C8"></circle><circle cx="9.5" cy="-7" r="2.3" fill="#DCD5C8"></circle></g></g>
+      <g transform="{{ ppT }}">
+        <rect x="928" y="16" width="4" height="27" fill="#2A2E37"></rect><rect x="920" y="41" width="20" height="4" rx="2" fill="#2A2E37"></rect>
+        <circle cx="930" cy="16" r="13" fill="#8B6CC9"></circle>
+        <circle cx="925" cy="14" r="3.6" fill="#fff"></circle><circle cx="935" cy="14" r="3.6" fill="#fff"></circle>
+        <circle cx="{{ ppE1 }}" cy="{{ ppEy }}" r="2" fill="#2A2E37"></circle><circle cx="{{ ppE2 }}" cy="{{ ppEy }}" r="2" fill="#2A2E37"></circle>
+        <path d="M925 20.5 q5 4.5 10 0" stroke="#2A2E37" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="{{ ppFeliz }}"></path>
+        <path d="M925.5 23.5 q4.5 -3.8 9 0" stroke="#2A2E37" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="{{ ppTriste }}"></path>
+        <rect x="948" y="19" width="28" height="13" rx="3" fill="#2A2E37"></rect><sc-if value="{{ ppV0 }}" hint-placeholder-val="{{ false }}"><text x="962" y="28.6" text-anchor="middle" fill="#B69CF0" style="font:800 10px 'Bricolage Grotesque',sans-serif">¡ya!</text></sc-if><sc-if value="{{ ppV1 }}" hint-placeholder-val="{{ false }}"><text x="962" y="28.6" text-anchor="middle" fill="#fff" style="font:800 10px 'Bricolage Grotesque',sans-serif">1′</text></sc-if><sc-if value="{{ ppV2 }}" hint-placeholder-val="{{ false }}"><text x="962" y="28.6" text-anchor="middle" fill="#fff" style="font:800 10px 'Bricolage Grotesque',sans-serif">2′</text></sc-if><sc-if value="{{ ppV3 }}" hint-placeholder-val="{{ false }}"><text x="962" y="28.6" text-anchor="middle" fill="#fff" style="font:800 10px 'Bricolage Grotesque',sans-serif">3′</text></sc-if><sc-if value="{{ ppV4 }}" hint-placeholder-val="{{ false }}"><text x="962" y="28.6" text-anchor="middle" fill="#fff" style="font:800 10px 'Bricolage Grotesque',sans-serif">4′</text></sc-if>
+      </g>
+    </svg>
+  </div>
+
+  <section id="equipo" data-screen-label="El equipo" style="max-width:1200px;margin:0 auto;padding:56px 24px 0;display:flex;flex-direction:column;gap:18px;width:100%;box-sizing:border-box">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px">
+      <h2 style="margin:0;font:800 clamp(28px,3.4vw,40px)/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">Conoce {{ banda }}</h2>
+      <a href="Universo Ontoy.dc.html" style="font-weight:700;font-size:15px">Entra al universo →</a>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px">
+      <div style="display:grid;grid-template-columns:clamp(84px,9vw,112px) minmax(0,1fr);gap:16px;align-items:center;background:#F7F3EC;border-radius:26px;padding:14px 18px 14px 14px;box-shadow:0 0 0 1px #DCD5C8"><div style="aspect-ratio:1;display:grid;place-items:center"><svg ref="{{ bandaRef }}" onClick="{{ onGuino }}" viewBox="-6 -30 132 150" style="width:100%;cursor:pointer;overflow:visible" aria-label="Ontoy: dale click">
+          <g transform="{{ bTilt }}"><ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+            <ellipse cx="38" cy="68" rx="7" ry="4.5" fill="#E36F8C" opacity="{{ bRubor }}"></ellipse><ellipse cx="88" cy="66" rx="7" ry="4.5" fill="#E36F8C" opacity="{{ bRubor }}"></ellipse>
+            <sc-if value="{{ bGuino }}" hint-placeholder-val="{{ false }}"><path d="M40 53 q10 6 20 0" fill="none" stroke="#2A2E37" stroke-width="3.4" stroke-linecap="round"></path></sc-if>
+            <sc-if value="{{ bSinGuino }}" hint-placeholder-val="{{ true }}"><circle cx="50" cy="52" r="11" fill="#fff"></circle><circle cx="50" cy="52" r="6" fill="#2A2E37" transform="{{ bEye }}"></circle></sc-if>
+            <circle cx="76" cy="50" r="11" fill="#fff"></circle><circle cx="76" cy="50" r="6" fill="#2A2E37" transform="{{ bEye }}"></circle>
+            <path d="M54 75 q9 6 18 0" opacity="{{ bSonrisa }}" fill="none" stroke="#2A2E37" stroke-width="3" stroke-linecap="round"></path>
+            <circle cx="{{ bLx }}" cy="{{ bLy }}" r="{{ bHr }}" fill="#F6A15B"></circle><circle cx="{{ bRx }}" cy="{{ bRy }}" r="{{ bHr }}" fill="#F6A15B"></circle>
+          </g>
+          <sc-for list="{{ bCors }}" as="c" hint-placeholder-count="0"><path d="M60 10 c-4 -6 -12 -2 -9 4 l9 9 9 -9 c3 -6 -5 -10 -9 -4 Z" fill="#E36F8C" opacity="{{ c.op }}" transform="{{ c.t }}"></path></sc-for>
+          <sc-if value="{{ bHayTxt }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ bTxV0 }}" hint-placeholder-val="{{ false }}"><text x="118" y="-10" text-anchor="end" fill="#2A2E37" style="font:800 14px 'Bricolage Grotesque',sans-serif">¡ay!</text></sc-if><sc-if value="{{ bTxV1 }}" hint-placeholder-val="{{ false }}"><text x="118" y="-10" text-anchor="end" fill="#2A2E37" style="font:800 14px 'Bricolage Grotesque',sans-serif">¡ay, ya!</text></sc-if><sc-if value="{{ bTxV2 }}" hint-placeholder-val="{{ false }}"><text x="118" y="-10" text-anchor="end" fill="#2A2E37" style="font:800 14px 'Bricolage Grotesque',sans-serif">¡me apenas!</text></sc-if><sc-if value="{{ bTxV3 }}" hint-placeholder-val="{{ false }}"><text x="118" y="-10" text-anchor="end" fill="#2A2E37" style="font:800 14px 'Bricolage Grotesque',sans-serif">¡basta! &gt;///&lt;</text></sc-if></sc-if>
+        </svg></div><div><div style="font:800 22px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.02em">Ontoy</div><div style="font-size:15px;line-height:1.4;color:#4A4F5A;margin-top:4px">Te avisa. Curioso y un poquito tímido: acércate.</div></div></div>
+      <div style="display:grid;grid-template-columns:clamp(84px,9vw,112px) minmax(0,1fr);gap:16px;align-items:center;background:#F7F3EC;border-radius:26px;padding:14px 18px 14px 14px;box-shadow:0 0 0 1px #DCD5C8"><div style="aspect-ratio:1;display:grid;place-items:center"><svg viewBox="0 0 120 120" style="width:100%;color:#4F7FD8"><use href="#L-paradito" width="120" height="120"></use></svg></div><div><div style="font:800 22px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.02em">Paradito</div><div style="font-size:15px;line-height:1.4;color:#4A4F5A;margin-top:4px">Tu parada, del color de su ruta, con sus minutos.</div></div></div>
+      <div style="display:grid;grid-template-columns:clamp(84px,9vw,112px) minmax(0,1fr);gap:16px;align-items:center;background:#F7F3EC;border-radius:26px;padding:14px 18px 14px 14px;box-shadow:0 0 0 1px #DCD5C8"><div style="aspect-ratio:1;display:grid;place-items:center"><svg viewBox="0 0 120 120" style="width:100%;color:#8B6CC9"><use href="#L-cami" width="120" height="120"></use></svg></div><div><div style="font:800 22px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.02em">Cami</div><div style="font-size:15px;line-height:1.4;color:#4A4F5A;margin-top:4px">Tu camión. Siempre llega y te saluda al irse.</div></div></div>
+    </div>
+  </section>
+
+  <section data-screen-label="Antes y con Ontoy" style="max-width:1200px;margin:0 auto;padding:64px 24px 72px;display:flex;flex-direction:column;gap:32px;width:100%;box-sizing:border-box">
+    <h2 style="margin:0;font:800 clamp(38px,5vw,60px)/0.98 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;max-width:820px;text-wrap:balance">Esperar el camión ya no es adivinar.</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:18px">
+      <div style="background:#F7F3EC;border-radius:30px;padding:28px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center;box-shadow:0 0 0 1px #DCD5C8">
+        <div style="width:96px"><svg viewBox="0 0 120 120" style="width:100%;color:#C9C1B3"><rect x="57" y="36" width="6" height="72" fill="#2A2E37"></rect><rect x="46" y="106" width="28" height="7" rx="3.5" fill="#2A2E37"></rect><circle cx="60" cy="38" r="26" fill="currentColor"></circle><circle cx="51" cy="36" r="7.5" fill="#fff"></circle><circle cx="69" cy="36" r="7.5" fill="#fff"></circle><circle cx="51" cy="39" r="4" fill="#2A2E37"></circle><circle cx="69" cy="39" r="4" fill="#2A2E37"></circle><rect x="42" y="30" width="36" height="5" fill="#C9C1B3"></rect><rect x="54" y="50" width="12" height="2.6" rx="1.3" fill="#2A2E37"></rect></svg></div>
+        <div style="display:flex;flex-direction:column;gap:10px"><div style="font:800 24px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">Antes</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:16px;line-height:1.45;color:#4A4F5A"><span>Esperar sin saber si ya pasó.</span><span>Preguntar en la tiendita «¿ya pasó la 51?».</span><span>Correr… para nada.</span></div></div>
+      </div>
+      <div style="background:#2A2E37;color:#F7F3EC;border-radius:30px;padding:28px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center">
+        <div style="width:96px"><svg viewBox="0 0 120 120" style="width:100%"><use href="#L-icono" width="120" height="120"></use></svg></div>
+        <div style="display:flex;flex-direction:column;gap:10px"><div style="font:800 24px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;color:#fff">Con Ontoy</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:16px;line-height:1.45"><span>Ves dónde viene tu camión, en vivo.</span><span>Sabes qué ruta tomar y dónde subirte.</span><span>Sales de tu casa cuando ya viene.</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="hace" data-screen-label="Qué hace" style="max-width:1200px;margin:0 auto;padding:0 24px;width:100%;box-sizing:border-box">
+    <div ref="{{ haceRef }}" style="position:relative;height:calc(100vh + 5 * 62vh)">
+      <div style="position:sticky;top:68px;height:calc(100vh - 68px);min-height:560px;display:flex;flex-direction:column;justify-content:center;gap:28px">
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px">
+          <h2 style="margin:0;font:800 clamp(34px,4.6vw,56px)/0.98 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">Lo que Ontoy hace por ti</h2>
+          <div style="font:800 16px 'Bricolage Grotesque',sans-serif;color:#6B6F78">{{ fNum }} / 05</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:36px;align-items:center">
+          <div style="display:flex;flex-direction:column">
+            <sc-for list="{{ feats }}" as="f" hint-placeholder-count="5">
+              <button onClick="{{ f.pick }}" style="display:{{ f.disp }};grid-template-columns:40px minmax(0,1fr);gap:12px;text-align:left;background:none;border:0;border-top:2px dashed #DCD5C8;padding:14px 0;cursor:pointer;font:inherit;color:#2A2E37;opacity:{{ f.op }};transition:opacity .35s">
+                <span style="font:800 15px/1.6 'Bricolage Grotesque',sans-serif;color:#6B6F78">{{ f.n }}</span>
+                <span style="display:flex;flex-direction:column;gap:8px;min-width:0">
+                  <span style="font:800 clamp(21px,2.3vw,28px)/1.08 'Bricolage Grotesque',sans-serif;letter-spacing:-0.02em">{{ f.title }}</span>
+                  <sc-if value="{{ f.active }}" hint-placeholder-val="{{ false }}"><span style="font-size:17px;line-height:1.5;color:#4A4F5A;text-wrap:pretty">{{ f.desc }}</span></sc-if>
+                  <span style="height:4px;border-radius:2px;background:#DCD5C8;overflow:hidden;opacity:{{ f.barOp }}"><span style="display:block;height:100%;width:{{ f.w }};background:#2A2E37;border-radius:2px"></span></span>
+                </span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="position:relative;height:clamp(280px,42vh,420px)">
+          <div style="position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;transition:opacity .45s cubic-bezier(.2,0,0,1), transform .6s cubic-bezier(.2,0,0,1);opacity:{{ fv0Op }};transform:{{ fv0T }};pointer-events:{{ fv0Pe }}">
+        <div style="background:#F7F3EC;border-radius:26px;padding:18px;display:flex;flex-direction:column;gap:10px;box-shadow:0 0 0 1px #DCD5C8"><div style="font:700 11px 'Instrument Sans';letter-spacing:.08em;text-transform:uppercase;color:#6B6F78">Tu próximo camión</div>
+        <div style="display:flex;align-items:center;gap:12px"><span style="flex:none;background:#2A2E37;color:#fff;border-radius:7px;padding:3px 8px;font:800 14px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;letter-spacing:0;box-shadow:inset 0 -3px 0 #8B6CC9">51</span><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:16px">Av. Tecnológico</div><div style="font-size:13px;color:#6B6F78">posición de hace 10 s</div></div><div style="font:800 34px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">{{ mins }}<span style="font-size:15px"> min</span></div></div>
+        <div style="height:8px;border-radius:4px;background:#DCD5C8;overflow:hidden"><div style="height:100%;width:{{ barra }};background:#8B6CC9;border-radius:4px"></div></div></div>
+        <div style="width:clamp(96px,14vw,150px)"><svg viewBox="0 0 120 120" style="width:100%;display:block;color:#8B6CC9"><use href="#L-cami" width="120" height="120"></use></svg></div>
+      </div>
+          <div style="position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;transition:opacity .45s cubic-bezier(.2,0,0,1), transform .6s cubic-bezier(.2,0,0,1);opacity:{{ fv1Op }};transform:{{ fv1T }};pointer-events:{{ fv1Pe }}">
+        <div style="background:#F7F3EC;border-radius:26px;padding:18px;display:flex;flex-direction:column;gap:10px;box-shadow:0 0 0 1px #DCD5C8"><div style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;padding:12px 14px;font-size:15px;font-weight:600;box-shadow:inset 0 0 0 1.5px #2A2E37"><span style="color:#6B6F78">⌕</span>Hospital General<span style="width:2px;height:18px;background:#2A2E37;opacity:{{ caret }}"></span></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:6px 2px"><span style="flex:none;background:#2A2E37;color:#fff;border-radius:7px;padding:3px 8px;font:800 14px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;letter-spacing:0;box-shadow:inset 0 -3px 0 #8B6CC9">51</span><div style="flex:1;min-width:0;font-size:14px;line-height:1.35"><strong>Súbete en Av. Tecnológico</strong><br><span style="color:#6B6F78">4 min caminando · pasa en {{ mins }} min</span></div></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:6px 2px;border-top:1px solid #DCD5C8"><span style="flex:none;background:#2A2E37;color:#fff;border-radius:7px;padding:3px 8px;font:800 14px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;letter-spacing:0;box-shadow:inset 0 -3px 0 #2FA6A0">T1</span><div style="flex:1;min-width:0;font-size:14px;line-height:1.35"><strong>Súbete en Calle 16</strong><br><span style="color:#6B6F78">7 min caminando · pasa en 9 min</span></div></div></div>
+        <div style="width:clamp(96px,14vw,150px)"><svg ref="{{ stepRef }}" onClick="{{ onSalto }}" viewBox="-16 -40 152 160" style="width:100%;height:auto;cursor:pointer;overflow:visible" aria-label="Ontoy: dale click">
+              <g transform="{{ sJump }}"><ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+                <circle cx="50" cy="52" r="11" fill="#fff"></circle><circle cx="76" cy="50" r="11" fill="#fff"></circle>
+                <circle cx="50" cy="52" r="6" fill="#2A2E37" transform="{{ sEye }}"></circle><circle cx="76" cy="50" r="6" fill="#2A2E37" transform="{{ sEye }}"></circle>
+                <sc-if value="{{ sMareo }}" hint-placeholder-val="{{ false }}"><path d="M50 52 m-7 0 a7 7 0 1 1 7 7 a4 4 0 1 1 -4 -4 M76 50 m-7 0 a7 7 0 1 1 7 7 a4 4 0 1 1 -4 -4" fill="none" stroke="#2A2E37" stroke-width="2.4" opacity="{{ sMareoOp }}" transform="{{ sMareoT }}"></path></sc-if>
+                <path d="{{ sSmile }}" opacity="{{ sSmileOp }}" fill="none" stroke="#2A2E37" stroke-width="3.2" stroke-linecap="round"></path>
+                <circle cx="{{ sLx }}" cy="{{ sLy }}" r="7" fill="#F6A15B"></circle><circle cx="{{ sRx }}" cy="{{ sRy }}" r="7" fill="#F6A15B"></circle>
+              </g>
+              <sc-if value="{{ sMas }}" hint-placeholder-val="{{ false }}"><path d="M-10 40 l2 5 5 .7 -3.6 3.5 .9 5 -4.3 -2.3 -4.3 2.3 .9 -5 -3.6 -3.5 5 -.7 Z M124 30 l2 5 5 .7 -3.6 3.5 .9 5 -4.3 -2.3 -4.3 2.3 .9 -5 -3.6 -3.5 5 -.7 Z M60 -36 l2.4 5.6 5.6 .8 -4 4 .8 5.6 -4.8 -2.4 -4.8 2.4 .8 -5.6 -4 -4 5.6 -.8 Z" fill="#8B6CC9"></path></sc-if>
+              <sc-if value="{{ sEstrellas }}" hint-placeholder-val="{{ false }}"><path d="M8 -6 l3 7 7 1 -5 5 1 7 -6 -3 -6 3 1 -7 -5 -5 7 -1 Z M110 -18 l2.4 5.6 5.6 .8 -4 4 .8 5.6 -4.8 -2.4 -4.8 2.4 .8 -5.6 -4 -4 5.6 -.8 Z" fill="#F2C14E"></path></sc-if>
+            </svg></div>
+      </div>
+          <div style="position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;transition:opacity .45s cubic-bezier(.2,0,0,1), transform .6s cubic-bezier(.2,0,0,1);opacity:{{ fv2Op }};transform:{{ fv2T }};pointer-events:{{ fv2Pe }}">
+        <div style="background:#F7F3EC;border-radius:26px;padding:18px;display:flex;flex-direction:column;gap:10px;box-shadow:0 0 0 1px #DCD5C8"><div style="display:flex;align-items:center;gap:12px"><span style="color:#F2C14E;font-size:22px">★</span><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">Casa · Av. Tecnológico</div><div style="font-size:13px;color:#6B6F78">51 en {{ mins }} min</div></div><span style="flex:none;background:#2A2E37;color:#fff;border-radius:7px;padding:3px 8px;font:800 14px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;letter-spacing:0;box-shadow:inset 0 -3px 0 #8B6CC9">51</span></div>
+        <div style="display:flex;align-items:center;gap:12px;border-top:1px solid #DCD5C8;padding-top:10px"><span style="color:#F2C14E;font-size:22px">★</span><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">Trabajo · Parque industrial</div><div style="font-size:13px;color:#6B6F78">T1 en 12 min</div></div><span style="flex:none;background:#2A2E37;color:#fff;border-radius:7px;padding:3px 8px;font:800 14px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;letter-spacing:0;box-shadow:inset 0 -3px 0 #2FA6A0">T1</span></div></div>
+        <div style="width:clamp(96px,14vw,150px)"><svg viewBox="0 0 120 120" style="width:100%;display:block;color:#8B6CC9"><use href="#L-paradito" width="120" height="120"></use></svg></div>
+      </div>
+          <div style="position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;transition:opacity .45s cubic-bezier(.2,0,0,1), transform .6s cubic-bezier(.2,0,0,1);opacity:{{ fv3Op }};transform:{{ fv3T }};pointer-events:{{ fv3Pe }}">
+        <div style="background:#2A2E37;border-radius:30px;padding:16px;display:flex;flex-direction:column;gap:10px">
+        <div style="text-align:center;color:#F7F3EC;font:800 40px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">7:42</div>
+        <div style="display:flex;gap:12px;align-items:center;background:#F7F3EC;border-radius:18px;padding:12px 14px"><span style="flex:none;width:40px;height:40px;border-radius:10px;background:#EDE9E1;display:grid;place-items:center"><svg viewBox="0 0 120 120" style="width:82%"><use href="#L-icono" width="120" height="120"></use></svg></span><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">¡Ya viene tu 51!</div><div style="font-size:13px;color:#4A4F5A">Llega en 2 min a Av. Tecnológico</div></div></div>
+      </div>
+        <div style="width:clamp(96px,14vw,150px)"><svg ref="{{ heroRef }}" onClick="{{ onRisa }}" viewBox="-12 -24 144 144" style="width:100%;display:block;cursor:pointer;overflow:visible" aria-label="Ontoy: hazle cosquillas">
+          <g transform="{{ hShake }}"><ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+            <sc-if value="{{ hRisa }}" hint-placeholder-val="{{ false }}"><path d="M40 54 q10 -10 20 0 M66 52 q10 -10 20 0" fill="none" stroke="#2A2E37" stroke-width="3.6" stroke-linecap="round"></path></sc-if>
+            <sc-if value="{{ hOjos }}" hint-placeholder-val="{{ true }}"><circle cx="50" cy="52" r="{{ hEr }}" fill="#fff"></circle><circle cx="76" cy="50" r="{{ hEr }}" fill="#fff"></circle><circle cx="50" cy="52" r="6" fill="#2A2E37" transform="{{ hEye }}"></circle><circle cx="76" cy="50" r="6" fill="#2A2E37" transform="{{ hEye }}"></circle></sc-if>
+            <ellipse cx="63" cy="{{ hMy }}" rx="{{ hMrx }}" ry="{{ hMry }}" fill="#2A2E37"></ellipse>
+            <sc-if value="{{ hLagrimas }}" hint-placeholder-val="{{ false }}"><ellipse cx="34" cy="{{ hTy }}" rx="3" ry="4.5" fill="#7FB8F0"></ellipse><ellipse cx="92" cy="{{ hTy }}" rx="3" ry="4.5" fill="#7FB8F0"></ellipse></sc-if>
+          </g>
+          <circle cx="{{ hLx }}" cy="{{ hLy }}" r="7" fill="#F6A15B"></circle><circle cx="{{ hRx }}" cy="{{ hRy }}" r="7" fill="#F6A15B"></circle>
+          <sc-if value="{{ hRisa }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ hJaV0 }}" hint-placeholder-val="{{ false }}"><text x="60" y="-10" text-anchor="middle" fill="#2A2E37" style="font:800 12px 'Bricolage Grotesque',sans-serif">¡ja ja!</text></sc-if><sc-if value="{{ hJaV1 }}" hint-placeholder-val="{{ false }}"><text x="60" y="-10" text-anchor="middle" fill="#2A2E37" style="font:800 12px 'Bricolage Grotesque',sans-serif">¡jajaja!</text></sc-if><sc-if value="{{ hJaV2 }}" hint-placeholder-val="{{ false }}"><text x="60" y="-10" text-anchor="middle" fill="#2A2E37" style="font:800 12px 'Bricolage Grotesque',sans-serif">¡JAJAJA!</text></sc-if><sc-if value="{{ hJaV3 }}" hint-placeholder-val="{{ false }}"><text x="60" y="-10" text-anchor="middle" fill="#2A2E37" style="font:800 12px 'Bricolage Grotesque',sans-serif">¡ya, ya! jaja</text></sc-if><sc-if value="{{ hJaV4 }}" hint-placeholder-val="{{ false }}"><text x="60" y="-10" text-anchor="middle" fill="#2A2E37" style="font:800 12px 'Bricolage Grotesque',sans-serif">¡me haces llorar! jaja</text></sc-if><sc-if value="{{ hJaV5 }}" hint-placeholder-val="{{ false }}"><text x="60" y="-10" text-anchor="middle" fill="#2A2E37" style="font:800 12px 'Bricolage Grotesque',sans-serif">¡basta! JAJAJA</text></sc-if></sc-if>
+        </svg></div>
+      </div>
+          <div style="position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;transition:opacity .45s cubic-bezier(.2,0,0,1), transform .6s cubic-bezier(.2,0,0,1);opacity:{{ fv4Op }};transform:{{ fv4T }};pointer-events:{{ fv4Pe }}">
+        <div style="background:#F7F3EC;border-radius:26px;padding:18px;display:flex;flex-direction:column;gap:10px;box-shadow:0 0 0 1px #DCD5C8"><div style="font:600 12px 'Instrument Sans';color:#6B6F78">Ayer 14:20 · según la concesión</div>
+        <div style="display:flex;align-items:center;gap:10px"><span style="flex:none;background:#2A2E37;color:#fff;border-radius:7px;padding:3px 8px;font:800 14px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;letter-spacing:0;box-shadow:inset 0 -3px 0 #E36F8C">38</span><div style="font-weight:700;font-size:16px">Desvío por obra en Calle 16</div></div>
+        <div style="font-size:14px;color:#4A4F5A;line-height:1.45">Sube en la parada de Av. Juárez hasta el viernes.</div></div>
+        <div style="width:clamp(96px,14vw,150px)"><svg viewBox="0 0 120 120" style="width:100%;display:block;color:#E36F8C"><use href="#L-paradito" width="120" height="120"></use></svg></div>
+      </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-screen-label="La calle de Ontoy" style="max-width:1200px;margin:0 auto;padding:40px 24px 0;display:flex;flex-direction:column;gap:22px;width:100%;box-sizing:border-box">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px">
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:640px">
+        <h2 style="margin:0;font:800 clamp(38px,5vw,60px)/0.98 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">Todo el barrio está pendiente.</h2>
+        <p style="margin:0;font-size:18px;line-height:1.5;color:#4A4F5A;text-wrap:pretty">Cuando tu camión se acerca, la tiendita, el árbol y hasta el semáforo voltean a verlo. Así se siente Ontoy.</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:#2A2E37;color:#F7F3EC;border-radius:999px;padding:10px 18px;font:700 15px 'Instrument Sans'"><span style="background:#8B6CC9;color:#fff;border-radius:6px;padding:2px 8px;font:800 13px 'Bricolage Grotesque',sans-serif">51</span><span>{{ fase }}</span></div>
+    </div>
+    <div style="background:#F7F3EC;border-radius:30px;overflow:hidden;box-shadow:0 0 0 1px #DCD5C8"><svg viewBox="0 0 900 330" style="display:block;width:100%;height:auto">
+        <rect width="900" height="330" fill="#F7F3EC"></rect>
+        <rect x="0" y="244" width="900" height="10" fill="#DCD5C8"></rect><rect x="0" y="254" width="900" height="76" fill="#2A2E37"></rect>
+        <rect x="20" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="140" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="260" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="380" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="500" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="620" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="740" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect><rect x="860" y="290" width="40" height="5" rx="2.5" fill="#F7F3EC"></rect>
+        <rect x="40" y="150" width="140" height="94" fill="#F2C14E"></rect><rect x="50" y="132" width="120" height="22" rx="5" fill="#2A2E37"></rect>
+        <text x="110" y="147.5" text-anchor="middle" fill="#F7F3EC" style="font:700 10px 'Instrument Sans',sans-serif;letter-spacing:.5px">ABARROTES LUPITA</text>
+        <rect x="40" y="156" width="140" height="14" fill="#E36F8C"></rect><rect x="50" y="180" width="44" height="32" rx="5" fill="#2A2E37"></rect><rect x="106" y="180" width="30" height="64" rx="3" fill="#2A2E37"></rect><rect x="144" y="180" width="28" height="32" rx="5" fill="#2A2E37"></rect>
+        <circle cx="64" cy="196" r="7" fill="#fff"></circle><circle cx="80" cy="196" r="7" fill="#fff"></circle><circle cx="{{ e1a }}" cy="196" r="3.8" fill="#2A2E37"></circle><circle cx="{{ e1b }}" cy="196" r="3.8" fill="#2A2E37"></circle>
+        <sc-if value="{{ ya }}" hint-placeholder-val="{{ false }}"><ellipse cx="72" cy="207" rx="3" ry="3.6" fill="#F2C14E"></ellipse></sc-if>
+        <rect x="244" y="150" width="12" height="96" rx="3" fill="#2A2E37"></rect><circle cx="222" cy="150" r="26" fill="#5FB36B"></circle><circle cx="278" cy="150" r="26" fill="#5FB36B"></circle><circle cx="250" cy="128" r="40" fill="#5FB36B"></circle>
+        <circle cx="240" cy="132" r="8.5" fill="#fff"></circle><circle cx="262" cy="132" r="8.5" fill="#fff"></circle><circle cx="{{ e2a }}" cy="132" r="4.6" fill="#2A2E37"></circle><circle cx="{{ e2b }}" cy="132" r="4.6" fill="#2A2E37"></circle>
+        <sc-if value="{{ ya }}" hint-placeholder-val="{{ false }}"><ellipse cx="251" cy="150" rx="4" ry="5" fill="#2A2E37"></ellipse></sc-if>
+        <rect x="310" y="168" width="100" height="76" fill="#DCD5C8"></rect><rect x="304" y="150" width="112" height="22" rx="5" fill="#5FB36B"></rect>
+        <text x="360" y="165.5" text-anchor="middle" fill="#fff" style="font:800 11px 'Bricolage Grotesque',sans-serif">FARMACIA</text>
+        <rect x="320" y="184" width="36" height="28" rx="4" fill="#3A4150"></rect><rect x="366" y="184" width="30" height="60" rx="3" fill="#3A4150"></rect>
+        <circle cx="331" cy="198" r="6" fill="#fff"></circle><circle cx="345" cy="198" r="6" fill="#fff"></circle><circle cx="{{ e3a }}" cy="198" r="3.2" fill="#2A2E37"></circle><circle cx="{{ e3b }}" cy="198" r="3.2" fill="#2A2E37"></circle>
+        <rect x="447" y="150" width="6" height="96" fill="#2A2E37"></rect><rect x="434" y="104" width="32" height="60" rx="10" fill="#2A2E37"></rect>
+        <circle cx="450" cy="118" r="7" fill="#E36F8C"></circle><circle cx="450" cy="134" r="7" fill="#4A505C"></circle><circle cx="450" cy="150" r="7" fill="#4A505C"></circle>
+        <rect x="436" y="174" width="28" height="18" rx="6" fill="#2FA6A0"></rect><circle cx="445" cy="183" r="4.6" fill="#fff"></circle><circle cx="455" cy="183" r="4.6" fill="#fff"></circle><circle cx="{{ e4a }}" cy="183" r="2.5" fill="#2A2E37"></circle><circle cx="{{ e4b }}" cy="183" r="2.5" fill="#2A2E37"></circle>
+        <rect x="557" y="140" width="6" height="104" fill="#2A2E37"></rect><rect x="546" y="242" width="28" height="7" rx="3.5" fill="#2A2E37"></rect>
+        <circle cx="560" cy="140" r="26" fill="#8B6CC9"></circle><circle cx="551" cy="138" r="7.5" fill="#fff"></circle><circle cx="569" cy="138" r="7.5" fill="#fff"></circle>
+        <circle cx="{{ e5a }}" cy="{{ e5y }}" r="4" fill="#2A2E37"></circle><circle cx="{{ e5b }}" cy="{{ e5y }}" r="4" fill="#2A2E37"></circle>
+        <sc-if value="{{ ya }}" hint-placeholder-val="{{ false }}"><ellipse cx="560" cy="154" rx="3.6" ry="4.4" fill="#2A2E37"></ellipse></sc-if>
+        <g transform="{{ plT }}"><rect x="527" y="172" width="66" height="26" rx="6.5" fill="#2A2E37"></rect><rect x="559" y="178" width="1.4" height="14" fill="#fff" opacity=".5"></rect><text x="543" y="189.5" text-anchor="middle" fill="{{ plC }}" style="font:800 12px 'Bricolage Grotesque',sans-serif">51</text><sc-if value="{{ plV0 }}" hint-placeholder-val="{{ false }}"><text x="576" y="189.5" text-anchor="middle" fill="{{ plC }}" style="font:800 12px 'Bricolage Grotesque',sans-serif">3′</text></sc-if><sc-if value="{{ plV1 }}" hint-placeholder-val="{{ false }}"><text x="576" y="189.5" text-anchor="middle" fill="{{ plC }}" style="font:800 12px 'Bricolage Grotesque',sans-serif">1′</text></sc-if><sc-if value="{{ plV2 }}" hint-placeholder-val="{{ false }}"><text x="576" y="189.5" text-anchor="middle" fill="{{ plC }}" style="font:800 12px 'Bricolage Grotesque',sans-serif">¡ya!</text></sc-if><circle cx="527" cy="185" r="6.5" fill="#8B6CC9"></circle><circle cx="593" cy="185" r="6.5" fill="#8B6CC9"></circle></g>
+        <g opacity="{{ paxOp }}"><use href="#L-pasajero" x="{{ pax1 }}" y="{{ paxY }}" width="44" height="44"></use><use href="#L-pasajero" x="{{ pax2 }}" y="{{ paxY }}" width="40" height="40"></use></g>
+        <g transform="{{ oT }}"><ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+          <circle cx="50" cy="52" r="11" fill="#fff"></circle><circle cx="76" cy="50" r="11" fill="#fff"></circle><circle cx="{{ oEa }}" cy="{{ oEy }}" r="6" fill="#2A2E37"></circle><circle cx="{{ oEb }}" cy="{{ oEy2 }}" r="6" fill="#2A2E37"></circle>
+          <sc-if value="{{ oAbierta }}" hint-placeholder-val="{{ false }}"><ellipse cx="63" cy="76" rx="7" ry="8" fill="#2A2E37"></ellipse></sc-if>
+          <sc-if value="{{ oSonrisa }}" hint-placeholder-val="{{ false }}"><path d="M52 74 q11 10 22 0" fill="none" stroke="#2A2E37" stroke-width="3.2" stroke-linecap="round"></path></sc-if>
+          <circle cx="10" cy="{{ oHl }}" r="7" fill="#F6A15B"></circle><circle cx="112" cy="{{ oHr }}" r="7" fill="#F6A15B"></circle>
+        </g>
+        <g transform="{{ camiT }}">
+          <rect x="0" y="170" width="150" height="72" rx="16" fill="#8B6CC9"></rect><rect x="0" y="218" width="150" height="6" fill="#F7F3EC"></rect>
+          <rect x="12" y="180" width="24" height="24" rx="5" fill="#2A2E37"></rect><rect x="42" y="180" width="24" height="24" rx="5" fill="#2A2E37"></rect><rect x="72" y="180" width="24" height="24" rx="5" fill="#2A2E37"></rect>
+          <rect x="104" y="178" width="38" height="34" rx="8" fill="#2A2E37"></rect><rect x="112" y="162" width="26" height="10" rx="3" fill="#F7F3EC"></rect>
+          <text x="125" y="170.5" text-anchor="middle" fill="#2A2E37" style="font:800 8px 'Bricolage Grotesque',sans-serif">51</text>
+          <ellipse cx="116" cy="193" rx="7.2" ry="5.4" fill="#fff"></ellipse><ellipse cx="131" cy="193" rx="7.2" ry="5.4" fill="#fff"></ellipse>
+          <circle cx="{{ cm1 }}" cy="{{ cmY }}" r="3.2" fill="#2A2E37"></circle><circle cx="{{ cm2 }}" cy="{{ cmY }}" r="3.2" fill="#2A2E37"></circle>
+          <sc-if value="{{ ya }}" hint-placeholder-val="{{ false }}"><ellipse cx="124" cy="205" rx="3.4" ry="4" fill="#F7F3EC"></ellipse></sc-if>
+          <sc-if value="{{ seVa }}" hint-placeholder-val="{{ false }}"><path d="M118 203 q6 5 12 0" fill="none" stroke="#F7F3EC" stroke-width="2.4" stroke-linecap="round"></path></sc-if>
+          <circle cx="34" cy="244" r="12" fill="#2A2E37"></circle><circle cx="34" cy="244" r="5" fill="#F7F3EC"></circle><circle cx="118" cy="244" r="12" fill="#2A2E37"></circle><circle cx="118" cy="244" r="5" fill="#F7F3EC"></circle>
+          <circle cx="160" cy="{{ cmH }}" r="7" fill="#8B6CC9"></circle>
+        </g>
+      </svg></div>
+  </section>
+
+  
+
+  <section id="instalar" data-screen-label="Instalar" style="background:#EDE9E1;color:#2A2E37">
+    <div style="max-width:1200px;margin:0 auto;padding:72px 24px 88px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:40px;align-items:center">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="width:96px"><svg viewBox="0 0 120 120" style="width:100%;display:block"><use href="#L-icono" width="120" height="120"></use></svg></div>
+        <h2 style="margin:0;font:800 clamp(38px,5vw,60px)/0.98 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;color:#2A2E37">Muy pronto en tu teléfono.</h2>
+        <p style="margin:0;font-size:18px;line-height:1.5;color:#4A4F5A">Estamos preparando las apps para iPhone y Android. Mientras, Ontoy ya funciona en tu navegador: sin cuenta y sin descargar nada.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:10px">
+          <sc-for list="{{ tiendas }}" as="t" hint-placeholder-count="2"><a href="{{ t.href }}" style="display:flex;flex-direction:column;gap:1px;text-decoration:none;border-radius:12px;padding:8px 14px;box-shadow:inset 0 0 0 1.5px #2A2E37;color:#4A4F5A;opacity:{{ t.op }}"><span style="font-size:11px;font-weight:600">{{ t.pre }}</span><span style="font:800 15px/1.1 'Bricolage Grotesque',sans-serif">{{ t.nombre }}</span></a></sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:16px;align-items:center;background:#F7F3EC;box-shadow:0 0 0 1px #DCD5C8;border-radius:22px;padding:18px 20px"><div><div style="font:800 20px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;color:#2A2E37">iPhone<span style="margin-left:8px;vertical-align:middle;background:#2A2E37;color:#F7F3EC;border-radius:999px;padding:2px 9px;font:700 12px 'Instrument Sans'">Pronto</span></div><div style="font-size:15px;line-height:1.45;color:#4A4F5A">Muy pronto en App Store. Mientras, úsala desde tu navegador.</div></div></div>
+        <div style="display:flex;gap:16px;align-items:center;background:#F7F3EC;box-shadow:0 0 0 1px #DCD5C8;border-radius:22px;padding:18px 20px"><div><div style="font:800 20px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;color:#2A2E37">Android<span style="margin-left:8px;vertical-align:middle;background:#2A2E37;color:#F7F3EC;border-radius:999px;padding:2px 9px;font:700 12px 'Instrument Sans'">Pronto</span></div><div style="font-size:15px;line-height:1.45;color:#4A4F5A">Muy pronto en Google Play. Mientras, úsala desde tu navegador.</div></div></div>
+        <div style="display:flex;gap:16px;align-items:center;background:#F7F3EC;box-shadow:0 0 0 1px #DCD5C8;border-radius:22px;padding:18px 20px"><div><div style="font:800 20px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;color:#2A2E37">Computadora</div><div style="font-size:15px;line-height:1.45;color:#4A4F5A">Abre ontoy.app. En Chrome o Edge, instálala desde la barra de direcciones.</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  
+
+  <footer style="background:#2A2E37;color:#C9CDD6">
+    <div style="max-width:1200px;margin:0 auto;padding:36px 24px 44px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:20px">
+      <div style="display:flex;align-items:center;gap:12px"><span style="width:44px;height:44px;border-radius:12px;background:#EDE9E1;display:grid;place-items:center"><svg viewBox="0 0 120 120" style="width:80%"><use href="#L-icono" width="120" height="120"></use></svg></span><span style="font:800 26px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em;color:#fff">¿Ontoy?</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:20px;font-size:14px"><a href="/privacidad" style="color:#F7F3EC">Privacidad</a><span>Horarios y avisos según cada concesión</span><span>ontoy.app</span></div>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;titulo&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;¿Ontás? Ontoy te lleva.&quot;,&quot;¿Sabes ontás? Ontoy te lleva.&quot;,&quot;¿A dónde vas? Ontoy te lleva.&quot;,&quot;Dime a dónde vas. Yo te digo cómo.&quot;,&quot;Tú dime a dónde, Ontoy te dice cómo.&quot;],&quot;default&quot;:&quot;¿Ontás? Ontoy te lleva.&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;tiendas&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;próximamente&quot;,&quot;publicada&quot;],&quot;default&quot;:&quot;próximamente&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;seguirCursor&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;nombreBanda&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;al equipo&quot;,&quot;a la palomilla&quot;,&quot;a los de la parada&quot;,&quot;a la cuadrilla&quot;,&quot;a los cuates de la esquina&quot;],&quot;default&quot;:&quot;al equipo&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { t: 0 };
+  cur = { lx: 0.3, ly: 0.1, hero: { e: 0, dx: 0.4, dy: -0.2 }, step: { e: 0, dx: 0, dy: 0 }, bnd: { e: 0, dx: 0, dy: 0 } };
+  tg = JSON.parse(JSON.stringify(this.cur));
+  ph = { h: 0, s: 0 };
+  combo = {};
+  clic(key) {
+    const now = this.state.t, c = this.combo[key];
+    const n = c && now - c.at < 1.4 ? Math.min(c.n + 1, 8) : 1;
+    this.combo[key] = { n, at: now };
+    this.setState({ [key + 'At']: now, [key + 'N']: n });
+  }
+  simTraffic(dt, t) {
+    const W = 1650;
+    if (!this.veh) { this.veh = [{ cami: true, x: -100, lane: 0, laneT: 0, pref: 0, v: 60, vd: 92, len: 90 }]; for (let i = 0; i < 7; i++) this.veh.push({ x: i * 225 + 60, lane: i % 2, laneT: i % 2, pref: i % 2, v: 70, vd: 82 + (i * 13) % 36, len: 64 }); this.lastDep = -8; this.stopDone = false; }
+    const ct = t % 45, cyc = Math.floor(t / 45), obraOn = ct > 8.5 && ct < 24.5; this.obraCt = ct;
+    if (this.obraCyc !== cyc) { this.obraCyc = cyc; this.obraX = [700, 330, 1040, 560, 860][cyc % 5]; this.obraL = (cyc + 1) % 2; }
+    const X = this.obraX, OL = this.obraL, rush = 0.62 + 0.38 * (0.5 + 0.5 * Math.cos(t * Math.PI * 2 / 70));
+    const inL = (o, L) => o.laneT === L || Math.abs(o.lane - L) < 0.55;
+    const ahead = (v, L) => { let g = 1e9; for (const o of this.veh) if (o !== v && inL(o, L)) { const d = ((o.x - v.x) % W + W) % W; if (d > 0 && d < W / 2) g = Math.min(g, d - v.len); } return g; };
+    const behind = (v, L) => { let g = 1e9; for (const o of this.veh) if (o !== v && inL(o, L)) { const d = ((v.x - o.x) % W + W) % W; if (d > 0 && d < W / 2) g = Math.min(g, d - o.len); } return g; };
+    for (const v of this.veh) {
+      let g = ahead(v, v.laneT);
+      if (obraOn && v.laneT === OL) { const d = X - 60 - (v.x + v.len); if (d > -30) { g = Math.min(g, d); const o = 1 - OL; if (d < 300 && ahead(v, o) > 18 && behind(v, o) > 36) v.laneT = o; } }
+      if (v.laneT !== v.pref && !(obraOn && v.pref === OL && v.x < X + 70 && v.x + v.len > X - 330) && ahead(v, v.pref) > 36 && behind(v, v.pref) > 46) v.laneT = v.pref;
+      if (v.cami) {
+        const ds = 918 - (v.x + v.len);
+        if (!this.stopDone && ds > -12) g = Math.min(g, ds + 12);
+        if (!this.stopDone && ds < 6 && v.v < 6) { if (this.dwellAt == null) this.dwellAt = t; if (t - this.dwellAt > 3.2) { this.stopDone = true; this.dwellAt = null; this.lastDep = t; this.wasLate = false; } }
+        this.camiDs = ds;
+      }
+      const vT = v.vd * rush * Math.max(0, Math.min(1, (g - 12) / 90));
+      v.v += (vT - v.v) * (1 - Math.exp(-dt * (vT < v.v ? 6 : 1.6)));
+      v.lane += (v.laneT - v.lane) * (1 - Math.exp(-dt * 3));
+    }
+    for (const v of this.veh) { v.x += v.v * dt; if (v.x > 1450) { v.x -= W; if (v.cami) this.stopDone = false; } }
+    const C = this.veh[0], dist = this.stopDone ? this.camiDs + W : this.camiDs;
+    const atStop = this.dwellAt != null, arriving = !this.stopDone && dist < 260 && !atStop;
+    const late = !this.stopDone && !atStop && !arriving && t - this.lastDep > 26;
+    if (late) this.wasLate = true;
+    const goneHappy = t - this.lastDep < 2.4 && this.lastDep > 0;
+    this.pp = { atStop, arriving, late, goneHappy, dist };
+    this.mood = late ? -1 : (atStop || arriving || goneHappy) ? 1 : 0;
+  }
+  suaviza(dt) {
+    this.simTraffic(dt, this.state.t || 0);
+    const k = 1 - Math.exp(-dt * 7), ke = 1 - Math.exp(-dt * 4);
+    const L = (a, b, f) => a + (b - a) * f;
+    this.cur.lx = L(this.cur.lx, this.tg.lx, k); this.cur.ly = L(this.cur.ly, this.tg.ly, k);
+    for (const n of ['hero', 'step', 'bnd']) { const c = this.cur[n], g = this.tg[n]; c.dx = L(c.dx, g.dx, k); c.dy = L(c.dy, g.dy, k); c.e = L(c.e, g.e, ke); }
+    this.ph.h += dt * (5 + this.cur.hero.e * 7); this.ph.s += dt * (4 + this.cur.step.e * 4);
+  }
+  componentDidMount() {
+    this.onRz = () => this.setState({ w: window.innerWidth });
+    this.onRz(); window.addEventListener('resize', this.onRz);
+    this.onSc = () => { const el = this.haceEl; if (!el) return; const r = el.getBoundingClientRect(), tot = r.height - window.innerHeight; if (tot <= 0) return; const p = Math.max(0, Math.min(0.9999, -r.top / tot)); this.fp = p; const i = Math.floor(p * 5); if (i !== this.state.fi) this.setState({ fi: i }); else if (this.reduce) this.forceUpdate(); };
+    window.addEventListener('scroll', this.onSc, { passive: true }); this.onSc();
+    this.reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    this.onVis = () => { if (document.hidden) { cancelAnimationFrame(this.raf); this.raf = null; } else if (!this.reduce && !this.raf) { last = performance.now(); this.raf = requestAnimationFrame(loop); } };
+    document.addEventListener('visibilitychange', this.onVis);
+    if ('IntersectionObserver' in window) this.io = new IntersectionObserver((es) => es.forEach((e) => { this.ifrVis = e.isIntersecting; if (this.ifr && this.ifr.contentWindow) this.ifr.contentWindow.postMessage({ tipo: 'vis', v: e.isIntersecting }, '*'); }));
+    const t0 = performance.now();
+    let last = t0;
+    const loop = (n) => { const dt = Math.min(0.05, (n - last) / 1000); last = n; this.suaviza(dt); this.setState({ t: (n - t0) / 1000 }); this.postBuses((n - t0) / 1000); this.raf = requestAnimationFrame(loop); };
+    if (!this.reduce) this.raf = requestAnimationFrame(loop);
+  }
+  irA(i) { const el = this.haceEl; if (!el) return; const r = el.getBoundingClientRect(), tot = r.height - window.innerHeight; window.scrollTo({ top: window.scrollY + r.top + tot * (i + 0.5) / 5, behavior: 'smooth' }); }
+  vehT(v) { const y = 44 + 53 * v.lane + (v.cami ? -6 : 8), ang = (v.laneT - v.lane) * 14; return `translate(${v.x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(1)} ${v.cami ? 45 : 32} 20)${v.cami ? ' scale(.75)' : ''}`; }
+  trafficVals(t) {
+    const out = {}, V = this.veh || [];
+    out.stCamiT = V[0] ? this.vehT(V[0]) : 'translate(-300 38) scale(.75)';
+    for (let i = 0; i < 7; i++) out['v' + i + 'T'] = V[i + 1] ? this.vehT(V[i + 1]) : 'translate(-300 52)';
+    const P = this.pp || { dist: 900 }, m = this.mood || 0;
+    const min = P.atStop ? 0 : Math.max(1, Math.min(4, Math.ceil(P.dist / 330)));
+    for (let k = 0; k < 5; k++) out['ppV' + k] = k === min;
+    let ex = -2, ey = 0; if (P.late) { ex = -0.6; ey = 1.6; } else if (P.arriving) { ex = -1.6; ey = -1.6; } else if (P.atStop) { ex = -0.6; ey = 0; } else if (P.goneHappy) { ex = 2; ey = 0; }
+    this.ppE = this.ppE || { x: -2, y: 0 }; this.ppE.x += (ex - this.ppE.x) * 0.15; this.ppE.y += (ey - this.ppE.y) * 0.15;
+    out.ppE1 = (925 + this.ppE.x).toFixed(2); out.ppE2 = (935 + this.ppE.x).toFixed(2); out.ppEy = (14 + this.ppE.y).toFixed(2);
+    this.ppM = (this.ppM || 0) + (m - (this.ppM || 0)) * 0.08;
+    out.ppFeliz = Math.max(0, this.ppM).toFixed(2); out.ppTriste = Math.max(0, -this.ppM).toFixed(2);
+    const hop = P.atStop ? -Math.abs(Math.sin(t * 7)) * (this.wasLate ? 5 : 3) : 0, droop = Math.max(0, -this.ppM) * 2.5;
+    const C = V[0], cX = C ? C.x + 45 : 0, sm = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+    const tl = Math.max(-1, Math.min(1, (cX - 145) / 300)) * 1.6; out.tdE1 = (140 + tl).toFixed(2); out.tdE2 = (151 + tl).toFixed(2);
+    out.faroOp = (0.55 + 0.45 * (0.5 + 0.5 * Math.sin(t * 1.3))).toFixed(2);
+    for (let i = 0; i < 3; i++) {
+      const bx = 888 - i * 15; let x = bx, y = 41, op = 1, hy = 0;
+      if (P.atStop && this.dwellAt != null) { const q = sm((t - this.dwellAt - 0.3 - i * 0.7) / 0.8); x = bx + (866 - bx) * q; y = 41 + 12 * q - Math.sin(q * Math.PI) * 6; op = 1 - sm((q - 0.8) / 0.2); }
+      else if (this.stopDone) { const q = sm((t - this.lastDep - 3 - i * 1.4) / 1.8); x = bx - 110 * (1 - q); op = q; y = 41 - Math.abs(Math.sin(t * 9 + i)) * 1.5 * (1 - q); }
+      else { y = 41 - Math.abs(Math.sin(t * 2 + i * 1.3)) * 0.8; }
+      if (P.arriving) hy = -6 - Math.abs(Math.sin(t * 10 + i)) * 3;
+      else if (P.late) hy = 2;
+      out['px' + i + 'T'] = `translate(${x.toFixed(1)} ${y.toFixed(1)})`; out['px' + i + 'Op'] = op.toFixed(2); out['px' + i + 'H'] = `translate(0 ${hy.toFixed(1)})`;
+    }
+    out.ppT = `translate(0 ${(hop + droop).toFixed(1)}) rotate(${(Math.max(0, -this.ppM) * -6).toFixed(1)} 930 43)`;
+    return out;
+  }
+  obraVals(t) {
+    const ct = this.obraCt ?? 0, ss = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+    const X = this.obraX ?? 700, Y = this.obraL ? 123 : 70;
+    const cs = ss((ct - 8) / 0.8) * (1 - ss((ct - 24.2) / 0.8)), ws = ss((ct - 9) / 0.7) * (1 - ss((ct - 23.4) / 0.8));
+    let nx = X - 400; for (const v of this.veh || []) if (v.x + v.len < X && v.x + v.len > nx) nx = v.x + v.len;
+    const look = Math.max(-1, Math.min(1, (nx - X) / 220)), golpe = ct > 10 && ct < 21.5;
+    return {
+      bX: X, bY: Y, bOp: (ss((ct - 8.6) / 0.6) * (1 - ss((ct - 21.5) / 1.6))).toFixed(2), pOp: (ss((ct - 21.5) / 1.6) * (1 - ss((ct - 24) / 1))).toFixed(2),
+      c1T: `translate(${X - 70} ${Y + 22}) scale(${cs.toFixed(3)})`, c2T: `translate(${X + 70} ${Y + 22}) scale(${cs.toFixed(3)})`,
+      cpA: (-3.2 + look * 1.3).toFixed(2), cpB: (3.2 + look * 1.3).toFixed(2),
+      wT: `translate(${(X + 36 + (1 - ws) * 30).toFixed(1)} ${Y + 22}) scale(${(ws * 0.9).toFixed(3)})`,
+      wpA: (-4.5 + (golpe ? -1.6 : look * 1.6)).toFixed(2), wpB: (4.5 + (golpe ? -1.6 : look * 1.6)).toFixed(2), wpY: golpe ? -12.5 : -14,
+      hamT: `rotate(${golpe ? (Math.sin(t * 11) * 28 - 10).toFixed(1) : 0} -18 0)`,
+    };
+  }
+  postBuses(t) {
+    this.pbN = (this.pbN || 0) + 1; if (this.pbN % 4) return;
+    const R = this.roadEl, F = this.ifr; if (!R || !F || !F.contentWindow || this.ifrVis === false) return;
+    const rr = R.getBoundingClientRect(), fr = F.getBoundingClientRect(), sc = Math.max(rr.width / 1200, 1);
+    const cx = fr.left + fr.width / 2, cy = fr.top + fr.height * 0.45;
+    const map = (vx, vy) => { const sx = rr.left + rr.width / 2 + (vx - 600) * sc, sy = rr.top + 75 + (vy - 75) * sc; return { x: (sx - cx) / (fr.width * 0.9), y: (sy - cy) / (fr.height * 0.9) }; };
+    const C = (this.veh || [])[0]; if (!C) return;
+    F.contentWindow.postMessage({ tipo: 'buses', list: [map(C.x + 45, 70 + 53 * C.lane)] }, '*');
+    const ct = this.obraCt ?? 0, cambio = C.lane > 0.06 && C.lane < 0.94, llega = ct > 8.3 && ct < 11.8;
+    const pt = cambio ? map(C.x + 45, 70 + 53 * C.lane) : map(this.obraX ?? 700, this.obraL ? 123 : 70);
+    F.contentWindow.postMessage({ tipo: 'obra', x: Math.max(-1.4, Math.min(1.4, pt.x)), y: Math.max(-1.4, Math.min(1.4, pt.y)), f: (cambio || llega) ? 1 : 0 }, '*');
+    F.contentWindow.postMessage({ tipo: 'animo', v: this.mood || 0 }, '*');
+  }
+  componentWillUnmount() { cancelAnimationFrame(this.raf); document.removeEventListener('visibilitychange', this.onVis); if (this.io) this.io.disconnect(); window.removeEventListener('resize', this.onRz); window.removeEventListener('scroll', this.onSc); }
+  cerca(el, x, y) {
+    if (!el) return { e: 0, dx: 0, dy: 0 };
+    const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const dx = x - cx, dy = y - cy, d = Math.hypot(dx, dy), n = d || 1;
+    const e = Math.max(0, Math.min(1, 1 - (d - r.width * 0.45) / 380));
+    const m = d < 24 ? 0 : Math.min(1, (d - 24) / 140);
+    return { e, dx: dx / n * m, dy: dy / n * m };
+  }
+  banda(t) {
+    // "La banda": shy — blushes, leans toward you, and covers its face peek-a-boo when you get very close; click = wink + heart
+    const B = this.cur.bnd;
+    const e = B.e;
+    const N = this.state.guinoN || 1, dur = 1.3 + N * 0.25;
+    const g = this.state.guinoAt != null ? t - this.state.guinoAt : 9, gu = g < dur;
+    const lerp = (a, b, k) => a + (b - a) * k;
+    const bob = Math.sin(t * 2.2) * 1.2;
+    const cover = Math.max(Math.max(0, Math.min(1, (e - 0.6) / 0.3)), gu && N >= 3 ? Math.max(0, Math.min(1, (dur - g) / 0.6)) : 0);
+    const peek = cover * (0.5 + 0.5 * Math.sin(t * 2.6));
+    return {
+      bTilt: `rotate(${(B.dx * e * 9 + (gu && N >= 4 ? Math.sin(t * 18) * 4 * Math.min(1, (dur - g) / 0.6) : 0)).toFixed(1)} 60 96) translate(0 ${(-e * 3).toFixed(1)}) scale(${(gu && N >= 5 ? 0.94 + 0.03 * Math.sin(t * 20) : 1).toFixed(3)})`,
+      bRubor: Math.min(1, e * 1.3 + (gu ? (0.4 + N * 0.15) * Math.min(1, (dur - g) / 0.6) : 0)).toFixed(2), bSonrisa: (e > 0.2 || gu) ? 1 : 0,
+      bGuino: gu, bSinGuino: !gu,
+      bEye: `translate(${(B.dx * 4.2).toFixed(2)} ${(B.dy * 4.2).toFixed(2)})`,
+      bLx: lerp(14, 50 + peek * -10, cover).toFixed(1), bLy: (lerp(80, 52, cover) + bob).toFixed(1),
+      bRx: lerp(108, 76 + peek * 10, cover).toFixed(1), bRy: (lerp(78, 50, cover) - bob).toFixed(1),
+      bHr: (7 + cover * 5).toFixed(1),
+      bCors: gu ? Array.from({ length: Math.min(N, 6) }, (_, i) => { const gg = Math.max(0, g - i * 0.12), sx = (i - (Math.min(N, 6) - 1) / 2) * 16; return { op: Math.max(0, 1 - gg / dur).toFixed(2), t: `translate(${(sx + Math.sin(gg * 6 + i) * 4).toFixed(1)} ${(-gg * (28 + i * 6)).toFixed(1)}) scale(${(1 + (N >= 4 ? 0.3 : 0)).toFixed(2)})` }; }) : [],
+      bHayTxt: gu && N >= 2, bTxt: ['', '', '¡ay!', '¡ay, ya!', '¡me apenas!', '¡basta! >///<', '¡basta! >///<', '¡basta! >///<'][N - 1],
+    };
+  }
+  renderVals() {
+    const seguir = this.props.seguirCursor ?? true;
+    const t = this.state.t, { lx, ly } = this.cur;
+    const H = this.cur.hero, S = this.cur.step;
+    const onMove = (ev) => {
+      if (!seguir) return;
+      const p = ev.touches ? ev.touches[0] : ev;
+      this.tg = { lx: Math.max(-1, Math.min(1, (p.clientX / window.innerWidth - 0.5) * 2.2)), ly: Math.max(-1, Math.min(1, (p.clientY / window.innerHeight - 0.45) * 2.4)),
+        hero: this.cerca(this.heroEl, p.clientX, p.clientY), bnd: this.cerca(this.bandaEl, p.clientX, p.clientY), step: this.cerca(this.stepEl, p.clientX, p.clientY) };
+      if (this.reduce) { this.cur = JSON.parse(JSON.stringify(this.tg)); this.forceUpdate(); }
+      if (this.ifr && this.ifr.contentWindow && this.ifrVis !== false) { const r = this.ifr.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height * 0.45, d = Math.hypot(p.clientX - cx, p.clientY - cy);
+        this.ifr.contentWindow.postMessage({ tipo: 'cursor', x: Math.max(-1.4, Math.min(1.4, (p.clientX - cx) / (r.width * 0.9))), y: Math.max(-1.4, Math.min(1.4, (p.clientY - cy) / (r.height * 0.9))), e: Math.max(0, Math.min(1, 1 - (d - r.width * 0.4) / 420)) }, '*'); }
+    };
+    const tr = (k) => `translate(${(lx * k).toFixed(2)} ${(ly * k).toFixed(2)})`;
+    // hero Ontoy: closer = more excited; click = tickles
+    const RN = this.state.risaN || 1, rd = 1.4 + RN * 0.35;
+    const risa = this.state.risaAt != null && t - this.state.risaAt < rd;
+    const rT = this.state.risaAt != null ? t - this.state.risaAt : 99;
+    const env = rT < rd ? Math.min(rT / 0.12, (rd - rT) / 0.8, 1) : 0, E = env * env * (3 - 2 * env);
+    const he = H.e, P = this.ph.h, amp = (1 + (RN - 1) * 0.45) * E;
+    const hShake = risa ? `translate(${(Math.sin(t * 48) * 2.6 * amp).toFixed(1)} ${(-Math.abs(Math.sin(t * 22)) * 4 * amp).toFixed(1)}) rotate(${(RN >= 4 ? Math.sin(t * 16) * (RN - 3) * 5 : 0).toFixed(1)} 60 96)` : `translate(0 ${(-Math.abs(Math.sin(P)) * he * 5).toFixed(1)})`;
+    const handsR = (RN >= 3 ? [16 + Math.sin(t * 30) * 8, 60 + Math.cos(t * 26) * 22, 104 - Math.sin(t * 30) * 8, 60 - Math.cos(t * 26) * 22] : [30 + Math.sin(t * 40) * 2, 86, 94 - Math.sin(t * 40) * 2, 86]);
+    const handsN = [14 - he * 6, 80 - he * 34 + Math.sin(P) * he * 14, 108 + he * 6, 78 - he * 34 + Math.sin(P + 1.6) * he * 14];
+    const hands = handsN.map((v, i) => v + (handsR[i] - v) * E);
+    const mB = he < 0.08 ? 0 : (1 + he * 8 * (0.75 + 0.25 * Math.sin(t * 10)));
+    const hJa = ['¡ja ja!', '¡jajaja!', '¡JAJAJA!', '¡ya, ya! jaja', '¡me haces llorar! jaja', '¡basta! JAJAJA', '¡basta! JAJAJA', '¡basta! JAJAJA'][RN - 1];
+    // step-03 Ontoy: different reaction — jumps and grins; click = big jump with stars
+    const SN = this.state.saltoN || 1, sd = 0.8 + SN * 0.12;
+    const salto = this.state.saltoAt != null ? (t - this.state.saltoAt) : 9;
+    const se = S.e, big = salto < sd ? Math.sin(Math.PI * salto / sd) : 0;
+    const giro = salto < sd && SN >= 3 ? (salto / sd) * 360 * (SN >= 6 ? 2 : 1) : big * 12;
+    const mareo = SN >= 5 && salto >= sd && salto < sd + 1.6;
+    const jy = -Math.abs(Math.sin(this.ph.s)) * se * 16 - big * (34 + (SN - 1) * 10);
+    const sSmile = `M${(56 - se * 6).toFixed(1)} 74 q${(7 + se * 6).toFixed(1)} ${(se * 12 + big * 6).toFixed(1)} ${(14 + se * 12).toFixed(1)} 0`;
+    const up = Math.max(se, big);
+    // phone map
+    const k = (t % 14) / 14; let x, y, ang;
+    if (k < 0.55) { const q = k / 0.55; x = 124; y = -30 + q * 198; ang = 180; } else { const q = (k - 0.55) / 0.45; x = 124 + q * 220; y = 168; ang = 90; }
+    const k2 = ((t + 6) % 12) / 12; let x2, y2, a2;
+    if (k2 < 0.35) { const q = k2 / 0.35; x2 = -30 + q * 154; y2 = 372; a2 = 90; } else { const q = (k2 - 0.35) / 0.65; x2 = 124; y2 = 372 + q * 300; a2 = 180; }
+    const mins = k < 0.3 ? 3 : k < 0.5 ? 2 : 1;
+    // street
+    const T = 13, c = t % T, ease = (v) => 1 - Math.pow(1 - v, 3), STOP = 470, START = -220, END = 1000;
+    let cx0, fase, stopped = false;
+    if (c < 5) { cx0 = START + (STOP - START) * ease(c / 5); fase = c < 3 ? 'Cami viene en camino' : '¡Ya casi!'; }
+    else if (c < 9) { cx0 = STOP; stopped = true; fase = c < 6 ? '¡Ya llegó!' : 'Suban, suban'; }
+    else { const q = (c - 9) / 3.5; cx0 = STOP + (END - STOP) * q * q; fase = 'Se va · buen viaje'; }
+    const near = c < 9 && cx0 > 60, seVa = c >= 9;
+    const look = (ox, m) => Math.max(-1, Math.min(1, (cx0 + 125 - ox) / 160)) * m;
+    const pw = (x, pts) => { for (let i = 1; i < pts.length; i++) if (x <= pts[i][0]) { const [a, va] = pts[i - 1], [b, vb] = pts[i]; const q = (x - a) / (b - a); return va + (vb - va) * q * q * (3 - 2 * q); } return pts[pts.length - 1][1]; };
+    const L = pw(c, [[0, 0], [4.4, 0], [5.1, 1], [8.9, 1], [9.9, 0], [13, 0]]);
+    const board = Math.max(0, Math.min(1, (c - 6) / 2));
+    const paxOp = c < 6 ? 1 : c < 8 ? 1 - board : c < 12.4 ? 0 : Math.min(1, (c - 12.4) / 0.5);
+    const oe = pw(c, [[0, 0], [2, 0], [3.2, 0.5], [4.8, 0.5], [5.3, 1], [8.8, 1], [9.7, 0.35], [11.8, 0.35], [12.9, 0]]);
+    const oUp = Math.max(0, (oe - 0.5) / 0.5);
+    const oj = -Math.abs(Math.sin(t * 7)) * oe * 16;
+    const ol = look(760, 4.5);
+    const FD = [{"n":"01","title":"Sabes cuándo pasa. De verdad.","desc":"Ontoy ve la posición real de cada camión y te dice cuánto falta para tu parada. Si no hay dato, te lo dice: nunca adivina."},{"n":"02","title":"Dile a dónde vas.","desc":"Escribe un lugar —el hospital, la plaza, tu trabajo— y Ontoy te muestra qué rutas te acercan y en qué parada subirte."},{"n":"03","title":"Tu parada, a un toque.","desc":"Guarda las paradas de siempre. Al abrir Ontoy ya te está diciendo cuándo pasa tu camión. Sin cuenta: se quedan en tu teléfono."},{"n":"04","title":"¡Ya viene! Sal a tiempo.","desc":"Ontoy te avisa cuando tu camión está por llegar. Ni esperas de más, ni lo ves pasar desde la esquina. (Hazle cosquillas.)"},{"n":"05","title":"Te enteras de los cambios.","desc":"Desvíos por obra, horarios de fiesta: los avisos de la concesión te llegan con fecha y con quién lo dijo. Sin alarmas."}];
+    const fi = this.state.fi ?? 0, fp = this.fp ?? 0, loc = Math.max(0, Math.min(1, fp * 5 - fi));
+    const angosto = (this.state.w ?? 1000) < 820;
+    const feats = FD.map((f, i) => ({ ...f, active: i === fi, op: i === fi ? 1 : 0.42, disp: angosto && i !== fi ? 'none' : 'grid', barOp: i === fi ? 1 : 0, w: (i === fi ? loc * 100 : 0).toFixed(1) + '%', pick: () => this.irA(i) }));
+    const fv = {}; FD.forEach((_, i) => { fv['fv' + i + 'Op'] = i === fi ? 1 : 0; fv['fv' + i + 'T'] = i < fi ? 'translateY(-48px) scale(.97)' : i > fi ? 'translateY(48px) scale(.97)' : 'none'; fv['fv' + i + 'Pe'] = i === fi ? 'auto' : 'none'; });
+    const V = {
+      ...fv, feats, fNum: '0' + (fi + 1), haceRef: (el) => { this.haceEl = el; },
+      ancho: (this.state.w ?? 1000) >= 560, onMove, lk: tr(2.6), lkB: tr(4.2), mins,
+      banda: this.props.nombreBanda ?? 'al equipo',
+      camiMap: `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang})`, cami2Map: `translate(${x2.toFixed(1)} ${y2.toFixed(1)}) rotate(${a2})`,
+      tiendas: ['App Store', 'Google Play'].map(nombre => (this.props.tiendas ?? 'próximamente') === 'publicada'
+        ? { nombre, pre: 'Descárgala en', href: '#', bg: '#2A2E37', fg: '#fff', op: 1 }
+        : { nombre, pre: 'Próximamente en', href: '#instalar', bg: 'transparent', fg: '#4A4F5A', op: 0.75 }),
+      heroRef: (el) => { this.heroEl = el; }, roadRef: (el) => { this.roadEl = el; }, ifrRef: (el) => { if (el && el !== this.ifr && this.io) this.io.observe(el); this.ifr = el; },
+      ...this.trafficVals(t), ...this.obraVals(t),
+      r2A: `translate(${(((t * 90 + 700) % 1500) - 180).toFixed(1)} 4)`, r2B: `translate(${(1350 - ((t * 120) % 1500)).toFixed(1)} 4) scale(-1 1) translate(-96 0)`,
+      barra: (100 - mins * 28) + '%', caret: (Math.floor(t * 2) % 2), bandaRef: (el) => { this.bandaEl = el; },
+      onGuino: () => this.clic('guino'),
+      titulo: this.props.titulo ?? '¿Ontás? Ontoy te lleva.',
+      ...this.banda(t), stepRef: (el) => { this.stepEl = el; },
+      onRisa: () => this.clic('risa'), onSalto: () => this.clic('salto'),
+      hRisa: risa && E > 0.35, hOjos: !(risa && E > 0.35), hShake, hJa, hLagrimas: risa && RN >= 3 && E > 0.3, hTy: (62 + ((t * 40) % 16)).toFixed(1), hEr: 11 + he * 2,
+      hEye: `translate(${(H.dx * 4.6).toFixed(2)} ${(H.dy * 4.6).toFixed(2)})`,
+      hMy: (77 - E).toFixed(1), hMrx: ((4 + he * 4) + (11 + Math.min(RN, 5) - (4 + he * 4)) * E).toFixed(1), hMry: (mB + (9 + Math.min(RN, 5) - mB) * E).toFixed(1),
+      hLx: hands[0].toFixed(1), hLy: hands[1].toFixed(1), hRx: hands[2].toFixed(1), hRy: hands[3].toFixed(1),
+      sJump: `translate(0 ${jy.toFixed(1)}) rotate(${giro.toFixed(1)} 60 60)`, sEye: `translate(${(S.dx * 4.6).toFixed(2)} ${(S.dy * 4.6 - big * 3).toFixed(2)})`,
+      sSmile, sSmileOp: (se > 0.06 || big > 0 || mareo) ? 1 : 0, sEstrellas: salto < sd, sMas: salto < sd && SN >= 2, sMareo: mareo, sMareoOp: mareo ? Math.min(1, (salto - sd) / 0.2, (sd + 1.6 - salto) / 0.7).toFixed(2) : 0, sMareoT: `rotate(${(t * 400 % 360).toFixed(0)} 63 51)`,
+      sLx: (14 - up * 4).toFixed(1), sLy: (80 - up * 70 + Math.sin(t * 9) * up * 6).toFixed(1), sRx: (106 + up * 4).toFixed(1), sRy: (78 - up * 70 + Math.sin(t * 9 + 2) * up * 6).toFixed(1),
+      fase, ya: stopped, seVa,
+      e1a: 64 + look(72, 3.2), e1b: 80 + look(72, 3.2), e2a: 240 + look(251, 3.9), e2b: 262 + look(251, 3.9), e3a: 331 + look(338, 2.7), e3b: 345 + look(338, 2.7), e4a: 445 + look(450, 2.1), e4b: 455 + look(450, 2.1),
+      e5a: 551 + look(560, 3.4), e5b: 569 + look(560, 3.4), e5y: 138 - L * 2.5,
+      plT: `translate(0 ${(-L * 70).toFixed(1)})`, plC: (c >= 5 && L > 0.45) ? '#B69CF0' : '#FFFFFF', plTxt: (c >= 5 && L > 0.45) ? '¡ya!' : (near && c > 3 ? '1′' : '3′'),
+      pax1: (598 + (556 - 598) * board).toFixed(1), pax2: (632 + (566 - 632) * board).toFixed(1), paxY: (202 + board * 14).toFixed(1), paxOp: paxOp.toFixed(2),
+      oT: `translate(700 ${(150 + oj).toFixed(1)}) scale(.78)`, oEa: (50 + ol).toFixed(1), oEb: (76 + ol).toFixed(1), oEy: (52 - 5 * oUp).toFixed(1), oEy2: (50 - 5 * oUp).toFixed(1),
+      oAbierta: oUp > 0.55, oSonrisa: oUp <= 0.55 && seVa, oHl: (80 - oe * 60 + Math.sin(t * 12) * oe * 8).toFixed(1), oHr: (78 - oe * 60 + Math.sin(t * 12 + 2) * oe * 8).toFixed(1),
+      camiT: `translate(${cx0.toFixed(1)} ${(52 + (stopped ? -Math.abs(Math.sin(t * 6)) * 3 : Math.sin(t * 30) * 0.6)).toFixed(1)})`,
+      cm1: 116 + (stopped ? 0 : seVa ? -2 : 2.5), cm2: 131 + (stopped ? 0 : seVa ? -2 : 2.5), cmY: stopped ? 190.5 : 193,
+      cmH: (214 + (stopped ? Math.sin(t * 12) * 9 : 0)).toFixed(1),
+    };
+    ["3′","1′","¡ya!"].forEach((v, k) => { V['plV' + k] = V.plTxt === v; });
+    ["¡ja ja!","¡jajaja!","¡JAJAJA!","¡ya, ya! jaja","¡me haces llorar! jaja","¡basta! JAJAJA"].forEach((v, k) => { V['hJaV' + k] = V.hJa === v; });
+    ["¡ay!","¡ay, ya!","¡me apenas!","¡basta! >///<"].forEach((v, k) => { V['bTxV' + k] = V.bTxt === v; });
+    return V;
+  }
+}
+</script>
+</body>
+</html>

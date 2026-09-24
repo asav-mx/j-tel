@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cami 3D</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;height:100%;background:#EDE9E1;color:#2A2E37;font-family:'Instrument Sans',sans-serif}
+  a{color:#2A2E37}a:hover{color:#C8702A}
+  three-d-stage:not(:defined){visibility:hidden}
+  three-d-stage{display:block;width:100vw;height:100vh}
+  .cap{position:fixed;top:24px;left:28px;display:flex;flex-direction:column;gap:4px;pointer-events:none}
+  .cap h1{margin:0;font:800 34px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-.02em}
+  .cap p{margin:0;font-size:14px;color:#4A4F5A}
+  .ctl{position:fixed;top:24px;right:28px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:60vw}
+  .ctl button{font:600 13px 'Instrument Sans',sans-serif;border:0;border-radius:999px;padding:9px 14px;background:#fff;color:#2A2E37;cursor:pointer}
+  .ctl button[aria-pressed="true"]{background:#F6A15B}
+</style>
+</head>
+<body>
+<three-d-stage name="cami" background="#EDE9E1" autorotate></three-d-stage>
+<div class="cap"><h1>Cami</h1><p>Juguete suave · 24 cm · se pinta del color de su ruta</p></div>
+<div class="ctl" id="ctl"></div>
+<script src="three-d-stage.js"></script>
+<script type="module">
+const stage = document.querySelector('three-d-stage');
+const { THREE } = await stage.ready;
+
+const RUTAS = { '51 morado': ['#8B6CC9','51'], '51 azul': ['#4F7FD8','51'], 'C4 verde': ['#5FB36B','C4'], '38 rosa': ['#E36F8C','38'], 'T1 turquesa': ['#2FA6A0','T1'] };
+const M = {
+  ruta:   new THREE.MeshStandardMaterial({ name: 'color-de-ruta', color: '#4F7FD8', roughness: 0.5, metalness: 0 }),
+  blanco: new THREE.MeshStandardMaterial({ name: 'ojo-blanco', color: '#FFFFFF', roughness: 0.25, metalness: 0 }),
+  carbon: new THREE.MeshStandardMaterial({ name: 'carbon', color: '#2A2E37', roughness: 0.35, metalness: 0.1 }),
+  crema:  new THREE.MeshStandardMaterial({ name: 'crema', color: '#F7F3EC', roughness: 0.4, metalness: 0 }),
+  boca:   new THREE.MeshStandardMaterial({ name: 'boca-interior', color: '#7A2E2A', roughness: 0.6, metalness: 0 }),
+};
+const cv = document.createElement('canvas'); cv.width = 400; cv.height = 100;
+const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+M.letrero = new THREE.MeshStandardMaterial({ name: 'letrero-ruta', map: tex, roughness: 0.4, metalness: 0 });
+function pintar(num) { const c = cv.getContext('2d'); c.fillStyle = '#F7F3EC'; c.fillRect(0,0,400,100); c.fillStyle = '#2A2E37'; c.textAlign='center'; c.textBaseline='middle'; c.font = '800 78px "Bricolage Grotesque", sans-serif'; c.fillText(num, 200, 56); tex.needsUpdate = true; }
+
+function rbox(w, h, d, r, n = 14) {
+  const g = new THREE.BoxGeometry(1, 1, 1, n, n, n), p = g.attributes.position, v = new THREE.Vector3(), o = new THREE.Vector3();
+  const hw = w/2 - r, hh = h/2 - r, hd = d/2 - r;
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i).multiply(new THREE.Vector3(w, h, d));
+    const ix = Math.max(-hw, Math.min(hw, v.x)), iy = Math.max(-hh, Math.min(hh, v.y)), iz = Math.max(-hd, Math.min(hd, v.z));
+    o.set(v.x - ix, v.y - iy, v.z - iz); if (o.lengthSq() > 0) o.normalize().multiplyScalar(r);
+    p.setXYZ(i, ix + o.x, iy + o.y, iz + o.z);
+  }
+  g.computeVertexNormals(); return g;
+}
+const mesh = (g, m, name, x=0, y=0, z=0, par) => { const k = new THREE.Mesh(g, m); k.name = name; k.position.set(x, y, z); k.castShadow = true; (par||C).add(k); return k; };
+
+const C = new THREE.Group(); C.name = 'Cami';
+const cuerpo = new THREE.Group(); cuerpo.name = 'cuerpo-grupo'; C.add(cuerpo);
+const W = 0.16, H = 0.17, D = 0.2, Y0 = 0.112, FZ = D / 2;
+mesh(rbox(W, H, D, 0.034), M.ruta, 'carroceria', 0, Y0, 0, cuerpo);
+mesh(rbox(W + 0.004, 0.012, D + 0.004, 0.006), M.crema, 'franja', 0, 0.088, 0, cuerpo);
+mesh(rbox(0.14, 0.02, 0.022, 0.009), M.carbon, 'defensa', 0, 0.04, FZ - 0.004, cuerpo);
+mesh(rbox(0.128, 0.072, 0.014, 0.014), M.carbon, 'parabrisas', 0, 0.138, FZ - 0.002, cuerpo);
+mesh(rbox(0.08, 0.024, 0.014, 0.006), M.crema, 'letrero', 0, 0.184, FZ - 0.001, cuerpo);
+const lt = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.0175), M.letrero); lt.name = 'letrero-numero'; lt.position.set(0, 0.184, FZ + 0.0075); cuerpo.add(lt);
+for (const sx of [-1, 1]) {
+  const f = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.008, 32), M.crema, 'faro-' + (sx < 0 ? 'izq' : 'der'), sx * 0.052, 0.07, FZ + 0.001, cuerpo); f.rotation.x = Math.PI / 2;
+  for (const [i, z] of [-0.06, -0.01, 0.04].entries()) mesh(rbox(0.006, 0.046, 0.038, 0.0028), M.carbon, 'ventana-' + (sx < 0 ? 'izq' : 'der') + '-' + i, sx * (W / 2 - 0.001), 0.142, z, cuerpo);
+}
+mesh(rbox(0.1, 0.05, 0.006, 0.01), M.carbon, 'ventana-trasera', 0, 0.142, -FZ + 0.001, cuerpo);
+for (const sx of [-1, 1]) for (const z of [-0.062, 0.062]) {
+  const wg = new THREE.Group(); wg.name = 'rueda'; wg.position.set(sx * (W / 2 - 0.014), 0.026, z); C.add(wg);
+  const t = mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.024, 40), M.carbon, 'llanta', 0, 0, 0, wg); t.rotation.z = Math.PI / 2;
+  const hb = mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.026, 32), M.crema, 'rin', 0, 0, 0, wg); hb.rotation.z = Math.PI / 2;
+}
+const ojos = [];
+for (const [s, x] of [['izq', -0.029], ['der', 0.029]]) {
+  const r = 0.021, eg = new THREE.Group(); eg.name = 'ojo-' + s; eg.position.set(x, 0.138, FZ + 0.004); cuerpo.add(eg);
+  const w = mesh(new THREE.SphereGeometry(r, 48, 32), M.blanco, 'ojo-blanco-' + s, 0, 0, 0, eg); w.scale.set(1.3, 0.92, 0.5);
+  const pu = mesh(new THREE.SphereGeometry(r * 0.52, 40, 28), M.carbon, 'pupila-' + s, 0, 0, 0, eg); pu.scale.set(1, 1, 0.5);
+  const br = mesh(new THREE.SphereGeometry(r * 0.13, 20, 14), M.blanco, 'brillo-' + s, 0, 0, 0, eg);
+  ojos.push({ eg, pu, br, r });
+}
+const boca = new THREE.Group(); boca.name = 'boca'; boca.position.set(0, 0.07, FZ + 0.001); cuerpo.add(boca);
+const bo = mesh(new THREE.SphereGeometry(0.013, 40, 28), M.carbon, 'boca-contorno', 0, 0, 0, boca); bo.scale.set(1.2, 1, 0.45);
+const bi = mesh(new THREE.SphereGeometry(0.009, 32, 24), M.boca, 'lengua', 0, -0.004, 0.003, boca); bi.scale.set(1, 0.6, 0.4);
+const sonrisa = mesh(new THREE.TorusGeometry(0.011, 0.003, 14, 40, Math.PI), M.carbon, 'boca-sonrisa', 0, 0.075, FZ + 0.001, cuerpo); sonrisa.rotation.z = Math.PI;
+const manos = [-1, 1].map(sx => { const m = mesh(new THREE.SphereGeometry(0.018, 40, 28), M.ruta, 'mano-' + (sx < 0 ? 'izq' : 'der'), sx * (W / 2 + 0.032), 0.1, 0.04); m.scale.set(0.9, 1, 0.9); return m; });
+
+const EXP = {
+  'original':       { mira: [0.25, 0.05], parpado: 1,    boca: null },
+  'buscando':       { mira: [0.5, 0.05],  parpado: 1,    boca: null },
+  '¡ya llegué!':    { mira: [0.05, 0.45], parpado: 1.08, boca: 'abierta' },
+  'se va · saluda': { mira: [-0.5, 0.05], parpado: 0.85, boca: 'sonrisa' },
+  'lleno':          { mira: [0.3, -0.35], parpado: 0.9,  boca: 'triste' },
+  'cansado':        { mira: [0, -0.3],    parpado: 0.5,  boca: null },
+};
+let exp = 'original', ruta = '51 morado', anim = true;
+function aplicar() {
+  const e = EXP[exp], [col, num] = RUTAS[ruta];
+  M.ruta.color.set(col); pintar(num);
+  ojos.forEach(({ pu, br, r }) => { pu.position.set(e.mira[0] * r, e.mira[1] * r, r * 0.42); br.position.set(e.mira[0] * r + r * 0.18, e.mira[1] * r + r * 0.16, r * 0.58); });
+  boca.visible = e.boca === 'abierta'; sonrisa.visible = e.boca === 'sonrisa' || e.boca === 'triste'; sonrisa.rotation.z = e.boca === 'triste' ? 0 : Math.PI; sonrisa.position.y = e.boca === 'triste' ? 0.066 : 0.075;
+  document.querySelector('.cap h1').textContent = 'Cami · ' + exp;
+}
+if (document.fonts) await document.fonts.load('800 78px "Bricolage Grotesque"').catch(() => {});
+aplicar();
+stage.setObject(C);
+
+const ctl = document.getElementById('ctl');
+const row = () => { const d = document.createElement('div'); d.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;width:100%'; ctl.append(d); return d; };
+const mk = (p, label, on, fn) => { const b = document.createElement('button'); b.textContent = label; b.setAttribute('aria-pressed', on); b.onclick = () => fn(b); p.append(b); return b; };
+const r1 = row(), r2 = row();
+const eb = Object.keys(EXP).map(k => mk(r1, k, k === exp, () => { exp = k; eb.forEach(x => x.setAttribute('aria-pressed', x.textContent === k)); aplicar(); }));
+const rb = Object.keys(RUTAS).map(k => mk(r2, k, k === ruta, () => { ruta = k; rb.forEach(x => x.setAttribute('aria-pressed', x.textContent === k)); aplicar(); }));
+mk(r2, 'animación', true, b => { anim = !anim; b.setAttribute('aria-pressed', anim); });
+
+
+const ADAPT = (hex) => { const n = hex.replace('#',''); const [r,g,b] = [0,2,4].map(i => parseInt(n.slice(i,i+2),16)/255); const mx=Math.max(r,g,b), mn=Math.min(r,g,b); let H=0,S=0,L=(mx+mn)/2; if(mx!==mn){const d=mx-mn; S=L>0.5?d/(2-mx-mn):d/(mx+mn); H=(mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4)*60;} if(S>0.35&&H>=14&&H<=44&&L>0.35&&L<0.88) H = H<29?4:50; if(L>0.8) L=0.66; if(L<0.2) L=0.36; return new THREE.Color().setHSL(H/360,S,L); };
+const pick = document.createElement('input'); pick.type = 'color'; pick.title = 'Cualquier color de la concesión'; pick.style.cssText = 'width:44px;height:36px;border:0;border-radius:999px;background:#fff;padding:3px;cursor:pointer';
+pick.oninput = () => M.ruta.color.copy(ADAPT(pick.value)); r2.append(pick);
+const t0 = performance.now();
+(function tick() {
+  requestAnimationFrame(tick);
+  const t = (performance.now() - t0) / 1000, e = EXP[exp];
+  let blink = 1, talk = 1, bob = 0, fl = 0;
+  if (anim) {
+    const b = (t + 0.6) % 3.1; blink = b > 2.85 ? Math.abs(Math.cos((b - 2.85) / 0.25 * Math.PI)) : 1;
+    talk = 0.55 + 0.45 * Math.abs(Math.cos((t % 1.4) / 1.4 * Math.PI * 2));
+    bob = (exp === '¡ya llegué!' ? Math.abs(Math.sin(t * 6)) * 0.006 : Math.abs(Math.sin(t * 9)) * 0.0012);
+    fl = Math.sin(t * 1.8) * 0.004;
+  }
+  ojos.forEach(o => o.eg.scale.y = Math.max(0.08, blink * e.parpado));
+  boca.scale.set(1, talk, 1);
+  cuerpo.position.y = bob;
+  manos[0].position.y = 0.1 + fl; manos[1].position.y = 0.1 - fl;
+})();
+</script>
+</body>
+</html>
