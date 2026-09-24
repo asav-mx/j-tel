@@ -783,6 +783,8 @@ export * from "./paradas.js";
 export * from "./simplificar-traza.js";
 export * from "./flota.js";
 export * from "./dispositivo-acciones.js";
+/* Los lectores de Ontoy: mismas reglas de 6.5, aparato distinto (P3.5). */
+export * from "./lector-acciones.js";
 export * from "./unidad-acciones.js";
 export * from "./chofer-acciones.js";
 export * from "./imei.js";

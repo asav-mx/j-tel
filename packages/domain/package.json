@@ -29,6 +29,10 @@
     "./vigilante": {
       "types": "./dist/quien-deberia-hablar.d.ts",
       "import": "./dist/quien-deberia-hablar.js"
+    },
+    "./sincronizacion": {
+      "types": "./dist/sincronizacion.d.ts",
+      "import": "./dist/sincronizacion.js"
     }
   },
   "scripts": {

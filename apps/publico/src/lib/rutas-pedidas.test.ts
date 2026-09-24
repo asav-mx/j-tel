@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { SLUGS_RESERVADOS } from "@jtel/domain";
 import { direccionEnVivo, MAXIMO_RUTAS, rutasPedidas } from "@/lib/rutas-pedidas";
 
@@ -28,10 +28,33 @@ describe("las rutas que pide /api/circuitos/en-vivo", () => {
   });
 });
 
-describe("todo lo que la app pide al servidor vive bajo el prefijo del firewall", () => {
-  it("no hay consultas fuera de /api/circuitos/ (la regla del firewall sólo cubre ese prefijo)", () => {
+describe("todo lo que la app pide al servidor vive bajo un prefijo con regla de firewall", () => {
+  /*
+   * ✎ **Cambió el 23-sep-2026, con el P3.5.** Antes esto decía «no hay nada
+   * fuera de /api/circuitos/» y comparaba contra esa única carpeta. La entrega
+   * del lector no cabe ahí —no es un circuito— así que la valla se movió una
+   * pulgada, y hacia arriba: ya no pregunta «¿es el prefijo de siempre?» sino
+   * **«¿este prefijo tiene su regla escrita?»**, que era lo que se quería
+   * desde el principio.
+   *
+   * El procedimiento es la única memoria de esas reglas: viven en el firewall
+   * de Vercel y **no aparecen en ningún PR**. Un prefijo nuevo sin renglón ahí
+   * es exactamente el hueco que ese archivo documenta haber costado cuatro
+   * semanas de límite inexistente.
+   */
+  it("cada carpeta de /api/ está nombrada en el procedimiento del firewall", () => {
     const api = readdirSync(new URL("../app/api/", import.meta.url));
-    expect(api).toEqual(["circuitos"]);
+    const procedimiento = readFileSync(
+      new URL("../../../../docs/Procedimiento-Firewall-Publico.md", import.meta.url),
+      "utf8",
+    );
+    const sinRegla = api.filter((carpeta) => !procedimiento.includes(`/api/${carpeta}/`));
+    expect(sinRegla).toEqual([]);
+  });
+
+  it("y las que hay son las que se esperan: una carpeta nueva se lee en el diff", () => {
+    const api = readdirSync(new URL("../app/api/", import.meta.url));
+    expect(api.sort()).toEqual(["boletos", "circuitos"]);
   });
 
   it("las carpetas fijas bajo /api/circuitos/ son nombres que ninguna ruta puede usar como slug", () => {

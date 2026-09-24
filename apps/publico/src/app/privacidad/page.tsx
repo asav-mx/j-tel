@@ -93,6 +93,22 @@ export default function Privacidad() {
           segundos, por las rutas de esas paradas: cuáles rutas, no cuáles paradas, y nada más de ti. El servidor
           contesta y no guarda la pregunta.
         </p>
+        {/*
+          El pase (Ontoy 3.0). Se dice aquí porque es lo que se guarda en el
+          teléfono, y la pregunta del folio porque es la única petición del pase
+          que existe. **Los dos renglones dicen que el dinero es de mentira**: un
+          pasajero que lee «boletos» sin más entendería que pagó.
+        */}
+        <p>
+          Si usas el pase, tus boletos se guardan también ahí, en tu teléfono. Hoy son{" "}
+          <b>boletos de prueba</b>: no se cobra dinero real y no hay ningún banco de por medio.
+        </p>
+        <p>
+          Cuando enseñas el pase, tu teléfono no sabe si el lector del camión te dejó subir —el lector no le habla a tu
+          teléfono—. Por eso, y sólo mientras ese viaje esté sin aclarar, tu teléfono le pregunta a nuestro servidor si
+          ese boleto ya se usó. Va <b>el folio de ese boleto y nada más</b>: ni quién eres, ni dónde estás. El servidor
+          contesta y no guarda la pregunta.
+        </p>
       </section>
 
       <section>

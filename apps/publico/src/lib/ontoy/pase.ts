@@ -124,6 +124,62 @@ export function marcarMostrado(pase: Pase, folio: string, ahora: number): Pase {
   };
 }
 
+/**
+ * Los folios que el pase tiene derecho a preguntar: **sólo los que enseñó y
+ * nadie confirmó** (decisión de Asav, 23-sep-2026, e1).
+ *
+ * Los que no ha usado no se nombran —no hay nada que preguntar de ellos— y los
+ * confirmados tampoco. Cada folio que sale de aquí es uno que el servidor ve,
+ * así que la lista más corta que contesta la pregunta es la correcta.
+ */
+export const foliosPorConfirmar = (pase: Pase): string[] =>
+  pase.boletos.filter((b) => b.estado === "en_uso").map((b) => b.sellado.cuerpo.folio);
+
+/**
+ * La sincronización dijo cuáles se quemaron. **Aquí cierra el ciclo.**
+ *
+ * Un boleto que el servidor da por quemado pasa a `confirmado` y su renglón
+ * deja de estar por confirmar: ahora sí consta que se usó. Los que el servidor
+ * no conoce **se quedan en `en_uso`** —el lector puede no haber sincronizado
+ * todavía— y el pase sigue diciendo que no sabe, que es la verdad.
+ *
+ * El renglón del movimiento se corrige por orden: el más viejo sin confirmar es
+ * el del boleto más viejo que se enseñó. No se inventa una hora nueva ni se
+ * agrega un renglón: fue **un** viaje, y pasó cuando pasó.
+ */
+export function confirmarQuemados(pase: Pase, foliosQuemados: readonly string[]): Pase {
+  const quemados = new Set(foliosQuemados);
+  const confirmados = pase.boletos.filter(
+    (b) => b.estado === "en_uso" && quemados.has(b.sellado.cuerpo.folio),
+  ).length;
+  if (confirmados === 0) return pase;
+
+  /* Los movimientos van del más nuevo al más viejo: los por confirmar más
+     antiguos son los últimos de la lista. */
+  const porConfirmar = pase.movimientos
+    .map((m, i) => ({ m, i }))
+    .filter(({ m }) => m.porConfirmar)
+    .slice(-confirmados)
+    .map(({ i }) => i);
+  const aCorregir = new Set(porConfirmar);
+
+  return {
+    ...pase,
+    boletos: pase.boletos.map((b) =>
+      b.estado === "en_uso" && quemados.has(b.sellado.cuerpo.folio)
+        ? { ...b, estado: "confirmado" as const }
+        : b,
+    ),
+    movimientos: pase.movimientos.map((m, i) =>
+      aCorregir.has(i) ? { cuando: m.cuando, que: m.que, cambio: m.cambio } : m,
+    ),
+  };
+}
+
+/** Los viajes ya confirmados: se usaron, y consta. */
+export const viajesConfirmados = (pase: Pase): number =>
+  pase.boletos.filter((b) => b.estado === "confirmado").length;
+
 /** Los viajes comprados entran al pase, con su renglón. */
 export function agregarCompra(
   pase: Pase,

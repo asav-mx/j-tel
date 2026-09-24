@@ -7,6 +7,7 @@ import {
   TARIFA_MXN,
   codigoParaDictar,
   precioDe,
+  viajesConfirmados,
   viajesDisponibles,
   viajesPorConfirmar,
   type BoletoDelTelefono,
@@ -64,11 +65,19 @@ export function VistaPase({
 
   const disponibles = viajesDisponibles(pase);
   const porConfirmar = viajesPorConfirmar(pase);
+  const confirmados = viajesConfirmados(pase);
 
   if (pantalla === "qr" && boleto) {
     return (
       <PantallaQr
         boleto={boleto}
+        /* El estado VIVO de ese folio: mientras el QR está en pantalla, la
+           sincronización puede confirmarlo, y entonces hay que decirlo. */
+        confirmado={
+          pase.boletos.find((b) => b.sellado.cuerpo.folio === boleto.sellado.cuerpo.folio)
+            ?.estado === "confirmado"
+        }
+        hayOtro={viajesDisponibles(pase) > 0}
         alVolver={() => {
           setBoleto(null);
           setPantalla("pase");
@@ -110,6 +119,18 @@ export function VistaPase({
               {porConfirmar === 1 ? "Un viaje enseñado" : `${porConfirmar} viajes enseñados`} que
               nadie ha confirmado. <b>No sabemos si te dejaron subir:</b> el lector no le habla a tu
               teléfono. Se aclara cuando haya señal.
+            </p>
+          )}
+
+          {/*
+            Lo confirmado se dice (P3.5). No es lo mismo «gastaste un viaje» que
+            «consta que lo usaste»: el segundo es el único que alguien puede
+            sostener, y hasta hoy el pase no tenía cómo decirlo nunca.
+          */}
+          {confirmados > 0 && porConfirmar === 0 && (
+            <p className="ontoy-pase-confirmado">
+              {confirmados === 1 ? "Un viaje usado" : `${confirmados} viajes usados`} y confirmado
+              {confirmados === 1 ? "" : "s"} por el lector.
             </p>
           )}
 
@@ -231,7 +252,17 @@ function RenglonDeMovimiento({ movimiento }: { movimiento: Movimiento }) {
  * gastando de verdad, no para gustar (`prefers-reduced-motion` lo deja quieto,
  * y el número sigue siendo cierto porque el ancho se recalcula igual).
  */
-function PantallaQr({ boleto, alVolver }: { boleto: BoletoDelTelefono; alVolver: () => void }) {
+function PantallaQr({
+  boleto,
+  confirmado,
+  hayOtro,
+  alVolver,
+}: {
+  boleto: BoletoDelTelefono;
+  confirmado: boolean;
+  hayOtro: boolean;
+  alVolver: () => void;
+}) {
   const [ahora, setAhora] = useState(() => Date.now());
 
   useEffect(() => {
@@ -246,6 +277,40 @@ function PantallaQr({ boleto, alVolver }: { boleto: BoletoDelTelefono; alVolver:
   );
   const restante = VENTANA_MS - (ahora % VENTANA_MS);
   const folio = boleto.sellado.cuerpo.folio;
+
+  /*
+   * **El ciclo cerrado** (P3.5). El lector sincronizó, J-Tel lo confirmó y el
+   * pase se enteró mientras el QR seguía en pantalla.
+   *
+   * El código se deja de enseñar: seguir pintándolo sería invitar a mostrarlo
+   * otra vez por un viaje que ya se cobró. Y se dice si hay otro, porque «se
+   * usó» a secas deja al pasajero sin saber si puede volver a subir.
+   */
+  if (confirmado) {
+    return (
+      <div className="ontoy-vista">
+        <BandaRd />
+        <section className="ontoy-seccion ontoy-qr">
+          <h2 className="ontoy-seccion-titulo">Viaje usado</h2>
+          <div className="ontoy-qr-usado">
+            <p className="ontoy-qr-usado-sello mono">USADO</p>
+            <p>
+              El lector entregó tu viaje y <b>ya consta</b>. Folio{" "}
+              <span className="mono">{folio}</span>.
+            </p>
+            <p className="ontoy-qr-nota">
+              {hayOtro
+                ? "Te quedan viajes: el siguiente se enseña desde el pase."
+                : "Era tu último viaje. Compra más, o paga en efectivo como siempre."}
+            </p>
+          </div>
+          <button type="button" className="ontoy-boton" onClick={alVolver}>
+            ‹ Volver al pase
+          </button>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="ontoy-vista">

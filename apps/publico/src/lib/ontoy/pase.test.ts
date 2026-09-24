@@ -11,6 +11,9 @@ import {
   marcarMostrado,
   agregarCompra,
   codigoParaDictar,
+  confirmarQuemados,
+  foliosPorConfirmar,
+  viajesConfirmados,
   type BoletoDelTelefono,
   type Pase,
 } from "./pase";
@@ -135,5 +138,77 @@ describe("el código que se dicta", () => {
 
   it("de un folio largo se queda con los últimos ocho", () => {
     expect(codigoParaDictar("ONT-9999912345678")).toBe("1234 5678");
+  });
+});
+
+/*
+ * El cierre del ciclo — Ontoy 3.0 · PR P3.5.
+ *
+ * Hasta el P2 el estado `confirmado` estaba declarado y vacío a propósito:
+ * «hasta el P3 no hay con qué llegar aquí». Esto es con qué.
+ */
+describe("la sincronización confirma lo que se usó", () => {
+  const conUnoEnElAire = () => {
+    const pase = agregarCompra(PASE_VACIO, [boleto("1"), boleto("2")], AHORA);
+    return marcarMostrado(pase, "1", AHORA + 1000);
+  };
+
+  it("sólo se pregunta por los que están en el aire", () => {
+    const pase = conUnoEnElAire();
+    expect(foliosPorConfirmar(pase)).toEqual(["1"]);
+    /* El que no se ha usado no se nombra: no hay nada que preguntar de él. */
+    expect(foliosPorConfirmar(PASE_VACIO)).toEqual([]);
+  });
+
+  it("el boleto quemado pasa a confirmado y su renglón deja de estar pendiente", () => {
+    const pase = confirmarQuemados(conUnoEnElAire(), ["1"]);
+    expect(viajesConfirmados(pase)).toBe(1);
+    expect(viajesPorConfirmar(pase)).toBe(0);
+    expect(pase.movimientos.some((m) => m.porConfirmar)).toBe(false);
+    /* Un viaje, un renglón: confirmar no agrega otro ni cambia su hora. */
+    expect(pase.movimientos).toHaveLength(2);
+    expect(pase.movimientos[0]?.cuando).toBe(AHORA + 1000);
+  });
+
+  it("ofrece el siguiente en cuanto el de antes quedó confirmado", () => {
+    const enElAire = conUnoEnElAire();
+    /* Sin confirmar, enseñar otra vez devuelve EL MISMO: enseñar dos veces no
+       gasta dos viajes (la regla del P2, que no se toca). */
+    expect(boletoParaMostrar(enElAire)?.sellado.cuerpo.folio).toBe("1");
+    const confirmado = confirmarQuemados(enElAire, ["1"]);
+    expect(boletoParaMostrar(confirmado)?.sellado.cuerpo.folio).toBe("2");
+    expect(viajesDisponibles(confirmado)).toBe(1);
+  });
+
+  /* Que el servidor no lo conozca NO es prueba de que no te dejaron subir: el
+     lector puede no haber sincronizado todavía. */
+  it("un folio que el servidor no conoce se queda sin confirmar", () => {
+    const pase = confirmarQuemados(conUnoEnElAire(), []);
+    expect(viajesPorConfirmar(pase)).toBe(1);
+    expect(pase.movimientos.some((m) => m.porConfirmar)).toBe(true);
+  });
+
+  it("confirmar lo ya confirmado no cambia nada", () => {
+    const una = confirmarQuemados(conUnoEnElAire(), ["1"]);
+    expect(confirmarQuemados(una, ["1"])).toBe(una);
+  });
+
+  it("un folio ajeno no toca el pase", () => {
+    const pase = conUnoEnElAire();
+    expect(confirmarQuemados(pase, ["ONT-DE-OTRO"])).toBe(pase);
+  });
+
+  it("con dos en el aire, confirmar uno deja el otro pendiente y su renglón también", () => {
+    let pase = agregarCompra(PASE_VACIO, [boleto("1"), boleto("2")], AHORA);
+    pase = marcarMostrado(pase, "1", AHORA + 1000);
+    pase = marcarMostrado(pase, "2", AHORA + 2000);
+    const confirmado = confirmarQuemados(pase, ["1"]);
+    expect(viajesConfirmados(confirmado)).toBe(1);
+    expect(viajesPorConfirmar(confirmado)).toBe(1);
+    /* Los movimientos van del más nuevo al más viejo: el corregido es el del
+       boleto 1, que es el más viejo de los dos pendientes. */
+    const pendientes = confirmado.movimientos.filter((m) => m.porConfirmar);
+    expect(pendientes).toHaveLength(1);
+    expect(pendientes[0]?.cuando).toBe(AHORA + 2000);
   });
 });

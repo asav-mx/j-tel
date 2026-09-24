@@ -144,7 +144,29 @@ const lat = (i: number, n: number) => 31.7 + (i / Math.max(1, n - 1)) * 0.05;
 
 async function limpiar(db: ReturnType<typeof createDb>) {
   await db.delete(livePositions).where(inArray(livePositions.imei, IMEIS));
-  await db.delete(accounts).where(inArray(accounts.id, Object.values(CUENTAS)));
+  try {
+    await db.delete(accounts).where(inArray(accounts.id, Object.values(CUENTAS)));
+  } catch (e) {
+    /*
+     * **El libro de boletos manda sobre el plan** (0054, P3.5). Sus renglones
+     * apuntan a la unidad y al circuito con `ON DELETE RESTRICT`, así que una
+     * ciudad donde ya se quemaron boletos **no se puede tirar** — y eso no es
+     * una falla del guion: es la garantía funcionando.
+     *
+     * Se dice con todas sus letras en vez de dejar salir el error crudo de
+     * Postgres, que aquí se leería como «el escenario está roto».
+     */
+    if ((e as { cause?: { code?: string } })?.cause?.code === "23503") {
+      console.error(
+        "\n  ✗ [escenario-ontoy] esta ciudad ya tiene viajes en el libro de boletos." +
+          "\n    El libro no pierde renglones, así que su unidad tampoco se borra (0054)." +
+          "\n    Para empezar de cero, se tira la RAMA desechable entera y se vuelve a" +
+          "\n    construir con las migraciones.\n",
+      );
+      process.exit(1);
+    }
+    throw e;
+  }
   console.log("[escenario-ontoy] borrado.");
 }
 

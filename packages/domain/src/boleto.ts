@@ -293,6 +293,30 @@ function firmaValida(firmaHex: string, mensaje: Uint8Array, publica: Uint8Array)
  * si un boleto es legítimo sin quemarlo —no es un atajo para saltarse el
  * control de un solo uso.
  */
+/**
+ * ¿Este boleto lo firmó J-Tel? **Sólo eso.**
+ *
+ * Es la primera mitad de {@link verificarBoleto}, suelta, porque el servidor la
+ * necesita sin la otra: cuando un lector entrega sus quemados, la ventana de
+ * tiempo en la que se presentó el QR ya pasó hace rato y la prueba del portador
+ * no se puede volver a comprobar —ni hace falta, porque el lector ya la
+ * comprobó en su momento—. Lo que el servidor sí puede y debe volver a mirar es
+ * que el folio exista: **un lector robado tiene su llave, y con ella puede
+ * firmar lotes llenos de folios inventados.** Contra eso sirve esta firma, que
+ * el lector no puede fabricar (Asav, 23-sep-2026).
+ *
+ * No mira si venció: sin red, el único reloj de aquel momento era el del
+ * aparato, y volver a juzgarlo con el del servidor sería juzgar con una hora
+ * que nadie tenía.
+ */
+export function boletoLoFirmoJTel(
+  boleto: BoletoSellado,
+  llavePublicaDeJTel: Uint8Array,
+): boolean {
+  if (!boleto || !cuerpoEstaBienFormado(boleto.cuerpo)) return false;
+  return firmaValida(boleto.firmaDeJTel, serializarCuerpo(boleto.cuerpo), llavePublicaDeJTel);
+}
+
 export function verificarBoleto(
   presentacion: Presentacion,
   contexto: {

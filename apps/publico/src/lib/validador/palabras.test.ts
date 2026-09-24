@@ -10,6 +10,9 @@ const bueno = (
   folio: "ONT-00042042",
   via,
   conSenal,
+  /* El id del paso, desde el P3.5. Las palabras no lo miran, pero un resultado
+     sin él ya no es un resultado. */
+  idDelPaso: "paso-de-prueba",
 });
 
 describe("lo que el panel puede afirmar", () => {

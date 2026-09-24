@@ -75,11 +75,41 @@ En el proyecto de Vercel **`j-tel-publico`** → **Firewall** → **Rate Limitin
 
 | Campo | Valor | Por qué |
 |---|---|---|
-| Ruta | `/api/circuitos/*` (prefijo `/api/circuitos/`) | Todo el endpoint, cualquier circuito: forma, unidades y aperturas; y desde el 22-sep también `/api/circuitos/en-vivo` (las favoritas, en una consulta) y `/api/circuitos/paradas-de-la-ciudad` (que vivía en `/api/paradas`, **fuera** de la regla). **Todo lo que la app pide vive bajo este prefijo**, y una prueba (`apps/publico/src/lib/rutas-pedidas.test.ts`) se cae si alguien agrega una consulta fuera de él. |
+| Ruta | `/api/circuitos/*` (prefijo `/api/circuitos/`) | Todo el endpoint, cualquier circuito: forma, unidades y aperturas; y desde el 22-sep también `/api/circuitos/en-vivo` (las favoritas, en una consulta) y `/api/circuitos/paradas-de-la-ciudad` (que vivía en `/api/paradas`, **fuera** de la regla). Una prueba (`apps/publico/src/lib/rutas-pedidas.test.ts`) se cae si alguien agrega una carpeta bajo `/api/` que no esté nombrada en este archivo. |
 | Llave | **IP** | No hay otra: la app no tiene cuentas. |
 | Ventana | **60 s**, ventana fija | Larga para que un pico normal no la toque. |
 | Límite | **120 peticiones por IP** | ASAV, 21-sep: las compañías de celular meten muchos teléfonos detrás de una misma IP, y en Juárez es el caso normal. Un pasajero hace 4 por minuto; 120 son treinta pasajeros con la app abierta detrás de una IP, y sigue siendo muy poco para un barrido. |
 | Acción | **429** («Too Many Requests»), **no** *Challenge* ni *Deny* | Ver abajo. |
+
+---
+
+## La segunda regla: `/api/boletos/` (Ontoy 3.0 · P3.5, 23-sep-2026)
+
+**Esta regla todavía NO está puesta.** Se pone en el mismo proyecto
+`j-tel-publico`, con los mismos pasos de abajo, cuando el P3.5 se despliegue.
+
+| Campo | Valor | Por qué |
+|---|---|---|
+| Ruta | `/api/boletos/*` (prefijo `/api/boletos/`) | Las tres del libro de boletos: `sincronizar` (POST, la entrega del lector), `estado` (POST, lo que pregunta el pase) y `lector` (GET, «¿cómo me llamo?»). **Son escrituras**, al contrario de las de circuitos. |
+| Llave | **IP** | Igual que allá: no hay cuentas, y el lector tampoco tiene sesión. |
+| Ventana | **60 s**, ventana fija | La misma forma, para no tener dos modelos mentales. |
+| Límite | **60 peticiones por IP** | Un lector entrega en cuanto tiene señal y late cada 5 min: en uso normal no pasa de unas pocas por minuto, aun reintentando cada 2 s en el peor caso. Un pase pregunta cada 20 s mientras tenga un viaje en el aire, o sea 3 por minuto. 60 deja lugar para varios aparatos detrás de la misma IP de la compañía celular y sigue siendo poco para un guion. |
+| Acción | **Log primero**, 429 después | Igual que la otra: primero se mira qué habría mordido. |
+
+**Lo que esta regla NO hace, y hay que decirlo.** No decide quién puede
+escribir en el libro: eso lo decide **la firma del lote** contra la llave
+pública registrada (`packages/domain/src/sincronizacion.ts`). El límite sólo
+frena el ruido —alguien mandando basura para gastarnos función—. Un lote con
+firma mala se rechaza aunque venga de una IP tranquila, y uno bien firmado se
+acepta aunque venga de una saturada… hasta el límite.
+
+**Un 429 aquí no pierde nada.** El lector guarda lo suyo y reintenta con
+esperas crecientes (`apps/publico/src/lib/validador/sincronizar.ts`); el pase
+se queda en «sin confirmar», que ya era su estado. Al contrario que una
+apertura, **ninguna de las dos cosas se pierde en silencio**: el aparato
+conserva sus renglones hasta que alguien los acuse.
+
+---
 
 **Por qué 429 y no *Challenge*.** El desafío es una página para un humano en un
 navegador. La app no navega a este endpoint: lo pide con `fetch` cada 15 s, y
