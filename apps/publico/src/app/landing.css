@@ -1,0 +1,529 @@
+/*
+ * LA LANDING de `ontoy.app` — la portada, para quien todavía no conoce Ontoy.
+ *
+ * Es otra cara que la app: la app es para el que ya está parado en la parada
+ * con prisa; esto es para el que oyó el nombre y quiere saber qué es. Por eso
+ * tiene su propia letra y su propio aire, y por eso vive en su propio archivo.
+ *
+ * ## Los tokens son los del sistema de diseño, y no se inventan
+ *
+ * Cada valor de aquí sale de `.claude/skills/ontoy-design/tokens/colors.css`,
+ * que es la única fuente de verdad del color de Ontoy. Si falta un color, se
+ * agrega **allá** primero. Las tres reglas que gobiernan esta paleta:
+ *
+ *  - **El naranja es sólo de Ontoy.** Ninguna otra cosa del sistema lo lleva, y
+ *    la lista de colores de ruta de J-Staff no ofrece tonos que peleen con él.
+ *  - **El 90 % es neutro**: banqueta de fondo, hueso en superficies, carbón en
+ *    texto y placas, arena en bordes.
+ *  - **Dos mundos que no se mezclan.** Los colores de Ontoy (neutros, naranja,
+ *    noche, reacciones) son de la marca. Los colores de RUTA son de la
+ *    concesión y sólo pintan lo que es de una ruta: Tino, Cami, el Tótem, las
+ *    líneas del mapa y las placas. Nada de la interfaz usa color de ruta.
+ *
+ * ## Por qué los tokens NO están en `:root`
+ *
+ * Porque no estamos solos en el documento. El layout de la app importa
+ * `globals.css` y `ontoy.css` para todas las páginas, y los dos declaran sus
+ * propias variables en `:root` — entre ellas **`--ruta` y `--gris`, que también
+ * existen en la paleta de Ontoy con otro valor**. Declarar los de la landing en
+ * `:root` los dejaría puestos en la app entera, y la app se vería teñida por
+ * una portada que nadie abrió.
+ *
+ * Así que todo cuelga de `.landing`. Lo que la landing define, se queda en la
+ * landing.
+ */
+
+.landing {
+  /* Neutros */
+  --carbon: #2a2e37;
+  --carbon-2: #4a4f5a;
+  --gris: #6b6f78;
+  --asfalto: #3a4150;
+  --llanta: #15171c;
+  --hueso: #f7f3ec;
+  --papel: #f4f0e9;
+  --banqueta: #ede9e1;
+  --arena-clara: #e2dcd1;
+  --arena: #dcd5c8;
+  --arena-2: #c9c1b3;
+  --blanco: #ffffff;
+
+  /* Marca: SÓLO Ontoy */
+  --ontoy: #f6a15b;
+  --ontoy-sombra: #c8702a;
+
+  /* Las reacciones de Ontoy, que son sus propios acentos */
+  --ontoy-rubor: #e36f8c;
+  --ontoy-lagrima: #7fb8f0;
+  --ontoy-estrella: #f2c14e;
+
+  /* Noche: la piel oscura, las secciones oscuras y el ícono de noche */
+  --noche: #1e2b4d;
+  --noche-2: #26365e;
+  --noche-3: #324673;
+
+  /* El pasajero «tú estás aquí»: color de Ontoy, nunca de ruta */
+  --pasajero: var(--noche);
+
+  /* El barrio: objetos SIN ruta (tiendita, tacos, árboles, obra). Nunca naranja. */
+  --maiz: #f2c14e;
+  --nopal: #5fb36b;
+  --rosa: #e36f8c;
+  --agua: #2fa6a0;
+  --madera: #8a6a52;
+  --pasto: #d3e4c9;
+  --lagrima: #7fb8f0;
+
+  /*
+   * EL COLOR DE RUTA, y es el único token de aquí que no es una decisión de
+   * diseño sino un dato.
+   *
+   * Sale del `color_hex` del circuito, que la concesión escoge **una vez, de
+   * una lista** al capturar la ruta en J-Staff, y es el mismo en la lámina del
+   * poste, en la app y pintado en el camión. **Nada se le corrige al dibujar:**
+   * ni tono, ni luz, ni saturación. Lo que se capturó es lo que se pinta.
+   *
+   * El valor de aquí es sólo el que se ve mientras la página no ha escrito el
+   * de verdad; quien lo escribe es el componente que sabe de qué ruta habla.
+   */
+  --ruta: #4f7fd8;
+  /* Blanco o carbón, el que contraste ≥ 3:1 sobre `--ruta`. Lo calcula quien inyecta el color. */
+  --sobre-ruta: var(--blanco);
+
+  /* Semánticos */
+  --lienzo: var(--banqueta);
+  --superficie: var(--hueso);
+  --superficie-2: var(--papel);
+  --borde: var(--arena);
+  --borde-fuerte: var(--arena-2);
+  --texto: var(--carbon);
+  --texto-2: var(--carbon-2);
+  /*
+   * ⚠ `--texto-3` **no sirve para texto sobre el lienzo**, y está medido:
+   * el gris del sistema (`#6B6F78`) da **4.16:1 sobre banqueta** y se queda
+   * corto del piso de 4.5 que pide el texto. Sobre `--superficie` (hueso) da
+   * **4.55:1** y sí cumple: el token está calibrado para las superficies, no
+   * para el fondo de la página.
+   *
+   * Así que el texto apagado de esta landing va en `--texto-2` (6.78:1 sobre
+   * banqueta), que ya existe en la paleta y separa la jerarquía igual de bien.
+   * `--texto-3` se queda declarado porque es parte del sistema y lo van a
+   * necesitar las tarjetas de hueso; lo que no se hace es ponerlo sobre el
+   * lienzo. **No se inventa un gris nuevo**: si hiciera falta, se agrega
+   * primero en `tokens/colors.css`.
+   */
+  --texto-3: var(--gris);
+  --texto-en-oscuro: var(--hueso);
+  --placa-fondo: var(--carbon);
+  --placa-texto: var(--blanco);
+  --calle: var(--carbon);
+  --calle-linea: var(--hueso);
+  --ojo: var(--blanco);
+  --pupila: var(--carbon);
+
+  /*
+   * La letra. Las variables las pone `next/font/local` desde `letra.ts`: los
+   * `.woff2` viven en el repo y **la compilación no sale a internet** por
+   * ellos. La valla `scripts/verificar-fuentes-locales.mjs` tumba CI si alguna
+   * app vuelve a importar `next/font/google`.
+   */
+  --titular: var(--fuente-bricolage), "Bricolage Grotesque", sans-serif;
+  --cuerpo: var(--fuente-instrument), "Instrument Sans", sans-serif;
+
+  /*
+   * Formas: todo redondo y amable, y **sin sombras** — los bordes son de 1 px
+   * arena. Sin degradados y sin blur.
+   */
+  --r-placa: 7px;
+  --r-tienda: 12px;
+  --r-tarjeta: 24px;
+  --r-telefono: 44px;
+  --r-pastilla: 999px;
+
+  /* El movimiento de Ontoy: suave, con inercia, y nunca se corta de golpe. */
+  --curva: cubic-bezier(0.2, 0, 0, 1);
+
+  background: var(--lienzo);
+  color: var(--texto);
+  font-family: var(--cuerpo);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+
+/*
+ * El fondo del `body`, que si no se ve en el rebote del scroll.
+ *
+ * `globals.css` se lo pone para la app, y la app y la landing no son del mismo
+ * color. Esto lo corrige **sólo donde hay landing**, sin tocar una sola
+ * pantalla de la app.
+ */
+body:has(.landing) {
+  background: #ede9e1;
+}
+
+/* ─── Lo que se repite ─────────────────────────────────────────────────── */
+
+/*
+ * El ancho de la landing: 1280 de caja y 24 de margen lateral. El `readme` del
+ * sistema de diseño dice 1200; la landing aprobada está dibujada a 1280 en
+ * todas sus secciones, y manda la hoja. El margen no se encoge en teléfono —
+ * es lo que separa el texto del filo de la pantalla.
+ */
+.landing-caja {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-inline: 24px;
+  box-sizing: border-box;
+}
+
+.landing h1,
+.landing h2,
+.landing h3 {
+  font-family: var(--titular);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  margin: 0;
+}
+
+.landing h1 {
+  font-size: clamp(40px, 5.4vw, 76px);
+  line-height: 0.95;
+}
+
+.landing h2 {
+  font-size: clamp(34px, 5vw, 60px);
+  line-height: 0.98;
+}
+
+.landing p {
+  margin: 0;
+}
+
+/*
+ * El wordmark es **¿Ontoy?**, pegado y con sus dos signos. No se parte, no se
+ * pone en mayúsculas y no pierde los signos: son parte del nombre.
+ */
+.landing-wordmark {
+  font-family: var(--titular);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+}
+
+/* ─── La cabecera ──────────────────────────────────────────────────────── */
+
+/*
+ * Fija, color banqueta, con su línea de arena abajo. Se queda a la vista
+ * porque lleva la única salida que importa: el botón que abre la app.
+ */
+.landing-cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--lienzo);
+  border-bottom: 1px solid var(--borde);
+}
+
+.landing-cabecera > div {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 64px;
+}
+
+.landing-cabecera nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-inline-start: auto;
+}
+
+/*
+ * Los enlaces de sección — y **sólo** ellos. El `:not()` no es cosmético: sin
+ * él, este selector le gana en especificidad al del botón y le deja el rótulo
+ * en carbón sobre el fondo carbón del propio botón. Se vio en la primera
+ * captura: «Abrir la app» prácticamente no se leía.
+ */
+.landing-cabecera nav a:not(.landing-boton) {
+  color: var(--texto-2);
+  text-decoration: none;
+  font: 600 14px/1 var(--cuerpo);
+}
+
+.landing-cabecera nav a:not(.landing-boton):hover {
+  color: var(--texto);
+}
+
+/*
+ * En teléfono los enlaces de sección se van: el botón de abrir la app es lo
+ * único que no puede faltar, y cuatro anclas apretadas contra él se tocan mal
+ * con el pulgar. Las secciones siguen ahí, bajando.
+ */
+@media (max-width: 720px) {
+  .landing-cabecera nav a:not(.landing-boton) {
+    display: none;
+  }
+}
+
+/* ─── Los botones ──────────────────────────────────────────────────────── */
+
+/*
+ * Pastilla, sin sombra y **sin encogerse al presionar** (el sistema de diseño:
+ * «press: sin encogimiento»).
+ */
+.landing-boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-pastilla);
+  padding: 14px 22px;
+  font: 700 16px/1 var(--cuerpo);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.18s var(--curva), color 0.18s var(--curva);
+}
+
+.landing-boton-principal {
+  background: var(--carbon);
+  color: var(--hueso);
+}
+
+.landing-boton-principal:hover {
+  background: var(--carbon-2);
+}
+
+.landing-boton-chico {
+  padding: 9px 16px;
+  font-size: 14px;
+}
+
+.landing-boton-fantasma {
+  background: transparent;
+  color: var(--texto);
+  border-color: var(--borde-fuerte);
+}
+
+.landing-boton-fantasma:hover {
+  background: var(--superficie);
+}
+
+/*
+ * El foco del teclado. Va en carbón y no en el color de ruta: el foco es de la
+ * interfaz, y la interfaz no usa color de ruta.
+ */
+.landing :focus-visible {
+  outline: 2px solid var(--carbon);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ─── El hero ──────────────────────────────────────────────────────────── */
+
+.landing-hero {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(20px, 3vw, 36px);
+  padding-block: clamp(20px, 4vw, 52px) 48px;
+}
+
+/*
+ * La etiqueta de arriba del título: pastilla carbón con la cara de Ontoy.
+ * Dice qué es esto antes de que el título diga qué hace.
+ */
+.landing-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--carbon);
+  color: var(--texto-en-oscuro);
+  border-radius: var(--r-pastilla);
+  padding: 6px 14px 6px 6px;
+  font: 700 13px/1 var(--cuerpo);
+  align-self: flex-start;
+}
+
+.landing-etiqueta span {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--banqueta);
+  display: grid;
+  place-items: center;
+}
+
+/* Sin esto el SVG no tiene tamaño intrínseco y se encoge a nada dentro de la pastilla. */
+.landing-etiqueta span svg {
+  width: 84%;
+  height: 84%;
+}
+
+/*
+ * El renglón de la marca: el wordmark gigante a la izquierda, Ontoy a la
+ * derecha, los dos apoyados en la misma línea de base. Es lo primero que se ve
+ * y es puro nombre: la portada se presenta antes de explicar nada.
+ */
+.landing-hero-marca {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 20px;
+}
+
+/*
+ * El wordmark a tamaño de portada.
+ *
+ * **El tope es 200 px y no 250, y lo puso la medición.** «¿Ontoy?» ocupa unas
+ * 4.7 veces su tamaño de letra: a 250 px mide ~1180 px y no deja lugar para
+ * Ontoy dentro de los 1232 de la caja, así que el flex lo mandaba a la fila de
+ * abajo y el hero se partía en dos. A 200 px mide ~945 y los dos caben en el
+ * mismo renglón, que es como está dibujado el hero.
+ */
+.landing-wordmark-gigante {
+  display: flex;
+  align-items: baseline;
+  flex: 1 1 auto;
+  font-family: var(--titular);
+  font-weight: 800;
+  font-size: clamp(72px, 15vw, 200px);
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+  color: var(--carbon);
+  user-select: none;
+}
+
+.landing-hero-ontoy {
+  flex: 0 1 300px;
+  min-width: 170px;
+  aspect-ratio: 1 / 1.15;
+  margin-bottom: -6px;
+  display: grid;
+  place-items: end center;
+}
+
+.landing-hero-ontoy svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/*
+ * Lo que la portada dice, debajo de la línea: a la izquierda qué es y el
+ * título, a la derecha la frase y el botón. La línea es de 2 px y de carbón —
+ * no es un borde de tarjeta, es el renglón que separa el nombre de lo que el
+ * nombre promete.
+ */
+.landing-hero-dicho {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: 24px 48px;
+  align-items: end;
+  border-top: 2px solid var(--carbon);
+  padding-top: 24px;
+}
+
+.landing-hero-dicho > div {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.landing-hero-columna {
+  gap: 20px !important;
+  align-items: stretch !important;
+}
+
+.landing-lead {
+  font-family: var(--cuerpo);
+  font-weight: 400;
+  font-size: clamp(18px, 1.8vw, 21px);
+  line-height: 1.5;
+  color: var(--texto-2);
+  max-width: 56ch;
+  text-wrap: pretty;
+}
+
+/* «Si no sabe, te lo dice» es la frase que sostiene el resto, y va en el peso del texto. */
+.landing-lead strong {
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.landing-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+/*
+ * «Muy pronto en App Store y Google Play». Es el estado `próximamente` del
+ * diseño, y se queda hasta que las apps estén publicadas de verdad: la landing
+ * no anuncia una tienda donde todavía no hay nada que bajar.
+ */
+.landing-tiendas {
+  font: 600 13px/1.3 var(--cuerpo);
+  color: var(--texto-2);
+}
+
+/* ─── El pie ───────────────────────────────────────────────────────────── */
+
+.landing-pie {
+  border-top: 1px solid var(--borde);
+  margin-top: 64px;
+  padding-block: 32px 40px;
+}
+
+.landing-pie > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  font: 400 13px/1.4 var(--cuerpo);
+  color: var(--texto-2);
+}
+
+.landing-pie a {
+  color: var(--texto-2);
+  text-decoration-color: var(--borde-fuerte);
+  text-underline-offset: 3px;
+}
+
+.landing-pie a:hover {
+  color: var(--texto);
+}
+
+.landing-pie .landing-wordmark {
+  font-size: 18px;
+  color: var(--texto);
+}
+
+/* El dominio se va al extremo opuesto del renglón, y se acomoda en teléfono. */
+.landing-pie-dominio {
+  margin-inline-start: auto;
+}
+
+@media (max-width: 720px) {
+  .landing-pie-dominio {
+    margin-inline-start: 0;
+  }
+}
+
+/*
+ * Nada parpadea como alarma, y con `reduced-motion` sólo cambia la cara: lo
+ * que se mueva en esta página se para aquí, de una vez, para que ninguna pieza
+ * nueva tenga que acordarse.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .landing *,
+  .landing *::before,
+  .landing *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

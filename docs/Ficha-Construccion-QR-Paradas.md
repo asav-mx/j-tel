@@ -28,6 +28,16 @@ El QR es la única pieza de Ontoy que **se imprime en lámina y se atornilla**. 
 
 *(Las tres son recomendación de Claude; Asav las confirma antes de construir.)*
 
+### Enmiendas de Asav del 23 de septiembre de 2026
+
+| # | Decisión |
+|---|---|
+| d | **El diseño es el 1b de «Ontoy QR»**: banda del color de la ruta, Tino, «¿Cuándo pasa? Escanea.», módulos carbón sobre blanco, Ontoy al centro, corrección **H**, 8 cm de mínimo. Sale del skill `ontoy-design`. |
+| e | **Sí se imprime de un circuito sin publicar**, con el aviso en pantalla. Voltea el punto 6 de abajo: imprimir, repartir y atornillar toma días, y exigir la publicación antes obliga a prometerle algo a un pasajero días antes de que haya un letrero en un poste. |
+| f | **El QR de un circuito no publicado dice «Este QR todavía no está activo»** — el **mismo texto** que un código inventado, para no revelar nada (8.4). La frase era «Este letrero…» y cambió el 24-sep: es lo que la persona acaba de escanear. |
+
+**Lo que la (e) NO cambia:** lo que contesta el código. Un circuito sin publicar sigue respondiendo igual que un slug inventado. Lo que cambia es que la impresora no espera a la publicación.
+
 ## 4 · Qué se construye
 
 **En Ontoy (`apps/publico`)**
@@ -42,15 +52,19 @@ El QR es la única pieza de Ontoy que **se imprime en lámina y se atornilla**. 
 **En J-Staff (casa nueva, cuarto Circuitos)**
 4. En `Ver ‹parada›` y en la lista de paradas del circuito: **«Imprimir letrero»**.
 5. En el expediente del circuito: **«Imprimir todas las paradas»**.
-6. **Sólo se imprime de circuitos publicados.** Un circuito sin publicar enseña el botón desactivado con su razón escrita al lado: un letrero pegado en la calle que no abre nada es una promesa falsa.
+6. ~~**Sólo se imprime de circuitos publicados.** Un circuito sin publicar enseña el botón desactivado con su razón escrita al lado: un letrero pegado en la calle que no abre nada es una promesa falsa.~~ → **Reemplazado por la enmienda (e) del 23-sep.** El argumento era cierto y le faltaba el calendario. Ahora **se imprime igual**, y el aviso va en la pantalla —donde lo lee quien manda a la impresora y todavía puede decidir—, diciendo qué va a contestar el código hasta que se publique.
 
-**La hoja impresa (tamaño carta, vertical)**
-- El QR, grande: mínimo **8 × 8 cm** para escanearlo desde un metro, con su margen blanco alrededor.
-- El nombre de la parada y el **nombre y color de la ruta** (el color es identidad, nunca estado: 8.8c). El nombre siempre acompaña al color.
-- Una línea: «Escanea para ver cuándo pasa tu camión».
+**La hoja impresa (tamaño carta, vertical) — el 1b, enmienda (d)**
+- **Banda del color de la ruta** a sangre arriba: es lo que se ve desde lejos y lo que distingue dos rutas en el mismo paradero.
+- **Tino**, del color de la ruta, con su placa. **Sin minutos**: un «3′» impreso en un poste sería un número correcto el día que se imprimió mintiendo para siempre a alguien que está esperando de verdad. Los minutos los dice la app, que es la que los mide.
+- **«¿Cuándo pasa? Escanea.»** como titular.
+- El **nombre de la ruta en placa carbón** y el nombre de la parada al lado (el color es identidad, nunca estado: 8.8c, y el nombre siempre lo acompaña).
+- El QR de **9 × 9 cm** —la ficha pedía 8 de mínimo, y un mínimo no es una medida de diseño—, **módulos carbón sobre blanco** con su margen, **corrección H**, y **Ontoy al centro**.
 - **La dirección escrita en texto** (`ontoy.app/p/…`), para quien no tiene cámara o no sabe escanear.
-- La marca de Ontoy.
-- **Nada del transportista**: ni su nombre, ni su color, ni su logo. La plataforma no se viste de ninguno.
+- El wordmark **¿Ontoy?** abajo.
+- **Nada del transportista**: ni su nombre, ni su logo. La plataforma no se viste de ninguno.
+
+**Por qué H, medido:** la hoja de diseño dice «corrección alta, por eso aguanta a Ontoy en el centro», y ésa **no es la razón**: un disco centrado que tapa el 22 % del lado le quita el 4 % de los cuadritos, y eso lo sobrevive hasta M. Lo que H compra es la calle — con cuatro calcomanías o rayones simulados, M lee el **25 %** de las veces y H el **85 %**. Cuesta cuadritos más chicos en los mismos 9 cm (33 en vez de 29 con un slug corto), que es una razón más para que los `qr_slug` sigan siendo cortos.
 
 ## 5 · Lo que no hace
 

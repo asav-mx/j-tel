@@ -25,12 +25,45 @@ antes de compilar y **se cae si cualquier app vuelve a importar
 
 ## Qué hay aquí
 
+**La app y la landing no usan la misma letra**, y es a propósito. La app va con
+Archivo + IBM Plex (decisión de ASAV, 21-sep). La landing va con Bricolage
+Grotesque + Instrument Sans, que es lo que declaran los tokens del sistema de
+diseño (`.claude/skills/ontoy-design/tokens/typography.css`) y con lo que está
+dibujada la landing aprobada. Es temporal: la app cambia a los tokens en su
+propio PR.
+
+**Nadie baja las seis.** El navegador sólo pide los archivos que la página que
+abrió declara, y son dos páginas distintas: quien entra a la landing baja dos
+archivos, quien abre la app baja los otros cuatro.
+
+### De la app
+
 | Archivo | Familia | Pesos declarados | Papel | sha256 |
 |---|---|---|---|---|
 | `archivo-variable.woff2` | Archivo | 600–700 (variable) | lo que identifica | `7150c0ec5ad35645` |
 | `plex-sans-variable.woff2` | IBM Plex Sans | 400–600 (variable) | lo que se lee de corrido | `056e4e2459f57a00` |
 | `plex-mono-400.woff2` | IBM Plex Mono | 400 | toda medición | `c36f509c0a8f9f85` |
 | `plex-mono-500.woff2` | IBM Plex Mono | 500 | toda medición | `a76f53ca6612e7b3` |
+
+### De la landing
+
+| Archivo | Familia | Pesos declarados | Papel | Bytes | sha256 |
+|---|---|---|---|---|---|
+| `bricolage-variable.woff2` | Bricolage Grotesque | 600–800 (variable) | títulos, placas y números | 76 868 | `85f55a58a31e61a2` |
+| `instrument-sans-variable.woff2` | Instrument Sans | 400–700 (variable) | el texto | 29 904 | `6219bc4bfdfc5d9b` |
+
+**Por qué Bricolage pesa 77 KB y no 41.** Tiene **dos ejes**: el peso y `opsz`
+—el tamaño óptico, que reajusta el dibujo de la letra según de qué tamaño se
+vaya a ver—. Pidiéndolo con `opsz` fijo, Google sirve **41 236 bytes**: 36 KB
+menos. Pero la landing aprobada no declara `opsz` en ningún lado, así que el
+navegador usa `font-optical-sizing: auto` y lo mueve solo — y eso es lo que
+hace que el título de 76 px y la placa de 14 px estén dibujados cada uno para
+su tamaño. Fijarlo dibujaría los titulares del hero con el trazo pensado para
+texto chico.
+
+Los 36 KB son el precio de los titulares, y se paga **una vez**: es la portada,
+no la app que se abre en la parada todos los días. Si algún día pesan más de lo
+que valen, el cambio es un renglón en `FAMILIAS` dentro del guion.
 
 **Son byte por byte los que `next/font/google` servía** antes del cambio: el
 pasajero no descarga ni un byte más.
@@ -66,5 +99,6 @@ commitear**, y se actualiza la tabla.
 
 ## Licencias
 
-Archivo e IBM Plex se distribuyen bajo **SIL Open Font License 1.1**, que
-permite redistribuir los archivos dentro del proyecto.
+Las cuatro familias —Archivo, IBM Plex, Bricolage Grotesque e Instrument Sans—
+se distribuyen bajo **SIL Open Font License 1.1**, que permite redistribuir los
+archivos dentro del proyecto.
