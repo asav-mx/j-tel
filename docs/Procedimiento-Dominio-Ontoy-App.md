@@ -38,6 +38,21 @@ dado de alta en el proyecto de Vercel, y la variable del nombre. Eso vive en
 paneles, no aparece en ningún PR, y si nadie lo escribe se olvida — la misma
 lección del límite del firewall.
 
+### ✅ Hecho el 25 de septiembre de 2026
+
+ASAV conectó el dominio, y **contesta**. Comprobado desde fuera, no leído de un
+panel:
+
+```
+dig +short A ontoy.app           → 216.150.1.1
+dig +short CNAME www.ontoy.app   → 325a00deb44ee3cd.vercel-dns-016.com.
+curl -o /dev/null -w '%{http_code}' https://ontoy.app       → 200
+curl -o /dev/null -w '%{http_code}' https://www.ontoy.app   → 308 → https://ontoy.app/
+```
+
+Así que los pasos 1 y 2 ya están dados. Lo que queda de esta hoja es el paso 4
+—comprobar la mudanza de las dos puntas— y el paso 6, el cambio de 307 a 308.
+
 ### Y qué dirección tiene cada cosa (decidido el 23-sep-2026)
 
 Esta hoja mueve la **casa**; cuál es el cuarto de cada cosa lo decidió ASAV el
@@ -69,13 +84,26 @@ pantalla**, que son la fuente buena. Lo que hay que esperar ver:
 
 | Tipo | Nombre | Valor |
 |---|---|---|
-| `A` | `@` | `76.76.21.21` |
-| `CNAME` | `www` | `cname.vercel-dns-0.com` |
+| `A` | `@` | `216.150.1.1` |
+| `CNAME` | `www` | `325a00deb44ee3cd.vercel-dns-016.com` |
 
-⚠ **Fíjate en el `-0` del CNAME.** Ese valor cambió; el viejo
-`cname.vercel-dns.com` ya no es el documentado, y copiarlo de un tutorial de
-hace un año deja el dominio en «Invalid Configuration» sin decir por qué. Es la
-misma trampa que se documentó con el dominio anterior.
+**Éstos son los que Vercel pidió el 25 de septiembre de 2026**, y los que ASAV
+puso ese día. Los que decía esta hoja antes —`76.76.21.21` y
+`cname.vercel-dns-0.com`— **ya no son los que pide**: quedan abajo, en la nota,
+para que quien encuentre uno de ésos en un panel sepa que es viejo y no ande
+adivinando.
+
+⚠ **El CNAME es propio de este dominio, no genérico.** `325a00deb44ee3cd…` es
+una etiqueta que Vercel emite para `ontoy.app`; **no se copia de otro proyecto ni
+de un tutorial**, y el de otro dominio no sirve aquí. Y fíjate en el `-016` del
+final: hubo `-0`, hay `-016`, y va a haber otro. **La fuente buena es siempre la
+pantalla de Vercel**, no esta tabla — esta tabla es para comprobar que lo que
+pusiste es lo que ella dijo.
+
+**Valores viejos, para reconocerlos:** `76.76.21.21` y `cname.vercel-dns-0.com`
+(y antes de ése, `cname.vercel-dns.com`). Si un panel todavía tiene uno de esos,
+está apuntando a donde ya no hay que apuntar, y Vercel lo muestra como «Invalid
+Configuration» sin decir por qué.
 
 ## 2 · Poner los registros en Unstoppable Domains
 
@@ -85,8 +113,8 @@ registros se editan en su panel, no en Vercel** — igual que `juarezbus.digital
 En el panel de Unstoppable Domains, en el dominio → **DNS**:
 
 ```
-A      @      76.76.21.21
-CNAME  www    cname.vercel-dns-0.com
+A      @      216.150.1.1
+CNAME  www    325a00deb44ee3cd.vercel-dns-016.com
 ```
 
 Mover los nameservers a Vercel también funcionaría, pero es más movimiento del
@@ -95,8 +123,8 @@ necesario y deja el dominio administrado en dos lados.
 **Comprobar, no suponer:**
 
 ```bash
-dig +short A ontoy.app          # debe contestar 76.76.21.21
-dig +short CNAME www.ontoy.app  # debe contestar cname.vercel-dns-0.com
+dig +short A ontoy.app          # debe contestar 216.150.1.1
+dig +short CNAME www.ontoy.app  # debe contestar 325a00deb44ee3cd.vercel-dns-016.com
 ```
 
 Tarda de minutos a un par de horas. Mientras no conteste eso, Vercel muestra
