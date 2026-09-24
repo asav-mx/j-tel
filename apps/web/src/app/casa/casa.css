@@ -431,14 +431,27 @@
   width: 21.59cm; /* carta, vertical */
   min-height: 27.94cm;
   box-sizing: border-box;
+  padding: 1.6cm;
   background: #ffffff;
   color: #2a2e37;
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
   /* En pantalla se ve como una hoja sobre la mesa; al imprimir, el borde se va. */
   border: 1px solid var(--linea);
   margin: 0 auto 1.5rem;
+}
+
+/* La tarjeta del 1b: Hueso con su orilla de arena, esquinas de 30.
+   ⚠ Asav la pidió «color banqueta» (#EDE9E1); la hoja de diseño la trae en
+   **Hueso** (#F7F3EC). Se siguió la hoja, que es lo que dijo copiar. Son vecinos
+   y cambiarlo es esta línea. */
+.letrero-tarjeta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #f7f3ec;
+  border-radius: 1cm;
+  box-shadow: 0 0 0 1px #dcd5c8;
+  overflow: hidden;
 }
 
 /* La banda del color de la ruta, a sangre. Es lo primero que se ve desde lejos,
@@ -451,7 +464,7 @@
 .letrero-cuerpo {
   flex: 1;
   box-sizing: border-box;
-  padding: 1.6cm 2cm 2cm;
+  padding: 1.3cm 1.4cm 1.4cm;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -460,13 +473,13 @@
 .letrero-encabezado {
   display: flex;
   align-items: center;
-  gap: 0.9cm;
+  gap: 0.8cm;
   width: 100%;
 }
 
 .letrero-tino {
-  width: 3.4cm;
-  height: 3.4cm;
+  width: 3.2cm;
+  height: 3.2cm;
   flex: none;
   display: block;
 }
@@ -481,7 +494,7 @@
 .letrero-pregunta {
   font-family: var(--letra-titular);
   font-weight: 800;
-  font-size: 1.35cm;
+  font-size: 1.25cm;
   line-height: 1.05;
   letter-spacing: -0.025em;
   margin: 0;
@@ -504,7 +517,7 @@
 .letrero-placa {
   font-family: var(--letra-titular);
   font-weight: 800;
-  font-size: 0.62cm;
+  font-size: 0.58cm;
   line-height: 1.15;
   color: #ffffff;
   background: #2a2e37;
@@ -517,54 +530,44 @@
 
 .letrero-parada {
   font-family: var(--letra-lectura);
-  font-size: 0.62cm;
+  font-size: 0.58cm;
   color: #4a4f5a;
 }
 
-/* Ontoy va ENCIMA del código, centrado, con su hueco blanco debajo. Medido: a
-   22 % del lado le quita el 4 % de los cuadritos, y H aguanta cerca del 30 %. */
-.letrero-codigo {
-  position: relative;
-  width: 9.8cm;
-  height: 9.8cm;
-  margin: 1.5cm 0 1.2cm;
-  display: grid;
-  place-items: center;
-}
-
-/* 9 cm: la ficha pide 8 como mínimo, y el mínimo no es la medida de diseño.
-   Es lo que decide si engancha de pie, a un metro del poste. */
-.letrero-qr {
-  width: 9cm;
-  height: 9cm;
-  display: block;
-  /* La zona tranquila que el estándar pide alrededor del código. */
-  padding: 0.4cm;
+/* El recuadro blanco redondeado del 1b, con el código dentro.
+   13 cm: los puntitos cuestan margen y el precio son ~3 cm — medido, ver
+   `letrero-de-parada.tsx`. En una carta con 1.6+1.4 cm de margen quedan 17.2 cm
+   útiles, así que cabe con holgura. */
+.letrero-caja-del-codigo {
   background: #ffffff;
+  border-radius: 0.7cm;
+  padding: 0.35cm;
+  margin: 1.1cm 0 0.9cm;
 }
 
-.letrero-ontoy {
-  position: absolute;
-  width: 1.85cm;
-  height: 1.85cm;
-  pointer-events: none;
+.letrero-qr {
+  width: 13cm;
+  height: 13cm;
+  display: block;
 }
 
-/* Para quien no trae cámara, no sabe escanear o tiene la pantalla rota. */
+/* Para quien no trae cámara, no sabe escanear o tiene la pantalla rota.
+   En la letra de la marca, no en monoespaciada (ASAV, 24-sep-2026). */
 .letrero-direccion {
-  font-family: var(--letra-medida);
-  font-size: 0.6cm;
-  letter-spacing: 0.01em;
-  color: #4a4f5a;
-  margin: 0 0 auto;
-}
-
-.letrero-marca {
   font-family: var(--letra-titular);
   font-weight: 800;
-  font-size: 0.85cm;
-  letter-spacing: -0.02em;
-  margin: 1.2cm 0 0;
+  font-size: 0.62cm;
+  letter-spacing: -0.01em;
+  color: #2a2e37;
+  margin: 0;
+}
+
+/* Lo que quita el miedo antes de escanear: ni cuenta, ni app que instalar. */
+.letrero-pie {
+  font-family: var(--letra-lectura);
+  font-size: 0.42cm;
+  color: #6b6f78;
+  margin: 0.5cm 0 0;
 }
 
 /* Lo que sólo sirve en pantalla y estorba en papel. */

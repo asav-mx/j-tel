@@ -85,8 +85,9 @@ export default async function LetrerosDelCircuito({
         </h1>
         <p className="mt-2 text-[15px] text-[var(--tenue)]">
           Una hoja por parada, tamaño carta. Imprime con el navegador (⌘P) al 100 %, sin ajustar a
-          la página: el código mide 9 cm de lado a propósito, y encogerlo le quita el metro de
-          distancia desde el que engancha.
+          la página: el código mide <strong>13 cm</strong> de lado a propósito —los módulos en
+          puntitos del diseño piden más resolución que los cuadrados— y encogerlo le quita el metro
+          de distancia desde el que engancha.
         </p>
         {!circuito.publishedAt && (
           /* En tinta y con su frase, sin cobre: un aviso no es un dato vivo. Y no

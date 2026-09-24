@@ -26,7 +26,6 @@ import { etiquetaCortaDeLaRuta } from "@jtel/domain";
 
 /** El carbón y el naranja, de `tokens/colors.css`. Aquí no se inventa un hex. */
 const CARBON = "#2A2E37";
-const NARANJA_DE_ONTOY = "#F6A15B";
 
 /**
  * **Tino**, la parada oficial: un poste con su cabeza del color de la ruta.
@@ -86,32 +85,34 @@ export function TinoDeLaLamina({ ruta, colorHex }: { ruta: string; colorHex: str
 }
 
 /**
- * **Ontoy**, para el centro del código.
+ * **La cara del centro del código**, del color de la ruta.
  *
- * Va sin su celular y sin boca —la versión original— porque a este tamaño la
- * boca abierta se lee como un borrón, y porque lo que hace ahí es firmar el
+ * ## Ojo con esto: en el 1b el centro NO es el naranja de Ontoy
+ *
+ * El §16 del handoff dice «las tres esquinas son ojos que miran a Ontoy, que va
+ * en el centro», y es fácil leer eso como que ahí va Ontoy en naranja. Pero el
+ * marcado del uso **1b** de `Ontoy QR.dc.html` —el que Asav señaló— pone
+ * `<circle r="54" fill="{{ ruta }}">`: un disco **del color de la ruta**. De los
+ * cuatro usos del QR, 1b es el único con cara en el centro, y la tiene del color
+ * de su ruta.
+ *
+ * Se siguió el marcado y no la prosa, porque el marcado es el diseño y porque es
+ * lo coherente: el letrero de una parada pertenece a una ruta, y todo lo que
+ * pertenece a una ruta toma su color. Si se quiere a Ontoy en naranja ahí, es
+ * cambiar esta función y nada más.
+ *
+ * Va **sin boca** —la versión original de todos los personajes— porque a este
+ * tamaño la boca se lee como un borrón, y porque lo que hace ahí es firmar el
  * código, no reaccionar a nada.
- *
- * **Medido, no supuesto:** tapando el 22 % del lado del código, Ontoy le quita
- * un **4 % de los cuadritos**. La corrección H aguanta hasta cerca del 30 %, así
- * que el logo no es de dónde viene el riesgo de este letrero — ver la nota de
- * `letrero-de-parada.tsx`.
  */
-export function OntoyDelCodigo() {
+export function CaraDeLaRuta({ colorHex }: { colorHex: string }) {
   return (
-    <svg viewBox="0 0 120 120" className="letrero-ontoy" aria-hidden="true">
-      <ellipse cx="44" cy="96" rx="9" ry="6" fill={NARANJA_DE_ONTOY} />
-      <ellipse cx="76" cy="96" rx="9" ry="6" fill={NARANJA_DE_ONTOY} />
-      <path
-        d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z"
-        fill={NARANJA_DE_ONTOY}
-      />
-      <circle cx="14" cy="80" r="6" fill={NARANJA_DE_ONTOY} />
-      <circle cx="108" cy="78" r="6" fill={NARANJA_DE_ONTOY} />
-      <circle cx="50" cy="52" r="11" fill="#fff" />
-      <circle cx="76" cy="50" r="11" fill="#fff" />
-      <circle cx="50" cy="52" r="6" fill={CARBON} />
-      <circle cx="76" cy="50" r="6" fill={CARBON} />
-    </svg>
+    <>
+      <circle cx="60" cy="60" r="54" fill={colorHex} />
+      <circle cx="42" cy="52" r="15" fill="#fff" />
+      <circle cx="78" cy="52" r="15" fill="#fff" />
+      <circle cx="42" cy="52" r="8" fill={CARBON} />
+      <circle cx="78" cy="52" r="8" fill={CARBON} />
+    </>
   );
 }
