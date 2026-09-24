@@ -1,10 +1,14 @@
+import { cache } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { tituloDelQr } from "@jtel/domain";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
 import { DescargarPdf } from "@/components/casa/descargar-pdf";
 import {
   LetreroDeParada,
+  varianteEnElTitulo,
   type FormaDeLasEsquinas,
   type FormaDeLosModulos,
 } from "@/components/casa/letrero-de-parada";
@@ -53,6 +57,65 @@ export const dynamic = "force-dynamic";
  * poste, **sigue funcionando** y dice que la parada salió de servicio — eso lo
  * contesta Ontoy, no esta pantalla.
  */
+/** Cómo se leen los dos parámetros del dibujo. Una sola lectura para los dos usos. */
+function dibujoPedido(sp: Record<string, string | string[] | undefined>) {
+  const modulos: FormaDeLosModulos = sp.modulos === "cuadritos" ? "cuadritos" : "puntitos";
+  const esquinas: FormaDeLasEsquinas = sp.esquinas === "normales" ? "normales" : "ojos";
+  return { modulos, esquinas };
+}
+
+/**
+ * El circuito y las paradas que toca imprimir.
+ *
+ * Va envuelto en `cache` porque lo piden **dos** veces en la misma petición: el
+ * título de la página (`generateMetadata`) y la página. Sin esto, cada impresión
+ * haría las consultas dos veces; y separarlos en dos lecturas distintas sería
+ * peor —el filtro de «sólo esta parada» viviría copiado, y el día que cambie, el
+ * título dejaría de decir lo que la hoja enseña.
+ */
+const loQueSeImprime = cache(async (id: string, unaSola: string | null) => {
+  const repos = getRepos();
+  const circuito = await repos.circuits.getCircuit(id);
+  if (!circuito) return null;
+  const paradas = await repos.circuits.listStopsVigentes(id);
+  const aImprimir = unaSola ? paradas.filter((p) => p.qrSlug === unaSola) : paradas;
+  return { circuito, aImprimir };
+});
+
+const laParadaPedida = (sp: Record<string, string | string[] | undefined>) =>
+  typeof sp.parada === "string" ? sp.parada : null;
+
+/**
+ * **El título de la página, que es el nombre del archivo PDF.**
+ *
+ * El navegador saca de aquí el nombre que sugiere al guardar y el título que va
+ * dentro del PDF. Sin esto heredaba el de toda la casa, y a la imprenta le
+ * llegaban dieciocho archivos «JTEL — Verificación de Transporte» indistinguibles.
+ *
+ * El formato lo decide el dominio (`tituloDelQr`); aquí sólo se junta el dato.
+ */
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
+  const [{ id }, sp] = await Promise.all([params, searchParams]);
+  const unaSola = laParadaPedida(sp);
+  const datos = await loQueSeImprime(id, unaSola);
+  if (!datos || datos.aImprimir.length === 0) return {};
+  const { modulos, esquinas } = dibujoPedido(sp);
+  return {
+    title: tituloDelQr({
+      circuito: datos.circuito.name,
+      parada: datos.aImprimir.length === 1 ? datos.aImprimir[0]!.name : undefined,
+      cuantasParadas: datos.aImprimir.length,
+      variante: varianteEnElTitulo(modulos, esquinas),
+    }),
+  };
+}
+
 export default async function LetrerosDelCircuito({
   params,
   searchParams,
@@ -62,13 +125,12 @@ export default async function LetrerosDelCircuito({
 }) {
   await exigirEnPagina({ tipo: "jstaff" });
   const [{ id }, sp] = await Promise.all([params, searchParams]);
-  const repos = getRepos();
-  const circuito = await repos.circuits.getCircuit(id);
-  if (!circuito) notFound();
+  const unaSola = laParadaPedida(sp);
+  const datos = await loQueSeImprime(id, unaSola);
+  if (!datos) notFound();
+  const { circuito, aImprimir } = datos;
 
-  const unaSola = typeof sp.parada === "string" ? sp.parada : null;
-  const modulos: FormaDeLosModulos = sp.modulos === "cuadritos" ? "cuadritos" : "puntitos";
-  const esquinasComo: FormaDeLasEsquinas = sp.esquinas === "normales" ? "normales" : "ojos";
+  const { modulos, esquinas: esquinasComo } = dibujoPedido(sp);
   const vuelta = `/casa/jstaff/circuitos/${id}`;
   /*
    * Las tres hojas que hay que imprimir para poder decidir con teléfonos. Son
@@ -88,9 +150,6 @@ export default async function LetrerosDelCircuito({
     const cola = q.toString();
     return `/casa/jstaff/circuitos/${id}/letreros${cola ? `?${cola}` : ""}`;
   };
-
-  const paradas = await repos.circuits.listStopsVigentes(id);
-  const aImprimir = unaSola ? paradas.filter((p) => p.qrSlug === unaSola) : paradas;
 
   if (aImprimir.length === 0) {
     return (

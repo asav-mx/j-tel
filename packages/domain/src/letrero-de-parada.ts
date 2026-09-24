@@ -116,3 +116,38 @@ export function etiquetaCortaDeLaRuta(nombre: string): string {
   if (partes.length === 1) return partes[0]!.slice(0, 2).toUpperCase();
   return (partes[0]![0]! + partes[partes.length - 1]![0]!).toUpperCase();
 }
+
+/**
+ * **El título de la página del QR** — y por lo tanto el nombre del archivo PDF.
+ *
+ * Existe porque el navegador saca las dos cosas del `<title>`: el nombre que
+ * sugiere al guardar y el título que va **dentro** del PDF. Sin esto, la página
+ * heredaba el de toda la casa y a la imprenta le llegaban dieciocho archivos
+ * llamados «JTEL — Verificación de Transporte», indistinguibles entre sí.
+ *
+ * Vive en el dominio y no en la pantalla por lo mismo que la dirección impresa:
+ * es el nombre con el que un objeto físico viaja a un tercero, la imprenta va a
+ * archivar por ese nombre, y una regla así no debe poder cambiar de forma sin que
+ * se caiga una prueba.
+ *
+ * Formato: `QR · ‹circuito› · ‹parada o cuántas›`, y la variante al final sólo si
+ * no es la de por omisión. Todo sale del dato: no hay nada escrito a mano para
+ * ningún circuito.
+ */
+export function tituloDelQr(entrada: {
+  circuito: string;
+  /** Una parada concreta, cuando se imprime sólo ésa. */
+  parada?: string;
+  /** O cuántas van, cuando se imprimen todas. */
+  cuantasParadas?: number;
+  /** «cuadrados», «cuadrados y esquinas normales»… Vacío en la de por omisión. */
+  variante?: string;
+}): string {
+  const { circuito, parada, cuantasParadas, variante } = entrada;
+  const sujeto =
+    parada ??
+    (cuantasParadas === 1 ? "1 parada" : `${cuantasParadas ?? 0} paradas`);
+  const partes = ["QR", circuito.trim(), sujeto];
+  if (variante?.trim()) partes.push(variante.trim());
+  return partes.join(" · ");
+}

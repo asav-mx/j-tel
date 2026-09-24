@@ -97,6 +97,29 @@ export type FormaDeLosModulos = "puntitos" | "cuadritos";
  */
 export type FormaDeLasEsquinas = "ojos" | "normales";
 
+/**
+ * Cómo se nombra la variante **en el título de la página**, que es de donde el
+ * navegador saca el nombre del archivo PDF.
+ *
+ * La de por omisión —el 1b— no se nombra: su archivo es el normal, y ponerle
+ * «puntitos y ojos» a lo que ya es el diseño sólo ensucia el nombre.
+ *
+ * **Cubre las cuatro combinaciones, no las tres que la pantalla ofrece.** Los dos
+ * parámetros son independientes, así que `?esquinas=normales` a secas es una URL
+ * alcanzable; si no tuviera nombre, ese PDF saldría llamándose como el de por
+ * omisión siendo otro dibujo — y a la imprenta le llegarían dos archivos con el
+ * mismo nombre y distinto contenido.
+ */
+export function varianteEnElTitulo(
+  modulos: FormaDeLosModulos,
+  esquinas: FormaDeLasEsquinas,
+): string | undefined {
+  if (modulos === "puntitos" && esquinas === "ojos") return undefined;
+  if (modulos === "cuadritos" && esquinas === "ojos") return "cuadrados";
+  if (modulos === "cuadritos" && esquinas === "normales") return "cuadrados y esquinas normales";
+  return "esquinas normales";
+}
+
 /** El radio del puntito, en cuadritos. Del diseño 1b. */
 const RADIO_DEL_PUNTITO = 0.44;
 /** La zona tranquila que el estándar pide, en cuadritos. Del diseño 1b. */
