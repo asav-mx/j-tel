@@ -21,7 +21,7 @@ export default function NoEncontrado() {
       </p>
       <ul>
         <li>
-          <Link href="/">Ver las rutas</Link>
+          <Link href="/rutas">Ver las rutas</Link>
         </li>
       </ul>
     </main>

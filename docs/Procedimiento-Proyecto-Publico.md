@@ -98,6 +98,17 @@ doble — un daño silencioso, del que se ve normal.
 
 ## 5 · El dominio y el DNS
 
+> ✎ **23 de septiembre de 2026: el dominio cambió.** La app se muda a
+> **`ontoy.app`**, porque `juarezbus.digital` es el nombre de **un
+> transportista** y la plataforma no se viste de ninguno (ASAV). El dominio
+> viejo **no se apaga: redirige**, conservando la ruta, y eso vive en
+> `apps/publico/next.config.ts` con su prueba.
+>
+> **Lo que sigue en esta sección es el procedimiento del dominio VIEJO**, y se
+> conserva porque describe cómo quedó montado lo que hoy está en el aire. Para
+> apuntar el dominio nuevo el día que termine su registro:
+> [`Procedimiento-Dominio-Ontoy-App.md`](Procedimiento-Dominio-Ontoy-App.md).
+
 **En Vercel:** Settings → Domains → `juarezbus.digital` → **Add**. Vercel muestra
 los registros exactos que pide. **Usar los que muestre la pantalla**, que son la
 fuente buena. Lo que la documentación dice hoy, y lo que hay que esperar ver:

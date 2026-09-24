@@ -42,7 +42,7 @@ export default function Privacidad() {
     <main className="ontoy-legal">
       <p className="ontoy-legal-salida">
         {/* Toda pantalla tiene su salida (8.10). */}
-        <Link href="/">← Volver a {NOMBRE}</Link>
+        <Link href="/rutas">← Volver a {NOMBRE}</Link>
       </p>
 
       <h1>Privacidad</h1>
@@ -159,7 +159,7 @@ export default function Privacidad() {
       </section>
 
       <p className="ontoy-legal-salida">
-        <Link href="/">← Volver a {NOMBRE}</Link>
+        <Link href="/rutas">← Volver a {NOMBRE}</Link>
       </p>
     </main>
   );
