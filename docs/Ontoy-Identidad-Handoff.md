@@ -192,10 +192,14 @@ Tiendita «Abarrotes Lupita» (toldo rosa) · Tienda 24 h «Súper 24» (turques
   - Función 02: brinca y sonríe; clicks = saltos, vueltas, se marea.
   - Equipo: tímido, se sonroja y se tapa la cara; clicks = guiño, corazones, «¡basta! >///<».
   - Clicks seguidos cuentan si pasan menos de 1.4 s entre uno y otro. Con reduced-motion solo cambia la cara.
-- Pendiente técnico **resuelto el 23-sep-2026 por Asav**: la **app se queda en la raíz** de
-  `ontoy.app` —quien escanea un letrero o toca el ícono quiere su camión— y la **landing vive
-  en `ontoy.app/conoce`**. Así ninguna dirección que un pasajero guarde, instale o escanee
-  cambia después. El mapa completo de direcciones va en su propio documento y su propia valla.
+- Pendiente técnico **resuelto el 23-sep y cambiado el 25-sep-2026 por Asav**: la **landing
+  vive en la raíz** de `ontoy.app` —la gente escribe «ontoy.app» y nada más— y la **app vive
+  en `ontoy.app/rutas`**, que es el `start_url` del manifiesto. El 23-sep se había decidido al
+  revés; el argumento de entonces —que mudar el `start_url` le cambia el destino al ícono ya
+  instalado— era cierto y se resolvió **por fecha**: la app se mudó de inmediato (#550),
+  mientras casi nadie la tiene instalada, y no el día que la landing entrara. Así ninguna
+  dirección que un pasajero guarde, instale o escanee cambia después. El mapa completo va en
+  `docs/Ontoy-Direcciones.md`, con su valla en `apps/publico/src/app/direcciones.test.ts`.
 - El planeador arranca después de tener recorridos medidos. **Hasta que exista, la landing no lo nombra** —ni él ni las notificaciones—. Ver la enmienda (b) arriba.
 
 ## 13. Cierre (2026-09-23)

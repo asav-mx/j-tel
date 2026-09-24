@@ -24,11 +24,11 @@
  * **Subset `latin`**, el mismo que pedía `subsets: ["latin"]`: cubre el español
  * completo (acentos, ñ, ¿, ¡).
  *
- * **Archivo e IBM Plex Sans son VARIABLES**: Google devuelve un solo archivo
- * para todos los pesos, así que se guarda UNO por familia y el rango se declara
- * en el layout. IBM Plex Mono trae un archivo por peso.
+ * **Casi todas son VARIABLES**: Google devuelve un solo archivo para todos los
+ * pesos, así que se guarda UNO por familia y el rango se declara donde se usa.
+ * IBM Plex Mono es la excepción: trae un archivo por peso.
  *
- * Licencias: Archivo e IBM Plex, SIL OFL 1.1 — permiten redistribuir los
+ * Licencias: las cuatro familias, SIL OFL 1.1 — permiten redistribuir los
  * archivos dentro del proyecto.
  */
 import { writeFile, mkdir } from "node:fs/promises";
@@ -42,11 +42,35 @@ const UA =
 
 const DESTINO = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "app", "fuentes");
 
-/** Los pesos son los que declara `app/layout.tsx`. */
+/**
+ * Las dos letras de Ontoy, y son dos porque hoy hay dos caras.
+ *
+ * - **La app** (`app/layout.tsx`): Archivo + IBM Plex — decisión de ASAV, 21-sep.
+ * - **La landing** (`app/landing/`): Bricolage Grotesque + Instrument Sans, que
+ *   es lo que piden los tokens del sistema de diseño
+ *   (`.claude/skills/ontoy-design/tokens/typography.css`) y con lo que está
+ *   dibujada la landing aprobada.
+ *
+ * Que sean distintas es a propósito y es temporal: la app cambia a los tokens
+ * en su propio PR. Mientras tanto, **ningún archivo se descarga dos veces**: el
+ * navegador sólo baja los de la página que abrió, y nadie abre las dos a la vez.
+ *
+ * `consulta` existe porque Bricolage Grotesque tiene **dos ejes** —`opsz` y
+ * `wght`—, y Google quiere los dos nombrados en orden alfabético o devuelve un
+ * 400. Las demás se arman con sus pesos y ya.
+ */
 const FAMILIAS = [
   { familia: "Archivo", pesos: [600, 700], variable: true, nombre: "archivo" },
   { familia: "IBM Plex Sans", pesos: [400, 500, 600], variable: true, nombre: "plex-sans" },
   { familia: "IBM Plex Mono", pesos: [400, 500], variable: false, nombre: "plex-mono" },
+  {
+    familia: "Bricolage Grotesque",
+    pesos: [600, 800],
+    variable: true,
+    nombre: "bricolage",
+    consulta: "Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800",
+  },
+  { familia: "Instrument Sans", pesos: [400, 500, 600, 700], variable: true, nombre: "instrument-sans" },
 ];
 
 async function traer(url) {
@@ -67,8 +91,9 @@ function bloqueLatin(css, peso) {
 async function main() {
   await mkdir(DESTINO, { recursive: true });
 
-  for (const { familia, pesos, variable, nombre } of FAMILIAS) {
-    const url = `https://fonts.googleapis.com/css2?family=${familia.replace(/ /g, "+")}:wght@${pesos.join(";")}&display=swap`;
+  for (const { familia, pesos, variable, nombre, consulta } of FAMILIAS) {
+    const familiaEnLaUrl = consulta ?? `${familia.replace(/ /g, "+")}:wght@${pesos.join(";")}`;
+    const url = `https://fonts.googleapis.com/css2?family=${familiaEnLaUrl}&display=swap`;
     const css = await (await traer(url)).text();
 
     // De una variable basta el primer peso: el archivo es el mismo para todos.
