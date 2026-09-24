@@ -69,7 +69,13 @@ export const metadata: Metadata = {
   description: "Dónde viene tu camión, en vivo.",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: NOMBRE, statusBarStyle: "default" },
-  // iOS no lee el manifiesto para el ícono de inicio: quiere este PNG (hueco de la identidad, `docs/Ontoy-Iconos.md`).
+  // iOS no lee el manifiesto para el ícono de inicio: quiere este PNG (`docs/Ontoy-Iconos.md`).
+  // Va **sin transparencia**, y no por estética: iOS no maneja alfa aquí —compone lo
+  // transparente sobre negro— y le pone SU propia máscara redondeada encima. El ícono
+  // exportado trae esquinas transparentes con un radio distinto al de esa máscara, así que
+  // cuánto negro se asoma depende de una curva que no controlamos: medido, entre 8 pixeles
+  // y 296 según qué superelipse use iOS. Aplanado sobre Banqueta el riesgo no existe, y
+  // cuesta 4 KB. Es también lo que pide `docs/Ontoy-Iconos.md` desde antes de esto.
   icons: { icon: "/icono.svg", apple: "/iconos/apple-touch-icon.png" },
 };
 
@@ -79,8 +85,11 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   // Sin `maximumScale`: bloquear el zoom en una app que se usa en la calle deja
   // fuera a quien no ve de cerca. La accesibilidad gana al pixel perfect.
+  // El día toma Banqueta `#EDE9E1` de la identidad de Ontoy, el mismo del manifiesto.
+  // La noche se queda como estaba: el azul noche `#1E2B4D` de la identidad entra con el PR
+  // de los tokens, cuando la piel oscura de la app deje de ser gris pizarra.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: light)", color: "#EDE9E1" },
     { media: "(prefers-color-scheme: dark)", color: "#141225" },
   ],
 };

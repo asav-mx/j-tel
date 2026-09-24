@@ -23,8 +23,17 @@ it("cada ajuste del expediente es un campo que la ruta de siempre lee", () => {
 
 it("los campos de la identidad también son los que la ruta lee", () => {
   const ruta = leer("api/jstaff/circuitos/[id]/route.ts");
-  const identidad = readFileSync(path.resolve(APP, "../components/casa/identidad-del-circuito.tsx"), "utf8");
-  const campos = [...identidad.matchAll(/name="([a-zA-Z]+)"/g)].map((m) => m[1]!).filter((c) => !["volver", "seccion"].includes(c));
+  /*
+   * **Dos archivos, un formulario.** El color salió a su propio componente
+   * cuando dejó de ser un selector libre y pasó a ser una lista
+   * (`selector-de-color-de-ruta.tsx`, enmienda (a) de ASAV 23-sep-2026), y su
+   * `name="colorHex"` se fue con él. Si esta prueba sólo leyera el archivo de la
+   * identidad, dejaría de vigilar justo el campo que se acaba de mover — que es
+   * cuando un campo se escribe distinto y nadie lo nota.
+   */
+  const COMPONENTES = ["identidad-del-circuito.tsx", "selector-de-color-de-ruta.tsx"];
+  const formulario = COMPONENTES.map((c) => readFileSync(path.resolve(APP, "../components/casa", c), "utf8")).join("\n");
+  const campos = [...formulario.matchAll(/name="([a-zA-Z]+)"/g)].map((m) => m[1]!).filter((c) => !["volver", "seccion"].includes(c));
   expect(campos.sort()).toEqual(["arrancaEl", "colorHex", "horaFin", "horaInicio", "motivo", "nombre", "zonaHoraria"]);
   for (const c of campos) expect(ruta, c).toContain(`"${c}"`);
 });

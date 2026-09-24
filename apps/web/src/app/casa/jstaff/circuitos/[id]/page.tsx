@@ -56,7 +56,7 @@ export default async function VerCircuitoJStaff({
   const circuito = await repos.circuits.getCircuit(id);
   if (!circuito) notFound();
 
-  const [concesion, trazados, paradas, asignaciones, promesa, asignables, versiones, reglasCambiadas, avisos] = await Promise.all([
+  const [concesion, trazados, paradas, asignaciones, promesa, asignables, versiones, reglasCambiadas, avisos, otrosCircuitos] = await Promise.all([
     repos.accounts.findById(circuito.concessionAccountId),
     repos.circuits.getPaths(id),
     repos.circuits.listStopsVigentes(id),
@@ -66,6 +66,9 @@ export default async function VerCircuitoJStaff({
     repos.circuits.listPromiseTables(id),
     repos.circuits.listRuleChanges(id),
     repos.circuits.listAvisos(id),
+    // Para avisar si el color ya lo tiene otra ruta. Avisa y deja guardar: el
+    // color es el que los camiones traen pintados (ASAV, 23-sep).
+    repos.circuits.coloresDeOtrosCircuitos(id),
   ]);
   // Desempate por número económico: con la misma fecha, el orden cambiaba de una carga a otra.
   const vigentes = asignaciones
@@ -278,6 +281,7 @@ export default async function VerCircuitoJStaff({
 
         <Paso eslabon={eslabon(1)} titulo="Identidad">
           <IdentidadDelCircuito
+            otrosCircuitos={otrosCircuitos}
             circuitId={id}
             nombre={circuito.name}
             slug={circuito.publicSlug}

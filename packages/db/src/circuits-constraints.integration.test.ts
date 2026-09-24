@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { createDb, createRepositories, accounts, circuits } from "../src/index.js";
 
 /*
@@ -419,5 +419,53 @@ describe("cambiarCircuito · el registro de las reglas de la medición", () => {
       publicSlug: `minutos-${Date.now()}`,
     });
     expect(nuevo.corridorExitMinutes).toBe(3);
+  });
+});
+
+/*
+ * El color prohibido, en la transacción — la mitad que la prueba pura del
+ * dominio no puede cubrir: que `cambiarCircuito` de verdad devuelva el error y
+ * que **no escriba nada** cuando lo devuelve.
+ *
+ * La regla en sí vive en `cambioDeColorRechazado` (dominio) y tiene sus casos
+ * ahí, que sí corren en CI. Esto comprueba el cableado.
+ */
+describe("cambiarCircuito · el color prohibido se rechaza sólo si cambia", () => {
+  const PROHIBIDO = "#B05A0F"; // 28°: dentro de la banda del naranja de Ontoy
+  const BUENO = "#4F7FD8";
+
+  it("escoger un tono del naranja se rechaza, y no escribe NADA del formulario", async () => {
+    await repos.circuits.cambiarCircuito(circuitoId, { colorHex: BUENO }, FIRMA);
+    const nombreAntes = (await repos.circuits.getCircuit(circuitoId))!.name;
+    const r = await repos.circuits.cambiarCircuito(
+      circuitoId,
+      { colorHex: PROHIBIDO, name: `${nombreAntes} EDITADO` },
+      FIRMA,
+    );
+    expect(r).toMatchObject({ ok: false, error: "color_prohibido" });
+    const despues = (await repos.circuits.getCircuit(circuitoId))!;
+    expect(despues.colorHex.toUpperCase()).toBe(BUENO);
+    // El nombre venía en el mismo formulario: si se guardara, el rechazo sería a medias.
+    expect(despues.name).toBe(nombreAntes);
+  });
+
+  it("un circuito que YA venía con uno prohibido puede corregirle el nombre", async () => {
+    // Se siembra el estado heredado por la puerta de atrás: es lo que hay en la
+    // base de circuitos capturados antes de que la regla existiera.
+    await db.update(circuits).set({ colorHex: PROHIBIDO }).where(eq(circuits.id, circuitoId));
+    const r = await repos.circuits.cambiarCircuito(
+      circuitoId,
+      { colorHex: PROHIBIDO, name: "Nombre corregido" },
+      FIRMA,
+    );
+    expect(r).toMatchObject({ ok: true });
+    expect((await repos.circuits.getCircuit(circuitoId))!.name).toBe("Nombre corregido");
+  });
+
+  it("y puede CORREGIR el color a uno bueno, que es el punto de todo esto", async () => {
+    await db.update(circuits).set({ colorHex: PROHIBIDO }).where(eq(circuits.id, circuitoId));
+    const r = await repos.circuits.cambiarCircuito(circuitoId, { colorHex: BUENO }, FIRMA);
+    expect(r).toMatchObject({ ok: true });
+    expect((await repos.circuits.getCircuit(circuitoId))!.colorHex.toUpperCase()).toBe(BUENO);
   });
 });

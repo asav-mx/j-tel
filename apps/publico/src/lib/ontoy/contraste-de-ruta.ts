@@ -59,24 +59,20 @@ export function haloParaLaTraza(colorDeRuta: string, lienzo: string): number {
   return Math.min(6, Math.round(2 + falta * 2));
 }
 
-/**
- * Los colores que la plataforma tiene reservados y que **no se le asignan a una
- * ruta** (8.8c): el cobre de lo vivo, el verde del latido, y los dos del sello.
+/*
+ * Los colores reservados de la plataforma **ya no viven aquí**.
  *
- * Esto no rechaza el dato —el color viene de la calle y la app lo dibuja— pero
- * sí lo **declara**, para que quien captura circuitos se entere de que eligió un
- * color que ya significa otra cosa en la plataforma. El aviso es para J-Staff,
- * nunca para el pasajero: a él no le importa nuestra paleta.
+ * Había una lista de hexes y una función `colorReservado` que los declaraba… y
+ * nada la llamaba: su único consumidor era su propia prueba. Ahora el color de
+ * una ruta se escoge de una lista al capturarlo (enmienda (a) de ASAV,
+ * 23-sep-2026), y ahí sí se usan — así que se subieron a
+ * `packages/domain/src/color-de-ruta.ts`, que es donde J-Staff los lee.
+ *
+ * **No se importan de vuelta desde aquí**, y eso es a propósito: este módulo lo
+ * usa `vista-mapa.tsx`, que es `"use client"`. Traer `@jtel/domain` le metería
+ * zod y el resto del dominio al teléfono de un pasajero, para una función que
+ * esta app no llama.
+ *
+ * Lo que sí sigue aquí es lo que el mapa usa de verdad: medir el contraste y
+ * engordar el halo.
  */
-const RESERVADOS: Record<string, string> = {
-  "#b05a0f": "el cobre de lo vivo",
-  "#ffa24d": "el cobre de lo vivo",
-  "#1b9e6b": "el verde del latido",
-  "#2fcb8b": "el verde del latido",
-  "#2e6a4e": "el verde del sello",
-  "#a93636": "el ladrillo del no cumplido",
-};
-
-export function colorReservado(colorDeRuta: string): string | null {
-  return RESERVADOS[colorDeRuta.trim().toLowerCase()] ?? null;
-}

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { franjaDentroDelHorario, type FranjaCapturada } from "@jtel/domain";
+import { franjaDentroDelHorario, porQueNoSirveParaUnaRuta, type FranjaCapturada } from "@jtel/domain";
 import { Renglon } from "@/components/casa/expediente";
 import { clases } from "@/components/casa/formulario";
+import { SelectorDeColorDeRuta } from "@/components/casa/selector-de-color-de-ruta";
 
 /**
  * La identidad de un circuito, editable desde el expediente de J-Staff (PR A4
@@ -35,6 +36,7 @@ export function IdentidadDelCircuito({
   zona,
   arrancaEl,
   franjas,
+  otrosCircuitos,
 }: {
   circuitId: string;
   nombre: string;
@@ -46,10 +48,12 @@ export function IdentidadDelCircuito({
   zona: string;
   arrancaEl: string | null;
   franjas: FranjaCapturada[];
+  /** Los otros circuitos y su color, para avisar si se repite. */
+  otrosCircuitos: { name: string; colorHex: string }[];
 }) {
   const [inicio, setInicio] = useState(abre);
   const [fin, setFin] = useState(cierra);
-  const [tono, setTono] = useState(color);
+  const [tono, setTono] = useState(color.toUpperCase());
   const [zonaNueva, setZonaNueva] = useState(zona);
   const [arranque, setArranque] = useState(arrancaEl ?? "");
   /*
@@ -58,6 +62,16 @@ export function IdentidadDelCircuito({
    * aquí —el servidor lo exige igual y lee el antes de la base—. Nombre y color
    * no son reglas: se guardan sin motivo.
    */
+  /*
+   * Dos cosas distintas, y la diferencia es lo que pidió ASAV el 24-sep:
+   *  - `colorBloqueado`: se está ESCOGIENDO un tono prohibido → no se guarda.
+   *  - `colorHeredado`: el circuito YA VENÍA con uno → se avisa en grande y se
+   *    puede guardar lo demás, porque si no, no se le podría ni corregir el
+   *    nombre. Lo mismo decide el servidor, comparando bajo `FOR UPDATE`.
+   */
+  const cambioElColor = tono.trim().toUpperCase() !== color.trim().toUpperCase();
+  const colorBloqueado = cambioElColor && porQueNoSirveParaUnaRuta(tono) !== null;
+  const colorHeredado = porQueNoSirveParaUnaRuta(color);
   const cambiaUnaRegla = inicio !== abre || fin !== cierra || zonaNueva !== zona || arranque !== (arrancaEl ?? "");
 
   const fuera = franjas.filter((f) => !franjaDentroDelHorario(f, inicio, fin));
@@ -74,31 +88,32 @@ export function IdentidadDelCircuito({
       <Renglon pregunta="Concesión dueña">{concesion}</Renglon>
 
       <div className={clases.panel}>
+        {colorHeredado && (
+          /* En grande y arriba de todo, porque es lo primero que hay que
+             arreglar de este circuito — y porque su color ya está impreso en
+             láminas y pintado en camiones si alguien no lo corrige. En tinta y
+             con su frase: sin cobre, que es sólo de lo vivo. */
+          <p role="alert" className={`${clases.aviso} text-[15px]`}>
+            <span className="block text-[17px] font-semibold">
+              Este circuito trae un color que ya no se puede escoger.
+            </span>
+            <span className="mt-1 block">
+              {colorHeredado} Se guarda lo demás sin tocarlo, pero conviene corregirlo antes de
+              imprimir un letrero o pintar un camión: el color es el mismo en los tres lugares.
+            </span>
+          </p>
+        )}
         <label className={etiqueta}>
           Nombre
           <input name="nombre" defaultValue={nombre} required className={clases.campo} />
         </label>
 
-        <label className={etiqueta}>
-          Color de la ruta
-          <span className="flex items-center gap-2">
-            <input
-              type="color"
-              aria-label="Escoger el color"
-              value={tono}
-              onChange={(e) => setTono(e.target.value.toUpperCase())}
-              className="h-10 w-12 cursor-pointer rounded-lg border border-[var(--linea)] bg-[var(--papel)]"
-            />
-            <input
-              name="colorHex"
-              value={tono}
-              onChange={(e) => setTono(e.target.value)}
-              pattern="#[0-9a-fA-F]{6}"
-              className={`${clases.campo.replace("w-full ", "")} w-[130px] font-[family-name:var(--letra-medida)]`}
-            />
-          </span>
-          <span className={clases.ayuda}>Identidad de la ruta, nunca estado: así se conoce en la calle (8.8c).</span>
-        </label>
+        <SelectorDeColorDeRuta
+          tono={tono}
+          setTono={setTono}
+          colorGuardado={color}
+          otrosCircuitos={otrosCircuitos}
+        />
 
         <fieldset className="flex flex-col gap-1.5">
           <legend className="text-[13px] font-semibold">Horario de servicio</legend>
@@ -154,7 +169,10 @@ export function IdentidadDelCircuito({
           </label>
         )}
         <div>
-          <button type="submit" className={clases.primario}>
+          {/* Apagado mientras el color no se pueda guardar: el servidor lo
+              rechazaría igual, y dejar apretar el botón para que lo diga él
+              convierte una regla en un viaje de ida y vuelta. */}
+          <button type="submit" disabled={colorBloqueado} className={clases.primario}>
             Guardar la identidad
           </button>
         </div>
