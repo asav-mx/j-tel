@@ -149,21 +149,24 @@ describe("las direcciones de Ontoy no se mueven", () => {
      * la app es **servir la app**: reexportar su página, como hacía el reenvío,
      * o montar su componente.
      *
-     * ⚠ **Lo que NO se mide aquí es que la raíz consulte circuitos**, y la
-     * distinción costó pensarla. La landing sí los consulta y debe hacerlo: el
-     * número y el color de una ruta **salen del dato, nunca del código**, así
-     * que la portada lee los publicados para su ejemplo igual que los lee la
-     * app. Prohibir la consulta habría medido el parecido en vez de la
-     * identidad, y se habría caído en el primer PR que trajera una sección con
-     * una ruta dentro — obligando a aflojar la valla, que es como las vallas
-     * dejan de servir.
+     * Y **tampoco consulta circuitos**, que aquí no es una medida de parecido
+     * sino la decisión de ASAV del 24-sep-2026: **la portada no enseña una
+     * ruta real.** Una ruta de una concesión en la portada de la plataforma es
+     * vestir la plataforma de transportista, que es la razón misma por la que
+     * Ontoy se mudó de `juarezbus.digital` a su propio dominio. Lo que la
+     * portada enseña es ilustración — la 51 del universo —, y por eso no lee
+     * nada y se queda estática.
+     *
+     * La regla de que nada de una ruta se escribe a mano es **de la app**, que
+     * informa. La landing no informa de ninguna ruta: dibuja una.
      */
     const raiz = readFileSync(path.join(APP, "page.tsx"), "utf8");
     expect(raiz, "la raíz ya no reenvía a la app: es la landing").not.toMatch(
       /from\s+"\.\/rutas\/page"/,
     );
-    expect(raiz, "la raíz no monta la app: es la landing").not.toMatch(
-      /<Ontoy[\s/>]/,
+    expect(raiz, "la raíz no monta la app: es la landing").not.toMatch(/<Ontoy[\s/>]/);
+    expect(raiz, "la portada no enseña una ruta real: es ilustración").not.toContain(
+      "listPublishedCircuits",
     );
   });
 });

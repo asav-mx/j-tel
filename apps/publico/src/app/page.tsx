@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./landing.css";
 import { bricolage, instrumentSans } from "@/components/landing/letra";
-import { CaraDeOntoy, WordmarkConOjos } from "@/components/landing/ontoy";
+import { CaraDeOntoy } from "@/components/landing/ontoy";
+import { MarcaDelHero } from "@/components/landing/marca-del-hero";
 
 /**
  * **La landing de `ontoy.app`** — la raíz, para quien todavía no conoce Ontoy.
@@ -34,6 +35,22 @@ import { CaraDeOntoy, WordmarkConOjos } from "@/components/landing/ontoy";
  *
  * Lo que sí promete está en el lead, y la última frase es la que sostiene todo
  * lo demás: **si no sabe, te lo dice.**
+ *
+ * ## Y lo que esta página NO lee: la base de datos
+ *
+ * **La portada no enseña una ruta real** (decisión de ASAV, 24-sep-2026). Una
+ * ruta de una concesión en la portada de la plataforma es vestir la plataforma
+ * de transportista — la razón misma por la que Ontoy se mudó de
+ * `juarezbus.digital` a su propio dominio. Así que lo que se ve aquí es
+ * **ilustración**: la 51 del universo de Ontoy como ejemplo dibujado, y donde
+ * el texto pregunta, pregunta en genérico («¿Ya pasó tu camión?»).
+ *
+ * La regla de que **nada de una ruta se escribe a mano** es de la app, que
+ * informa. Esta página no informa de ninguna ruta: dibuja una.
+ *
+ * El efecto secundario es que la portada **no consulta nada y se queda
+ * estática**, que es lo que la hace aparecer de inmediato en el teléfono de
+ * alguien que apenas está conociendo Ontoy. Lo cuida `direcciones.test.ts`.
  */
 
 /**
@@ -89,17 +106,12 @@ export default function Landing() {
       </header>
 
       <section className="landing-caja landing-hero">
-        <div className="landing-hero-marca">
-          <WordmarkConOjos className="landing-wordmark-gigante" />
-          {/*
-           * El hueco del 3D de Ontoy. Mientras el 3D no entre —y en el nivel
-           * bajo de rendimiento, que no lo carga nunca (§15)— aquí se queda su
-           * cara en 2D, que es la misma del ícono de la app.
-           */}
-          <div className="landing-hero-ontoy">
-            <CaraDeOntoy titulo="Ontoy" />
-          </div>
-        </div>
+        {/*
+         * La única parte cliente del hero: el wordmark y Ontoy, que parpadean
+         * y siguen a quien lee. Todo lo demás de esta página llega ya escrito
+         * en el HTML.
+         */}
+        <MarcaDelHero />
 
         <div className="landing-hero-dicho">
           <div>

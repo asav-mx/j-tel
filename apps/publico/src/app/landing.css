@@ -374,21 +374,31 @@ body:has(.landing) {
 }
 
 /*
- * El wordmark a tamaño de portada.
+ * El wordmark a tamaño de portada — el del diseño: hasta 250 px.
  *
- * **El tope es 200 px y no 250, y lo puso la medición.** «¿Ontoy?» ocupa unas
- * 4.7 veces su tamaño de letra: a 250 px mide ~1180 px y no deja lugar para
- * Ontoy dentro de los 1232 de la caja, así que el flex lo mandaba a la fila de
- * abajo y el hero se partía en dos. A 200 px mide ~945 y los dos caben en el
- * mismo renglón, que es como está dibujado el hero.
+ * **`flex: 0 1 auto` es lo que hace que esto funcione, y costó una medición mal
+ * hecha descubrirlo.** Con `1 1 auto` la caja del wordmark se estiraba hasta
+ * llenar el espacio sobrante —912 px, el mismo número con la letra a 100 o a
+ * 250— y el texto se quedaba alineado a la izquierda dentro de ella, dejando un
+ * hueco enorme antes de Ontoy que parecía un problema de tamaño y no lo era.
+ * Con `0 1 auto` la caja mide el texto, y `space-between` los separa de verdad.
+ *
+ * Medido en el navegador con un clon fuera de flujo (dentro del flex, medir la
+ * caja mide el hueco): **«¿Ontoy?» ocupa 3.593 veces su tamaño de letra**, y la
+ * razón es la misma a 100, 150, 200 y 250 px. A 250 son 898 px, que con los 300
+ * de Ontoy y los 20 del hueco suman 1218 de los 1232 de la caja: **cabe**.
+ *
+ * Por debajo de unos 540 px de ventana ya no caben los dos, y entonces el
+ * `wrap` los pone uno encima de otro — que es como se ve en teléfono, y está
+ * bien así.
  */
 .landing-wordmark-gigante {
   display: flex;
   align-items: baseline;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   font-family: var(--titular);
   font-weight: 800;
-  font-size: clamp(72px, 15vw, 200px);
+  font-size: clamp(84px, 17.5vw, 250px);
   line-height: 0.9;
   letter-spacing: -0.045em;
   color: var(--carbon);

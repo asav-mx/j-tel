@@ -75,6 +75,10 @@ app no era la familia sino **`tabular-nums`** —que las cifras midan lo mismo y
 no bailen al cambiar—, y eso Instrument Sans lo da igual. Vive en la clase
 `.cifra` de `ontoy.css`, que hasta este PR se llamaba `.mono`.
 
+**Cuánto ocupa el wordmark**, medido en el navegador por si hace falta otra vez:
+«¿Ontoy?» en Bricolage 800 con `letter-spacing: -0.045em` ocupa **3.593 veces su
+tamaño de letra**, y la razón no cambia con el tamaño. A 250 px son 898 px.
+
 **Son byte por byte los que `next/font/google` servía** antes del cambio: el
 pasajero no descarga ni un byte más.
 
