@@ -18,6 +18,8 @@ import {
   type RazonSinLedger,
 } from "@/lib/pasos-medicion";
 import { politicaDelSello } from "@/lib/politica-del-sello";
+import { lecturaDelActa, unidadEnPalabras } from "@/lib/acta-del-sello";
+import type { CotejoDelContorno } from "@jtel/domain";
 
 export type MapPoint = { lat: number; lng: number; at: string };
 export type MapPolygon = Array<{ lat: number; lng: number }>;
@@ -58,6 +60,22 @@ export interface ServiceDetailData {
    * de que el lector lo suponga.
    */
   politicaOrigen: "sello" | "contrato";
+  /**
+   * **De dónde sale lo que esta pantalla enseña** — C24, Tramo 4.
+   *
+   * `"acta"`: la ventana, las unidades y los nombres salen del acta congelada
+   * con el hecho. `"hoy"`: el hecho se selló antes de que el acta existiera, y
+   * lo que se ve se arma con filas de hoy — que **pudieron cambiar**. La
+   * pantalla lo dice con palabras y lo distingue por forma, no sólo por color.
+   */
+  actaOrigen: "acta" | "hoy";
+  /**
+   * Si la evidencia de hoy sigue siendo la que se juzgó.
+   *
+   * `sin_acta` **no es** `cuadra`: es que no se puede preguntar. Pintarlos
+   * igual convertiría un hueco en un visto bueno.
+   */
+  actaContorno: CotejoDelContorno;
   /**
    * El contrato cambió alguna de las reglas que este expediente muestra desde
    * que el hecho se selló. Lo que se enseña sigue siendo lo del sello; esto
@@ -317,17 +335,34 @@ export async function loadServiceDetail(
     ? await repos.compliance.getLedgerForTrip(occurrence.trip.id)
     : [];
 
-  const [referenceUnitLabel, observedUnitLabel] = await Promise.all([
+  const [referenceUnitLabelVivo, observedUnitLabelVivo] = await Promise.all([
     unitLabel(repos, contract.carrierAccountId, occurrence.referenceUnitId),
     unitLabel(repos, contract.carrierAccountId, fact?.observedUnitId),
   ]);
+
+  /*
+   * **El acta manda sobre lo vivo** — C24, Tramo 4. Hermana de
+   * `politicaDelSello`: aquélla decide qué política gobierna, ésta qué ventana,
+   * qué unidades y qué nombres. Y las dos **declaran su origen**, para que la
+   * pantalla pueda decirlo en vez de que alguien lo suponga.
+   *
+   * El cotejo va contra `evidencePoints` —los del viaje, enteros— que es lo
+   * mismo que el motor firmó.
+   */
+  const lecturaDeActa = lecturaDelActa(fact, evidencePoints);
+  const acta = lecturaDeActa.acta;
+
+  const referenceUnitLabel =
+    unidadEnPalabras(acta?.unidades.referencia) ?? referenceUnitLabelVivo;
+  const observedUnitLabel = unidadEnPalabras(acta?.unidades.observada) ?? observedUnitLabelVivo;
 
   const evidenceFirstAtRaw = mapPointsCut[0]?.at ?? null;
   const evidenceLastAtRaw = mapPointsCut[mapPointsCut.length - 1]?.at ?? null;
 
   const policyWindow = computeEvidenceWindow(occurrence.expectedDeadline, policy);
-  const tripStart = trip?.evidenceWindowStart ?? null;
-  const tripEnd = trip?.evidenceWindowEnd ?? null;
+  /* La ventana del acta gobierna cuando la hay: es la que se usó al juzgar. */
+  const tripStart = acta?.ventana.desde ? new Date(acta.ventana.desde) : (trip?.evidenceWindowStart ?? null);
+  const tripEnd = acta?.ventana.hasta ? new Date(acta.ventana.hasta) : (trip?.evidenceWindowEnd ?? null);
   const tripWindowDiffersFromPolicy = Boolean(
     tripStart &&
       tripEnd &&
@@ -380,10 +415,10 @@ export async function loadServiceDetail(
   return {
     occurrenceId: occurrence.id,
     serviceDate: occurrence.serviceDate,
-    profileName: occurrence.profile?.name ?? "—",
-    clientName: client?.name ?? "—",
-    carrierName: carrier?.name ?? "—",
-    plantName: plant?.name ?? null,
+    profileName: acta?.nombres.perfil ?? occurrence.profile?.name ?? "—",
+    clientName: acta?.nombres.cliente ?? client?.name ?? "—",
+    carrierName: acta?.nombres.transportista ?? carrier?.name ?? "—",
+    plantName: acta?.nombres.planta ?? plant?.name ?? null,
     status: fact?.status ?? null,
     expectedDeadline: localDateTimeShort(occurrence.expectedDeadline, tz),
     referenceUnitLabel,
@@ -393,7 +428,7 @@ export async function loadServiceDetail(
       ? localDateTimeShort(fact.observedArrivalAt, tz)
       : null,
     timing: fact?.timing ?? null,
-    evidenceStatus: trip?.evidenceStatus ?? null,
+    evidenceStatus: acta?.viaje.estado ?? trip?.evidenceStatus ?? null,
     policyWindowStart: localDateTimeShort(policyWindow.windowStart, tz),
     policyWindowEnd: localDateTimeShort(policyWindow.windowEnd, tz),
     tripWindowStart: tripStart ? localDateTimeShort(tripStart, tz) : null,
@@ -401,6 +436,10 @@ export async function loadServiceDetail(
     tripWindowDiffersFromPolicy,
     politicaOrigen: lecturaDePolitica.origen,
     contratoCambioDesdeElSello: lecturaDePolitica.contratoCambioDesdeElSello,
+    /* De dónde sale lo que esta pantalla enseña, y si la evidencia de hoy
+       sigue siendo la que se juzgó (C24). */
+    actaOrigen: lecturaDeActa.origen,
+    actaContorno: lecturaDeActa.contorno,
     evidenceMarginBeforeMinutes: policy.evidenceMarginMinutesBefore ?? null,
     verificationGraceMinutes: policy.verificationGraceMinutes ?? null,
     evidenceMarginAfterMinutes: policy.evidenceMarginMinutesAfter ?? null,

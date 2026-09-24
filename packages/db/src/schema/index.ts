@@ -818,6 +818,31 @@ export const complianceFacts = pgTable("compliance_facts", {
    * Nulo en los hechos anteriores al módulo, y nulo cuando el transportista no
    * declaró chofer — que es un hueco legítimo y se muestra, no se esconde.
    */
+  /**
+   * **El acta del hecho, congelada dentro del hecho** — C24, Tramo 4.
+   *
+   * Lo que el expediente enseña y hasta hoy leía de filas editables: la
+   * ventana del viaje, las unidades con su económico y sus placas, los
+   * nombres de perfil, contrato, planta, cliente y transportista, el estado
+   * del viaje, y el **contorno** de la evidencia.
+   *
+   * **Una columna con las familias adentro** y no cuatro (ASAV, 23-sep-2026):
+   * cuatro invitan a que un día se llenen tres, y estas familias ya crecieron
+   * una vez. Igual que `contractPolicySnapshot`.
+   *
+   * **Texto plano, no referencias**, como `declaredDriverName`: el acta tiene
+   * que sobrevivir al renombre de la unidad y al borrado de la planta.
+   *
+   * **Los puntos no se copian**: son miles por viaje. Se guarda su contorno
+   * —cuántos, de cuándo a cuándo, y una huella que cambia si cambian— porque
+   * sin algo congelado enfrente la divergencia es invisible, y con él el
+   * expediente puede decir «esto ya no cuadra» en vez de callarse.
+   *
+   * ⚠ `null` = **se selló antes de que el acta existiera**. No se rellena
+   * hacia atrás: deducirla con los datos de hoy sería escribir dentro de un
+   * expediente sellado algo que nadie observó. Sin default, por lo mismo.
+   */
+  actaSnapshot: jsonb("acta_snapshot").$type<import("@jtel/domain").ActaDelHecho>(),
   declaredDriverName: text("declared_driver_name"),
   declaredDriverId: uuid("declared_driver_id").references(() => drivers.id, {
     onDelete: "set null",

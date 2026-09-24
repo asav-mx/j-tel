@@ -109,6 +109,7 @@ import {
 } from "../schema/index.js";
 import type { ComplianceFact, IngestAlertKind } from "../schema/index.js";
 import type {
+  ActaDelHecho,
   CandidatasSnapshot,
   ContractPolicy,
   CreateContractInput,
@@ -3960,7 +3961,9 @@ export class OccurrenceRepository {
         // cliente: es lo que el motor lee para saber si esta cuenta es de
         // ejemplo antes de sellar nada. Se trae aquí porque `verifyOccurrence`
         // ya hace esta lectura y no hay razón para pagar una segunda.
-        contract: { with: { client: true } },
+        /* `plant` y `carrier` se suman para el acta (C24): son dos joins en una
+           consulta que el motor ya hace, y evitan dos lecturas por sello. */
+        contract: { with: { client: true, plant: true, carrier: true } },
       },
     });
   }
@@ -4244,6 +4247,17 @@ export class ComplianceRepository {
       aparatos: number;
       puntos: number;
     } | null;
+    /**
+     * **El acta del hecho** — C24, Tramo 4. Lo que el expediente enseña y no
+     * se podía deducir: la ventana, las unidades y los nombres como texto, y
+     * el contorno de la evidencia.
+     *
+     * ⚠ Como sus dos hermanas de arriba, **sólo entra por este INSERT** y
+     * nunca se escribe sobre un hecho ya sellado. Los 2 593 anteriores se
+     * quedan en `null` para siempre, y ese `null` es la única forma de saber
+     * que se sellaron antes de que el acta existiera.
+     */
+    actaSnapshot?: ActaDelHecho | null;
     /**
      * Cuándo se materializó este veredicto. Por omisión, ahora.
      *
