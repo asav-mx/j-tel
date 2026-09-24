@@ -1197,6 +1197,169 @@ body:has(.landing) {
   margin-bottom: 10px;
 }
 
+/* ─── Instalar ────────────────────────────────────────────────────────── */
+
+/*
+ * La última sección, oscura y **pegada al pie**: sólo redondea arriba, para
+ * que se lea como el suelo de la página y no como otra tarjeta.
+ */
+.landing-instalar {
+  background: var(--carbon);
+  color: var(--texto-en-oscuro);
+  margin-inline: clamp(8px, 1.4vw, 20px);
+  border-radius: clamp(28px, 3vw, 44px) clamp(28px, 3vw, 44px) 0 0;
+  margin-top: clamp(56px, 8vw, 104px);
+}
+
+.landing-instalar-caja {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 48px;
+  align-items: center;
+  padding-block: clamp(56px, 8vw, 104px);
+}
+
+.landing-instalar h2 {
+  color: var(--blanco);
+}
+
+.landing-instalar-dicho {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+/* Sobre carbón el botón se invierte: hueso de fondo y carbón de texto. */
+.landing-boton-claro {
+  background: var(--hueso);
+  color: var(--carbon);
+}
+
+.landing-boton-claro:hover {
+  background: var(--blanco);
+}
+
+.landing-tiendas-cajas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/*
+ * Las tiendas son cajas MUERTAS, no botones: no llevan a ningún lado porque
+ * todavía no hay a dónde llevar. Un botón que no hace nada es peor que una
+ * etiqueta que lo dice.
+ */
+.landing-tienda {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 9px 16px;
+  border: 1px solid var(--gris);
+  border-radius: var(--r-tienda);
+  color: var(--arena-2);
+}
+
+.landing-tienda small {
+  font: 400 11px/1.2 var(--cuerpo);
+}
+
+.landing-tienda b {
+  font: 700 14px/1.2 var(--cuerpo);
+  color: var(--arena);
+}
+
+.landing-dormido {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.landing-despertar {
+  position: relative;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.landing-despertar svg {
+  width: clamp(140px, 22vw, 200px);
+  height: auto;
+  display: block;
+}
+
+.landing-zetas {
+  position: absolute;
+  top: -8px;
+  inset-inline-end: -6px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--arena-2);
+  font-family: var(--titular);
+  font-weight: 800;
+  transition: opacity 0.3s var(--curva);
+}
+
+/* Despierto, las zetas se van: seguir roncando con los ojos abiertos sería raro. */
+.landing-zetas[data-durmiendo="false"] {
+  opacity: 0;
+}
+
+.landing-zetas i {
+  font-style: normal;
+}
+
+.landing-zetas i:nth-child(1) {
+  font-size: 14px;
+}
+
+.landing-zetas i:nth-child(2) {
+  font-size: 19px;
+}
+
+.landing-zetas i:nth-child(3) {
+  font-size: 25px;
+}
+
+.landing-refunfuño {
+  font: 700 14px/1 var(--cuerpo);
+  color: var(--arena-2);
+}
+
+.landing-nota-dormido {
+  font: 400 14px/1.5 var(--cuerpo);
+  color: var(--arena);
+  max-width: 42ch;
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.landing-nota-dormido strong {
+  font-weight: 600;
+  color: var(--blanco);
+}
+
+.landing-instalar :focus-visible {
+  outline-color: var(--arena);
+}
+
+/*
+ * El pie, cuando va debajo de la sección oscura, se queda sin su línea de
+ * arriba: la sección ya es un borde, y dos seguidos son un renglón de más.
+ */
+.landing-instalar + .landing-pie {
+  border-top: 0;
+  margin-top: 0;
+}
+
 /* ─── El pie ───────────────────────────────────────────────────────────── */
 
 .landing-pie {
