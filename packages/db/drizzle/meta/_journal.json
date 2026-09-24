@@ -393,6 +393,13 @@
       "when": 1791158400000,
       "tag": "0055_el_circuito_no_se_borra",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1791244800000,
+      "tag": "0056_el_acta_del_hecho",
+      "breakpoints": true
     }
   ]
 }

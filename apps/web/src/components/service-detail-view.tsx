@@ -3,6 +3,7 @@ import { ServiceEvidenceMap } from "@/components/service-evidence-map";
 import { PasosMedicionView } from "@/components/pasos-medicion-view";
 import type { ServiceDetailData } from "@/lib/service-detail-data";
 import { noCumplidoDetailLine } from "@/lib/no-cumplido-motivo";
+import { SIN_ACTA_EN_PALABRAS } from "@/lib/acta-del-sello";
 
 const timingLabels: Record<string, string> = {
   temprano: "Temprano",
@@ -150,6 +151,31 @@ export function ServiceDetailView({
               <dd>{data.referenceUnitLabel}</dd>
             </div>
           </dl>
+
+          {/*
+            C24 · de dónde sale lo que esta tarjeta enseña.
+
+            Se distingue por FORMA —un recuadro con su borde y una barra a la
+            izquierda— y no sólo por color: el aviso tiene que sobrevivir a una
+            pantalla mala, al sol de frente y a quien no distingue colores. Es
+            la misma ley que gobierna los glifos.
+          */}
+          {data.actaOrigen === "hoy" ? (
+            <p
+              data-acta="sin-acta"
+              className="mt-3 border-l-2 border-[var(--muted)] bg-[var(--surface-2,transparent)] py-1 pl-3 text-xs text-[var(--fg)]"
+            >
+              <strong>Sin acta guardada.</strong> {SIN_ACTA_EN_PALABRAS}
+            </p>
+          ) : data.actaContorno.que === "no_cuadra" ? (
+            <p
+              data-acta="no-cuadra"
+              className="mt-3 border-l-2 border-[var(--fg)] py-1 pl-3 text-xs text-[var(--fg)]"
+            >
+              <strong>La evidencia de hoy no es la que se juzgó:</strong>{" "}
+              {data.actaContorno.motivo}. Lo de arriba es lo que quedó escrito al sellar.
+            </p>
+          ) : null}
         </Card>
 
         <Card title="Observado">

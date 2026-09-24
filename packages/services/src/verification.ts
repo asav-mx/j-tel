@@ -18,6 +18,17 @@ import { armarCandidatasSnapshot } from "./candidatas-snapshot.js";
 import type { ComplianceFact, Repositories } from "@jtel/db";
 import type { ContractPolicy, VerificationResult } from "@jtel/domain";
 import { localDateIso, JTTEL_TZ, DEFAULT_FRECHET_MAX_KM } from "@jtel/domain";
+import { armarActaDelHecho, type UnidadEnElActa } from "@jtel/domain";
+
+/**
+ * Una unidad como la guarda el acta: **texto**, no una referencia (C24).
+ *
+ * `undefined` cuando no hubo unidad —no se observó ninguna, o el perfil no
+ * declara una de referencia— y eso es un hueco legítimo que se guarda como
+ * hueco, no se rellena.
+ */
+const enElActa = (u: { label: string; plateNumber?: string | null } | undefined): UnidadEnElActa | null =>
+  u ? { economico: u.label, placas: u.plateNumber ?? null } : null;
 
 /**
  * El motor ya no recibe configuración del proveedor de GPS: no habla con él.
@@ -1561,6 +1572,55 @@ export class VerificationService {
        * evidencia, no de ninguna candidata.
        */
       densidadSnapshot: verification.densidadEvidencia ?? null,
+      /*
+       * **El acta del hecho** — C24, Tramo 4.
+       *
+       * Todo lo que el expediente enseña y hasta hoy leía de filas editables:
+       * la ventana del viaje, las unidades con su económico y sus placas, los
+       * nombres de perfil, contrato, planta, cliente y transportista, y el
+       * contorno de la evidencia.
+       *
+       * Se arma con lo que el motor **ya tiene en la mano** —ninguna consulta
+       * nueva por sello: `plant` y `carrier` se sumaron a la lectura del
+       * contrato que ya se hacía— y con los MISMOS puntos con los que se
+       * juzgó (`enrichedPoints`), no con los que haya cuando alguien abra el
+       * expediente.
+       *
+       * ⚠ Sólo en hechos nuevos. Los anteriores se quedan en `null`, y ese
+       * nulo es la única forma de saber que se sellaron antes del acta.
+       */
+      actaSnapshot: armarActaDelHecho({
+        ventana: { desde: trip.evidenceWindowStart, hasta: trip.evidenceWindowEnd },
+        unidadObservada: enElActa(units.find((u) => u.id === observedUnitId)),
+        unidadDeReferencia: enElActa(units.find((u) => u.id === occurrence.referenceUnitId)),
+        nombres: {
+          perfil: profile.name,
+          contrato: contract.name,
+          planta: occurrence.contract?.plant?.name ?? null,
+          cliente: occurrence.contract?.client?.name ?? null,
+          transportista: occurrence.contract?.carrier?.name ?? null,
+        },
+        estadoDelViaje: trip.evidenceStatus ?? null,
+        /*
+         * **La huella testifica los puntos DEL VIAJE, no los que el motor dejó
+         * pasar.** `enrichedPoints` ya quitó las unidades excluidas; el
+         * expediente lee `trip.evidencePoints`, que están enteros. Firmar los
+         * filtrados haría que el cotejo gritara «ya no cuadra» cada vez que
+         * hubo una exclusión, que es ruido y no un cambio.
+         *
+         * Lo que el contorno vigila es que **la evidencia guardada no se haya
+         * movido**; por qué se excluyó a alguien ya lo cuenta
+         * `candidatasSnapshot`, que es su lugar.
+         *
+         * El motor llama `timestamp` a lo que la tabla llama `recorded_at`: se
+         * usa el nombre canónico para que los dos lados comparen lo mismo.
+         */
+        puntos: storedPoints.map((p) => ({
+          recordedAt: p.recordedAt,
+          latitude: p.latitude,
+          longitude: p.longitude,
+        })),
+      }),
       candidatasSnapshot: armarCandidatasSnapshot({
         verification,
         evidencePoints: enrichedPoints,

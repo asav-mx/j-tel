@@ -800,6 +800,8 @@ export * from "./recorridos.js";
 export * from "./slugs-reservados.js";
 /* La dirección que va impresa en el letrero de una parada. */
 export * from "./letrero-de-parada.js";
+/* El acta de un hecho sellado, congelada dentro del hecho (C24). */
+export * from "./acta-del-hecho.js";
 export * from "./tiempo.js";
 /* La alarma de la zona del proceso (diagnóstico del 23-sep-2026). */
 export * from "./zona-del-proceso.js";
