@@ -41,6 +41,43 @@ if (existsSync(rootEnv)) {
  */
 export const RUTAS_QUE_NO_SE_ANUNCIAN = ["/validador", "/validador/:resto*"];
 
+/**
+ * **La casa de Ontoy es `ontoy.app`** (decisión de ASAV, 23-sep-2026).
+ *
+ * Hasta hoy la app vivía en `juarezbus.digital`, que es **el nombre de un
+ * transportista**. La plataforma no se viste de ninguno: el siguiente
+ * concesionario abriría la app de la ciudad y leería la marca de su
+ * competencia en la barra de direcciones. Es la misma razón por la que el
+ * morado de Juárez Bus no entró a la piel y por la que el nombre de la app
+ * sale de una variable y no del código.
+ *
+ * El dominio viejo **no se apaga: redirige**. Hay letreros impresos, mensajes
+ * de WhatsApp y teléfonos con la app instalada apuntando ahí, y un dominio que
+ * deja de contestar se lee como «la app se murió».
+ */
+export const DOMINIOS_VIEJOS = ["juarezbus.digital", "www.juarezbus.digital"];
+
+/** Dónde vive Ontoy. De variable para poder probar el traslado sin desplegar. */
+export const SITIO = process.env.NEXT_PUBLIC_SITIO ?? "https://ontoy.app";
+
+/**
+ * **La primera semana la redirección es TEMPORAL.** Decisión de ASAV,
+ * 23-sep-2026.
+ *
+ * Un 307 se puede deshacer; **un 308 no**. El navegador que ve un permanente
+ * deja de preguntar al dominio viejo —ése es justamente su valor— y si la
+ * mudanza sale mal, revertir el despliegue no despega a nadie: el teléfono ya
+ * no vuelve a pedirle a `juarezbus.digital`, y el único arreglo es esperar a
+ * que caduque su caché o pedirle a cada persona que la borre. En un producto
+ * que se usa en la parada del camión, eso no es una opción.
+ *
+ * Así que la mudanza entra en temporal, se comprueba con teléfonos reales, y
+ * **cuando esté probada un 308 se pone en un PR de una línea**: este valor a
+ * `true`. El procedimiento (`docs/Procedimiento-Dominio-Ontoy-App.md`) dice
+ * cuándo.
+ */
+export const REDIRECCION_PERMANENTE = false;
+
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../.."),
   transpilePackages: ["@jtel/db", "@jtel/domain"],
@@ -49,6 +86,30 @@ const nextConfig: NextConfig = {
     return RUTAS_QUE_NO_SE_ANUNCIAN.map((source) => ({
       source,
       headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+    }));
+  },
+
+  /**
+   * El traslado, en el repo y no en un panel.
+   *
+   * Vercel sabe redirigir un dominio desde sus ajustes, y eso **no aparecería
+   * en ningún PR**: es exactamente lo que este repo ya pagó con el límite del
+   * firewall, que durante cuatro semanas estuvo escrito en un documento y no
+   * existía en ninguna parte. Aquí se lee en el diff y lo cuida una prueba.
+   *
+   * Arranca **temporal (307)** a propósito, hasta que la mudanza esté probada
+   * en teléfonos reales; ver `REDIRECCION_PERMANENTE` arriba.
+   *
+   * **La ruta se conserva**: un QR pegado en un poste que apunte a
+   * `juarezbus.digital/c/zaragoza-centro` tiene que abrir esa misma ruta en
+   * `ontoy.app`, no la portada.
+   */
+  async redirects() {
+    return DOMINIOS_VIEJOS.map((host) => ({
+      source: "/:ruta*",
+      has: [{ type: "host" as const, value: host }],
+      destination: `${SITIO}/:ruta*`,
+      permanent: REDIRECCION_PERMANENTE,
     }));
   },
 };
