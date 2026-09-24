@@ -386,8 +386,43 @@
   font-size: 10.5px;
   line-height: 1.5;
   word-break: break-all;
+  color: var(--val-tenue);
+  user-select: all;
+}
+
+/*
+ * La huella: los últimos seis, grandes, para comparar a ojo con la pantalla de
+ * J-Staff. Es lo que un humano puede cotejar de un vistazo; los 64 de abajo
+ * son los que se pegan.
+ */
+.val-huella-rotulo {
+  margin: 10px 0 2px;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--val-tenue);
+}
+.val-huella {
+  margin: 0 0 8px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  line-height: 1.1;
   color: var(--val-tinta);
   user-select: all;
+}
+
+.val-compartir {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.val-compartir-hecho {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--val-ok-letra);
 }
 
 /*

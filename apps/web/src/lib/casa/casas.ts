@@ -243,6 +243,18 @@ export const CASAS: Record<Cara, Casa> = {
             ruta: "/casa/jstaff/circuitos",
             condicion: "siempre",
           },
+          {
+            /*
+             * Los lectores de boletos de Ontoy (P3.5, ratificado por ASAV el
+             * 23-sep-2026). Van en J-Staff y no en la casa del transportista
+             * —donde viven los GPS— porque la pregunta que contestan es la de
+             * esta casa: si la plataforma está sana. La lista es de todos los
+             * lectores, y cada uno dice de quién es.
+             */
+            nombre: "Lectores",
+            ruta: "/casa/jstaff/lectores",
+            condicion: "siempre",
+          },
         ],
       },
     ],

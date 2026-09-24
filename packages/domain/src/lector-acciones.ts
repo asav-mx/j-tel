@@ -49,6 +49,31 @@ export function llavePublicaBienFormada(hex: string): boolean {
   return typeof hex === "string" && /^[0-9a-f]{64}$/.test(hex);
 }
 
+/** Cuántos caracteres de la llave se enseñan como huella. */
+export const LARGO_DE_LA_HUELLA = 6;
+
+/**
+ * **La huella de una llave: sus últimos seis caracteres.**
+ *
+ * Existe para comparar **a ojo** (Asav, 23-sep-2026). Quien da de alta un
+ * lector tiene el aparato en una mano y la pantalla de J-Staff en la otra;
+ * cotejar 64 caracteres hexadecimales así es justo la tarea que nadie hace
+ * bien, y el error no avisa: el alta se completa con la llave de otro aparato
+ * y lo que se descubre, semanas después, es que un lector no puede entregar.
+ *
+ * Seis caracteres no son una garantía criptográfica y no pretenden serlo —la
+ * llave entera es la que se pega y la que se guarda—. Son lo que un humano
+ * puede comparar de un vistazo sin equivocarse.
+ *
+ * **Los últimos y no los primeros:** la llave se pega en un campo que muestra
+ * su principio, así que el final es lo que queda tapado. Y cuando algo trunca
+ * un hexadecimal, trunca por el final.
+ */
+export function huellaDeLlave(hex: string): string {
+  if (!llavePublicaBienFormada(hex)) return "";
+  return hex.slice(-LARGO_DE_LA_HUELLA);
+}
+
 export interface LectorParaAccion {
   readonly bajaEn: Date | null;
   /** La unidad donde está montado ahora, o null si está en bodega. */
