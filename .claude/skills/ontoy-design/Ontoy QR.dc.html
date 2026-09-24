@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
+<style>body{margin:0;background:#EDE9E1;color:#2A2E37;font-family:'Instrument Sans',sans-serif;-webkit-font-smoothing:antialiased}a{color:#2A2E37}a:hover{color:#4A4F5A}</style>
+</helmet>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <symbol id="L-icono" viewBox="0 0 120 120">
+      <ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse>
+      <path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+      <circle cx="50" cy="50" r="12" fill="#fff"></circle><circle cx="76" cy="48" r="12" fill="#fff"></circle>
+      <circle cx="51" cy="45" r="6" fill="#2A2E37"></circle><circle cx="77" cy="43" r="6" fill="#2A2E37"></circle>
+      <ellipse cx="63" cy="75" rx="5" ry="6" fill="#2A2E37"></ellipse>
+    <circle cx="12" cy="58" r="6" fill="#F6A15B"></circle><circle cx="110" cy="54" r="6" fill="#F6A15B"></circle></symbol>
+    <symbol id="L-ontoy" viewBox="0 0 120 120">
+      <ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse>
+      <path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+      <circle cx="50" cy="52" r="11" fill="#fff"></circle><circle cx="76" cy="50" r="11" fill="#fff"></circle>
+      <circle cx="50" cy="52" r="6" fill="#2A2E37"></circle><circle cx="76" cy="50" r="6" fill="#2A2E37"></circle>
+      <circle cx="14" cy="80" r="6" fill="#F6A15B"></circle><circle cx="108" cy="78" r="6" fill="#F6A15B"></circle>
+    </symbol>
+    <symbol id="L-paradito" viewBox="0 0 120 120">
+      <rect x="57" y="36" width="6" height="72" fill="#2A2E37"></rect><rect x="46" y="106" width="28" height="7" rx="3.5" fill="#2A2E37"></rect>
+      <circle cx="60" cy="38" r="26" fill="currentColor"></circle>
+      <circle cx="51" cy="36" r="7.5" fill="#fff"></circle><circle cx="69" cy="36" r="7.5" fill="#fff"></circle>
+      <circle cx="51" cy="36" r="4" fill="#2A2E37"></circle><circle cx="69" cy="36" r="4" fill="#2A2E37"></circle>
+      <rect x="31" y="70" width="58" height="26" rx="6.5" fill="#2A2E37"></rect>
+      <text x="46" y="87.5" text-anchor="middle" fill="#fff" style="font:800 11px 'Bricolage Grotesque',sans-serif">51</text>
+      <rect x="58.5" y="76" width="1.4" height="14" fill="#fff" opacity=".5"></rect>
+      <text x="74" y="87" text-anchor="middle" fill="#fff" style="font:800 9px 'Bricolage Grotesque',sans-serif">3′</text>
+      <circle cx="31" cy="83" r="6" fill="currentColor"></circle><circle cx="89" cy="83" r="6" fill="currentColor"></circle>
+    </symbol>
+    <symbol id="L-cami" viewBox="0 0 120 120">
+      <rect x="32" y="90" width="14" height="12" rx="4" fill="#2A2E37"></rect><rect x="74" y="90" width="14" height="12" rx="4" fill="#2A2E37"></rect>
+      <rect x="26" y="14" width="68" height="80" rx="16" fill="currentColor"></rect>
+      <rect x="40" y="19" width="40" height="13" rx="4" fill="#F7F3EC"></rect><text x="60" y="29" text-anchor="middle" fill="#2A2E37" style="font:800 10px 'Bricolage Grotesque',sans-serif">51</text>
+      <rect x="32" y="36" width="56" height="30" rx="10" fill="#2A2E37"></rect>
+      <ellipse cx="49" cy="51" rx="9.5" ry="7" fill="#fff"></ellipse><ellipse cx="71" cy="51" rx="9.5" ry="7" fill="#fff"></ellipse>
+      <ellipse cx="49" cy="51" rx="4.4" ry="4.6" fill="#2A2E37"></ellipse><ellipse cx="71" cy="51" rx="4.4" ry="4.6" fill="#2A2E37"></ellipse>
+      <circle cx="42" cy="80" r="5" fill="#F7F3EC"></circle><circle cx="78" cy="80" r="5" fill="#F7F3EC"></circle>
+      <circle cx="14" cy="66" r="6" fill="currentColor"></circle><circle cx="106" cy="66" r="6" fill="currentColor"></circle>
+    </symbol>
+</defs></svg>
+<section data-screen-label="QR · ronda 1" style="padding:48px;display:flex;flex-direction:column;gap:28px">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:760px">
+    <div style="font:800 40px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">Códigos QR de ¿Ontoy?</div>
+    <div style="font-size:16px;line-height:1.45;color:#4A4F5A">Son códigos reales y escaneables. Las tres esquinas son ojos que miran hacia Ontoy, en el centro. Los módulos van siempre en carbón sobre blanco; el naranja y el color de ruta van solo en el marco.</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:6px"><span style="background:#2A2E37;color:#fff;border-radius:999px;padding:5px 12px;font:700 13px 'Instrument Sans'">{{ estado }}</span><span style="font-size:14px;color:#6B6F78">Cambia cada 5 s · el código sigue siendo el mismo</span></div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+    <div id="1a" style="display:flex;flex-direction:column;gap:12px;width:380px"><a href="#1a" style="align-self:flex-start;background:#2A2E37;color:#fff;border-radius:999px;padding:4px 11px;font:700 12px 'Instrument Sans';text-decoration:none">1a</a><div><div style="font:800 20px/1.1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.02em">Sticker Ontoy</div><div style="font-size:14px;color:#6B6F78;margin-top:3px">Para redes, flyers y la tiendita</div></div><div style="background:#F7F3EC;border-radius:30px;padding:26px;box-shadow:0 0 0 1px #DCD5C8;display:flex;flex-direction:column;gap:18px;align-items:center"><div style="width:100%;background:#fff;border-radius:20px;padding:10px;box-sizing:border-box"><svg viewBox="{{ gVB }}" style="width:100%;display:block" role="img" aria-label="Código QR de ¿Ontoy?">
+          <rect width="100%" height="100%" fill="#fff"></rect>
+          <path d="{{ gD }}" fill="#2A2E37"></path>
+          <g transform="{{ gF1 }}"><rect x=".5" y=".5" width="6" height="6" rx="2.2" fill="none" stroke="#2A2E37" stroke-width="1"></rect><circle cx="{{ gP1x }}" cy="{{ gP1y }}" r="1.45" fill="#2A2E37"></circle></g><g transform="{{ gF2 }}"><rect x=".5" y=".5" width="6" height="6" rx="2.2" fill="none" stroke="#2A2E37" stroke-width="1"></rect><circle cx="{{ gP2x }}" cy="{{ gP2y }}" r="1.45" fill="#2A2E37"></circle></g><g transform="{{ gF3 }}"><rect x=".5" y=".5" width="6" height="6" rx="2.2" fill="none" stroke="#2A2E37" stroke-width="1"></rect><circle cx="{{ gP3x }}" cy="{{ gP3y }}" r="1.45" fill="#2A2E37"></circle></g>
+          <rect x="{{ gCX }}" y="{{ gCX }}" width="{{ gCS }}" height="{{ gCS }}" rx="1.6" fill="#fff"></rect>
+          <g transform="{{ gFT }}"><circle cx="{{ fHx1 }}" cy="{{ fHy1 }}" r="6" fill="#F6A15B"></circle><circle cx="{{ fHx2 }}" cy="{{ fHy2 }}" r="6" fill="#F6A15B"></circle><ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+<ellipse cx="36" cy="66" rx="7" ry="4.5" fill="#E36F8C" opacity="{{ fRub }}"></ellipse><ellipse cx="90" cy="64" rx="7" ry="4.5" fill="#E36F8C" opacity="{{ fRub }}"></ellipse>
+<g opacity="{{ fOjo }}"><circle cx="50" cy="50" r="12" fill="#fff"></circle><circle cx="76" cy="48" r="12" fill="#fff"></circle><circle cx="{{ fA1 }}" cy="{{ fB1 }}" r="6" fill="#2A2E37"></circle><circle cx="{{ fA2 }}" cy="{{ fB2 }}" r="6" fill="#2A2E37"></circle></g>
+<g opacity="{{ fCer }}"><path d="M40 51 q10 6 20 0" stroke="#2A2E37" stroke-width="3.4" fill="none" stroke-linecap="round"></path><path d="M66 49 q10 6 20 0" stroke="#2A2E37" stroke-width="3.4" fill="none" stroke-linecap="round"></path></g>
+<ellipse cx="63" cy="76" rx="5" ry="6" fill="#2A2E37" opacity="{{ fMO }}"></ellipse>
+<path d="M55 73 q8 8 16 0" stroke="#2A2E37" stroke-width="3.4" fill="none" stroke-linecap="round" opacity="{{ fMS }}"></path>
+<path d="M56 76 h14" stroke="#2A2E37" stroke-width="3.4" stroke-linecap="round" opacity="{{ fML }}"></path>
+<path d="M55 79 q8 -7 16 0" stroke="#2A2E37" stroke-width="3.4" fill="none" stroke-linecap="round" opacity="{{ fMT }}"></path>
+<path d="M54 76 q3 -3 6 0 t6 0 t6 0" stroke="#2A2E37" stroke-width="3" fill="none" stroke-linecap="round" opacity="{{ fMW }}"></path></g>
+        </svg></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="font:800 30px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">¿Ontás? Escanéame.</div><div style="font-size:15px;color:#4A4F5A">ontoy.app</div></div></div></div>
+    <div id="1b" style="display:flex;flex-direction:column;gap:12px;width:380px"><a href="#1b" style="align-self:flex-start;background:#2A2E37;color:#fff;border-radius:999px;padding:4px 11px;font:700 12px 'Instrument Sans';text-decoration:none">1b</a><div><div style="font:800 20px/1.1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.02em">Parada · Tino</div><div style="font-size:14px;color:#6B6F78;margin-top:3px">Letrero en el poste. El color de la banda viene de la ruta</div></div><div style="background:#F7F3EC;border-radius:30px;overflow:hidden;box-shadow:0 0 0 1px #DCD5C8"><div style="background:{{ ruta }};height:14px"></div><div style="padding:22px 24px 24px;display:flex;flex-direction:column;gap:16px"><div style="display:flex;align-items:center;gap:12px"><svg viewBox="0 0 120 120" color="{{ ruta }}" style="width:62px;flex:none"><use href="#L-paradito" width="120" height="120"></use></svg><div style="display:flex;flex-direction:column;gap:6px"><div style="font:800 24px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">¿Cuándo pasa? Escanea.</div><div style="display:flex;gap:6px;align-items:center"><span style="background:#2A2E37;color:#fff;border-radius:7px;padding:5px 10px;font:800 18px/1 'Bricolage Grotesque',sans-serif">{{ rutaNum }}</span><span style="font-size:14px;color:#4A4F5A">{{ parada }}</span></div></div></div><div style="background:#fff;border-radius:20px;padding:10px"><svg viewBox="{{ pVB }}" style="width:100%;display:block" role="img" aria-label="Código QR de ¿Ontoy?">
+          <rect width="100%" height="100%" fill="#fff"></rect>
+          <path d="{{ pD }}" fill="#2A2E37"></path>
+          <g transform="{{ pF1 }}"><rect x=".5" y=".5" width="6" height="6" rx="2.2" fill="none" stroke="#2A2E37" stroke-width="1"></rect><circle cx="{{ pP1x }}" cy="{{ pP1y }}" r="1.45" fill="#2A2E37"></circle></g><g transform="{{ pF2 }}"><rect x=".5" y=".5" width="6" height="6" rx="2.2" fill="none" stroke="#2A2E37" stroke-width="1"></rect><circle cx="{{ pP2x }}" cy="{{ pP2y }}" r="1.45" fill="#2A2E37"></circle></g><g transform="{{ pF3 }}"><rect x=".5" y=".5" width="6" height="6" rx="2.2" fill="none" stroke="#2A2E37" stroke-width="1"></rect><circle cx="{{ pP3x }}" cy="{{ pP3y }}" r="1.45" fill="#2A2E37"></circle></g>
+          <rect x="{{ pCX }}" y="{{ pCX }}" width="{{ pCS }}" height="{{ pCS }}" rx="1.6" fill="#fff"></rect>
+          <g transform="{{ pFT }}"><circle cx="60" cy="60" r="54" fill="{{ ruta }}"></circle>
+<g opacity="{{ fOjo }}"><circle cx="42" cy="52" r="15" fill="#fff"></circle><circle cx="78" cy="52" r="15" fill="#fff"></circle><circle cx="{{ tA1 }}" cy="{{ tB }}" r="8" fill="#2A2E37"></circle><circle cx="{{ tA2 }}" cy="{{ tB }}" r="8" fill="#2A2E37"></circle></g>
+<g opacity="{{ fCer }}"><path d="M30 54 q12 7 24 0" stroke="#2A2E37" stroke-width="4.4" fill="none" stroke-linecap="round"></path><path d="M66 54 q12 7 24 0" stroke="#2A2E37" stroke-width="4.4" fill="none" stroke-linecap="round"></path></g>
+<ellipse cx="60" cy="84" rx="6.5" ry="7.800000000000001" fill="#2A2E37" opacity="{{ fMO }}"></ellipse>
+<path d="M49.6 80.1 q10.4 10.4 20.8 0" stroke="#2A2E37" stroke-width="4.42" fill="none" stroke-linecap="round" opacity="{{ fMS }}"></path>
+<path d="M50.9 84 h18.2" stroke="#2A2E37" stroke-width="4.42" stroke-linecap="round" opacity="{{ fML }}"></path>
+<path d="M49.6 87.9 q10.4 -9.1 20.8 0" stroke="#2A2E37" stroke-width="4.42" fill="none" stroke-linecap="round" opacity="{{ fMT }}"></path>
+<path d="M48.3 84 q3.9000000000000004 -3.9000000000000004 7.800000000000001 0 t7.800000000000001 0 t7.800000000000001 0" stroke="#2A2E37" stroke-width="3.9000000000000004" fill="none" stroke-linecap="round" opacity="{{ fMW }}"></path></g>
+        </svg></div><div style="font-size:13px;color:#6B6F78;text-align:center">Sin cuenta y sin descargar nada · ontoy.app</div></div></div></div>
+    <div id="1c" style="display:flex;flex-direction:column;gap:12px;width:380px"><a href="#1c" style="align-self:flex-start;background:#2A2E37;color:#fff;border-radius:999px;padding:4px 11px;font:700 12px 'Instrument Sans';text-decoration:none">1c</a><div><div style="font:800 20px/1.1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.02em">Dentro de Cami</div><div style="font-size:14px;color:#6B6F78;margin-top:3px">Calcomanía horizontal para la ventanilla o el respaldo</div></div><div style="background:#F7F3EC;border-radius:30px;padding:20px;box-shadow:0 0 0 1px #DCD5C8;display:grid;grid-template-columns:170px 1fr;gap:18px;align-items:center"><div style="background:#fff;border-radius:16px;padding:6px"><svg viewBox="{{ g2VB }}" style="width:100%;display:block" role="img" aria-label="Código QR de ¿Ontoy?">
+          <rect width="100%" height="100%" fill="#fff"></rect>
+          <path d="{{ g2D }}" fill="#2A2E37"></path>
+          <g transform="{{ g2F1 }}"><rect x=".5" y=".5" width="6" height="6" rx="2.2" fill="none" stroke="#2A2E37" stroke-width="1"></rect><circle cx="{{ g2P1x }}" cy="{{ g2P1y }}" r="1.45" fill="#2A2E37"></circle></g><g transform="{{ g2F2 }}"><rect x=".5" y=".5" width="6" height="6" rx="2.2" fill="none" stroke="#2A2E37" stroke-width="1"></rect><circle cx="{{ g2P2x }}" cy="{{ g2P2y }}" r="1.45" fill="#2A2E37"></circle></g><g transform="{{ g2F3 }}"><rect x=".5" y=".5" width="6" height="6" rx="2.2" fill="none" stroke="#2A2E37" stroke-width="1"></rect><circle cx="{{ g2P3x }}" cy="{{ g2P3y }}" r="1.45" fill="#2A2E37"></circle></g>
+          <rect x="{{ g2CX }}" y="{{ g2CX }}" width="{{ g2CS }}" height="{{ g2CS }}" rx="1.6" fill="#fff"></rect>
+          <g transform="{{ g2FT }}"><circle cx="{{ fHx1 }}" cy="{{ fHy1 }}" r="6" fill="#F6A15B"></circle><circle cx="{{ fHx2 }}" cy="{{ fHy2 }}" r="6" fill="#F6A15B"></circle><ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+<ellipse cx="36" cy="66" rx="7" ry="4.5" fill="#E36F8C" opacity="{{ fRub }}"></ellipse><ellipse cx="90" cy="64" rx="7" ry="4.5" fill="#E36F8C" opacity="{{ fRub }}"></ellipse>
+<g opacity="{{ fOjo }}"><circle cx="50" cy="50" r="12" fill="#fff"></circle><circle cx="76" cy="48" r="12" fill="#fff"></circle><circle cx="{{ fA1 }}" cy="{{ fB1 }}" r="6" fill="#2A2E37"></circle><circle cx="{{ fA2 }}" cy="{{ fB2 }}" r="6" fill="#2A2E37"></circle></g>
+<g opacity="{{ fCer }}"><path d="M40 51 q10 6 20 0" stroke="#2A2E37" stroke-width="3.4" fill="none" stroke-linecap="round"></path><path d="M66 49 q10 6 20 0" stroke="#2A2E37" stroke-width="3.4" fill="none" stroke-linecap="round"></path></g>
+<ellipse cx="63" cy="76" rx="5" ry="6" fill="#2A2E37" opacity="{{ fMO }}"></ellipse>
+<path d="M55 73 q8 8 16 0" stroke="#2A2E37" stroke-width="3.4" fill="none" stroke-linecap="round" opacity="{{ fMS }}"></path>
+<path d="M56 76 h14" stroke="#2A2E37" stroke-width="3.4" stroke-linecap="round" opacity="{{ fML }}"></path>
+<path d="M55 79 q8 -7 16 0" stroke="#2A2E37" stroke-width="3.4" fill="none" stroke-linecap="round" opacity="{{ fMT }}"></path>
+<path d="M54 76 q3 -3 6 0 t6 0 t6 0" stroke="#2A2E37" stroke-width="3" fill="none" stroke-linecap="round" opacity="{{ fMW }}"></path></g>
+        </svg></div><div style="display:flex;flex-direction:column;gap:10px"><svg viewBox="0 0 120 120" color="{{ ruta }}" style="width:64px"><use href="#L-cami" width="120" height="120"></use></svg><div style="font:800 22px/1.05 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">Sigue tu viaje en ¿Ontoy?</div><div style="font-size:14px;color:#4A4F5A">Escanea y ve por dónde va tu ruta.</div></div></div></div>
+    <div id="1d" style="display:flex;flex-direction:column;gap:12px;width:380px"><a href="#1d" style="align-self:flex-start;background:#2A2E37;color:#fff;border-radius:999px;padding:4px 11px;font:700 12px 'Instrument Sans';text-decoration:none">1d</a><div><div style="font:800 20px/1.1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.02em">Mínimo</div><div style="font-size:14px;color:#6B6F78;margin-top:3px">Para impresos chicos: solo el código con su firma</div></div><div style="display:flex;flex-direction:column;gap:10px;align-items:center;width:260px"><div style="width:100%;background:#fff;border-radius:18px;padding:8px;box-sizing:border-box;box-shadow:0 0 0 1px #DCD5C8"><svg viewBox="{{ g3VB }}" style="width:100%;display:block" role="img" aria-label="Código QR de ¿Ontoy?">
+          <rect width="100%" height="100%" fill="#fff"></rect>
+          <path d="{{ g3D }}" fill="#2A2E37"></path>
+          <g transform="{{ g3F1 }}"><rect x=".5" y=".5" width="6" height="6" rx="2.2" fill="none" stroke="#2A2E37" stroke-width="1"></rect><circle cx="{{ g3P1x }}" cy="{{ g3P1y }}" r="1.45" fill="#2A2E37"></circle></g><g transform="{{ g3F2 }}"><rect x=".5" y=".5" width="6" height="6" rx="2.2" fill="none" stroke="#2A2E37" stroke-width="1"></rect><circle cx="{{ g3P2x }}" cy="{{ g3P2y }}" r="1.45" fill="#2A2E37"></circle></g><g transform="{{ g3F3 }}"><rect x=".5" y=".5" width="6" height="6" rx="2.2" fill="none" stroke="#2A2E37" stroke-width="1"></rect><circle cx="{{ g3P3x }}" cy="{{ g3P3y }}" r="1.45" fill="#2A2E37"></circle></g>
+          <rect x="{{ g3CX }}" y="{{ g3CX }}" width="{{ g3CS }}" height="{{ g3CS }}" rx="1.6" fill="#fff"></rect>
+          <g transform="{{ g3FT }}"><circle cx="{{ fHx1 }}" cy="{{ fHy1 }}" r="6" fill="#F6A15B"></circle><circle cx="{{ fHx2 }}" cy="{{ fHy2 }}" r="6" fill="#F6A15B"></circle><ellipse cx="44" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><ellipse cx="76" cy="96" rx="9" ry="6" fill="#F6A15B"></ellipse><path d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z" fill="#F6A15B"></path>
+<ellipse cx="36" cy="66" rx="7" ry="4.5" fill="#E36F8C" opacity="{{ fRub }}"></ellipse><ellipse cx="90" cy="64" rx="7" ry="4.5" fill="#E36F8C" opacity="{{ fRub }}"></ellipse>
+<g opacity="{{ fOjo }}"><circle cx="50" cy="50" r="12" fill="#fff"></circle><circle cx="76" cy="48" r="12" fill="#fff"></circle><circle cx="{{ fA1 }}" cy="{{ fB1 }}" r="6" fill="#2A2E37"></circle><circle cx="{{ fA2 }}" cy="{{ fB2 }}" r="6" fill="#2A2E37"></circle></g>
+<g opacity="{{ fCer }}"><path d="M40 51 q10 6 20 0" stroke="#2A2E37" stroke-width="3.4" fill="none" stroke-linecap="round"></path><path d="M66 49 q10 6 20 0" stroke="#2A2E37" stroke-width="3.4" fill="none" stroke-linecap="round"></path></g>
+<ellipse cx="63" cy="76" rx="5" ry="6" fill="#2A2E37" opacity="{{ fMO }}"></ellipse>
+<path d="M55 73 q8 8 16 0" stroke="#2A2E37" stroke-width="3.4" fill="none" stroke-linecap="round" opacity="{{ fMS }}"></path>
+<path d="M56 76 h14" stroke="#2A2E37" stroke-width="3.4" stroke-linecap="round" opacity="{{ fML }}"></path>
+<path d="M55 79 q8 -7 16 0" stroke="#2A2E37" stroke-width="3.4" fill="none" stroke-linecap="round" opacity="{{ fMT }}"></path>
+<path d="M54 76 q3 -3 6 0 t6 0 t6 0" stroke="#2A2E37" stroke-width="3" fill="none" stroke-linecap="round" opacity="{{ fMW }}"></path></g>
+        </svg></div><div style="font:800 20px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">¿Ontoy?</div></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;max-width:1100px">
+    <div style="background:#F7F3EC;border-radius:22px;padding:16px;box-shadow:0 0 0 1px #DCD5C8;font-size:14px;line-height:1.45;color:#4A4F5A"><b style="color:#2A2E37">Tamaño mínimo:</b> 2.5 cm de lado; en el poste, 8 cm o más para escanear a un paso.</div>
+    <div style="background:#F7F3EC;border-radius:22px;padding:16px;box-shadow:0 0 0 1px #DCD5C8;font-size:14px;line-height:1.45;color:#4A4F5A"><b style="color:#2A2E37">Siempre oscuro sobre claro.</b> No invertir ni pintar los módulos de naranja o del color de la ruta: muchos celulares no los leen.</div>
+    <div style="background:#F7F3EC;border-radius:22px;padding:16px;box-shadow:0 0 0 1px #DCD5C8;font-size:14px;line-height:1.45;color:#4A4F5A"><b style="color:#2A2E37">Corrección alta (H).</b> Por eso aguanta a Ontoy en el centro. Deja siempre el margen blanco alrededor.</div>
+    <div style="background:#F7F3EC;border-radius:22px;padding:16px;box-shadow:0 0 0 1px #DCD5C8;font-size:14px;line-height:1.45;color:#4A4F5A"><b style="color:#2A2E37">Cada parada tiene su link:</b> ontoy.app/p/… abre directo esa parada. Prueba cada impreso con 2 o 3 celulares antes de mandarlo.</div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;url&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://ontoy.app&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;urlParada&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://ontoy.app/p/&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;rutaNum&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;51&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;parada&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Av. Juárez&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;rutaColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#4F7FD8&quot;,&quot;options&quot;:[&quot;#4F7FD8&quot;,&quot;#8B6CC9&quot;,&quot;#2FA6A0&quot;,&quot;#E36F8C&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { t: 0 };
+  cache = {};
+  cur = null;
+  E = [
+    { n: '¡Ya viene!', dx: 0, dy: -1, m: 'MO', cer: 0, rub: 0 },
+    { n: 'Te habla a ti', dx: 0, dy: 0, m: 'MS', cer: 0, rub: 1 },
+    { n: 'De allá viene', dx: -1, dy: 0, m: '', cer: 0, rub: 0 },
+    { n: 'Revisando / esperando', dx: 0, dy: 1, m: 'ML', cer: 0, rub: 0 },
+    { n: 'Ya se va', dx: 1, dy: 0, m: 'MW', cer: 0, rub: 0 },
+    { n: 'Descansando', dx: 0, dy: 0, m: '', cer: 1, rub: 0 },
+  ];
+  componentDidMount() {
+    const go = () => { if (window.qrcode) this.setState({ ok: true }); else this.tm = setTimeout(go, 120); }; go();
+    this.reduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const t0 = performance.now(); let last = t0;
+    const loop = (n) => { const dt = Math.min(0.05, (n - last) / 1000); last = n; const tt = Math.max(0, (n - t0) / 1000); this.step(dt, tt); this.setState({ t: tt }); this.raf = requestAnimationFrame(loop); };
+    this.raf = requestAnimationFrame(loop);
+  }
+  componentWillUnmount() { clearTimeout(this.tm); cancelAnimationFrame(this.raf); }
+  step(dt, t) {
+    const e = this.E[Math.floor(t / 5) % this.E.length];
+    const tg = { dx: e.dx, dy: e.dy, cer: e.cer, rub: e.rub, MO: 0, MS: 0, ML: 0, MT: 0, MW: 0 }; if (e.m) tg[e.m] = 1;
+    if (!this.cur || this.reduce) { this.cur = { ...tg }; return; }
+    const k = 1 - Math.exp(-dt * 6); for (const key in tg) this.cur[key] += (tg[key] - this.cur[key]) * k;
+  }
+  base(p, text) {
+    if (!this.state.ok) return null;
+    if (this.cache[p] && this.cache[p].text === text) return this.cache[p];
+    const q = window.qrcode(0, 'H'); q.addData(text); q.make();
+    const N = q.getModuleCount(), Q = 4, S = N + Q * 2, R = 0.44;
+    let c = Math.round(N * 0.24); if (c % 2 === 0) c++; const c0 = Math.floor((N - c) / 2);
+    const inF = (r, k) => (r < 7 && k < 7) || (r < 7 && k >= N - 7) || (r >= N - 7 && k < 7);
+    const inC = (r, k) => r >= c0 && r < c0 + c && k >= c0 && k < c0 + c;
+    let d = '';
+    for (let r = 0; r < N; r++) for (let k = 0; k < N; k++) {
+      if (!q.isDark(r, k) || inF(r, k) || inC(r, k)) continue;
+      const x = k + Q + 0.5, y = r + Q + 0.5;
+      d += 'M' + (x - R) + ' ' + y + 'a' + R + ' ' + R + ' 0 1 0 ' + 2 * R + ' 0a' + R + ' ' + R + ' 0 1 0 ' + (-2 * R) + ' 0';
+    }
+    const IX = Q + c0 + 0.2, IS = c - 0.4;
+    const v = { [p + 'VB']: '0 0 ' + S + ' ' + S, [p + 'D']: d, [p + 'CX']: Q + c0 - 0.3, [p + 'CS']: c + 0.6, [p + 'FT']: 'translate(' + IX + ' ' + IX + ') scale(' + (IS / 120) + ')' };
+    [[Q, Q], [Q + N - 7, Q], [Q, Q + N - 7]].forEach(([x, y], i) => { v[p + 'F' + (i + 1)] = 'translate(' + x + ' ' + y + ')'; });
+    return (this.cache[p] = { text, v });
+  }
+  build(p, text) {
+    const b = this.base(p, text); if (!b) return {};
+    const c = this.cur || { dx: 0, dy: 0 }, o = 0.2, v = { ...b.v };
+    for (let i = 1; i <= 3; i++) { v[p + 'P' + i + 'x'] = 3.5 + c.dx * o; v[p + 'P' + i + 'y'] = 3.5 + c.dy * o; }
+    return v;
+  }
+  renderVals() {
+    const url = this.props.url ?? 'https://ontoy.app', num = this.props.rutaNum ?? '51';
+    const pUrl = (this.props.urlParada ?? 'https://ontoy.app/p/') + num;
+    const c = this.cur || { dx: 0, dy: 0, cer: 0, rub: 0, MO: 0, MS: 0, ML: 0, MT: 0, MW: 0 };
+    const f2 = (x) => x.toFixed(2);
+    return { ruta: this.props.rutaColor ?? '#4F7FD8', rutaNum: num, parada: this.props.parada ?? 'Av. Juárez',
+      estado: this.E[Math.max(0, Math.floor(this.state.t / 5)) % this.E.length].n,
+      fA1: f2(50 + c.dx * 5), fA2: f2(76 + c.dx * 5), fB1: f2(50 + c.dy * 5), fB2: f2(48 + c.dy * 5),
+      tA1: f2(42 + c.dx * 6), tA2: f2(78 + c.dx * 6), tB: f2(52 + c.dy * 6),
+      fHx1: f2(14 - c.MO * 2 + c.dx * 2), fHx2: f2(108 + c.MO * 2 + c.dx * 2), fHy1: f2(80 - c.MO * 22 - c.MS * 6), fHy2: f2(78 - c.MO * 24 - c.MS * 6), fOjo: f2(1 - c.cer), fCer: f2(c.cer), fRub: f2(c.rub * 0.8), fMO: f2(c.MO), fMS: f2(c.MS), fML: f2(c.ML), fMT: f2(c.MT), fMW: f2(c.MW),
+      ...this.build('g', url), ...this.build('g2', url), ...this.build('g3', url), ...this.build('p', pUrl) };
+  }
+}
+</script>
+</body>
+</html>

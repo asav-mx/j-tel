@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Paradito 3D</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;height:100%;background:#EDE9E1;color:#2A2E37;font-family:'Instrument Sans',sans-serif}
+  a{color:#2A2E37}a:hover{color:#C8702A}
+  three-d-stage:not(:defined){visibility:hidden}
+  three-d-stage{display:block;width:100vw;height:100vh}
+  .cap{position:fixed;top:24px;left:28px;display:flex;flex-direction:column;gap:4px;pointer-events:none}
+  .cap h1{margin:0;font:800 34px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-.02em}
+  .cap p{margin:0;font-size:14px;color:#4A4F5A}
+  .ctl{position:fixed;top:24px;right:28px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:60vw}
+  .ctl button{font:600 13px 'Instrument Sans',sans-serif;border:0;border-radius:999px;padding:9px 14px;background:#fff;color:#2A2E37;cursor:pointer}
+  .ctl button[aria-pressed="true"]{background:#F6A15B}
+</style>
+</head>
+<body>
+<three-d-stage name="paradito" background="#EDE9E1" autorotate></three-d-stage>
+<div class="cap"><h1>Paradito</h1><p>Juguete suave · 30 cm · se viste del color de su ruta</p></div>
+<div class="ctl" id="ctl"></div>
+<script src="three-d-stage.js"></script>
+<script type="module">
+const stage = document.querySelector('three-d-stage');
+const { THREE } = await stage.ready;
+
+const RUTAS = { '51 azul': ['#4F7FD8','51'], 'C4 verde': ['#5FB36B','C4'], '38 rosa': ['#E36F8C','38'], 'T1 turquesa': ['#2FA6A0','T1'] };
+const M = {
+  ruta:   new THREE.MeshStandardMaterial({ name: 'color-de-ruta', color: '#4F7FD8', roughness: 0.55, metalness: 0 }),
+  blanco: new THREE.MeshStandardMaterial({ name: 'ojo-blanco', color: '#FFFFFF', roughness: 0.25, metalness: 0 }),
+  carbon: new THREE.MeshStandardMaterial({ name: 'carbon', color: '#2A2E37', roughness: 0.4, metalness: 0.1 }),
+  boca:   new THREE.MeshStandardMaterial({ name: 'boca-interior', color: '#7A2E2A', roughness: 0.6, metalness: 0 }),
+};
+
+// Plate face as canvas texture
+const cv = document.createElement('canvas'); cv.width = 600; cv.height = 240;
+const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+M.placaCara = new THREE.MeshStandardMaterial({ name: 'placa-cara', map: tex, roughness: 0.5, metalness: 0 });
+function pintarPlaca(num, txt, col) {
+  const c = cv.getContext('2d');
+  c.fillStyle = '#2A2E37'; c.fillRect(0, 0, 600, 240);
+  c.fillStyle = col; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = '800 128px "Bricolage Grotesque", sans-serif'; c.fillText(num, 165, 128);
+  c.globalAlpha = .5; c.fillRect(296, 60, 8, 120); c.globalAlpha = 1;
+  c.font = '800 100px "Bricolage Grotesque", sans-serif'; c.fillText(txt, 445, 128);
+  tex.needsUpdate = true;
+}
+
+const P = new THREE.Group(); P.name = 'Paradito';
+const base = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.014, 48), M.carbon); base.name = 'base'; base.position.y = 0.007; base.castShadow = true; P.add(base);
+const domo = new THREE.Mesh(new THREE.SphereGeometry(0.045, 48, 16, 0, Math.PI * 2, 0, Math.PI / 2), M.carbon); domo.name = 'base-domo'; domo.scale.y = 0.18; domo.position.y = 0.014; P.add(domo);
+const poste = new THREE.Mesh(new THREE.CylinderGeometry(0.0085, 0.0085, 0.19, 32), M.carbon); poste.name = 'poste'; poste.position.y = 0.014 + 0.095; poste.castShadow = true; P.add(poste);
+
+// Head: soft disc
+const cabeza = new THREE.Group(); cabeza.name = 'cabeza-grupo'; cabeza.position.y = 0.205; P.add(cabeza);
+const RD = 0.085, SZ = 0.32;
+const disco = new THREE.Mesh(new THREE.SphereGeometry(RD, 96, 64), M.ruta); disco.name = 'disco'; disco.scale.z = SZ; disco.castShadow = true; cabeza.add(disco);
+const fz = (x, y) => RD * SZ * Math.sqrt(Math.max(0, 1 - (x * x + y * y) / (RD * RD)));
+
+const ojos = [];
+for (const [s, x] of [['izq', -0.029], ['der', 0.029]]) {
+  const y = 0.008, r = 0.022;
+  const eg = new THREE.Group(); eg.name = 'ojo-' + s; eg.position.set(x, y, fz(x, y) - 0.004);
+  const w = new THREE.Mesh(new THREE.SphereGeometry(r, 48, 32), M.blanco); w.name = 'ojo-blanco-' + s; w.scale.set(1, 1, 0.5);
+  const pu = new THREE.Mesh(new THREE.SphereGeometry(r * 0.52, 40, 28), M.carbon); pu.name = 'pupila-' + s; pu.scale.set(1, 1, 0.5);
+  const br = new THREE.Mesh(new THREE.SphereGeometry(r * 0.13, 20, 14), M.blanco); br.name = 'brillo-' + s;
+  eg.add(w, pu, br); cabeza.add(eg); ojos.push({ eg, pu, br, r });
+}
+const boca = new THREE.Group(); boca.name = 'boca'; boca.position.set(0, -0.036, fz(0, -0.036));
+const bo = new THREE.Mesh(new THREE.SphereGeometry(0.012, 40, 28), M.carbon); bo.name = 'boca-contorno'; bo.scale.set(1, 1.25, 0.45);
+const bi = new THREE.Mesh(new THREE.SphereGeometry(0.008, 32, 24), M.boca); bi.name = 'lengua'; bi.scale.set(1, 0.6, 0.4); bi.position.set(0, -0.005, 0.003);
+boca.add(bo, bi); cabeza.add(boca);
+
+// Plate + floating hands
+const placa = new THREE.Group(); placa.name = 'placa-grupo'; P.add(placa);
+const W = 0.15, H = 0.06, R = 0.014, D = 0.012;
+const sh = new THREE.Shape();
+sh.moveTo(-W/2 + R, -H/2); sh.lineTo(W/2 - R, -H/2); sh.quadraticCurveTo(W/2, -H/2, W/2, -H/2 + R); sh.lineTo(W/2, H/2 - R); sh.quadraticCurveTo(W/2, H/2, W/2 - R, H/2);
+sh.lineTo(-W/2 + R, H/2); sh.quadraticCurveTo(-W/2, H/2, -W/2, H/2 - R); sh.lineTo(-W/2, -H/2 + R); sh.quadraticCurveTo(-W/2, -H/2, -W/2 + R, -H/2);
+const pg = new THREE.ExtrudeGeometry(sh, { depth: D - 0.006, bevelEnabled: true, bevelThickness: 0.003, bevelSize: 0.003, bevelSegments: 5, curveSegments: 16 });
+pg.translate(0, 0, -(D - 0.006) / 2);
+const pc = new THREE.Mesh(pg, M.carbon); pc.name = 'placa'; pc.castShadow = true; placa.add(pc);
+const cara = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.016, H - 0.012), M.placaCara); cara.name = 'placa-texto'; cara.position.z = D / 2 + 0.0012; placa.add(cara);
+const manos = [-1, 1].map((sg, i) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.017, 40, 28), M.ruta); m.name = 'mano-' + (i ? 'der' : 'izq'); m.scale.set(0.9, 1, 0.9); m.position.set(sg * (W / 2 + 0.006), 0, 0.008); m.castShadow = true; placa.add(m); return m; });
+
+const EXP = {
+  'espera':     { mira: [0.2, 0.1],  parpado: 1,    boca: false, arriba: false, txt: '3′' },
+  'mira la calle': { mira: [0.42, 0.05], parpado: 1, boca: false, arriba: false, txt: '3′' },
+  'aburrido':   { mira: [0, -0.3],   parpado: 0.5,  boca: false, arriba: false, txt: '8′' },
+  '¡ya viene!': { mira: [0.05, 0.42], parpado: 1.08, boca: true,  arriba: true,  txt: '¡ya!' },
+};
+let exp = 'espera', ruta = '51 azul', anim = true, subir = 0;
+function aplicar() {
+  const e = EXP[exp], [col, num] = RUTAS[ruta];
+  M.ruta.color.set(col);
+  pintarPlaca(num, e.txt, e.arriba ? col : '#FFFFFF');
+  ojos.forEach(({ pu, br, r }) => { pu.position.set(e.mira[0] * r, e.mira[1] * r, r * 0.42); br.position.set(e.mira[0] * r + r * 0.18, e.mira[1] * r + r * 0.16, r * 0.58); });
+  boca.visible = e.boca;
+  document.querySelector('.cap h1').textContent = 'Paradito · ' + exp;
+}
+const ABAJO = new THREE.Vector3(0, 0.1, 0.05), ARRIBA = new THREE.Vector3(0, 0.335, 0.012);
+placa.position.copy(ABAJO);
+if (document.fonts) await document.fonts.load('800 100px "Bricolage Grotesque"').catch(() => {});
+aplicar();
+stage.setObject(P);
+
+const ctl = document.getElementById('ctl');
+const row = () => { const d = document.createElement('div'); d.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;width:100%'; ctl.append(d); return d; };
+const mk = (parent, label, pressed, fn) => { const b = document.createElement('button'); b.textContent = label; b.setAttribute('aria-pressed', pressed); b.onclick = () => fn(b); parent.append(b); return b; };
+const r1 = row(), r2 = row();
+const eb = Object.keys(EXP).map(k => mk(r1, k, k === exp, () => { exp = k; eb.forEach(x => x.setAttribute('aria-pressed', x.textContent === k)); aplicar(); }));
+const rb = Object.keys(RUTAS).map(k => mk(r2, k, k === ruta, () => { ruta = k; rb.forEach(x => x.setAttribute('aria-pressed', x.textContent === k)); aplicar(); }));
+mk(r2, 'animación', true, (b) => { anim = !anim; b.setAttribute('aria-pressed', anim); });
+
+
+const ADAPT = (hex) => { const n = hex.replace('#',''); const [r,g,b] = [0,2,4].map(i => parseInt(n.slice(i,i+2),16)/255); const mx=Math.max(r,g,b), mn=Math.min(r,g,b); let H=0,S=0,L=(mx+mn)/2; if(mx!==mn){const d=mx-mn; S=L>0.5?d/(2-mx-mn):d/(mx+mn); H=(mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4)*60;} if(S>0.35&&H>=14&&H<=44&&L>0.35&&L<0.88) H = H<29?4:50; if(L>0.8) L=0.66; if(L<0.2) L=0.36; return new THREE.Color().setHSL(H/360,S,L); };
+const pick = document.createElement('input'); pick.type = 'color'; pick.title = 'Cualquier color de la concesión'; pick.style.cssText = 'width:44px;height:36px;border:0;border-radius:999px;background:#fff;padding:3px;cursor:pointer';
+pick.oninput = () => M.ruta.color.copy(ADAPT(pick.value)); r2.append(pick);
+const t0 = performance.now(); let last = t0;
+(function tick() {
+  requestAnimationFrame(tick);
+  const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const t = (now - t0) / 1000, e = EXP[exp];
+  subir += ((e.arriba ? 1 : 0) - subir) * Math.min(1, dt * 7);
+  placa.position.lerpVectors(ABAJO, ARRIBA, subir);
+  let blink = 1, talk = 1, fl = 0, hop = 0;
+  if (anim) {
+    const b = (t + 1.2) % 4.4; blink = b > 4.15 ? Math.abs(Math.cos((b - 4.15) / 0.25 * Math.PI)) : 1;
+    talk = 0.55 + 0.45 * Math.abs(Math.cos((t % 1.6) / 1.6 * Math.PI * 2));
+    fl = Math.sin(t * 1.6) * 0.003;
+    hop = e.arriba ? Math.abs(Math.sin(t * 5)) * 0.008 : 0;
+  }
+  ojos.forEach(o => o.eg.scale.y = Math.max(0.08, blink * e.parpado));
+  boca.scale.set(1, talk, 1);
+  placa.position.y += fl + hop;
+  cabeza.rotation.z = anim && !e.arriba ? Math.sin(t * 1.1) * 0.03 : 0;
+})();
+</script>
+</body>
+</html>
