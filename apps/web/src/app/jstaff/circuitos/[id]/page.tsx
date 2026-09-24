@@ -383,8 +383,8 @@ function IdentidadYPublicacion({
         <Dato rotulo="Slug público">{slug}</Dato>
       </dl>
       <p className="mt-1 text-[12px] leading-snug text-[var(--tenue)]">
-        No se edita: va impreso en el QR de cada parada, y cambiarlo rompe los letreros que ya
-        están atornillados al poste.
+        No se edita: va impreso en el QR de cada parada, y cambiarlo rompe los QR que ya están
+        atornillados al poste.
       </p>
 
       {/* ── Los dos interruptores ── */}

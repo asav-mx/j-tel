@@ -94,7 +94,7 @@ export default async function LetrerosDelCircuito({
   if (aImprimir.length === 0) {
     return (
       <main className="mx-auto max-w-[21.59cm] px-4 py-10">
-        <h1 className="text-[22px] font-semibold">No hay nada que imprimir</h1>
+        <h1 className="text-[22px] font-semibold">No hay ningún QR que imprimir</h1>
         <p className="mt-3 text-[15px] text-[var(--tenue)]">
           {unaSola
             ? "Esa parada no está entre las vigentes de este circuito."
@@ -115,8 +115,8 @@ export default async function LetrerosDelCircuito({
       <div className="solo-pantalla px-4 pt-8">
         <h1 className="text-[22px] font-semibold">
           {aImprimir.length === 1
-            ? `Letrero de ${aImprimir[0]!.name}`
-            : `${aImprimir.length} letreros de ${circuito.name}`}
+            ? `QR de ${aImprimir[0]!.name}`
+            : `${aImprimir.length} QR de ${circuito.name}`}
         </h1>
         <p className="mt-2 text-[15px] text-[var(--tenue)]">
           Una hoja por parada, tamaño carta. Imprime con el navegador (⌘P) al 100 %, sin ajustar a

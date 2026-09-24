@@ -340,39 +340,41 @@ export default async function VerCircuitoJStaff({
                   <span className={m.lejos ? "font-semibold" : "text-[var(--tenue)]"}>
                     {distanciasEnPalabras(m)}
                     {m.lejos ? ` · lejos, tolerancia ${circuito.stopSnapToleranceMeters} m` : ""} · {m.qr}
-                    {publicado && (
-                      <>
-                        {" · "}
-                        <Link
-                          href={`/casa/jstaff/circuitos/${id}/letreros?parada=${encodeURIComponent(m.qr)}`}
-                          className="text-[var(--tinta)] underline underline-offset-2"
-                        >
-                          Imprimir letrero
-                        </Link>
-                      </>
-                    )}
+                    {" · "}
+                    {/* Sin publicar también se imprime; la razón y el aviso van una vez, abajo. */}
+                    <Link
+                      href={`/casa/jstaff/circuitos/${id}/letreros?parada=${encodeURIComponent(m.qr)}`}
+                      className="text-[var(--tinta)] underline underline-offset-2"
+                    >
+                      Imprimir QR
+                    </Link>
                   </span>
                 </Renglon>
               ))}
               {/*
-                Sólo se imprime de circuitos publicados. Un letrero atornillado
-                a un poste que no abre nada es una promesa falsa — y quien la
-                lee está parado esperando el camión. Sin publicar, el botón no
-                se esconde: se enseña apagado con su razón al lado, que es la
-                ley de «J-Staff enuncia, no esconde».
+                **Sin publicar también se imprime** (ASAV, 23-sep): imprimir,
+                repartir y atornillar toma días, y exigir la publicación antes
+                obliga a prometerle algo a un pasajero días antes de que exista
+                un QR en un poste. El aviso de qué contesta el código mientras
+                tanto lo da la pantalla de impresión, que es donde lo lee quien
+                manda a la impresora y todavía puede decidir.
+
+                Este enlace se quedó apagado cuando la pantalla de impresión ya
+                dejaba pasar: el caso que Asav pidió sólo se alcanzaba
+                escribiendo la dirección a mano.
               */}
               <p className="text-[13px]">
-                {publicado ? (
-                  <Link
-                    href={`/casa/jstaff/circuitos/${id}/letreros`}
-                    className="text-[var(--tinta)] underline underline-offset-2"
-                  >
-                    Imprimir todas las paradas
-                  </Link>
-                ) : (
+                <Link
+                  href={`/casa/jstaff/circuitos/${id}/letreros`}
+                  className="text-[var(--tinta)] underline underline-offset-2"
+                >
+                  Imprimir todos los QR
+                </Link>
+                {!publicado && (
                   <span className="text-[var(--tenue)]">
-                    Imprimir todas las paradas — no se puede todavía: el circuito no está
-                    publicado, y un letrero que no abre nada es una promesa falsa.
+                    {" "}
+                    — el circuito no está publicado, y hasta que lo publiques estos códigos
+                    contestan «todavía no está activo»
                   </span>
                 )}
               </p>
