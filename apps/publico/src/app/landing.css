@@ -480,6 +480,45 @@ body:has(.landing) {
   color: var(--texto-2);
 }
 
+/* ─── La calle ─────────────────────────────────────────────────────────── */
+
+/*
+ * La franja de calle que cruza debajo del hero.
+ *
+ * Va a **todo el ancho de la ventana** y no dentro de la caja de 1280: es una
+ * calle, y una calle que se acaba antes del filo de la pantalla es una maqueta
+ * de calle. El `slice` del SVG recorta en vez de deformar, así que en pantalla
+ * ancha se ve más calle y en teléfono menos — que es justo lo que hace una
+ * calle de verdad.
+ *
+ * ## El alto crece con el ancho, y el número no es decorativo
+ *
+ * `12.5vw` es exactamente 150/1200, la proporción del `viewBox`. Con una altura
+ * fija de 150, el `slice` escalaba por el ancho y **recortaba por arriba y por
+ * abajo**: a 1440 se comía 15 px de cada lado y **le cortaba la cabeza a
+ * Tino**, que es la pieza que más importa de toda la escena. Creciendo en la
+ * misma proporción, la escala vertical y la horizontal coinciden y no se
+ * recorta nada de alto.
+ *
+ * Por debajo de 1200 se queda en 150 —una calle más baja que eso deja de
+ * leerse— y ahí sí recorta a lo ancho. Por eso se ancla a la derecha: ver.
+ */
+.landing-calle {
+  position: relative;
+  height: clamp(150px, 12.5vw, 240px);
+  overflow: hidden;
+  background: var(--calle);
+  border-bottom: 10px solid var(--arena);
+  box-shadow: inset 0 -3px 0 var(--arena-2);
+}
+
+.landing-calle svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
 /* ─── El pie ───────────────────────────────────────────────────────────── */
 
 .landing-pie {

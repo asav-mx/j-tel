@@ -71,7 +71,12 @@ export interface OjosVivos {
   alTocar?: RefObject<HTMLElement | null>;
 }
 
-export function useOjosVivos({ ojos, nivel, quieto, alTocar }: OjosVivos): void {
+export function useOjosVivos({
+  ojos,
+  nivel,
+  quieto,
+  alTocar,
+}: OjosVivos): void {
   useEffect(() => {
     if (quieto) return;
 
@@ -142,7 +147,9 @@ export function useOjosVivos({ ojos, nivel, quieto, alTocar }: OjosVivos): void 
 
       const desdeElParpadeo = t - parpadeoEn;
       const abierto =
-        desdeElParpadeo < PARPADEO_S ? Math.abs(desdeElParpadeo / (PARPADEO_S / 2) - 1) : 1;
+        desdeElParpadeo < PARPADEO_S
+          ? Math.abs(desdeElParpadeo / (PARPADEO_S / 2) - 1)
+          : 1;
 
       vivos.forEach((ojo, i) => {
         const p = donde[i];

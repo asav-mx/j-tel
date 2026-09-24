@@ -33,14 +33,24 @@ import localFont from "next/font/local";
  */
 
 export const bricolage = localFont({
-  src: [{ path: "../../app/fuentes/bricolage-variable.woff2", weight: "600 800", style: "normal" }],
+  src: [
+    {
+      path: "../../app/fuentes/bricolage-variable.woff2",
+      weight: "600 800",
+      style: "normal",
+    },
+  ],
   variable: "--fuente-bricolage",
   display: "swap",
 });
 
 export const instrumentSans = localFont({
   src: [
-    { path: "../../app/fuentes/instrument-sans-variable.woff2", weight: "400 700", style: "normal" },
+    {
+      path: "../../app/fuentes/instrument-sans-variable.woff2",
+      weight: "400 700",
+      style: "normal",
+    },
   ],
   variable: "--fuente-instrument",
   display: "swap",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { useNivelDeRendimiento } from "./nivel-de-rendimiento";
+import { useNivel } from "./nivel-contexto";
 import { useOjosVivos } from "./ojos-vivos";
 import {
   CaraDeOntoy,
@@ -13,10 +13,10 @@ import {
 /**
  * **El renglón de la marca del hero**: el wordmark gigante y Ontoy, vivos.
  *
- * Es la única parte cliente del hero. Todo lo demás —la etiqueta, el título,
- * la frase, el botón— lo rinde el servidor y llega en el HTML, así que la
- * portada **dice lo que tiene que decir antes de que corra una línea de
- * JavaScript**. Si el JS no llega nunca, lo que se pierde es el parpadeo.
+ * La etiqueta, el título, la frase y el botón los rinde el servidor y llegan en
+ * el HTML, así que la portada **dice lo que tiene que decir antes de que corra
+ * una línea de JavaScript**. Si el JS no llega nunca, lo que se pierde es el
+ * parpadeo.
  *
  * ## Los cuatro ojos parpadean juntos, y es a propósito
  *
@@ -33,7 +33,7 @@ import {
  * propio PR y se monta encima de esto, no en su lugar.
  */
 export function MarcaDelHero() {
-  const { nivel, quieto } = useNivelDeRendimiento();
+  const { nivel, quieto } = useNivel();
 
   const caja = useRef<HTMLDivElement>(null);
   const wordmarkA = useRef<SVGGElement>(null);

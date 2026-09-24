@@ -62,12 +62,40 @@ export function CaraDeOntoy({
       />
       {/* Los ojos. Sin `ref` se quedan mirando arriba: «¡ya viene!». */}
       <g ref={ojoIzq}>
-        <ellipse className="ojo-blanco" cx="50" cy="50" rx="12" ry="12" fill="var(--ojo)" />
-        <ellipse className="ojo-pupila" cx="51" cy="45" rx="6" ry="6" fill="var(--pupila)" />
+        <ellipse
+          className="ojo-blanco"
+          cx="50"
+          cy="50"
+          rx="12"
+          ry="12"
+          fill="var(--ojo)"
+        />
+        <ellipse
+          className="ojo-pupila"
+          cx="51"
+          cy="45"
+          rx="6"
+          ry="6"
+          fill="var(--pupila)"
+        />
       </g>
       <g ref={ojoDer}>
-        <ellipse className="ojo-blanco" cx="76" cy="48" rx="12" ry="12" fill="var(--ojo)" />
-        <ellipse className="ojo-pupila" cx="77" cy="43" rx="6" ry="6" fill="var(--pupila)" />
+        <ellipse
+          className="ojo-blanco"
+          cx="76"
+          cy="48"
+          rx="12"
+          ry="12"
+          fill="var(--ojo)"
+        />
+        <ellipse
+          className="ojo-pupila"
+          cx="77"
+          cy="43"
+          rx="6"
+          ry="6"
+          fill="var(--pupila)"
+        />
       </g>
       {/* La boca abierta. Sólo la llevan las reacciones, y ésta es una. */}
       <ellipse cx="63" cy="75" rx="5" ry="6" fill="var(--pupila)" />
@@ -145,9 +173,17 @@ function OjoDelWordmark({
   return (
     <span
       aria-hidden="true"
-      style={{ display: "block", width: tamano, height: tamano, margin: "0 .012em 0 .03em" }}
+      style={{
+        display: "block",
+        width: tamano,
+        height: tamano,
+        margin: "0 .012em 0 .03em",
+      }}
     >
-      <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", display: "block" }}>
+      <svg
+        viewBox="0 0 100 100"
+        style={{ width: "100%", height: "100%", display: "block" }}
+      >
         <circle cx="50" cy="50" r="48" fill="var(--carbon)" />
         <g ref={ref}>
           <ellipse

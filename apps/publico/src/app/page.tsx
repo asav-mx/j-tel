@@ -4,6 +4,8 @@ import "./landing.css";
 import { bricolage, instrumentSans } from "@/components/landing/letra";
 import { CaraDeOntoy } from "@/components/landing/ontoy";
 import { MarcaDelHero } from "@/components/landing/marca-del-hero";
+import { Calle } from "@/components/landing/calle/calle";
+import { ProveedorDeNivel } from "@/components/landing/nivel-contexto";
 
 /**
  * **La landing de `ontoy.app`** — la raíz, para quien todavía no conoce Ontoy.
@@ -82,77 +84,107 @@ const SECCIONES = [
 export default function Landing() {
   return (
     <div className={`landing ${bricolage.variable} ${instrumentSans.variable}`}>
-      <header className="landing-cabecera">
-        <div className="landing-caja">
-          <Link href="/rutas" className="landing-wordmark" style={{ fontSize: 23, color: "var(--texto)", textDecoration: "none" }}>
-            {ONTOY}
-          </Link>
-          <nav aria-label="Secciones">
-            {SECCIONES.map((s) => (
-              <a key={s.ancla} href={s.ancla}>
-                {s.palabra}
-              </a>
-            ))}
-            {/*
-             * La única salida que no puede faltar, y por eso viaja fija con la
-             * cabecera: quien ya sabe qué es Ontoy no tiene que bajar la
-             * portada entera para poder usarla.
-             */}
-            <Link href="/rutas" className="landing-boton landing-boton-principal landing-boton-chico">
-              Abrir la app
+      {/*
+       * El nivel de rendimiento se averigua UNA vez y baja por contexto. Esto
+       * es cliente, pero lo que envuelve no: el título, la frase y el botón
+       * siguen llegando en el HTML.
+       */}
+      <ProveedorDeNivel>
+        <header className="landing-cabecera">
+          <div className="landing-caja">
+            <Link
+              href="/rutas"
+              className="landing-wordmark"
+              style={{
+                fontSize: 23,
+                color: "var(--texto)",
+                textDecoration: "none",
+              }}
+            >
+              {ONTOY}
             </Link>
-          </nav>
-        </div>
-      </header>
-
-      <section className="landing-caja landing-hero">
-        {/*
-         * La única parte cliente del hero: el wordmark y Ontoy, que parpadean
-         * y siguen a quien lee. Todo lo demás de esta página llega ya escrito
-         * en el HTML.
-         */}
-        <MarcaDelHero />
-
-        <div className="landing-hero-dicho">
-          <div>
-            <span className="landing-etiqueta">
-              <span>
-                <CaraDeOntoy />
-              </span>
-              La app de tu camión
-            </span>
-            <h1>¿Ontás? Mira cuándo pasa tu camión.</h1>
-          </div>
-          <div className="landing-hero-columna">
-            <p className="landing-lead">
-              Qué camión tomar, dónde subirte y cuándo pasa, con la posición real del camión.{" "}
-              <strong>Si no sabe, te lo dice.</strong>
-            </p>
-            <div className="landing-acciones">
-              <Link href="/rutas" className="landing-boton landing-boton-principal">
-                Úsala ya en tu navegador
-                <span aria-hidden="true">→</span>
+            <nav aria-label="Secciones">
+              {SECCIONES.map((s) => (
+                <a key={s.ancla} href={s.ancla}>
+                  {s.palabra}
+                </a>
+              ))}
+              {/*
+               * La única salida que no puede faltar, y por eso viaja fija con la
+               * cabecera: quien ya sabe qué es Ontoy no tiene que bajar la
+               * portada entera para poder usarla.
+               */}
+              <Link
+                href="/rutas"
+                className="landing-boton landing-boton-principal landing-boton-chico"
+              >
+                Abrir la app
               </Link>
-            </div>
-            {/*
-             * Las tiendas van en «muy pronto» hasta que haya algo que bajar de
-             * verdad. Es el estado `próximamente` del diseño, y no se adelanta:
-             * una tienda anunciada y vacía es la primera promesa incumplida que
-             * alguien se lleva de la portada.
-             */}
-            <p className="landing-tiendas">Muy pronto en App Store y Google Play</p>
+            </nav>
           </div>
-        </div>
-      </section>
+        </header>
 
-      <footer className="landing-pie">
-        <div className="landing-caja">
-          <span className="landing-wordmark">{ONTOY}</span>
-          <Link href="/privacidad">Privacidad</Link>
-          <span>Horarios y avisos según cada concesión</span>
-          <span className="landing-pie-dominio">ontoy.app</span>
-        </div>
-      </footer>
+        <section className="landing-caja landing-hero">
+          {/*
+           * La única parte cliente del hero: el wordmark y Ontoy, que parpadean
+           * y siguen a quien lee. Todo lo demás de esta página llega ya escrito
+           * en el HTML.
+           */}
+          <MarcaDelHero />
+
+          <div className="landing-hero-dicho">
+            <div>
+              <span className="landing-etiqueta">
+                <span>
+                  <CaraDeOntoy />
+                </span>
+                La app de tu camión
+              </span>
+              <h1>¿Ontás? Mira cuándo pasa tu camión.</h1>
+            </div>
+            <div className="landing-hero-columna">
+              <p className="landing-lead">
+                Qué camión tomar, dónde subirte y cuándo pasa, con la posición
+                real del camión. <strong>Si no sabe, te lo dice.</strong>
+              </p>
+              <div className="landing-acciones">
+                <Link
+                  href="/rutas"
+                  className="landing-boton landing-boton-principal"
+                >
+                  Úsala ya en tu navegador
+                  <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+              {/*
+               * Las tiendas van en «muy pronto» hasta que haya algo que bajar de
+               * verdad. Es el estado `próximamente` del diseño, y no se adelanta:
+               * una tienda anunciada y vacía es la primera promesa incumplida que
+               * alguien se lleva de la portada.
+               */}
+              <p className="landing-tiendas">
+                Muy pronto en App Store y Google Play
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/*
+         * La calle cruza a TODO el ancho, así que va fuera de la caja del hero —
+         * una calle que se acaba antes del filo de la pantalla es una maqueta de
+         * calle.
+         */}
+        <Calle />
+
+        <footer className="landing-pie">
+          <div className="landing-caja">
+            <span className="landing-wordmark">{ONTOY}</span>
+            <Link href="/privacidad">Privacidad</Link>
+            <span>Horarios y avisos según cada concesión</span>
+            <span className="landing-pie-dominio">ontoy.app</span>
+          </div>
+        </footer>
+      </ProveedorDeNivel>
     </div>
   );
 }
