@@ -149,11 +149,10 @@ export function TuColor() {
 /**
  * Tino a tamaño de muestra, con su placa.
  *
- * **«¡ya!» va en blanco y más grande, no en el color de la ruta.** Es la misma
- * corrección que en la calle, por la misma medición: el color de ruta sobre la
- * placa carbón da 3.47:1 con el azul y 3.29 con el morado, contra un piso de
- * 4.5. El prototipo lo resolvía con una versión aclarada del color, que es
- * exactamente el «corrimiento de luz» que la enmienda (a) prohíbe.
+ * **El texto va en blanco y el color de la ruta en la franja de abajo**
+ * (enmienda (f)). El prototipo ponía «¡ya!» en una versión aclarada del color,
+ * que además de no llegar al contraste era el «corrimiento de luz» que la
+ * enmienda (a) prohíbe.
  */
 function TinoGrande({ numero }: { numero: string }) {
   return (
@@ -165,7 +164,9 @@ function TinoGrande({ numero }: { numero: string }) {
       <circle cx="69" cy="36" r="7.5" fill="var(--ojo)" />
       <circle cx="49" cy="37" r="4" fill="var(--pupila)" />
       <circle cx="67" cy="37" r="4" fill="var(--pupila)" />
-      <rect x="31" y="70" width="58" height="26" rx="6.5" fill="var(--carbon)" />
+      {/* La franja del color de la ruta en el filo de abajo (enmienda (f)). */}
+      <rect x="31" y="92" width="58" height="4" rx="2" fill="var(--ruta)" />
+      <rect x="31" y="70" width="58" height="22" rx="6.5" fill="var(--carbon)" />
       <text x="46" y="87.5" textAnchor="middle" fill="var(--blanco)" style={{ font: "800 11px var(--titular)" }}>
         {numero}
       </text>

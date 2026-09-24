@@ -18,7 +18,8 @@ import { MS_POR_CUADRO } from "../../nivel-de-rendimiento";
  * El prototipo las traía contando minutos, y el texto de entrada lo decía:
  * «su placa cuenta los minutos». Sin corredor calibrado la app no da minutos
  * (8.9b), así que cuentan **a cuántas paradas viene Cami** — y la de enfrente,
- * cuando lo tiene encima, dice «¡ya!».
+ * cuando lo tiene encima, dice «¡ya!». Todas en blanco, con el color de la ruta
+ * en la franja del filo de abajo (enmienda (f)).
  *
  * ## Va atado al scroll, no a un reloj
  *
@@ -173,7 +174,9 @@ export function Hilo({ seccion }: { seccion: React.RefObject<HTMLElement | null>
            * la escribe en tres sitios y la abrevia en el cuarto enseña que la
            * unidad es opcional.
            */}
-          <rect x="24" y="-12" width="104" height="24" rx="5" fill="var(--carbon)" />
+          {/* La franja del color de la ruta en el filo de abajo (enmienda (f)). */}
+          <rect x="24" y="9" width="104" height="3" rx="1.5" fill="var(--ruta)" />
+          <rect x="24" y="-12" width="104" height="21" rx="5" fill="var(--carbon)" />
           <text
             data-pieza={`placa-${i}`}
             x="76"
