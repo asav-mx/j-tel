@@ -735,6 +735,169 @@ body:has(.landing) {
   display: block;
 }
 
+/* ─── Personajes ──────────────────────────────────────────────────────── */
+
+/*
+ * La única sección oscura de la portada, y no por variar: los ojos son blancos
+ * con pupila carbón, y sobre banqueta el blanco casi no se separa del fondo.
+ * Sobre carbón la mirada es lo primero que se ve — que es de lo que trata.
+ *
+ * Va con márgenes laterales y esquinas redondeadas, como una tarjeta grande:
+ * así se lee como un aparte y no como que la página cambió de piel.
+ */
+.landing-personajes {
+  background: var(--carbon);
+  color: var(--texto-en-oscuro);
+  margin-inline: clamp(8px, 1.4vw, 20px);
+  border-radius: clamp(28px, 3vw, 44px);
+}
+
+.landing-personajes-caja {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding-block: clamp(56px, 7vw, 96px);
+}
+
+.landing-personajes h2 {
+  color: var(--blanco);
+}
+
+/* Sobre carbón, el rótulo y el lead necesitan sus propios tonos. */
+.landing-rotulo-claro {
+  color: var(--arena-2);
+}
+
+.landing-lead-claro {
+  color: var(--arena);
+}
+
+.landing-lead-claro strong {
+  color: var(--blanco);
+}
+
+.landing-personajes-dicho {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.landing-miradas-dibujo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(24px, 5vw, 64px);
+}
+
+.landing-miradas-dibujo figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex: 0 1 180px;
+}
+
+.landing-miradas-dibujo svg {
+  width: 100%;
+  max-width: 180px;
+  height: auto;
+  display: block;
+}
+
+.landing-miradas-dibujo figcaption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font: 400 14px/1.3 var(--cuerpo);
+  color: var(--arena-2);
+}
+
+.landing-miradas-dibujo figcaption b {
+  font-family: var(--titular);
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--blanco);
+}
+
+/*
+ * Las pupilas se mueven con una transición, no con un bucle: son seis destinos
+ * fijos y el navegador interpola entre ellos mejor que nosotros. Con
+ * `reduced-motion` la regla de arriba la apaga y el cambio es instantáneo, que
+ * es lo correcto: lo que importa es DÓNDE mira, no el viaje.
+ */
+.landing-pupilas {
+  transition: transform 0.45s var(--curva);
+}
+
+.landing-miradas-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /*
+   * 170 y no 200: con 200 las seis miradas se quedaban en 1244 px por cuatro
+   * píxeles, y la sexta —«cerrados», que es la que más importa— caía sola en
+   * otra fila como si fuera una nota al pie.
+   */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  gap: 8px;
+}
+
+.landing-miradas-lista button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--r-tienda);
+  background: transparent;
+  color: var(--arena);
+  text-align: start;
+  cursor: pointer;
+  font: 400 14px/1.35 var(--cuerpo);
+  transition: background 0.2s var(--curva);
+}
+
+.landing-miradas-lista button b {
+  font: 700 13px/1.3 var(--cuerpo);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--arena-2);
+}
+
+.landing-miradas-lista button:hover {
+  background: var(--asfalto);
+}
+
+/*
+ * La escogida se marca con FONDO y con el texto en blanco, no sólo con un
+ * color de acento: sobre carbón, un acento de color sería lo único que la
+ * distingue, y el estado no puede vivir del color solo.
+ */
+/*
+ * El borde va en arena-2 (7.62:1 sobre carbón) y no en gris (2.70): si el
+ * borde está, que se vea. El estado no depende de él —lo marcan el fondo y el
+ * texto en blanco—, pero un borde que nadie distingue es ruido, no refuerzo.
+ */
+.landing-miradas-lista button[aria-pressed="true"] {
+  background: var(--asfalto);
+  color: var(--blanco);
+  border-color: var(--arena-2);
+}
+
+.landing-miradas-lista button[aria-pressed="true"] b {
+  color: var(--blanco);
+}
+
+/* El foco del teclado, en claro: sobre carbón el carbón no se ve. */
+.landing-personajes :focus-visible {
+  outline-color: var(--arena);
+}
+
 /* ─── El pie ───────────────────────────────────────────────────────────── */
 
 .landing-pie {
