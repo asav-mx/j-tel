@@ -126,16 +126,25 @@ describe("las direcciones de Ontoy no se mueven", () => {
     );
 
     /*
-     * Y la raíz no puede volver a ser la app por accidente. Las dos formas de
-     * que eso pase son reexportarla —como hacía el reenvío— o copiarle la
-     * consulta; las dos se ven en el archivo.
+     * Y la raíz no puede volver a ser la app por accidente. Lo que la volvería
+     * la app es **servir la app**: reexportar su página, como hacía el reenvío,
+     * o montar su componente.
+     *
+     * ⚠ **Lo que NO se mide aquí es que la raíz consulte circuitos**, y la
+     * distinción costó pensarla. La landing sí los consulta y debe hacerlo: el
+     * número y el color de una ruta **salen del dato, nunca del código**, así
+     * que la portada lee los publicados para su ejemplo igual que los lee la
+     * app. Prohibir la consulta habría medido el parecido en vez de la
+     * identidad, y se habría caído en el primer PR que trajera una sección con
+     * una ruta dentro — obligando a aflojar la valla, que es como las vallas
+     * dejan de servir.
      */
     const raiz = readFileSync(path.join(APP, "page.tsx"), "utf8");
     expect(raiz, "la raíz ya no reenvía a la app: es la landing").not.toMatch(
       /from\s+"\.\/rutas\/page"/,
     );
-    expect(raiz, "la raíz no consulta circuitos: eso es la app").not.toContain(
-      "listPublishedCircuits",
+    expect(raiz, "la raíz no monta la app: es la landing").not.toMatch(
+      /<Ontoy[\s/>]/,
     );
   });
 });
