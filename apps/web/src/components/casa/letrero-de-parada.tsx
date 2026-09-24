@@ -21,43 +21,46 @@ import { CaraDeLaRuta, TinoDeLaLamina } from "@/components/casa/ontoy-impreso";
  * nombre ni su logo. El color de la ruta sí va —es identidad, no estado (8.8c)—
  * y **siempre con su nombre**, en la banda, en Tino y en la placa.
  *
- * ## Los puntitos SÍ cuestan lectura, y el tamaño no lo compra
+ * ## Qué cuesta cada mitad del dibujo, medido
  *
- * Medido sobre **este render**, no sobre una plantilla: se recorta el código de
+ * Medido sobre **estos renders**, no sobre una plantilla: se recorta el código de
  * la captura y se reduce a la resolución que una cámara de teléfono entrega a un
  * metro, con menos contraste, desenfoque y ruido; 25 tiradas por celda,
  * decodificando con jsQR — el mismo lector que trae el validador.
  *
- * A 13 cm, y qué fracción de las tiradas lee:
+ * A 13 cm, qué fracción de las tiradas lee:
  *
- * | | prev. 1920 (4.9 px/cuadrito) | prev. 1280 (3.3) | prev. 960 (2.5) |
+ * | | prev. 1920 (4.9 px/cuad) | prev. 1280 (3.3) | prev. 960 (2.5) |
  * |---|---|---|---|
- * | cuadritos, buena luz | 100 % | 100 % | 100 % |
- * | cuadritos, poca luz | 100 % | 100 % | 92 % |
- * | **puntitos, buena luz** | 100 % | 56 % | **0 %** |
- * | **puntitos, poca luz** | 100 % | 32 % | **0 %** |
+ * | puntitos + ojos (el 1b) | 100 % | 32–72 % | **0 %** |
+ * | cuadrados + ojos | 100 % | 76–100 % | **0 %** |
+ * | cuadrados + esquinas normales | 100 % | 100 % | **92–100 %** |
  *
- * **Y agrandarlo no arregla la columna de en medio:** a 15 y 17 cm los cuadritos
- * siguen al 100 % en todo, y los puntitos siguen entre 80 % y 100 % arriba y
- * flojos abajo. Una primera medición con una plantilla sintética dijo que 3 cm
- * más igualaban los dos dibujos; el render real dice que no, y manda el render.
+ * **Las dos mitades cuestan, y no lo mismo:**
  *
- * O sea: **con los puntitos hace falta un teléfono que le dé al código unos 5
- * píxeles por cuadrito.** Con los cuadritos alcanza con 2.5.
+ *  - **Los puntitos** cuestan la columna de en medio: de 76–100 % bajan a
+ *    32–72 % con la cámara típica.
+ *  - **Los ojos redondeados** cuestan la de abajo, y cuestan más: a 2.5 px por
+ *    cuadrito **no lee nada** con ojos, ni con puntitos ni con cuadrados, y con
+ *    esquinas normales lee al 92 %.
  *
- * ⚠ **Lo que esta medición NO es:** tres teléfonos frente a un poste. Es un
- * modelo con un solo decodificador, y los de los teléfonos reales (VisionKit de
- * Apple, ML Kit de Google) son bastante más tolerantes con los códigos
- * estilizados que jsQR — hay miles de QR de marca con puntitos que sí escanean.
- * Además sus celdas rebotan: el muestreo de la cámara hace *aliasing* contra la
- * rejilla de puntitos, y a un tamaño lee y al siguiente no. Sirve para decir que
- * **los puntitos piden más resolución que los cuadritos**, y cuánto más; no para
- * fijar un porcentaje.
+ * Eso da vuelta a lo que yo había reportado, que era que los puntitos eran el
+ * problema. Y agrandar el código no compra la columna de en medio: a 15 y 17 cm
+ * los cuadrados con esquinas normales siguen al 100 % y lo demás sigue flojo.
  *
- * ## El interruptor, para que la decisión sea de una línea
+ * ⚠ **Lo que esta medición NO es:** teléfonos frente a un poste. Es un modelo con
+ * **un solo decodificador**, y ahí está su límite más importante: los de los
+ * teléfonos reales (VisionKit de Apple, ML Kit de Google) son bastante más
+ * tolerantes con los patrones de búsqueda estilizados que jsQR — es justo de lo
+ * que viven los miles de QR de marca con esquinas redondeadas que sí escanean.
+ * Además sus celdas rebotan: el muestreo hace *aliasing* contra la rejilla. Esto
+ * dice **qué está en juego y de qué tamaño**; no fija un porcentaje ni decide.
  *
- * `MODULOS` elige entre el dibujo del diseño y el que más margen aguanta. Está
- * aquí y no repartido por el archivo justamente para eso.
+ * ## Las tres variantes, para decidir con teléfonos
+ *
+ * La pantalla de impresión saca las tres de la misma parada
+ * (`?modulos=cuadritos`, `?esquinas=normales`). Son tres y no dos porque con dos
+ * hojas no se puede saber cuál de las dos mitades estorba.
  *
  * ## Por qué H
  *
@@ -74,13 +77,25 @@ import { CaraDeLaRuta, TinoDeLaLamina } from "@/components/casa/ontoy-impreso";
  */
 
 /**
- * Cómo se dibujan los módulos.
- *
- * `"puntitos"` es el diseño 1b aprobado. `"cuadritos"` es el del letrero viejo,
- * que aguanta teléfonos peores — ver la tabla de arriba. Cambiar esta línea
- * cambia el letrero completo y nada más.
+ * Cómo se dibujan los módulos de datos. `puntitos` es el 1b aprobado.
  */
-const MODULOS: "puntitos" | "cuadritos" = "puntitos";
+export type FormaDeLosModulos = "puntitos" | "cuadritos";
+
+/**
+ * Cómo se dibujan las tres esquinas — el patrón que el lector usa para
+ * **encontrar** el código.
+ *
+ * `ojos` son los ojos redondeados del diseño, la firma del 1b. `normales` es el
+ * patrón de siempre, un 7×7 de módulos cuadrados.
+ *
+ * **Existe porque medirlo dio vuelta a lo que yo había dicho.** Los ojos
+ * redondeados cuestan MÁS que los puntitos: a 13 cm y 2.5 px por cuadrito (la
+ * previsualización de 960 a un metro), con ojos no lee nada —ni con puntitos ni
+ * con cuadrados— y con esquinas normales lee al 92 %. Si la prueba con teléfonos
+ * reales sólo comparara puntitos contra cuadrados, no podría distinguir cuál de
+ * las dos mitades es la que estorba.
+ */
+export type FormaDeLasEsquinas = "ojos" | "normales";
 
 /** El radio del puntito, en cuadritos. Del diseño 1b. */
 const RADIO_DEL_PUNTITO = 0.44;
@@ -95,11 +110,17 @@ export function LetreroDeParada({
   parada,
   ruta,
   sitio,
+  modulos = "puntitos",
+  esquinasComo = "ojos",
 }: {
   parada: { nombre: string; qrSlug: string };
   ruta: { nombre: string; colorHex: string };
   /** De dónde cuelga la dirección impresa. Se pasa para poder probar contra un preview. */
   sitio?: string;
+  /** El 1b es `puntitos`; `cuadritos` es la variante que se está probando. */
+  modulos?: FormaDeLosModulos;
+  /** El 1b son `ojos`; `normales` es el patrón de siempre. */
+  esquinasComo?: FormaDeLasEsquinas;
 }) {
   const direccion = direccionDelLetrero(parada.qrSlug, sitio);
   const { size, data } = encode(direccion, { ecc: CORRECCION_DEL_LETRERO, border: 0 });
@@ -120,14 +141,15 @@ export function LetreroDeParada({
 
   /* Los puntitos, en un solo `path`: dos arcos por círculo. Las tres esquinas
      quedan fuera — se dibujan como ojos — y el hueco de la cara también. */
-  const conPuntitos = MODULOS === "puntitos";
+  const conPuntitos = modulos === "puntitos";
+  const conOjos = esquinasComo === "ojos";
   const r = RADIO_DEL_PUNTITO;
   let trazo = "";
   for (let f = 0; f < size; f++) {
     for (let c = 0; c < size; c++) {
       if (!data[f]?.[c] || enLaCara(f, c)) continue;
-      // con cuadritos las esquinas se dibujan solas, con sus propios módulos
-      if (conPuntitos && enEsquina(f, c)) continue;
+      // con ojos, las esquinas se dibujan aparte; sin ojos, con sus propios módulos
+      if (conOjos && enEsquina(f, c)) continue;
       if (conPuntitos) {
         const x = c + Q + 0.5;
         const y = f + Q + 0.5;
@@ -192,21 +214,22 @@ export function LetreroDeParada({
               <rect width={lado} height={lado} fill="#ffffff" />
               <path d={trazo} fill="#2A2E37" />
 
-              {conPuntitos && esquinas.map((e) => (
-                <g key={`${e.x}-${e.y}`}>
-                  <rect
-                    x={e.x + 0.5}
-                    y={e.y + 0.5}
-                    width={6}
-                    height={6}
-                    rx={2.2}
-                    fill="none"
-                    stroke="#2A2E37"
-                    strokeWidth={1}
-                  />
-                  <circle cx={e.pupilaX} cy={e.pupilaY} r={1.45} fill="#2A2E37" />
-                </g>
-              ))}
+              {conOjos &&
+                esquinas.map((e) => (
+                  <g key={`${e.x}-${e.y}`}>
+                    <rect
+                      x={e.x + 0.5}
+                      y={e.y + 0.5}
+                      width={6}
+                      height={6}
+                      rx={2.2}
+                      fill="none"
+                      stroke="#2A2E37"
+                      strokeWidth={1}
+                    />
+                    <circle cx={e.pupilaX} cy={e.pupilaY} r={1.45} fill="#2A2E37" />
+                  </g>
+                ))}
 
               {/* El recuadro blanco del hueco, y encima la cara de la ruta. */}
               <rect

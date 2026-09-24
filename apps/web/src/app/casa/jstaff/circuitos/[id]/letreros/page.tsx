@@ -2,7 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
-import { LetreroDeParada } from "@/components/casa/letrero-de-parada";
+import {
+  LetreroDeParada,
+  type FormaDeLasEsquinas,
+  type FormaDeLosModulos,
+} from "@/components/casa/letrero-de-parada";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +35,17 @@ export const dynamic = "force-dynamic";
  * mismo texto exacto que un código inventado. Lo no publicado no existe para la
  * app (8.4), y distinguirlo de un slug inventado sería confirmar que existe.
  *
+ * ## `?modulos=cuadritos`, para decidir con teléfonos y no con una simulación
+ *
+ * El diseño 1b lleva los módulos en **puntitos**, y medirlo dice que piden más
+ * resolución de cámara que los cuadrados. Cuánto más, lo dice una simulación —y
+ * una simulación no decide esto, lo decide un teléfono frente a un poste—. Así
+ * que esta pantalla saca **las dos versiones de la misma parada** para poder
+ * imprimirlas y probarlas el mismo día (ASAV, 24-sep).
+ *
+ * **Las tres esquinas van redondeadas en las dos:** son la firma del diseño y no
+ * están en discusión. Lo único que cambia es la forma de los módulos de datos.
+ *
  * ## Sólo las vigentes
  *
  * Una parada retirada no se reimprime. Su letrero viejo, el que ya está en el
@@ -51,7 +66,27 @@ export default async function LetrerosDelCircuito({
   if (!circuito) notFound();
 
   const unaSola = typeof sp.parada === "string" ? sp.parada : null;
+  const modulos: FormaDeLosModulos = sp.modulos === "cuadritos" ? "cuadritos" : "puntitos";
+  const esquinasComo: FormaDeLasEsquinas = sp.esquinas === "normales" ? "normales" : "ojos";
   const vuelta = `/casa/jstaff/circuitos/${id}`;
+  /*
+   * Las tres hojas que hay que imprimir para poder decidir con teléfonos. Son
+   * tres y no dos porque los ojos redondeados y los puntitos cuestan por
+   * separado, y con dos hojas no se sabría cuál de los dos estorba.
+   */
+  const VARIANTES: { etiqueta: string; modulos: FormaDeLosModulos; esquinas: FormaDeLasEsquinas }[] = [
+    { etiqueta: "puntitos + ojos (el diseño 1b)", modulos: "puntitos", esquinas: "ojos" },
+    { etiqueta: "cuadrados + ojos", modulos: "cuadritos", esquinas: "ojos" },
+    { etiqueta: "cuadrados + esquinas normales", modulos: "cuadritos", esquinas: "normales" },
+  ];
+  const liga = (v: { modulos: FormaDeLosModulos; esquinas: FormaDeLasEsquinas }) => {
+    const q = new URLSearchParams();
+    if (unaSola) q.set("parada", unaSola);
+    if (v.modulos === "cuadritos") q.set("modulos", "cuadritos");
+    if (v.esquinas === "normales") q.set("esquinas", "normales");
+    const cola = q.toString();
+    return `/casa/jstaff/circuitos/${id}/letreros${cola ? `?${cola}` : ""}`;
+  };
 
   const paradas = await repos.circuits.listStopsVigentes(id);
   const aImprimir = unaSola ? paradas.filter((p) => p.qrSlug === unaSola) : paradas;
@@ -85,10 +120,36 @@ export default async function LetrerosDelCircuito({
         </h1>
         <p className="mt-2 text-[15px] text-[var(--tenue)]">
           Una hoja por parada, tamaño carta. Imprime con el navegador (⌘P) al 100 %, sin ajustar a
-          la página: el código mide <strong>13 cm</strong> de lado a propósito —los módulos en
-          puntitos del diseño piden más resolución que los cuadrados— y encogerlo le quita el metro
-          de distancia desde el que engancha.
+          la página: el código mide <strong>13 cm</strong> de lado a propósito, y encogerlo le
+          quita el metro de distancia desde el que engancha.
         </p>
+        <div className="mt-3 rounded-lg border border-[var(--linea)] p-3 text-[15px]">
+          <p className="font-semibold">
+            Esta hoja:{" "}
+            {VARIANTES.find((v) => v.modulos === modulos && v.esquinas === esquinasComo)?.etiqueta}
+          </p>
+          <p className="mt-1">
+            Imprime <strong>las tres</strong> de la misma parada y pruébalas con teléfonos. Son tres
+            y no dos porque los puntitos y los ojos redondeados cuestan por separado: con dos hojas
+            no se sabría cuál de los dos estorba.
+          </p>
+          <ul className="mt-2 flex flex-col gap-1">
+            {VARIANTES.map((v) => {
+              const esta = v.modulos === modulos && v.esquinas === esquinasComo;
+              return (
+                <li key={v.etiqueta}>
+                  {esta ? (
+                    <span className="text-[var(--tenue)]">{v.etiqueta} — es la que estás viendo</span>
+                  ) : (
+                    <Link href={liga(v)} className="underline underline-offset-2">
+                      {v.etiqueta}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
         {!circuito.publishedAt && (
           /* En tinta y con su frase, sin cobre: un aviso no es un dato vivo. Y no
              bloquea — imprimir, repartir y pegar toma días. */
@@ -112,6 +173,8 @@ export default async function LetrerosDelCircuito({
           key={p.qrSlug}
           parada={{ nombre: p.name, qrSlug: p.qrSlug }}
           ruta={{ nombre: circuito.name, colorHex: circuito.colorHex }}
+          modulos={modulos}
+          esquinasComo={esquinasComo}
         />
       ))}
     </main>
