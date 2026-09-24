@@ -323,7 +323,13 @@ async function sembrarJornada(
 }
 
 async function limpiar(db: ReturnType<typeof createDb>) {
+  // Las paradas ya no caen por cascada: desde la 0055 su referencia al
+  // circuito es RESTRICT, porque cada una tiene un letrero atornillado a un
+  // poste. En un escenario se borran a mano; en producción, ya no se puede.
   await db.delete(livePositions).where(inArray(livePositions.imei, IMEIS));
+  await db
+    .delete(circuitStops)
+    .where(inArray(circuitStops.circuitId, [IDS.circuito, IDS.circuitoVecino]));
   await db.delete(circuits).where(inArray(circuits.id, [IDS.circuito, IDS.circuitoVecino]));
   await db
     .delete(accounts)

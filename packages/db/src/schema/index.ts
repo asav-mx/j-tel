@@ -1616,9 +1616,15 @@ export const circuitStops = pgTable(
   "circuit_stops",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /**
+     * **RESTRICT, no CASCADE** (0055). Cada parada tiene un letrero de lámina
+     * atornillado a un poste: borrar el circuito convertiría cada QR impreso
+     * en un callejón, sin aviso y sin rastro. Para dejar de dar un circuito se
+     * **despublica** —lo quita de la app al instante y no borra nada—.
+     */
     circuitId: uuid("circuit_id")
       .notNull()
-      .references(() => circuits.id, { onDelete: "cascade" }),
+      .references(() => circuits.id, { onDelete: "restrict" }),
     qrSlug: text("qr_slug").notNull().unique(),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     /** Retirar una parada tampoco borra: se marca y deja de publicarse. */

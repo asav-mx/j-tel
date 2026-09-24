@@ -65,6 +65,14 @@ const RESERVADAS = [
   { direccion: "/c/[slug]", que: "una ruta, para compartir por mensaje" },
   { direccion: "/validador", que: "el lector del camión" },
   { direccion: "/privacidad", que: "qué se guarda y qué no" },
+  /*
+   * **La única que va atornillada a un poste.** De las tres formas en que una
+   * dirección se sale de nuestro alcance —guardada, instalada, escaneada—, ésta
+   * es la que no tiene arreglo por despliegue: corregir una lámina pide un
+   * humano en una escalera. `docs/Ontoy-Direcciones.md` la tenía reservada
+   * esperando a que su página existiera; existe desde el #536.
+   */
+  { direccion: "/p/[qrSlug]", que: "lo que abre el QR del poste" },
 ];
 
 const SERVIDAS = carpetasConPagina(APP).map(direccionDeLaCarpeta);
@@ -121,8 +129,19 @@ describe("las direcciones de Ontoy no se mueven", () => {
      * todo, y la raíz **ya no es** la app.
      */
     const app = readFileSync(path.join(APP, "rutas/page.tsx"), "utf8");
+    /*
+     * Lo que se busca es «aquí está la app de verdad, no un cascarón». El
+     * marcador era `listPublishedCircuits`, la consulta de los circuitos
+     * publicados; con el #536 esa carga salió a `lib/ontoy/ciudad.ts`, porque
+     * desde el QR de las paradas hay **dos puertas** a la misma app y dos copias
+     * serían dos formas de dejar de coincidir. El marcador se mueve con ella.
+     *
+     * **Sigue siendo un proxy, y conviene decirlo:** esto no prueba que la
+     * pantalla dibuje; prueba que este archivo carga la ciudad en vez de
+     * reenviar a otro lado.
+     */
     expect(app, "la app de verdad tiene que estar en rutas/page.tsx").toContain(
-      "listPublishedCircuits",
+      "ciudadPublicada",
     );
 
     /*

@@ -418,3 +418,112 @@
   stroke-width: 2px;
   fill: var(--pieza);
 }
+
+/* ─── El letrero de una parada ────────────────────────────────────────────────
+   La única pantalla del producto cuyo destino es el papel: se imprime, se
+   plastifica y se atornilla a un poste. Por eso no tiene piel oscura —una piel
+   oscura en papel es un cartucho de tinta— y por eso sus medidas están en
+   centímetros y no en píxeles: lo que importa es desde cuántos metros engancha
+   el código, no cómo se ve en un monitor. */
+.letrero {
+  width: 21.59cm; /* carta, vertical */
+  min-height: 27.94cm;
+  box-sizing: border-box;
+  padding: 2.2cm 2cm;
+  background: #ffffff;
+  color: #000000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  /* En pantalla se ve como una hoja sobre la mesa; al imprimir, el borde se va. */
+  border: 1px solid var(--linea);
+  margin: 0 auto 1.5rem;
+}
+
+.letrero-marca {
+  font-family: var(--letra-titular);
+  font-weight: 800;
+  font-size: 0.9cm;
+  letter-spacing: -0.02em;
+  margin: 0 0 1.4cm;
+}
+
+.letrero-parada {
+  font-family: var(--letra-titular);
+  font-weight: 800;
+  font-size: 1.5cm;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.5cm;
+}
+
+/* El color es identidad (8.8c) y NUNCA va solo: el nombre lo acompaña siempre.
+   Quien no distingue colores lee el mismo dato que todos. */
+.letrero-ruta {
+  font-family: var(--letra-lectura);
+  font-size: 0.75cm;
+  display: flex;
+  align-items: center;
+  gap: 0.35cm;
+  margin: 0 0 1.2cm;
+}
+
+.letrero-punto {
+  width: 0.55cm;
+  height: 0.55cm;
+  border-radius: 999px;
+  /* Un borde negro fino: un color claro sobre papel blanco se pierde solo. */
+  border: 1px solid #000000;
+  display: inline-block;
+}
+
+/* 9 cm: la ficha pide 8 como mínimo, y el mínimo no es la medida de diseño.
+   Es lo que decide si engancha de pie, a un metro del poste. */
+.letrero-qr {
+  width: 9cm;
+  height: 9cm;
+  display: block;
+  /* La zona tranquila que el estándar pide alrededor del código. */
+  padding: 0.4cm;
+  background: #ffffff;
+}
+
+.letrero-invita {
+  font-family: var(--letra-lectura);
+  font-size: 0.7cm;
+  margin: 1.2cm 0 0.5cm;
+}
+
+/* Para quien no trae cámara, no sabe escanear o tiene la pantalla rota. */
+.letrero-direccion {
+  font-family: var(--letra-medida);
+  font-size: 0.65cm;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+/* Lo que sólo sirve en pantalla y estorba en papel. */
+.solo-pantalla {
+  margin: 0 auto 1.5rem;
+  max-width: 21.59cm;
+}
+
+@media print {
+  .solo-pantalla {
+    display: none;
+  }
+
+  .letrero {
+    border: 0;
+    margin: 0;
+    width: auto;
+    min-height: auto;
+    /* Una parada por página, y la última sin una página en blanco detrás. */
+    break-after: page;
+  }
+
+  .letrero:last-child {
+    break-after: auto;
+  }
+}

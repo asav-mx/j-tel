@@ -29,7 +29,7 @@ minutos; una lámina mal impresa se corrige con un humano en una escalera.
 | `ontoy.app/c/‹ruta›` | Una ruta, para compartir por mensaje | Existe |
 | `ontoy.app/validador` | El lector del camión | Existe |
 | `ontoy.app/privacidad` | Qué se guarda y qué no | Existe |
-| `ontoy.app/p/‹parada›` | Lo que abre el QR del poste | Llega con el #536 |
+| `ontoy.app/p/‹parada›` | Lo que abre el QR del poste | Existe (#536) |
 
 ## La decisión cambió el 25 de septiembre, y por qué el cambio no rompe nada
 
@@ -70,8 +70,8 @@ no la encontraría en caché.
 ## Qué cuida esto, y qué no
 
 `apps/publico/src/app/direcciones.test.ts` revisa que **las direcciones que ya existen no se
-muevan**: que haya página en la raíz, en `/c/‹ruta›` y en `/validador`, y que el `start_url`
-del manifiesto siga siendo `/`.
+muevan**: que haya página en la raíz, en `/rutas`, en `/c/‹ruta›`, en `/validador`, en
+`/privacidad` y en `/p/‹parada›`, y que el `start_url` del manifiesto siga siendo `/rutas`.
 
 Es una valla chica y es a propósito: mide lo único que de verdad está en riesgo, que es que un
 cambio de estructura del router mueva una dirección **sin que nadie lo note**, porque mover una
@@ -82,8 +82,9 @@ Lo que la valla **no** puede cuidar:
 - **Que la raíz se vuelva la landing.** Una prueba no puede exigir que eso *no* haya pasado
   todavía: se caería el día que debe pasar. Lo que sí cuida es que ese día `/rutas` no se vaya
   con ella.
-- **El `/p/‹parada›` del #536.** Su página no está en `main` todavía. Cuando entre, su
-  dirección ya está reservada en esta tabla.
+- **Que un letrero ya impreso siga abriendo.** La valla cuida que `/p/‹parada›` siga
+  sirviéndose; que el `qr_slug` de una lámina concreta siga existiendo en la base es otra
+  pregunta, y la cuida la `0055` —`circuit_stops` con RESTRICT— no esta prueba.
 - **Un dominio apuntado mal en un panel.** Eso vive en `docs/Procedimiento-Dominio-Ontoy-App.md`
   y en la mudanza del #534.
 

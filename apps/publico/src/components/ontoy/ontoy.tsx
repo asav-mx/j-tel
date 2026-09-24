@@ -72,6 +72,7 @@ export function Ontoy({
   estados,
   vigenteHasta,
   rutaInicial,
+  paradaInicial,
 }: {
   /** De configuración, nunca del código: `NEXT_PUBLIC_APP_NOMBRE`. */
   nombre: string;
@@ -85,13 +86,31 @@ export function Ontoy({
    * una liga compartida quiere ver ESA ruta, no la lista de la ciudad.
    */
   rutaInicial: string | null;
+  /**
+   * La parada que la dirección pidió, por el slug de su QR (`/p/‹qr_slug›`).
+   *
+   * Quien llega escaneando un letrero atornillado a un poste está **parado en
+   * esa parada**: la app abre en su hoja, no en la lista de la ciudad ni en la
+   * ruta entera. La parada se abre sobre su ruta, que viene en `rutaInicial`.
+   *
+   * No se valida aquí contra la forma de la ruta —las paradas llegan después,
+   * con la consulta— y no hace falta: si el slug no fuera de esta ruta, la hoja
+   * simplemente no se abre y queda la ruta enfocada. Quien decide si el slug
+   * existe es el servidor, en `/p/‹qr_slug›`, y ahí un slug que no resuelve ni
+   * siquiera llega a esta pantalla.
+   */
+  paradaInicial: string | null;
 }) {
   const { deNoche, alternar: alternarPiel } = useTema();
   const pedida = rutaInicial && rutas.some((r) => r.circuito_id === rutaInicial) ? rutaInicial : null;
   const [lugar, setLugar] = useState<Lugar>(pedida ? "mapa" : "inicio");
   const [enfocada, setEnfocada] = useState<string | null>(pedida ?? rutas[0]?.circuito_id ?? null);
   const [sentido, setSentido] = useState<Sentido>("ida");
-  const [paradaAbierta, setParadaAbierta] = useState<string | null>(null);
+  /* Con `paradaInicial` la app nace con la hoja abierta: quien escaneó el
+     letrero está parado ahí. Cerrarla lo deja en su ruta, no en la nada. */
+  const [paradaAbierta, setParadaAbierta] = useState<string | null>(
+    pedida ? paradaInicial : null,
+  );
   /**
    * Una ruta ABIERTA: su cabeza teñida y sus paradas o su mapa (8.8, 8.8d). Quien
    * llega por la liga de una ruta la ve abierta; el Mapa sin ruta abierta es el
