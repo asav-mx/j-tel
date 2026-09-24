@@ -9,6 +9,7 @@ import { ProveedorDeNivel } from "@/components/landing/nivel-contexto";
 import { LaPreguntaDeSiempre } from "@/components/landing/secciones/pregunta-de-siempre";
 import { TuColor } from "@/components/landing/secciones/tu-color";
 import { Personajes } from "@/components/landing/secciones/personajes";
+import { Recorrido } from "@/components/landing/secciones/recorrido/recorrido";
 
 /**
  * **La landing de `ontoy.app`** — la raíz, para quien todavía no conoce Ontoy.
@@ -184,6 +185,8 @@ export default function Landing() {
         <TuColor />
 
         <Personajes />
+
+        <Recorrido />
 
         <footer className="landing-pie">
           <div className="landing-caja">
