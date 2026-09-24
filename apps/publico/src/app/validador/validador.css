@@ -438,3 +438,24 @@
   color: var(--val-tenue);
   opacity: 0.85;
 }
+
+/*
+ * «La memoria del aparato está llena.»
+ *
+ * No es un veredicto —el veredicto es el semáforo— pero tampoco es una nota al
+ * pie: es lo único de esta pantalla que pide **hacer algo** (buscar señal). Va
+ * en tinta plena y con su marco, para que se distinga de las notas apagadas de
+ * arriba sin robarle el ojo al rojo o al verde de un boleto.
+ *
+ * Cero colores nuevos: el marco es la línea de siempre y el texto la tinta de
+ * siempre. Lo que lo separa es la **forma**, no el color.
+ */
+.val-memoria-llena {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--val-tinta);
+  border-radius: 12px;
+  color: var(--val-tinta);
+  font-size: 12px;
+  line-height: 1.5;
+}

@@ -20,7 +20,11 @@ import {
   codigosDictados,
   porSincronizar,
   marcarEntregados,
+  jornadaEntregada,
+  jornadasQueSeGuardan,
+  porEntregarEnTodas,
   type JornadaDelLector,
+  type RegistroDePaso,
 } from "./validador.js";
 
 const MEDIODIA = Date.UTC(2026, 8, 23, 12, 0, 0);
@@ -272,5 +276,92 @@ describe("lo que el aparato le dice al chofer", () => {
       expect(frase.length, motivo).toBeGreaterThan(0);
       expect(frase.length, motivo).toBeLessThan(55);
     }
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/** Una jornada de mentira con los pasos que se le pidan. */
+const jornadaCon = (dia: string, pasos: Array<Partial<RegistroDePaso>>): JornadaDelLector => ({
+  ...jornadaNueva("J-VAL-01", dia),
+  pasos: pasos.map((p, i) => ({
+    id: `${dia}-${i}`,
+    folio: `ONT-${dia}-${i}`,
+    cuando: MEDIODIA,
+    via: "qr" as const,
+    conSenal: false,
+    ...p,
+  })),
+});
+
+describe("qué se guarda en el aparato: hasta que esté entregado", () => {
+  const HOY = "2026-09-23";
+
+  it("la jornada de hoy se guarda siempre, aunque esté vacía", () => {
+    const hoy = jornadaCon(HOY, []);
+    expect(jornadasQueSeGuardan([hoy], HOY)).toEqual([hoy]);
+  });
+
+  /*
+   * El defecto que esto cierra: antes se guardaban DOS jornadas, la de hoy y
+   * una vieja cualquiera. Un lector que pasaba tres cambios de día sin señal
+   * tiraba los pasos del día más viejo **aunque nadie los hubiera recibido**, y
+   * sin decir nada.
+   */
+  it("una jornada vieja con pasos sin entregar NO se tira, por vieja que sea", () => {
+    const hoy = jornadaCon(HOY, []);
+    const ayer = jornadaCon("2026-09-22", [{}]);
+    const anteayer = jornadaCon("2026-09-21", [{}]);
+    const laSemanaPasada = jornadaCon("2026-09-16", [{}]);
+
+    const guardadas = jornadasQueSeGuardan([hoy, ayer, anteayer, laSemanaPasada], HOY);
+    expect(guardadas.map((j) => j.dia)).toEqual([HOY, "2026-09-22", "2026-09-21", "2026-09-16"]);
+  });
+
+  it("una jornada vieja ya entregada se suelta: su evidencia vive en el libro de J-Tel", () => {
+    const hoy = jornadaCon(HOY, []);
+    const ayer = jornadaCon("2026-09-22", [{ entregadoEn: MEDIODIA }, { entregadoEn: MEDIODIA }]);
+    expect(jornadasQueSeGuardan([hoy, ayer], HOY).map((j) => j.dia)).toEqual([HOY]);
+  });
+
+  /* Un rechazo también quedó entregado: no se reintenta, y no se carga para siempre. */
+  it("una vieja cuyos renglones J-Tel rechazó también se suelta", () => {
+    const hoy = jornadaCon(HOY, []);
+    const ayer = jornadaCon("2026-09-22", [
+      { entregadoEn: MEDIODIA, rechazoDeJTel: "no lo firmó J-Tel" },
+    ]);
+    expect(jornadasQueSeGuardan([hoy, ayer], HOY).map((j) => j.dia)).toEqual([HOY]);
+  });
+
+  it("una vieja a medio entregar se queda entera: no se parte por la mitad", () => {
+    const hoy = jornadaCon(HOY, []);
+    const ayer = jornadaCon("2026-09-22", [{ entregadoEn: MEDIODIA }, {}]);
+    const guardadas = jornadasQueSeGuardan([hoy, ayer], HOY);
+    expect(guardadas.map((j) => j.dia)).toEqual([HOY, "2026-09-22"]);
+    expect(guardadas[1]!.pasos.length).toBe(2);
+  });
+
+  it("las viejas salen de la más reciente a la más antigua", () => {
+    const hoy = jornadaCon(HOY, []);
+    const viejas = ["2026-09-18", "2026-09-22", "2026-09-20"].map((d) => jornadaCon(d, [{}]));
+    expect(jornadasQueSeGuardan([hoy, ...viejas], HOY).map((j) => j.dia)).toEqual([
+      HOY,
+      "2026-09-22",
+      "2026-09-20",
+      "2026-09-18",
+    ]);
+  });
+
+  it("una jornada vacía está entregada: no hay nada que deber", () => {
+    expect(jornadaEntregada(jornadaCon(HOY, []))).toBe(true);
+  });
+
+  it("lo que el aparato debe se cuenta en TODAS sus jornadas, no sólo en la de hoy", () => {
+    const jornadas = [
+      jornadaCon(HOY, [{}, { entregadoEn: MEDIODIA }]),
+      jornadaCon("2026-09-22", [{}, {}]),
+    ];
+    expect(porSincronizar(jornadas[0]!)).toBe(1);
+    expect(porEntregarEnTodas(jornadas)).toBe(3);
   });
 });

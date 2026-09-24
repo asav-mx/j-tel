@@ -204,6 +204,61 @@ export function marcarRechazadoPorJTel(
 export const rechazadosPorJTel = (j: JornadaDelLector): number =>
   j.pasos.filter((p) => p.rechazoDeJTel).length;
 
+/**
+ * **Una jornada entregada** es aquella cuyos pasos, todos, ya tienen acuse de
+ * J-Tel. Una jornada vacía también lo está: no hay nada que deber.
+ *
+ * Un rechazo cuenta como entregado —ver `marcarRechazadoPorJTel`—: lo que esto
+ * pregunta no es «¿quedó bien?» sino «¿alguien fuera de este aparato ya sabe
+ * de esto?».
+ */
+export const jornadaEntregada = (j: JornadaDelLector): boolean =>
+  j.pasos.every((p) => p.entregadoEn);
+
+/**
+ * **Qué jornadas se guardan en el aparato.** Decisión de Asav, 23-sep-2026:
+ * *se guarda hasta que esté entregado, y nunca se tira en silencio.*
+ *
+ * Se guarda la de hoy —siempre, aunque esté vacía: es donde se escribe— y
+ * **toda jornada vieja que todavía deba algo**. Una jornada vieja cuyos pasos
+ * ya están todos acusados se suelta: no es evidencia perdida, es evidencia que
+ * ya vive en el libro de J-Tel, que es el que no pierde renglones.
+ *
+ * ## Qué reemplaza, y por qué estaba mal
+ *
+ * Antes se guardaban **dos jornadas**: la de hoy y una vieja cualquiera. La
+ * regla venía de cuando el lector no tenía a dónde mandar nada —la
+ * sincronización no existía—, y con ella un lector que pasara tres cambios de
+ * día sin señal **tiraba los pasos del día más viejo aunque nadie los hubiera
+ * recibido**, sin decir una palabra. Eso es justo lo que la ficha prohíbe:
+ * cada viaje es un renglón que no se borra.
+ *
+ * Con la entrega del P3.5 la pregunta correcta ya no es «¿cuántos días?» sino
+ * **«¿ya le consta a alguien más?»**.
+ *
+ * El orden se conserva: primero hoy, luego las viejas de la más reciente a la
+ * más antigua, para que lo que más tiempo lleva esperando se vea primero.
+ */
+export function jornadasQueSeGuardan(
+  jornadas: readonly JornadaDelLector[],
+  hoy: string,
+): JornadaDelLector[] {
+  const deHoy = jornadas.filter((j) => j.dia === hoy);
+  const viejasQueDeben = jornadas
+    .filter((j) => j.dia !== hoy && !jornadaEntregada(j))
+    .sort((a, b) => b.dia.localeCompare(a.dia));
+  return [...deHoy, ...viejasQueDeben];
+}
+
+/**
+ * Lo que el aparato todavía le debe a J-Tel, contando **todas** sus jornadas.
+ *
+ * `porSincronizar` responde por un solo día; esto responde por el aparato, que
+ * es lo que el chofer necesita ver cuando lleva días sin señal.
+ */
+export const porEntregarEnTodas = (jornadas: readonly JornadaDelLector[]): number =>
+  jornadas.reduce((n, j) => n + porSincronizar(j), 0);
+
 export type MotivoDelLector =
   | Rechazo
   | "no_se_pudo_leer"
