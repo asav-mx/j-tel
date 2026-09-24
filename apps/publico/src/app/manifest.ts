@@ -10,9 +10,18 @@ import type { MetadataRoute } from "next";
  * escala a cualquier pantalla; los PNG existen porque las tiendas y el empaque
  * de Android los exigen en tamaños fijos (192 y 512, y el de máscara).
  *
- * **Es el hueco de la identidad de Ontoy** (Parte B): los archivos tienen
- * nombre fijo en `public/iconos/`, y la identidad nueva entra reemplazándolos,
- * sin tocar esto. Qué archivo va dónde: `docs/Ontoy-Iconos.md`.
+ * **El hueco de la identidad ya se llenó** (23-sep-2026). Los archivos tienen
+ * nombre fijo en `public/iconos/`, y la identidad entró reemplazándolos sin tocar
+ * el código, que era exactamente para lo que se dejaron así. Hoy son Ontoy
+ * «¡Ya viene!» sobre Banqueta. Qué archivo va dónde: `docs/Ontoy-Iconos.md`.
+ *
+ * **Los colores son los de la identidad, y sólo cabe uno.** Un manifiesto tiene
+ * un `theme_color`, no dos, así que aquí va el del día —Banqueta `#EDE9E1`—, que
+ * es el que Android usa para la pantalla de arranque de la app instalada. El azul
+ * noche `#1E2B4D` de la identidad **todavía no entra**: la noche de la app sigue
+ * siendo el gris pizarra de `ontoy.css`, y una barra azul marino encima de una app
+ * gris se ve como un defecto. Entra con el PR que cambie la piel por los tokens
+ * (decisión de ASAV, 23-sep-2026).
  */
 export const dynamic = "force-static";
 
@@ -25,8 +34,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#0f1418",
-    theme_color: "#0f1418",
+    background_color: "#EDE9E1",
+    theme_color: "#EDE9E1",
     lang: "es-MX",
     icons: [
       { src: "/icono.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },

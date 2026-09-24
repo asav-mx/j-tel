@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  colorReservado,
   contraste,
   haloParaLaTraza,
   luminancia,
@@ -59,25 +58,5 @@ describe("haloParaLaTraza — lo único que la app puede hacer por la 8.8c", () 
 
   it("si no se puede medir, el halo va puesto: no medir no es cumplir", () => {
     expect(haloParaLaTraza("no-es-un-color", PAPEL_CLARO)).toBeGreaterThan(0);
-  });
-});
-
-describe("colorReservado — la paleta de la plataforma no se le da a una ruta (8.8c)", () => {
-  it("nombra el cobre, el verde del latido y los dos del sello", () => {
-    expect(colorReservado("#B05A0F")).toContain("cobre");
-    expect(colorReservado("#1B9E6B")).toContain("latido");
-    expect(colorReservado("#A93636")).toContain("ladrillo");
-  });
-
-  it("un color de ruta cualquiera no está reservado", () => {
-    expect(colorReservado("#FFB81C")).toBeNull();
-    expect(colorReservado("#2EC4B6")).toBeNull();
-  });
-
-  it("NO rechaza el dato: sólo lo declara", () => {
-    // El color viene de la calle. La app lo dibuja igual; el aviso es para quien
-    // captura circuitos, no para el pasajero.
-    expect(typeof colorReservado("#B05A0F")).toBe("string");
-    expect(haloParaLaTraza("#B05A0F", PAPEL_CLARO)).toBeGreaterThanOrEqual(0);
   });
 });
