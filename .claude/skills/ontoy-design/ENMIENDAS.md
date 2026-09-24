@@ -80,10 +80,15 @@ manda mientras no entre el PR que cambia los colores y la letra por `tokens/`. E
 **no se edita**: queda reemplazado, no corregido.
 
 **El `apple-touch-icon.png` del zip perdió su fondo opaco.** En el zip del #542 era un
-cuadrado Banqueta completo; en el del #543 las esquinas salieron transparentes (4.5% del
-dibujo). iOS rellena la transparencia con **negro**, y la ficha de íconos del repo
-(`docs/Ontoy-Iconos.md`) ya pedía PNG sin transparencia. La copia que sirve la app va aplanada
-sobre Banqueta `#EDE9E1`; **la de aquí se dejó como llegó**, para que se vea de dónde salió.
+cuadrado Banqueta completo; en el del #543 las esquinas salieron transparentes (4.5 % del
+dibujo). iOS no maneja alfa ahí —compone lo transparente sobre **negro**— y encima le pone su
+propia máscara redondeada, con otra curva. **Medido: entre 0 y 296 pixeles** oscurecidos según
+qué superelipse use iOS (con la más citada, 8, ninguno negro puro). No es un defecto visible;
+es un riesgo que depende de una curva ajena, y la ficha del repo (`docs/Ontoy-Iconos.md`) ya
+pedía PNG sin transparencia. La copia que sirve la app va aplanada sobre Banqueta `#EDE9E1` y
+sin canal alfa, con una prueba que lo cuida (`iconos.test.ts`, #546); **la de aquí se dejó
+como llegó**, para que se vea de dónde salió. Vale corregirlo en la herramienta de diseño: la
+próxima exportación lo repite.
 
 **La frontera, otra vez, porque es la regla que más se rompe sin querer:** J-Staff, planta y
 carrier (el árbitro) **no llevan caritas**. Este universo es del lado del pasajero, de lo
