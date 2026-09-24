@@ -169,3 +169,31 @@ export function porQueNoSirveParaUnaRuta(hex: string): string | null {
 export function estaEnLaLista(hex: string): boolean {
   return COLORES_DE_RUTA.some((c) => c.hex.toLowerCase() === hex.trim().toLowerCase());
 }
+
+/**
+ * **¿Se rechaza este cambio de color?** La razón, o `null` si se puede guardar.
+ *
+ * La regla completa, en un solo lugar y sin base de datos — que es lo que
+ * permite probarla en CI, donde las de integración no corren.
+ *
+ * **Sólo se rechaza lo que CAMBIA** (ASAV, 24-sep-2026). La primera versión
+ * rechazaba el color prohibido siempre, y eso dejaba encerrado a todo circuito ya
+ * capturado con un tono del naranja: el formulario manda el color en cada
+ * guardado, así que no se le podía corregir ni el nombre. La regla es sobre lo
+ * que se escoge, no sobre lo que ya está escrito — y lo que ya está escrito lo
+ * señala la pantalla, en grande, para que se corrija.
+ *
+ * **Comparar sin distinguir mayúsculas no es cosmético:** la base guarda
+ * `#B05A0F` y un formulario puede mandar `#b05a0f`. Tratarlos como distintos
+ * convertiría «no toqué el color» en un cambio, y volvería a encerrar el
+ * circuito — exactamente el defecto que esto arregla.
+ */
+export function cambioDeColorRechazado(
+  colorGuardado: string,
+  colorNuevo: string | undefined,
+): string | null {
+  if (colorNuevo === undefined) return null;
+  const igual = colorNuevo.trim().toUpperCase() === colorGuardado.trim().toUpperCase();
+  if (igual) return null;
+  return porQueNoSirveParaUnaRuta(colorNuevo);
+}

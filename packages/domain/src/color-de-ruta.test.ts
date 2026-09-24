@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   COLORES_DE_RUTA,
   NARANJA_DE_ONTOY,
+  cambioDeColorRechazado,
   RESERVADOS_DE_LA_PLATAFORMA,
   colorReservado,
   estaEnLaLista,
@@ -132,5 +133,43 @@ describe("la lista que J-Staff ofrece", () => {
 describe("el formato", () => {
   it.each(["", "azul", "#FFF", "#12345", "#1234567", "rgb(1,2,3)"])("«%s» no es un color", (malo) => {
     expect(porQueNoSirveParaUnaRuta(malo)).toBe("El color va en formato #RRGGBB");
+  });
+});
+
+describe("sólo se rechaza el color que CAMBIA", () => {
+  const PROHIBIDO = "#B05A0F"; // 28°, dentro de la banda del naranja
+  const BUENO = "#4F7FD8";
+
+  it("escoger un tono del naranja se rechaza", () => {
+    expect(cambioDeColorRechazado(BUENO, PROHIBIDO)).toContain("naranja de Ontoy");
+  });
+
+  it("un circuito que YA venía con uno prohibido puede guardar lo demás", () => {
+    // Es el caso que encerraba: el formulario manda el color en cada guardado,
+    // así que rechazarlo siempre impedía corregirle hasta el nombre.
+    expect(cambioDeColorRechazado(PROHIBIDO, PROHIBIDO)).toBeNull();
+  });
+
+  it("y puede CORREGIRLO a uno bueno, que es el punto", () => {
+    expect(cambioDeColorRechazado(PROHIBIDO, BUENO)).toBeNull();
+  });
+
+  it("pero no puede cambiarlo por OTRO prohibido", () => {
+    expect(cambioDeColorRechazado(PROHIBIDO, "#C2410C")).toContain("naranja de Ontoy");
+  });
+
+  it("no mandar el color no es un cambio", () => {
+    expect(cambioDeColorRechazado(PROHIBIDO, undefined)).toBeNull();
+  });
+
+  it("mayúsculas y espacios no convierten «no lo toqué» en un cambio", () => {
+    // La base guarda `#B05A0F`; un formulario puede mandar `#b05a0f`. Tratarlos
+    // como distintos volvería a encerrar el circuito.
+    expect(cambioDeColorRechazado("#B05A0F", "#b05a0f")).toBeNull();
+    expect(cambioDeColorRechazado("#B05A0F", " #B05A0F ")).toBeNull();
+  });
+
+  it("un color mal escrito se rechaza aunque venga de un circuito prohibido", () => {
+    expect(cambioDeColorRechazado(PROHIBIDO, "azul")).toBe("El color va en formato #RRGGBB");
   });
 });

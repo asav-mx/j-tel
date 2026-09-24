@@ -17,10 +17,13 @@ import { clases } from "@/components/casa/formulario";
  * un tono que pelee con el naranja —que es de Ontoy y de nadie más— y detrás de
  * «otro color» queda el selector libre, con la misma regla aplicada.
  *
- * ## Las tres cosas que dice, y por qué son tres y no una
+ ## Las tres cosas que dice, y por qué son tres y no una
  *
- * **Bloquea el naranja de Ontoy.** Es la regla, y va con el color deshabilitado
- * para guardar: si se pudiera guardar, no sería una regla.
+ * **Bloquea el naranja de Ontoy, pero sólo si lo estás CAMBIANDO a eso** (ASAV,
+ * 24-sep-2026). Escogerlo apaga el botón de guardar: si se pudiera guardar, no
+ * sería una regla. Pero un circuito que **ya venía** con un tono del naranja no
+ * se queda encerrado —no se le podría corregir ni el nombre— : eso lo dice el
+ * aviso grande de arriba del formulario, que pide corregirlo.
  *
  * **Avisa si el color ya significa algo en la plataforma** —el cobre de lo vivo,
  * el verde del latido, los del sello— y deja guardar. El color de una ruta es el
@@ -46,6 +49,7 @@ import { clases } from "@/components/casa/formulario";
 export function SelectorDeColorDeRuta({
   tono,
   setTono,
+  colorGuardado,
   otrosCircuitos = [],
 }: {
   /**
@@ -56,6 +60,8 @@ export function SelectorDeColorDeRuta({
    */
   tono: string;
   setTono: (hex: string) => void;
+  /** El color que está en la base. Contra él se decide si el tono CAMBIÓ. */
+  colorGuardado: string;
   /** Los otros circuitos y su color, para poder decir quién ya lo tiene. */
   otrosCircuitos?: { name: string; colorHex: string }[];
 }) {
@@ -64,7 +70,10 @@ export function SelectorDeColorDeRuta({
      color con que nace un circuito. */
   const [otro, setOtro] = useState(!estaEnLaLista(tono));
 
-  const noSirve = porQueNoSirveParaUnaRuta(tono);
+  const cambio = tono.trim().toUpperCase() !== colorGuardado.trim().toUpperCase();
+  /* Sólo se bloquea lo que se está escogiendo. Lo que ya estaba guardado lo
+     señala el aviso grande del formulario, y se puede guardar el resto. */
+  const noSirve = cambio ? porQueNoSirveParaUnaRuta(tono) : null;
   const reservado = colorReservado(tono);
   const yaLoTiene = otrosCircuitos.filter((c) => c.colorHex.toUpperCase() === tono.toUpperCase());
 

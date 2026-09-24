@@ -62,7 +62,16 @@ export function IdentidadDelCircuito({
    * aquí —el servidor lo exige igual y lee el antes de la base—. Nombre y color
    * no son reglas: se guardan sin motivo.
    */
-  const colorBloqueado = porQueNoSirveParaUnaRuta(tono) !== null;
+  /*
+   * Dos cosas distintas, y la diferencia es lo que pidió ASAV el 24-sep:
+   *  - `colorBloqueado`: se está ESCOGIENDO un tono prohibido → no se guarda.
+   *  - `colorHeredado`: el circuito YA VENÍA con uno → se avisa en grande y se
+   *    puede guardar lo demás, porque si no, no se le podría ni corregir el
+   *    nombre. Lo mismo decide el servidor, comparando bajo `FOR UPDATE`.
+   */
+  const cambioElColor = tono.trim().toUpperCase() !== color.trim().toUpperCase();
+  const colorBloqueado = cambioElColor && porQueNoSirveParaUnaRuta(tono) !== null;
+  const colorHeredado = porQueNoSirveParaUnaRuta(color);
   const cambiaUnaRegla = inicio !== abre || fin !== cierra || zonaNueva !== zona || arranque !== (arrancaEl ?? "");
 
   const fuera = franjas.filter((f) => !franjaDentroDelHorario(f, inicio, fin));
@@ -79,12 +88,32 @@ export function IdentidadDelCircuito({
       <Renglon pregunta="Concesión dueña">{concesion}</Renglon>
 
       <div className={clases.panel}>
+        {colorHeredado && (
+          /* En grande y arriba de todo, porque es lo primero que hay que
+             arreglar de este circuito — y porque su color ya está impreso en
+             láminas y pintado en camiones si alguien no lo corrige. En tinta y
+             con su frase: sin cobre, que es sólo de lo vivo. */
+          <p role="alert" className={`${clases.aviso} text-[15px]`}>
+            <span className="block text-[17px] font-semibold">
+              Este circuito trae un color que ya no se puede escoger.
+            </span>
+            <span className="mt-1 block">
+              {colorHeredado} Se guarda lo demás sin tocarlo, pero conviene corregirlo antes de
+              imprimir un letrero o pintar un camión: el color es el mismo en los tres lugares.
+            </span>
+          </p>
+        )}
         <label className={etiqueta}>
           Nombre
           <input name="nombre" defaultValue={nombre} required className={clases.campo} />
         </label>
 
-        <SelectorDeColorDeRuta tono={tono} setTono={setTono} otrosCircuitos={otrosCircuitos} />
+        <SelectorDeColorDeRuta
+          tono={tono}
+          setTono={setTono}
+          colorGuardado={color}
+          otrosCircuitos={otrosCircuitos}
+        />
 
         <fieldset className="flex flex-col gap-1.5">
           <legend className="text-[13px] font-semibold">Horario de servicio</legend>

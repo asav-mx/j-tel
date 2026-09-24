@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { porQueNoSirveParaUnaRuta } from "@jtel/domain";
 import { getRepos } from "@/lib/db";
 import { exigir } from "@/lib/guardia-api";
 import { destinoDeVuelta } from "@/lib/casa/volver";
@@ -96,14 +95,14 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const color = String(form.get("colorHex") ?? "").trim();
   if (color) {
     /*
-     * La regla del color vive en el dominio y se sostiene AQUÍ, no en la
-     * pantalla: el selector de pastillas no ofrece un tono del naranja de
-     * Ontoy, pero un formulario viejo en una pestaña abierta, o un `curl`,
-     * mandan lo que quieran. Una regla que sólo vive en el navegador no es una
-     * regla (enmienda (a) de ASAV, 23-sep-2026).
+     * El formato se revisa aquí; **si el tono se puede usar lo decide
+     * `cambiarCircuito`**, que compara contra el color guardado bajo
+     * `FOR UPDATE` y sólo rechaza cuando el color CAMBIA (ASAV, 24-sep-2026).
+     * Una regla que sólo viviera en la pantalla no sería una regla —un
+     * formulario viejo en una pestaña abierta o un `curl` mandan lo que
+     * quieran—, y una que se comprobara aquí con una lectura suelta dejaría la
+     * rendija de dos guardados a la vez.
      */
-    const noSirve = porQueNoSirveParaUnaRuta(color);
-    if (noSirve) return volver({ error: noSirve });
     cambios.colorHex = color.toUpperCase();
   }
 
@@ -245,6 +244,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     const r = await getRepos().circuits.cambiarCircuito(id, cambios, { motivo, por: g.identidad.userId });
     if (!r.ok) {
       if (r.error === "no_existe") return volver({ error: "No existe ese circuito" });
+      if (r.error === "color_prohibido") return volver({ error: r.razon });
       if (r.error === "falta_quien") return volver({ error: "Inicia sesión: el cambio de una regla queda firmado." });
       return volver({
         error: "No se guardó nada: este cambio mueve una regla de la medición. Di por qué — queda escrito con tu nombre.",
