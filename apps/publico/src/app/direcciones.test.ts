@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import manifest from "./manifest";
@@ -60,7 +60,8 @@ export function direccionDeLaCarpeta(carpeta: string): string {
 
 /** Las direcciones que ya existen y que un pasajero puede tener guardada. */
 const RESERVADAS = [
-  { direccion: "/", que: "la app: Inicio" },
+  { direccion: "/rutas", que: "la app: Inicio, y el `start_url` del manifiesto" },
+  { direccion: "/", que: "hoy la app; va a ser la landing" },
   { direccion: "/c/[slug]", que: "una ruta, para compartir por mensaje" },
   { direccion: "/validador", que: "el lector del camión" },
   { direccion: "/privacidad", que: "qué se guarda y qué no" },
@@ -86,11 +87,40 @@ describe("las direcciones de Ontoy no se mueven", () => {
     expect(SERVIDAS).toContain(direccion);
   });
 
-  it("la app se queda en la RAÍZ: la landing no se la puede quedar", () => {
-    // La otra opción era la landing en la raíz y la app en `/rutas`. Se descartó
-    // porque el ícono ya instalado apunta a `/`, y `/` no puede contestar dos
-    // cosas según si el teléfono instaló la app o no: el servidor no lo sabe.
-    expect(manifest().start_url).toBe("/");
-    expect(SERVIDAS).toContain("/");
+  it("el `start_url` es `/rutas`: es la dirección que el ícono instalado graba", () => {
+    /*
+     * **ASAV cambió de decisión el 25-sep-2026** y la raíz es de la landing: la
+     * gente escribe «ontoy.app» y nada más.
+     *
+     * Lo que hace que eso NO rompa un ícono instalado es el orden: el
+     * `start_url` se mueve **ahora**, mientras casi nadie la tiene instalada, y
+     * no el día que la landing entre. Un `start_url` que cambia después no mueve
+     * el ícono de nadie — el teléfono ya lo grabó.
+     *
+     * El argumento que traía esta prueba antes —«la app se queda en la raíz
+     * porque el ícono instalado apunta a `/`»— era cierto y se resolvió por
+     * fecha, no por dirección.
+     */
+    expect(manifest().start_url).toBe("/rutas");
+    expect(SERVIDAS).toContain("/rutas");
+  });
+
+  it("la app vive en `/rutas` y es la RAÍZ la que reenvía, no al revés", () => {
+    /*
+     * La trampa que esto cierra: si la app viviera en `app/page.tsx` y `/rutas`
+     * reenviara, el día que la raíz se vuelva la landing **`/rutas` se volvería
+     * la landing con ella**, y el ícono instalado de todos abriría una portada
+     * en vez de su camión.
+     *
+     * Así que la app vive en `rutas/page.tsx` y la raíz es un reenvío de una
+     * línea. Cuando la landing entre, lo que se reemplaza es la raíz, y no se
+     * lleva nada.
+     */
+    const raiz = readFileSync(path.join(APP, "page.tsx"), "utf8");
+    expect(raiz).toMatch(/from\s+"\.\/rutas\/page"/);
+    const app = readFileSync(path.join(APP, "rutas/page.tsx"), "utf8");
+    expect(app, "la app de verdad tiene que estar en rutas/page.tsx").toContain(
+      "listPublishedCircuits",
+    );
   });
 });

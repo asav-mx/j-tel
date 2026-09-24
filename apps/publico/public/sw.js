@@ -14,6 +14,11 @@
  *     llegando» cuando el camión pasó hace veinte minutos. Las consultas vivas
  *     (`VIVO`, abajo) pasan derecho a la red, siempre.
  *
+ * ✎ 25-sep-2026: **`/rutas` entra al cascarón y la versión sube a v4.** La app se
+ * mudó ahí y el `start_url` del manifiesto apunta ahí (ASAV): sin esto, la app
+ * instalada abriría su propia dirección sin red y no la encontraría en caché. La
+ * raíz se queda en la lista mientras siga enseñando la app.
+ *
  * ✎ 22-sep-2026: la consulta de las favoritas (`/api/circuitos/en-vivo`, PR 3b)
  * nació sin estar en la lista —sólo se exceptuaba `/unidades`— y este archivo
  * la guardaba en caché: sin red, la app habría enseñado camiones de hace rato
@@ -25,7 +30,7 @@
 /** Lo vivo: nunca de caché. Si agregas una consulta viva, va aquí (lo exige `sw.test.ts`). */
 const VIVO = ["/unidades", "/api/circuitos/en-vivo"];
 
-const VERSION = "v3";
+const VERSION = "v4";
 const CASCARON = `cascaron-${VERSION}`;
 const TESELAS = `teselas-${VERSION}`;
 
@@ -40,7 +45,9 @@ self.addEventListener("install", (evento) => {
        chofer en un tramo sin señal recargaría y se quedaría sin lector. */
     caches
       .open(CASCARON)
-      .then((c) => c.addAll(["/", "/validador", "/icono.svg", "/manifest.webmanifest"])),
+      .then((c) =>
+        c.addAll(["/rutas", "/", "/validador", "/icono.svg", "/manifest.webmanifest"]),
+      ),
   );
   self.skipWaiting();
 });
