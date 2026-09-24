@@ -44,6 +44,7 @@ export default defineConfig({
       "src/paso-por-parada.integration.test.ts",
       "src/avisos.integration.test.ts",
       "src/libro-de-boletos.integration.test.ts",
+      "src/qr-de-parada.integration.test.ts",
     ],
     // Escriben en la misma rama desechable: en paralelo se pisan.
     fileParallelism: false,

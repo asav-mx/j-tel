@@ -340,9 +340,42 @@ export default async function VerCircuitoJStaff({
                   <span className={m.lejos ? "font-semibold" : "text-[var(--tenue)]"}>
                     {distanciasEnPalabras(m)}
                     {m.lejos ? ` · lejos, tolerancia ${circuito.stopSnapToleranceMeters} m` : ""} · {m.qr}
+                    {publicado && (
+                      <>
+                        {" · "}
+                        <Link
+                          href={`/casa/jstaff/circuitos/${id}/letreros?parada=${encodeURIComponent(m.qr)}`}
+                          className="text-[var(--tinta)] underline underline-offset-2"
+                        >
+                          Imprimir letrero
+                        </Link>
+                      </>
+                    )}
                   </span>
                 </Renglon>
               ))}
+              {/*
+                Sólo se imprime de circuitos publicados. Un letrero atornillado
+                a un poste que no abre nada es una promesa falsa — y quien la
+                lee está parado esperando el camión. Sin publicar, el botón no
+                se esconde: se enseña apagado con su razón al lado, que es la
+                ley de «J-Staff enuncia, no esconde».
+              */}
+              <p className="text-[13px]">
+                {publicado ? (
+                  <Link
+                    href={`/casa/jstaff/circuitos/${id}/letreros`}
+                    className="text-[var(--tinta)] underline underline-offset-2"
+                  >
+                    Imprimir todas las paradas
+                  </Link>
+                ) : (
+                  <span className="text-[var(--tenue)]">
+                    Imprimir todas las paradas — no se puede todavía: el circuito no está
+                    publicado, y un letrero que no abre nada es una promesa falsa.
+                  </span>
+                )}
+              </p>
             </>
           )}
           <p className="text-[13px] text-[var(--tenue)]">
