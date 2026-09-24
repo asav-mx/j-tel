@@ -10,6 +10,18 @@ import {
 const ahora = new Date("2026-07-28T11:26:00.000Z");
 const haceMin = (m: number) => new Date(ahora.getTime() - m * 60_000);
 
+/* Una unidad en turno, hablando. `ahora` es 05:26 en Juárez: dentro de 05:00–22:00. */
+const UNIDAD = (minutosSinHablar: number | null = 3) => ({
+  unidad: "2120",
+  carrier: "Juárez Bus",
+  circuito: "Oasis-Centro",
+  abre: "05:00:00",
+  cierra: "22:00:00",
+  zona: "America/Ciudad_Juarez",
+  arrancaEl: null,
+  minutosSinHablar,
+});
+
 const muestra = (over: Partial<MuestraSalud> = {}): MuestraSalud => ({
   ahora,
   marcas: [{ lastRecordedAt: haceMin(3), updatedAt: haceMin(1) }],
@@ -17,6 +29,7 @@ const muestra = (over: Partial<MuestraSalud> = {}): MuestraSalud => ({
   alertasCriticasAbiertas: 0,
   alertaCriticaMasAntigua: null,
   verificacion: { fallosMudos: 0, masAntiguoHoras: null },
+  flota: [UNIDAD()],
   ...over,
 });
 
@@ -33,33 +46,91 @@ describe("evaluarSalud", () => {
   it("un solo chequeo enfermo enferma el conjunto", () => {
     const r = evaluarSalud(muestra({ alertasCriticasAbiertas: 1, alertaCriticaMasAntigua: haceMin(25) }));
     expect(r.estado).toBe("enfermo");
-    expect(chequeo(r, "gps").estado).toBe("sano");
+    expect(chequeo(r, "flota").estado).toBe("sano");
   });
 
-  it("GPS por encima del umbral enferma", () => {
-    const r = evaluarSalud(muestra({ marcas: [{ lastRecordedAt: haceMin(21), updatedAt: haceMin(1) }] }));
-    expect(chequeo(r, "gps").estado).toBe("enfermo");
+  it("una unidad en turno por encima del umbral enferma", () => {
+    const r = evaluarSalud(muestra({ flota: [UNIDAD(21)] }));
+    expect(chequeo(r, "flota").estado).toBe("enfermo");
     expect(r.estado).toBe("enfermo");
   });
 
   it("justo en el umbral todavía está sano", () => {
-    const r = evaluarSalud(muestra({ marcas: [{ lastRecordedAt: haceMin(20), updatedAt: haceMin(30) }] }));
-    expect(chequeo(r, "gps").estado).toBe("sano");
+    const r = evaluarSalud(
+      muestra({ flota: [UNIDAD(20)], marcas: [{ lastRecordedAt: haceMin(20), updatedAt: haceMin(30) }] }),
+    );
+    expect(chequeo(r, "flota").estado).toBe("sano");
     expect(chequeo(r, "archivador").estado).toBe("sano");
   });
 
-  it("reporta el PEOR carrier, no el promedio", () => {
+  it("reporta la PEOR de las que callan, no el promedio", () => {
+    const r = evaluarSalud(muestra({ flota: [UNIDAD(1), UNIDAD(200)] }));
+    expect(chequeo(r, "flota").estado).toBe("enfermo");
+    expect(chequeo(r, "flota").minutos).toBe(200);
+  });
+
+  /* ── El #470, en el evaluador ─────────────────────────────────────────── */
+
+  /*
+   * El caso exacto del incidente: la flota estacionada y apagada, con 68 h sin
+   * dato, **fuera de horario**. Antes esto era un 503 y tres días de gritos.
+   */
+  it("#470 · flota fuera de horario: informativo, NO enferma", () => {
+    const deMadrugada = new Date("2026-07-28T09:00:00.000Z"); // 03:00 en Juárez
+    const r = evaluarSalud(
+      muestra({
+        ahora: deMadrugada,
+        flota: [{ ...UNIDAD(68 * 60), abre: "09:53:00" }],
+        marcas: [{ lastRecordedAt: new Date(deMadrugada.getTime() - 68 * 3600_000), updatedAt: haceMin(1) }],
+      }),
+    );
+    expect(chequeo(r, "flota").estado).toBe("sano");
+    expect(chequeo(r, "flota").lectura).toContain("fuera de horario");
+    expect(r.estado).toBe("sano");
+  });
+
+  /*
+   * Y el otro lado: en turno y callada sí grita, **nombrando a quién**. Sin
+   * esto, «no grita cuando duerme» se podría cumplir no gritando nunca.
+   */
+  it("#470 · en turno y callada: enferma, y dice qué unidad", () => {
+    const r = evaluarSalud(muestra({ flota: [UNIDAD(68 * 60)] }));
+    expect(chequeo(r, "flota").estado).toBe("enfermo");
+    expect(chequeo(r, "flota").lectura).toContain("2120");
+    expect(chequeo(r, "flota").lectura).toContain("Oasis-Centro");
+  });
+
+  /*
+   * La frase ya no puede decir «dato de GPS más nuevo hace 68 h» cuando el
+   * dato más nuevo tiene minutos. Esa oración era el defecto.
+   */
+  it("#470 · la lectura no habla de «dato más nuevo»: habla de quién calla", () => {
+    const r = evaluarSalud(muestra({ flota: [UNIDAD(1), UNIDAD(68 * 60)] }));
+    expect(chequeo(r, "flota").lectura).not.toContain("más nuevo");
+  });
+
+  /*
+   * El archivador es UN proceso: si escribió para alguien hace un minuto, está
+   * vivo, aunque otro carrier lleve tres días sin darle nada que escribir.
+   */
+  it("#470 · un carrier dormido no declara muerto al archivador", () => {
     const r = evaluarSalud(
       muestra({
         carriersEsperados: 2,
         marcas: [
           { lastRecordedAt: haceMin(1), updatedAt: haceMin(1) },
-          { lastRecordedAt: haceMin(200), updatedAt: haceMin(1) },
+          { lastRecordedAt: haceMin(68 * 60), updatedAt: haceMin(68 * 60) },
         ],
       }),
     );
-    expect(chequeo(r, "gps").estado).toBe("enfermo");
-    expect(chequeo(r, "gps").minutos).toBe(200);
+    expect(chequeo(r, "archivador").estado).toBe("sano");
+  });
+
+  /* Lo que no se pudo mirar no se da por bueno. */
+  it("sin flota que leer, el chequeo se declara no medido", () => {
+    const r = evaluarSalud(muestra({ flota: undefined }));
+    expect(chequeo(r, "flota").estado).toBe("no_medido");
+    expect(r.estado).toBe("enfermo");
   });
 
   it("un carrier real sin marca de agua enferma", () => {
@@ -70,44 +141,51 @@ describe("evaluarSalud", () => {
 
   it("toda lectura lleva su umbral al lado", () => {
     const r = evaluarSalud(muestra({ marcas: [{ lastRecordedAt: haceMin(90), updatedAt: haceMin(90) }] }));
-    expect(chequeo(r, "gps").lectura).toContain(`umbral ${UMBRALES_SALUD.gpsMaxMinutos} min`);
+    expect(chequeo(r, "flota").lectura).toContain(`umbral ${UMBRALES_SALUD.gpsMaxMinutos} min`);
     expect(chequeo(r, "archivador").lectura).toContain(
       `umbral ${UMBRALES_SALUD.archivadorMaxMinutos} min`,
     );
   });
 
-  it("sin marcas y sin carriers esperados: solo evalúa alertas", () => {
+  it("sin marcas y sin carriers esperados no hay chequeo de archivador", () => {
     const r = evaluarSalud(muestra({ marcas: [], carriersEsperados: 0 }));
     expect(r.estado).toBe("sano");
-    expect(r.chequeos.find((c) => c.id === "gps")).toBeUndefined();
+    expect(r.chequeos.find((c) => c.id === "archivador")).toBeUndefined();
   });
 });
 
 describe("diagnostico", () => {
-  it("GPS fresco = al día", () => {
+  it("unidades en turno hablando = al día", () => {
     expect(diagnostico(evaluarSalud(muestra()))).toContain("al día");
   });
 
-  it("el caso real del 2026-07-28: dato viejo pero archivador escribiendo", () => {
-    // 3.4 h de atraso con el archivador escribiendo hace 1 min. Es
-    // recuperación, no caída — distinguirlas fue lo difícil ese día.
+  it("el caso real del 2026-07-28: la unidad calla, y el diagnóstico la nombra", () => {
     const r = evaluarSalud(
-      muestra({ marcas: [{ lastRecordedAt: haceMin(204), updatedAt: haceMin(1) }] }),
+      muestra({
+        flota: [UNIDAD(204)],
+        marcas: [{ lastRecordedAt: haceMin(204), updatedAt: haceMin(1) }],
+      }),
     );
     expect(r.estado).toBe("enfermo");
-    expect(diagnostico(r)).toContain("poniéndose al día");
+    expect(diagnostico(r)).toContain("2120");
   });
 
-  it("durante el apagón: dato viejo y archivador callado", () => {
+  /*
+   * El caso que sólo se ve con las dos mitades juntas: entra dato pero no se
+   * guarda. Antes se leía como «poniéndose al día», que es lo contrario.
+   */
+  it("las unidades hablan y el archivador no escribe: lo que entra no se guarda", () => {
     const r = evaluarSalud(
-      muestra({ marcas: [{ lastRecordedAt: haceMin(600), updatedAt: haceMin(600) }] }),
+      muestra({ marcas: [{ lastRecordedAt: haceMin(1), updatedAt: haceMin(600) }] }),
     );
-    expect(diagnostico(r)).toContain("detenida");
+    expect(diagnostico(r)).toContain("no se está guardando");
   });
 
-  it("sin marcas no inventa diagnóstico", () => {
-    const r = evaluarSalud(muestra({ marcas: [], carriersEsperados: 0 }));
-    expect(diagnostico(r)).toContain("sin marcas");
+  it("sin flota que mirar no inventa diagnóstico", () => {
+    const r = evaluarSalud(muestra({ flota: undefined, marcas: [], carriersEsperados: 0 }));
+    /* Repite la lectura del chequeo en vez de resumirla: una segunda frase
+       puede separarse de la primera, y la que se separó costó el #470. */
+    expect(diagnostico(r)).toContain("no se pudo leer qué unidades");
   });
 });
 

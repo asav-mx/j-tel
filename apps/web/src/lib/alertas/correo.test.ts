@@ -117,7 +117,7 @@ const resumen = (parcial: Partial<ResumenDiario> = {}): ResumenDiario => ({
   saludAhora: "sano",
   diagnostico: "ingesta al día",
   chequeos: [
-    { id: "gps", estado: "sano", lectura: "dato de GPS más nuevo hace 2.1 min · umbral 20 min" },
+    { id: "flota", estado: "sano", lectura: "1 unidad en turno, todas al día · umbral 20 min" },
     {
       id: "archivador",
       estado: "sano",
@@ -377,7 +377,7 @@ describe("cuando un chequeo no se pudo medir", () => {
     // del GPS sería el error simétrico del que este correo ya se cuida.
     const { texto } = renderResumen(
       resumen({
-        chequeos: [{ id: "gps", estado: "no_medido", lectura: "no se pudo leer la marca de GPS" }],
+        chequeos: [{ id: "flota", estado: "no_medido", lectura: "no se pudo leer qué unidades deberían estar hablando" }],
         saludAhora: "enfermo",
         colaVerificacion: { total: 6 },
       }),
@@ -392,7 +392,7 @@ describe("cuando un chequeo no se pudo medir", () => {
   it("y con incidentes abiertos, las tres piezas conviven en un solo titular", () => {
     const { texto } = renderResumen(
       resumen({
-        chequeos: [{ id: "gps", estado: "no_medido", lectura: "no se pudo leer la marca de GPS" }],
+        chequeos: [{ id: "flota", estado: "no_medido", lectura: "no se pudo leer qué unidades deberían estar hablando" }],
         saludAhora: "enfermo",
         abiertasPorTipo: [{ tipo: "rate_limit", cantidad: 4, masAntigua: T("2026-07-30T09:00:00Z") }],
         colaVerificacion: { total: 6 },
@@ -412,7 +412,7 @@ describe("cuando un chequeo no se pudo medir", () => {
     const ciego = renderResumen(resumenCiego(), AHORA);
     const roto = renderResumen(
       resumen({
-        chequeos: [{ id: "gps", estado: "enfermo", lectura: "dato de GPS más nuevo hace 91.4 min · umbral 20 min" }],
+        chequeos: [{ id: "flota", estado: "enfermo", lectura: "2120 (Oasis-Centro) calla hace 91.4 min · umbral 20 min" }],
         saludAhora: "enfermo",
       }),
       AHORA,

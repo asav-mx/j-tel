@@ -5092,6 +5092,94 @@ export class TelemetryRepository {
     return Math.max(0, (Date.now() - latest.getTime()) / 60_000);
   }
 
+  /**
+   * **Las unidades de las que el producto espera oír algo** — la regla del
+   * vigilante, nacida del #470 (23-sep-2026).
+   *
+   * Las tres condiciones, y ninguna sobra: **aparato montado**, **asignada a
+   * un circuito publicado**, y el circuito con su horario y su zona para que
+   * quien decida pueda preguntar si estamos en turno. Son exactamente las que
+   * el producto ya usa para prometerle algo a un pasajero: si no le
+   * prometemos nada, no tenemos por qué esperar dato.
+   *
+   * El horario **no se filtra aquí**. Se devuelve, y quien decide es
+   * `veredictoDeLaFlota`, que es puro y se prueba sin base. Una consulta que
+   * decidiera el turno metería la regla en SQL, donde no se puede probar sin
+   * levantar Postgres ni leer sin saber SQL.
+   *
+   * La antigüedad sale de `live_positions` —el último punto de verdad— y no de
+   * las marcas de agua, que son el cursor del archivador: llevan la hora de la
+   * última pasada, no la del último punto, y confundirlas fue justo lo que
+   * hizo decir «dato de GPS más nuevo hace 68 h» con dato de hace 18 minutos.
+   *
+   * ⚠ El cruce con `live_positions` va por **imei Y cuenta**: el mismo IMEI
+   * existe bajo dos carriers en producción —un aparato que cambió de cuenta—
+   * y cruzar sólo por imei mezclaría la frescura de uno con la del otro.
+   */
+  async unidadesQueDeberianHablar(): Promise<
+    Array<{
+      carrierAccountId: string;
+      unidad: string;
+      carrier: string;
+      circuito: string;
+      abre: string;
+      cierra: string;
+      zona: string;
+      arrancaEl: string | null;
+      minutosSinHablar: number | null;
+    }>
+  > {
+    const posicion = alias(livePositions, "posicion_de_la_unidad");
+    const filas = await this.db
+      .select({
+        carrierAccountId: units.carrierAccountId,
+        unidad: units.label,
+        carrier: accounts.name,
+        circuito: circuits.name,
+        abre: circuits.serviceStartLocal,
+        cierra: circuits.serviceEndLocal,
+        zona: circuits.timeZone,
+        arrancaEl: circuits.serviceLaunchDate,
+        ultimoPunto: posicion.recordedAt,
+      })
+      .from(circuitUnitAssignments)
+      .innerJoin(circuits, eq(circuits.id, circuitUnitAssignments.circuitId))
+      .innerJoin(units, eq(units.id, circuitUnitAssignments.unitId))
+      .innerJoin(accounts, eq(accounts.id, units.carrierAccountId))
+      .innerJoin(
+        deviceAssignments,
+        and(eq(deviceAssignments.unitId, units.id), isNull(deviceAssignments.validTo)),
+      )
+      .innerJoin(devices, eq(devices.id, deviceAssignments.deviceId))
+      .leftJoin(
+        posicion,
+        and(eq(posicion.imei, devices.imei), eq(posicion.carrierAccountId, units.carrierAccountId)),
+      )
+      .where(
+        and(
+          isNull(circuitUnitAssignments.validTo),
+          isNotNull(circuits.publishedAt),
+          /* Las cuentas de ejemplo no se vigilan: nadie va a ir a ver ese camión. */
+          eq(accounts.isDemo, false),
+        ),
+      );
+
+    const ahora = Date.now();
+    return filas.map((f) => ({
+      carrierAccountId: f.carrierAccountId,
+      unidad: f.unidad,
+      carrier: f.carrier,
+      circuito: f.circuito,
+      abre: f.abre,
+      cierra: f.cierra,
+      zona: f.zona,
+      arrancaEl: f.arrancaEl ?? null,
+      minutosSinHablar: f.ultimoPunto
+        ? Math.max(0, (ahora - new Date(f.ultimoPunto).getTime()) / 60_000)
+        : null,
+    }));
+  }
+
   async countPointsSince(carrierAccountId: string, since: Date): Promise<number> {
     const [row] = await this.db
       .select({ count: sql<number>`count(*)::int` })

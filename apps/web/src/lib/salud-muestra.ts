@@ -56,7 +56,7 @@ import { evaluarSalud, UMBRALES_SALUD, HORAS_FALLO_MUDO } from "@jtel/services";
 export async function leerMuestraDeSalud(repos: Repositories, ahora: Date) {
   const carriers = await repos.accounts.listByType("carrier", { includeDemo: false });
 
-  const [marcasTodas, abiertas, fallosMudos] = await Promise.all([
+  const [marcasTodas, abiertas, fallosMudos, flota] = await Promise.all([
     repos.telemetry.listWatermarks(),
     repos.ingestAlerts.listUnresolved(100),
     // El chequeo que faltaba en el camino del correo: si el árbitro llegó a
@@ -64,6 +64,11 @@ export async function leerMuestraDeSalud(repos: Repositories, ahora: Date) {
     // pudo decir "sano" durante 35 días con ocho servicios de un cliente vivo
     // sin veredicto.
     repos.occurrences.contarFallosMudos(HORAS_FALLO_MUDO),
+    /*
+     * Quién debería estar hablando (#470). Sin esto el chequeo de la flota se
+     * declara `no_medido` en vez de darse por bueno.
+     */
+    repos.telemetry.unidadesQueDeberianHablar(),
   ]);
 
   const marcas = marcasTodas.map((m) => ({
@@ -86,6 +91,7 @@ export async function leerMuestraDeSalud(repos: Repositories, ahora: Date) {
         fallosMudos: fallosMudos.total,
         masAntiguoHoras: fallosMudos.masAntiguoHoras,
       },
+      flota,
     },
     UMBRALES_SALUD,
   );
