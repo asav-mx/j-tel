@@ -904,7 +904,13 @@
  * concesión no comparten caja (8.3).
  */
 .ontoy-hoja-medido {
-  background: var(--panel2);
+  /*
+   * **El mismo color que la hoja**, no uno distinto: lo que la separa es su
+   * anillo. Medido en las dos láminas —de día la hoja y la tarjeta son las dos
+   * #f7f3ec; de noche, las dos #26365e—. Traía `--panel2`, que es otro tono en
+   * las dos pieles (#f4f0e9 y #324673).
+   */
+  background: var(--panel);
   border-radius: 22px;
   box-shadow: 0 0 0 1px var(--linea);
   padding: 2px 14px;
@@ -1461,10 +1467,37 @@
  * una franja de 3 px en vez de pintar el fondo — sobre carbón el número se lee
  * igual con cualquier color de ruta, sin tener que calcularle el contraste.
  */
+/*
+ * **La placa NO sigue la piel: es carbón de día y de noche.**
+ *
+ * Traía `background: var(--texto); color: var(--panel)`, o sea los roles de
+ * tinta y papel — y esos dos se voltean con la piel. De noche la placa salía
+ * hueso con número azul oscuro, al revés de la lámina. Lo cazó el Chat C.
+ *
+ * El patrón en sí no está mal y por eso no se borra de todos lados: el botón
+ * principal SÍ se invierte de noche, y así lo tiene el diseño. La placa es la
+ * excepción porque **no es una superficie de la interfaz: es un objeto con
+ * identidad propia**, como el color de ruta de la 8.8c. Una placa de camión es
+ * lámina oscura con dígitos blancos, y eso no cambia porque anochezca.
+ *
+ * Por eso toma los tokens de la PALETA y no los roles: escribir `--carbon`
+ * aquí es la forma de decir «esto no se voltea».
+ *
+ * Medido sobre `capturas/2-mapa/10-mapa-hoja-media-noche.png`, cortando el
+ * borde de la placa de fuera hacia dentro:
+ *
+ *     #26365e · #293a63 · #324673 · #2a2e37 · #2a2e37 …
+ *     ───────   ───────   ───────   ─────────────────
+ *     fondo     suavizado  ANILLO   la placa, en carbón
+ *
+ * y por abajo, la franja de la ruta de 3 px (#4f7fd8) por dentro del anillo.
+ * En la lámina de día el relleno es el MISMO #2a2e37, con el mismo número
+ * blanco. El README lo dice en una línea: «Las placas siguen en carbón».
+ */
 .ontoy-placa {
   display: inline-block;
-  background: var(--texto);
-  color: var(--panel);
+  background: var(--carbon);
+  color: var(--hueso);
   border-radius: var(--r-plate, 7px);
   padding: 4px 10px 5px;
   font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
@@ -1472,6 +1505,24 @@
   font-size: 16px;
   letter-spacing: -0.02em;
   box-shadow: inset 0 -3px 0 var(--ruta);
+}
+/*
+ * **De noche la placa gana su anillo**, y no es adorno: el carbón sobre la
+ * superficie de noche da **1.15:1**, o sea que el rectángulo no se ve. Lo que
+ * se lee es el número (12.29:1 sobre el carbón) y la franja de la ruta; el
+ * anillo es lo que le devuelve el borde. Está en el README —«con borde
+ * #324673»— y está dibujado en la lámina.
+ *
+ * Va en el mismo `box-shadow` que la franja: son dos sombras de la misma capa
+ * y separarlas en `border` movería el tamaño de la placa.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="dia"]) .ontoy-placa {
+    box-shadow: inset 0 -3px 0 var(--ruta), 0 0 0 1px var(--noche-3);
+  }
+}
+:root[data-tema="noche"] .ontoy-placa {
+  box-shadow: inset 0 -3px 0 var(--ruta), 0 0 0 1px var(--noche-3);
 }
 
 /* Dato viejo: la hoja entera se apaga, como el muñeco en el mapa. */
