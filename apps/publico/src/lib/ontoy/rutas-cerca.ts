@@ -72,7 +72,7 @@ export interface OrdenDeLasRutas {
   porDistancia: boolean;
 }
 
-/** Cuántas se enseñan antes de que el pasajero pida el resto. */
+/** Cuántas se enseñan antes de que el pasajero pida el resto (Marco 8.8, segunda enmienda). */
 export const RUTAS_A_LA_VISTA = 3;
 
 /**
