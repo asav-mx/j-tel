@@ -3,9 +3,9 @@
 import type { RutaDeLaCiudad, Sentido } from "@/lib/ontoy/forma";
 import type { ParadaGuardada } from "@/lib/ontoy/paradas-guardadas";
 import type { Ubicacion } from "@/lib/ubicacion";
-import { Ontoy } from "@/components/ontoy/ontoy-muneco";
+import { Ontoy, type PoseDeOntoy } from "@/components/ontoy/ontoy-muneco";
 import { ciudadCerrada, vuelvenEnPalabras } from "@/lib/ontoy/noche-de-la-ciudad";
-import { AtajoDeParada } from "@/components/ontoy/atajo-de-parada";
+import { RenglonDeParada, TarjetaDelProximoCamion } from "@/components/ontoy/atajo-de-parada";
 import type { Vivo } from "@/lib/ontoy/forma";
 import { useParadasDeLaCiudad } from "@/lib/ontoy/usar-paradas-de-la-ciudad";
 import type { EstadoDeRuta } from "@/lib/ontoy/estado-de-ruta";
@@ -124,6 +124,43 @@ export function VistaInicio({
    */
   const sinRed = enVivo.error;
 
+  const [primera, ...demas] = guardadas;
+  /*
+   * **El Ontoy de Inicio, y es uno** (regla 3; ASAV, 25-sep). Siempre hay uno
+   * y siempre dice algo, así que el asomado de arriba se esconde aquí solo:
+   *
+   * | Cuándo | Qué tarjeta | Qué dice Ontoy |
+   * |---|---|---|
+   * | primera vez | la bienvenida | «¿Ontás?» — y pide la ubicación, la única vez |
+   * | con guardadas | «Tu próximo camión» | la llegada de la primera, del dato |
+   * | sin guardadas, de noche | la noche de la ciudad | «Ya no hay corridas» + a qué hora vuelve la primera |
+   * | sin guardadas, de día | la invitación | cómo se guarda una parada |
+   *
+   * Sin red no tiene tarjeta propia: sólo puede pasar con guardadas (ver
+   * `sinRed`), y entonces la dice la tarjeta del próximo camión.
+   */
+  const tarjeta = primeraVez ? (
+    <Bienvenida alPedirUbicacion={ubicacion.pedir} puedeGuardar={puedeGuardar} />
+  ) : primera ? (
+    <TarjetaDelProximoCamion
+      guardada={primera}
+      ruta={rutas.find((r) => r.circuito_id === primera.ruta) ?? null}
+      yo={ubicacion.yo}
+      vivo={enVivo.vivos.get(primera.ruta) ?? (enVivo.respondio ? null : undefined)}
+      errorVivo={enVivo.error}
+      alAbrir={() => alAbrirRuta(primera.ruta, primera.parada)}
+      alQuitar={() => alQuitarGuardada(primera)}
+    />
+  ) : deNoche ? (
+    <TarjetaDeOntoy pose="dormido" dicho="Ya no hay corridas." apoyo={vuelvenEnPalabras(deNoche)} />
+  ) : puedeGuardar ? (
+    <TarjetaDeOntoy
+      pose="al-frente"
+      dicho="Guarda tu parada"
+      apoyo="Abre una ruta y toca la estrella de tu parada: aquí verás a cuántas paradas viene."
+    />
+  ) : null;
+
   return (
     <div className="ontoy-vista">
       <Encabezado
@@ -133,85 +170,42 @@ export function VistaInicio({
         deNoche={deNoche !== null}
       />
 
-      {primeraVez && <Bienvenida alPedirUbicacion={ubicacion.pedir} puedeGuardar={puedeGuardar} />}
+      {tarjeta}
+
+      {/* Justo debajo de la tarjeta grande, como en el diseño: la puerta a los avisos. */}
+      {avisos.length > 0 && <PuertaDeAvisos avisos={avisos} nuevos={avisosNuevos} alAbrir={alVerAvisos} />}
 
       {/*
-        * **Sin red va arriba de todo lo demás, y no reemplaza nada.**
-        *
-        * Lo de abajo sigue dibujándose: las rutas son lo último que supimos y
-        * siguen valiendo —la promesa publicada no depende de la red (8.2)—. Lo
-        * que esta línea agrega es de cuándo es lo que se está viendo. Taparlo
-        * todo con una pantalla de error le quitaría al pasajero la mitad de la
-        * app por una consulta caída.
+        * **«Tus paradas»: las demás**, en renglones compactos. La primera ya la
+        * dice la tarjeta de arriba; repetirla sería decir lo mismo dos veces.
         */}
-      {sinRed && !primeraVez && (
-        <section className="ontoy-seccion ontoy-inicio-estado">
-          <Ontoy pose="sin-red" tamano={64} />
-          <p className="ontoy-inicio-estado-dicho">
-            Sin señal. Te enseño lo último que supe.
-          </p>
-        </section>
-      )}
-
-      {/*
-        * **De noche también se suma, no reemplaza.** Las rutas siguen abajo con
-        * su horario, que es lo que alguien viene a mirar a esa hora.
-        */}
-      {deNoche && !primeraVez && !sinRed && (
-        <section className="ontoy-seccion ontoy-inicio-estado">
-          <Ontoy pose="dormido" tamano={64} />
-          <p className="ontoy-inicio-estado-dicho">
-            Ya no hay corridas. {vuelvenEnPalabras(deNoche)}
-          </p>
-        </section>
-      )}
-
-      {guardadas.length > 0 ? (
+      {demas.length > 0 && (
         <section className="ontoy-seccion">
           {/*
-            * La puerta a «Tus paradas». Va aquí y no en la barra porque la
-            * barra tiene cuatro lugares y eso es ley (8.8) — y porque el
-            * pasajero que quiere ordenarlas viene de verlas, no de buscarlas.
+            * La puerta a «Tus paradas» (ordenar y quitar). Va aquí y no en la
+            * barra: la barra tiene cuatro lugares y eso es ley (8.8).
             */}
-          <div className="ontoy-seccion-cabeza">
-            <h2 className="ontoy-seccion-titulo">Tus paradas</h2>
+          <div className="ontoy-inicio-seccion-cabeza">
+            <h2 className="ontoy-inicio-seccion-titulo">Tus paradas</h2>
             <button type="button" className="ontoy-seccion-mas" onClick={alVerTusParadas}>
               Ordenar
             </button>
           </div>
-          {guardadas.map((g) => (
-            <AtajoDeParada
-              key={g.parada}
-              guardada={g}
-              ruta={rutas.find((r) => r.circuito_id === g.ruta) ?? null}
-              yo={ubicacion.yo}
-              vivo={enVivo.vivos.get(g.ruta) ?? (enVivo.respondio ? null : undefined)}
-              errorVivo={enVivo.error}
-              alAbrir={() => alAbrirRuta(g.ruta, g.parada)}
-              alQuitar={() => alQuitarGuardada(g)}
-            />
-          ))}
+          <div className="ontoy-renglones">
+            {demas.map((g) => (
+              <RenglonDeParada
+                key={g.parada}
+                guardada={g}
+                ruta={rutas.find((r) => r.circuito_id === g.ruta) ?? null}
+                yo={ubicacion.yo}
+                vivo={enVivo.vivos.get(g.ruta) ?? (enVivo.respondio ? null : undefined)}
+                errorVivo={enVivo.error}
+                alAbrir={() => alAbrirRuta(g.ruta, g.parada)}
+              />
+            ))}
+          </div>
         </section>
-      ) : (
-        /*
-         * Sin guardadas, la puerta de entrada dicha una vez. No es un estado
-         * vacío: debajo están las rutas, que es con lo que se llega a guardar
-         * la primera.
-         */
-        /*
-         * Sin guardadas y **ya no es la primera vez** —ya contestó lo de la
-         * ubicación—: la puerta dicha una vez, sin Ontoy. El de la pantalla ya
-         * se gastó arriba si había algo que decir, y son uno por pantalla.
-         */
-        !primeraVez &&
-        puedeGuardar && (
-          <p className="ontoy-vacio ontoy-inicio-invitacion">
-            Guarda una parada y aquí verás su próximo camión. Abre una ruta y toca la suya.
-          </p>
-        )
       )}
-
-      {avisos.length > 0 && <PuertaDeAvisos avisos={avisos} nuevos={avisosNuevos} alAbrir={alVerAvisos} />}
 
       <RutasDeInicio
         rutas={rutas}
@@ -223,12 +217,32 @@ export function VistaInicio({
         alAbrirRuta={alAbrirRuta}
       />
 
+      {/* Al pie: los datos (lo que es ley vive allá, no en la pantalla) y la piel. */}
       <p className="ontoy-pie">
-        Tus paradas guardadas se quedan en tu teléfono. No hace falta cuenta.{" "}
-        <a href="/privacidad">Qué datos usa la app y para qué</a>.
+        <a href="/privacidad">Qué datos usa la app y para qué</a>
       </p>
       <RenglonDePiel deNoche={pielDeNoche} alAlternar={alAlternarPiel} />
     </div>
+  );
+}
+
+/**
+ * **Una tarjeta de Ontoy** cuando Inicio no tiene una parada que contar: la
+ * noche de la ciudad, o cómo se guarda la primera. Misma forma que la del
+ * próximo camión —carbón, Ontoy a la izquierda, la frase grande— para que
+ * Inicio abra siempre igual.
+ */
+function TarjetaDeOntoy({ pose, dicho, apoyo }: { pose: PoseDeOntoy; dicho: string; apoyo: string }) {
+  return (
+    <section className="ontoy-proximo">
+      <div className="ontoy-proximo-dicho">
+        <Ontoy pose={pose} tamano={72} />
+        <div>
+          <p className="ontoy-proximo-frase">{dicho}</p>
+          <p className="ontoy-proximo-apoyo">{apoyo}</p>
+        </div>
+      </div>
+    </section>
   );
 }
 

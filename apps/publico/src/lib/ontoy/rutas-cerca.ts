@@ -72,9 +72,6 @@ export interface OrdenDeLasRutas {
   porDistancia: boolean;
 }
 
-/** Cuántas se enseñan antes de que el pasajero pida el resto. */
-export const RUTAS_A_LA_VISTA = 3;
-
 /**
  * La parada más cercana de una ruta, con su distancia.
  * `null` si esa ruta no tiene ninguna parada publicada: no se inventa un punto
