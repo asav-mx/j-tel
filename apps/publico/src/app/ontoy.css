@@ -538,6 +538,13 @@
   font-size: 12.5px;
   color: var(--tenue);
 }
+/* En la hoja, la promesa y su firma van en los dos extremos del renglón. */
+.ontoy-hoja-promesa {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
 
 /* ── la lista de rutas ──────────────────────────────────────────────── */
 .ontoy-ruta {
@@ -952,26 +959,8 @@
   font-weight: 700;
   font-size: 17px;
 }
-.ontoy-guardar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--linea);
-  background: var(--panel2);
-  color: var(--tenue);
-  border-radius: 9px;
-  padding: 7px 11px;
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-}
-.ontoy-guardar.guardada {
-  color: var(--ruta);
-  border-color: currentColor;
-}
-.ontoy-guardar:disabled {
-  cursor: not-allowed;
-}
+/* (`.ontoy-guardar`, la pastilla chica del encabezado, se fue: «Guarda tu
+   parada» es ahora el botón principal al final de la hoja.) */
 .ontoy-cerrar {
   width: 34px;
   height: 34px;
@@ -988,6 +977,19 @@
   color: var(--tenue);
   margin: 2px 0 12px;
 }
+/*
+ * **La fila de una llegada, y son DOS repartos distintos.**
+ *
+ * `con-cifra` —«3 paradas»— va como el diseño: placa · lo que se sabe · la
+ * cifra grande a la derecha. El ojo encuentra el número sin leer; el apoyo, que
+ * es lo que se puede comprobar, queda chico a la izquierda.
+ *
+ * **Sin cifra el reparto es el de antes, y tiene que serlo.** «Sin unidad a la
+ * vista» y «Fuera de horario» son frases, no números: metidas en la columna
+ * estrecha de la derecha se desbordaban fuera de la hoja mientras el apoyo se
+ * partía en dos renglones a la izquierda. Lo enseñó la captura. Una frase
+ * necesita el ancho entero y poder envolver.
+ */
 .ontoy-llegada {
   display: flex;
   align-items: baseline;
@@ -995,6 +997,16 @@
   padding: 9px 0;
   border-top: 1px solid var(--linea);
   flex-wrap: wrap;
+}
+/*
+ * `align-items: center` y no `baseline`: con la placa y el número de 34 px en
+ * la misma fila, alinear por la base deja la placa colgando. Y sin envolver:
+ * aquí todo mide poco y cabe.
+ */
+.ontoy-llegada.con-cifra {
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
 }
 .ontoy-llegada:first-of-type {
   border-top: 0;
@@ -1729,6 +1741,89 @@
 }
 .ontoy-muneco-z.chica {
   font-size: 12px;
+}
+
+/* ── la hoja de parada, con el diseño del #562 ────────────────────────── */
+
+/* Tino, de la parada que estás mirando. Su mirada sale del mismo dato. */
+.ontoy-hoja-tino {
+  flex: none;
+  display: block;
+}
+.ontoy-hoja-tino .ontoy-tino {
+  position: static;
+  width: 44px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+}
+
+.ontoy-llegada-dicho {
+  flex: 1;
+  min-width: 0;
+}
+/* Sin cifra, el rótulo va primero y con su ancho de siempre. */
+.ontoy-llegada:not(.con-cifra) .ontoy-llegada-dicho {
+  order: 2;
+}
+.ontoy-llegada-cifra {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-left: auto;
+}
+.ontoy-llegada-cifra b {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 34px;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  color: var(--texto);
+}
+.ontoy-llegada-unidad {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--texto);
+}
+/*
+ * Una posición vieja no tiene cifra grande —se queda en su rótulo—, y aquí se
+ * apaga lo que sí tenga: es lo último que se vio, no dónde está (8.9).
+ */
+.ontoy-llegada.pasada .ontoy-llegada-cifra b,
+.ontoy-llegada.pasada .ontoy-llegada-unidad {
+  color: var(--tenue);
+}
+
+/* La firma sólo aparece si la concesión declaró algo: ver el porqué en la hoja. */
+.ontoy-hoja-firma {
+  flex: none;
+  font-size: 12px;
+  color: var(--tenue);
+}
+
+/* «Guarda tu parada»: el botón principal de la hoja, al final. */
+.ontoy-hoja-guardar {
+  width: 100%;
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+/*
+ * Guardada: deja de ser el botón principal —ya no hay nada que hacer aquí— y
+ * pasa a ser el secundario, con su estrella llena. La FORMA cambia, no sólo el
+ * texto: un botón que sigue viéndose principal invita a volver a tocarlo.
+ */
+.ontoy-hoja-guardar.guardada {
+  background: transparent;
+  color: var(--texto);
+  border-color: var(--linea);
+}
+.ontoy-hoja-guardar.guardada svg {
+  color: var(--maiz);
 }
 
 /* ── la campana (8.13b) ───────────────────────────────────────────────── */

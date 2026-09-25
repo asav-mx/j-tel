@@ -370,6 +370,13 @@ export function Ontoy({
     const enMinutos: LlegadaEnLaHoja[] = lista.slice(0, 3).map((l, i) => ({
       rotulo: rangoEnPalabras(l.rango),
       apoyo: `viene la ${l.unidad} · ${haceNMinutos(l.antiguedadSeg)}`,
+      placa: l.unidad,
+      /*
+       * El rango NO se parte en cifra grande: «4–7 min» es **un solo valor con
+       * dos extremos**, y agrandar sólo el «4» lo volvería una promesa de
+       * cuatro minutos con el resto en letra chica. La cuenta de paradas sí se
+       * parte, porque ahí el número es uno.
+       */
       enVivo: i === 0,
       vieja: i > 0,
     }));
@@ -384,6 +391,14 @@ export function Ontoy({
       .map((p) => ({
         rotulo: `iba ${paradasEnPalabras(p.paradas)}`,
         apoyo: `la ${p.unidad} · posición de ${haceNMinutos(p.antiguedadSeg)}`,
+        placa: p.unidad,
+        /*
+         * **La posición vieja NO lleva cifra grande** (8.9; decisión de ASAV
+         * del 22-sep): es lo último que se vio, no dónde está. El número
+         * grande es lo que el ojo lee primero, y dárselo a un dato de hace seis
+         * minutos lo presenta como si fuera de ahorita. Se queda en el rótulo
+         * chico, en pasado, con su edad al lado.
+         */
         vieja: true,
         pasada: true,
       }));
@@ -393,7 +408,14 @@ export function Ontoy({
       .filter((p) => p.fresca)
       .map((p, i) => ({
         rotulo: paradasEnPalabras(p.paradas),
+        /*
+         * La cifra viene del **número**, no de recortar la frase: el día que
+         * `paradasEnPalabras` diga «a 1 parada» en singular, o le cambie el
+         * orden, partir la cadena se equivocaría en silencio.
+         */
+        cifra: { valor: String(p.paradas), unidad: p.paradas === 1 ? "parada" : "paradas" },
         apoyo: `viene la ${p.unidad} · ${haceNMinutos(p.antiguedadSeg)}`,
+        placa: p.unidad,
         enVivo: i === 0,
         vieja: i > 0,
       }));
@@ -571,6 +593,8 @@ export function Ontoy({
               : null
           }
           promesa={promesaEnPalabras(vivo?.promesa ?? null, sentido) ?? ""}
+          /* Sólo lo declarado lleva firma: ver el porqué en la prop. */
+          promesaDeclarada={vivo?.promesa?.estado === "declarada"}
           guardada={guardadas.estaGuardada(parada.id)}
           sePuedeGuardar={guardadas.disponible}
           color={rutaEnfocada.color_hex}
