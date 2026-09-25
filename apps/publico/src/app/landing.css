@@ -1172,6 +1172,51 @@ body:has(.landing) {
   font-size: 20px;
 }
 
+/* Ontoy que reacciona: el botón que lo envuelve no se ve, sólo él. */
+.landing-reacciona {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+.landing-reacciona svg {
+  width: 84px;
+  height: 84px;
+  display: block;
+  /* Las estrellas y los brincos se salen del lienzo, y deben verse. */
+  overflow: visible;
+}
+
+/* En los personajes va del tamaño de los otros dos, no del de un botón. */
+.landing-ontoy-personaje svg {
+  width: 100%;
+  max-width: 180px;
+  height: auto;
+}
+
+.landing-ontoy-personaje .landing-tocalo {
+  color: var(--arena-2);
+}
+
+/* El buscador y su Ontoy, uno al lado del otro. */
+.landing-con-ontoy {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.landing-con-ontoy .landing-demo {
+  flex: 1 1 300px;
+  min-width: 0;
+}
+
 .landing-cosquillas {
   border: 0;
   background: none;
