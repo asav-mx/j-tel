@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "start": "next start",
     "test": "TZ=UTC vitest run",
-    "fuentes:traer": "node scripts/traer-fuentes.mjs"
+    "fuentes:traer": "node scripts/traer-fuentes.mjs",
+    "mapa:traer": "node scripts/traer-mapa.mjs"
   },
   "dependencies": {
     "@jtel/db": "workspace:*",
