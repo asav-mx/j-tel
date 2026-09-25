@@ -1789,12 +1789,42 @@
  */
 .ontoy-ira-nada {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-top: 40px;
+  text-align: center;
 }
-.ontoy-ira-nada .ontoy-vacio {
+.ontoy-ira-nada-titulo {
+  margin: 8px 0 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.ontoy-ira-nada-apoyo {
   margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--tenue);
+  text-wrap: pretty;
+}
+/* El botón de contorno del diseño: una salida, no la acción principal de la pantalla. */
+.ontoy-boton-contorno {
+  margin-top: 10px;
+  min-height: 52px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--texto);
+  color: var(--texto);
+  font-family: var(--fuente-texto), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
 }
 
 /* ── las pantallas de estado completo (§G) ─────────────────────────────── */

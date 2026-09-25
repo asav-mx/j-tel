@@ -112,6 +112,15 @@ export default function Privacidad() {
       </section>
 
       <section>
+        <h2>Lo que escribes en «Ir a»</h2>
+        <p>
+          El buscador de «Ir a» compara lo que escribes con la lista de paradas y rutas que tu teléfono ya bajó —la
+          misma para todos—. Lo que escribes se usa para encontrar tu parada, no se manda a nuestro servidor y no se
+          guarda.
+        </p>
+      </section>
+
+      <section>
         <h2>Lo que se guarda en tu teléfono</h2>
         <p>
           Tus paradas guardadas, qué avisos de tus rutas ya viste y si prefieres la app en claro u oscuro se guardan

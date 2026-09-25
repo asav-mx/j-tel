@@ -334,6 +334,21 @@ export function Ontoy({
     setVolverAlInicioDelLugar((n) => n + 1);
   }, []);
 
+  /*
+   * «Ver todas las rutas», la salida de una búsqueda sin resultados: a Inicio,
+   * y bajando hasta su lista de rutas (ahí viven todas, Marco 8.8). Se baja en
+   * un efecto porque la lista existe hasta que Inicio se dibuja.
+   */
+  const [bajarALasRutas, setBajarALasRutas] = useState(0);
+  const verTodasLasRutas = useCallback(() => {
+    irA("inicio");
+    setBajarALasRutas((n) => n + 1);
+  }, [irA]);
+  useEffect(() => {
+    if (bajarALasRutas === 0 || lugar !== "inicio") return;
+    document.getElementById("ontoy-rutas")?.scrollIntoView({ block: "start" });
+  }, [bajarALasRutas, lugar]);
+
   const rutaEnfocada = rutas.find((r) => r.circuito_id === enfocada) ?? null;
   /**
    * **La ruta de la hoja abierta** — la consultada, que en la ciudad es la de la
@@ -667,6 +682,7 @@ export function Ontoy({
           error={listaDeLaCiudad.error}
           alReintentar={listaDeLaCiudad.reintentar}
           alAbrirRuta={abrirRuta}
+          alVerTodasLasRutas={verTodasLasRutas}
         />
       )}
 
