@@ -118,7 +118,7 @@ describe("las poses de Ontoy", () => {
 
   it("las poses que NO vienen del handoff están declaradas, TODAS", () => {
     /*
-     * `sin-red`, `dormido` y `triste` se armaron aquí con las reglas escritas
+     * `sin-red`, `dormido`, `triste` y `al-otro-lado` se armaron aquí con las reglas escritas
      * del skill, no copiadas de un dibujo. Es la única parte de la pieza que no
      * está copiada, y quien la revise tiene que saberlo sin preguntar.
      *
@@ -128,9 +128,11 @@ describe("las poses de Ontoy", () => {
      * **contra la declaración**, así que una pose nueva sin declarar la tumba
      * — que es justo lo que tiene que pasar.
      */
-    const declaradas = muneco.match(/\*\*`([a-z-]+)`(?:, `([a-z-]+)`)?(?: y `([a-z-]+)`)? no venían dibujados/);
+    const declaradas = muneco.match(
+      /\*\*((?:`[a-z-]+`(?:, | y )?)+) no venían dibujados/,
+    );
     expect(declaradas, "falta la frase que declara las poses no copiadas").not.toBeNull();
-    const nombradas = declaradas!.slice(1).filter(Boolean).sort();
-    expect(nombradas).toEqual(["dormido", "sin-red", "triste"]);
+    const nombradas = [...declaradas![1].matchAll(/`([a-z-]+)`/g)].map((m) => m[1]).sort();
+    expect(nombradas).toEqual(["al-otro-lado", "dormido", "sin-red", "triste"]);
   });
 });

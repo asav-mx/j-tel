@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { CalleSinSalida, PantallaCompleta } from "@/components/ontoy/pantalla-completa";
 
 /**
  * La página que sale cuando la liga no lleva a ninguna parte.
@@ -9,21 +9,22 @@ import Link from "next/link";
  *
  * Es también lo que ve quien abre el QR de una ruta que todavía no se publica,
  * o cuyo slug se escribió mal en un letrero. Por eso no se disculpa ni echa
- * culpas: dice qué pasó y ofrece la única salida que hay.
+ * culpas: dice qué pasó y ofrece la única salida que hay (8.10).
+ *
+ * ## La salida va a `/rutas`, no a `/`
+ *
+ * Desde el #550 la raíz es la **landing** y la app vive en `/rutas`. Un «Ver las
+ * rutas» que lleva a la portada es una salida que no lleva a donde dice — y
+ * quien cae aquí ya se topó con una liga que no funcionó.
  */
 export default function NoEncontrado() {
   return (
-    <main className="puerta">
-      <h1>No encontramos esa ruta</h1>
-      <p>
-        La liga puede estar mal escrita, o la ruta todavía no está publicada. Revisa el código del
-        letrero, o vuelve al inicio para ver las rutas disponibles.
-      </p>
-      <ul>
-        <li>
-          <Link href="/rutas">Ver las rutas</Link>
-        </li>
-      </ul>
-    </main>
+    <PantallaCompleta
+      pose="al-otro-lado"
+      titular="Esta calle no lleva a ningún lado."
+      ayuda="Te regreso al inicio y de ahí seguimos."
+      boton={{ texto: "Ir al inicio", a: "/rutas" }}
+      adorno={<CalleSinSalida />}
+    />
   );
 }
