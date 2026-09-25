@@ -1,0 +1,23 @@
+/* ¿Ontoy? · colores. Única fuente de verdad. */
+:root{
+  /* Neutros */
+  --carbon:#2A2E37; --carbon-2:#4A4F5A; --gris:#6B6F78; --asfalto:#3A4150; --llanta:#15171C;
+  --hueso:#F7F3EC; --papel:#F4F0E9; --banqueta:#EDE9E1; --arena-clara:#E2DCD1; --arena:#DCD5C8; --arena-2:#C9C1B3; --blanco:#FFFFFF;
+  /* Marca: SOLO Ontoy */
+  --ontoy:#F6A15B; --ontoy-sombra:#C8702A;
+  /* Reacciones de Ontoy (sus propios acentos) */
+  --ontoy-rubor:#E36F8C; --ontoy-lagrima:#7FB8F0; --ontoy-estrella:#F2C14E;
+  /* Pasajero «Tú estás aquí» y pasajeros: color de Ontoy, nunca de ruta */
+  --pasajero:var(--noche);
+  /* Noche (modo oscuro, sección Instalar oscura, icono noche) */
+  --noche:#1E2B4D; --noche-2:#26365E; --noche-3:#324673;
+  /* Barrio: objetos sin ruta (tiendita, obra, pasajeros, parques). Nunca naranja. */
+  --maiz:#F2C14E; --nopal:#5FB36B; --rosa:#E36F8C; --agua:#2FA6A0; --madera:#8A6A52; --pasto:#D3E4C9; --lagrima:#7FB8F0;
+  /* Ruta: viene del dato (color_hex). Estos son SOLO ejemplos para maquetas. */
+  --ruta:var(--ruta-51); --ruta-51:#4F7FD8; --ruta-morada:#8B6CC9; --ruta-vino:#A2466E;
+  /* Semánticos */
+  --bg-page:var(--banqueta); --surface:var(--hueso); --surface-2:var(--papel); --border:var(--arena); --border-strong:var(--arena-2);
+  --text:var(--carbon); --text-2:var(--carbon-2); --text-3:var(--gris); --text-on-dark:var(--hueso);
+  --plate-bg:var(--carbon); --plate-text:var(--blanco); --street:var(--carbon); --street-line:var(--hueso);
+  --eye:var(--blanco); --pupil:var(--carbon);
+}

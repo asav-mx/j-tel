@@ -136,6 +136,34 @@ pantalla.
 
 La landing llegó a la misma cuenta por su lado (#555) y usa el mismo `--carbon-2`.
 
+## (f) La placa de ruta: «¡ya!» en blanco, el color en una franja de 3 px — 24-sep-2026
+
+**Queda sin efecto** lo que dice `CLAUDE.md`: «Placas de ruta: carbón con texto blanco; en
+"¡ya!" el texto va en el color de la ruta».
+
+**El texto de la placa va SIEMPRE en blanco**, también en «¡ya!». El color de la ruta va en
+una **franja de 3 px en el filo inferior** de la placa.
+
+**Por qué, y está medido.** El color de ruta sobre la placa carbón no alcanza el contraste
+que pide el texto (piso 4.5:1), y no es cosa de un color: **ninguno de los cinco de la lista
+llega**.
+
+| Color de ruta | Sobre la placa carbón |
+|---|---|
+| Azul `#4F7FD8` | 3.47:1 |
+| Morado `#8B6CC9` | 3.29:1 |
+| Rosa `#E36F8C` | 4.48:1 |
+| Agua `#2FA6A0` | 4.59:1 |
+| Verde `#5FB36B` | 5.28:1 |
+
+Y pintando la placa **del** color de la ruta con su mejor tinta —lo que hace
+`textoSobreLaRuta`— el mejor caso de los cinco sigue siendo **3.92:1**. No hay forma de
+cumplir la regla vieja.
+
+Blanco sobre carbón da **13.6:1**. La señal de color no se pierde: se muda a la franja, que
+es un elemento gráfico y le basta con 3:1 — y además **el color nunca va solo**, porque la
+placa lleva el número de la ruta al lado.
+
 ---
 
 ## Notas del repo (no son enmiendas: son cosas que este repo ya decidió)

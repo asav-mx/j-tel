@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>¿Ontoy? · Símbolos del universo</title>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E2DCD1;color:#2A2E37;font-family:'Instrument Sans',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#2A2E37;text-decoration-color:#C9C1B3;text-underline-offset:3px}
+a:hover{color:#4A4F5A}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="plano" x="-10%" y="-10%" width="120%" height="120%"><feFlood flood-color="#4A4F5A"></feFlood><feComposite in2="SourceAlpha" operator="in"></feComposite></filter>
+    <filter id="plano-n" x="-10%" y="-10%" width="120%" height="120%"><feFlood flood-color="#C9C1B3"></feFlood><feComposite in2="SourceAlpha" operator="in"></feComposite></filter>
+
+    <symbol id="g-casa" viewBox="0 0 24 24"><rect x="4.6" y="10" width="14.8" height="11.4" rx="1.8" fill="#E36F8C"></rect><path d="M2.4 11.4 11.2 4a1.2 1.2 0 0 1 1.6 0l8.8 7.4c.6.5.2 1.4-.5 1.4H2.9c-.7 0-1.1-.9-.5-1.4z" fill="var(--ink,#2A2E37)"></path><rect x="10.4" y="17.6" width="3.2" height="3.8" rx="1" fill="var(--ink,#2A2E37)"></rect><circle cx="8.5" cy="15.2" r="2" fill="#fff"></circle><circle cx="15.5" cy="15.2" r="2" fill="#fff"></circle><g style="transform:translate(var(--mx,0px),var(--my,0px));opacity:var(--pup,1)"><circle cx="8.5" cy="15.2" r="1.1" fill="#2A2E37"></circle><circle cx="15.5" cy="15.2" r="1.1" fill="#2A2E37"></circle></g></symbol>
+    <symbol id="g-mapa" viewBox="0 0 24 24"><path d="M2.4 6.4 8.4 4.2l7.2 2.2 6-2.2v13.4l-6 2.2-7.2-2.2-6 2.2z" fill="#5FB36B"></path><path d="M8.4 4.2l7.2 2.2v13.6l-7.2-2.2z" fill="#D3E4C9"></path><circle cx="10.3" cy="11.8" r="1.75" fill="#fff"></circle><circle cx="13.7" cy="12.6" r="1.75" fill="#fff"></circle><g style="transform:translate(var(--mx,0px),var(--my,0px));opacity:var(--pup,1)"><circle cx="10.3" cy="11.8" r="0.95" fill="#2A2E37"></circle><circle cx="13.7" cy="12.6" r="0.95" fill="#2A2E37"></circle></g></symbol>
+    <symbol id="g-ira" viewBox="0 0 24 24"><path d="M12 11 7 1.4h10z" fill="#F2C14E"></path><circle cx="12" cy="14.6" r="7.6" fill="#fff"></circle><circle cx="12" cy="14.6" r="6.4" fill="#1E2B4D"></circle><circle cx="3.4" cy="17.8" r="1.7" fill="#1E2B4D"></circle><circle cx="20.6" cy="17.8" r="1.7" fill="#1E2B4D"></circle><circle cx="9.7" cy="13.6" r="1.9" fill="#fff"></circle><circle cx="14.3" cy="13.6" r="1.9" fill="#fff"></circle><g style="transform:translate(var(--mx,0px),var(--my,0px));opacity:var(--pup,1)"><circle cx="9.8" cy="12.9" r="1.05" fill="#2A2E37"></circle><circle cx="14.4" cy="12.9" r="1.05" fill="#2A2E37"></circle></g></symbol>
+    <symbol id="g-pase" viewBox="0 0 24 24"><rect x="2.4" y="5.6" width="19.2" height="12.8" rx="2.6" fill="#2FA6A0"></rect><rect x="2.4" y="14.4" width="19.2" height="2" fill="var(--ink,#2A2E37)"></rect><circle cx="9.4" cy="10.2" r="2" fill="#fff"></circle><circle cx="14.6" cy="10.2" r="2" fill="#fff"></circle><g style="transform:translate(var(--mx,0px),var(--my,0px));opacity:var(--pup,1)"><circle cx="9.4" cy="10.2" r="1.1" fill="#2A2E37"></circle><circle cx="14.6" cy="10.2" r="1.1" fill="#2A2E37"></circle></g></symbol>
+    <symbol id="g-ubicacion" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#1E2B4D" opacity=".16"></circle><circle cx="12" cy="12" r="7.4" fill="#fff"></circle><circle cx="12" cy="12" r="6.2" fill="#1E2B4D"></circle><circle cx="9.8" cy="11.2" r="1.85" fill="#fff"></circle><circle cx="14.2" cy="11.2" r="1.85" fill="#fff"></circle><g style="transform:translate(var(--mx,0px),var(--my,0px));opacity:var(--pup,1)"><circle cx="9.8" cy="11.2" r="1" fill="#2A2E37"></circle><circle cx="14.2" cy="11.2" r="1" fill="#2A2E37"></circle></g></symbol>
+    <symbol id="g-estrella" viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z" fill="#C9C1B3" stroke="#C9C1B3" stroke-width="1.2" stroke-linejoin="round"></path><circle cx="10" cy="11.6" r="1.6" fill="#fff"></circle><circle cx="14" cy="11.6" r="1.6" fill="#fff"></circle><g style="transform:translate(var(--mx,0px),var(--my,0px));opacity:var(--pup,1)"><circle cx="10" cy="11.6" r="0.85" fill="#2A2E37"></circle><circle cx="14" cy="11.6" r="0.85" fill="#2A2E37"></circle></g></symbol>
+    <symbol id="g-estrella-si" viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z" fill="#F2C14E" stroke="#F2C14E" stroke-width="1.2" stroke-linejoin="round"></path><circle cx="10" cy="11.2" r="1.6" fill="#fff"></circle><circle cx="14" cy="11.2" r="1.6" fill="#fff"></circle><circle cx="10" cy="11.2" r="0.85" fill="#2A2E37"></circle><circle cx="14" cy="11.2" r="0.85" fill="#2A2E37"></circle><path d="M10.7 13.9q1.3 1.1 2.6 0" fill="none" stroke="#2A2E37" stroke-width="1.1" stroke-linecap="round"></path></symbol>
+    <symbol id="g-aviso" viewBox="0 0 24 24"><rect x="11" y="14" width="2" height="6.4" fill="var(--ink,#2A2E37)"></rect><rect x="7.6" y="19.8" width="8.8" height="2.2" rx="1.1" fill="var(--ink,#2A2E37)"></rect><rect x="2.6" y="3" width="18.8" height="11.8" rx="2.8" fill="#F2C14E"></rect><circle cx="9.4" cy="8.9" r="2" fill="#fff"></circle><circle cx="14.6" cy="8.9" r="2" fill="#fff"></circle><g style="transform:translate(var(--mx,0px),var(--my,0px));opacity:var(--pup,1)"><circle cx="9.4" cy="8.9" r="1.1" fill="#2A2E37"></circle><circle cx="14.6" cy="8.9" r="1.1" fill="#2A2E37"></circle></g></symbol>
+    <symbol id="g-instalar" viewBox="0 0 24 24"><rect x="5.6" y="1.8" width="12.8" height="20.4" rx="3.2" fill="#2A2E37"></rect><rect x="7.2" y="3.6" width="9.6" height="16.8" rx="1.8" fill="#F7F3EC"></rect><path d="M7.2 20.4v-2.6a4.8 4.4 0 0 1 9.6 0v2.6z" fill="#F6A15B"></path><circle cx="10.4" cy="17.2" r="1.35" fill="#fff"></circle><circle cx="13.6" cy="17.2" r="1.35" fill="#fff"></circle><circle cx="10.4" cy="16.8" r="0.75" fill="#2A2E37"></circle><circle cx="13.6" cy="16.8" r="0.75" fill="#2A2E37"></circle></symbol>
+    <symbol id="g-sol" viewBox="0 0 24 24"><path d="M12 1.6v2.2M12 20.2v2.2M1.6 12h2.2M20.2 12h2.2M4.6 4.6l1.5 1.5M17.9 17.9l1.5 1.5M4.6 19.4l1.5-1.5M17.9 6.1l1.5-1.5" stroke="#F2C14E" stroke-width="2" stroke-linecap="round"></path><circle cx="12" cy="12" r="5.8" fill="#F2C14E"></circle><circle cx="10" cy="11.4" r="1.6" fill="#fff"></circle><circle cx="14" cy="11.4" r="1.6" fill="#fff"></circle><circle cx="10" cy="11.4" r="0.85" fill="#2A2E37"></circle><circle cx="14" cy="11.4" r="0.85" fill="#2A2E37"></circle></symbol>
+    <symbol id="g-luna" viewBox="0 0 24 24"><path d="M14.8 2.6A9.6 9.6 0 1 0 21.4 15.4 7.6 7.6 0 0 1 14.8 2.6z" fill="#7FB8F0"></path><path d="M5.4 12.6q1.3 1.1 2.6 0M9.4 15.6q1.3 1.1 2.6 0" fill="none" stroke="#2A2E37" stroke-width="1.2" stroke-linecap="round"></path></symbol>
+    <symbol id="g-nube" viewBox="0 0 24 24"><path d="M7 19.4a4.6 4.6 0 0 1-.7-9.1 6 6 0 0 1 11.5-1.4 5.2 5.2 0 0 1-.2 10.5z" fill="#7FB8F0"></path><circle cx="9.6" cy="13" r="1.8" fill="#fff"></circle><circle cx="14.4" cy="13" r="1.8" fill="#fff"></circle><circle cx="9.6" cy="13.7" r="0.95" fill="#2A2E37"></circle><circle cx="14.4" cy="13.7" r="0.95" fill="#2A2E37"></circle><path d="M10.2 16.6q.9-.9 1.8 0t1.8 0" fill="none" stroke="#2A2E37" stroke-width="1" stroke-linecap="round"></path></symbol>
+    <symbol id="g-carta" viewBox="0 0 24 24"><rect x="2.4" y="5.4" width="19.2" height="13.6" rx="2.4" fill="#E36F8C"></rect><path d="M3.8 6.8 12 12.2l8.2-5.4" fill="none" stroke="var(--ink,#2A2E37)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="8.8" cy="14.8" r="1.8" fill="#fff"></circle><circle cx="15.2" cy="14.8" r="1.8" fill="#fff"></circle><circle cx="8.8" cy="14.8" r="0.95" fill="#2A2E37"></circle><circle cx="15.2" cy="14.8" r="0.95" fill="#2A2E37"></circle></symbol>
+    <symbol id="g-maletin" viewBox="0 0 24 24"><rect x="8.6" y="3.4" width="6.8" height="5" rx="1.8" fill="none" stroke="var(--ink,#2A2E37)" stroke-width="1.8"></rect><rect x="2.6" y="7.2" width="18.8" height="13.4" rx="2.6" fill="#8A6A52"></rect><circle cx="9.4" cy="13.4" r="2" fill="#fff"></circle><circle cx="14.6" cy="13.4" r="2" fill="#fff"></circle><circle cx="9.4" cy="13.4" r="1.1" fill="#2A2E37"></circle><circle cx="14.6" cy="13.4" r="1.1" fill="#2A2E37"></circle></symbol>
+    <symbol id="g-corre" viewBox="0 0 24 24"><path d="M1.4 9.8h3.2M.8 13.2h2.8M1.8 16.6h2.2" stroke="var(--ink,#2A2E37)" stroke-width="1.6" stroke-linecap="round"></path><circle cx="14" cy="13" r="7.2" fill="#fff"></circle><circle cx="14" cy="13" r="6" fill="#1E2B4D"></circle><circle cx="7.4" cy="17.2" r="1.5" fill="#1E2B4D"></circle><circle cx="21.8" cy="15.4" r="1.5" fill="#1E2B4D"></circle><circle cx="12.2" cy="12" r="1.75" fill="#fff"></circle><circle cx="16.4" cy="12" r="1.75" fill="#fff"></circle><circle cx="12.9" cy="12" r="0.95" fill="#2A2E37"></circle><circle cx="17.1" cy="12" r="0.95" fill="#2A2E37"></circle></symbol>
+
+    <symbol id="s-chev" viewBox="0 0 24 24"><path d="M9 5.5 15.5 12 9 18.5" fill="none" stroke="var(--ink,#2A2E37)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
+    <symbol id="s-volver" viewBox="0 0 24 24"><path d="M19.5 12H5M11 5.5 4.5 12l6.5 6.5" fill="none" stroke="var(--ink,#2A2E37)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
+    <symbol id="s-cerrar" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="var(--ink,#2A2E37)" stroke-width="2.6" stroke-linecap="round"></path></symbol>
+    <symbol id="s-mas" viewBox="0 0 24 24"><path d="M5.5 9 12 15.5 18.5 9" fill="none" stroke="var(--ink,#2A2E37)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
+    <symbol id="s-menos" viewBox="0 0 24 24"><path d="M5.5 15 12 8.5 18.5 15" fill="none" stroke="var(--ink,#2A2E37)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
+    <symbol id="s-ida" viewBox="0 0 24 24"><path d="M4.5 12h14M13 5.5l6.5 6.5-6.5 6.5" fill="none" stroke="var(--ink,#2A2E37)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
+    <symbol id="s-reintentar" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.4-5.5M19.5 3.8v4.4h-4.4" fill="none" stroke="var(--ink,#2A2E37)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
+    <symbol id="s-palomita" viewBox="0 0 24 24"><path d="M4.5 12.8 9.6 17.8 19.5 6.8" fill="none" stroke="var(--ink,#2A2E37)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
+    <symbol id="s-vivo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#C9C1B3" opacity=".55"></circle><circle cx="12" cy="12" r="4.4" fill="var(--ink,#2A2E37)"></circle></symbol>
+    <symbol id="s-viejo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.4" fill="none" stroke="#6B6F78" stroke-width="2.2"></circle></symbol>
+    <symbol id="s-anillo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4" fill="none" stroke="#C9C1B3" stroke-width="3"></circle><path d="M12 3.6A8.4 8.4 0 1 1 3.6 12" fill="none" stroke="var(--ink,#2A2E37)" stroke-width="3" stroke-linecap="round"></path></symbol>
+
+    <symbol id="e-vivo" viewBox="0 0 60 60"><circle cx="30" cy="30" r="26" fill="currentColor"></circle><circle cx="22" cy="27" r="6.5" fill="#fff"></circle><circle cx="38" cy="27" r="6.5" fill="#fff"></circle><circle cx="23.5" cy="27.5" r="3.5" fill="#2A2E37"></circle><circle cx="39.5" cy="27.5" r="3.5" fill="#2A2E37"></circle><path d="M24 39 q6 5 12 0" fill="none" stroke="#2A2E37" stroke-width="2.6" stroke-linecap="round"></path></symbol>
+    <symbol id="e-arrancar" viewBox="0 0 60 60"><circle cx="30" cy="30" r="26" fill="currentColor"></circle><circle cx="22" cy="27" r="6.5" fill="#fff"></circle><circle cx="38" cy="27" r="6.5" fill="#fff"></circle><circle cx="22" cy="28.5" r="3.5" fill="#2A2E37"></circle><circle cx="38" cy="28.5" r="3.5" fill="#2A2E37"></circle><rect x="15" y="20" width="14" height="6" fill="currentColor"></rect><rect x="31" y="20" width="14" height="6" fill="currentColor"></rect><rect x="25" y="39" width="10" height="2.8" rx="1.4" fill="#2A2E37"></rect></symbol>
+    <symbol id="e-cerrado" viewBox="0 0 60 60"><circle cx="30" cy="30" r="26" fill="currentColor"></circle><path d="M17 28 q5 4 10 0 M33 28 q5 4 10 0" fill="none" stroke="#2A2E37" stroke-width="3" stroke-linecap="round"></path><text x="45" y="13" fill="var(--zz,#2A2E37)" style="font:800 11px 'Bricolage Grotesque',sans-serif">z</text><text x="51" y="4" fill="var(--zz,#2A2E37)" style="font:800 15px 'Bricolage Grotesque',sans-serif">z</text></symbol>
+    <symbol id="e-sinsenal" viewBox="0 0 60 60"><circle cx="30" cy="30" r="26" fill="#C9C1B3"></circle><circle cx="22" cy="27" r="6.5" fill="#fff"></circle><circle cx="38" cy="27" r="6.5" fill="#fff"></circle><circle cx="22" cy="30" r="3.5" fill="#2A2E37"></circle><circle cx="38" cy="30" r="3.5" fill="#2A2E37"></circle><path d="M24 40 q3 -3 6 0 t6 0" fill="none" stroke="#2A2E37" stroke-width="2.6" stroke-linecap="round"></path></symbol>
+  </defs>
+</svg>
+
+<div style="padding:72px 64px 120px;display:flex;flex-direction:column;gap:88px;max-width:1500px">
+
+<section id="2" data-screen-label="Símbolos del universo" style="display:flex;flex-direction:column;gap:48px">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:780px">
+    <div style="font:700 13px 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:#6B6F78">Símbolos del universo · ronda 1</div>
+    <h1 style="margin:0;font:800 56px/0.95 'Bricolage Grotesque',sans-serif;letter-spacing:-0.035em;text-wrap:balance">Cada ícono es un vecino del barrio</h1>
+    <p style="margin:0;font-size:17px;line-height:1.5;color:#4A4F5A;text-wrap:pretty">Los objetos llevan ojos y color de barrio. Las señales (flechas, cerrar) van sin ojos, en trazo grueso de calle. Retícula de 24, sin contornos. Nada en naranja salvo Ontoy.</p>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:780px">
+      <h2 style="margin:0;font:800 32px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">La barra: ¿cómo se nota dónde estás?</h2>
+      <p style="margin:0;font-size:15px;line-height:1.5;color:#4A4F5A">Tres maneras de marcar la pestaña activa. Toca las pestañas de cada una y dime cuál: <a href="#2a">2a</a>, <a href="#2b">2b</a> o <a href="#2c">2c</a>.</p>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+
+      <div id="2a" style="flex:1 1 400px;max-width:460px;background:#F7F3EC;border-radius:26px;box-shadow:0 0 0 1px #DCD5C8;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px"><span style="background:#2A2E37;color:#fff;border-radius:999px;padding:5px 11px;font:800 14px/1 'Bricolage Grotesque',sans-serif">2a</span><span style="font:800 20px/1 'Bricolage Grotesque',sans-serif">Se despierta la tuya</span></div>
+        <div style="font-size:14px;line-height:1.45;color:#4A4F5A">La activa se ve a color, con ojos y en pastilla carbón. Las demás quedan como silueta plana, sin cara. Es la más tranquila: solo hay un personaje a la vez.</div>
+        <nav style="height:64px;border-radius:16px;box-shadow:0 0 0 1px #DCD5C8;background:#EDE9E1;display:grid;grid-template-columns:repeat(4,1fr);padding:0 6px">
+          <sc-for list="{{ barA }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.go }}" aria-label="{{ t.label }}" style="border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0"><span style="width:56px;height:32px;border-radius:999px;display:grid;place-items:center;background:{{ t.bg }};transition:background .2s"><svg viewBox="0 0 24 24" style="width:26px;height:26px;overflow:visible;--ink:{{ t.ink }};--mx:{{ t.mx }};--pup:{{ t.pup }}"><use href="#{{ t.id }}" filter="{{ t.filt }}"></use></svg></span><span style="font-size:12px;line-height:1;font-weight:{{ t.fw }};color:{{ t.col }}">{{ t.label }}</span></button></sc-for>
+        </nav>
+        <nav style="height:64px;border-radius:16px;background:#1E2B4D;display:grid;grid-template-columns:repeat(4,1fr);padding:0 6px">
+          <sc-for list="{{ barAn }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.go }}" aria-label="{{ t.label }}" style="border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0"><span style="width:56px;height:32px;border-radius:999px;display:grid;place-items:center;background:{{ t.bg }};transition:background .2s"><svg viewBox="0 0 24 24" style="width:26px;height:26px;overflow:visible;--ink:{{ t.ink }};--mx:{{ t.mx }};--pup:{{ t.pup }}"><use href="#{{ t.id }}" filter="{{ t.filt }}"></use></svg></span><span style="font-size:12px;line-height:1;font-weight:{{ t.fw }};color:{{ t.col }}">{{ t.label }}</span></button></sc-for>
+        </nav>
+      </div>
+
+      <div id="2b" style="flex:1 1 400px;max-width:460px;background:#F7F3EC;border-radius:26px;box-shadow:0 0 0 1px #DCD5C8;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px"><span style="background:#2A2E37;color:#fff;border-radius:999px;padding:5px 11px;font:800 14px/1 'Bricolage Grotesque',sans-serif">2b</span><span style="font:800 20px/1 'Bricolage Grotesque',sans-serif">Todos miran a la tuya</span><span style="margin-left:auto;background:#5FB36B;color:#2A2E37;border-radius:999px;padding:5px 10px;font:700 12px/1 'Instrument Sans'">elegida</span></div>
+        <div style="font-size:14px;line-height:1.45;color:#4A4F5A">Todas van despiertas. La activa te mira de frente, en pastilla carbón, y las demás voltean hacia ella. Usa la regla de la mirada, pero es la más cargada.</div>
+        <nav style="height:64px;border-radius:16px;box-shadow:0 0 0 1px #DCD5C8;background:#EDE9E1;display:grid;grid-template-columns:repeat(4,1fr);padding:0 6px">
+          <sc-for list="{{ barB }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.go }}" aria-label="{{ t.label }}" style="border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0"><span style="width:56px;height:32px;border-radius:999px;display:grid;place-items:center;background:{{ t.bg }};transition:background .2s"><svg viewBox="0 0 24 24" style="width:26px;height:26px;overflow:visible;--ink:{{ t.ink }};--mx:{{ t.mx }};--pup:{{ t.pup }}"><use href="#{{ t.id }}" filter="{{ t.filt }}"></use></svg></span><span style="font-size:12px;line-height:1;font-weight:{{ t.fw }};color:{{ t.col }}">{{ t.label }}</span></button></sc-for>
+        </nav>
+        <nav style="height:64px;border-radius:16px;background:#1E2B4D;display:grid;grid-template-columns:repeat(4,1fr);padding:0 6px">
+          <sc-for list="{{ barBn }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.go }}" aria-label="{{ t.label }}" style="border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0"><span style="width:56px;height:32px;border-radius:999px;display:grid;place-items:center;background:{{ t.bg }};transition:background .2s"><svg viewBox="0 0 24 24" style="width:26px;height:26px;overflow:visible;--ink:{{ t.ink }};--mx:{{ t.mx }};--pup:{{ t.pup }}"><use href="#{{ t.id }}" filter="{{ t.filt }}"></use></svg></span><span style="font-size:12px;line-height:1;font-weight:{{ t.fw }};color:{{ t.col }}">{{ t.label }}</span></button></sc-for>
+        </nav>
+      </div>
+
+      <div id="2c" style="flex:1 1 400px;max-width:460px;background:#F7F3EC;border-radius:26px;box-shadow:0 0 0 1px #DCD5C8;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px"><span style="background:#2A2E37;color:#fff;border-radius:999px;padding:5px 11px;font:800 14px/1 'Bricolage Grotesque',sans-serif">2c</span><span style="font:800 20px/1 'Bricolage Grotesque',sans-serif">Color siempre, pupila solo en la tuya</span></div>
+        <div style="font-size:14px;line-height:1.45;color:#4A4F5A">Todas van a color. Solo la activa tiene pupilas y pastilla; las demás muestran ojos blancos vacíos. Queda en medio de las otras dos, aunque los ojos vacíos pueden verse raros.</div>
+        <nav style="height:64px;border-radius:16px;box-shadow:0 0 0 1px #DCD5C8;background:#EDE9E1;display:grid;grid-template-columns:repeat(4,1fr);padding:0 6px">
+          <sc-for list="{{ barC }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.go }}" aria-label="{{ t.label }}" style="border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0"><span style="width:56px;height:32px;border-radius:999px;display:grid;place-items:center;background:{{ t.bg }};transition:background .2s"><svg viewBox="0 0 24 24" style="width:26px;height:26px;overflow:visible;--ink:{{ t.ink }};--mx:{{ t.mx }};--pup:{{ t.pup }}"><use href="#{{ t.id }}" filter="{{ t.filt }}"></use></svg></span><span style="font-size:12px;line-height:1;font-weight:{{ t.fw }};color:{{ t.col }}">{{ t.label }}</span></button></sc-for>
+        </nav>
+        <nav style="height:64px;border-radius:16px;background:#1E2B4D;display:grid;grid-template-columns:repeat(4,1fr);padding:0 6px">
+          <sc-for list="{{ barCn }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.go }}" aria-label="{{ t.label }}" style="border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0"><span style="width:56px;height:32px;border-radius:999px;display:grid;place-items:center;background:{{ t.bg }};transition:background .2s"><svg viewBox="0 0 24 24" style="width:26px;height:26px;overflow:visible;--ink:{{ t.ink }};--mx:{{ t.mx }};--pup:{{ t.pup }}"><use href="#{{ t.id }}" filter="{{ t.filt }}"></use></svg></span><span style="font-size:12px;line-height:1;font-weight:{{ t.fw }};color:{{ t.col }}">{{ t.label }}</span></button></sc-for>
+        </nav>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:780px">
+      <h2 style="margin:0;font:800 32px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">Objetos · con ojos</h2>
+      <p style="margin:0;font-size:15px;line-height:1.5;color:#4A4F5A">Cosas del barrio que hacen algo. A la izquierda de día, a la derecha de noche; abajo, a 32, 24 y 20 px.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px">
+      <sc-for list="{{ objetos }}" as="o" hint-placeholder-count="12">
+        <div style="background:#F7F3EC;border-radius:22px;box-shadow:0 0 0 1px #DCD5C8;overflow:hidden;display:flex;flex-direction:column">
+          <div style="display:grid;grid-template-columns:1fr 1fr">
+            <div style="background:#EDE9E1;height:112px;display:grid;place-items:center"><svg viewBox="0 0 24 24" style="width:64px;height:64px;overflow:visible"><use href="#{{ o.id }}"></use><sc-if value="{{ o.punto }}" hint-placeholder-val="{{ false }}"><circle cx="20.6" cy="3.4" r="3.2" fill="#2A2E37" stroke="#EDE9E1" stroke-width="1.4"></circle></sc-if></svg></div>
+            <div style="background:#1E2B4D;height:112px;display:grid;place-items:center"><svg viewBox="0 0 24 24" style="width:64px;height:64px;overflow:visible;--ink:#F7F3EC"><use href="#{{ o.id }}"></use><sc-if value="{{ o.punto }}" hint-placeholder-val="{{ false }}"><circle cx="20.6" cy="3.4" r="3.2" fill="#F7F3EC" stroke="#1E2B4D" stroke-width="1.4"></circle></sc-if></svg></div>
+          </div>
+          <div style="padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:flex-end;gap:12px;height:34px"><svg viewBox="0 0 24 24" style="width:32px;height:32px;overflow:visible"><use href="#{{ o.id }}"></use></svg><svg viewBox="0 0 24 24" style="width:24px;height:24px;overflow:visible"><use href="#{{ o.id }}"></use></svg><svg viewBox="0 0 24 24" style="width:20px;height:20px;overflow:visible"><use href="#{{ o.id }}"></use></svg><sc-if value="{{ o.nuevo }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;align-self:center;background:#2A2E37;color:#fff;border-radius:999px;padding:4px 9px;font:700 11px/1 'Instrument Sans'">idea nueva</span></sc-if></div>
+            <div style="font:800 17px/1.1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.01em">{{ o.nombre }}</div>
+            <div style="font-size:13px;line-height:1.4;color:#4A4F5A;text-wrap:pretty">{{ o.uso }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:780px">
+      <h2 style="margin:0;font:800 32px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">Señales · sin ojos</h2>
+      <p style="margin:0;font-size:15px;line-height:1.5;color:#4A4F5A">Son la puntuación de la interfaz, en trazo de 2.6 con punta redonda, como raya de calle. En carbón, o en hueso de noche.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
+      <sc-for list="{{ senales }}" as="s" hint-placeholder-count="12">
+        <div style="background:#F7F3EC;border-radius:18px;box-shadow:0 0 0 1px #DCD5C8;overflow:hidden;display:flex;flex-direction:column">
+          <div style="display:grid;grid-template-columns:1fr 1fr">
+            <div style="background:#EDE9E1;height:72px;display:grid;place-items:center"><svg viewBox="0 0 24 24" style="width:32px;height:32px;transform:{{ s.rot }}"><use href="#{{ s.id }}"></use></svg></div>
+            <div style="background:#1E2B4D;height:72px;display:grid;place-items:center"><svg viewBox="0 0 24 24" style="width:32px;height:32px;--ink:#F7F3EC;transform:{{ s.rot }}"><use href="#{{ s.id }}"></use></svg></div>
+          </div>
+          <div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px">
+            <div style="font:800 15px/1.1 'Bricolage Grotesque',sans-serif">{{ s.nombre }}</div>
+            <div style="font-size:12px;line-height:1.35;color:#4A4F5A">{{ s.uso }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:780px">
+      <h2 style="margin:0;font:800 32px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-0.025em">Caritas de estado de ruta · a 24 px</h2>
+      <p style="margin:0;font-size:15px;line-height:1.5;color:#4A4F5A">Ya existían en el Universo (sección 10), en tamaño grande. Aquí van a tamaño de fila y en el color de la ruta, porque son de una ruta. Sin señal va en arena, porque en ese caso no hay dato de la ruta.</p>
+    </div>
+    <div style="max-width:420px;background:#F7F3EC;border-radius:22px;box-shadow:0 0 0 1px #DCD5C8;display:flex;flex-direction:column">
+      <sc-for list="{{ estados }}" as="e" hint-placeholder-count="4">
+        <div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;min-height:64px;padding:10px 14px;box-shadow:0 1px 0 #DCD5C8">
+          <span style="display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:30px;background:#2A2E37;color:#fff;border-radius:7px;box-shadow:inset 0 -3px 0 {{ c51 }};font:800 16px/1 'Bricolage Grotesque',sans-serif;padding:0 8px 2px;box-sizing:border-box">51</span>
+          <div style="display:flex;align-items:center;gap:8px;min-width:0"><svg viewBox="0 0 60 60" style="flex:none;width:24px;height:24px;color:{{ c51 }};overflow:visible"><use href="#{{ e.id }}"></use></svg><div style="display:flex;flex-direction:column;gap:2px"><div style="font-weight:700;font-size:15px">{{ e.nombre }}</div><div style="font-size:13px;color:#6B6F78">{{ e.linea }}</div></div></div>
+          <svg viewBox="0 0 24 24" style="width:18px;height:18px"><use href="#s-chev"></use></svg>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="background:#2A2E37;color:#F7F3EC;border-radius:26px;padding:28px;display:flex;flex-direction:column;gap:12px;max-width:780px">
+    <div style="font:800 24px/1.1 'Bricolage Grotesque',sans-serif;color:#fff">Las ideas nuevas</div>
+    <div style="font-size:15px;line-height:1.55;color:#DCD5C8;text-wrap:pretty">Me pediste que te sorprendiera. Las cuatro que llevan «idea nueva» no salen del repo:
+      <b style="color:#fff">«Manda tu parada»</b> (una carta, para compartirla por WhatsApp),
+      <b style="color:#fff">Casa y Chamba</b> (tus lugares como atajos en Ir a) y
+      <b style="color:#fff">«¡Sal ya!»</b> (el pasajero corriendo). Esta última solo se enciende cuando se <i>mide</i> que ya es hora de salir, nunca por adivinar.</div>
+  </div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;color51&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#4F7FD8&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#4F7FD8&quot;,&quot;#8B6CC9&quot;,&quot;#A2466E&quot;],&quot;section&quot;:&quot;Dato de ruta&quot;}}">
+class Component extends DCLogic {
+  state = { a: 0, b: 0, c: 0 };
+  bar(v, noche) {
+    const tabs = [['g-casa', 'Inicio'], ['g-mapa', 'Mapa'], ['g-ira', 'Ir a'], ['g-pase', 'Pase']];
+    const act = this.state[v];
+    return tabs.map(([id, label], i) => {
+      const on = i === act;
+      const pill = noche ? '#F7F3EC' : '#2A2E37';
+      const inkOn = noche ? '#2A2E37' : '#F7F3EC';
+      const inkOff = noche ? '#F7F3EC' : '#2A2E37';
+      let filt = 'none', mx = '0px', pup = '1';
+      if (!on && v === 'a') filt = noche ? 'url(#plano-n)' : 'url(#plano)';
+      if (!on && v === 'b') mx = (act > i ? 0.9 : -0.9) + 'px';
+      if (!on && v === 'c') pup = '0';
+      return {
+        id, label, filt, mx, pup,
+        bg: on ? pill : 'transparent',
+        ink: on ? inkOn : inkOff,
+        fw: on ? '700' : '500',
+        col: noche ? (on ? '#F7F3EC' : '#C9C1B3') : (on ? '#2A2E37' : '#4A4F5A'),
+        go: () => this.setState({ [v]: i }),
+      };
+    });
+  }
+  renderVals() {
+    const c51 = this.props.color51 ?? '#4F7FD8';
+    return {
+      c51,
+      barA: this.bar('a', false), barAn: this.bar('a', true),
+      barB: this.bar('b', false), barBn: this.bar('b', true),
+      barC: this.bar('c', false), barCn: this.bar('c', true),
+      objetos: [
+        { id: 'g-casa', nombre: 'Inicio · la casa', uso: 'Barra. Sale de la casa rosa del barrio.' },
+        { id: 'g-mapa', nombre: 'Mapa', uso: 'Barra. Un plano de nopal doblado que te mira.' },
+        { id: 'g-ira', nombre: 'Ir a · el pasajero con linterna', uso: 'Barra y buscador. La linterna alumbra hacia donde vas.' },
+        { id: 'g-pase', nombre: 'Pase · el boleto', uso: 'Barra y pase R&D. La franja es la banda.' },
+        { id: 'g-ubicacion', nombre: 'Tú estás aquí', uso: '«Usar mi ubicación» y centrar el mapa. Es el pasajero 12a.' },
+        { id: 'g-estrella', nombre: 'Guardar', uso: 'Parada sin guardar. Estrella arena.' },
+        { id: 'g-estrella-si', nombre: 'Guardada', uso: 'Al tocarla se pone maíz y sonríe (la acción provoca la reacción).' },
+        { id: 'g-aviso', nombre: 'Avisos', uso: 'El letrero de Tino. El punto carbón marca los que no has visto; nunca rojo.', punto: true },
+        { id: 'g-nube', nombre: 'Sin señal', uso: 'En línea con el dato: «lo último que supe». Boca ondulada.' },
+        { id: 'g-sol', nombre: 'Día · sube el brillo', uso: 'Cambio de piel y consejo del pase.' },
+        { id: 'g-luna', nombre: 'Noche', uso: 'Cambio de piel. Duerme: ojos cerrados.' },
+        { id: 'g-instalar', nombre: 'Ponme en tu pantalla', uso: 'Tarjeta de instalar (PWA). Ontoy se asoma, así que va en naranja.' },
+        { id: 'g-carta', nombre: 'Manda tu parada', uso: 'Compartir una parada por WhatsApp o mensaje.', nuevo: true },
+        { id: 'g-casa', nombre: 'Casa', uso: 'Futuro · planeador. Chip de tus lugares en Ir a: «voy a casa».', nuevo: true },
+        { id: 'g-maletin', nombre: 'Chamba', uso: 'Futuro · planeador. «Voy a la chamba».', nuevo: true },
+        { id: 'g-corre', nombre: '¡Sal ya!', uso: 'Futuro · cuando se mida la velocidad. Solo se enciende si se mide que ya es hora de salir.', nuevo: true },
+      ],
+      senales: [
+        { id: 's-chev', nombre: 'Abrir', uso: 'Filas de ruta y paradas', rot: 'none' },
+        { id: 's-volver', nombre: 'Volver', uso: 'Cabeza de ruta, privacidad', rot: 'none' },
+        { id: 's-cerrar', nombre: 'Cerrar', uso: 'Hoja y panel de rutas', rot: 'none' },
+        { id: 's-mas', nombre: 'Ver más', uso: '«Ver todas las rutas»', rot: 'none' },
+        { id: 's-menos', nombre: 'Ver menos', uso: 'Lista desplegada', rot: 'none' },
+        { id: 's-ida', nombre: 'Ida', uso: 'Sentido de la ruta', rot: 'none' },
+        { id: 's-ida', nombre: 'Vuelta', uso: 'Sentido de la ruta', rot: 'scaleX(-1)' },
+        { id: 's-reintentar', nombre: 'Reintentar', uso: 'Sin red, lista que no bajó', rot: 'none' },
+        { id: 's-vivo', nombre: 'Dato fresco', uso: 'Junto a la edad. No pulsa.', rot: 'none' },
+        { id: 's-viejo', nombre: 'Dato viejo', uso: '«posición de hace 6 min»', rot: 'none' },
+        { id: 's-anillo', nombre: 'Cuenta del QR', uso: 'Se vacía; quieto con reduced-motion', rot: 'none' },
+        { id: 's-palomita', nombre: 'Palomita · operador', uso: 'Solo del lado del operador, sin cara', rot: 'none' },
+        { id: 's-cerrar', nombre: 'Tache · operador', uso: 'Solo del lado del operador, sin cara', rot: 'none' },
+      ],
+      estados: [
+        { id: 'e-vivo', nombre: 'En vivo', linea: 'Pasa cada 12–15 min' },
+        { id: 'e-arrancar', nombre: 'Por arrancar', linea: 'Arranca el 1 de octubre' },
+        { id: 'e-cerrado', nombre: 'Cerrada', linea: 'Fuera de horario · abre 5:30' },
+        { id: 'e-sinsenal', nombre: 'Sin señal', linea: 'No pudimos preguntar ahorita' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
