@@ -22,6 +22,7 @@ import { useParadasGuardadas } from "@/lib/ontoy/paradas-guardadas";
 import { useForma } from "@/lib/ontoy/ruta-en-vivo";
 import { HojaDeParada, type LlegadaEnLaHoja } from "@/components/ontoy/hoja-de-parada";
 import { HojaDeCami } from "@/components/ontoy/hoja-de-cami";
+import { VistaTusParadas } from "@/components/ontoy/vista-tus-paradas";
 import { VistaMapa } from "@/components/ontoy/vista-mapa";
 import type { EstadoDeRuta } from "@/lib/ontoy/estado-de-ruta";
 import { VistaInicio } from "@/components/ontoy/vista-inicio";
@@ -127,6 +128,11 @@ export function Ontoy({
    * mueve.
    */
   const [camiTocado, setCamiTocado] = useState<UnidadViva | null>(null);
+  /**
+   * «Tus paradas» cuelga de Inicio, como la ruta abierta cuelga del Mapa: la
+   * barra tiene cuatro lugares y eso es ley (8.8). No es un quinto lugar.
+   */
+  const [verTusParadas, setVerTusParadas] = useState(false);
   const [modo, setModo] = useState<"paradas" | "mapa">("paradas");
 
   const guardadas = useParadasGuardadas();
@@ -205,7 +211,11 @@ export function Ontoy({
    * una petición más. Es un `GET` **sin parámetros, igual para todos y con
    * caché largo**: no lleva nada del pasajero y no lo identifica (8.7).
    */
-  const listaDeLaCiudad = useParadasDeLaCiudad(lugar === "mapa" || lugar === "ira");
+  /*
+   * «Tus paradas» también la necesita: sin la lista de la ciudad no hay de
+   * dónde sacar el nombre de cada guardada —el teléfono sólo guarda su slug—.
+   */
+  const listaDeLaCiudad = useParadasDeLaCiudad(lugar === "mapa" || lugar === "ira" || verTusParadas);
   const paradasGuardadasEnElMapa = useMemo(() => {
     const todas = listaDeLaCiudad.datos?.paradas ?? [];
     return guardadas.guardadas.flatMap((g) => {
@@ -468,8 +478,25 @@ export function Ontoy({
         />
       )}
 
-      {!campanaAbierta && lugar === "inicio" && (
+      {!campanaAbierta && lugar === "inicio" && verTusParadas && (
+        <VistaTusParadas
+          guardadas={guardadas.guardadas}
+          rutas={rutas}
+          paradas={paradasDeLaCiudad}
+          alVolver={() => setVerTusParadas(false)}
+          alReordenar={guardadas.reordenar}
+          alQuitar={guardadas.quitar}
+          alReponer={guardadas.reponer}
+          alAbrirRuta={(r, p) => {
+            setVerTusParadas(false);
+            abrirRuta(r, p);
+          }}
+        />
+      )}
+
+      {!campanaAbierta && lugar === "inicio" && !verTusParadas && (
         <VistaInicio
+          alVerTusParadas={() => setVerTusParadas(true)}
           rutas={rutas}
           estados={estados}
           guardadas={guardadas.guardadas}
