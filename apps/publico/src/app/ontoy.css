@@ -638,6 +638,18 @@
   position: absolute;
   inset: 0;
 }
+/*
+ * El piso de debajo del mapa. Leaflet lo pinta **gris** (`#ddd`) y se veía en
+ * dos momentos: el instante antes de que la primera tesela se dibuje, y
+ * cualquier hueco entre teselas al arrastrar. Con el mapa de fondo teñido por un
+ * filtro no había forma de hacer que ese gris siguiera al tema; ahora el suelo
+ * del mapa es un token —banqueta de día, azul noche de noche— y el piso de
+ * Leaflet es el mismo, así que lo que aparece mientras carga es **suelo**, no un
+ * agujero gris.
+ */
+.ontoy .leaflet-container {
+  background: var(--fondo);
+}
 .ontoy-sentido {
   position: absolute;
   top: 12px;
@@ -1081,6 +1093,43 @@
   opacity: 0.8;
   border-radius: 0 0 0 8px;
   padding: 2px 6px;
+}
+/*
+ * El crédito del mapa, en los colores del tema.
+ *
+ * Leaflet lo pinta sobre **blanco** (`rgba(255,255,255,.8)`), y de noche eso era
+ * una cajita blanca encima del mapa azul: la única cosa clara de la pantalla. No
+ * se notaba antes porque el fondo del mapa se teñía con un filtro y el crédito,
+ * que no es una tesela, quedaba fuera del teñido — así que el mapa también era
+ * claro. Con el mapa dibujado en azul noche, la cajita quedó sola.
+ *
+ * **`.leaflet-container` va pegado a `.ontoy` a propósito, y sin él esto no
+ * funciona.** La regla de Leaflet es `.leaflet-container .leaflet-control-attribution`
+ * —dos clases—, empata en especificidad con `.ontoy .leaflet-…` y gana por orden
+ * de archivo, porque `leaflet.css` lo importa el componente. Medido: con dos
+ * clases el color sí entraba y **el fondo no**, que es lo peor de los dos mundos
+ * —letra clara sobre caja blanca—. `apps/web` ya había pagado esta misma lección
+ * (ver su `globals.css`).
+ *
+ * Y el crédito es obligatorio, no decorativo (#368): los datos son de
+ * OpenStreetMap. Un crédito que se ve como un error es un crédito que alguien va
+ * a querer esconder.
+ */
+.ontoy .leaflet-container .leaflet-control-attribution {
+  background: var(--panel);
+  color: var(--tenue);
+}
+.ontoy .leaflet-container .leaflet-control-attribution a {
+  color: var(--tenue);
+}
+/*
+ * La banderita que Leaflet mete junto a su nombre. Fuera, por la misma razón por
+ * la que se fue de la otra app: es un adorno de la librería, no parte del
+ * crédito que la licencia pide, y en una esquina de 9 px compite con lo único
+ * que ahí importa — de quién son los datos.
+ */
+.ontoy .leaflet-container .leaflet-attribution-flag {
+  display: none !important;
 }
 
 /* ── la página de privacidad (Parte B): texto para leer, no una pantalla ── */

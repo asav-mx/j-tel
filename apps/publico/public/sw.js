@@ -6,13 +6,26 @@
  *  1. **Guarda el cascarón** para que la app ABRA sin red. Abrir y decir «no
  *     tengo dato» es honesto; el dinosaurio del navegador se lee como «esta app
  *     está rota».
- *  2. **Guarda las teselas del mapa** con un tope. Las teselas son de lejos lo
- *     más pesado que baja esta app, y un pasajero recorre casi siempre las
- *     mismas calles.
+ *  2. **NO toca el archivo del mapa.** Ver abajo.
  *  3. **NO guarda nada de lo vivo.** Nunca. Una posición servida de caché
  *     es una posición vieja dibujada en un mapa en vivo, y eso se lee como «va
  *     llegando» cuando el camión pasó hace veinte minutos. Las consultas vivas
  *     (`VIVO`, abajo) pasan derecho a la red, siempre.
+ *
+ * ✎ **El mapa dejó de pasar por aquí, y es una pérdida que hay que decir.**
+ * Antes el fondo eran mosaicos de OpenStreetMap y este archivo guardaba hasta
+ * 300, así que sin señal el pasajero veía el pedazo de ciudad por donde ya había
+ * andado. Ahora el mapa es **un archivo nuestro que el navegador lee por
+ * rangos**, y una respuesta parcial (`206`) **no se puede guardar en la caché
+ * del navegador**: `cache.put` la rechaza. El mecanismo no sirve, así que el
+ * mapa se excluye en vez de dejar que reviente en silencio con cada rango.
+ *
+ * Se puede hacer **mejor** que lo que había —guardar el archivo completo la
+ * primera vez que alguien abre el mapa y servir los rangos desde ahí: toda la
+ * ciudad sin señal, en todos los zooms, en vez de nada más lo que se miró— y es
+ * su propio PR. Mientras no entre, **sin señal no hay mapa de fondo**: la app
+ * abre, las rutas y las paradas siguen ahí, y el mapa queda del color del suelo.
+ * Está escrito en `docs/Ontoy-Mapa-Base.md` para que nadie lo cuente como parejo.
  *
  * ✎ 25-sep-2026: **`/rutas` entra al cascarón y la versión sube a v4.** La app se
  * mudó ahí y el `start_url` del manifiesto apunta ahí (ASAV): sin esto, la app
@@ -30,13 +43,11 @@
 /** Lo vivo: nunca de caché. Si agregas una consulta viva, va aquí (lo exige `sw.test.ts`). */
 const VIVO = ["/unidades", "/api/circuitos/en-vivo"];
 
-const VERSION = "v4";
+/* ✎ v5 (25-sep-2026): sube para que los teléfonos **borren las teselas de
+   OpenStreetMap** que tengan guardadas. El fondo ya no viene de ahí, y una
+   caché con 300 mosaicos ajenos que nadie va a volver a pedir es puro peso. */
+const VERSION = "v5";
 const CASCARON = `cascaron-${VERSION}`;
-const TESELAS = `teselas-${VERSION}`;
-
-/* Cuántas teselas se guardan. ~50 KB cada una: 300 son unos 15 MB, que es
-   generoso para un recorrido y sigue siendo poco para un teléfono. */
-const TOPE_TESELAS = 300;
 
 self.addEventListener("install", (evento) => {
   evento.waitUntil(
@@ -57,11 +68,7 @@ self.addEventListener("activate", (evento) => {
     caches
       .keys()
       .then((llaves) =>
-        Promise.all(
-          llaves
-            .filter((k) => k !== CASCARON && k !== TESELAS)
-            .map((k) => caches.delete(k)),
-        ),
+        Promise.all(llaves.filter((k) => k !== CASCARON).map((k) => caches.delete(k))),
       )
       .then(() => self.clients.claim()),
   );
@@ -76,11 +83,14 @@ self.addEventListener("fetch", (evento) => {
      dibujar un camión donde ya no está. */
   if (VIVO.some((v) => url.pathname.includes(v))) return;
 
-  /* Teselas del mapa: de caché si están, y si no, de la red guardando copia. */
-  if (/^[abc]\.tile\.openstreetmap\.org$/.test(url.hostname)) {
-    evento.respondWith(deTeselas(evento.request));
-    return;
-  }
+  /*
+   * **El archivo del mapa pasa derecho, sin tocarlo.** El navegador lo pide por
+   * rangos y la respuesta es un `206`, que `cache.put` rechaza: dejarlo caer en
+   * la rama de abajo llenaría la consola de promesas rotas en cada arrastre del
+   * mapa, sin que el mapa se viera mal. Un error que no se ve es peor que uno que
+   * se ve. Ver la nota de arriba: guardar el archivo completo es otro PR.
+   */
+  if (url.pathname.startsWith("/mapa/")) return;
 
   /* La forma del circuito y el cascarón: red primero para no servir un trazado
      viejo cuando hay señal, caché cuando no la hay. */
@@ -97,30 +107,10 @@ self.addEventListener("fetch", (evento) => {
   }
 });
 
-async function deTeselas(peticion) {
-  const cache = await caches.open(TESELAS);
-  const guardada = await cache.match(peticion);
-  if (guardada) return guardada;
-
-  try {
-    const respuesta = await fetch(peticion);
-    if (respuesta.ok) {
-      cache.put(peticion, respuesta.clone());
-      podar(cache);
-    }
-    return respuesta;
-  } catch {
-    // Sin red y sin tesela guardada: el mapa queda con huecos grises. Es la
-    // versión honesta — mejor un hueco que una calle que no es.
-    return Response.error();
-  }
-}
-
-/* Poda en orden de inserción: lo más viejo se va primero. */
-async function podar(cache) {
-  const llaves = await cache.keys();
-  if (llaves.length <= TOPE_TESELAS) return;
-  for (const llave of llaves.slice(0, llaves.length - TOPE_TESELAS)) {
-    await cache.delete(llave);
-  }
-}
+/*
+ * Aquí vivían `deTeselas` y `podar`, la caché de los 300 mosaicos de
+ * OpenStreetMap. Se fueron con los mosaicos: **no se dejan «por si acaso»**,
+ * porque un mecanismo de caché que nadie llama se lee como que el mapa sigue
+ * guardándose, y eso es justo lo que ya no pasa. Lo que viene en su lugar está
+ * dicho arriba y en `docs/Ontoy-Mapa-Base.md`.
+ */
