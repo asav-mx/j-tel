@@ -107,8 +107,8 @@ self.addEventListener("install", (evento) => {
 
 self.addEventListener("activate", (evento) => {
   evento.waitUntil(
-    caches
-      .keys()
+    heredarCodigo()
+      .then(() => caches.keys())
       .then((llaves) =>
         Promise.all(
           llaves.filter((k) => k !== CASCARON && k !== MAPA).map((k) => caches.delete(k)),
@@ -117,6 +117,42 @@ self.addEventListener("activate", (evento) => {
       .then(() => self.clients.claim()),
   );
 });
+
+/*
+ * Cuántos archivos de código pasan de un cascarón al siguiente. La app baja unas
+ * dos docenas por compilación, así que 150 alcanzan para varias sin que la caché
+ * crezca sin fin: cada versión sólo hereda los más recientes de la anterior.
+ */
+const TOPE_HEREDADAS = 150;
+
+/**
+ * **Al estrenar cascarón, el código guardado se hereda; no se tira.**
+ *
+ * ✎ 25-sep-2026, el defecto que lo trajo: la v7 (#594) borró `cascaron-v6`
+ * entera, y ahí vivía **el código que dibuja el mapa**. Leaflet y protomaps se
+ * bajan aparte, sólo al abrir el Mapa. Los pedazos del mapa sobrevivieron en
+ * `mapa-v6`, pero sin el código que los dibuja no sirven: en un Android en modo
+ * avión el Mapa salió en blanco (ASAV). Se reprodujo borrando esos dos archivos
+ * de la caché, con la red cortada de verdad: el mismo mapa en blanco.
+ *
+ * Lo que se hereda es sólo `/_next/static/`: esos archivos llevan la huella de
+ * su contenido en el nombre, así que uno guardado nunca queda viejo. Es lo que
+ * NO puede heredarse lo que sí se tira: las páginas y la forma de las rutas, que
+ * cambian bajo la misma dirección.
+ */
+async function heredarCodigo() {
+  const nuevo = await caches.open(CASCARON);
+  for (const nombre of await caches.keys()) {
+    if (nombre === CASCARON || !nombre.startsWith("cascaron-")) continue;
+    const viejo = await caches.open(nombre);
+    const codigo = (await viejo.keys()).filter((k) => new URL(k.url).pathname.startsWith("/_next/static/"));
+    for (const llave of codigo.slice(-TOPE_HEREDADAS)) {
+      if (await nuevo.match(llave)) continue;
+      const guardada = await viejo.match(llave);
+      if (guardada) await nuevo.put(llave, guardada);
+    }
+  }
+}
 
 self.addEventListener("fetch", (evento) => {
   const url = new URL(evento.request.url);
