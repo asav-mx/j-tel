@@ -2779,6 +2779,26 @@
  * La banda dice qué es esto sin que nadie pregunte. Va en las tres pantallas
  * del pase, y en la del QR más que en ninguna: es la que más parece de verdad.
  */
+/*
+ * **El botón con contorno** — «Volver al inicio» del Pase del lanzamiento
+ * (4-pase/03). Pastilla del principal, pero sin relleno: regresar no es la
+ * acción de la pantalla, es la salida, y no tiene por qué pesar como una.
+ */
+.ontoy-boton-contorno {
+  background: transparent;
+  color: var(--texto);
+  border: 1.5px solid var(--texto);
+}
+/*
+ * Una vista hecha de un solo estado de pantalla completa (4-pase/03, 3-ir-a/15):
+ * columna, para que `.ontoy-completa-dentro` tome el alto que sobra y quede
+ * centrada como en el diseño, y no pegada arriba.
+ */
+.ontoy-vista-llena {
+  display: flex;
+  flex-direction: column;
+}
+
 .ontoy-banda-rd {
   margin: 0;
   /* La esquina derecha es de Ontoy asomado: el letrero no se deja tapar. */
