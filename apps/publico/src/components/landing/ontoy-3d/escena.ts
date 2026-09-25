@@ -66,12 +66,20 @@ const entraYSale = (p: number) => (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 /
 /**
  * Monta a Ontoy dentro de `contenedor` y devuelve con qué hablarle.
  *
- * @param sinSombras el nivel medio lo pide: mismo Ontoy, sin sombras y a 1x.
- * @param quieto     `prefers-reduced-motion`: se queda, pero no se mueve.
+ * @param sinSombras   el nivel medio lo pide: mismo Ontoy, sin sombras y a 1x.
+ * @param msPorCuadro  el mínimo entre cuadros. `medio` son 32 fps (§15), y sin
+ *                     esto la escena corría a 60 en un nivel que promete 32:
+ *                     la mitad de la protección de `medio` es el ritmo, no sólo
+ *                     las sombras.
+ * @param quieto       `prefers-reduced-motion`: se queda, pero no se mueve.
  */
 export function montarOntoy3D(
   contenedor: HTMLElement,
-  { sinSombras = false, quieto = false }: { sinSombras?: boolean; quieto?: boolean } = {},
+  {
+    sinSombras = false,
+    msPorCuadro = 0,
+    quieto = false,
+  }: { sinSombras?: boolean; msPorCuadro?: number; quieto?: boolean } = {},
 ): Ontoy3D {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(sinSombras ? 1 : Math.min(contenedor.clientWidth < 600 ? 1.5 : 2, devicePixelRatio));
@@ -340,7 +348,14 @@ export function montarOntoy3D(
   let raf = 0;
   const cuadro = (ahora: number) => {
     raf = requestAnimationFrame(cuadro);
-    const dt = Math.min(0.05, (ahora - anterior) / 1000);
+    /*
+     * El ritmo del nivel. `anterior` **no se toca** en el cuadro que se salta:
+     * si se tocara, el `dt` del siguiente saldría del salto y no del tiempo que
+     * pasó de verdad, y Ontoy se movería a tirones en vez de más despacio.
+     */
+    const desde = ahora - anterior;
+    if (desde < msPorCuadro) return;
+    const dt = Math.min(0.05, desde / 1000);
     anterior = ahora;
     const t = (ahora - arranque) / 1000;
     const k = 1 - Math.exp(-dt * 6);

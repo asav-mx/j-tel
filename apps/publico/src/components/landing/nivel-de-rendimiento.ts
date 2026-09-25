@@ -12,9 +12,12 @@ import { useEffect, useRef, useState } from "react";
  *
  * | Nivel | Ritmo | Qué trae |
  * |---|---|---|
- * | **alto** | 60 fps | todo, con el 3D de Ontoy |
- * | **medio** | 32 fps | todo menos el 3D |
+ * | **alto** | 60 fps | todo, con el 3D de Ontoy con sombras |
+ * | **medio** | 32 fps | todo, con el 3D **sin sombras y a 1x** |
  * | **bajo** | 20 fps | sin 3D; Ontoy en 2D y lo mínimo moviéndose |
+ *
+ * Los tres son de §15 del handoff, tal cual. **El 3D no es exclusivo de
+ * `alto`**: sólo `bajo` se queda sin él.
  *
  * ## Dos cosas separadas, y antes eran una sola
  *
@@ -71,16 +74,42 @@ const CALMA_TRAS_MONTAR_MS = 1500;
 /**
  * Lo que el aparato declara de sí mismo.
  *
- * ## `deviceMemory` no existe en Safari ni en Firefox
+ * ## La regla: **se baja por señales malas, no por falta de señales**
  *
- * Y ése fue el segundo defecto: se suponía **4 GB** cuando no venía, y 4 cae
- * justo en el escalón de `medio`. Resultado: **en Safari el 3D no se cargaba
- * nunca**, ni en un Mac de 64 GB. No era una mala estimación, era una
- * estimación aplicada a quien no había dicho nada.
+ * Ésta es la corrección del 25 de septiembre, y viene de un teléfono de verdad:
+ * un Android con Chrome, que es el teléfono típico de un pasajero de Juárez,
+ * salía en 2D — y con `?nivel=alto` en la dirección mostraba el 3D **completo y
+ * suave**. El aparato podía; el detector lo castigaba.
  *
- * Así que ahora hay dos caminos. Si el aparato **declara** su memoria, se usa.
- * Si **no la declara**, se decide con lo que sí hay —el dedo, los núcleos, el
- * ahorro de datos— y **no se inventa una cifra**.
+ * Es el mismo error que tuvo con Safari, con otro disfraz. Antes castigaba a
+ * quien **no declaraba** memoria; luego, corregido eso, seguía castigando por
+ * dos cosas que tampoco dicen nada de lo que un aparato puede:
+ *
+ *  - **El dedo.** `pointer: coarse` dice que es táctil, no que sea lento. Un
+ *    teléfono de 2026 mueve este Ontoy sin despeinarse, y mandarlo a `medio`
+ *    por ser teléfono es juzgarlo por lo que es y no por lo que hace.
+ *  - **`deviceMemory` ≤ 4.** Chrome **no reporta la memoria real**: la redondea
+ *    a la baja y la **topa en 8**, así que un teléfono de 6 GB dice «4». Tratar
+ *    ese 4 como «aparato modesto» es leer como dato lo que es un tope.
+ *
+ * Así que ya no se deduce capacidad de indicios blandos. Se baja **sólo cuando
+ * el aparato dice algo malo de sí mismo**:
+ *
+ * | Señal | Qué es | Nivel |
+ * |---|---|---|
+ * | `saveData` | lo pidió quien navega | `bajo` |
+ * | 2G o slow-2G | la red no da | `bajo` |
+ * | `deviceMemory` ≤ 2 | poca memoria, **declarada** | `bajo` |
+ * | `hardwareConcurrency` ≤ 2 | poco procesador | `bajo` |
+ * | nada de lo anterior | — | `alto` |
+ *
+ * Y lo que no se declara **no cuenta en contra**: sin `deviceMemory` no se
+ * inventa una cifra, y sin `hardwareConcurrency` tampoco.
+ *
+ * `medio` ya no se elige al abrir: **se cae a él** si la medición de fps
+ * encuentra que la página va lenta de verdad. Es la diferencia entre suponer y
+ * medir — y §15 lo permite, porque en `medio` el 3D sigue estando, sólo que sin
+ * sombras y a 1x.
  */
 export function nivelDeclarado(): Nivel {
   if (typeof navigator === "undefined") return "medio";
@@ -90,9 +119,6 @@ export function nivelDeclarado(): Nivel {
     deviceMemory?: number;
   };
   const enlace = nav.connection ?? {};
-  const nucleos = nav.hardwareConcurrency ?? 4;
-  const dedo =
-    typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
 
   /*
    * Lo que habla del ENLACE manda sobre todo lo demás y va primero: quien pide
@@ -101,24 +127,17 @@ export function nivelDeclarado(): Nivel {
   if (enlace.saveData) return "bajo";
   if (/(^|\b)(slow-)?2g\b/.test(enlace.effectiveType ?? "")) return "bajo";
 
-  const memoria = nav.deviceMemory;
-
-  if (typeof memoria === "number") {
-    if (memoria <= 2) return "bajo";
-    if (dedo && nucleos <= 4) return "bajo";
-    if (memoria <= 4 || dedo) return "medio";
-    return "alto";
-  }
-
   /*
-   * Sin memoria declarada. El dedo es la señal más fuerte que queda: un
-   * aparato táctil es un teléfono o una tableta, y ahí el 3D no entra (§15).
-   * En un escritorio, los núcleos deciden — ocho o más es una máquina que
-   * puede, y es lo que trae cualquier Mac o PC de los últimos años.
+   * Y lo que el aparato declara de malo de sí mismo. Los dos son `undefined`
+   * en algún navegador, y por eso se comprueba el tipo: **ausente no es poco**.
    */
-  if (dedo && nucleos <= 4) return "bajo";
-  if (dedo) return "medio";
-  return nucleos >= 8 ? "alto" : "medio";
+  const memoria = nav.deviceMemory;
+  if (typeof memoria === "number" && memoria <= 2) return "bajo";
+
+  const nucleos = nav.hardwareConcurrency;
+  if (typeof nucleos === "number" && nucleos <= 2) return "bajo";
+
+  return "alto";
 }
 
 /** `?nivel=alto|medio|bajo` para poder verlos los tres sin cambiar de teléfono (§15). */
@@ -142,6 +161,7 @@ function unEscalonAbajo(n: Nivel): Nivel {
 export function useNivelDeRendimiento(): {
   nivel: Nivel;
   cargarEl3D: boolean;
+  el3DLigero: boolean;
   quieto: boolean;
 } {
   /*
@@ -150,6 +170,7 @@ export function useNivelDeRendimiento(): {
    */
   const [nivel, setNivel] = useState<Nivel>("bajo");
   const [cargarEl3D, setCargarEl3D] = useState(false);
+  const [el3DLigero, setEl3DLigero] = useState(false);
   const [quieto, setQuieto] = useState(false);
   const yaBajo = useRef(false);
 
@@ -167,8 +188,15 @@ export function useNivelDeRendimiento(): {
      * **Ésta es la decisión que no se revoca.** Si el aparato da para el 3D al
      * abrir, el 3D se carga y se queda: lo que venga después puede cambiar el
      * RITMO, nunca quitar la escena de debajo de quien la está mirando.
+     *
+     * Y el 3D es de `alto` **y de `medio`**, que es lo que dice §15 —«medio: 32
+     * fps; el 3D sin sombras y a resolución 1x»—. Atarlo sólo a `alto` fue una
+     * lectura mía de más: dejaba escrito en la escena un camino de medio que no
+     * se podía alcanzar, y mandaba a 2D a teléfonos que sí pueden. Sin 3D se
+     * queda sólo `bajo`, que es lo que §15 dice de `bajo`.
      */
-    setCargarEl3D(elegido === "alto");
+    setCargarEl3D(elegido !== "bajo");
+    setEl3DLigero(elegido === "medio");
 
     /*
      * Un nivel pedido a mano no se corrige solo: quien escribe `?nivel=alto`
@@ -238,5 +266,5 @@ export function useNivelDeRendimiento(): {
     };
   }, []);
 
-  return { nivel, cargarEl3D, quieto };
+  return { nivel, cargarEl3D, el3DLigero, quieto };
 }
