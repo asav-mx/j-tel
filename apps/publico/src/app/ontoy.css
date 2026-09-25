@@ -108,6 +108,10 @@
    * captura. La vista de Rutas hace su propio scroll adentro.
    */
   height: 100dvh;
+  /* Sin cabecera, el filo de arriba es la barra de estado del teléfono. */
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
+  position: relative;
   display: flex;
   flex-direction: column;
   background: var(--fondo);
@@ -140,47 +144,43 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── cabeza ─────────────────────────────────────────────────────────── */
-.ontoy-cabeza {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 18px 10px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--linea);
-}
-.ontoy-logo {
-  width: 29px;
-  height: 29px;
-  flex: none;
-  color: var(--texto);
-}
-.ontoy-logo-ojo {
-  fill: var(--panel);
-}
-.ontoy-marca {
-  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
-  font-weight: 700;
-  font-size: 17px;
-  margin: 0;
-}
-/* 44 px de toque, como la campana de al lado. Medía 34. */
-.ontoy-piel {
-  margin-left: auto;
-  width: 44px;
-  height: 44px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 1px solid var(--linea);
-  background: var(--panel2);
-  color: var(--tenue);
+/* ── Ontoy asomado: lo que quedó en lugar de la cabecera (25-sep) ────── */
+/*
+ * Arriba a la derecha, pegado al filo. Se esconde —sube detrás del filo— si la
+ * pantalla ya tiene su Ontoy hablando: uno por pantalla (regla 3 del diseño).
+ * Lo decide `:has`, no cada pantalla; ver `asomado.tsx`.
+ */
+.ontoy-asomado {
+  position: absolute;
+  top: env(safe-area-inset-top, 0px);
+  right: 10px;
+  z-index: 5;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
   cursor: pointer;
+  line-height: 0;
+  transition: transform 0.6s var(--ease, ease), visibility 0s;
 }
-.ontoy-piel svg {
-  width: 17px;
-  height: 17px;
+.ontoy-asomado svg {
+  display: block;
+}
+.ontoy:has(.ontoy-muneco) .ontoy-asomado {
+  transform: translateY(-110%);
+  visibility: hidden;
+  transition: transform 0.6s var(--ease, ease), visibility 0s 0.6s;
+}
+.ontoy-asomado:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+  border-radius: 0 0 16px 16px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ontoy-asomado,
+  .ontoy:has(.ontoy-muneco) .ontoy-asomado {
+    transition: none;
+  }
 }
 
 /* ── la barra (8.8, 22-sep): cuatro lugares, cada ícono con su palabra ── */
@@ -2099,13 +2099,20 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 2px;
+  /* La esquina derecha es de Ontoy asomado: «Editar» se hace a un lado. */
+  padding-right: 78px;
 }
 .ontoy-guardadas-cabeza .ontoy-inicio-titulo,
 .ontoy-guardadas-cabeza .ontoy-inicio-contexto {
   /* Alineados con los renglones de abajo, que llevan 18 de margen. */
   padding: 0 4px;
 }
-.ontoy-volver {
+/*
+ * Sólo la flecha de «Tus paradas». Sin el padre, esta regla le ganaba al
+ * «‹ Volver» de texto de Avisos y lo apretaba a 44 px: se partía en dos
+ * renglones.
+ */
+.ontoy-guardadas-cabeza .ontoy-volver {
   flex: none;
   width: 44px;
   height: 44px;
@@ -2255,43 +2262,64 @@
   padding-top: 8px;
 }
 
-/* ── la campana (8.13b) ───────────────────────────────────────────────── */
-/* 44 px de toque: es lo que un pulgar acierta de pie. Medía 34. */
-.ontoy-campana {
-  position: relative;
-  margin-left: auto;
-  width: 44px;
-  height: 44px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
+/* ── la puerta a los avisos en Inicio: lo que era la campana (25-sep) ── */
+.ontoy-puerta-avisos {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 14px;
   border: 1px solid var(--linea);
-  background: var(--panel2);
+  border-radius: 16px;
+  background: var(--panel);
   color: var(--texto);
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
-.ontoy-campana svg {
-  width: 17px;
-  height: 17px;
+.ontoy-puerta-avisos > svg:first-child {
+  flex: none;
 }
-.ontoy-campana[aria-pressed="true"] {
-  border-color: var(--texto);
+.ontoy-puerta-avisos-texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ontoy-puerta-avisos-titulo {
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.25;
+}
+.ontoy-puerta-avisos-cuando {
+  font-size: 13px;
+  color: var(--tenue);
 }
 /* El punto: forma (un círculo lleno en tinta), no un color de alarma. */
-.ontoy-campana-punto {
-  position: absolute;
-  top: 6px;
-  right: 7px;
-  width: 8px;
-  height: 8px;
+.ontoy-puerta-avisos-punto {
+  flex: none;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--texto);
-  box-shadow: 0 0 0 2px var(--panel2);
 }
-/* Con la campana a su lado, la piel ya no empuja a la derecha. */
-.ontoy-campana + .ontoy-piel {
-  margin-left: 6px;
+
+/* ── el interruptor de piel, al pie de Inicio (25-sep) ───────────────── */
+.ontoy-renglon-piel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin: 0 18px 22px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--texto);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
 }
 
 /* ── los avisos: fechados, atribuidos y nunca de alarma ──────────────── */
@@ -2750,13 +2778,14 @@
  */
 .ontoy-banda-rd {
   margin: 0;
-  padding: 8px 18px;
+  /* La esquina derecha es de Ontoy asomado: el letrero no se deja tapar. */
+  padding: 8px 96px 8px 18px;
   background: var(--texto);
   color: var(--fondo);
   font-size: 12px;
   line-height: 1.5;
   letter-spacing: 0.04em;
-  text-align: center;
+  text-align: left;
 }
 
 .ontoy-pase-tarjeta {

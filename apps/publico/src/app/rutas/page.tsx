@@ -1,5 +1,5 @@
 import { Ontoy } from "@/components/ontoy/ontoy";
-import { ciudadPublicada, NOMBRE_DE_LA_APP } from "@/lib/ontoy/ciudad";
+import { ciudadPublicada } from "@/lib/ontoy/ciudad";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,6 @@ export default async function Inicio({
 
   return (
     <Ontoy
-      nombre={NOMBRE_DE_LA_APP}
       rutas={ciudad.rutas}
       estados={ciudad.estados}
       vigenteHasta={ciudad.vigenteHasta}
