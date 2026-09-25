@@ -544,6 +544,14 @@ el cuerpo, más un vigilante externo en GitHub Actions cada 15 minutos, fuera de
 y fuera de Neon (PR #89). `SALUD_URL` configurada y activa. Umbrales: **20 minutos**
 para el GPS, **30 minutos** para el archivador.
 
+> ✎ **25-sep-2026 — hay un tercer vigilante, y vive fuera del repo.** ASAV dio de
+> alta **UptimeRobot** cada **5 minutos** sobre `https://ontoy.app` y
+> `https://www.j-telemetry.com`, avisando a **su correo y a su teléfono**. Queda
+> anotado en `docs/Vigilancia-De-Produccion.md` —con lo que mira y lo que no—
+> porque lo que no está en el repo se da por inexistente: alguien lo apaga sin
+> saber que existía, o lo vuelve a construir. **No sustituye a los de abajo:**
+> mira que las direcciones contesten, no el contrato de salud.
+
 **Qué falta de la Fase 0.**
 - **Bitácora de corridas (`cron_runs`) y crones que no mientan.** Hoy `archiveAll`
   devuelve 200 con el error adentro, y `listByType` tronaba fuera del `try`. Un cron
@@ -557,6 +565,15 @@ para el GPS, **30 minutos** para el archivador.
   canal de salida — de nada sirve un vigilante fuera de la plataforma si su único modo de
   gritar vive dentro. Cierra el agujero del **28 de julio**: 13 horas caído y nadie
   avisado.
+
+  > ✎ **25-sep-2026 — el canal ya no depende de nosotros, y el agujero se achica sin
+  > cerrarse.** El aviso de UptimeRobot sale **de ellos** al teléfono de ASAV, sin
+  > pasar por Vercel ni por nuestro correo, así que un apagón completo **sí** se
+  > avisa. Lo que sigue abierto es lo otro: ese aviso dice que una dirección dejó de
+  > contestar, **no** que el GPS se atrasó o que el archivador se paró — para eso
+  > hace falta que el vigilante que sí mira el contrato pueda gritar afuera. Y
+  > **nadie ha visto llegar todavía un aviso de UptimeRobot**, que es lo que este
+  > mismo renglón enseñó a exigir: ver `docs/Vigilancia-De-Produccion.md`.
 - **Semáforo de salud en la portada de J-Staff** — acero/tenue cuando está sano,
   **azul** cuando está enfermo. Los colores de veredicto no se tocan.
 
