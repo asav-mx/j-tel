@@ -99,13 +99,19 @@ describe("la fecha de arranque nunca sale cruda a la pantalla", () => {
 });
 
 describe("lo que la fecha dice, con el copy final del handoff", () => {
-  it("la frase de la tarjeta va sin día de la semana", () => {
-    /* «Arranca el 1 de octubre.» — el copy del #562 es final. */
-    expect(arranqueLargo("2026-10-01")).toBe("1 de octubre");
+  it("la frase de la tarjeta lleva el día de la semana", () => {
+    /*
+     * «Arranca el **jueves** 1 de octubre.» Corrección de ASAV del 25-sep
+     * encima del copy del handoff, que lo escribía sin él: «la gente se acuerda
+     * del jueves». Va aquí porque quien compare la pantalla con el diseño va a
+     * ver la diferencia y tiene que encontrar la razón, no un descuido.
+     */
+    expect(arranqueLargo("2026-10-01")).toBe("jueves 1 de octubre");
   });
 
-  it("el renglón de la fila va corto y con «de»", () => {
-    expect(arranqueCorto("2026-10-01")).toBe("1 de oct");
+  it("el renglón de la fila lo lleva abreviado y sin «de»", () => {
+    /* En la columna estrecha, el «de» es el lugar que el «jue» necesita. */
+    expect(arranqueCorto("2026-10-01")).toBe("jue 1 oct");
   });
 
   it("una fecha ilegible no dibuja frase, en vez de dibujar «null»", () => {
