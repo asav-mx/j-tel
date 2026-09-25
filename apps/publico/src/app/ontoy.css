@@ -2439,6 +2439,17 @@
   color: var(--texto);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16);
 }
+/*
+ * El ojo va al final del chip, después del nombre: primero **qué ruta es** —que
+ * es lo que se busca— y después **cómo está**. Al revés, el ojo se lee antes que
+ * el nombre y la tira se vuelve una fila de ojos.
+ */
+.ontoy-chip-ojo {
+  flex: none;
+  display: block;
+  margin-left: 2px;
+  color: var(--texto);
+}
 .ontoy-chip-punto {
   width: 11px;
   height: 11px;
