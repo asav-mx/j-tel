@@ -421,8 +421,65 @@ body:has(.landing) {
   min-width: 170px;
   aspect-ratio: 1 / 1.15;
   margin-bottom: -6px;
-  display: grid;
-  place-items: end center;
+  /* Las dos capas van dentro, en absoluto: el hueco fija el tamaño, no ellas. */
+  position: relative;
+}
+
+/*
+ * **En teléfono, Ontoy se mide contra la PANTALLA y no contra el ancho.**
+ *
+ * Asav lo vio en su Android: la frase de debajo del título se cortaba a media
+ * oración —«…si no sabe, te lo dice»—, porque el primer vistazo se acababa
+ * dentro de ella. Medido: el bloque de la marca ocupaba **423 px de alto, de
+ * los que 345 eran Ontoy**, y con eso el título no empezaba hasta el píxel 606
+ * y la frase acababa en el 825, por debajo del pliegue de cualquier teléfono.
+ *
+ * El arreglo no es encoger la letra: es que **lo que escasea en un teléfono es
+ * el alto**, y Ontoy se estaba dimensionando por el ancho. Con `dvh` se mide
+ * contra lo que de verdad falta, y se ajusta solo en un teléfono corto, en uno
+ * largo y con la barra del navegador puesta o recogida — sin puntos de corte
+ * inventados. El `min-width` de arriba le pone suelo: no se hace un sello.
+ *
+ * Si un navegador no entiende `dvh`, la declaración entera no vale y se queda
+ * con los 300 px de la regla de arriba, que es lo que había: se pierde el
+ * arreglo, no la portada.
+ */
+@media (max-width: 560px) {
+  /*
+   * Se topa el ALTO, no sólo el ancho. Medido: con el hueco a 170 de ancho, el
+   * `aspect-ratio` pedía 195 de alto y la caja salía de **225** — porque dentro
+   * hay un dibujo que se mide solo, y `aspect-ratio` es una preferencia que el
+   * contenido puede empujar. `max-height` no se empuja.
+   *
+   * Y el ancho sale del alto —dividido por la proporción— para que el dibujo no
+   * quede flotando en una caja ancha con aire a los lados.
+   */
+  .landing-hero-ontoy {
+    flex-basis: min(300px, calc(24dvh / 1.15));
+    max-height: 24dvh;
+    min-width: 120px;
+    /*
+     * Centrado en su renglón. El `space-between` de la fila deja al único que
+     * queda pegado a la izquierda, y ahí Ontoy no se lee como puesto sino como
+     * olvidado.
+     */
+    margin-inline: auto;
+  }
+
+  /* Y el aire de alrededor, que en un teléfono se paga en frases cortadas. */
+  .landing-hero {
+    padding-block: 12px 36px;
+    gap: 14px;
+  }
+
+  .landing-hero-dicho {
+    padding-top: 18px;
+    gap: 18px 48px;
+  }
+
+  .landing-hero-dicho > div {
+    gap: 12px;
+  }
 }
 
 .landing-hero-ontoy svg {
@@ -432,16 +489,32 @@ body:has(.landing) {
 }
 
 /*
- * El 2D y el 3D, uno encima del otro en la misma celda.
+ * El 2D y el 3D, uno encima del otro, **dentro** del hueco y sin decidir cuánto
+ * mide.
  *
- * Es una rejilla de una sola celda y los dos la ocupan: así el hueco mide lo
- * que mide el 2D —que es lo que hay desde el primer cuadro— y **nada de
- * alrededor se mueve** cuando el 3D acaba de bajar y lo tapa.
+ * Antes el hueco medía lo que midiera su contenido. Eso se mordía la cola: el
+ * canvas de `three` se dimensiona contra el hueco, y el hueco se dimensionaba
+ * contra el canvas. En teléfono el resultado medido era una caja de 163 × 187
+ * con un lienzo de **163 × 225** dentro: la proporción del canvas bajaba a 0.72
+ * y, como el campo horizontal de la cámara va con el ancho, **a Ontoy se le
+ * salían las manos del cuadro**.
+ *
+ * Ahora el hueco manda: su alto sale de su `aspect-ratio` y de su tope, y las
+ * dos capas se estiran a él. Nada de alrededor se mueve cuando el 3D baja,
+ * igual que antes — porque lo que fija el tamaño ya no es ninguna de las dos.
  */
 .landing-ontoy-3d {
   display: grid;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
+  /*
+   * Pistas FIJAS, no automáticas. Con `auto` la fila seguía creciendo hasta el
+   * canvas —que `three` deja medido en píxeles— y el `height: 100%` de las
+   * capas se resolvía contra esa fila crecida: la pescadilla se mordía la cola
+   * en un punto fijo de 225 px aunque el hueco midiera 187. Con `100%` la fila
+   * vale lo que el hueco y el observador de `three` lo corrige al bajar.
+   */
+  grid-template: 100% / 100%;
 }
 
 .landing-ontoy-3d > * {
@@ -449,9 +522,10 @@ body:has(.landing) {
   min-width: 0;
 }
 
+/* El 2D se apoya abajo del hueco, como se apoyaba cuando él lo medía. */
 .landing-ontoy-2d {
   display: grid;
-  place-items: center;
+  place-items: end center;
 }
 
 .landing-ontoy-lienzo {
@@ -537,21 +611,32 @@ body:has(.landing) {
  * ancha se ve más calle y en teléfono menos — que es justo lo que hace una
  * calle de verdad.
  *
- * ## El alto crece con el ancho, y el número no es decorativo
+ * ## El alto sigue la proporción del dibujo, sin tope
  *
- * `12.5vw` es exactamente 150/1200, la proporción del `viewBox`. Con una altura
- * fija de 150, el `slice` escalaba por el ancho y **recortaba por arriba y por
- * abajo**: a 1440 se comía 15 px de cada lado y **le cortaba la cabeza a
- * Tino**, que es la pieza que más importa de toda la escena. Creciendo en la
- * misma proporción, la escala vertical y la horizontal coinciden y no se
- * recorta nada de alto.
+ * Y el tope es justo lo que estuvo mal. Antes era `clamp(150px, 12.5vw, 240px)`:
+ * el `12.5vw` es exactamente 150/1200 —la proporción del `viewBox`— y hasta
+ * 1920 px de ancho todo cuadraba. **Pasado 1920, el tope de 240 dejaba de
+ * alcanzar y el `slice` volvía a recortar por arriba y por abajo.** En una
+ * pantalla de 2551 se comía 79 px, y lo primero que se pierde es **la cabeza de
+ * Tino**, que es la pieza que más importa de la escena.
  *
- * Por debajo de 1200 se queda en 150 —una calle más baja que eso deja de
- * leerse— y ahí sí recorta a lo ancho. Por eso se ancla a la derecha: ver.
+ * `aspect-ratio` no tiene ese problema: la altura sale del ancho, siempre, sin
+ * un número que se quede corto en la siguiente pantalla más grande. El
+ * `min-height` sólo actúa por debajo de 1200, donde la proporción daría una
+ * calle demasiado baja para leerse — y ahí recorta a lo ancho, anclada a la
+ * derecha para no perder la parada.
  */
 .landing-calle {
   position: relative;
-  height: clamp(150px, 12.5vw, 240px);
+  /*
+   * `width: 100%` no sobra: sin él, cuando el `min-height` gana —en teléfono—,
+   * el `aspect-ratio` deriva el ANCHO de esa altura (150 × 8 = 1200 px) y la
+   * página entera desborda a 1200 en una pantalla de 390. Con el ancho fijado,
+   * el ancho manda y la proporción sólo decide el alto.
+   */
+  width: 100%;
+  aspect-ratio: 1200 / 150;
+  min-height: 150px;
   overflow: hidden;
   background: var(--calle);
   border-bottom: 10px solid var(--arena);
@@ -793,25 +878,56 @@ body:has(.landing) {
   gap: 16px;
 }
 
+/*
+ * Las dos columnas de la sección: **la lista a un lado de los personajes**,
+ * como el diseño. Debajo se leía como una nota al pie de un dibujo; al lado se
+ * lee como lo que es — la leyenda de un idioma, junto a quienes lo hablan.
+ *
+ * `auto-fit` con 400 de mínimo las apila solas en cuanto no caben, que es lo
+ * que tiene que pasar en teléfono: ahí sí van una encima de otra.
+ */
+.landing-miradas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
+  gap: 48px;
+  align-items: center;
+}
+
+/*
+ * Los tres en una fila y colgados del mismo suelo, como el diseño: 30 / 40 / 30
+ * — Cami es el más ancho porque es el más ancho.
+ *
+ * Sin `nowrap` se partían en dos filas al meterlos al lado de la lista, y con
+ * Tino solo debajo la frase «Ontoy te dice, Cami es tu camión y Tino es tu
+ * parada» dejaba de leerse como una sola. Y con `justify-content: flex-end` los
+ * tres rótulos quedan a la misma altura aunque los dibujos midan distinto: lo
+ * que se compara son las miradas, no los tamaños.
+ */
 .landing-miradas-dibujo {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: stretch;
   justify-content: center;
-  gap: clamp(24px, 5vw, 64px);
+  gap: 3%;
 }
 
 .landing-miradas-dibujo figure {
   margin: 0;
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   align-items: center;
   gap: 12px;
-  flex: 0 1 180px;
+  flex: 0 1 30%;
+}
+
+.landing-miradas-dibujo figure:nth-child(2) {
+  flex-basis: 40%;
 }
 
 .landing-miradas-dibujo svg {
   width: 100%;
-  max-width: 180px;
+  max-width: 200px;
   height: auto;
   display: block;
 }
@@ -842,18 +958,18 @@ body:has(.landing) {
   transition: transform 0.45s var(--curva);
 }
 
+/*
+ * Apiladas, no en rejilla: al lado de los personajes la lista es una columna, y
+ * las seis miradas se leen de arriba abajo como lo que son — una escala, de la
+ * que te incluye a ti a la que dice que no hay nada que mirar.
+ */
 .landing-miradas-lista {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  /*
-   * 170 y no 200: con 200 las seis miradas se quedaban en 1244 px por cuatro
-   * píxeles, y la sexta —«cerrados», que es la que más importa— caía sola en
-   * otra fila como si fuera una nota al pie.
-   */
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .landing-miradas-lista button {
@@ -942,10 +1058,17 @@ body:has(.landing) {
   align-self: start;
 }
 
+/*
+ * El alto es lo que manda el tamaño del dibujo: el lienzo es de 300 × 900, así
+ * que con 640 px de tope el recorrido se encoge a 0.71 y la placa de Tino
+ * —«a 4 paradas», que es texto y no tres glifos— baja a 7.8 px. Con 760 queda
+ * en 9.3 y sigue cabiendo debajo de la cabecera pegajosa en una pantalla de
+ * 1000 px de alto: 88 + 760 = 848.
+ */
 .landing-hilo {
   width: 100%;
   height: auto;
-  max-height: min(70vh, 640px);
+  max-height: min(78vh, 760px);
   display: block;
 }
 
@@ -1349,6 +1472,34 @@ body:has(.landing) {
   width: clamp(140px, 22vw, 200px);
   height: auto;
   display: block;
+}
+
+/*
+ * Las zetas del sueño, dentro del SVG de Ontoy. Suben y se desvanecen, una
+ * detrás de otra, y se paran con `reduced-motion` — la regla de arriba las
+ * alcanza porque están dentro de `.landing`.
+ */
+.landing-zzz text {
+  font-family: var(--titular);
+  font-weight: 800;
+  fill: var(--arena-2);
+  animation: landing-sube-la-z 3.4s ease-out infinite;
+}
+
+.landing-z1 { font-size: 13px; animation-delay: 0s; }
+.landing-z2 { font-size: 18px; animation-delay: 0.5s; }
+.landing-z3 { font-size: 24px; animation-delay: 1s; }
+
+@keyframes landing-sube-la-z {
+  0% { opacity: 0; transform: translate(0, 6px); }
+  22% { opacity: 1; }
+  70% { opacity: 0.55; }
+  100% { opacity: 0; transform: translate(10px, -22px); }
+}
+
+.landing-ontoy-dormido svg {
+  width: clamp(140px, 22vw, 200px);
+  height: auto;
 }
 
 .landing-zetas {

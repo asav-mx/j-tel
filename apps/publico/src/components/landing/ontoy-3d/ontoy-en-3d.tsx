@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNivel } from "../nivel-contexto";
+import { MS_POR_CUADRO } from "../nivel-de-rendimiento";
 import type { Ontoy3D } from "./escena";
 
 /**
@@ -9,20 +10,21 @@ import type { Ontoy3D } from "./escena";
  *
  * Decisión de ASAV del 24-sep-2026, y este archivo es donde vive entera:
  *
- *  - **Sólo en el nivel alto.** En medio y bajo no se descarga ni un byte de
+ *  - **En alto y en medio**, que es lo que dice §15: en `medio` es el mismo
+ *    Ontoy sin sombras y a 1x. Sólo en `bajo` no se descarga ni un byte de
  *    `three`.
  *  - **Diferido**, después de que la página ya es usable.
  *  - **Ontoy en 2D es lo primero que se ve, siempre.** El 3D no lo reemplaza
  *    hasta estar dibujado, y si nunca llega, el 2D se queda — que es lo que ve
- *    todo el mundo en medio y bajo.
+ *    todo el mundo en bajo.
  *  - **Desde npm, en nuestro paquete.** Nunca un CDN ajeno.
  *
  * ## Las tres puertas antes de bajar `three`
  *
- * 1. **El nivel al abrir.** Sólo `alto` — y esa respuesta **no se revoca**: si
- *    después la página va lenta, baja el RITMO, pero la escena no se quita de
- *    debajo de quien la está mirando. Mezclar las dos cosas fue el defecto que
- *    hacía que el 3D no se viera nunca.
+ * 1. **El nivel al abrir.** Todo menos `bajo` — y esa respuesta **no se
+ *    revoca**: si después la página va lenta, baja el RITMO, pero la escena no
+ *    se quita de debajo de quien la está mirando. Mezclar las dos cosas fue el
+ *    defecto que hacía que el 3D no se viera nunca.
  * 2. **Que se vea.** Un `IntersectionObserver` espera a que el hueco esté a la
  *    vista. Quien abre la portada y baja de golpe al pie no llega a pedirlo.
  * 3. **Que el navegador esté desocupado.** `requestIdleCallback` con un tope de
@@ -42,7 +44,7 @@ import type { Ontoy3D } from "./escena";
  * además deja pedir el módulo en el momento exacto.
  */
 export function OntoyEn3D({ children }: { children: React.ReactNode }) {
-  const { cargarEl3D, quieto } = useNivel();
+  const { cargarEl3D, el3DLigero, quieto } = useNivel();
   const hueco = useRef<HTMLDivElement>(null);
   const [montado, setMontado] = useState(false);
 
@@ -54,13 +56,51 @@ export function OntoyEn3D({ children }: { children: React.ReactNode }) {
     let vivo = true;
     let ontoy: Ontoy3D | null = null;
     let cancelarOcio: (() => void) | null = null;
+    let soltarElBaile: (() => void) | null = null;
 
     const traer = async () => {
       try {
         const { montarOntoy3D } = await import("./escena");
         if (!vivo || !hueco.current) return;
-        ontoy = montarOntoy3D(hueco.current, { quieto });
+        /*
+         * `el3DLigero` se decide al abrir, igual que `cargarEl3D`, y por eso
+         * entra en las dependencias sin peligro: si la medición bajara el nivel
+         * más tarde, lo que cambia es el ritmo, no cómo está montada la escena.
+         * Quitar las sombras a media mirada obligaría a rehacer el `renderer`.
+         */
+        ontoy = montarOntoy3D(hueco.current, {
+          sinSombras: el3DLigero,
+          msPorCuadro: el3DLigero ? MS_POR_CUADRO.medio : MS_POR_CUADRO.alto,
+          quieto,
+        });
         setMontado(true);
+
+        /*
+         * **Ontoy baila cuando el ratón se pone sobre el botón de abrir la
+         * app.** Celebra que vas a entrar, y es lo único de la portada que
+         * reacciona a algo que no es él mismo.
+         *
+         * Se engancha por selector y no por `ref` porque el botón lo rinde el
+         * servidor, en otro árbol: pasar una referencia desde allá obligaría a
+         * volver cliente media portada para un gesto de dos segundos.
+         */
+        const botones = document.querySelectorAll<HTMLElement>("[data-baila-ontoy]");
+        const entra = () => ontoy?.baila(true);
+        const sale = () => ontoy?.baila(false);
+        botones.forEach((b) => {
+          b.addEventListener("pointerenter", entra);
+          b.addEventListener("pointerleave", sale);
+          b.addEventListener("focus", entra);
+          b.addEventListener("blur", sale);
+        });
+        soltarElBaile = () => {
+          botones.forEach((b) => {
+            b.removeEventListener("pointerenter", entra);
+            b.removeEventListener("pointerleave", sale);
+            b.removeEventListener("focus", entra);
+            b.removeEventListener("blur", sale);
+          });
+        };
       } catch {
         /*
          * Si el fragmento no baja —red caída, un bloqueador, una tarjeta de
@@ -90,10 +130,11 @@ export function OntoyEn3D({ children }: { children: React.ReactNode }) {
       vivo = false;
       mirando.disconnect();
       cancelarOcio?.();
+      soltarElBaile?.();
       ontoy?.destruir();
       setMontado(false);
     };
-  }, [cargarEl3D, quieto]);
+  }, [cargarEl3D, el3DLigero, quieto]);
 
   return (
     <div className="landing-ontoy-3d">

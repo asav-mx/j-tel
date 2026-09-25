@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { OntoyQueReacciona } from "../ontoy-que-reacciona";
 
 /**
  * **«Instalar»** — la última sección, y la que cierra la portada con la
@@ -31,11 +31,7 @@ import Link from "next/link";
  * y vacía es la primera promesa incumplida que alguien se lleva de la portada.
  */
 
-/** Lo que dice Ontoy si lo despiertan, en orden. Vuelve a dormirse solo. */
-const REFUNFUÑOS = ["¡cinco minutitos más!", "mmm…", "ya voy, ya voy"];
-
 export function Instalar() {
-  const [despierto, setDespierto] = useState(-1);
 
   return (
     <section id="instalar" className="landing-instalar">
@@ -65,45 +61,13 @@ export function Instalar() {
         </div>
 
         <div className="landing-dormido">
-          <button
-            type="button"
-            className="landing-despertar"
-            onClick={() => setDespierto((d) => (d + 1) % REFUNFUÑOS.length)}
-            aria-label="Despierta a Ontoy"
-          >
-            {/* Las zetas del sueño, que se van cuando lo despiertan. */}
-            <span className="landing-zetas" aria-hidden="true" data-durmiendo={despierto < 0}>
-              <i>z</i>
-              <i>z</i>
-              <i>Z</i>
-            </span>
-            <svg viewBox="0 0 120 120" aria-hidden="true">
-              <ellipse cx="44" cy="96" rx="9" ry="6" fill="var(--ontoy)" />
-              <ellipse cx="76" cy="96" rx="9" ry="6" fill="var(--ontoy)" />
-              <path
-                d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z"
-                fill="var(--ontoy)"
-              />
-              {/*
-               * **Los ojos cerrados son la sección.** Son dos arcos, la forma
-               * que el universo usa para «descansando» — y que aquí significa
-               * «no hay dato».
-               */}
-              <path
-                d="M40 53 q10 6 20 0 M66 51 q10 6 20 0"
-                fill="none"
-                stroke="var(--pupila)"
-                strokeWidth="3.4"
-                strokeLinecap="round"
-              />
-              {/* Dormido no tiene boca: la boca sólo sale en las reacciones. */}
-              <circle cx="12" cy="58" r="6" fill="var(--ontoy)" />
-              <circle cx="110" cy="54" r="6" fill="var(--ontoy)" />
-            </svg>
-            <span className="landing-refunfuño">
-              {despierto >= 0 ? REFUNFUÑOS[despierto] : "shhh…"}
-            </span>
-          </button>
+          {/*
+           * Ontoy dormido, y **dormido de verdad**: las zetas se mueven y, si
+           * lo tocas, abre un ojo, refunfuña y se vuelve a dormir. Antes sólo
+           * cambiaba el texto de abajo — el dibujo se quedaba igual, que es
+           * como decir que reacciona sin que reaccione.
+           */}
+          <OntoyQueReacciona reaccion="dormido" etiqueta="shhh…" className="landing-ontoy-dormido" />
 
           <p className="landing-nota-dormido">
             Cuando no hay corridas, Ontoy descansa.{" "}
