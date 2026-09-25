@@ -57,7 +57,26 @@ describe("la etiqueta corta de la ruta, para la placa de Tino", () => {
     expect(etiquetaCortaDeLaRuta("Oasis")).toBe("Oasis");
   });
 
-  it("un nombre largo va en iniciales, y no apretado hasta ser una mancha", () => {
+  it("si la ruta trae número, el NÚMERO es la etiqueta — no las iniciales", () => {
+    /*
+     * En la calle las rutas se conocen por su número: «la 51», «la T1». Nadie
+     * dice «la RT».
+     *
+     * Lo enseñó la lámina de 40 × 60 cm: «Ruta 51 · Centro–Tecnológico» salía
+     * «RT», y eso atornillado a un poste durante años es la ruta equivocada
+     * escrita en grande.
+     */
+    expect(etiquetaCortaDeLaRuta("Ruta 51 · Centro–Tecnológico")).toBe("51");
+    expect(etiquetaCortaDeLaRuta("Ruta T1 · Parque industrial")).toBe("T1");
+    expect(etiquetaCortaDeLaRuta("Circuito 4 · Oasis a Centro")).toBe("4");
+    expect(etiquetaCortaDeLaRuta("Ruta C2 · Centro")).toBe("C2");
+  });
+
+  it("un número largo NO es un número de ruta: es un año o un código de otra cosa", () => {
+    expect(etiquetaCortaDeLaRuta("Corredor Oriente 2026 · Centro")).toBe("CC");
+  });
+
+  it("un nombre largo SIN número va en iniciales, y no apretado hasta ser una mancha", () => {
     // Éste es el caso que salió mal en la primera captura: apretado con
     // `textLength` a los 14 mm de la placa, era una raya gris.
     expect(etiquetaCortaDeLaRuta("Oasis – Parroquia Santa Teresa de Jesús")).toBe("OJ");

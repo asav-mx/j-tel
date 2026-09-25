@@ -6,6 +6,7 @@ import { tituloDelQr } from "@jtel/domain";
 import { getRepos } from "@/lib/db";
 import { exigirEnPagina } from "@/lib/guardia-pagina";
 import { DescargarPdf } from "@/components/casa/descargar-pdf";
+import { LaminaDeParada } from "@/components/casa/lamina-de-parada";
 import {
   LetreroDeParada,
   varianteEnElTitulo,
@@ -63,6 +64,27 @@ function dibujoPedido(sp: Record<string, string | string[] | undefined>) {
   const esquinas: FormaDeLasEsquinas = sp.esquinas === "normales" ? "normales" : "ojos";
   return { modulos, esquinas };
 }
+
+/**
+ * **Carta o lámina.** Son dos piezas distintas, no dos tamaños de la misma:
+ *
+ * - **Carta** es la que se imprime en una oficina y se pega hoy.
+ * - **Lámina** es la de 40 × 60 cm que va a una imprenta y **se atornilla al
+ *   poste**. De ahí que no lleve frecuencia: dura años y la promesa cambia por
+ *   franja horaria.
+ *
+ * Carta sigue siendo lo que sale sin pedir nada, porque es lo que alguien
+ * necesita el día que captura un circuito. La lámina se pide.
+ *
+ * ⚠ **El dibujo del código por omisión NO es el mismo en las dos.** La carta
+ * sale con los puntitos del 1b; la lámina, con cuadrados. Está medido en
+ * `lamina-de-parada.tsx`: con puntitos, jsQR lee 1 de 5 tamaños; con cuadrados,
+ * 5 de 5. La carta se reimprime el mismo día; la lámina se atornilla por años.
+ */
+type Formato = "carta" | "lamina";
+
+const formatoPedido = (sp: Record<string, string | string[] | undefined>): Formato =>
+  sp.formato === "lamina" ? "lamina" : "carta";
 
 /**
  * El circuito y las paradas que toca imprimir.
@@ -131,6 +153,7 @@ export default async function LetrerosDelCircuito({
   const { circuito, aImprimir } = datos;
 
   const { modulos, esquinas: esquinasComo } = dibujoPedido(sp);
+  const formato = formatoPedido(sp);
   const vuelta = `/casa/jstaff/circuitos/${id}`;
   /*
    * Las tres hojas que hay que imprimir para poder decidir con teléfonos. Son
@@ -147,6 +170,7 @@ export default async function LetrerosDelCircuito({
     if (unaSola) q.set("parada", unaSola);
     if (v.modulos === "cuadritos") q.set("modulos", "cuadritos");
     if (v.esquinas === "normales") q.set("esquinas", "normales");
+    if (formato === "lamina") q.set("formato", "lamina");
     const cola = q.toString();
     return `/casa/jstaff/circuitos/${id}/letreros${cola ? `?${cola}` : ""}`;
   };
@@ -174,16 +198,64 @@ export default async function LetrerosDelCircuito({
       {/* Lo único que no se imprime: el rótulo y la salida. */}
       <div className="solo-pantalla px-4 pt-8">
         <h1 className="text-[22px] font-semibold">
+          {formato === "lamina" ? "Láminas" : "QR"}
           {aImprimir.length === 1
-            ? `QR de ${aImprimir[0]!.name}`
-            : `${aImprimir.length} QR de ${circuito.name}`}
+            ? ` de ${aImprimir[0]!.name}`
+            : `: ${aImprimir.length} de ${circuito.name}`}
         </h1>
-        <p className="mt-2 text-[15px] text-[var(--tenue)]">
-          Una hoja por parada, tamaño carta, <strong>una página por parada</strong>. El código mide{" "}
-          <strong>13 cm</strong> de lado a propósito: al imprimir va al <strong>100 %</strong>, sin
-          «ajustar a la página», porque encogerlo le quita el metro de distancia desde el que
-          engancha.
-        </p>
+        {formato === "lamina" ? (
+          <p className="mt-2 text-[15px] text-[var(--tenue)]">
+            La <strong>lámina de 40 × 60 cm</strong>, una por parada. Es la que va a la imprenta y{" "}
+            <strong>se atornilla al poste</strong>. El PDF sale{" "}
+            <strong>vectorial y al tamaño real</strong>: al guardarlo, no uses «ajustar a la
+            página». Su código va en <strong>cuadrados</strong> y no en los puntitos del 1b, porque
+            medido con jsQR los puntitos se leen en 1 de 5 tamaños y los cuadrados en 5 de 5 — y
+            esto dura años.
+          </p>
+        ) : (
+          <p className="mt-2 text-[15px] text-[var(--tenue)]">
+            Una hoja por parada, tamaño carta, <strong>una página por parada</strong>. El código mide{" "}
+            <strong>13 cm</strong> de lado a propósito: al imprimir va al <strong>100 %</strong>, sin
+            «ajustar a la página», porque encogerlo le quita el metro de distancia desde el que
+            engancha.
+          </p>
+        )}
+
+        {/*
+          Los dos formatos. No son dos tamaños de lo mismo: la carta se imprime
+          en una oficina y se pega hoy; la lámina va a una imprenta, dura años y
+          por eso NO lleva frecuencia — la promesa cambia por franja y una lámina
+          no se corrige con un despliegue.
+        */}
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-[15px]">
+          <span className="font-semibold">Formato:</span>
+          {(
+            [
+              { id: "carta", que: "Carta — para imprimir y pegar hoy" },
+              { id: "lamina", que: "Lámina 40 × 60 cm — para la imprenta" },
+            ] as const
+          ).map((f) => {
+            const q = new URLSearchParams();
+            if (unaSola) q.set("parada", unaSola);
+            if (typeof sp.modulos === "string") q.set("modulos", sp.modulos);
+            if (esquinasComo === "normales") q.set("esquinas", "normales");
+            if (f.id === "lamina") q.set("formato", "lamina");
+            const cola = q.toString();
+            return f.id === formato ? (
+              <span key={f.id} className="text-[var(--tenue)]">
+                {f.que} — es el que estás viendo
+              </span>
+            ) : (
+              <Link
+                key={f.id}
+                href={`/casa/jstaff/circuitos/${id}/letreros${cola ? `?${cola}` : ""}`}
+                className="underline underline-offset-2"
+              >
+                {f.que}
+              </Link>
+            );
+          })}
+        </div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <DescargarPdf que={aImprimir.length === 1 ? "de esta parada" : "de las " + aImprimir.length} />
           <span className="text-[14px] text-[var(--tenue)]">
@@ -236,15 +308,31 @@ export default async function LetrerosDelCircuito({
         </p>
       </div>
 
-      {aImprimir.map((p) => (
-        <LetreroDeParada
-          key={p.qrSlug}
-          parada={{ nombre: p.name, qrSlug: p.qrSlug }}
-          ruta={{ nombre: circuito.name, colorHex: circuito.colorHex }}
-          modulos={modulos}
-          esquinasComo={esquinasComo}
-        />
-      ))}
+      {aImprimir.map((p) =>
+        formato === "lamina" ? (
+          <LaminaDeParada
+            key={p.qrSlug}
+            parada={{ nombre: p.name, qrSlug: p.qrSlug }}
+            ruta={{ nombre: circuito.name, colorHex: circuito.colorHex }}
+            /*
+             * Sin `modulos`: la lámina trae su propio valor por omisión
+             * —cuadrados, que es el que se lee— y pasarle el de la carta se lo
+             * quitaría sin que nadie lo pidiera. Quien quiera otro lo pide con
+             * `?modulos=`, y entonces sí llega.
+             */
+            {...(sp.modulos ? { modulos } : {})}
+            esquinasComo={esquinasComo}
+          />
+        ) : (
+          <LetreroDeParada
+            key={p.qrSlug}
+            parada={{ nombre: p.name, qrSlug: p.qrSlug }}
+            ruta={{ nombre: circuito.name, colorHex: circuito.colorHex }}
+            modulos={modulos}
+            esquinasComo={esquinasComo}
+          />
+        ),
+      )}
     </main>
   );
 }
