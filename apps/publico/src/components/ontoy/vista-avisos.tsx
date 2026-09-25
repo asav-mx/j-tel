@@ -81,7 +81,7 @@ export function VistaAvisos({
 
   if (avisos.length === 0 && telefono.length === 0) {
     return (
-      <div className="ontoy-vista">
+      <div className="ontoy-vista ontoy-vista-llena">
         {cabeza}
         <section className="ontoy-completa ontoy-completa-dentro">
           <Ontoy pose="al-frente" tamano={128} />
