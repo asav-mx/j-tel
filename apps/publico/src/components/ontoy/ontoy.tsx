@@ -231,6 +231,12 @@ export function Ontoy({
   const { vistos, marcarVistos } = useAvisosVistos();
   const [campanaAbierta, setCampanaAbierta] = useState(false);
   const abrirCampana = useCallback(() => {
+    /*
+     * **Avisos es una página de Inicio** (3-ir-a/14: «← Inicio», y la barra
+     * marca Inicio). Se puede abrir desde las paradas de una ruta, y sin esto
+     * la barra seguía marcando Mapa estando en Avisos.
+     */
+    setLugar("inicio");
     setCampanaAbierta(true);
     setParadaAbierta(null);
     setParadaTocada(null);
@@ -542,6 +548,8 @@ export function Ontoy({
         <VistaAvisos
           avisos={avisos}
           telefono={telefono.avisos}
+          vistos={vistos}
+          rutasGuardadas={new Set(guardadas.guardadas.map((g) => g.ruta))}
           alVolver={() => setCampanaAbierta(false)}
           alAbrirRuta={(ruta) => abrirRuta(ruta)}
         />
