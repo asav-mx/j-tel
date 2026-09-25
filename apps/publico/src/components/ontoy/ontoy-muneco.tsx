@@ -19,13 +19,14 @@
  * | `sin-red` | abajo, boca ondulada: se cayó la red |
  * | `dormido` | ojos cerrados: cerrado, o de noche |
  * | `contento` | sonrisa: llegó, o lo lograste |
+ * | `triste` | boca hacia abajo: no encontré nada — y enseguida propone otra cosa |
  *
  * ## De dónde salen los dibujos
  *
  * `al-frente`, `sin-dato` y `contento` están **copiados** del handoff
  * (`App Inicio.dc.html` del #562: `O-frente`, `O-sindato`, `O-sonrisa`).
  *
- * **`sin-red` y `dormido` no venían dibujados**, y se arman aquí con la misma
+ * **`sin-red`, `dormido` y `triste` no venían dibujados**, y se arman aquí con la misma
  * construcción y las reglas escritas del skill —«sin red: abajo con boca
  * ondulada», «cerrado o de noche: ojos cerrados con zzz»—. Se dice con todas
  * sus letras porque **es la única parte de esta pieza que no está copiada**: si
@@ -39,7 +40,7 @@ const NARANJA = "#F6A15B";
 const CARBON = "#2A2E37";
 const BLANCO = "#ffffff";
 
-export type PoseDeOntoy = "al-frente" | "sin-dato" | "sin-red" | "dormido" | "contento";
+export type PoseDeOntoy = "al-frente" | "sin-dato" | "sin-red" | "dormido" | "contento" | "triste";
 
 /** Qué lee en voz alta un lector de pantalla. La pose es información, no adorno. */
 const DICHO: Record<PoseDeOntoy, string> = {
@@ -48,6 +49,7 @@ const DICHO: Record<PoseDeOntoy, string> = {
   "sin-red": "Ontoy, sin señal",
   dormido: "Ontoy, dormido",
   contento: "Ontoy, contento",
+  triste: "Ontoy, triste",
 };
 
 export function Ontoy({
@@ -106,7 +108,7 @@ function Cara({ pose }: { pose: PoseDeOntoy }) {
   }
 
   /* Los ojos blancos con pupila carbón: los cinco personajes los comparten. */
-  const mirandoAbajo = pose === "sin-dato" || pose === "sin-red";
+  const mirandoAbajo = pose === "sin-dato" || pose === "sin-red" || pose === "triste";
   return (
     <>
       <circle cx="50" cy="52" r="11" fill={BLANCO} />
@@ -127,6 +129,15 @@ function Cara({ pose }: { pose: PoseDeOntoy }) {
           strokeWidth="3.6"
           strokeLinecap="round"
         />
+      )}
+      {pose === "triste" && (
+        /*
+         * **Triste suave, y la palabra «suave» es la regla.** El estándar pide
+         * que una búsqueda sin resultados «proponga otra cosa enseguida»: esto
+         * no es un error ni una alarma, es un «no lo encontré». La boca baja
+         * poco —la misma curva de la sonrisa, volteada— y nada se pone rojo.
+         */
+        <path d="M54 78 q9 -8 18 0" fill="none" stroke={CARBON} strokeWidth="3.6" strokeLinecap="round" />
       )}
       {pose === "contento" && (
         <path d="M54 72 q9 8 18 0" fill="none" stroke={CARBON} strokeWidth="3.6" strokeLinecap="round" />

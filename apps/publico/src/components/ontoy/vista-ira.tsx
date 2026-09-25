@@ -9,6 +9,8 @@ import {
   type ParadaBuscable,
   type RutaBuscable,
 } from "@/lib/ontoy/buscar-lugar";
+import { Ontoy } from "@/components/ontoy/ontoy-muneco";
+import { encontre } from "@/lib/ontoy/encontre";
 
 /**
  * **Ir a** — la única búsqueda de la app (8.8; ASAV, 22-sep).
@@ -103,23 +105,39 @@ export function VistaIrA({
 
   return (
     <div className="ontoy-vista ontoy-ira">
-      <section className="ontoy-seccion">
-        <h2 className="ontoy-seccion-titulo">Ir a</h2>
+      <header className="ontoy-inicio-cabeza">
+        <h1 className="ontoy-inicio-titulo">¿Qué buscas?</h1>
+        <p className="ontoy-inicio-contexto">Escribe una ruta o una parada y te la abro en el mapa</p>
+      </header>
 
+      <section className="ontoy-seccion">
         <div className="ontoy-ira-campo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <circle cx="10.5" cy="10.5" r="6" />
-            <path d="m15 15 5 5" />
-          </svg>
+          <GlifoIra />
           <input
             type="search"
             value={consulta}
             onChange={(e) => setConsulta(e.target.value)}
-            placeholder="Una parada o una ruta"
+            placeholder="Busca una ruta o una parada"
             aria-label="Buscar una parada o una ruta"
             enterKeyHint="search"
             autoComplete="off"
           />
+          {/*
+            * La equis sólo existe cuando hay algo que borrar. Un botón siempre
+            * puesto que la mitad del tiempo no hace nada enseña a no tocarlo.
+            */}
+          {consulta !== "" && (
+            <button
+              type="button"
+              className="ontoy-ira-limpiar"
+              onClick={() => setConsulta("")}
+              aria-label="Borrar lo escrito"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
         </div>
 
         <p className="ontoy-ira-limite">
@@ -137,12 +155,30 @@ export function VistaIrA({
           ) : buscando ? (
             <p className="ontoy-vacio">Buscando…</p>
           ) : sugerencias.length === 0 ? (
-            <p className="ontoy-vacio">
-              No encontramos ninguna parada ni ruta con ese nombre. En <b>Inicio</b> están todas las rutas
-              de la ciudad.
-            </p>
+            <div className="ontoy-ira-nada">
+              <Ontoy pose="triste" tamano={64} />
+              <p className="ontoy-vacio">
+                No encontré ninguna parada ni ruta con ese nombre. Prueba con el nombre de la calle —
+                o mira en <b>Inicio</b>, que están todas las rutas de la ciudad.
+              </p>
+            </div>
           ) : (
             <>
+              {/*
+                * **El resumen, con Ontoy de 40 px.** Es «en línea con el dato»,
+                * el tamaño chico del estándar: aquí Ontoy no es el mensajero de
+                * la pantalla —lo es sólo cuando no encuentra nada—, acompaña a
+                * una respuesta que ya está.
+                */}
+              <p className="ontoy-ira-encontre">
+                <Ontoy pose="contento" tamano={40} />
+                <span>
+                  {encontre(
+                    sugerencias.filter((s) => s.tipo === "ruta").length,
+                    sugerencias.filter((s) => s.tipo === "parada").length,
+                  )}
+                </span>
+              </p>
               <ul className="ontoy-ira-lista">
                 {sugerencias.map((s, i) => (
                   <li key={`${s.clave}-${i}`}>
@@ -199,5 +235,34 @@ export function VistaIrA({
         <a href="/privacidad">Qué datos usa la app y para qué</a>.
       </p>
     </div>
+  );
+}
+
+/**
+ * **El glifo de «Ir a»**, del paquete de símbolos del #562 (`g-ira`).
+ *
+ * Es un objeto del universo —con ojos y en color de barrio— y no una lupa
+ * genérica: el estándar es explícito en que no se usa ninguna fuente de iconos
+ * ajena, y la lupa que había aquí era justamente eso.
+ *
+ * **Va escrito a mano y no importado del `.svg`**, y conviene saber por qué:
+ * los archivos del paquete traen **16 KB de metadatos C2PA** cada uno —la
+ * procedencia que estampa la herramienta de diseño—, contra unos 400 bytes de
+ * dibujo. Copiarlos tal cual metería cuarenta veces su peso en la app que se
+ * abre en la calle con datos contados. Lo que se copia es el dibujo.
+ */
+function GlifoIra() {
+  return (
+    <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" className="ontoy-ira-glifo">
+      <path d="M12 11 7 1.4h10z" fill="#F2C14E" />
+      <circle cx="12" cy="14.6" r="7.6" fill="#fff" />
+      <circle cx="12" cy="14.6" r="6.4" fill="#1E2B4D" />
+      <circle cx="3.4" cy="17.8" r="1.7" fill="#1E2B4D" />
+      <circle cx="20.6" cy="17.8" r="1.7" fill="#1E2B4D" />
+      <circle cx="9.7" cy="13.6" r="1.9" fill="#fff" />
+      <circle cx="14.3" cy="13.6" r="1.9" fill="#fff" />
+      <circle cx="9.8" cy="12.9" r="1.05" fill="#2A2E37" />
+      <circle cx="14.4" cy="12.9" r="1.05" fill="#2A2E37" />
+    </svg>
   );
 }

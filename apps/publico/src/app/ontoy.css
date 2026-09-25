@@ -1826,6 +1826,72 @@
   color: var(--maiz);
 }
 
+/* ── «Ir a»: el buscador, con el diseño del #562 ───────────────────────── */
+
+/* El glifo del universo dentro del campo, no una lupa ajena. */
+.ontoy-ira-glifo {
+  flex: none;
+  display: block;
+  overflow: visible;
+}
+/*
+ * **Fuera la equis nativa de `type="search"`.**
+ *
+ * WebKit le dibuja una equis propia a los campos de búsqueda, así que al poner
+ * la nuestra salieron **dos**, una azul y una carbón, pegadas. Lo enseñó la
+ * captura.
+ *
+ * Se quita la de ellos y se queda la nuestra, y no al revés: la nativa no
+ * tiene rótulo para un lector de pantalla, mide lo que el navegador quiera
+ * —menos de 44 px— y se dibuja distinta en cada uno. La nuestra es la misma en
+ * todos y se puede tocar.
+ */
+.ontoy-ira-campo input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+/*
+ * La equis sólo existe cuando hay algo que borrar, y mide 44 px de toque
+ * aunque el dibujo mida 18: es un objetivo de pulgar en una pantalla de calle.
+ */
+.ontoy-ira-limpiar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin-right: -8px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--tenue);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* El resumen: Ontoy de 40 px acompañando una respuesta que ya está. */
+.ontoy-ira-encontre {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 4px;
+  font-size: 14px;
+  color: var(--tenue);
+}
+
+/*
+ * Sin resultados: Ontoy triste, y la frase propone otra cosa enseguida. No hay
+ * rojo ni alarma — es un «no lo encontré», no un error.
+ */
+.ontoy-ira-nada {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.ontoy-ira-nada .ontoy-vacio {
+  margin: 0;
+}
+
 /* ── la campana (8.13b) ───────────────────────────────────────────────── */
 .ontoy-campana {
   position: relative;
