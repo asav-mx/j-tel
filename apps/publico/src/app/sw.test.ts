@@ -431,3 +431,93 @@ describe("al instalarse, SIN SEÑAL se guarda con sus piezas", () => {
     expect(SW).toMatch(/const MAPA = "mapa-v\d+";/);
   });
 });
+
+/*
+ * **Al estrenar cascarón, el código se hereda** — el defecto del 25-sep: la v7
+ * borró la v6 entera, con ella el código del mapa (Leaflet y protomaps, que se
+ * bajan aparte al abrir el Mapa), y sin red el Mapa salió en blanco.
+ */
+function cargarConVariasCaches(inicial: Record<string, Record<string, string>>) {
+  const manejadores: Record<string, (e: unknown) => void> = {};
+  const self = {
+    addEventListener: (tipo: string, f: (e: unknown) => void) => (manejadores[tipo] = f),
+    location: new URL(ORIGEN),
+    skipWaiting: () => {},
+    clients: { claim: () => Promise.resolve() },
+  };
+  const almacen = new Map<string, Map<string, Response>>();
+  const abrir = (nombre: string) => {
+    if (!almacen.has(nombre)) almacen.set(nombre, new Map());
+    const m = almacen.get(nombre)!;
+    const llave = (p: Request | string) => (typeof p === "string" ? new URL(p, ORIGEN).href : p.url);
+    return {
+      match: async (p: Request | string) => m.get(llave(p))?.clone(),
+      put: async (p: Request | string, r: Response) => void m.set(llave(p), r),
+      keys: async () => [...m.keys()].map((u) => new Request(u)),
+      delete: async (p: Request | string) => m.delete(llave(p)),
+    };
+  };
+  for (const [nombre, entradas] of Object.entries(inicial)) {
+    const m = new Map<string, Response>();
+    for (const [ruta, cuerpo] of Object.entries(entradas)) m.set(ORIGEN + ruta, new Response(cuerpo));
+    almacen.set(nombre, m);
+  }
+  const caches = {
+    open: async (n: string) => abrir(n),
+    keys: async () => [...almacen.keys()],
+    delete: async (n: string) => almacen.delete(n),
+    match: async () => undefined,
+  };
+  runInNewContext(SW, { self, URL, caches, fetch: () => Promise.reject(new Error("sin red")), Response, Request, Headers, console });
+  const activar = async () => {
+    let espera: Promise<unknown> = Promise.resolve();
+    manejadores.activate!({ waitUntil: (p: Promise<unknown>) => (espera = p) });
+    await espera;
+  };
+  const rutas = (nombre: string) => [...(almacen.get(nombre)?.keys() ?? [])].map((u) => new URL(u).pathname);
+  return { activar, almacen, rutas };
+}
+
+const VERSION_ACTUAL = /const VERSION = "([^"]+)"/.exec(SW)![1];
+const MAPA_ACTUAL = /const MAPA = "([^"]+)"/.exec(SW)![1];
+
+describe("al estrenar cascarón, el código guardado se hereda", () => {
+  it("el código del mapa pasa a la caché nueva; las páginas no", async () => {
+    const { activar, almacen, rutas } = cargarConVariasCaches({
+      "cascaron-v6": {
+        "/rutas": "la app vieja",
+        "/api/circuitos/zaragoza-centro": "la forma vieja",
+        "/_next/static/chunks/fe69a73d.leaflet.js": "leaflet",
+        "/_next/static/chunks/935.protomaps.js": "protomaps",
+      },
+      [MAPA_ACTUAL]: { "/mapa/juarez.pmtiles?desde=0&hasta=9": "pedazo" },
+    });
+    await activar();
+    expect(almacen.has("cascaron-v6"), "la caché vieja sí se va").toBe(false);
+    expect(rutas(`cascaron-${VERSION_ACTUAL}`).sort()).toEqual([
+      "/_next/static/chunks/935.protomaps.js",
+      "/_next/static/chunks/fe69a73d.leaflet.js",
+    ]);
+    expect(rutas(MAPA_ACTUAL), "los pedazos del mapa, intactos").toEqual(["/mapa/juarez.pmtiles"]);
+  });
+
+  it("lo que la caché nueva ya tiene no se pisa con lo viejo", async () => {
+    const { activar, almacen } = cargarConVariasCaches({
+      "cascaron-v6": { "/_next/static/chunks/a.js": "viejo" },
+      [`cascaron-${VERSION_ACTUAL}`]: { "/_next/static/chunks/a.js": "nuevo" },
+    });
+    await activar();
+    const r = almacen.get(`cascaron-${VERSION_ACTUAL}`)!.get(`${ORIGEN}/_next/static/chunks/a.js`)!;
+    expect(await r.text()).toBe("nuevo");
+  });
+
+  it("con tope: se heredan los más recientes, no todo lo que se juntó", async () => {
+    const muchos = Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`/_next/static/chunks/${i}.js`, "x"]));
+    const { activar, rutas } = cargarConVariasCaches({ "cascaron-v6": muchos });
+    await activar();
+    const heredadas = rutas(`cascaron-${VERSION_ACTUAL}`);
+    expect(heredadas.length).toBe(150);
+    expect(heredadas).toContain("/_next/static/chunks/199.js");
+    expect(heredadas).not.toContain("/_next/static/chunks/0.js");
+  });
+});
