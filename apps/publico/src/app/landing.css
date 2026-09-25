@@ -421,8 +421,65 @@ body:has(.landing) {
   min-width: 170px;
   aspect-ratio: 1 / 1.15;
   margin-bottom: -6px;
-  display: grid;
-  place-items: end center;
+  /* Las dos capas van dentro, en absoluto: el hueco fija el tamaño, no ellas. */
+  position: relative;
+}
+
+/*
+ * **En teléfono, Ontoy se mide contra la PANTALLA y no contra el ancho.**
+ *
+ * Asav lo vio en su Android: la frase de debajo del título se cortaba a media
+ * oración —«…si no sabe, te lo dice»—, porque el primer vistazo se acababa
+ * dentro de ella. Medido: el bloque de la marca ocupaba **423 px de alto, de
+ * los que 345 eran Ontoy**, y con eso el título no empezaba hasta el píxel 606
+ * y la frase acababa en el 825, por debajo del pliegue de cualquier teléfono.
+ *
+ * El arreglo no es encoger la letra: es que **lo que escasea en un teléfono es
+ * el alto**, y Ontoy se estaba dimensionando por el ancho. Con `dvh` se mide
+ * contra lo que de verdad falta, y se ajusta solo en un teléfono corto, en uno
+ * largo y con la barra del navegador puesta o recogida — sin puntos de corte
+ * inventados. El `min-width` de arriba le pone suelo: no se hace un sello.
+ *
+ * Si un navegador no entiende `dvh`, la declaración entera no vale y se queda
+ * con los 300 px de la regla de arriba, que es lo que había: se pierde el
+ * arreglo, no la portada.
+ */
+@media (max-width: 560px) {
+  /*
+   * Se topa el ALTO, no sólo el ancho. Medido: con el hueco a 170 de ancho, el
+   * `aspect-ratio` pedía 195 de alto y la caja salía de **225** — porque dentro
+   * hay un dibujo que se mide solo, y `aspect-ratio` es una preferencia que el
+   * contenido puede empujar. `max-height` no se empuja.
+   *
+   * Y el ancho sale del alto —dividido por la proporción— para que el dibujo no
+   * quede flotando en una caja ancha con aire a los lados.
+   */
+  .landing-hero-ontoy {
+    flex-basis: min(300px, calc(24dvh / 1.15));
+    max-height: 24dvh;
+    min-width: 120px;
+    /*
+     * Centrado en su renglón. El `space-between` de la fila deja al único que
+     * queda pegado a la izquierda, y ahí Ontoy no se lee como puesto sino como
+     * olvidado.
+     */
+    margin-inline: auto;
+  }
+
+  /* Y el aire de alrededor, que en un teléfono se paga en frases cortadas. */
+  .landing-hero {
+    padding-block: 12px 36px;
+    gap: 14px;
+  }
+
+  .landing-hero-dicho {
+    padding-top: 18px;
+    gap: 18px 48px;
+  }
+
+  .landing-hero-dicho > div {
+    gap: 12px;
+  }
 }
 
 .landing-hero-ontoy svg {
@@ -432,16 +489,32 @@ body:has(.landing) {
 }
 
 /*
- * El 2D y el 3D, uno encima del otro en la misma celda.
+ * El 2D y el 3D, uno encima del otro, **dentro** del hueco y sin decidir cuánto
+ * mide.
  *
- * Es una rejilla de una sola celda y los dos la ocupan: así el hueco mide lo
- * que mide el 2D —que es lo que hay desde el primer cuadro— y **nada de
- * alrededor se mueve** cuando el 3D acaba de bajar y lo tapa.
+ * Antes el hueco medía lo que midiera su contenido. Eso se mordía la cola: el
+ * canvas de `three` se dimensiona contra el hueco, y el hueco se dimensionaba
+ * contra el canvas. En teléfono el resultado medido era una caja de 163 × 187
+ * con un lienzo de **163 × 225** dentro: la proporción del canvas bajaba a 0.72
+ * y, como el campo horizontal de la cámara va con el ancho, **a Ontoy se le
+ * salían las manos del cuadro**.
+ *
+ * Ahora el hueco manda: su alto sale de su `aspect-ratio` y de su tope, y las
+ * dos capas se estiran a él. Nada de alrededor se mueve cuando el 3D baja,
+ * igual que antes — porque lo que fija el tamaño ya no es ninguna de las dos.
  */
 .landing-ontoy-3d {
   display: grid;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
+  /*
+   * Pistas FIJAS, no automáticas. Con `auto` la fila seguía creciendo hasta el
+   * canvas —que `three` deja medido en píxeles— y el `height: 100%` de las
+   * capas se resolvía contra esa fila crecida: la pescadilla se mordía la cola
+   * en un punto fijo de 225 px aunque el hueco midiera 187. Con `100%` la fila
+   * vale lo que el hueco y el observador de `three` lo corrige al bajar.
+   */
+  grid-template: 100% / 100%;
 }
 
 .landing-ontoy-3d > * {
@@ -449,9 +522,10 @@ body:has(.landing) {
   min-width: 0;
 }
 
+/* El 2D se apoya abajo del hueco, como se apoyaba cuando él lo medía. */
 .landing-ontoy-2d {
   display: grid;
-  place-items: center;
+  place-items: end center;
 }
 
 .landing-ontoy-lienzo {
