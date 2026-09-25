@@ -54,6 +54,7 @@ export function VistaInicio({
   ubicacion,
   alAbrirRuta,
   alQuitarGuardada,
+  alVerTusParadas,
   enVivo,
 }: {
   rutas: RutaDeLaCiudad[];
@@ -65,6 +66,8 @@ export function VistaInicio({
   ubicacion: Ubicacion;
   alAbrirRuta: (circuitoId: string, parada?: string, sentido?: Sentido) => void;
   alQuitarGuardada: (g: ParadaGuardada) => void;
+  /** Abre «Tus paradas», que cuelga de aquí y no es un quinto lugar de la barra. */
+  alVerTusParadas: () => void;
   /**
    * Los camiones de TODAS tus rutas, de la consulta única de la raíz (PR 4b):
    * Inicio ya no pregunta por su cuenta.
@@ -150,6 +153,17 @@ export function VistaInicio({
 
       {guardadas.length > 0 ? (
         <section className="ontoy-seccion">
+          {/*
+            * La puerta a «Tus paradas». Va aquí y no en la barra porque la
+            * barra tiene cuatro lugares y eso es ley (8.8) — y porque el
+            * pasajero que quiere ordenarlas viene de verlas, no de buscarlas.
+            */}
+          <div className="ontoy-seccion-cabeza">
+            <h2 className="ontoy-seccion-titulo">Tus paradas</h2>
+            <button type="button" className="ontoy-seccion-mas" onClick={alVerTusParadas}>
+              Ordenar
+            </button>
+          </div>
           {guardadas.map((g) => (
             <AtajoDeParada
               key={g.parada}

@@ -1957,6 +1957,195 @@
   text-decoration: none;
 }
 
+/* ── «Tus paradas»: el orden, la papelera y su deshacer ────────────────── */
+
+.ontoy-seccion-cabeza {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ontoy-seccion-mas {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  /* 44 px de toque aunque el texto mida menos: esto se toca de pie. */
+  min-height: 44px;
+  padding: 0 4px;
+}
+
+/* Los controles arriba; el título con todo el ancho debajo. */
+.ontoy-guardadas-cabeza {
+  padding: 8px 14px 2px;
+}
+.ontoy-guardadas-controles {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+.ontoy-guardadas-cabeza .ontoy-inicio-titulo,
+.ontoy-guardadas-cabeza .ontoy-inicio-contexto {
+  /* Alineados con los renglones de abajo, que llevan 18 de margen. */
+  padding: 0 4px;
+}
+.ontoy-volver {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--texto);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.ontoy-guardadas-editar {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  min-height: 44px;
+  padding: 0 6px;
+  cursor: pointer;
+}
+
+.ontoy-guardadas {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ontoy-guardada {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border-radius: var(--r-card-sm, 22px);
+  box-shadow: 0 0 0 1px var(--linea);
+}
+/*
+ * La que se está arrastrando se marca **con su borde y con su palabra**
+ * —«Arrastrando…»—, no sólo levantándola: sin el rótulo, quien no distingue el
+ * cambio de sombra no sabe cuál agarró.
+ */
+.ontoy-guardada.arrastrando {
+  box-shadow: 0 0 0 2px var(--texto);
+}
+.ontoy-guardada-tino {
+  flex: none;
+  display: block;
+}
+.ontoy-guardada-tino .ontoy-tino {
+  position: static;
+  width: 34px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+}
+.ontoy-guardada-abrir {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.ontoy-guardada-abrir:disabled {
+  cursor: default;
+}
+.ontoy-guardada-nombre {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--texto);
+}
+.ontoy-guardada-ruta {
+  font-size: 13px;
+  color: var(--tenue);
+}
+.ontoy-guardada-quitar,
+.ontoy-guardada-asa {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--panel2);
+  color: var(--tenue);
+  cursor: pointer;
+}
+.ontoy-guardada-asa {
+  background: transparent;
+  /* El dedo arrastra el asa; sin esto el navegador se lleva el gesto al scroll. */
+  touch-action: none;
+  cursor: grab;
+}
+
+/*
+ * El aviso de quitada, encima de la barra. **No bloquea nada**: quitar no es un
+ * error y no se pide perdón por ello — se ofrece volver atrás.
+ */
+.ontoy-deshacer {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--r-card-sm, 22px);
+  background: var(--texto);
+  color: var(--panel);
+  font-size: 14px;
+}
+.ontoy-deshacer button {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  min-height: 44px;
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+/* El vacío de esta pantalla vive DENTRO del cascarón, con su barra abajo. */
+.ontoy-completa-dentro {
+  min-height: auto;
+  flex: 1;
+  padding-top: 8px;
+}
+
 /* ── la campana (8.13b) ───────────────────────────────────────────────── */
 .ontoy-campana {
   position: relative;

@@ -67,6 +67,24 @@ function escribir(ids: ParadaGuardada[]): void {
   }
 }
 
+/**
+ * **Mover una parada de un lugar a otro de la lista.** Pura, y por eso probable
+ * sin arrastrar nada con el dedo.
+ *
+ * Los índices se recortan a la lista en vez de reventar: un gesto que se suelta
+ * fuera de la lista manda un índice de más, y lo correcto ahí es dejarla al
+ * final —que es donde el dedo la soltó— y no perder la parada.
+ */
+export function mover<T>(lista: T[], desde: number, hasta: number): T[] {
+  if (desde < 0 || desde >= lista.length) return lista;
+  const destino = Math.min(Math.max(hasta, 0), lista.length - 1);
+  if (destino === desde) return lista;
+  const copia = [...lista];
+  const [pieza] = copia.splice(desde, 1);
+  copia.splice(destino, 0, pieza);
+  return copia;
+}
+
 export function useParadasGuardadas() {
   const [ids, setIds] = useState<ParadaGuardada[]>([]);
   /**
@@ -101,11 +119,71 @@ export function useParadasGuardadas() {
     });
   }, []);
 
+  /**
+   * **Reordenar.** El orden del arreglo ES el orden de la pantalla: la primera
+   * guardada es la que Inicio enseña arriba, que es la parada de todos los días.
+   */
+  const reordenar = useCallback((desde: number, hasta: number) => {
+    setIds((antes) => {
+      const siguiente = mover(antes, desde, hasta);
+      if (siguiente !== antes) escribir(siguiente);
+      return siguiente;
+    });
+  }, []);
+
+  /**
+   * **Quitar, con su deshacer.**
+   *
+   * Devuelve lo necesario para reponerla **en su lugar**, no al final: quitar
+   * por error una parada de en medio y que reaparezca hasta abajo es deshacer a
+   * medias — el pasajero tendría que volver a ordenarla.
+   *
+   * No hay confirmación antes, y es a propósito: una pregunta por cada quitada
+   * cansa, y lo que protege de verdad es poder deshacer después (estándar:
+   * «nada de alarmas»).
+   */
+  const quitar = useCallback(
+    (parada: string): { g: ParadaGuardada; en: number } | null => {
+      /*
+       * **Se lee de `ids`, no de dentro del actualizador.**
+       *
+       * La primera versión sacaba el valor desde dentro de `setIds(antes => …)`
+       * y lo devolvía después. **Siempre devolvía `null`**: el actualizador es
+       * una función que React corre cuando quiere, así que para cuando `quitar`
+       * volvía, todavía no había corrido. El botón funcionaba —la parada se
+       * iba— y el «Deshacer» no aparecía nunca. Lo enseñó la prueba en el
+       * navegador; no lo veía ninguna prueba unitaria y compilaba perfecto.
+       */
+      const en = ids.findIndex((x) => x.parada === parada);
+      if (en < 0) return null;
+      const quitada = { g: ids[en], en };
+      const siguiente = ids.filter((_, i) => i !== en);
+      escribir(siguiente);
+      setIds(siguiente);
+      return quitada;
+    },
+    [ids],
+  );
+
+  /** Reponer una quitada en el lugar donde estaba. */
+  const reponer = useCallback((g: ParadaGuardada, en: number) => {
+    setIds((antes) => {
+      if (antes.some((x) => x.parada === g.parada)) return antes;
+      const siguiente = [...antes];
+      siguiente.splice(Math.min(en, siguiente.length), 0, g);
+      escribir(siguiente);
+      return siguiente;
+    });
+  }, []);
+
   return {
     guardadas: ids,
     disponible,
     listo,
     alternar,
+    reordenar,
+    quitar,
+    reponer,
     estaGuardada: (parada: string) => ids.some((x) => x.parada === parada),
   };
 }
