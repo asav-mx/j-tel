@@ -113,6 +113,24 @@ export function etiquetaCortaDeLaRuta(nombre: string): string {
     .split(/[\s-]+/)
     .filter(Boolean);
   if (partes.length === 0) return "··";
+
+  /*
+   * **Si la ruta trae número, el número ES la etiqueta.** Y va antes que las
+   * iniciales a propósito: en la calle las rutas se conocen por su número — «la
+   * 51», «la T1» —, nadie dice «la RT», y la placa es justo el sitio donde el
+   * pasajero busca ese número.
+   *
+   * Lo enseñó la lámina de 40 × 60: «Ruta 51 · Centro–Tecnológico» salía «RT»,
+   * y eso, atornillado a un poste durante años, es la ruta equivocada escrita
+   * en grande.
+   *
+   * Vale un token de hasta tres caracteres que sea todo dígitos o una letra
+   * seguida de dígitos: cubre «51», «4», «T1», «C2». Más largo que eso ya no es
+   * un número de ruta sino un año o un código de otra cosa, y se deja pasar.
+   */
+  const conNumero = partes.find((t) => /^(?:\d{1,3}|\p{L}\d{1,2})$/u.test(t));
+  if (conNumero) return conNumero.toUpperCase();
+
   if (partes.length === 1) return partes[0]!.slice(0, 2).toUpperCase();
   return (partes[0]![0]! + partes[partes.length - 1]![0]!).toUpperCase();
 }
