@@ -116,12 +116,21 @@ describe("las poses de Ontoy", () => {
     expect(bloque).toContain("ontoy-muneco-z");
   });
 
-  it("las dos poses que NO vienen del handoff están declaradas", () => {
+  it("las poses que NO vienen del handoff están declaradas, TODAS", () => {
     /*
-     * `sin-red` y `dormido` se armaron aquí con las reglas escritas del skill,
-     * no copiadas de un dibujo. Es la única parte de la pieza que no está
-     * copiada, y quien la revise tiene que saberlo sin preguntar.
+     * `sin-red`, `dormido` y `triste` se armaron aquí con las reglas escritas
+     * del skill, no copiadas de un dibujo. Es la única parte de la pieza que no
+     * está copiada, y quien la revise tiene que saberlo sin preguntar.
+     *
+     * **Esta prueba ya cobró una vez**, y por eso se escribe así: al agregar
+     * `triste` en el PR de «Ir a», la declaración se quedó nombrando dos poses
+     * cuando ya eran tres, y la prueba se cayó. La lista de abajo se compara
+     * **contra la declaración**, así que una pose nueva sin declarar la tumba
+     * — que es justo lo que tiene que pasar.
      */
-    expect(muneco).toMatch(/`sin-red` y `dormido` no venían dibujados/);
+    const declaradas = muneco.match(/\*\*`([a-z-]+)`(?:, `([a-z-]+)`)?(?: y `([a-z-]+)`)? no venían dibujados/);
+    expect(declaradas, "falta la frase que declara las poses no copiadas").not.toBeNull();
+    const nombradas = declaradas!.slice(1).filter(Boolean).sort();
+    expect(nombradas).toEqual(["dormido", "sin-red", "triste"]);
   });
 });
