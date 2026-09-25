@@ -152,9 +152,11 @@ export default function Landing() {
                 real del camión. <strong>Si no sabe, te lo dice.</strong>
               </p>
               <div className="landing-acciones">
+                {/* `data-baila-ontoy`: al pasar por encima, Ontoy baila en el hero. */}
                 <Link
                   href="/rutas"
                   className="landing-boton landing-boton-principal"
+                  data-baila-ontoy
                 >
                   Úsala ya en tu navegador
                   <span aria-hidden="true">→</span>

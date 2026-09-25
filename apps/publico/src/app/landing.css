@@ -537,21 +537,32 @@ body:has(.landing) {
  * ancha se ve más calle y en teléfono menos — que es justo lo que hace una
  * calle de verdad.
  *
- * ## El alto crece con el ancho, y el número no es decorativo
+ * ## El alto sigue la proporción del dibujo, sin tope
  *
- * `12.5vw` es exactamente 150/1200, la proporción del `viewBox`. Con una altura
- * fija de 150, el `slice` escalaba por el ancho y **recortaba por arriba y por
- * abajo**: a 1440 se comía 15 px de cada lado y **le cortaba la cabeza a
- * Tino**, que es la pieza que más importa de toda la escena. Creciendo en la
- * misma proporción, la escala vertical y la horizontal coinciden y no se
- * recorta nada de alto.
+ * Y el tope es justo lo que estuvo mal. Antes era `clamp(150px, 12.5vw, 240px)`:
+ * el `12.5vw` es exactamente 150/1200 —la proporción del `viewBox`— y hasta
+ * 1920 px de ancho todo cuadraba. **Pasado 1920, el tope de 240 dejaba de
+ * alcanzar y el `slice` volvía a recortar por arriba y por abajo.** En una
+ * pantalla de 2551 se comía 79 px, y lo primero que se pierde es **la cabeza de
+ * Tino**, que es la pieza que más importa de la escena.
  *
- * Por debajo de 1200 se queda en 150 —una calle más baja que eso deja de
- * leerse— y ahí sí recorta a lo ancho. Por eso se ancla a la derecha: ver.
+ * `aspect-ratio` no tiene ese problema: la altura sale del ancho, siempre, sin
+ * un número que se quede corto en la siguiente pantalla más grande. El
+ * `min-height` sólo actúa por debajo de 1200, donde la proporción daría una
+ * calle demasiado baja para leerse — y ahí recorta a lo ancho, anclada a la
+ * derecha para no perder la parada.
  */
 .landing-calle {
   position: relative;
-  height: clamp(150px, 12.5vw, 240px);
+  /*
+   * `width: 100%` no sobra: sin él, cuando el `min-height` gana —en teléfono—,
+   * el `aspect-ratio` deriva el ANCHO de esa altura (150 × 8 = 1200 px) y la
+   * página entera desborda a 1200 en una pantalla de 390. Con el ancho fijado,
+   * el ancho manda y la proporción sólo decide el alto.
+   */
+  width: 100%;
+  aspect-ratio: 1200 / 150;
+  min-height: 150px;
   overflow: hidden;
   background: var(--calle);
   border-bottom: 10px solid var(--arena);
@@ -1349,6 +1360,34 @@ body:has(.landing) {
   width: clamp(140px, 22vw, 200px);
   height: auto;
   display: block;
+}
+
+/*
+ * Las zetas del sueño, dentro del SVG de Ontoy. Suben y se desvanecen, una
+ * detrás de otra, y se paran con `reduced-motion` — la regla de arriba las
+ * alcanza porque están dentro de `.landing`.
+ */
+.landing-zzz text {
+  font-family: var(--titular);
+  font-weight: 800;
+  fill: var(--arena-2);
+  animation: landing-sube-la-z 3.4s ease-out infinite;
+}
+
+.landing-z1 { font-size: 13px; animation-delay: 0s; }
+.landing-z2 { font-size: 18px; animation-delay: 0.5s; }
+.landing-z3 { font-size: 24px; animation-delay: 1s; }
+
+@keyframes landing-sube-la-z {
+  0% { opacity: 0; transform: translate(0, 6px); }
+  22% { opacity: 1; }
+  70% { opacity: 0.55; }
+  100% { opacity: 0; transform: translate(10px, -22px); }
+}
+
+.landing-ontoy-dormido svg {
+  width: clamp(140px, 22vw, 200px);
+  height: auto;
 }
 
 .landing-zetas {
