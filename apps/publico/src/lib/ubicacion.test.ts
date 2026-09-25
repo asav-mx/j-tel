@@ -36,8 +36,38 @@ describe("el punto «tú» no se vuelve a perder en silencio", () => {
     for (const m of mapas) expect(m, m.slice(0, 80)).toContain("yo={yo}");
   });
 
-  it("y la vista del mapa lo dibuja, en tinta y con la palabra «tú»", () => {
+  it("y la vista del mapa lo dibuja, con su palabra «tú»", () => {
+    /*
+     * **La valla no se aflojó: se mudó con el dibujo.**
+     *
+     * Hasta el PR de los muñecos, el pasajero era un `<span>` escrito a mano
+     * dentro de `vista-mapa.tsx`, y esta prueba buscaba ese literal. Ahora es el
+     * personajito del universo y lo dibuja `pasajeroConLinterna` en
+     * `lib/ontoy/munecos.ts`, con su carita y su linterna.
+     *
+     * Así que se comprueban **las dos mitades**, que es lo que el literal
+     * comprobaba junto: que el mapa llame a quien lo dibuja, y que lo que
+     * dibuja siga llevando la palabra. Cualquiera de las dos que se pierda
+     * vuelve a dejar al pasajero sin saber dónde está parado.
+     */
     const mapa = readFileSync(new URL("../components/ontoy/vista-mapa.tsx", import.meta.url), "utf8");
-    expect(mapa).toContain('<span class="ontoy-tu-palabra">tú</span>');
+    expect(mapa, "el mapa tiene que dibujar al pasajero").toContain("pasajeroConLinterna(");
+    const munecos = readFileSync(new URL("./ontoy/munecos.ts", import.meta.url), "utf8");
+    expect(munecos, "el pasajero lleva su palabra").toContain('ontoy-pasajero-palabra">tú<');
+  });
+
+  it("la linterna sólo se enciende con rumbo medido", () => {
+    /*
+     * Va aquí y no en `munecos.test.ts` porque es una regla sobre **el dato**,
+     * no sobre el dibujo: `coords.heading` viene nulo casi siempre, y el nulo
+     * tiene que llegar hasta el mapa sin que nadie lo rellene en el camino.
+     *
+     * Lo que esto cerca es el atajo fácil —`?? 0`— en cualquiera de los tres
+     * saltos: al leerlo del GPS, al pasarlo por props o al dibujarlo.
+     */
+    const ubi = readFileSync(new URL("./ubicacion.ts", import.meta.url), "utf8");
+    expect(ubi, "el rumbo se conserva nulo cuando no se midió").toContain("rumbo: Number.isFinite(");
+    const mapa = readFileSync(new URL("../components/ontoy/vista-mapa.tsx", import.meta.url), "utf8");
+    expect(mapa).toContain("pasajeroConLinterna(yo.rumbo ?? null)");
   });
 });
