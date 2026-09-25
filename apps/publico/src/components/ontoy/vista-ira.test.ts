@@ -26,6 +26,9 @@ describe("una búsqueda sin resultados no es un callejón (8.10)", () => {
     expect(visible).toContain("Ver todas las rutas");
     expect(raiz).toContain("alVerTodasLasRutas={verTodasLasRutas}");
     expect(raiz).toContain('document.getElementById("ontoy-rutas")');
+    /* Y la lista llega ABIERTA: Inicio enseña tres, el botón prometió todas. */
+    expect(raiz).toMatch(/verTodasLasRutas = useCallback\(\(\) => \{[\s\S]*?setRutasAbiertas\(true\)/);
+    expect(raiz).toContain("rutasAbiertas={rutasAbiertas}");
   });
 
   it("no promete un número de ruta que no existe", () => {

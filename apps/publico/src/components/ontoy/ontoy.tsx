@@ -324,6 +324,8 @@ export function Ontoy({
    * La 8.10 dice que la barra es la salida de cualquier pantalla; ahora lo es.
    */
   const [volverAlInicioDelLugar, setVolverAlInicioDelLugar] = useState(0);
+  /* Si Inicio abre su lista de rutas completa: sólo al llegar desde «Ver todas las rutas» de «Ir a». */
+  const [rutasAbiertas, setRutasAbiertas] = useState(false);
   const irA = useCallback((l: Lugar) => {
     setLugar(l);
     setRutaAbierta(false);
@@ -331,6 +333,7 @@ export function Ontoy({
     setParadaTocada(null);
     setCampanaAbierta(false);
     setVerTusParadas(false);
+    setRutasAbiertas(false);
     setVolverAlInicioDelLugar((n) => n + 1);
   }, []);
 
@@ -342,6 +345,7 @@ export function Ontoy({
   const [bajarALasRutas, setBajarALasRutas] = useState(0);
   const verTodasLasRutas = useCallback(() => {
     irA("inicio");
+    setRutasAbiertas(true);
     setBajarALasRutas((n) => n + 1);
   }, [irA]);
   useEffect(() => {
@@ -603,6 +607,7 @@ export function Ontoy({
           alVerAvisos={abrirCampana}
           deNoche={deNoche}
           alAlternarPiel={alternarPiel}
+          rutasAbiertas={rutasAbiertas}
         />
       )}
 
