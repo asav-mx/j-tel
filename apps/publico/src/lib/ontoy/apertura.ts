@@ -34,3 +34,37 @@ export function useContarApertura(circuitoId: string | null): void {
     );
   }, [circuitoId]);
 }
+
+/**
+ * **«Abrió una parada»** — el contador hermano, y una cifra aparte.
+ *
+ * Desde el #592, tocar una parada en el mapa ya **no** abre la ruta: la hoja se
+ * abre encima del mapa. Eso dejó al contador de rutas sin ver el gesto más común
+ * de la app, y sumar las dos cosas en la misma cifra habría hecho que «abrió una
+ * ruta» empezara a significar otra cosa de un día para otro, sin aviso.
+ *
+ * Así que son dos contadores, dos tablas y dos preguntas (ASAV, 25-sep). Éste
+ * cuenta **las tres formas de llegar a la hoja**: tocar la parada en el mapa de
+ * la ciudad, tocarla dentro de una ruta abierta, y escanear su letrero.
+ *
+ * Mismo candado que el otro: **una por parada y por sesión**, no una por cuadro.
+ */
+export function useContarAperturaDeParada(
+  circuitoId: string | null,
+  paradaId: string | null,
+): void {
+  const mandadas = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (!circuitoId || !paradaId) return;
+    const llave = `${circuitoId}/${paradaId}`;
+    if (mandadas.current.has(llave)) return;
+    mandadas.current.add(llave);
+    void fetch(`/api/circuitos/${circuitoId}/paradas/${paradaId}/apertura`, {
+      method: "POST",
+      keepalive: true,
+    }).catch(() => {
+      /* Un contador no rompe una pantalla. */
+    });
+  }, [circuitoId, paradaId]);
+}
