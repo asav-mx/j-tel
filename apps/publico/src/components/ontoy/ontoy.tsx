@@ -231,6 +231,12 @@ export function Ontoy({
   const { vistos, marcarVistos } = useAvisosVistos();
   const [campanaAbierta, setCampanaAbierta] = useState(false);
   const abrirCampana = useCallback(() => {
+    /*
+     * **Avisos es una página de Inicio** (3-ir-a/14: «← Inicio», y la barra
+     * marca Inicio). Se puede abrir desde las paradas de una ruta, y sin esto
+     * la barra seguía marcando Mapa estando en Avisos.
+     */
+    setLugar("inicio");
     setCampanaAbierta(true);
     setParadaAbierta(null);
     setParadaTocada(null);
@@ -318,6 +324,8 @@ export function Ontoy({
    * La 8.10 dice que la barra es la salida de cualquier pantalla; ahora lo es.
    */
   const [volverAlInicioDelLugar, setVolverAlInicioDelLugar] = useState(0);
+  /* Si Inicio abre su lista de rutas completa: sólo al llegar desde «Ver todas las rutas» de «Ir a». */
+  const [rutasAbiertas, setRutasAbiertas] = useState(false);
   const irA = useCallback((l: Lugar) => {
     setLugar(l);
     setRutaAbierta(false);
@@ -325,8 +333,25 @@ export function Ontoy({
     setParadaTocada(null);
     setCampanaAbierta(false);
     setVerTusParadas(false);
+    setRutasAbiertas(false);
     setVolverAlInicioDelLugar((n) => n + 1);
   }, []);
+
+  /*
+   * «Ver todas las rutas», la salida de una búsqueda sin resultados: a Inicio,
+   * y bajando hasta su lista de rutas (ahí viven todas, Marco 8.8). Se baja en
+   * un efecto porque la lista existe hasta que Inicio se dibuja.
+   */
+  const [bajarALasRutas, setBajarALasRutas] = useState(0);
+  const verTodasLasRutas = useCallback(() => {
+    irA("inicio");
+    setRutasAbiertas(true);
+    setBajarALasRutas((n) => n + 1);
+  }, [irA]);
+  useEffect(() => {
+    if (bajarALasRutas === 0 || lugar !== "inicio") return;
+    document.getElementById("ontoy-rutas")?.scrollIntoView({ block: "start" });
+  }, [bajarALasRutas, lugar]);
 
   const rutaEnfocada = rutas.find((r) => r.circuito_id === enfocada) ?? null;
   /**
@@ -542,6 +567,8 @@ export function Ontoy({
         <VistaAvisos
           avisos={avisos}
           telefono={telefono.avisos}
+          vistos={vistos}
+          rutasGuardadas={new Set(guardadas.guardadas.map((g) => g.ruta))}
           alVolver={() => setCampanaAbierta(false)}
           alAbrirRuta={(ruta) => abrirRuta(ruta)}
         />
@@ -580,6 +607,7 @@ export function Ontoy({
           alVerAvisos={abrirCampana}
           deNoche={deNoche}
           alAlternarPiel={alternarPiel}
+          rutasAbiertas={rutasAbiertas}
         />
       )}
 
@@ -659,6 +687,7 @@ export function Ontoy({
           error={listaDeLaCiudad.error}
           alReintentar={listaDeLaCiudad.reintentar}
           alAbrirRuta={abrirRuta}
+          alVerTodasLasRutas={verTodasLasRutas}
         />
       )}
 

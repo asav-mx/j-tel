@@ -21,17 +21,21 @@ import { encontre } from "@/lib/ontoy/encontre";
  * 22-sep-2026). La lista completa de la ciudad vive en Inicio, con sus rutas
  * ordenadas por cercanía — aquí tenía un botón y allá está la lista de verdad.
  *
- * ## Lo que esta pantalla NO hace todavía, dicho en la pantalla
+ * ## El planeador no está, y tampoco se anuncia (ASAV, 25-sep)
  *
  * Aquí va a vivir el **planeador** (8.16): a dónde vas, y la app arma el viaje
- * con o sin transbordo. No está, y **no se finge**. El planeador necesita
- * recorridos medidos —cuánto tarda de verdad cada tramo— y hasta que existan,
- * un total sería una llegada inventada (8.9, 8.16 regla 4). Mientras tanto
- * esto contesta la pregunta más chica que sí se puede contestar sin mentir:
- * *dónde está esa parada y qué ruta pasa por ella*.
+ * con o sin transbordo. No está, y **no se finge**: sin recorridos medidos un
+ * total sería una llegada inventada (8.9, 8.16 regla 4). Hasta el 25-sep la
+ * pantalla lo explicaba en un párrafo al pie; se quitó, porque la versión 1 no
+ * promete el planeador (tampoco la landing) y un párrafo sobre lo que no hay
+ * le quitaba el lugar a lo que sí hay.
  *
- * Esto **no es un lugar reservado**: es una pantalla que sirve hoy y que va a
- * crecer. Por eso no dice «llega pronto» y ya, sino qué hace y qué le falta.
+ * ## Cuando no encuentra nada, una salida (3-ir-a/13)
+ *
+ * Ontoy triste dice qué no encontró, propone qué escribir y ofrece **«Ver
+ * todas las rutas»**, que lleva a la lista de Inicio: ahí viven todas (Marco
+ * 8.8, segunda enmienda del 22-sep). Una búsqueda sin resultados no es un
+ * callejón (8.10).
  *
  * ## El límite se declara
  *
@@ -54,6 +58,7 @@ export function VistaIrA({
   error,
   alReintentar,
   alAbrirRuta,
+  alVerTodasLasRutas,
 }: {
   rutas: RutaDeLaCiudad[];
   /** Las paradas públicas de la ciudad. Vacío mientras bajan. */
@@ -64,6 +69,8 @@ export function VistaIrA({
   error: boolean;
   alReintentar: () => void;
   alAbrirRuta: (circuitoId: string, parada?: string, sentido?: "ida" | "vuelta") => void;
+  /** Lleva a la lista de rutas de Inicio: la salida de una búsqueda sin resultados. */
+  alVerTodasLasRutas: () => void;
 }) {
   const [consulta, setConsulta] = useState("");
 
@@ -157,11 +164,13 @@ export function VistaIrA({
             <p className="ontoy-vacio">Buscando…</p>
           ) : sugerencias.length === 0 ? (
             <div className="ontoy-ira-nada">
-              <Ontoy pose="triste" tamano={64} />
-              <p className="ontoy-vacio">
-                No encontré ninguna parada ni ruta con ese nombre. Prueba con el nombre de la calle —
-                o mira en <b>Inicio</b>, que están todas las rutas de la ciudad.
-              </p>
+              <Ontoy pose="triste" tamano={120} />
+              <p className="ontoy-ira-nada-titulo">No encontré «{consulta.trim()}».</p>
+              {/* Sin «el número de la ruta»: las rutas no tienen número en la versión 1. */}
+              <p className="ontoy-ira-nada-apoyo">Prueba con el nombre de tu parada o de la ruta.</p>
+              <button type="button" className="ontoy-boton-contorno" onClick={alVerTodasLasRutas}>
+                Ver todas las rutas
+              </button>
             </div>
           ) : (
             <>
@@ -228,11 +237,13 @@ export function VistaIrA({
 
       </section>
 
+      {/*
+        * Lo único que queda al pie es lo de privacidad: el PARA QUÉ de lo que
+        * escribes, donde lo escribes, y la liga (a «Ir a» se llega sin pasar
+        * por Inicio).
+        */}
       <p className="ontoy-pie">
-        Aquí va a vivir el <b>planeador</b>: a dónde vas, y la app te arma el viaje, con o sin
-        transbordo. Llega cuando estén medidos los recorridos de cada tramo — antes de eso
-        cualquier total sería una llegada inventada. Lo que escribes se usa para encontrar tu
-        parada, y no se guarda.{" "}
+        Lo que escribes se usa para encontrar tu parada, y no se guarda.{" "}
         <a href="/privacidad">Qué datos usa la app y para qué</a>.
       </p>
     </div>

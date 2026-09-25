@@ -70,8 +70,8 @@ export default function Privacidad() {
       <section>
         <h2>Tu ubicación</h2>
         <p>
-          La app no te pide tu ubicación al abrir. Te la pide cuando tocas «Ver paradas cerca de mí»; si ya se la
-          habías dado antes, la usa sin volver a preguntar.
+          La app no te pide tu ubicación al abrir. Te la pide una sola vez, cuando tocas «Usar mi ubicación» en la
+          tarjeta de bienvenida de Inicio; si ya se la habías dado antes, la usa sin volver a preguntar.
         </p>
         <p>
           Si das permiso, la app lee tu ubicación para enseñarte las paradas que tienes cerca, para marcar dónde
@@ -86,6 +86,37 @@ export default function Privacidad() {
         <p>
           Si no das permiso, la app sigue funcionando: ves las rutas, las paradas y los camiones en vivo; sólo no se
           calculan las paradas cerca de ti, ni dónde estás sobre la ruta, ni la llegada hasta ti. Puedes quitar el permiso cuando quieras desde los ajustes de tu teléfono.
+        </p>
+        <p>
+          Si dijiste que no y cambias de idea, dale permiso de ubicación a esta app en los ajustes de tu teléfono o de
+          tu navegador.
+        </p>
+      </section>
+
+      {/*
+        Lo que Inicio explicaba en tres párrafos debajo de las rutas (ASAV,
+        25-sep): lo que es ley vive aquí, no en la pantalla. Inicio dice sólo
+        el orden —«en línea recta» o «en orden alfabético»— junto al título.
+      */}
+      <section>
+        <h2>Las rutas que ves en Inicio</h2>
+        <p>
+          Con tu ubicación, las rutas se ordenan por la parada más cercana a ti, y ésa es la que se abre al tocarlas.
+          La distancia es en línea recta, no caminando. Sin tu ubicación, van en orden alfabético y la app funciona
+          igual.
+        </p>
+        <p>
+          El color de cada ruta es el que sus camiones traen pintado en la calle: la app lo registra, no lo inventa.
+          Sólo se muestran rutas publicadas.
+        </p>
+      </section>
+
+      <section>
+        <h2>Lo que escribes en «Ir a»</h2>
+        <p>
+          El buscador de «Ir a» compara lo que escribes con la lista de paradas y rutas que tu teléfono ya bajó —la
+          misma para todos—. Lo que escribes se usa para encontrar tu parada, no se manda a nuestro servidor y no se
+          guarda.
         </p>
       </section>
 

@@ -88,6 +88,7 @@
     --texto: var(--hueso);
     --tenue: var(--arena-2);
     --tinta-sobre-texto: var(--carbon);
+    --borde-carbon: var(--noche-3);
     --sombra-hoja: 0 -18px 48px rgba(0, 0, 0, 0.5);
   }
 }
@@ -100,6 +101,7 @@
   --texto: var(--hueso);
   --tenue: var(--arena-2);
   --tinta-sobre-texto: var(--carbon);
+  --borde-carbon: var(--noche-3);
   --sombra-hoja: 0 -18px 48px rgba(0, 0, 0, 0.5);
 }
 
@@ -403,42 +405,6 @@
   color: var(--tenue);
 }
 
-/* ── el atajo de una parada guardada (8.8b) ─────────────────────────── */
-.ontoy-atajo {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--linea);
-  border-radius: 16px;
-  background: var(--panel);
-  padding: 15px 16px 13px;
-  margin-bottom: 10px;
-}
-/* La franja del color de la ruta: identidad, y el nombre va al lado (8.8c). */
-.ontoy-atajo::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 5px;
-  background: var(--ruta);
-}
-.ontoy-atajo-cabeza {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.ontoy-atajo-nombre {
-  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
-  font-weight: 700;
-  font-size: 16px;
-  color: inherit;
-  background: none;
-  border: 0;
-  padding: 0;
-  text-align: left;
-  cursor: pointer;
-}
 .ontoy-estrella {
   margin-left: auto;
   color: var(--ruta);
@@ -449,49 +415,7 @@
   display: grid;
   place-items: center;
 }
-.ontoy-atajo-ruta {
-  font-size: 12.5px;
-  color: var(--tenue);
-  margin: 2px 0 12px;
-}
-.ontoy-atajo-ruta b {
-  color: var(--texto);
-  font-weight: 600;
-}
-.ontoy-atajo-eta {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.ontoy-eta-num {
-  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
-  font-weight: 700;
-  font-size: 32px;
-  letter-spacing: -0.01em;
-  font-variant-numeric: tabular-nums;
-}
-.ontoy-eta-quieta {
-  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
-  font-weight: 600;
-  font-size: 18px;
-  color: var(--tenue);
-}
-/* El dato viejo (8.9): en pasado, sin número grande, con su edad. */
-.ontoy-eta-vieja {
-  display: block;
-  font-size: 14px;
-  color: var(--tenue);
-}
-.ontoy-eta-vieja b {
-  color: var(--texto);
-  font-weight: 600;
-}
-.ontoy-eta-edad {
-  display: block;
-  margin-top: 3px;
-  font-size: 12px;
-}
+
 /* La forma carga el estado: anillo hueco, sin latido — distinto del punto vivo aunque no se vea el color. */
 .ontoy-punto-viejo {
   display: inline-block;
@@ -502,14 +426,7 @@
   margin-right: 6px;
   vertical-align: 0;
 }
-.ontoy-eta-apoyo {
-  font-size: 13px;
-  color: var(--tenue);
-}
-.ontoy-eta-apoyo b {
-  color: var(--texto);
-  font-weight: 600;
-}
+
 /* El punto verde: lo ÚNICO que dice «esto está vivo ahora». */
 .ontoy-punto-vivo {
   display: inline-block;
@@ -530,29 +447,9 @@
     opacity: 0.35;
   }
 }
-.ontoy-atajo-tuyo {
-  margin-top: 10px;
-  padding-top: 9px;
-  border-top: 1px solid var(--linea);
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-.ontoy-et {
-  font-family: var(--fuente-texto), system-ui, sans-serif;
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--tenue);
-}
-.ontoy-atajo-tuyo b {
-  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
-  font-size: 17px;
-  font-variant-numeric: tabular-nums;
-}
+
 /* La promesa, SIEMPRE, y separada por su línea punteada (8.2, 8.3). */
-.ontoy-atajo-promesa,
+
 .ontoy-hoja-promesa {
   margin: 11px 0 0;
   padding-top: 10px;
@@ -568,94 +465,9 @@
   gap: 12px;
 }
 
-/* ── la lista de rutas ──────────────────────────────────────────────── */
-.ontoy-ruta {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  width: 100%;
-  padding: 13px 14px;
-  margin-bottom: 9px;
-  border: 1px solid var(--linea);
-  border-radius: 14px;
-  background: var(--panel);
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.ontoy-ruta-color {
-  width: 14px;
-  height: 44px;
-  border-radius: 5px;
-  flex: none;
-}
-.ontoy-ruta-info {
-  flex: 1;
-  min-width: 0;
-}
-.ontoy-ruta-nombre {
-  display: block;
-  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
-  font-weight: 600;
-  font-size: 15px;
-}
-.ontoy-ruta-sub {
-  display: block;
-  font-size: 12.5px;
-  color: var(--tenue);
-  margin-top: 2px;
-}
-/* Por dónde se toma la ruta: el lugar y su número, en el mismo renglón. */
-.ontoy-ruta-entrada {
-  display: block;
-  font-size: 12.5px;
-  color: var(--tenue);
-  margin-top: 3px;
-}
-.ontoy-ruta-entrada b {
-  color: var(--texto);
-  font-weight: 600;
-}
-.ontoy-inicio-invitacion {
-  padding: 0 18px;
-  margin: 14px 0 2px;
-}
 .ontoy-chevron {
   color: var(--tenue);
   flex: none;
-}
-
-/* ── las rutas en Inicio: el botón que despliega el resto ───────────── */
-.ontoy-desplegar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  width: 100%;
-  padding: 12px 14px;
-  margin: 2px 0 0;
-  /* Punteado: no es una acción de la pantalla, es un cajón que se abre. */
-  border: 1.5px dashed var(--linea);
-  border-radius: 12px;
-  background: transparent;
-  color: var(--texto);
-  font-family: var(--fuente-texto), sans-serif;
-  font-weight: 600;
-  font-size: 13.5px;
-  cursor: pointer;
-  /* 44: el mínimo del estándar. Medía menos y se toca de pie. */
-  min-height: 44px;
-}
-.ontoy-desplegar:hover {
-  border-color: var(--texto);
-}
-.ontoy-desplegar-flecha {
-  color: var(--tenue);
-  font-size: 12px;
-}
-.ontoy-rutas-nota {
-  margin-top: 11px;
 }
 
 /* ── mapa ───────────────────────────────────────────────────────────── */
@@ -1873,25 +1685,6 @@
   text-decoration: none;
 }
 
-/*
- * **Los estados de Inicio se SUMAN, no reemplazan.** Sin red y de noche ponen
- * su renglón arriba y dejan las rutas abajo: la promesa publicada no depende de
- * la red (8.2), y a las 2 de la mañana lo que alguien viene a mirar es
- * justamente el horario.
- */
-.ontoy-inicio-estado {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 18px 6px;
-}
-.ontoy-inicio-estado-dicho {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.4;
-  color: var(--tenue);
-  text-wrap: pretty;
-}
 .ontoy-muneco {
   flex: none;
   display: block;
@@ -2047,12 +1840,42 @@
  */
 .ontoy-ira-nada {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-top: 40px;
+  text-align: center;
 }
-.ontoy-ira-nada .ontoy-vacio {
+.ontoy-ira-nada-titulo {
+  margin: 8px 0 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.ontoy-ira-nada-apoyo {
   margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--tenue);
+  text-wrap: pretty;
+}
+/* El botón de contorno del diseño: una salida, no la acción principal de la pantalla. */
+.ontoy-boton-contorno {
+  margin-top: 10px;
+  min-height: 52px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--texto);
+  color: var(--texto);
+  font-family: var(--fuente-texto), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
 }
 
 /* ── las pantallas de estado completo (§G) ─────────────────────────────── */
@@ -2122,12 +1945,6 @@
 
 /* ── «Tus paradas»: el orden, la papelera y su deshacer ────────────────── */
 
-.ontoy-seccion-cabeza {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
 .ontoy-seccion-mas {
   flex: none;
   border: 0;
@@ -2316,6 +2133,224 @@
   padding-top: 8px;
 }
 
+/* ── Inicio como app-v1 (25-sep): la tarjeta de Ontoy, renglones compactos ── */
+/*
+ * **«Tu próximo camión»: la tarjeta carbón**, una por pantalla. Carbón también
+ * de noche —como las placas—, con el borde azul noche que la separa del fondo.
+ */
+.ontoy-proximo {
+  margin: 12px 18px 4px;
+  padding: 18px 18px 16px;
+  border-radius: 26px;
+  background: var(--carbon);
+  color: var(--hueso);
+  box-shadow: 0 0 0 1px var(--borde-carbon, transparent);
+}
+.ontoy-proximo-cabeza {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.ontoy-proximo-parada {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ontoy-proximo-nombre {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.ontoy-proximo-ruta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--arena-2);
+}
+/* La franja del color de la ruta: identidad, y su nombre al lado (8.8c). */
+.ontoy-franja {
+  flex: none;
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ruta);
+}
+.ontoy-proximo .ontoy-estrella {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: -8px -10px 0 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  color: var(--maiz);
+  cursor: pointer;
+}
+.ontoy-proximo-dicho {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+}
+.ontoy-proximo-frase {
+  margin: 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.ontoy-proximo-apoyo {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--arena-2);
+  text-wrap: pretty;
+}
+.ontoy-proximo-tuyo {
+  margin: 14px 0 0;
+  font-size: 14px;
+}
+.ontoy-proximo .ontoy-porque {
+  color: var(--arena-2);
+}
+/* La promesa, separada de lo medido por su raya (8.3), como en el diseño. */
+.ontoy-proximo-promesa {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--asfalto);
+  font-size: 13px;
+  color: var(--arena-2);
+}
+
+/* Los títulos de sección de Inicio, como el diseño: 800 20, en tipo oración. */
+.ontoy-inicio-seccion-cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 4px 0 12px;
+}
+.ontoy-inicio-seccion-titulo {
+  margin: 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  /* El título no se parte: si el contexto no cabe al lado, baja a su renglón. */
+  white-space: nowrap;
+}
+.ontoy-inicio-seccion-contexto {
+  font-size: 13px;
+  color: var(--tenue);
+}
+.ontoy-liga {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--texto);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* **Renglones compactos**, en una sola caja con sus rayas: no una tarjeta por cosa. */
+.ontoy-renglones {
+  border: 1px solid var(--linea);
+  border-radius: 22px;
+  background: var(--panel);
+  overflow: hidden;
+}
+/* El enlace discreto de «Ver todas las rutas»: texto, no botón (44 px de toque igual). */
+.ontoy-renglones-mas {
+  margin: 4px 0 0;
+  text-align: center;
+}
+.ontoy-renglones-mas .ontoy-liga {
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--tenue);
+}
+
+.ontoy-renglon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 0;
+  background: none;
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ontoy-renglon + .ontoy-renglon {
+  box-shadow: 0 -1px 0 var(--linea);
+}
+.ontoy-franja-vertical {
+  flex: none;
+  align-self: stretch;
+  width: 5px;
+  border-radius: 3px;
+  background: var(--ruta);
+}
+.ontoy-renglon-texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ontoy-renglon-titulo {
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.25;
+}
+.ontoy-renglon-sub {
+  font-size: 13px;
+  color: var(--tenue);
+}
+.ontoy-renglon-sub b {
+  color: var(--texto);
+}
+.ontoy-renglon-dato {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: 45%;
+  font-size: 12px;
+  color: var(--tenue);
+  text-align: right;
+}
+.ontoy-renglon-dato b {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  color: var(--texto);
+}
+
 /* ── la puerta a los avisos en Inicio: lo que era la campana (25-sep) ── */
 .ontoy-puerta-avisos {
   display: flex;
@@ -2378,63 +2413,84 @@
 
 /* ── los avisos: fechados, atribuidos y nunca de alarma ──────────────── */
 .ontoy-aviso {
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 6px;
   width: 100%;
-  padding: 12px 14px 12px 18px;
-  margin-bottom: 9px;
+  padding: 14px 16px 16px;
+  margin-bottom: 10px;
   border: 1px solid var(--linea);
-  border-radius: 14px;
+  border-radius: 18px;
   background: var(--panel);
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
-/* La franja del color de la ruta: identidad, con su nombre al lado (8.8c). */
-.ontoy-aviso::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 9px;
-  bottom: 9px;
-  width: 4px;
-  border-radius: 0 3px 3px 0;
-  background: var(--ruta);
-}
 .ontoy-aviso-telefono {
   cursor: default;
   border-style: dashed;
 }
-.ontoy-aviso-telefono::before {
-  display: none;
-}
+/* «Hoy 9:10 · según la concesión», y el punto de nuevo a la derecha (3-ir-a/14). */
 .ontoy-aviso-cuando {
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--tenue);
-}
-.ontoy-aviso-ruta {
-  font-size: 12px;
-  color: var(--tenue);
-}
-.ontoy-aviso-ruta b {
-  color: var(--texto);
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
   font-weight: 600;
+  color: var(--tenue);
 }
+.ontoy-aviso-nuevo {
+  flex: none;
+  margin-left: auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--texto);
+}
+/* La placa y el título en un renglón; la placa no se encoge. */
 .ontoy-aviso-titulo {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
-  font-weight: 700;
-  font-size: 15px;
-  margin-top: 3px;
+  font-weight: 800;
+  font-size: 17px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.ontoy-aviso-titulo .ontoy-placa {
+  flex: none;
+}
+.ontoy-aviso-titulo > span:last-child {
+  padding-top: 4px;
 }
 .ontoy-aviso-detalle {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--tenue);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--texto);
+}
+/* La cabeza de Avisos: «← Inicio» arriba, y el título con todo el ancho debajo. */
+.ontoy-avisos-cabeza {
+  padding: 12px 18px 14px;
+  /* La esquina derecha es de Ontoy asomado. */
+  padding-right: 78px;
+}
+.ontoy-avisos-volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin: 0 0 6px -4px;
+  padding: 0 8px 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
 }
 .ontoy-aviso-hasta {
   font-size: 11px;
