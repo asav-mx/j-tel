@@ -5,14 +5,6 @@ import { promesaConSusFronteras } from "@/lib/promesa";
 import type { RutaDeLaCiudad, Sentido } from "@/lib/ontoy/forma";
 import type { EstadoDeRuta } from "@/lib/ontoy/estado-de-ruta";
 
-/**
- * El nombre de la app, **de configuración y nunca del código**
- * (`NEXT_PUBLIC_APP_NOMBRE=Ontoy`). El mismo que titula la pestaña y nombra la
- * app instalada. Esta app sirve a cualquier concesionario invitado, y hornear un
- * nombre convertiría el alta del siguiente en un despliegue.
- */
-export const NOMBRE_DE_LA_APP = process.env.NEXT_PUBLIC_APP_NOMBRE ?? "Transporte público";
-
 export interface CiudadPublicada {
   rutas: RutaDeLaCiudad[];
   estados: EstadoDeRuta[];

@@ -1,7 +1,7 @@
 /*
  * El service worker de la app del pasajero.
  *
- * Hace tres cosas y ninguna más:
+ * Hace cuatro cosas y ninguna más:
  *
  *  1. **Guarda el cascarón** para que la app ABRA sin red. Abrir y decir «no
  *     tengo dato» es honesto; el dinosaurio del navegador se lee como «esta app
@@ -11,6 +11,11 @@
  *     es una posición vieja dibujada en un mapa en vivo, y eso se lee como «va
  *     llegando» cuando el camión pasó hace veinte minutos. Las consultas vivas
  *     (`VIVO`, abajo) pasan derecho a la red, siempre.
+ *  4. **En lugar del dinosaurio, SIN SEÑAL** (3-ir-a/16; ASAV, 25-sep-2026).
+ *     Cuando una página no abre sin red y no hay copia guardada de ella, manda
+ *     a `/sin-senal?desde=‹la página›`: Ontoy ondulado, de cuándo es lo último
+ *     que se supo, y un botón. Ver `guardarSinSenal`, abajo, por qué se guarda
+ *     con sus piezas.
  *
  * ✎ **El mapa sin señal, y por qué NO se baja la ciudad completa** (ASAV,
  * 25-sep-2026).
@@ -62,9 +67,17 @@ const VIVO = ["/unidades", "/api/circuitos/en-vivo"];
    ✎ v6, el mismo día: sube porque nace la caché del mapa. La de la v5 no
    estorbaría, pero dejarla obliga a acordarse de ella; subir la versión la borra
    sola. */
-const VERSION = "v6";
+/* ✎ v7 (25-sep-2026): sube porque nace SIN SEÑAL, y un teléfono con el
+   service worker de antes no la tendría guardada. **El mapa ya no sube con
+   ella**: son dos versiones desde aquí. Subir la del cascarón sólo vuelve a
+   bajar unas cuantas páginas; subir la del mapa tiraría los pedazos que el
+   pasajero ya miró, que es justo lo que le sirve sin señal. */
+const VERSION = "v7";
 const CASCARON = `cascaron-${VERSION}`;
-const MAPA = `mapa-${VERSION}`;
+const MAPA = "mapa-v6";
+
+/** Dónde vive la pantalla. La misma cadena que `DIRECCION_SIN_SENAL` (lo compara `sw.test.ts`). */
+const SIN_SENAL = "/sin-senal";
 
 /*
  * Cuántos pedazos del mapa se guardan. Cada uno pesa entre 10 y 60 KB, así que
@@ -82,7 +95,11 @@ self.addEventListener("install", (evento) => {
     caches
       .open(CASCARON)
       .then((c) =>
-        c.addAll(["/rutas", "/", "/validador", "/icono.svg", "/manifest.webmanifest"]),
+        c
+          .addAll(["/rutas", "/", "/validador", "/icono.svg", "/manifest.webmanifest"])
+          /* SIN SEÑAL no tumba la instalación si falla: sin ella queda el
+             dinosaurio de siempre, no una app sin service worker. */
+          .then(() => guardarSinSenal(c).catch(() => {})),
       ),
   );
   self.skipWaiting();
@@ -90,8 +107,8 @@ self.addEventListener("install", (evento) => {
 
 self.addEventListener("activate", (evento) => {
   evento.waitUntil(
-    caches
-      .keys()
+    heredarCodigo()
+      .then(() => caches.keys())
       .then((llaves) =>
         Promise.all(
           llaves.filter((k) => k !== CASCARON && k !== MAPA).map((k) => caches.delete(k)),
@@ -100,6 +117,42 @@ self.addEventListener("activate", (evento) => {
       .then(() => self.clients.claim()),
   );
 });
+
+/*
+ * Cuántos archivos de código pasan de un cascarón al siguiente. La app baja unas
+ * dos docenas por compilación, así que 150 alcanzan para varias sin que la caché
+ * crezca sin fin: cada versión sólo hereda los más recientes de la anterior.
+ */
+const TOPE_HEREDADAS = 150;
+
+/**
+ * **Al estrenar cascarón, el código guardado se hereda; no se tira.**
+ *
+ * ✎ 25-sep-2026, el defecto que lo trajo: la v7 (#594) borró `cascaron-v6`
+ * entera, y ahí vivía **el código que dibuja el mapa**. Leaflet y protomaps se
+ * bajan aparte, sólo al abrir el Mapa. Los pedazos del mapa sobrevivieron en
+ * `mapa-v6`, pero sin el código que los dibuja no sirven: en un Android en modo
+ * avión el Mapa salió en blanco (ASAV). Se reprodujo borrando esos dos archivos
+ * de la caché, con la red cortada de verdad: el mismo mapa en blanco.
+ *
+ * Lo que se hereda es sólo `/_next/static/`: esos archivos llevan la huella de
+ * su contenido en el nombre, así que uno guardado nunca queda viejo. Es lo que
+ * NO puede heredarse lo que sí se tira: las páginas y la forma de las rutas, que
+ * cambian bajo la misma dirección.
+ */
+async function heredarCodigo() {
+  const nuevo = await caches.open(CASCARON);
+  for (const nombre of await caches.keys()) {
+    if (nombre === CASCARON || !nombre.startsWith("cascaron-")) continue;
+    const viejo = await caches.open(nombre);
+    const codigo = (await viejo.keys()).filter((k) => new URL(k.url).pathname.startsWith("/_next/static/"));
+    for (const llave of codigo.slice(-TOPE_HEREDADAS)) {
+      if (await nuevo.match(llave)) continue;
+      const guardada = await viejo.match(llave);
+      if (guardada) await nuevo.put(llave, guardada);
+    }
+  }
+}
 
 self.addEventListener("fetch", (evento) => {
   const url = new URL(evento.request.url);
@@ -130,14 +183,73 @@ self.addEventListener("fetch", (evento) => {
     evento.respondWith(
       fetch(evento.request)
         .then((r) => {
-          const copia = r.clone();
-          caches.open(CASCARON).then((c) => c.put(evento.request, copia));
+          /* Sólo lo que salió bien. Un 500 guardado encima de la copia buena
+             sería, sin señal, «lo último que supe» enseñando una página de
+             error. */
+          if (r.ok) {
+            const copia = r.clone();
+            caches.open(CASCARON).then((c) => c.put(evento.request, copia));
+          }
           return r;
         })
-        .catch(() => caches.match(evento.request).then((r) => r ?? Response.error())),
+        .catch(() =>
+          caches
+            .match(evento.request)
+            .then((r) => r ?? (evento.request.mode === "navigate" ? sinSenal(url) : Response.error())),
+        ),
     );
   }
 });
+
+/* ── SIN SEÑAL ──────────────────────────────────────────────────────────── */
+
+/**
+ * Una página que no abrió y no tiene copia: **a SIN SEÑAL, diciendo de dónde
+ * venía**, para que al volver la red la pantalla regrese ahí.
+ *
+ * Se redirige en vez de contestar con la pantalla bajo la dirección pedida
+ * porque la pantalla es una página de Next, y Next se acomoda a la dirección
+ * con la que se armó: servida bajo `/p/‹parada›` podría reescribir la barra y
+ * perder a dónde regresar.
+ *
+ * Y si lo que falló es la pantalla misma —la redirección de arriba, sin red—,
+ * se sirve la guardada sin mirar la consulta: se guardó sin `?desde=`.
+ */
+function sinSenal(url) {
+  return caches.match(SIN_SENAL).then((guardada) => {
+    if (!guardada) return Response.error();
+    if (url.pathname === SIN_SENAL) return guardada;
+    const destino = new URL(SIN_SENAL, self.location.origin);
+    destino.searchParams.set("desde", url.pathname + url.search);
+    return Response.redirect(destino.toString(), 302);
+  });
+}
+
+/**
+ * Guarda SIN SEÑAL **con todas sus piezas**: su HTML y cada archivo de
+ * `/_next/static/` que nombra (su hoja de estilos, su letra, su código).
+ *
+ * Guardar sólo el HTML no alcanza, y así es como falla: esas piezas llevan la
+ * huella de la compilación en el nombre, y sin red nada garantiza que las de
+ * ESTA compilación estén en la caché — quizá el pasajero sólo las vio después de
+ * un despliegue. La pantalla saldría sin letra y sin estilo, o sin código, justo
+ * el día que hace falta. Bajadas juntas, son de la misma compilación.
+ *
+ * **No gasta de más:** es lo que la página que se estaba viendo ya bajó —la
+ * misma hoja, la misma letra—, así que el navegador lo saca de su propia caché.
+ * Lo único nuevo son la pantalla y su pedazo de código: unos cuantos KB.
+ */
+async function guardarSinSenal(cache) {
+  const respuesta = await fetch(SIN_SENAL);
+  if (!respuesta.ok) return;
+  const html = await respuesta.clone().text();
+  /* Se corta en la diagonal invertida: dentro de la carga de Next las
+     direcciones vienen escapadas (`\"/_next/...\"`). */
+  const piezas = [...new Set(html.match(/\/_next\/static\/[^"'\s)\\]+/g) ?? [])];
+  await cache.addAll(piezas);
+  /* La pantalla va al final: guardada sin sus piezas sería peor que no tenerla. */
+  await cache.put(SIN_SENAL, respuesta);
+}
 
 /* ── El mapa, pedazo por pedazo ─────────────────────────────────────────── */
 

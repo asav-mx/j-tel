@@ -4,6 +4,7 @@ import { runInNewContext } from "node:vm";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { MAPA_DE_LA_CIUDAD, direccionDelMapa } from "@/lib/ontoy/mapa-base";
+import { DIRECCION_SIN_SENAL } from "@/lib/ontoy/sin-senal";
 
 /*
  * «Lo vivo no se cachea» — la regla del service worker, probada EJECUTÁNDOLO.
@@ -252,5 +253,271 @@ describe("el mapa sin señal: se guarda lo que el pasajero ya miró", () => {
     await pedir(ARCHIVO, 100, 199);
     await respiro();
     expect([...guardadas.keys()]).toEqual([`${ORIGEN}${ARCHIVO}?desde=100&hasta=199`]);
+  });
+});
+
+/*
+ * **SIN SEÑAL, en lugar del dinosaurio** (3-ir-a/16; ASAV, 25-sep-2026),
+ * probado corriendo el service worker contra una caché que guarda y una red que
+ * se apaga.
+ *
+ * ## Qué NO prueba
+ *
+ * **No prueba que la pantalla se vea** ni que Next la hidrate servida desde la
+ * caché. Eso se comprobó en el navegador, con la red apagada, y está en el PR.
+ */
+function cargarNavegando(inicial: Record<string, Response> = {}) {
+  const manejadores: Record<string, (e: unknown) => void> = {};
+  const self = {
+    addEventListener: (tipo: string, f: (e: unknown) => void) => (manejadores[tipo] = f),
+    location: new URL(ORIGEN),
+    skipWaiting: () => {},
+    clients: { claim: () => Promise.resolve() },
+  };
+
+  /** Las llaves son la dirección completa, con consulta: como la caché de verdad. */
+  const guardadas = new Map<string, Response>(
+    Object.entries(inicial).map(([ruta, r]) => [ORIGEN + ruta, r]),
+  );
+  const llave = (p: Request | string) => (typeof p === "string" ? new URL(p, ORIGEN).href : p.url);
+  const cache = {
+    match: async (p: Request | string) => guardadas.get(llave(p))?.clone(),
+    put: async (p: Request | string, r: Response) => void guardadas.set(llave(p), r),
+    addAll: async (rutas: string[]) => {
+      for (const ruta of rutas) guardadas.set(llave(ruta), new Response(`pieza ${ruta}`));
+    },
+    keys: async () => [...guardadas.keys()].map((u) => new Request(u)),
+    delete: async (p: Request) => guardadas.delete(p.url),
+  };
+  const caches = {
+    open: async () => cache,
+    match: cache.match,
+    keys: async () => [],
+    delete: async () => true,
+  };
+
+  /** La red: contesta lo que se le diga, y se puede apagar. */
+  const red = { hay: true, paginas: {} as Record<string, Response> };
+  const fetchFalso = async (p: Request | string) => {
+    if (!red.hay) throw new Error("sin red");
+    const url = new URL(llave(p));
+    return red.paginas[url.pathname]?.clone() ?? new Response("ok");
+  };
+
+  runInNewContext(SW, { self, URL, caches, fetch: fetchFalso, Response, Request, Headers, console });
+
+  /** Abre una página como la abre el navegador (`mode: "navigate"`). */
+  const navegar = async (ruta: string, modo = "navigate") => {
+    let respuesta: Promise<Response> | null = null;
+    manejadores.fetch!({
+      request: { url: ORIGEN + ruta, method: "GET", mode: modo, headers: new Headers() },
+      respondWith: (r: Promise<Response>) => {
+        respuesta = r;
+      },
+    });
+    return respuesta ? await (respuesta as Promise<Response>) : null;
+  };
+
+  const instalar = async () => {
+    let espera: Promise<unknown> = Promise.resolve();
+    manejadores.install!({ waitUntil: (p: Promise<unknown>) => (espera = p) });
+    await espera;
+  };
+
+  return { navegar, instalar, red, guardadas };
+}
+
+const PANTALLA = new Response("<html>Sin señal.</html>");
+
+describe("sin señal y sin copia de la página: SIN SEÑAL, no el dinosaurio", () => {
+  it("manda a la pantalla diciendo de dónde venía, consulta incluida", async () => {
+    const { navegar, red } = cargarNavegando({ "/sin-senal": PANTALLA.clone() });
+    red.hay = false;
+    const r = await navegar("/p/av-tecnologico?sentido=ida");
+    expect(r?.status).toBe(302);
+    const destino = new URL(r!.headers.get("location")!);
+    expect(destino.pathname).toBe("/sin-senal");
+    expect(destino.searchParams.get("desde")).toBe("/p/av-tecnologico?sentido=ida");
+  });
+
+  it("y la pantalla, pedida sin red con su `?desde=`, sale de la caché", async () => {
+    const { navegar, red } = cargarNavegando({ "/sin-senal": PANTALLA.clone() });
+    red.hay = false;
+    const r = await navegar("/sin-senal?desde=%2Fp%2Fav-tecnologico");
+    expect(r?.status).toBe(200);
+    expect(await r!.text()).toBe("<html>Sin señal.</html>");
+  });
+
+  it("si la página SÍ tiene copia, se sirve la copia: es mejor que la pantalla", async () => {
+    const { navegar, red } = cargarNavegando({
+      "/sin-senal": PANTALLA.clone(),
+      "/rutas": new Response("la app de hace rato"),
+    });
+    red.hay = false;
+    const r = await navegar("/rutas");
+    expect(await r!.text()).toBe("la app de hace rato");
+  });
+
+  it("sólo para páginas: un pedazo de código o una consulta que falla no se vuelve pantalla", async () => {
+    const { navegar, red } = cargarNavegando({ "/sin-senal": PANTALLA.clone() });
+    red.hay = false;
+    const r = await navegar("/api/circuitos/zaragoza-centro", "cors");
+    expect(r?.type).toBe("error");
+  });
+
+  it("sin la pantalla guardada, el error de siempre: no hay a dónde mandar", async () => {
+    const { navegar, red } = cargarNavegando();
+    red.hay = false;
+    expect((await navegar("/p/av-tecnologico"))?.type).toBe("error");
+  });
+});
+
+describe("lo que se guarda al andar con señal", () => {
+  it("sólo lo que salió bien: un 500 no pisa la copia buena", async () => {
+    const { navegar, red, guardadas } = cargarNavegando({ "/rutas": new Response("la buena") });
+    red.paginas["/rutas"] = new Response("se cayó", { status: 500 });
+    await navegar("/rutas");
+    await respiro();
+    expect(await guardadas.get(`${ORIGEN}/rutas`)!.clone().text()).toBe("la buena");
+  });
+});
+
+describe("al instalarse, SIN SEÑAL se guarda con sus piezas", () => {
+  /*
+   * Sin sus piezas —la hoja, la letra, el código, que llevan la huella de la
+   * compilación en el nombre— la pantalla saldría sin estilo el día que hace
+   * falta. Aquí se mira que se guarden las que el HTML nombra, incluidas las que
+   * Next mete escapadas dentro de su carga.
+   */
+  const HTML = [
+    '<link rel="stylesheet" href="/_next/static/css/abc123.css">',
+    '<link rel="preload" href="/_next/static/media/bricolage.p.woff2" as="font">',
+    '<script src="/_next/static/chunks/app/sin-senal/page-9f.js"></script>',
+    '<script>self.__next_f.push([1,"2:I[\\"/_next/static/chunks/747-aa.js\\"]"])</script>',
+  ].join("");
+
+  it("la pantalla y cada archivo de `/_next/static/` que nombra", async () => {
+    const { instalar, red, guardadas } = cargarNavegando();
+    red.paginas["/sin-senal"] = new Response(HTML);
+    await instalar();
+    const llaves = [...guardadas.keys()].map((u) => new URL(u).pathname);
+    expect(llaves).toEqual(
+      expect.arrayContaining([
+        "/sin-senal",
+        "/_next/static/css/abc123.css",
+        "/_next/static/media/bricolage.p.woff2",
+        "/_next/static/chunks/app/sin-senal/page-9f.js",
+        "/_next/static/chunks/747-aa.js",
+      ]),
+    );
+    expect(llaves.some((l) => l.includes("\\")), "una pieza cortada en la diagonal").toBe(false);
+  });
+
+  it("si la pantalla no baja, la instalación sigue: queda el dinosaurio, no una app sin service worker", async () => {
+    const { instalar, red, guardadas } = cargarNavegando();
+    red.paginas["/sin-senal"] = new Response("caída", { status: 500 });
+    await instalar();
+    expect(guardadas.has(`${ORIGEN}/sin-senal`)).toBe(false);
+    expect(guardadas.has(`${ORIGEN}/rutas`)).toBe(true);
+  });
+
+  it("el service worker y la app nombran la misma dirección", () => {
+    expect(/const SIN_SENAL = "([^"]+)"/.exec(SW)?.[1]).toBe(DIRECCION_SIN_SENAL);
+  });
+
+  it("subir el cascarón no tira el mapa que el pasajero ya miró", () => {
+    /* Eran la misma versión hasta la v6: cada cambio al cascarón borraba los
+       pedazos del mapa, que es justo lo que sirve sin señal. */
+    expect(SW).toMatch(/const MAPA = "mapa-v\d+";/);
+  });
+});
+
+/*
+ * **Al estrenar cascarón, el código se hereda** — el defecto del 25-sep: la v7
+ * borró la v6 entera, con ella el código del mapa (Leaflet y protomaps, que se
+ * bajan aparte al abrir el Mapa), y sin red el Mapa salió en blanco.
+ */
+function cargarConVariasCaches(inicial: Record<string, Record<string, string>>) {
+  const manejadores: Record<string, (e: unknown) => void> = {};
+  const self = {
+    addEventListener: (tipo: string, f: (e: unknown) => void) => (manejadores[tipo] = f),
+    location: new URL(ORIGEN),
+    skipWaiting: () => {},
+    clients: { claim: () => Promise.resolve() },
+  };
+  const almacen = new Map<string, Map<string, Response>>();
+  const abrir = (nombre: string) => {
+    if (!almacen.has(nombre)) almacen.set(nombre, new Map());
+    const m = almacen.get(nombre)!;
+    const llave = (p: Request | string) => (typeof p === "string" ? new URL(p, ORIGEN).href : p.url);
+    return {
+      match: async (p: Request | string) => m.get(llave(p))?.clone(),
+      put: async (p: Request | string, r: Response) => void m.set(llave(p), r),
+      keys: async () => [...m.keys()].map((u) => new Request(u)),
+      delete: async (p: Request | string) => m.delete(llave(p)),
+    };
+  };
+  for (const [nombre, entradas] of Object.entries(inicial)) {
+    const m = new Map<string, Response>();
+    for (const [ruta, cuerpo] of Object.entries(entradas)) m.set(ORIGEN + ruta, new Response(cuerpo));
+    almacen.set(nombre, m);
+  }
+  const caches = {
+    open: async (n: string) => abrir(n),
+    keys: async () => [...almacen.keys()],
+    delete: async (n: string) => almacen.delete(n),
+    match: async () => undefined,
+  };
+  runInNewContext(SW, { self, URL, caches, fetch: () => Promise.reject(new Error("sin red")), Response, Request, Headers, console });
+  const activar = async () => {
+    let espera: Promise<unknown> = Promise.resolve();
+    manejadores.activate!({ waitUntil: (p: Promise<unknown>) => (espera = p) });
+    await espera;
+  };
+  const rutas = (nombre: string) => [...(almacen.get(nombre)?.keys() ?? [])].map((u) => new URL(u).pathname);
+  return { activar, almacen, rutas };
+}
+
+const VERSION_ACTUAL = /const VERSION = "([^"]+)"/.exec(SW)![1];
+const MAPA_ACTUAL = /const MAPA = "([^"]+)"/.exec(SW)![1];
+
+describe("al estrenar cascarón, el código guardado se hereda", () => {
+  it("el código del mapa pasa a la caché nueva; las páginas no", async () => {
+    const { activar, almacen, rutas } = cargarConVariasCaches({
+      "cascaron-v6": {
+        "/rutas": "la app vieja",
+        "/api/circuitos/zaragoza-centro": "la forma vieja",
+        "/_next/static/chunks/fe69a73d.leaflet.js": "leaflet",
+        "/_next/static/chunks/935.protomaps.js": "protomaps",
+      },
+      [MAPA_ACTUAL]: { "/mapa/juarez.pmtiles?desde=0&hasta=9": "pedazo" },
+    });
+    await activar();
+    expect(almacen.has("cascaron-v6"), "la caché vieja sí se va").toBe(false);
+    expect(rutas(`cascaron-${VERSION_ACTUAL}`).sort()).toEqual([
+      "/_next/static/chunks/935.protomaps.js",
+      "/_next/static/chunks/fe69a73d.leaflet.js",
+    ]);
+    expect(rutas(MAPA_ACTUAL), "los pedazos del mapa, intactos").toEqual(["/mapa/juarez.pmtiles"]);
+  });
+
+  it("lo que la caché nueva ya tiene no se pisa con lo viejo", async () => {
+    const { activar, almacen } = cargarConVariasCaches({
+      "cascaron-v6": { "/_next/static/chunks/a.js": "viejo" },
+      [`cascaron-${VERSION_ACTUAL}`]: { "/_next/static/chunks/a.js": "nuevo" },
+    });
+    await activar();
+    const r = almacen.get(`cascaron-${VERSION_ACTUAL}`)!.get(`${ORIGEN}/_next/static/chunks/a.js`)!;
+    expect(await r.text()).toBe("nuevo");
+  });
+
+  it("con tope: se heredan los más recientes, no todo lo que se juntó", async () => {
+    const muchos = Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`/_next/static/chunks/${i}.js`, "x"]));
+    const { activar, rutas } = cargarConVariasCaches({ "cascaron-v6": muchos });
+    await activar();
+    const heredadas = rutas(`cascaron-${VERSION_ACTUAL}`);
+    expect(heredadas.length).toBe(150);
+    expect(heredadas).toContain("/_next/static/chunks/199.js");
+    expect(heredadas).not.toContain("/_next/static/chunks/0.js");
   });
 });

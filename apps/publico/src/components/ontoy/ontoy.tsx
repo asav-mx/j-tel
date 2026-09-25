@@ -29,6 +29,7 @@ import { VistaInicio } from "@/components/ontoy/vista-inicio";
 import { VistaPase } from "@/components/ontoy/vista-pase";
 import { VistaIrA } from "@/components/ontoy/vista-ira";
 import { Barra, type Lugar } from "@/components/ontoy/barra";
+import { Asomado } from "@/components/ontoy/asomado";
 import { CabezaDeRuta } from "@/components/ontoy/cabeza-de-ruta";
 import { VistaParadas } from "@/components/ontoy/vista-paradas";
 import { armarParadas, haciaDonde } from "@/lib/ontoy/paradas-de-la-ruta";
@@ -71,15 +72,12 @@ import { arranqueCorto, arranqueLargo } from "@/lib/fecha-arranque";
  * sale del aparato (8.3b). Se lee UNA vez, aquí, y baja a quien la usa.
  */
 export function Ontoy({
-  nombre,
   rutas,
   estados,
   vigenteHasta,
   rutaInicial,
   paradaInicial,
 }: {
-  /** De configuración, nunca del código: `NEXT_PUBLIC_APP_NOMBRE`. */
-  nombre: string;
   rutas: RutaDeLaCiudad[];
   estados: EstadoDeRuta[];
   /** Hasta cuándo vale lo que dice la lista (ISO); en ese instante se vuelve a pedir. */
@@ -326,6 +324,7 @@ export function Ontoy({
     setParadaAbierta(null);
     setParadaTocada(null);
     setCampanaAbierta(false);
+    setVerTusParadas(false);
     setVolverAlInicioDelLugar((n) => n + 1);
   }, []);
 
@@ -536,23 +535,8 @@ export function Ontoy({
 
   return (
     <div className="ontoy">
-      <header className="ontoy-cabeza">
-        <LogoOntoy />
-        <h1 className="ontoy-marca">{nombre}</h1>
-        <Campana nuevos={hayAvisosNuevos(avisos, vistos)} abierta={campanaAbierta} alTocar={abrirCampana} />
-        <button type="button" className="ontoy-piel" onClick={alternarPiel} aria-label="Cambiar entre piel de día y de noche">
-          {deNoche ? (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="4" />
-              <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
-            </svg>
-          )}
-        </button>
-      </header>
+      {/* Sin cabecera (ASAV, 25-sep): Ontoy se asoma arriba y lleva a Inicio. No sale sobre el Mapa. */}
+      {lugar !== "mapa" && <Asomado alTocar={() => irA("inicio")} />}
 
       {campanaAbierta && (
         <VistaAvisos
@@ -591,6 +575,11 @@ export function Ontoy({
           alAbrirRuta={abrirRuta}
           alQuitarGuardada={guardadas.alternar}
           enVivo={enVivo}
+          avisos={avisos}
+          avisosNuevos={hayAvisosNuevos(avisos, vistos)}
+          alVerAvisos={abrirCampana}
+          deNoche={deNoche}
+          alAlternarPiel={alternarPiel}
         />
       )}
 
@@ -676,6 +665,7 @@ export function Ontoy({
       {!campanaAbierta && lugar === "pase" && (
         <VistaPase
           volverAlInicio={volverAlInicioDelLugar}
+          alVolverAlInicio={() => irA("inicio")}
           pase={elPase.pase}
           disponible={elPase.disponible}
           alComprar={elPase.comprar}
@@ -751,42 +741,6 @@ function avisoDeLaEscalera(
   }
   if (vivo.estado === "fuera_de_horario") return `Fuera de horario · abre ${vivo.abre_a}`;
   return null;
-}
-
-/**
- * La campana (8.13b): abre los avisos de tus rutas. **El punto se prende sólo
- * con avisos de la concesión que no has visto** — nunca por los del teléfono
- * (decisión de ASAV, 22-sep): una campana que grita por cada señal caída se
- * vuelve invisible. El punto es forma (un círculo lleno), no un color de alarma.
- */
-function Campana({ nuevos, abierta, alTocar }: { nuevos: boolean; abierta: boolean; alTocar: () => void }) {
-  return (
-    <button
-      type="button"
-      className="ontoy-campana"
-      onClick={alTocar}
-      aria-pressed={abierta}
-      aria-label={nuevos ? "Avisos de tus rutas, hay nuevos" : "Avisos de tus rutas"}
-    >
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />
-        <path d="M10 20.5a2 2 0 0 0 4 0" />
-      </svg>
-      {nuevos && <span className="ontoy-campana-punto" aria-hidden="true" />}
-    </button>
-  );
-}
-
-/** El logo de Ontoy. Su identidad es de Ontoy, no de la plataforma. */
-function LogoOntoy() {
-  return (
-    <svg className="ontoy-logo" viewBox="0 0 64 64" aria-hidden="true">
-      <path d="M8 54 C22 54 26 40 32 30" fill="none" stroke="currentColor" strokeWidth="6.5" strokeLinecap="round" />
-      <path d="M32 30 L26 40 L38 38 Z" fill="currentColor" />
-      <circle cx="46" cy="17" r="9.5" fill="currentColor" />
-      <circle cx="46" cy="17" r="3.6" className="ontoy-logo-ojo" />
-    </svg>
-  );
 }
 
 /**

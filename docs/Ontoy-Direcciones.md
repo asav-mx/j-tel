@@ -30,6 +30,7 @@ minutos; una lámina mal impresa se corrige con un humano en una escalera.
 | `ontoy.app/validador` | El lector del camión | Existe |
 | `ontoy.app/privacidad` | Qué se guarda y qué no | Existe |
 | `ontoy.app/p/‹parada›` | Lo que abre el QR del poste | Existe (#536) |
+| `ontoy.app/sin-senal` | SIN SEÑAL: la sirve el service worker en lugar del dinosaurio, con `?desde=‹la página›`. **Nadie la guarda ni la escanea**, así que no está reservada: puede moverse cambiando `sw.js` y `lib/ontoy/sin-senal.ts` juntos (lo cuida `sw.test.ts`) | Existe (25-sep-2026) |
 
 ## La decisión cambió el 25 de septiembre, y por qué el cambio no rompe nada
 
