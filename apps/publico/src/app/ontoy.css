@@ -257,6 +257,19 @@
   border-color: var(--linea);
 }
 /*
+ * **El botón principal: uno por pantalla** (estándar, regla 4). Pastilla
+ * carbón, texto del papel, 52 de alto — que es lo que un pulgar acierta de pie.
+ */
+.ontoy-boton-principal {
+  background: var(--texto);
+  color: var(--panel);
+  border-color: var(--texto);
+  font-weight: 700;
+  font-size: 16px;
+  min-height: 52px;
+  border-radius: var(--r-pill, 999px);
+}
+/*
  * Un botón apagado tiene que verse apagado. Sin esto, «Mostrar para subir» con
  * cero viajes se ve igual de pulsable que con cinco, y quien lo pica cree que
  * la app se trabó. Atenuar aquí es legítimo: un botón deshabilitado no carga
@@ -624,6 +637,18 @@
 .ontoy-lienzo {
   position: absolute;
   inset: 0;
+}
+/*
+ * El piso de debajo del mapa. Leaflet lo pinta **gris** (`#ddd`) y se veía en
+ * dos momentos: el instante antes de que la primera tesela se dibuje, y
+ * cualquier hueco entre teselas al arrastrar. Con el mapa de fondo teñido por un
+ * filtro no había forma de hacer que ese gris siguiera al tema; ahora el suelo
+ * del mapa es un token —banqueta de día, azul noche de noche— y el piso de
+ * Leaflet es el mismo, así que lo que aparece mientras carga es **suelo**, no un
+ * agujero gris.
+ */
+.ontoy .leaflet-container {
+  background: var(--fondo);
 }
 .ontoy-sentido {
   position: absolute;
@@ -1068,6 +1093,43 @@
   opacity: 0.8;
   border-radius: 0 0 0 8px;
   padding: 2px 6px;
+}
+/*
+ * El crédito del mapa, en los colores del tema.
+ *
+ * Leaflet lo pinta sobre **blanco** (`rgba(255,255,255,.8)`), y de noche eso era
+ * una cajita blanca encima del mapa azul: la única cosa clara de la pantalla. No
+ * se notaba antes porque el fondo del mapa se teñía con un filtro y el crédito,
+ * que no es una tesela, quedaba fuera del teñido — así que el mapa también era
+ * claro. Con el mapa dibujado en azul noche, la cajita quedó sola.
+ *
+ * **`.leaflet-container` va pegado a `.ontoy` a propósito, y sin él esto no
+ * funciona.** La regla de Leaflet es `.leaflet-container .leaflet-control-attribution`
+ * —dos clases—, empata en especificidad con `.ontoy .leaflet-…` y gana por orden
+ * de archivo, porque `leaflet.css` lo importa el componente. Medido: con dos
+ * clases el color sí entraba y **el fondo no**, que es lo peor de los dos mundos
+ * —letra clara sobre caja blanca—. `apps/web` ya había pagado esta misma lección
+ * (ver su `globals.css`).
+ *
+ * Y el crédito es obligatorio, no decorativo (#368): los datos son de
+ * OpenStreetMap. Un crédito que se ve como un error es un crédito que alguien va
+ * a querer esconder.
+ */
+.ontoy .leaflet-container .leaflet-control-attribution {
+  background: var(--panel);
+  color: var(--tenue);
+}
+.ontoy .leaflet-container .leaflet-control-attribution a {
+  color: var(--tenue);
+}
+/*
+ * La banderita que Leaflet mete junto a su nombre. Fuera, por la misma razón por
+ * la que se fue de la otra app: es un adorno de la librería, no parte del
+ * crédito que la licencia pide, y en una esquina de 9 px compite con lo único
+ * que ahí importa — de quién son los datos.
+ */
+.ontoy .leaflet-container .leaflet-attribution-flag {
+  display: none !important;
 }
 
 /* ── la página de privacidad (Parte B): texto para leer, no una pantalla ── */
@@ -1562,6 +1624,111 @@
 .ontoy-pronto-cuando b {
   color: var(--texto);
   font-weight: 700;
+}
+
+/* ── Inicio: su encabezado, su bienvenida y sus estados ────────────────── */
+
+/*
+ * El encabezado que el estándar pide en toda pantalla: título en tipo oración
+ * y, debajo, la línea de contexto que dice de dónde viene lo que se ve.
+ */
+.ontoy-inicio-cabeza {
+  padding: 18px 18px 2px;
+}
+.ontoy-inicio-titulo {
+  margin: 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  color: var(--texto);
+  text-wrap: balance;
+}
+.ontoy-inicio-contexto {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--tenue);
+}
+
+/* La bienvenida: UNA tarjeta, y se va para siempre en cuanto responda. */
+.ontoy-bienvenida {
+  margin: 14px 18px 4px;
+  padding: 18px;
+  background: var(--panel);
+  border-radius: var(--r-card, 26px);
+  box-shadow: 0 0 0 1px var(--linea);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ontoy-bienvenida-dicho {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ontoy-bienvenida-titulo {
+  margin: 0 0 6px;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  color: var(--texto);
+}
+.ontoy-bienvenida-apoyo {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--tenue);
+  text-wrap: pretty;
+}
+.ontoy-bienvenida-nota {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--tenue);
+  text-wrap: pretty;
+}
+/* Las dos salidas miden lo mismo: ninguna de las dos es la que «hay que» tocar. */
+.ontoy-bienvenida .ontoy-boton {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+}
+
+/*
+ * **Los estados de Inicio se SUMAN, no reemplazan.** Sin red y de noche ponen
+ * su renglón arriba y dejan las rutas abajo: la promesa publicada no depende de
+ * la red (8.2), y a las 2 de la mañana lo que alguien viene a mirar es
+ * justamente el horario.
+ */
+.ontoy-inicio-estado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px 6px;
+}
+.ontoy-inicio-estado-dicho {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--tenue);
+  text-wrap: pretty;
+}
+.ontoy-muneco {
+  flex: none;
+  display: block;
+}
+/* Las «z» del dormido: son parte del dibujo, no una animación. */
+.ontoy-muneco-z {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+}
+.ontoy-muneco-z.chica {
+  font-size: 12px;
 }
 
 /* ── la campana (8.13b) ───────────────────────────────────────────────── */

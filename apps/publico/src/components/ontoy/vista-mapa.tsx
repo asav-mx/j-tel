@@ -3,10 +3,11 @@
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
 import { haceNMinutos } from "@/lib/rotulo-de-la-tarjeta";
+import { crearCapaDeFondo, type CapaDeFondo } from "@/lib/ontoy/capa-de-fondo";
 import { fondoDelMapa } from "@/lib/ontoy/mapa-base";
+import { LIENZO } from "@/lib/ontoy/piel-del-mapa";
 import { haloParaLaTraza } from "@/lib/ontoy/contraste-de-ruta";
 import { pistaDelMapa } from "@/lib/ontoy/pista-del-mapa";
-import { useTinteDelMapa } from "@/lib/tinte-del-mapa";
 import type { Forma, RutaDeLaCiudad, Sentido, UnidadViva, Vivo } from "@/lib/ontoy/forma";
 import type { ParadaDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
 import { camiDesdeArriba, pasajeroConLinterna, tinoEnLaParada, type MiradaDeTino } from "@/lib/ontoy/munecos";
@@ -55,8 +56,14 @@ export interface ModoCiudad {
   alAbrirRuta: (ruta: string, parada?: string) => void;
 }
 
-/** Los lienzos de las dos pieles, que es contra lo que se mide el halo (8.8c). */
-const LIENZO = { dia: "#EFEBE3", noche: "#2B323B" } as const;
+/*
+ * El lienzo —contra lo que se mide el halo de la traza (8.8c)— ya no se declara
+ * aquí: viene de `piel-del-mapa.ts`, que es quien pinta el suelo. Eran dos hex
+ * medidos a ojo del mapa teñido; ahora el suelo lo pintamos nosotros y el lienzo
+ * **es** el token. Dos valores que describían lo mismo se habrían separado el
+ * día que la piel cambiara de tono, y el halo se habría medido contra un fondo
+ * que ya no existe.
+ */
 
 /**
  * **Mapa** — la segunda vista (8.8): los circuitos sobre la ciudad, y el que se
@@ -76,8 +83,9 @@ const LIENZO = { dia: "#EFEBE3", noche: "#2B323B" } as const;
  *
  * El prototipo dibujaba una retícula de calles inventadas. Una ruta trazada
  * sobre calles que no existen se lee como posicionada contra ellas. Aquí el
- * fondo es el de `fondoDelMapa()` — hoy OpenStreetMap — o no hay fondo; nunca
- * una ciudad de mentira.
+ * fondo son **calles de verdad, dibujadas por nosotros** con datos de
+ * OpenStreetMap que viajan en el repo (`lib/ontoy/capa-de-fondo.ts`), o no hay
+ * fondo; nunca una ciudad de mentira.
  *
  * ## El color de la ruta no va solo
  *
@@ -146,39 +154,77 @@ export function VistaMapa({
   const capaUnidades = useRef<import("leaflet").LayerGroup | null>(null);
   const capaYo = useRef<import("leaflet").LayerGroup | null>(null);
   const capaParadasCiudad = useRef<import("leaflet").LayerGroup | null>(null);
+  /** La capa del fondo, que se vuelve a pintar cuando cambia la piel. */
+  const fondo = useRef<CapaDeFondo | null>(null);
   /** El encuadre se hace una vez por apertura del Mapa, no en cada filtro. */
   const yaEncuadro = useRef(false);
   const [listo, setListo] = useState(false);
 
   const rutaEnfocada = rutas.find((r) => r.circuito_id === enfocada) ?? null;
   const lienzo = deNoche ? LIENZO.noche : LIENZO.dia;
+
   /*
-   * El teñido de las teselas (`lib/tinte-del-mapa.ts`). **Esta llamada faltaba**,
-   * y por eso este mapa salía a todo color en las dos pieles: de noche, blanco
-   * debajo de un cascarón oscuro, y de día con los amarillos y naranjas de OSM
-   * a todo volumen — que es contra lo que se dibujan las rutas.
+   * ── La piel del fondo ────────────────────────────────────────────────
    *
-   * El hook existía, documentado y probado, pero su único llamador era la
-   * pantalla `/buscar`, que se retiró en el #514. Nació para el mapa del
-   * buscador y nadie lo conectó al de Ontoy.
+   * El fondo ya no se tiñe con un filtro CSS: se **dibuja** con los colores de
+   * la piel que toca (`lib/ontoy/piel-del-mapa.ts`). Cambiar de piel es volver a
+   * pintar las teselas, no filtrarlas.
+   *
+   * **`listo` es la dependencia que hace falta, no `deNoche` a secas** — es la
+   * misma lección del #375, en su versión nueva: el mapa se crea en un efecto
+   * **asíncrono**, así que la primera vez que esto corre la capa todavía no
+   * existe. Sin `listo` el efecto se sale, no vuelve a correr porque sus
+   * dependencias no cambian, y el mapa se queda con la piel con la que nació:
+   * alternar el tema una vez no lo arreglaría, dos sí, y eso es exactamente el
+   * defecto que se veía en el buscador.
    */
-  useTinteDelMapa(contenedor, deNoche, listo);
+  useEffect(() => {
+    if (!listo) return;
+    fondo.current?.vestir(deNoche);
+  }, [deNoche, listo]);
 
   // ── El mapa, una vez ───────────────────────────────────────────────────
   useEffect(() => {
     let montado = true;
     void (async () => {
       const leaflet = await import("leaflet");
+      /*
+       * Las dos esperas van ANTES de crear el mapa, y eso importa: si una
+       * quedara en medio, un desmontaje durante la espera dejaría un mapa de
+       * Leaflet creado sin que nadie lo pudiera cerrar —la limpieza mira
+       * `mapa.current`, que todavía no existiría— y su DOM se quedaría pegado al
+       * contenedor.
+       */
+      const capaDeFondo = await crearCapaDeFondo(leaflet, deNoche);
       if (!montado || !contenedor.current || mapa.current) return;
       L.current = leaflet;
-      const m = leaflet.map(contenedor.current, { zoomControl: false, attributionControl: true });
+      /*
+       * **El mapa no se puede salir del mapa.** El recorte cubre Juárez, El Paso
+       * y un margen; más allá no hay nada que dibujar, y un vacío de borde recto
+       * no se lee como «hasta aquí llega el recorte» sino como una app rota. El
+       * piso de zoom impide llegar al borde alejando y los límites, arrastrando.
+       * Los dos números salen del archivo, no de aquí (`mapa-base.ts`).
+       */
+      const alcance = fondoDelMapa();
+      const m = leaflet.map(contenedor.current, {
+        zoomControl: false,
+        attributionControl: true,
+        minZoom: alcance.zoomMinimo,
+        maxBounds: leaflet.latLngBounds(
+          [alcance.limites.sur, alcance.limites.oeste],
+          [alcance.limites.norte, alcance.limites.este],
+        ),
+      });
       // El crédito arriba a la derecha, bajo el selector de sentido: abajo se enciman la pista
       // y las fichas de ruta, que crecen con el contenido (ver `ontoy.css`).
       m.attributionControl.setPosition("topright");
-      const fondo = fondoDelMapa();
-      leaflet
-        .tileLayer(fondo.url, { maxZoom: fondo.zoomMaximo, attribution: fondo.atribucion })
-        .addTo(m);
+      /*
+       * El fondo: nuestro archivo del mapa, dibujado con la piel de Ontoy. Todo
+       * lo que hay que saber de él vive en `lib/ontoy/capa-de-fondo.ts` —
+       * incluido por qué seguimos en Leaflet y no en MapLibre.
+       */
+      fondo.current = capaDeFondo;
+      capaDeFondo.capa.addTo(m);
       capaRutas.current = leaflet.layerGroup().addTo(m);
       capaParadas.current = leaflet.layerGroup().addTo(m);
       capaParadasCiudad.current = leaflet.layerGroup().addTo(m);

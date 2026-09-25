@@ -8,14 +8,17 @@
     "typecheck": "tsc --noEmit",
     "start": "next start",
     "test": "TZ=UTC vitest run",
-    "fuentes:traer": "node scripts/traer-fuentes.mjs"
+    "fuentes:traer": "node scripts/traer-fuentes.mjs",
+    "mapa:traer": "node scripts/traer-mapa.mjs"
   },
   "dependencies": {
     "@jtel/db": "workspace:*",
     "@jtel/domain": "workspace:*",
+    "@protomaps/basemaps": "^5.7.2",
     "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
     "next": "^15.3.4",
+    "protomaps-leaflet": "^5.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "three": "0.184.0",

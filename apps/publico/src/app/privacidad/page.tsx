@@ -12,13 +12,20 @@ import { fondoDelMapa } from "@/lib/ontoy/mapa-base";
  *
  * Misma regla que los textos cortos de las pantallas
  * (`docs/Ficha-Textos-De-Privacidad.md`): **se dice el PARA QUÉ y lo que
- * hacemos nosotros, no se jura el DÓNDE para siempre.** Por eso aquí no aparece
- * «ningún servidor»: el fondo del mapa se pide a un tercero, y esta página lo
- * dice en vez de callarlo.
+ * hacemos nosotros, no se jura el DÓNDE para siempre.**
  *
- * El tercero del mapa sale de `fondoDelMapa()`, no de un texto horneado: el día
- * que el mapa se sirva desde nuestro propio almacenamiento (Protomaps), esa
- * sección cambia sola.
+ * El tercero del mapa sale de `fondoDelMapa()`, no de un texto horneado — y el
+ * 25-sep-2026 **cambió sola**: el mapa dejó de pedirse a OpenStreetMap y pasó a
+ * ser un archivo de nuestro propio servidor, así que esta página dejó de
+ * declarar un tercero.
+ *
+ * **Lo que se dice del mapa sigue siendo el QUIÉN, no el DÓNDE:** que las
+ * peticiones no salen hacia nadie más. No que el archivo vaya a vivir para
+ * siempre en tal servidor, que es la clase de promesa que ata a la arquitectura
+ * futura y que el #381 retiró.
+ *
+ * Y se dice **qué cambió**, no nada más el estado nuevo: quien leyó esta página
+ * cuando decía que otra empresa recibía su IP merece leer que eso se acabó.
  *
  * El nombre de la app y el correo de contacto vienen de configuración
  * (`NEXT_PUBLIC_APP_NOMBRE`, `NEXT_PUBLIC_CONTACTO_PRIVACIDAD`): el código no
@@ -28,7 +35,7 @@ import { fondoDelMapa } from "@/lib/ontoy/mapa-base";
 const NOMBRE = process.env.NEXT_PUBLIC_APP_NOMBRE ?? "Transporte público";
 const CONTACTO = process.env.NEXT_PUBLIC_CONTACTO_PRIVACIDAD ?? null;
 /** El día en que esta página cambió por última vez. Se mueve a mano, con el texto. */
-const VIGENTE_DESDE = "22 de septiembre de 2026";
+const VIGENTE_DESDE = "25 de septiembre de 2026";
 
 export const metadata: Metadata = {
   title: `Privacidad · ${NOMBRE}`,
@@ -55,6 +62,7 @@ export default function Privacidad() {
           <li>Tu ubicación se usa en tu teléfono para calcular cuándo llega tu camión. La app no la manda a nuestro servidor.</li>
           <li>Tus paradas guardadas se quedan en tu teléfono.</li>
           <li>Contamos cuántas veces se abre cada ruta, sin saber quién la abrió.</li>
+          <li>El mapa lo servimos nosotros: nadie más se entera de qué parte de la ciudad estás mirando.</li>
           <li>No hay anuncios, no vendemos datos y no te seguimos en otras apps ni sitios.</li>
         </ul>
       </section>
@@ -138,7 +146,33 @@ export default function Privacidad() {
             tuyo. Lo que hace con esas peticiones lo rige su propia política de privacidad.
           </p>
         ) : (
-          <p>Las imágenes del mapa se sirven desde nuestro propio almacenamiento, sin pasar por terceros.</p>
+          <>
+            {/*
+              **Lo que se puede sostener es el QUIÉN, no el DÓNDE** (la regla de
+              los textos de privacidad, #381): se dice que las peticiones del
+              mapa no salen hacia nadie más, no que el archivo viva para siempre
+              en tal servidor. Y se dice **qué parte del mapa** viaja, porque
+              antes viajaba a un tercero y quien leyó esta página cuando decía
+              eso merece leer qué cambió.
+            */}
+            <p>
+              El mapa de fondo no se le pide a nadie más: es <b>un archivo nuestro</b>, y tu teléfono lo lee del mismo
+              servidor que ya te dio la app. Antes las imágenes del mapa venían de otra empresa, que recibía tu
+              dirección IP y qué parte de la ciudad estabas viendo. <b>Eso ya no pasa.</b>
+            </p>
+            <p>
+              El dibujo del mapa está hecho con datos de{" "}
+              <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
+                OpenStreetMap
+              </a>{" "}
+              —el mapa libre que hace la gente— y del recorte que publica{" "}
+              <a href="https://protomaps.com" target="_blank" rel="noreferrer">
+                Protomaps
+              </a>
+              . Por eso su crédito sigue apareciendo en la esquina del mapa: es por los datos, no porque tu teléfono
+              les pida algo.
+            </p>
+          </>
         )}
       </section>
 

@@ -86,7 +86,7 @@ export function RutasDeInicio({
 
   if (rutas.length === 0) {
     return (
-      <section className="ontoy-seccion">
+      <section className="ontoy-seccion" id="ontoy-rutas">
         <h2 className="ontoy-seccion-titulo">Rutas de la ciudad</h2>
         <p className="ontoy-vacio">Todavía no hay rutas publicadas en esta ciudad.</p>
       </section>
@@ -97,7 +97,11 @@ export function RutasDeInicio({
   const visibles = todas ? ordenadas : ordenadas.slice(0, RUTAS_A_LA_VISTA);
 
   return (
-    <section className="ontoy-seccion">
+    /*
+     * El ancla de «Buscar mi parada» de la bienvenida. Es una liga de verdad y
+     * no un `scrollTo`: funciona sin JavaScript y el teclado la alcanza.
+     */
+    <section className="ontoy-seccion" id="ontoy-rutas">
       <h2 className="ontoy-seccion-titulo">{porDistancia ? "Rutas cerca de ti" : "Rutas de la ciudad"}</h2>
 
       {visibles.map(({ ruta: r, entrada }) => {

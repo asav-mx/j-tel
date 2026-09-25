@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { MAPA_DE_LA_CIUDAD, direccionDelMapa } from "@/lib/ontoy/mapa-base";
 
 /*
  * «Lo vivo no se cachea» — la regla del service worker, probada EJECUTÁNDOLO.
@@ -76,5 +77,22 @@ describe("el service worker: lo vivo no se cachea", () => {
 
   it("nunca contesta una escritura (la apertura es un POST)", () => {
     expect(contesta("/api/circuitos/zaragoza-centro/apertura", "POST")).toBe(false);
+  });
+
+  it("el archivo del mapa pasa derecho: una respuesta parcial no se puede guardar", () => {
+    /*
+     * El navegador pide el `.pmtiles` **por rangos**, y la respuesta es un `206`
+     * que `cache.put` rechaza. Si el service worker lo tomara, cada arrastre del
+     * mapa dejaría una promesa rota en la consola **sin que el mapa se viera
+     * mal**: un error invisible, que es el peor tipo.
+     *
+     * Lo que esta prueba NO dice es que el mapa funcione sin red — hoy no
+     * funciona, y eso está dicho en `sw.js` y en `docs/Ontoy-Mapa-Base.md`.
+     * Guardar el archivo completo y servir los rangos desde ahí es otro PR; el
+     * día que entre, este caso cambia de sentido a propósito.
+     */
+    expect(contesta(`/mapa/juarez-${MAPA_DE_LA_CIUDAD.fecha}.pmtiles`)).toBe(false);
+    /* Y el archivo que se declara es el que la regla del service worker alcanza. */
+    expect(direccionDelMapa().startsWith("/mapa/")).toBe(true);
   });
 });
