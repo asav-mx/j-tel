@@ -66,7 +66,16 @@ lección que `salud.yml` aprendió dos veces —la segunda estuvo **nueve días 
 117 corridas y cero avisos— y por eso ese workflow tiene `simular_codigo`: se provoca
 un aviso a propósito y se mira si llega.
 
-Con UptimeRobot **eso todavía no se ha hecho**. Lo pendiente es pausar un monitor a
-mano (o apuntarlo un minuto a una dirección que no exista) y **comprobar que el aviso
-entra al correo y al teléfono de ASAV**. Hasta que alguien lo vea llegar, lo de arriba
-es una suposición con nombre de garantía.
+Con UptimeRobot **eso todavía no se ha hecho**. Lo pendiente es **apuntar un monitor
+un minuto a una dirección que conteste 404** —por ejemplo `https://ontoy.app/prueba-de-aviso-no-existe`—,
+esperar un ciclo de 5 minutos, **comprobar que el aviso entra al correo y al teléfono
+de ASAV**, y devolver la URL. Hasta que alguien lo vea llegar, lo de arriba es una
+suposición con nombre de garantía.
+
+**Pausar el monitor NO sirve para esto, y era lo que decía este renglón**: pausar sólo
+deja de medir, no manda «down». Probándolo así no llega nada, y eso se lee como que el
+aviso está roto cuando puede estar perfecto — un falso negativo en la única prueba que
+existe para saber si el vigilante grita. **Y el botón de notificación de prueba del
+contacto tampoco basta:** comprueba que el correo y el teléfono reciben, no que la
+caída se detecte. Detectar y avisar son dos cosas, y ésta es la lección de `salud.yml`
+escrita una vez más.
