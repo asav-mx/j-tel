@@ -3,6 +3,7 @@ import {
   idPublicoDelDia,
   fechaLocalDelCircuito,
   huellaDeApertura,
+  huellaDeAperturaDeParada,
   enHorarioDeServicio,
   yaArrancoElServicio,
   aperturaDeclaradaEnFecha,
@@ -529,5 +530,72 @@ describe("aperturaDeclaradaEnFecha", () => {
     const a = aperturaDeclaradaEnFecha("05:00", "2026-09-20", "America/Ciudad_Juarez");
     const b = aperturaDeclaradaEnFecha("05:00", "2026-09-21", "America/Ciudad_Juarez");
     expect(b.getTime() - a.getTime()).toBe(24 * 60 * 60_000);
+  });
+});
+
+describe("la huella de una apertura DE PARADA", () => {
+  const base = {
+    ip: "189.203.10.4",
+    agente: "Mozilla/5.0 (Linux; Android 11)",
+    fechaLocal: "2026-09-05",
+    paradaId: "parada-1",
+    secreto: LLAVE,
+  };
+
+  it("el mismo aparato, el mismo día y la misma parada dan la misma huella", () => {
+    expect(huellaDeAperturaDeParada(base)).toBe(huellaDeAperturaDeParada({ ...base }));
+  });
+
+  it("ROTA CADA DÍA, igual que la de una ruta y por lo mismo", () => {
+    expect(huellaDeAperturaDeParada({ ...base, fechaLocal: "2026-09-06" })).not.toBe(
+      huellaDeAperturaDeParada(base),
+    );
+  });
+
+  it("no se puede cruzar entre paradas", () => {
+    expect(huellaDeAperturaDeParada({ ...base, paradaId: "parada-2" })).not.toBe(
+      huellaDeAperturaDeParada(base),
+    );
+  });
+
+  it("NO PUEDE COINCIDIR con la huella de un circuito, aunque el id sea el mismo", () => {
+    /*
+     * Ésta es la razón de que la palabra `parada` vaya dentro del mensaje. Son
+     * dos poblaciones que miden cosas distintas —«abrió una ruta» y «abrió una
+     * parada»— y tienen que quedar separadas **por construcción**, no porque
+     * quien las consulte se acuerde de filtrar.
+     *
+     * Sin la palabra, un identificador de parada igual a uno de circuito daría
+     * la misma huella y las dos cifras se contaminarían en silencio.
+     */
+    const mismoId = "el-mismo-identificador";
+    expect(huellaDeAperturaDeParada({ ...base, paradaId: mismoId })).not.toBe(
+      huellaDeApertura({
+        ip: base.ip,
+        agente: base.agente,
+        fechaLocal: base.fechaLocal,
+        circuitoId: mismoId,
+        secreto: base.secreto,
+      }),
+    );
+  });
+
+  it("dos aparatos distintos dan huellas distintas", () => {
+    expect(huellaDeAperturaDeParada({ ...base, ip: "189.203.10.5" })).not.toBe(
+      huellaDeAperturaDeParada(base),
+    );
+    expect(huellaDeAperturaDeParada({ ...base, agente: "otro" })).not.toBe(
+      huellaDeAperturaDeParada(base),
+    );
+  });
+
+  it("sin la llave revienta, como la de una ruta", () => {
+    expect(() => huellaDeAperturaDeParada({ ...base, secreto: "" })).toThrow(/llave/i);
+  });
+
+  it("LOS SEPARADORES IMPORTAN aquí también", () => {
+    expect(huellaDeAperturaDeParada({ ...base, ip: "a", agente: "bc" })).not.toBe(
+      huellaDeAperturaDeParada({ ...base, ip: "ab", agente: "c" }),
+    );
   });
 });

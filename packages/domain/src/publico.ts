@@ -77,6 +77,43 @@ export function huellaDeApertura(entrada: {
   return createHmac("sha256", entrada.secreto).update(mensaje).digest("hex").slice(0, 32);
 }
 
+/**
+ * La huella de una APERTURA DE PARADA — la hermana de `huellaDeApertura`, y
+ * **deliberadamente incapaz de mezclarse con ella**.
+ *
+ * Contesta «¿cuántos aparatos distinguibles abrieron la hoja de esta parada
+ * hoy?», que es una pregunta distinta de «¿cuántos abrieron esta ruta?». Desde
+ * que tocar una parada en el mapa dejó de abrir la ruta entera, la vieja ya no
+ * cuenta ese gesto; ésta sí, **y por separado**, para que nadie sume dos cifras
+ * que miden cosas distintas.
+ *
+ * **La palabra `parada` va DENTRO del mensaje.** No es adorno ni comentario: es
+ * lo que garantiza que la huella de una parada no pueda coincidir nunca con la
+ * de un circuito, aunque algún día un identificador de parada y uno de circuito
+ * fueran iguales. Las dos poblaciones quedan separadas por construcción y no por
+ * la disciplina de quien las consulte.
+ *
+ * Lo demás es idéntico a `huellaDeApertura`, a propósito: rota con el día, usa
+ * HMAC y no un hash a secas, lleva separadores, y **subcuenta detrás de un NAT
+ * por las mismas razones y con el mismo rótulo**. Ver esa función para el
+ * argumento completo; no se repite aquí para que no se separen.
+ */
+export function huellaDeAperturaDeParada(entrada: {
+  ip: string;
+  agente: string;
+  fechaLocal: string;
+  paradaId: string;
+  secreto: string;
+}): string {
+  if (!entrada.secreto) {
+    throw new Error("huellaDeAperturaDeParada necesita una llave: sin ella la huella no es opaca");
+  }
+  const mensaje = [entrada.ip, entrada.agente, entrada.fechaLocal, "parada", entrada.paradaId].join(
+    "\n",
+  );
+  return createHmac("sha256", entrada.secreto).update(mensaje).digest("hex").slice(0, 32);
+}
+
 /** La fecha civil del circuito, que es la que hace rotar el identificador. */
 export function fechaLocalDelCircuito(ahora: Date, zona: string): string {
   return localDateIso(ahora, zona);

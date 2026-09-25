@@ -148,6 +148,74 @@ puramente aditiva —una tabla nueva— y no escribe en ninguna fila existente.
   fila con el crudo en tres**, dos aparatos son dos filas, y un circuito sin
   aperturas devuelve `null` en vez de una fecha inventada.
 
+---
+
+## Enmienda del 25 de septiembre de 2026 — «abrió una parada»
+
+**Migración: `0057_abrio_una_parada`. Decisión de ASAV.**
+
+### Qué pasó
+
+Hasta el #592, tocar una parada en el mapa **abría la ruta entera**, así que ese
+gesto caía en `circuit_opens`. Desde que la hoja de la parada se abre encima del
+mapa —que es lo que el pasajero hace todo el tiempo— la ruta ya no se abre.
+
+Eso dejó al contador viejo **sin ver el gesto más común de la app**, y sin que
+nada fallara: la cifra habría seguido saliendo, más chica, y nadie habría podido
+decir si la app se usaba menos o si sólo habíamos dejado de contar. Es la §D en
+su forma de alcance, sobre el único número con el que se decide eso.
+
+### La decisión: que cuente, pero como lo que es
+
+Un contador **aparte**. «Abrió una parada» en `stop_opens`, y «abrió una ruta»
+en `circuit_opens`, intacto. **Las dos cifras no se suman**, y el instrumento
+está construido para que no se puedan sumar por descuido:
+
+- **Dos tablas y no una columna `stop_id`.** Con una columna nullable, toda
+  consulta que hoy cuenta filas —las que existen y las que alguien escriba
+  mañana— empezaría a sumar aperturas de parada dentro de «abrió una ruta» salvo
+  que se acuerde de filtrar. Dos poblaciones que miden cosas distintas no se
+  separan con la disciplina de quien consulta.
+- **La palabra `parada` va DENTRO del mensaje del HMAC.** Así una huella de
+  parada no puede coincidir con una de circuito ni aunque los identificadores
+  fueran iguales. Hay prueba de eso, y se cae si alguien quita la palabra.
+
+### Qué NO cambia
+
+Las cuatro reglas de arriba valen igual: la huella la deriva el servidor y rota
+cada día, mide aperturas y no regresos, nada se guarda en el teléfono, y es un
+evento propio y explícito. **Las dos advertencias del rótulo también:** el NAT la
+hunde y el raspado la infla, con las mismas palabras y por las mismas razones.
+
+### Dónde vive, y por qué ahí
+
+`POST /api/circuitos/‹ruta›/paradas/‹parada›/apertura`, colgada del circuito.
+
+**No es jerarquía: es el firewall.** Esta ficha apoya la escritura pública
+abierta en que «el firewall ya la cubre… hereda el límite sin tocar el panel», y
+esa regla apunta a `/api/circuitos/*`. Una ruta en `/api/paradas/*` **no
+heredaría nada**, y habríamos estrenado una segunda escritura pública sin el
+límite que justifica a la primera, sin que nada fallara ni nadie se enterara.
+
+De paso, tener el circuito en la dirección permite comprobar que la parada es
+suya: sin eso, cualquiera podría sumarle aperturas a la parada de otra ruta
+mandando el slug que quisiera.
+
+### Un cero sigue sin ser un hueco, y aquí importa más
+
+Este contador **nace el 25-sep-2026**. Todos los días anteriores de todas las
+paradas son hueco, no cero. `primerDiaConAperturasDeParada` existe para eso, y
+es lo que cualquier pantalla tendrá que preguntar **antes** de dibujar un cero.
+
+### Lo que todavía no existe
+
+**Ninguna pantalla lo enseña.** El expediente del circuito enseña las aperturas
+de la ruta; el de una parada no existe todavía. Se construye el contador ahora
+—y no cuando haya pantalla— porque **las aperturas no se pueden rellenar hacia
+atrás**: cada día que pase sin registrar es un hueco permanente en la serie.
+
+---
+
 ## Lo que esta ficha NO afirma
 
 Que el número vaya a parecerse al de personas que usan la app. No va a

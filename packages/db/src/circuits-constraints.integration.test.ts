@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { eq, inArray } from "drizzle-orm";
-import { createDb, createRepositories, accounts, circuits } from "../src/index.js";
+import { createDb, createRepositories, accounts, circuits, circuitStops } from "../src/index.js";
 
 /*
  * Que los CHECK de `circuits` MUERDAN.
@@ -70,6 +70,22 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  /*
+   * Las PARADAS primero, y a mano. Desde la 0055 la referencia de una parada a
+   * su circuito es RESTRICT —cada parada tiene un letrero de lámina atornillado
+   * a un poste—, así que borrar la cuenta ya NO se lleva las paradas por
+   * cascada: el `delete` de abajo revienta con un 23503 si quedan.
+   *
+   * Eso es la restricción haciendo su trabajo, no un error de la prueba. Lo
+   * mismo le pasa a `escenario-ontoy` y por lo mismo.
+   */
+  const suyos = await db
+    .select({ id: circuits.id })
+    .from(circuits)
+    .where(eq(circuits.concessionAccountId, concesionId));
+  if (suyos.length) {
+    await db.delete(circuitStops).where(inArray(circuitStops.circuitId, suyos.map((c) => c.id)));
+  }
   await db.delete(accounts).where(inArray(accounts.id, [concesionId].filter(Boolean)));
 });
 
@@ -467,5 +483,88 @@ describe("cambiarCircuito · el color prohibido se rechaza sólo si cambia", () 
     const r = await repos.circuits.cambiarCircuito(circuitoId, { colorHex: BUENO }, FIRMA);
     expect(r).toMatchObject({ ok: true });
     expect((await repos.circuits.getCircuit(circuitoId))!.colorHex.toUpperCase()).toBe(BUENO);
+  });
+});
+
+describe("el contador de aperturas DE PARADA, desde la 0057", () => {
+  const hoy = "2026-09-25";
+  const huella = () => `hp-${Math.random().toString(16).slice(2)}`;
+  let paradaId = "";
+
+  beforeAll(async () => {
+    const p = await repos.circuits.createStop({
+      circuitId: circuitoId,
+      qrSlug: `parada-${marca}`,
+      name: "Parada de prueba",
+      orden: 1,
+      latitude: 31.7,
+      longitude: -106.45,
+    });
+    paradaId = p.identidad?.id ?? p.id;
+  });
+
+  it("EL MISMO APARATO TRES VECES ES UNA FILA, y el crudo sube", async () => {
+    const h = huella();
+    for (let i = 0; i < 3; i++) {
+      await repos.circuits.registrarAperturaDeParada({
+        stopId: paradaId,
+        localDate: hoy,
+        fingerprint: h,
+      });
+    }
+    const dia = (await repos.circuits.resumenDeAperturasDeParada(paradaId, hoy)).find(
+      (r) => r.localDate === hoy,
+    );
+    expect(dia?.aparatos).toBe(1);
+    expect(dia?.crudo).toBe(3);
+  });
+
+  it("dos aparatos distintos el mismo día son dos filas", async () => {
+    const dia = "2026-09-26";
+    await repos.circuits.registrarAperturaDeParada({ stopId: paradaId, localDate: dia, fingerprint: huella() });
+    await repos.circuits.registrarAperturaDeParada({ stopId: paradaId, localDate: dia, fingerprint: huella() });
+    const r = (await repos.circuits.resumenDeAperturasDeParada(paradaId, dia)).find(
+      (x) => x.localDate === dia,
+    );
+    expect(r?.aparatos).toBe(2);
+  });
+
+  it("NO MUEVE el contador de la ruta, que es la razón de ser de la tabla", async () => {
+    /*
+     * La prueba que justifica que sean dos tablas y no una columna. Si algún día
+     * alguien las funde, esto se cae — y se cae por la razón correcta: «abrió
+     * una ruta» habría empezado a significar otra cosa sin que nadie lo dijera.
+     */
+    const antes = await repos.circuits.resumenDeAperturas(circuitoId, "2000-01-01");
+    await repos.circuits.registrarAperturaDeParada({
+      stopId: paradaId,
+      localDate: "2026-09-27",
+      fingerprint: huella(),
+    });
+    const despues = await repos.circuits.resumenDeAperturas(circuitoId, "2000-01-01");
+    expect(despues).toEqual(antes);
+  });
+
+  it("un día sin registro es NULL y no cero: el contador nació el 25-sep", async () => {
+    const otra = await repos.circuits.createStop({
+      circuitId: circuitoId,
+      qrSlug: `parada-sin-aperturas-${marca}`,
+      name: "Parada sin aperturas",
+      orden: 2,
+      latitude: 31.71,
+      longitude: -106.45,
+    });
+    const id = otra.identidad?.id ?? otra.id;
+    expect(await repos.circuits.primerDiaConAperturasDeParada(id)).toBeNull();
+  });
+
+  it("la parada se busca DENTRO de su circuito: el slug de otra ruta no cuenta", async () => {
+    expect(await repos.circuits.paradaDelCircuitoPorQr(circuitoId, `parada-${marca}`)).not.toBeNull();
+    const ajeno = await repos.circuits.createCircuit({
+      concessionAccountId: concesionId,
+      name: `Otro ${marca}`,
+      publicSlug: `otro-${marca}`,
+    });
+    expect(await repos.circuits.paradaDelCircuitoPorQr(ajeno.id, `parada-${marca}`)).toBeNull();
   });
 });

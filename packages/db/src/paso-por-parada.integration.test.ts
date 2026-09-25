@@ -4,6 +4,8 @@ import {
   createDb,
   createRepositories,
   accounts,
+  circuits,
+  circuitStops,
   telemetryPoints,
   circuitStopPasses,
   circuitUnitAssignments,
@@ -150,8 +152,40 @@ beforeAll(async () => {
   }
 });
 
+/**
+ * **Las paradas de estas cuentas, borradas a mano y ANTES que las cuentas.**
+ *
+ * Desde la 0055 la referencia de una parada a su circuito es RESTRICT —cada
+ * parada tiene un letrero de lámina atornillado a un poste—, así que borrar la
+ * cuenta ya **no** se lleva las paradas por cascada y el `delete` de cuentas
+ * revienta con un 23503.
+ *
+ * No era ruido: **la limpieza no corría**, y cada pasada dejaba su cuenta, su
+ * circuito y sus paradas en la rama desechable. Esa basura acumulada es lo que
+ * hacía fallar a `libro-de-boletos.integration` en una prueba distinta cada vez
+ * —los consecutivos y las llaves de lector se topaban con restos de corridas
+ * anteriores—, y hacía que estas suites se leyeran como flojas cuando lo roto
+ * era su limpieza. (25-sep-2026.)
+ *
+ * Se buscan los circuitos POR DUEÑO y no por una lista de identificadores: una
+ * lista se queda corta en cuanto una prueba crea un circuito más, que es
+ * exactamente lo que pasó aquí.
+ */
+async function borrarParadasDe(cuentaIds: string[]) {
+  const ids = cuentaIds.filter(Boolean);
+  if (!ids.length) return;
+  const suyos = await db
+    .select({ id: circuits.id })
+    .from(circuits)
+    .where(inArray(circuits.concessionAccountId, ids));
+  if (suyos.length) {
+    await db.delete(circuitStops).where(inArray(circuitStops.circuitId, suyos.map((c) => c.id)));
+  }
+}
+
 afterAll(async () => {
   await db.delete(telemetryPoints).where(inArray(telemetryPoints.id, idsDePuntosSembrados));
+  await borrarParadasDe([concesionId, carrierId]);
   await db.delete(accounts).where(inArray(accounts.id, [concesionId, carrierId].filter(Boolean)));
 });
 
@@ -420,7 +454,13 @@ describe("el muro por unidad — dos carriers en el mismo circuito", () => {
   });
 
   afterAll(async () => {
-    // Las cuentas arrastran por cascada circuitos, unidades, asignaciones y pasos.
+    /*
+     * Las cuentas arrastran por cascada circuitos, unidades, asignaciones y
+     * pasos — **pero ya no las paradas**: desde la 0055 esa referencia es
+     * RESTRICT, y sin esta línea el `delete` de abajo revienta con un 23503 y la
+     * limpieza no corre. Ver la nota larga del `afterAll` de arriba.
+     */
+    await borrarParadasDe(Object.values(cuentas));
     await db.delete(accounts).where(inArray(accounts.id, Object.values(cuentas).filter(Boolean)));
   });
 

@@ -85,6 +85,7 @@ import {
   livePositions,
   circuits,
   circuitOpens,
+  stopOpens,
   circuitPaths,
   circuitStops,
   circuitStopVersions,
@@ -6763,6 +6764,55 @@ export class CircuitRepository {
   }
 
   /**
+   * **«Abrió una parada»** — el contador hermano, en su propia tabla.
+   *
+   * Idéntico al de arriba a propósito: mismo `onConflictDoUpdate`, mismo crudo
+   * que sube sin crear fila, misma deduplicación en la base. Lo único distinto
+   * es la tabla, y eso es justamente el punto: las dos cifras miden cosas
+   * distintas y no se pueden sumar por descuido (ASAV, 25-sep).
+   *
+   * `stopId` es el de `circuit_stops`, la parada estable — no el de su versión.
+   * Quien llama ya comprobó que esa parada es de ese circuito.
+   */
+  async registrarAperturaDeParada(entrada: {
+    stopId: string;
+    localDate: string;
+    fingerprint: string;
+  }) {
+    await this.db
+      .insert(stopOpens)
+      .values({
+        stopId: entrada.stopId,
+        localDate: entrada.localDate,
+        fingerprint: entrada.fingerprint,
+      })
+      .onConflictDoUpdate({
+        target: [stopOpens.stopId, stopOpens.localDate, stopOpens.fingerprint],
+        set: {
+          openCount: sql`${stopOpens.openCount} + 1`,
+          lastOpenAt: new Date(),
+        },
+      });
+  }
+
+  /**
+   * La parada de un circuito, por el slug de su QR — para poder contar su
+   * apertura sin confiar en lo que mandó el teléfono.
+   *
+   * Comprueba **las dos cosas**: que la parada existe y que es de ESE circuito.
+   * Sin lo segundo, cualquiera podría sumarle aperturas a la parada de otra
+   * ruta mandando el slug que quisiera, y la cifra dejaría de decir lo que dice.
+   */
+  async paradaDelCircuitoPorQr(circuitId: string, qrSlug: string) {
+    const [fila] = await this.db
+      .select({ id: circuitStops.id })
+      .from(circuitStops)
+      .where(and(eq(circuitStops.circuitId, circuitId), eq(circuitStops.qrSlug, qrSlug)))
+      .limit(1);
+    return fila ?? null;
+  }
+
+  /**
    * El resumen por día de un circuito: cuántos aparatos distinguibles y cuántas
    * veces en crudo.
    *
@@ -6782,6 +6832,45 @@ export class CircuitRepository {
       .where(and(eq(circuitOpens.circuitId, circuitId), gte(circuitOpens.localDate, desde)))
       .groupBy(circuitOpens.localDate)
       .orderBy(desc(circuitOpens.localDate));
+  }
+
+  /**
+   * El resumen de **aperturas de una PARADA**, por día. Gemelo del de arriba y
+   * sobre su propia tabla: las dos cifras nunca se suman.
+   *
+   * Aquí también se devuelven las dos —`aparatos` y `crudo`— y aquí también
+   * **sólo la primera se enseña**: el crudo es el detector, no un dato de
+   * reserva. Ver `docs/Ficha-Contador-Anonimo.md`.
+   */
+  async resumenDeAperturasDeParada(stopId: string, desde: string) {
+    return this.db
+      .select({
+        localDate: stopOpens.localDate,
+        aparatos: count(),
+        crudo: sql<number>`sum(${stopOpens.openCount})::int`,
+      })
+      .from(stopOpens)
+      .where(and(eq(stopOpens.stopId, stopId), gte(stopOpens.localDate, desde)))
+      .groupBy(stopOpens.localDate)
+      .orderBy(desc(stopOpens.localDate));
+  }
+
+  /**
+   * El primer día con registro de ESTA parada — lo mismo que
+   * `primerDiaConAperturas` hace para un circuito, y por la misma razón: **un
+   * cero no es un hueco.**
+   *
+   * Y aquí importa más que allá. Este contador nace el 25-sep-2026, así que
+   * todos los días anteriores de todas las paradas son hueco, no cero. Una
+   * pantalla que dibuje «0» en septiembre afirmaría que nadie abrió ninguna
+   * parada cuando lo cierto es que no había instrumento.
+   */
+  async primerDiaConAperturasDeParada(stopId: string): Promise<string | null> {
+    const [fila] = await this.db
+      .select({ dia: sql<string | null>`min(${stopOpens.localDate})` })
+      .from(stopOpens)
+      .where(eq(stopOpens.stopId, stopId));
+    return fila?.dia ?? null;
   }
 
   /**

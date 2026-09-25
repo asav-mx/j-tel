@@ -1599,6 +1599,62 @@ export const circuitOpens = pgTable(
   ],
 );
 
+/**
+ * **Aperturas de una PARADA, por día.** El contador hermano de `circuit_opens`.
+ *
+ * ## Por qué existe, y por qué no es una columna del otro
+ *
+ * Hasta el #592, tocar una parada en el mapa **abría la ruta entera**, así que
+ * ese gesto caía en `circuit_opens`. Desde que la hoja se abre encima del mapa,
+ * ya no: la ruta no se abre, y aquel contador dejó de ver el gesto más común de
+ * la app.
+ *
+ * Podría haber sido una columna `stop_id` nullable en `circuit_opens`. **No lo
+ * es a propósito.** Con una columna, cualquier consulta que hoy cuenta filas
+ * —las que ya existen y las que alguien escriba mañana— empezaría a sumar
+ * aperturas de parada dentro de «abrió una ruta» salvo que se acuerde de
+ * filtrar. Dos poblaciones que miden cosas distintas no se separan con la
+ * disciplina de quien consulta: se separan con dos tablas.
+ *
+ * La decisión es de ASAV, 25-sep: «que cuente, pero como lo que es».
+ *
+ * ## Todo lo demás es idéntico, y tiene que serlo
+ *
+ * Misma huella rotada por día (`huellaDeAperturaDeParada`), mismo crudo que se
+ * guarda y no se enseña, misma deduplicación en la base, y **las mismas dos
+ * advertencias**: el NAT la hunde y el raspado la infla. Ver
+ * `docs/Ficha-Contador-Anonimo.md`; no se repite aquí para que no se separen.
+ */
+export const stopOpens = pgTable(
+  "stop_opens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /*
+     * La parada ESTABLE (`circuit_stops`), no su versión. Una parada que cambia
+     * de nombre sigue siendo la misma parada y su serie no se parte en dos.
+     */
+    stopId: uuid("stop_id")
+      .notNull()
+      .references(() => circuitStops.id, { onDelete: "cascade" }),
+    /** El día CIVIL DEL CIRCUITO de esa parada, el mismo con el que rota la huella. */
+    localDate: date("local_date").notNull(),
+    /** HMAC del día, la parada y lo que la petición ya traía. */
+    fingerprint: text("fingerprint").notNull(),
+    /** El crudo. Se guarda, no se enseña — es el detector, igual que en el otro. */
+    openCount: integer("open_count").notNull().default(1),
+    firstOpenAt: timestamp("first_open_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    lastOpenAt: timestamp("last_open_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("stop_opens_un_dia").on(table.stopId, table.localDate, table.fingerprint),
+    index("stop_opens_resumen_idx").on(table.stopId, table.localDate),
+  ],
+);
+
 /** El trazado de un sentido. Uno por sentido: ida y vuelta no son espejo. */
 export const circuitPaths = pgTable(
   "circuit_paths",
