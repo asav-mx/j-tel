@@ -76,9 +76,8 @@ grados de los que había. Un mapa que se acaba en una línea horizontal no se le
 La caja de hoy (`-107.00,31.20 → -105.95,32.20`) cuesta **4.8 MB más en el repo y cero
 para el pasajero**. Va con dos cosas más, y las tres valen juntas: **piso de zoom** en
 z10 —donde la ciudad entera con El Paso cabe en la pantalla— para que no se llegue al
-borde alejando, y **límites de arrastre** para que no se llegue por un costado. Esas dos
-entran con el PR del estilo, que es quien crea el mapa; lo que sí mide ya
-`mapa-base.test.ts` es que la caja dé de sí para las dos.
+borde alejando, y **límites de arrastre** para que no se llegue por un costado. Lo mide
+`mapa-base.test.ts`.
 
 ## La fecha va en el nombre, y no es decoración
 

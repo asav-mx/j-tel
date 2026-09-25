@@ -3,7 +3,24 @@
 import { useEffect, type RefObject } from "react";
 
 /**
- * El teñido de las teselas del mapa, para las dos pantallas que lo dibujan.
+ * El teñido de las teselas del mapa.
+ *
+ * ## ⚠ 25-sep-2026: esto ya NO lo llama nadie, y se queda a propósito
+ *
+ * El mapa dejó de ser una imagen ajena que se filtra: ahora se **dibuja** con
+ * los colores de la piel (`lib/ontoy/piel-del-mapa.ts`). Un filtro es lo mejor
+ * que se puede hacer sobre teselas de otro, y este archivo se queda como **plan
+ * B declarado** mientras el mapa propio no haya rodado en la calle: si algo
+ * saliera mal antes del lanzamiento, volver a los mosaicos de OpenStreetMap es
+ * cambiar `mapa-base.ts` y llamar a esto otra vez.
+ *
+ * **No se aplica encima del mapa nuevo.** Filtrar un mapa que ya se dibujó con
+ * su piel lo tiñe dos veces: de noche, `invert(1)` sobre el azul noche devuelve
+ * un mapa amarillento. Lo cerca `piel-en-el-mapa.test.ts`.
+ *
+ * Cuando el mapa propio lleve unas semanas en la calle, este archivo y su prueba
+ * se borran. Un archivo que nadie llama se lee como vigente, y ése es el precio
+ * de dejarlo puesto.
  *
  * ## Por qué el filtro va a la CAPA DE TESELAS y no al contenedor
  *

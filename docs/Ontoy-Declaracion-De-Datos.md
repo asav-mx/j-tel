@@ -28,21 +28,32 @@ Cada respuesta lleva dónde se comprueba. Si un día el texto y el código no co
 
 **Las peticiones que hace la app, completas:** los recorridos por tramo (`GET /api/circuitos/recorridos`, sin parámetros, agregados del circuito), las paradas de la ciudad (`GET /api/circuitos/paradas-de-la-ciudad`, sin parámetros), la forma de la ruta (`GET /api/circuitos/‹ruta›`),
 los camiones en vivo de la ruta abierta (`GET …/unidades`, cada 15 s) y los de tus rutas favoritas (`GET /api/circuitos/en-vivo?rutas=…`, cada 15 s, una para todas), la apertura (`POST …/apertura`, vacío), **los folios en uso del pase** (`POST /api/boletos/estado`, sólo cuando hay alguno) y
-**las teselas del mapa, a un tercero** (ver abajo). Las respuestas de los camiones traen además **los avisos de la concesión** que valen en ese momento (título, detalle, fechas; nada de quién los capturó) — datos públicos de la ruta, no del pasajero, desde la 0052. Ninguna petición lleva ubicación, nombre, correo,
+**el mapa de fondo, que es un archivo de este mismo servidor** (ver abajo). Las respuestas de los camiones traen además **los avisos de la concesión** que valen en ese momento (título, detalle, fechas; nada de quién los capturó) — datos públicos de la ruta, no del pasajero, desde la 0052. Ninguna petición lleva ubicación, nombre, correo,
 teléfono ni identificador del aparato.
 
-### El tercero: el mapa de fondo
+### El mapa de fondo: ya no hay tercero
 
-Hoy las teselas se piden a **OpenStreetMap** (`tile.openstreetmap.org`), directo desde el
-teléfono. OpenStreetMap recibe **la IP del pasajero y qué zona del mapa está viendo** (por
-las coordenadas de la tesela). Nosotros no le mandamos nada. Está en
-`lib/ontoy/mapa-base.ts` (`hayTercero: true`) y la página pública lo dice.
+**El mapa lo servimos nosotros** desde el 25-sep-2026. Es **un archivo** —
+`/mapa/juarez-AAAAMMDD.pmtiles`, en el mismo servidor que sirve la app — que el navegador
+lee **por rangos**: pide los pedazos que necesita, como se lee un disco. Está en
+`lib/ontoy/mapa-base.ts` (`hayTercero: false`), y la página pública lo dice sola porque lee
+esa función.
 
-**Esto cambia antes del lanzamiento:** los tiles públicos de OSM no permiten uso de
-producción, y el camino decidido es **Protomaps en almacenamiento propio** (21 sep). Con
-eso, `hayTercero` pasa a `false`, la página se corrige sola, y **esta declaración se
-revisa** (desaparece el tercero). Declarar hoy con OSM y lanzar con Protomaps sin revisar
-sería declarar algo que ya no es cierto — en cualquiera de los dos sentidos.
+Hasta ese día las teselas se pedían a **OpenStreetMap** (`tile.openstreetmap.org`), directo
+desde el teléfono, y OpenStreetMap recibía **la IP del pasajero y qué zona del mapa estaba
+viendo** (por las coordenadas de la tesela). **Ese renglón desapareció**: nadie fuera de
+nuestro servidor recibe una petición del mapa.
+
+**Los datos del mapa siguen siendo de OpenStreetMap, y el crédito se queda.** Es una cosa
+distinta de la anterior y conviene no juntarlas:
+
+| | |
+|---|---|
+| **El crédito** | Es por los **datos** (ODbL). Va en el mapa, y no cambia porque cambie quién sirve el archivo |
+| **La privacidad** | Es por **quién recibe las peticiones**. Cambió: ahora nadie más que nosotros |
+
+Confundirlas produce los dos errores contrarios: quitar el crédito porque «ya no les
+pedimos nada», o seguir declarando un tercero porque «el crédito sigue ahí».
 
 ### El contador de aperturas subcuenta, y hay que decirlo
 
@@ -79,7 +90,7 @@ contestar la petición).
 
 | Pregunta | Respuesta propuesta | Por qué |
 |---|---|---|
-| ¿La app recopila o comparte datos del usuario? | **Sí** | La apertura guarda una huella; el mapa manda la IP a un tercero |
+| ¿La app recopila o comparte datos del usuario? | **Sí** (recopila; **no comparte**) | La apertura guarda una huella. El mapa **ya no manda nada a ningún tercero**: es un archivo de nuestro propio servidor |
 | **Ubicación** (aproximada / precisa) | **No recopilada** | Se usa en el teléfono y no sale (tabla de arriba) |
 | Información personal, financiera, de salud, mensajes, fotos, audio, archivos, contactos, calendario | **No** | La app no toca nada de eso |
 | **Actividad en la app → Interacciones con la app** | **Recopilada**, no compartida | «Se abrió la ruta X hoy», con una huella diaria |
@@ -89,7 +100,7 @@ contestar la petición).
 | · Y los folios del pase (`POST /api/boletos/estado`) | **No se declaran aparte: procesamiento efímero** | El folio viaja para contestar «¿ya se usó?» y **el servidor no guarda la consulta**. Lo que sí queda escrito es el quemado que entregó el lector, que es un dato del servicio (arriba). **Revisar con el abogado de Ontoy 3.0** antes de cualquier cobro real |
 | · Y las rutas favoritas (`en-vivo?rutas=`) | **No se declaran aparte: procesamiento efímero** | La lista viaja para contestar la petición y el servidor no la guarda. Es el mismo caso que pedir una ruta por su nombre, que ya se hacía. **Revisar con el abogado de Ontoy 3.0** si el registro técnico de la plataforma cambia esa respuesta |
 | **Identificadores de dispositivo u otros** | **No** | La huella viaja dentro de la interacción de arriba (ya declarada), rota cada día y no identifica al aparato entre días; la IP entra al cálculo y se descarta. Si la revisión de Google lo pregunta, ésa es la explicación |
-| **Compartidos con terceros** | **Revisar con el tercero del mapa**: mientras sea OSM, el teléfono le pide teselas directo, con su IP. Google considera «compartir» enviar datos a un tercero; lo prudente es declarar **Ubicación aproximada → compartida → funcionalidad de la app**, con la nota de que es la zona de la tesela, no la ubicación. **Con Protomaps, esta fila desaparece.** | Ver «el tercero» arriba |
+| **Compartidos con terceros** | **No.** Ninguna petición de la app sale hacia un tercero: ni las teselas del mapa, que ahora son un archivo nuestro. Hasta el 25-sep-2026 aquí había que declarar la **ubicación aproximada como compartida** por los mosaicos de OSM —Google cuenta como «compartir» mandar datos a un tercero—; con el mapa propio esa fila dejó de aplicar | Ver «el mapa de fondo» arriba |
 | ¿Los datos se cifran en tránsito? | **Sí** | Todo va por HTTPS |
 | ¿Se puede pedir que se borren? | **No aplica / no hay cuenta**: no hay nada ligado a una persona que borrar; lo del teléfono lo borra el pasajero | — |
 | Enlace a la política de privacidad | `https://ontoy.app/privacidad` | **El dominio se decidió el 23-sep: `ontoy.app`** (`Procedimiento-Dominio-Ontoy-App.md`). Vale en cuanto el DNS apunte |
@@ -102,14 +113,15 @@ empresas para publicidad).
 
 | Categoría | Respuesta propuesta |
 |---|---|
-| **Ubicación** | **No recopilada** por nosotros. Nota sobre el tercero del mapa: igual que en Play — mientras sea OSM, declarar **Ubicación aproximada, no vinculada, no rastreo, funcionalidad**. Con Protomaps se quita |
+| **Ubicación** | **No recopilada.** Se usa en el teléfono y no sale. Hasta el 25-sep-2026 había que declarar además **Ubicación aproximada** por los mosaicos de OSM; con el mapa propio se quitó |
 | **Datos de uso → Interacción con el producto** | **Recopilado**, **no vinculado** a la identidad, **no usado para rastreo**, propósito **Análisis** |
 | Contacto, salud, finanzas, contenido del usuario, historial de búsqueda y de navegación, identificadores, compras, diagnósticos | **No recopilados** |
 | ¿Rastreo? | **No** |
 | URL de la política | `https://ontoy.app/privacidad` |
 
-La etiqueta resultante debería leer: **«Datos no vinculados a ti: Datos de uso»** (y, mientras
-el mapa sea de OSM, **Ubicación**). Nada en «Datos usados para rastrearte».
+La etiqueta resultante debería leer: **«Datos no vinculados a ti: Datos de uso»**, y nada
+más — la **Ubicación** salió de la etiqueta cuando salió el tercero del mapa. Nada en «Datos
+usados para rastrearte».
 
 ---
 
@@ -121,7 +133,11 @@ el mapa sea de OSM, **Ubicación**). Nada en «Datos usados para rastrearte».
    El dominio viejo, `juarezbus.digital`, redirige y no se apaga.
 2. **`NEXT_PUBLIC_CONTACTO_PRIVACIDAD`** en Vercel: la página dice «el correo de contacto
    todavía no está configurado» mientras no exista, y ambas tiendas exigen un contacto.
-3. **Decidir el mapa del lanzamiento** (Protomaps): cambia las filas del tercero.
+3. ~~**Decidir el mapa del lanzamiento** (Protomaps)~~ → **hecho el 25-sep-2026.** El mapa
+   es un archivo nuestro y **el tercero desapareció de esta declaración**: la fila de
+   «compartidos con terceros» pasó a **No** y la **Ubicación aproximada** salió de la
+   etiqueta de Apple. Lo que sigue vivo del mapa es que **sin señal no hay fondo** — ver
+   `docs/Ontoy-Mapa-Base.md`; no es un dato del pasajero, así que no cambia nada de aquí.
 4. **El límite de peticiones en `/unidades`** — requisito antes de publicar en tiendas
    (traspaso del 21 sep), no de esta declaración.
 5. **Ontoy 3.0, antes de cualquier cobro real:** hoy los boletos son de laboratorio y no

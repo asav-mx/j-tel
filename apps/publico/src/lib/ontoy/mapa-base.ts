@@ -1,35 +1,48 @@
 /**
  * El fondo del mapa — **una sola función, y ése es el punto.**
  *
- * Hoy son los tiles públicos de OpenStreetMap, y eso tiene dos consecuencias
- * que conviene tener escritas donde se cambian:
+ * **El mapa lo servimos nosotros** (decisión de ASAV, 21-sep-2026): un archivo
+ * de Protomaps con Juárez y El Paso, en `public/mapa/`, servido por el mismo
+ * servidor que sirve la app. Antes eran los mosaicos públicos de
+ * `tile.openstreetmap.org`, y se fueron por dos razones distintas:
  *
- * ## 1. Es el único tercero que la app toca
+ * ## 1. Era el único tercero que la app tocaba
  *
- * Cada tile que el pasajero ve es una petición **suya** a `openstreetmap.org`,
- * con su IP y —por las coordenadas del tile— aproximadamente hacia dónde está
- * mirando. La app no manda su ubicación a ningún lado (ver `ubicacion.ts`), pero
- * el mapa de fondo sí le cuenta algo a alguien. Va declarado en la página de
- * privacidad, porque lo que no se dice se descubre.
+ * Cada mosaico que el pasajero veía era una petición **suya** a
+ * `openstreetmap.org`, con su IP y —por las coordenadas del mosaico—
+ * aproximadamente hacia dónde estaba mirando. La app nunca mandó su ubicación a
+ * ningún lado (ver `ubicacion.ts`); el mapa de fondo sí le contaba algo a
+ * alguien. **Ya no hay a quién.** Va declarado en la página de privacidad,
+ * porque lo que no se dice se descubre — y ahora lo que dice es que no hay
+ * tercero, que es una afirmación más fuerte y por eso hay que poder sostenerla:
+ * si alguien vuelve a poner una dirección absoluta aquí, `mapa-base.test.ts` se
+ * cae.
  *
- * ## 2. Los tiles públicos de OSM no son para producción
+ * ## 2. Los mosaicos públicos de OSM no son para producción
  *
  * Su política de uso lo dice sin rodeos: es infraestructura donada y el uso
  * pesado está prohibido; el remedio de ellos es bloquear por `User-Agent`, o
- * sea **el mapa se apaga un día, en la calle, para todos**. Para el piloto está
- * bien; para la tienda no.
+ * sea **el mapa se apaga un día, en la calle, para todos**. Para el piloto
+ * estuvo bien; para la tienda no.
  *
- * **El camino decidido (ASAV, 21-sep):** Protomaps servido desde nuestro propio
- * almacenamiento, para que ningún tercero vea dónde mira el pasajero; MapTiler
- * si Protomaps resulta pesado. Cambiar de proveedor es cambiar esta función —
- * y por eso está sola, en su archivo, en vez de dentro del componente del mapa.
+ * ## Lo que NO cambió: el crédito
  *
- * **Y el mapa ya está en el repo, pero la app todavía no lo usa.** Lo de abajo
- * —`MAPA_DE_LA_CIUDAD`— describe el archivo que sirve este mismo servidor;
- * `fondoDelMapa()` sigue devolviendo OpenStreetMap hasta que entre el estilo,
- * que es lo que hace que el mapa se vea como Ontoy y no como un mapa cualquiera.
- * Van en dos PRs a propósito: el archivo pesa 14 MB y el estilo se revisa
- * mirándolo, y un PR que trae las dos cosas no deja revisar ninguna.
+ * Los datos siguen siendo de **OpenStreetMap** (ODbL) y el crédito se queda en
+ * el mapa. El crédito es por los **datos**; la privacidad es por **quién recibe
+ * las peticiones**. Son dos cosas y confundirlas lleva a los dos errores: quitar
+ * el crédito porque «ya no les pedimos nada», o dejar dicho que hay un tercero
+ * porque «el crédito sigue ahí».
+ *
+ * **El crédito va sin liga, como ya iba.** Una liga en la esquina del mapa, en
+ * una app instalada —`display: standalone`, o sea **sin flecha de atrás** (#374)—
+ * es una salida sin regreso. El crédito completo, con sus ligas, vive en la
+ * página de privacidad, que sí tiene salida.
+ *
+ * ## Cambiar de proveedor es cambiar esta función
+ *
+ * Por eso está sola, en su archivo, en vez de dentro del componente del mapa. Lo
+ * que dibuja con esto está en `capa-de-fondo.ts` y los colores en
+ * `piel-del-mapa.ts`.
  */
 
 /**
@@ -65,10 +78,18 @@ export const MAPA_DE_LA_CIUDAD = {
    * app está rota.
    *
    * Cuesta **4.8 MB más en el repo y cero para el pasajero**, que sólo baja los
-   * pedazos que mira. El piso de zoom y los límites de arrastre que la
-   * acompañan entran con el PR del estilo, que es quien crea el mapa.
+   * pedazos que mira.
    */
   caja: { oeste: -107.0, sur: 31.2, este: -105.95, norte: 32.2 },
+  /**
+   * Hasta dónde se puede **alejar**. Es la otra mitad de lo mismo: con la caja
+   * de arriba, en z10 la pantalla de un teléfono cabe dentro de lo recortado —
+   * y ahí se ve la ciudad entera con El Paso. Un paso más lejos, no.
+   *
+   * Va junto con `maxBounds`, que es lo que impide llegar al borde
+   * arrastrando en vez de alejando.
+   */
+  zoomMinimo: 10,
   /**
    * Hasta dónde hay **datos**. El build de Protomaps se acaba en z15 y no es un
    * tope de acercamiento: el dibujo es vectorial, así que más allá de z15 las
@@ -83,10 +104,22 @@ export function direccionDelMapa(): string {
 }
 
 export interface FondoDelMapa {
+  /** Qué se le pide, y a quién. Hoy: un archivo de este mismo origen. */
   url: string;
   atribucion: string;
+  /** Hasta dónde se puede acercar el mapa. */
   zoomMaximo: number;
-  /** Un tercero recibe las peticiones de tiles. Lo usa la página de privacidad. */
+  /** Hasta dónde se puede alejar sin que asome el borde del recorte. */
+  zoomMinimo: number;
+  /** Hasta dónde hay datos; de ahí para arriba el dibujo se agranda sin pixelarse. */
+  zoomDeLosDatos: number;
+  /**
+   * Hasta dónde se puede arrastrar. **Es el mapa que tenemos, y ni un metro
+   * más:** sin esto, alejar queda limitado pero arrastrar no, y el pasajero se
+   * sale del recorte por un costado en vez de por abajo.
+   */
+  limites: { oeste: number; sur: number; este: number; norte: number };
+  /** Un tercero recibe las peticiones del mapa. Lo usa la página de privacidad. */
   hayTercero: boolean;
   /** El nombre del tercero, para poder decirlo. `null` cuando no hay ninguno. */
   tercero: string | null;
@@ -94,10 +127,18 @@ export interface FondoDelMapa {
 
 export function fondoDelMapa(): FondoDelMapa {
   return {
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-    atribucion: "© OpenStreetMap",
+    url: direccionDelMapa(),
+    /*
+     * Dos créditos y los dos obligados: los **datos** son de OpenStreetMap
+     * (ODbL) y el **recorte** es del build de Protomaps (BSD-3). Sin ligas, por
+     * la razón de arriba.
+     */
+    atribucion: "© OpenStreetMap · Protomaps",
     zoomMaximo: 19,
-    hayTercero: true,
-    tercero: "OpenStreetMap",
+    zoomMinimo: MAPA_DE_LA_CIUDAD.zoomMinimo,
+    zoomDeLosDatos: MAPA_DE_LA_CIUDAD.zoomDeLosDatos,
+    limites: MAPA_DE_LA_CIUDAD.caja,
+    hayTercero: false,
+    tercero: null,
   };
 }
