@@ -257,6 +257,19 @@
   border-color: var(--linea);
 }
 /*
+ * **El botón principal: uno por pantalla** (estándar, regla 4). Pastilla
+ * carbón, texto del papel, 52 de alto — que es lo que un pulgar acierta de pie.
+ */
+.ontoy-boton-principal {
+  background: var(--texto);
+  color: var(--panel);
+  border-color: var(--texto);
+  font-weight: 700;
+  font-size: 16px;
+  min-height: 52px;
+  border-radius: var(--r-pill, 999px);
+}
+/*
  * Un botón apagado tiene que verse apagado. Sin esto, «Mostrar para subir» con
  * cero viajes se ve igual de pulsable que con cinco, y quien lo pica cree que
  * la app se trabó. Atenuar aquí es legítimo: un botón deshabilitado no carga
@@ -1562,6 +1575,111 @@
 .ontoy-pronto-cuando b {
   color: var(--texto);
   font-weight: 700;
+}
+
+/* ── Inicio: su encabezado, su bienvenida y sus estados ────────────────── */
+
+/*
+ * El encabezado que el estándar pide en toda pantalla: título en tipo oración
+ * y, debajo, la línea de contexto que dice de dónde viene lo que se ve.
+ */
+.ontoy-inicio-cabeza {
+  padding: 18px 18px 2px;
+}
+.ontoy-inicio-titulo {
+  margin: 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  color: var(--texto);
+  text-wrap: balance;
+}
+.ontoy-inicio-contexto {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--tenue);
+}
+
+/* La bienvenida: UNA tarjeta, y se va para siempre en cuanto responda. */
+.ontoy-bienvenida {
+  margin: 14px 18px 4px;
+  padding: 18px;
+  background: var(--panel);
+  border-radius: var(--r-card, 26px);
+  box-shadow: 0 0 0 1px var(--linea);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ontoy-bienvenida-dicho {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ontoy-bienvenida-titulo {
+  margin: 0 0 6px;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  color: var(--texto);
+}
+.ontoy-bienvenida-apoyo {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--tenue);
+  text-wrap: pretty;
+}
+.ontoy-bienvenida-nota {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--tenue);
+  text-wrap: pretty;
+}
+/* Las dos salidas miden lo mismo: ninguna de las dos es la que «hay que» tocar. */
+.ontoy-bienvenida .ontoy-boton {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+}
+
+/*
+ * **Los estados de Inicio se SUMAN, no reemplazan.** Sin red y de noche ponen
+ * su renglón arriba y dejan las rutas abajo: la promesa publicada no depende de
+ * la red (8.2), y a las 2 de la mañana lo que alguien viene a mirar es
+ * justamente el horario.
+ */
+.ontoy-inicio-estado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px 6px;
+}
+.ontoy-inicio-estado-dicho {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--tenue);
+  text-wrap: pretty;
+}
+.ontoy-muneco {
+  flex: none;
+  display: block;
+}
+/* Las «z» del dormido: son parte del dibujo, no una animación. */
+.ontoy-muneco-z {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+}
+.ontoy-muneco-z.chica {
+  font-size: 12px;
 }
 
 /* ── la campana (8.13b) ───────────────────────────────────────────────── */
