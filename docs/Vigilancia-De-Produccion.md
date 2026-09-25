@@ -20,7 +20,7 @@ también un cron de Vercel y se cayó con todo lo demás.
 
 | | Dónde vive | Cada cuánto | Qué mira | Cómo avisa |
 |---|---|---|---|---|
-| **UptimeRobot** | Fuera de todo lo nuestro | **5 min** | Que **`https://ontoy.app`** y **`https://www.j-telemetry.com`** contesten | **Correo y teléfono de ASAV** |
+| **UptimeRobot** | Fuera de todo lo nuestro | **5 min** | Que **`https://ontoy.app`** y **`https://www.j-telemetry.com`** contesten | **Correo y teléfono de ASAV** — el correo, visto llegar el 25-sep (abajo) |
 | **Vigilante de salud** | GitHub Actions | 15 min | `/api/salud`: GPS con menos de 20 min de atraso, archivador con menos de 30 | Issue en el repo |
 | **Heartbeat de ingesta** | Cron de Vercel | — | Que sigan entrando posiciones | Escribe `ingest_alerts` en la base |
 
@@ -59,18 +59,26 @@ Lo que ninguno de los tres vigila hoy, dicho con nombre para que no se suponga:
 - **`/api/salud` dice «sano» con servicios sin veredicto.** Sigue abierto desde el
   PR 3 del OOM; el 200 de ese endpoint no es una garantía tan ancha como suena.
 
-## Lo que hay que comprobar, y no se ha comprobado
+## El aviso se vio llegar — 25 de septiembre de 2026
 
 **Un instrumento no está probado hasta que se ve llegar su aviso a un humano.** Es la
 lección que `salud.yml` aprendió dos veces —la segunda estuvo **nueve días muda**, con
 117 corridas y cero avisos— y por eso ese workflow tiene `simular_codigo`: se provoca
 un aviso a propósito y se mira si llega.
 
-Con UptimeRobot **eso todavía no se ha hecho**. Lo pendiente es **apuntar un monitor
-un minuto a una dirección que conteste 404** —por ejemplo `https://ontoy.app/prueba-de-aviso-no-existe`—,
-esperar un ciclo de 5 minutos, **comprobar que el aviso entra al correo y al teléfono
-de ASAV**, y devolver la URL. Hasta que alguien lo vea llegar, lo de arriba es una
-suposición con nombre de garantía.
+**Con UptimeRobot ya se hizo, y las dos mitades funcionan.** ASAV apuntó el monitor a
+una dirección que da 404, esperó un ciclo y **llegó «Monitor is DOWN: ontoy.app» a su
+correo**; después devolvió la URL buena. O sea: la caída **se detecta** y el aviso
+**sale**, que son las dos cosas distintas que casi nunca se prueban juntas.
+
+**Lo que se vio llegar fue el correo.** Del aviso al **teléfono** no hay constancia
+todavía, y se escribe así en vez de darlo por bueno: el canal del teléfono es
+precisamente el que tiene que funcionar cuando el correo no se puede abrir.
+
+**Cómo se repite** (cuando cambie el monitor, el contacto o la cuenta): apuntar el
+monitor un minuto a una dirección que conteste 404 —`https://ontoy.app/prueba-de-aviso-no-existe`—,
+esperar un ciclo de 5 minutos, ver entrar el aviso, y devolver la URL. El «up» de la
+vuelta también cuenta: comprueba que el aviso de recuperación existe.
 
 **Pausar el monitor NO sirve para esto, y era lo que decía este renglón**: pausar sólo
 deja de medir, no manda «down». Probándolo así no llega nada, y eso se lee como que el
