@@ -2786,6 +2786,15 @@
   color: var(--texto);
   border: 1.5px solid var(--texto);
 }
+/*
+ * Una vista hecha de un solo estado de pantalla completa (4-pase/03, 3-ir-a/15):
+ * columna, para que `.ontoy-completa-dentro` tome el alto que sobra y quede
+ * centrada como en el diseño, y no pegada arriba.
+ */
+.ontoy-vista-llena {
+  display: flex;
+  flex-direction: column;
+}
 
 .ontoy-banda-rd {
   margin: 0;

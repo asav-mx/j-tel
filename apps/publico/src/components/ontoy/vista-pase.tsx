@@ -48,13 +48,13 @@ export function VistaPase(props: Parameters<typeof PaseDePruebas>[0] & { alVolve
  */
 function PaseProximamente({ alVolver }: { alVolver: () => void }) {
   return (
-    <div className="ontoy-vista">
-      <section className="ontoy-seccion">
-        <h2 className="ontoy-seccion-titulo">Tu pase</h2>
-      </section>
+    <div className="ontoy-vista ontoy-vista-llena">
+      <header className="ontoy-inicio-cabeza">
+        <h1 className="ontoy-inicio-titulo">Tu pase</h1>
+      </header>
       <section className="ontoy-completa ontoy-completa-dentro">
         <Ontoy pose="con-boleto" tamano={160} />
-        <h3 className="ontoy-completa-titular">Pronto podrás pagar con tu teléfono.</h3>
+        <h2 className="ontoy-completa-titular">Pronto podrás pagar con tu teléfono.</h2>
         <p className="ontoy-completa-ayuda">
           Todavía ningún camión lee pases. Cuando tu ruta empiece, aquí aparece tu pase.
         </p>
