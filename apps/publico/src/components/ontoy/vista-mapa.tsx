@@ -46,7 +46,7 @@ export interface ModoCiudad {
   /** Cuántas quedan fuera de la tira, para el chip de «+N rutas más». */
   cuantasMas: number;
   vivos: Map<string, Vivo>;
-  guardadas: Array<{ id: string; ruta: string; nombre: string; lat: number; lon: number }>;
+  guardadas: Array<{ id: string; ruta: string; nombre: string; lat: number; lon: number; sentido: Sentido | null }>;
   /** Las paradas públicas de la ciudad; los puntitos salen de aquí. */
   paradas: ParadaDeLaCiudad[];
   /** El interruptor de los puntitos de parada. */
@@ -55,6 +55,14 @@ export interface ModoCiudad {
   alAlternarParadas: () => void;
   alAbrirPanel: () => void;
   alAbrirRuta: (ruta: string, parada?: string) => void;
+  /**
+   * **Tocar una parada NO es abrir su ruta.** Son dos verbos distintos y por eso
+   * son dos props: `alAbrirRuta` cambia de pantalla (se llega desde Inicio y
+   * desde la traza de una ruta), `alTocarParadaDeLaCiudad` abre su hoja encima
+   * del mapa sin mover nada más. Antes los puntitos llamaban al primero, y por
+   * eso tocar a Tino sacaba al pasajero del mapa.
+   */
+  alTocarParadaDeLaCiudad: (ruta: string, parada: string, sentido: Sentido | null) => void;
 }
 
 /*
@@ -361,7 +369,6 @@ export function VistaMapa({
             fillColor: forma.color_hex,
             fillOpacity: 1,
           })
-          .bindTooltip(p.nombre, { direction: "top", opacity: 0.95 })
           .on("click", () => alTocarParada(p.id))
           .addTo(capaParadas.current);
         continue;
@@ -380,7 +387,6 @@ export function VistaMapa({
       leaflet
         .marker([p.lat, p.lon], { icon: icono, keyboard: false })
         // El nombre acompaña al color siempre (8.8c): el marcador se anuncia con él.
-        .bindTooltip(p.nombre, { direction: "top", opacity: 0.95 })
         .on("click", () => alTocarParada(p.id))
         .addTo(capaParadas.current);
     }
@@ -541,8 +547,7 @@ export function VistaMapa({
         });
         leaflet
           .marker([p.lat, p.lon], { icon: icono, keyboard: false })
-          .bindTooltip(p.nombre, { direction: "top", opacity: 0.95 })
-          .on("click", () => ciudad.alAbrirRuta(p.ruta, p.id))
+          .on("click", () => ciudad.alTocarParadaDeLaCiudad(p.ruta, p.id, p.sentido ?? null))
           .addTo(capaParadasCiudad.current);
       } else {
         leaflet
@@ -553,8 +558,7 @@ export function VistaMapa({
             fillColor: c,
             fillOpacity: 1,
           })
-          .bindTooltip(p.nombre, { direction: "top", opacity: 0.95 })
-          .on("click", () => ciudad.alAbrirRuta(p.ruta, p.id))
+          .on("click", () => ciudad.alTocarParadaDeLaCiudad(p.ruta, p.id, p.sentido ?? null))
           .addTo(capaParadasCiudad.current);
       }
     }
@@ -580,7 +584,7 @@ export function VistaMapa({
       leaflet
         .marker([p.lat, p.lon], { icon: icono, keyboard: false })
         .bindTooltip(`★ ${p.nombre}`, { direction: "top", opacity: 0.95 })
-        .on("click", () => ciudad.alAbrirRuta(p.ruta, p.id))
+        .on("click", () => ciudad.alTocarParadaDeLaCiudad(p.ruta, p.id, p.sentido ?? null))
         .addTo(capaParadas.current);
     }
   }, [listo, ciudad, rutas, lienzo]);

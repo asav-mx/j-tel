@@ -129,6 +129,17 @@ export function Ontoy({
    */
   const [camiTocado, setCamiTocado] = useState<UnidadViva | null>(null);
   /**
+   * **La parada tocada en el Mapa de la ciudad**, con su ruta.
+   *
+   * Lleva la ruta y no sólo el identificador de la parada porque en la ciudad no
+   * hay ninguna ruta abierta de la cual deducirla: la lista pública de paradas
+   * trae `ruta` por parada (`ParadaDeLaCiudad`) y es la única forma de saber a
+   * quién preguntarle sus llegadas. Deducirla del mapa —«la ruta enfocada»—
+   * daría la respuesta de otra ruta el día que el pasajero toque una parada de
+   * una ruta distinta a la que está resaltada, que es justo el caso normal.
+   */
+  const [paradaTocada, setParadaTocada] = useState<{ ruta: string; parada: string } | null>(null);
+  /**
    * «Tus paradas» cuelga de Inicio, como la ruta abierta cuelga del Mapa: la
    * barra tiene cuatro lugares y eso es ley (8.8). No es un quinto lugar.
    */
@@ -149,8 +160,28 @@ export function Ontoy({
   const enElMapa = lugar === "mapa";
   /** El Mapa de la ciudad (PR 3b): en el Mapa, sin ruta abierta. */
   const enLaCiudad = enElMapa && !rutaAbierta;
-  /** La ruta abierta, si hay: su forma se pide aparte (una vez); sus camiones, en la consulta única. */
+  /**
+   * **La ruta que se CONSULTA**, que ya no es la misma que «la ruta abierta».
+   *
+   * De aquí cuelgan la forma (`useForma`) y los camiones de la consulta única.
+   * Hasta el #588 era `rutaAbierta ? enfocada : null`, y esa línea es la que
+   * hacía imposible el bucle del mapa: en el Mapa de la ciudad no había forma ni
+   * dato vivo de ninguna ruta, así que tocar una parada **no podía** contestar
+   * ahí mismo. La única forma de enseñar sus llegadas era abrir la ruta entera,
+   * o sea sacar al pasajero del mapa justo cuando acababa de señalar dónde está.
+   *
+   * Ahora son dos preguntas distintas:
+   * - **abierta**: ¿qué ruta está ocupando la pantalla? Decide la cabeza teñida,
+   *   la lista de paradas y la apertura que se cuenta (8.7).
+   * - **consultada**: ¿de qué ruta necesito datos? Es la abierta, o —en la
+   *   ciudad— la de la parada que el pasajero acaba de tocar.
+   *
+   * La apertura sigue colgando de la primera, a propósito: mirar la hoja de una
+   * parada sobre el mapa no es abrir una ruta, y contarlo inflaría la única
+   * cifra que dice cuántas rutas se abrieron.
+   */
   const abierta = enElMapa && rutaAbierta ? enfocada : null;
+  const consultada = abierta ?? (enLaCiudad ? (paradaTocada?.ruta ?? null) : null);
   const ubicacion = useUbicacion({ pedirAlAbrir: false });
   const yo = ubicacion.yo;
   // La única escritura de la app: una apertura por ruta abierta (8.7).
@@ -181,11 +212,11 @@ export function Ontoy({
    * una ruta abierta, eran 8— y los avisos al día en cualquier pantalla.
    */
   const [telefono, setTelefono] = useState<EstadoDelTelefono>(TELEFONO_INICIAL);
-  const consulta = useMemo(() => rutasDeLaConsulta(favoritas, abierta), [favoritas, abierta]);
+  const consulta = useMemo(() => rutasDeLaConsulta(favoritas, consultada), [favoritas, consultada]);
   const enVivo = useEnVivo(consulta, { alSondear: (s) => setTelefono((e) => registrarSondeo(e, s)) });
-  const f = useForma(abierta);
+  const f = useForma(consultada);
   const forma = f.forma;
-  const vivo = abierta ? (enVivo.vivos.get(abierta) ?? null) : null;
+  const vivo = consultada ? (enVivo.vivos.get(consultada) ?? null) : null;
   const error = enVivo.error || f.error;
   const reintentar = enVivo.reintentar;
   const { velocidad, trazadoPorSentido } = useVelocidadDelCorredor(forma, vivo);
@@ -197,6 +228,7 @@ export function Ontoy({
   const abrirCampana = useCallback(() => {
     setCampanaAbierta(true);
     setParadaAbierta(null);
+    setParadaTocada(null);
   }, []);
   useEffect(() => {
     // Abierta, lo que está en pantalla queda visto: el punto se apaga.
@@ -220,18 +252,55 @@ export function Ontoy({
     const todas = listaDeLaCiudad.datos?.paradas ?? [];
     return guardadas.guardadas.flatMap((g) => {
       const p = todas.find((x) => x.id === g.parada && x.ruta === g.ruta);
-      return p ? [{ id: p.id, ruta: p.ruta, nombre: p.nombre, lat: p.lat, lon: p.lon }] : [];
+      return p ? [{ id: p.id, ruta: p.ruta, nombre: p.nombre, lat: p.lat, lon: p.lon, sentido: p.sentido }] : [];
     });
   }, [listaDeLaCiudad.datos, guardadas.guardadas]);
 
   const abrirRuta = useCallback((circuitoId: string, parada?: string, enSentido?: Sentido) => {
     setEnfocada(circuitoId);
     setParadaAbierta(parada ?? null);
+    setParadaTocada(null);
     if (enSentido) setSentido(enSentido);
     setRutaAbierta(true);
     setModo("paradas");
     setLugar("mapa");
     setCampanaAbierta(false);
+  }, []);
+
+  /**
+   * **Tocar una parada en el Mapa de la ciudad: su hoja, encima del mapa.**
+   *
+   * Esto es el bucle que faltaba. Antes, este toque llamaba a `abrirRuta` y el
+   * pasajero acababa en la lista de las 18 paradas de la ruta: había señalado un
+   * punto del mapa y la app le contestaba cambiándole la pantalla. La pantalla de
+   * la ruta sigue existiendo —se llega a ella desde Inicio—, pero ya no es el
+   * destino de un toque en el mapa.
+   *
+   * No toca `lugar`, ni `rutaAbierta`, ni `enfocada`: el mapa se queda **exacto
+   * como estaba**, con el mismo encuadre y las mismas rutas prendidas. Lo único
+   * que cambia es que ahora hay una parada tocada, y de ella cuelga la consulta.
+   */
+  const tocarParadaDeLaCiudad = useCallback(
+    (ruta: string, parada: string, enSentido: Sentido | null) => {
+      setParadaTocada({ ruta, parada });
+      setParadaAbierta(parada);
+      setCamiTocado(null);
+      /*
+       * **El sentido sale de la parada tocada**, no del que traía la app.
+       *
+       * Sin esto, tocar una parada del regreso enseñaba «Ruta 51 · hacia Centro»
+       * encima de las llegadas del otro sentido: el dato bueno con el rótulo de
+       * otra cosa, que es el §D. Las paradas que sirven a los dos sentidos traen
+       * `null` y ahí el que había es tan bueno como cualquiera.
+       */
+      if (enSentido) setSentido(enSentido);
+    },
+    [],
+  );
+
+  const cerrarLaHoja = useCallback(() => {
+    setParadaAbierta(null);
+    setParadaTocada(null);
   }, []);
 
   /**
@@ -248,11 +317,19 @@ export function Ontoy({
     setLugar(l);
     setRutaAbierta(false);
     setParadaAbierta(null);
+    setParadaTocada(null);
     setCampanaAbierta(false);
     setVolverAlInicioDelLugar((n) => n + 1);
   }, []);
 
   const rutaEnfocada = rutas.find((r) => r.circuito_id === enfocada) ?? null;
+  /**
+   * **La ruta de la hoja abierta** — la consultada, que en la ciudad es la de la
+   * parada tocada y no la que el mapa tiene resaltada. Usar `rutaEnfocada` aquí
+   * pondría el nombre y el color de OTRA ruta encima de las llegadas de ésta:
+   * un dato correcto en el lugar equivocado, que es exactamente el §D.
+   */
+  const rutaDeLaHoja = rutas.find((r) => r.circuito_id === consultada) ?? null;
 
   /*
    * El Mapa de la ciudad, en UN objeto estable: los marcadores se redibujan
@@ -303,8 +380,9 @@ export function Ontoy({
       alAlternarParadas: () => setVerParadas((v) => !v),
       alAbrirPanel: () => setPanelAbierto(true),
       alAbrirRuta: (ruta: string, parada?: string) => abrirRuta(ruta, parada),
+      alTocarParadaDeLaCiudad: tocarParadaDeLaCiudad,
     }),
-    [filtro, enVivo.vivos, paradasGuardadasEnElMapa, paradasDeLaCiudad, verParadas, alternarRuta, abrirRuta],
+    [filtro, enVivo.vivos, paradasGuardadasEnElMapa, paradasDeLaCiudad, verParadas, alternarRuta, abrirRuta, tocarParadaDeLaCiudad],
   );
 
   /* Las paradas de la ruta abierta: se arma en `lib/ontoy/paradas-de-la-ruta.ts`, aquí sólo se pide. */
@@ -607,16 +685,20 @@ export function Ontoy({
         />
       )}
 
-      {!campanaAbierta && enElMapa && parada && rutaEnfocada && (
+      {/*
+        * **La hoja vive encima del mapa, en la ciudad y en una ruta abierta.**
+        * Su ruta es la CONSULTADA (`rutaDeLaHoja`), no la resaltada.
+        */}
+      {!campanaAbierta && enElMapa && parada && rutaDeLaHoja && (
         <HojaDeParada
           nombre={parada.nombre}
-          direccion={`Ruta ${rutaEnfocada.nombre} · ${nombreDeSentido(sentido) ?? (sentido === "ida" ? "ida" : "vuelta")}${
+          direccion={`Ruta ${rutaDeLaHoja.nombre} · ${nombreDeSentido(sentido) ?? (sentido === "ida" ? "ida" : "vuelta")}${
             hastaMi ? ` · hasta donde estás ${hastaMi}` : ""
           }`}
           llegadas={llegadasDeLaHoja}
           porArrancar={
             vivo?.estado === "por_arrancar"
-              ? { ruta: rutaEnfocada.nombre, arrancaEl: vivo.arranca_el }
+              ? { ruta: rutaDeLaHoja.nombre, arrancaEl: vivo.arranca_el }
               : null
           }
           promesa={promesaEnPalabras(vivo?.promesa ?? null, sentido) ?? ""}
@@ -624,9 +706,9 @@ export function Ontoy({
           promesaDeclarada={vivo?.promesa?.estado === "declarada"}
           guardada={guardadas.estaGuardada(parada.id)}
           sePuedeGuardar={guardadas.disponible}
-          color={rutaEnfocada.color_hex}
-          alGuardar={() => guardadas.alternar({ parada: parada.id, ruta: rutaEnfocada.circuito_id })}
-          alCerrar={() => setParadaAbierta(null)}
+          color={rutaDeLaHoja.color_hex}
+          alGuardar={() => guardadas.alternar({ parada: parada.id, ruta: rutaDeLaHoja.circuito_id })}
+          alCerrar={cerrarLaHoja}
         />
       )}
 

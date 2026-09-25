@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ProntoEnLaCalle } from "@/components/ontoy/pronto-en-la-calle";
+import {
+  FRACCION,
+  alSoltar,
+  masAbajo,
+  masArriba,
+  type AlturaDeLaHoja,
+} from "@/lib/ontoy/alturas-de-la-hoja";
 import { tinoEnLaParada } from "@/lib/ontoy/munecos";
 
 export interface LlegadaEnLaHoja {
@@ -58,6 +65,23 @@ export interface LlegadaEnLaHoja {
  * Cerrar con el botón, con la tecla de escape o tocando fuera. Tres salidas
  * porque la hoja tapa el mapa, y una hoja que no se sabe cerrar sobre un mapa
  * que el pasajero necesita es un callejón (8.10).
+ *
+ * ## Las tres alturas, y por qué NUNCA saca al pasajero del mapa
+ *
+ * La hoja se arrastra entre **asomada, media y completa** (las fracciones y el
+ * veredicto al soltar, en `alturas-de-la-hoja.ts`). Esto no es un adorno: es lo
+ * que permite que tocar una parada deje de ser un viaje a otra pantalla.
+ *
+ * Antes, tocar a Tino en el mapa de la ciudad abría la ruta entera con su lista
+ * de paradas, y el pasajero perdía de vista dónde estaba parado justo cuando
+ * acababa de señalarlo. Ahora la respuesta llega **encima del mapa**, y bajarla
+ * a la asomada devuelve el mapa sin perder la parada.
+ *
+ * En la asomada no hay velo ninguno: el mapa se sigue usando —arrastrar,
+ * acercar, tocar otra parada— porque a esa altura la hoja acompaña, no
+ * interrumpe. De la media hacia arriba sí hay uno, pero **transparente**: sólo
+ * recoge el toque de fuera para cerrar (8.10). Que no tiña está medido contra
+ * las láminas, y el porqué está escrito junto a la regla en `ontoy.css`.
  */
 export function HojaDeParada({
   nombre,
@@ -71,6 +95,7 @@ export function HojaDeParada({
   color,
   alGuardar,
   alCerrar,
+  alturaInicial = "media",
 }: {
   nombre: string;
   /** «Dirección → Centro». Sale de los datos del circuito, nunca del código. */
@@ -102,8 +127,38 @@ export function HojaDeParada({
   color: string;
   alGuardar: () => void;
   alCerrar: () => void;
+  /** Con qué altura nace. La hoja de un toque nace en la media (§2 del diseño). */
+  alturaInicial?: AlturaDeLaHoja;
 }) {
   const cerrarRef = useRef<HTMLButtonElement | null>(null);
+  const [altura, setAltura] = useState<AlturaDeLaHoja>(alturaInicial);
+  /**
+   * La fracción mientras el dedo la tiene. `null` cuando no se está arrastrando,
+   * y entonces manda `altura`.
+   *
+   * Son dos cosas distintas a propósito: durante el arrastre la hoja sigue al
+   * dedo **sin transición** —si la tuviera, iría siempre un poco atrás y se
+   * sentiría pegajosa—, y al soltar vuelve a mandar la altura, que sí se anima.
+   */
+  const [arrastrando, setArrastrando] = useState<number | null>(null);
+  /**
+   * **Cuánto mide la barra de abajo**, medido del DOM y no escrito aquí.
+   *
+   * La hoja no puede tapar la barra: la barra es la salida de cualquier pantalla
+   * (8.10), y una hoja que la cubre deja al pasajero con una salida menos justo
+   * encima del mapa. En las láminas del diseño la barra se ve debajo de la hoja
+   * en las tres alturas.
+   *
+   * Se **mide** en vez de escribirse porque el estándar dice 64 px y la barra de
+   * hoy mide 75: la palabra subió a 12 px en el #589 y eso la creció. Un número
+   * copiado aquí volvería a separarse de la realidad la próxima vez que alguien
+   * toque la barra —y lo está haciendo hoy—, sin que ninguna prueba lo notara.
+   */
+  const [altoBarra, setAltoBarra] = useState(0);
+  useEffect(() => {
+    const barra = document.querySelector(".ontoy-barra");
+    setAltoBarra(barra ? Math.round(barra.getBoundingClientRect().height) : 0);
+  }, []);
 
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => {
@@ -114,11 +169,83 @@ export function HojaDeParada({
     return () => window.removeEventListener("keydown", alTeclear);
   }, [alCerrar]);
 
+  /**
+   * El arrastre del asa.
+   *
+   * **Los oyentes van en `window`, no en el asa**, y esto ya costó una vez: en
+   * «Tus paradas» los puse en el asa con `setPointerCapture` y, como React mueve
+   * el nodo al reordenar, el `pointerup` nunca llegaba y la lista se quedaba
+   * «arrastrando» para siempre. Aquí el nodo no se mueve, pero el dedo sí sale
+   * de un asa de 5 px de alto en cuanto empieza a moverse: en el asa, el gesto
+   * se perdería en el primer milímetro.
+   */
+  const alAgarrar = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      const alto = window.innerHeight;
+      if (!alto) return;
+      const mover = (ev: PointerEvent) => {
+        /* La hoja ocupa de su borde hasta abajo: la fracción es lo que queda
+           debajo del dedo. */
+        setArrastrando(Math.min(1, Math.max(0, (alto - ev.clientY) / alto)));
+      };
+      const soltar = (ev: PointerEvent) => {
+        window.removeEventListener("pointermove", mover);
+        window.removeEventListener("pointerup", soltar);
+        window.removeEventListener("pointercancel", soltar);
+        setArrastrando(null);
+        const veredicto = alSoltar((alto - ev.clientY) / alto);
+        if (veredicto === "cerrar") alCerrar();
+        else setAltura(veredicto);
+      };
+      window.addEventListener("pointermove", mover);
+      window.addEventListener("pointerup", soltar);
+      window.addEventListener("pointercancel", soltar);
+    },
+    [alCerrar],
+  );
+
+  const fraccion = arrastrando ?? FRACCION[altura];
+
   return (
     <>
-      <button type="button" className="ontoy-scrim" aria-label="Cerrar" onClick={alCerrar} />
-      <section className="ontoy-hoja" role="dialog" aria-modal="false" aria-label={`Parada ${nombre}`}>
-        <span className="ontoy-hoja-asa" aria-hidden="true" />
+      {/*
+        * **El velo sólo de la media hacia arriba.** En la asomada el mapa se
+        * sigue usando; un velo ahí apagaría justo lo que el pasajero está
+        * mirando y convertiría una hoja que acompaña en una que interrumpe.
+        */}
+      {altura !== "asomada" && (
+        <button type="button" className="ontoy-scrim transparente" aria-label="Cerrar" onClick={alCerrar} />
+      )}
+      <section
+        className={`ontoy-hoja${arrastrando !== null ? " arrastrando" : ""}`}
+        style={{
+          ["--alto-hoja" as string]: String(fraccion),
+          ["--alto-barra" as string]: `${altoBarra}px`,
+        }}
+        role="dialog"
+        aria-modal="false"
+        aria-label={`Parada ${nombre}`}
+      >
+        {/*
+          * El asa es un control de verdad, no un adorno: se arrastra con el dedo
+          * y **sube y baja con las flechas**. Un arrastre no es alcanzable con
+          * teclado ni con un conmutador, y sin las flechas quien navega así se
+          * quedaría con la altura con la que abrió.
+          */}
+        <button
+          type="button"
+          className="ontoy-hoja-asa"
+          onPointerDown={alAgarrar}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowUp") { e.preventDefault(); setAltura(masArriba(altura)); }
+            if (e.key === "ArrowDown") { e.preventDefault(); setAltura(masAbajo(altura)); }
+          }}
+          aria-label={`Alto de la hoja: ${altura}. Usa las flechas para subirla o bajarla.`}
+        >
+          <span aria-hidden="true" />
+        </button>
+        <div className="ontoy-hoja-cuerpo">
         <div className="ontoy-hoja-cabeza">
           {/*
             * **Tino, de la parada que estás mirando.** Mira de lado —«de allá
@@ -162,7 +289,14 @@ export function HojaDeParada({
           <ProntoEnLaCalle color={color} ruta={porArrancar.ruta} arrancaEl={porArrancar.arrancaEl} />
         ) : (
           <>
-        {/* Lo MEDIDO. */}
+        {/*
+          * Lo MEDIDO, **dentro de su tarjeta**. El estándar la describe —hueso,
+          * radio 22, anillo arena, separador de 1 px entre filas— y no es
+          * decoración: la tarjeta es lo que dice dónde termina lo que midió el
+          * GPS y dónde empieza la promesa, que va fuera y debajo. Sin ella, las
+          * dos cosas son una lista sola (8.3).
+          */}
+        <div className="ontoy-hoja-medido">
         {llegadas.map((l, i) => (
           <div
             key={i}
@@ -195,6 +329,7 @@ export function HojaDeParada({
             )}
           </div>
         ))}
+        </div>
 
         {/* LA PROMESA, separada por su línea y siempre presente (8.2, 8.3). */}
         <p className="ontoy-hoja-promesa">
@@ -237,6 +372,7 @@ export function HojaDeParada({
             ? "Guardar una parada la deja a la mano en este teléfono. No hace falta cuenta."
             : "Tu navegador no deja guardar nada en este teléfono, así que el atajo no está disponible. Todo lo demás funciona igual."}
         </p>
+        </div>
       </section>
     </>
   );
