@@ -22,6 +22,7 @@
  * | `triste` | boca hacia abajo: no encontré nada — y enseguida propone otra cosa |
  * | `al-otro-lado` | las dos pupilas corridas: se va, o esto no lleva a ningún lado |
  * | `con-boleto` | enseña su boleto, mirándolo: lo que todavía no se puede hacer, dicho sin alarma |
+ * | `mirando-arriba` | las pupilas arriba: ya viene — está viendo llegar tu camión |
  *
  * ## De dónde salen los dibujos
  *
@@ -30,13 +31,14 @@
  * `con-boleto` también: es `s-ontoy-boleto` de `App Pase y Lector.dc.html`
  * (4-pase/03), con las manos sosteniendo el boleto en vez de flotar a los lados.
  *
- * **`sin-red`, `dormido`, `triste` y `al-otro-lado` no venían dibujados**, y se arman aquí con la misma
- * construcción y las reglas escritas del skill —«sin red: abajo con boca
- * ondulada», «cerrado o de noche: ojos cerrados con zzz»—. Se dice con todas
- * sus letras porque **es la única parte de esta pieza que no está copiada**: si
- * el paquete de diseño los trae algún día, éstos se reemplazan por los suyos.
+ * **`sin-red`, `dormido`, `triste`, `al-otro-lado` y `mirando-arriba` no venían dibujados**,
+ * y se arman aquí con la misma construcción y las reglas escritas del skill
+ * —«sin red: abajo con boca ondulada», «cerrado o de noche: ojos cerrados con
+ * zzz»—. Se dice con todas sus letras porque **es la única parte de esta pieza
+ * que no está copiada**: si el paquete de diseño los trae algún día, éstos se
+ * reemplazan por los suyos.
  *
- * El cuerpo es el mismo en las cinco: lo que cambia son los ojos y la boca, que
+ * El cuerpo es el mismo en todas: lo que cambia son los ojos y la boca, que
  * es justamente lo que `prefers-reduced-motion` deja cambiar.
  */
 
@@ -54,7 +56,8 @@ export type PoseDeOntoy =
   | "contento"
   | "triste"
   | "al-otro-lado"
-  | "con-boleto";
+  | "con-boleto"
+  | "mirando-arriba";
 
 /** Qué lee en voz alta un lector de pantalla. La pose es información, no adorno. */
 const DICHO: Record<PoseDeOntoy, string> = {
@@ -66,6 +69,7 @@ const DICHO: Record<PoseDeOntoy, string> = {
   triste: "Ontoy, triste",
   "al-otro-lado": "Ontoy, mirando al otro lado",
   "con-boleto": "Ontoy con su boleto",
+  "mirando-arriba": "Ontoy, mirando llegar tu camión",
 };
 
 export function Ontoy({
@@ -173,13 +177,19 @@ function Cara({ pose }: { pose: PoseDeOntoy }) {
    * cosa.
    */
   const alLado = pose === "al-otro-lado" ? 3.5 : 0;
+  /*
+   * «Mirando arriba» (ASAV, 25-sep): la llegada en vivo de «Tu próximo camión».
+   * Las pupilas suben lo mismo que bajan en «sin dato»: es su espejo — no
+   * busca, ve venir.
+   */
+  const alto = mirandoAbajo ? 5 : pose === "mirando-arriba" ? -4 : 0;
 
   return (
     <>
       <circle cx="50" cy="52" r="11" fill={BLANCO} />
       <circle cx="76" cy="50" r="11" fill={BLANCO} />
-      <circle cx={50 + alLado} cy={mirandoAbajo ? 57 : 52} r="6" fill={CARBON} />
-      <circle cx={76 + alLado} cy={mirandoAbajo ? 55 : 50} r="6" fill={CARBON} />
+      <circle cx={50 + alLado} cy={52 + alto} r="6" fill={CARBON} />
+      <circle cx={76 + alLado} cy={50 + alto} r="6" fill={CARBON} />
 
       {pose === "sin-dato" && (
         /* Boca en línea: paciente, sin saber. */

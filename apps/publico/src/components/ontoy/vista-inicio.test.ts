@@ -27,13 +27,20 @@ describe("un Ontoy por pantalla, y sólo si dice algo", () => {
    * La regla 1 del estándar. Se rompe sin querer: cada estado nuevo trae la
    * tentación de su propio muñeco, y dos en pantalla es uno de los dos sobrando.
    */
-  it("los estados de Inicio se excluyen entre sí", () => {
+  it("los estados de Inicio se excluyen entre sí: UNA tarjeta, un Ontoy", () => {
+    /*
+     * ✎ 25-sep: los estados ya no son bloques sueltos con su propio muñeco.
+     * Inicio escoge **una** tarjeta con una sola cadena —bienvenida, próximo
+     * camión, noche de la ciudad o invitación— y la dibuja una vez. Que se
+     * excluyan ya no depende de repetir `!primeraVez && !sinRed` en cada
+     * bloque: una cadena de `? :` no puede dar dos.
+     */
     const codigo = sinComentarios(vista);
-    /* Sin red y de noche nunca salen juntos, y ninguno sale en la primera vez. */
-    expect(codigo).toContain("sinRed && !primeraVez");
-    expect(codigo).toContain("deNoche && !primeraVez && !sinRed");
-    /* Y la invitación de texto tampoco se suma a la bienvenida. */
-    expect(codigo).toContain("!primeraVez &&\n        puedeGuardar");
+    expect(codigo).toContain("const tarjeta = primeraVez ? (");
+    expect(codigo.match(/\{tarjeta\}/g) ?? []).toHaveLength(1);
+    /* Y fuera de la tarjeta no queda otro Ontoy suelto en la pantalla. */
+    const pantalla = codigo.slice(codigo.indexOf("return (\n    <div className=\"ontoy-vista\">"), codigo.indexOf("function TarjetaDeOntoy"));
+    expect(pantalla).not.toContain("<Ontoy ");
   });
 
   it("la bienvenida se va en cuanto el pasajero conteste cualquiera de las dos", () => {
@@ -73,13 +80,19 @@ describe("los estados se suman, no reemplazan", () => {
      * Se comprueba que `RutasDeInicio` se dibuje **fuera** de cualquier rama de
      * estado: su renglón no está dentro de ningún `sinRed ?` ni `deNoche ?`.
      */
+    /*
+     * ✎ 25-sep: la noche y la falta de red se deciden ahora DENTRO de la
+     * tarjeta (antes del `return`); lo que se cuida es lo mismo: entre el
+     * principio de la pantalla y las rutas no queda ninguna rama abierta.
+     */
     const codigo = sinComentarios(vista);
+    const inicio = codigo.indexOf('return (\n    <div className="ontoy-vista">');
     const i = codigo.indexOf("<RutasDeInicio");
-    expect(i).toBeGreaterThan(0);
-    /* Entre el último cierre de los estados y las rutas no queda una rama abierta. */
-    const antes = codigo.slice(0, i);
+    expect(inicio).toBeGreaterThan(0);
+    expect(i).toBeGreaterThan(inicio);
+    const antes = codigo.slice(inicio, i);
     const ternarios = (antes.match(/sinRed \?|deNoche \?/g) ?? []).length;
-    expect(ternarios, "los estados van como bloques sueltos, no como ternarios que envuelvan").toBe(0);
+    expect(ternarios, "las rutas no pueden quedar dentro de una rama de estado").toBe(0);
   });
 });
 
@@ -133,6 +146,20 @@ describe("las poses de Ontoy", () => {
     );
     expect(declaradas, "falta la frase que declara las poses no copiadas").not.toBeNull();
     const nombradas = [...declaradas![1].matchAll(/`([a-z-]+)`/g)].map((m) => m[1]).sort();
-    expect(nombradas).toEqual(["al-otro-lado", "dormido", "sin-red", "triste"]);
+    expect(nombradas).toEqual(["al-otro-lado", "dormido", "mirando-arriba", "sin-red", "triste"]);
+  });
+});
+
+describe("las rutas de Inicio: el Marco 8.8 y sin botones grandes (ASAV, 25-sep)", () => {
+  const rutas = sinComentarios(readFileSync(path.join(AQUI, "rutas-de-inicio.tsx"), "utf8"));
+
+  it("tres a la vista y el resto tras «Ver todas las rutas»", () => {
+    expect(rutas).toContain("ordenadas.slice(0, RUTAS_A_LA_VISTA)");
+    expect(rutas).toContain('"Ver todas las rutas"');
+  });
+
+  it("es un enlace discreto, no un botón grande", () => {
+    expect(rutas).toContain('className="ontoy-liga"');
+    expect(rutas).not.toMatch(/ontoy-boton|ontoy-desplegar/);
   });
 });
