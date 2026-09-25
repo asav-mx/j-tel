@@ -3,8 +3,8 @@ import { arranqueCorto, arranqueLargo } from "./fecha-arranque";
 
 describe("cómo se escribe el día del arranque", () => {
   it("el titular va corto, para rimar con «Abre 05:00»", () => {
-    expect(arranqueCorto("2026-09-15")).toBe("15 sep");
-    expect(arranqueCorto("2026-11-03")).toBe("3 nov");
+    expect(arranqueCorto("2026-09-15")).toBe("mar 15 sep");
+    expect(arranqueCorto("2026-11-03")).toBe("mar 3 nov");
   });
 
   it("la frase va con día de la semana y sin coma que la parta", () => {
@@ -18,13 +18,13 @@ describe("cómo se escribe el día del arranque", () => {
      * dibujaría como el 14. Un día corrido por uno manda a alguien a la parada
      * la víspera, y en la pantalla no hay nada que se vea mal.
      */
-    expect(arranqueCorto("2026-09-15")).toBe("15 sep");
+    expect(arranqueCorto("2026-09-15")).toBe("mar 15 sep");
     expect(arranqueLargo("2026-01-01")).toBe("jueves 1 de enero");
     expect(arranqueLargo("2026-12-31")).toBe("jueves 31 de diciembre");
   });
 
   it("aguanta la fecha con hora pegada, como la devolvería un `timestamp`", () => {
-    expect(arranqueCorto("2026-09-15T00:00:00.000Z")).toBe("15 sep");
+    expect(arranqueCorto("2026-09-15T00:00:00.000Z")).toBe("mar 15 sep");
   });
 
   it("una fecha ilegible no produce un titular inventado: no produce ninguno", () => {

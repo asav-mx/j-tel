@@ -6,7 +6,7 @@ import { useTema } from "@/lib/tema";
 import { useUbicacion } from "@/lib/ubicacion";
 import { avanceSobreTrazado } from "@jtel/domain";
 import { haceNMinutos } from "@/lib/rotulo-de-la-tarjeta";
-import type { RutaDeLaCiudad, Sentido } from "@/lib/ontoy/forma";
+import type { RutaDeLaCiudad, Sentido, UnidadViva } from "@/lib/ontoy/forma";
 import {
   dondeCaeLaParada,
   llegadasHasta,
@@ -15,11 +15,13 @@ import {
   promesaEnPalabras,
   rangoEnPalabras,
   useVelocidadDelCorredor,
+  proximasParadasDeLaUnidad,
 } from "@/lib/ontoy/llegadas";
 import { useContarApertura } from "@/lib/ontoy/apertura";
 import { useParadasGuardadas } from "@/lib/ontoy/paradas-guardadas";
 import { useForma } from "@/lib/ontoy/ruta-en-vivo";
 import { HojaDeParada, type LlegadaEnLaHoja } from "@/components/ontoy/hoja-de-parada";
+import { HojaDeCami } from "@/components/ontoy/hoja-de-cami";
 import { VistaMapa } from "@/components/ontoy/vista-mapa";
 import type { EstadoDeRuta } from "@/lib/ontoy/estado-de-ruta";
 import { VistaInicio } from "@/components/ontoy/vista-inicio";
@@ -41,6 +43,7 @@ import { useAvisosVistos } from "@/lib/ontoy/avisos-vistos";
 import { VistaAvisos } from "@/components/ontoy/vista-avisos";
 import { useParadasDeLaCiudad } from "@/lib/ontoy/usar-paradas-de-la-ciudad";
 import { useElPase, useConfirmacionDelPase } from "@/lib/ontoy/pase-del-telefono";
+import { arranqueCorto, arranqueLargo } from "@/lib/fecha-arranque";
 
 /**
  * **Ontoy** — el cascarón de los cuatro lugares (8.8, 22-sep).
@@ -117,6 +120,13 @@ export function Ontoy({
    * de la ciudad.
    */
   const [rutaAbierta, setRutaAbierta] = useState<boolean>(pedida !== null);
+  /**
+   * El camión tocado, si hay uno. Se guarda **la unidad entera** y no su número:
+   * la hoja necesita su posición para contar las paradas que le siguen, y
+   * buscarla de nuevo por el económico la perdería justo cuando el sondeo la
+   * mueve.
+   */
+  const [camiTocado, setCamiTocado] = useState<UnidadViva | null>(null);
   const [modo, setModo] = useState<"paradas" | "mapa">("paradas");
 
   const guardadas = useParadasGuardadas();
@@ -309,6 +319,26 @@ export function Ontoy({
   );
   const parada = forma?.paradas.find((p) => p.id === paradaAbierta) ?? null;
 
+  /*
+   * Las próximas paradas del camión tocado. Se recalculan con cada sondeo, que
+   * es lo que hace que la hoja siga diciendo la verdad mientras está abierta:
+   * si el camión avanza una parada, la cuenta baja sola.
+   */
+  const paradasDeCami =
+    camiTocado && forma
+      ? proximasParadasDeLaUnidad(camiTocado, { forma, trazadoPorSentido })
+      : [];
+
+  /*
+   * El camión tocado, **vuelto a buscar en el sondeo de ahorita**. Sin esto la
+   * hoja se quedaría con la posición del momento del toque y seguiría contando
+   * desde ahí — el número se congelaría sin decirlo, que es un dato correcto
+   * mintiendo por viejo.
+   */
+  const camiAhora = camiTocado
+    ? (vivo?.unidades.find((u) => u.economico === camiTocado.economico) ?? camiTocado)
+    : null;
+
   /* Lo que la hoja enseña: lo medido arriba, la promesa abajo, nunca fundidos. */
   const llegadasDeLaHoja = useMemo((): LlegadaEnLaHoja[] => {
     if (!forma || !parada) return [];
@@ -319,7 +349,7 @@ export function Ontoy({
     if (vivo.estado === "por_arrancar") {
       return [
         {
-          rotulo: vivo.arranca_el ? `Arranca el ${vivo.arranca_el}` : "Todavía no arranca",
+          rotulo: arranqueCorto(vivo.arranca_el ?? "") ?? "Todavía no arranca",
           apoyo: "esta ruta aún no da servicio",
           vieja: true,
         },
@@ -463,6 +493,7 @@ export function Ontoy({
           <VistaMapa
               rutaAbierta
               yo={yo}
+              alTocarCami={setCamiTocado}
             rutas={rutas}
             enfocada={enfocada}
             forma={forma}
@@ -534,12 +565,28 @@ export function Ontoy({
             hastaMi ? ` · hasta donde estás ${hastaMi}` : ""
           }`}
           llegadas={llegadasDeLaHoja}
+          porArrancar={
+            vivo?.estado === "por_arrancar"
+              ? { ruta: rutaEnfocada.nombre, arrancaEl: vivo.arranca_el }
+              : null
+          }
           promesa={promesaEnPalabras(vivo?.promesa ?? null, sentido) ?? ""}
           guardada={guardadas.estaGuardada(parada.id)}
           sePuedeGuardar={guardadas.disponible}
           color={rutaEnfocada.color_hex}
           alGuardar={() => guardadas.alternar({ parada: parada.id, ruta: rutaEnfocada.circuito_id })}
           alCerrar={() => setParadaAbierta(null)}
+        />
+      )}
+
+      {!campanaAbierta && enElMapa && camiAhora && rutaEnfocada && (
+        <HojaDeCami
+          economico={camiAhora.economico}
+          color={rutaEnfocada.color_hex}
+          edad={haceNMinutos(camiAhora.antiguedad_seg)}
+          fresca={camiAhora.fresco}
+          paradas={paradasDeCami}
+          alCerrar={() => setCamiTocado(null)}
         />
       )}
 
@@ -558,7 +605,10 @@ function avisoDeLaEscalera(
 ): string | null {
   if (error) return "No pudimos preguntar ahorita. Lo que ves es lo último que supimos.";
   if (!vivo) return null;
-  if (vivo.estado === "por_arrancar") return vivo.arranca_el ? `Arranca el ${vivo.arranca_el}` : "Todavía no arranca";
+  if (vivo.estado === "por_arrancar") {
+    const cuando = arranqueLargo(vivo.arranca_el ?? "");
+    return cuando ? `Arranca el ${cuando}` : "Todavía no arranca";
+  }
   if (vivo.estado === "fuera_de_horario") return `Fuera de horario · abre ${vivo.abre_a}`;
   return null;
 }

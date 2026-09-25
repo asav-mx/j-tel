@@ -223,3 +223,77 @@ export function rangoEnPalabras(r: RangoDeLlegada): string {
 
 // La frase vive en el dominio (una sola, la misma que enseña J-Staff); aquí se reexporta.
 export { promesaEnPalabras } from "@jtel/domain";
+
+// ── Las próximas paradas de UNA unidad (tocar a Cami) ────────────────────
+
+/** Una parada por delante de la unidad, contada desde donde va. */
+export interface ParadaPorDelante {
+  id: string;
+  nombre: string;
+  /** Cuántas paradas le faltan a la unidad para llegar a ésta. Nunca 0. */
+  paradas: number;
+}
+
+/**
+ * **Las próximas paradas de una unidad** — lo que contesta tocar a Cami.
+ *
+ * Es la inversa de `paradasHastaLaParada`: aquélla parte de la parada del
+ * pasajero y cuenta unidades; ésta parte de la unidad y cuenta paradas. Se
+ * escribe aparte en vez de generalizar la otra porque las dos preguntas tienen
+ * **reglas distintas de qué se descarta**, y una función con una bandera para
+ * cambiarlas es la forma de que un día se descarte lo que no era.
+ *
+ * Las reglas, que son las mismas de siempre:
+ *
+ *  - **Sólo paradas de SU sentido** (o de los dos). Mezclarlas sería enseñarle
+ *    al pasajero paradas por las que este camión no va a pasar.
+ *  - **Sólo las que caen en el trazado**, con el mismo corredor con el que el
+ *    servidor decidió qué publicar.
+ *  - **Sólo las que van por delante.** Una parada que ya quedó atrás no es una
+ *    próxima parada, y ponerla ahí invitaría a alguien a caminar hacia ella.
+ *  - **Ninguna velocidad entra aquí** (8.9b): esto cuenta paradas, no minutos,
+ *    así que no hay llegada inventada ni hace falta permiso de rango.
+ *
+ * **Una unidad con dato viejo también contesta**, porque el camión no se fue a
+ * ningún lado — pero quien la dibuje tiene que decirlo en pasado y sin cifra
+ * grande (8.9). Esta función no lo sabe: entrega la cuenta y la pantalla pone
+ * el tiempo verbal.
+ *
+ * ## Qué NO hace
+ *
+ * **No dice cuándo llega a ninguna de ellas.** Ni aquí ni en la pantalla: sin
+ * el corredor calibrado no hay minuto que dar, y «a N paradas» es exactamente
+ * lo que se puede sostener.
+ *
+ * **No inventa la parada de la que viene.** Si la unidad no cae en el trazado
+ * —fuera del corredor— devuelve la lista vacía, y la hoja lo dice en vez de
+ * enseñar las paradas de la ruta como si fueran las suyas.
+ */
+export function proximasParadasDeLaUnidad(
+  unidad: { lat: number; lon: number; sentido: Sentido | null },
+  entrada: { forma: Forma; trazadoPorSentido: Map<Sentido, Array<[number, number]>> },
+  cuantas = 4,
+): ParadaPorDelante[] {
+  const { forma, trazadoPorSentido } = entrada;
+  if (!unidad.sentido) return [];
+  const trazado = trazadoPorSentido.get(unidad.sentido);
+  if (!trazado) return [];
+
+  const donde = avanceSobreTrazado({ lat: unidad.lat, lon: unidad.lon }, trazado, forma.corredor_m);
+  if (!donde) return [];
+
+  const conAbscisa = forma.paradas
+    .filter((p) => p.sentido === null || p.sentido === unidad.sentido)
+    .map((p) => ({ p, a: dondeCaeLaParada(p, trazado, forma.corredor_m) }))
+    .filter((x): x is { p: (typeof forma.paradas)[number]; a: number } => x.a !== null)
+    .filter((x) => x.a > donde.avanceMetros)
+    .sort((x, y) => x.a - y.a);
+
+  /*
+   * La cuenta es **la posición en la fila**, no una distancia: la primera que
+   * tiene por delante es «a 1 parada», la siguiente «a 2». Contar con
+   * `paradasHasta` daría lo mismo aquí y costaría una pasada por cada parada,
+   * porque la lista ya viene ordenada por avance.
+   */
+  return conAbscisa.slice(0, cuantas).map(({ p }, i) => ({ id: p.id, nombre: p.nombre, paradas: i + 1 }));
+}

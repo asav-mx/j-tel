@@ -7,8 +7,9 @@ import { fondoDelMapa } from "@/lib/ontoy/mapa-base";
 import { haloParaLaTraza } from "@/lib/ontoy/contraste-de-ruta";
 import { pistaDelMapa } from "@/lib/ontoy/pista-del-mapa";
 import { useTinteDelMapa } from "@/lib/tinte-del-mapa";
-import type { Forma, RutaDeLaCiudad, Sentido, Vivo } from "@/lib/ontoy/forma";
+import type { Forma, RutaDeLaCiudad, Sentido, UnidadViva, Vivo } from "@/lib/ontoy/forma";
 import type { ParadaDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
+import { camiDesdeArriba, pasajeroConLinterna, tinoEnLaParada, type MiradaDeTino } from "@/lib/ontoy/munecos";
 import type { RutaOrdenada } from "@/lib/ontoy/rutas-cerca";
 import { TiraDeRutas } from "@/components/ontoy/tira-de-rutas";
 
@@ -100,6 +101,7 @@ export function VistaMapa({
   rutaAbierta = false,
   ciudad,
   yo = null,
+  alTocarCami,
 }: {
   rutas: RutaDeLaCiudad[];
   enfocada: string | null;
@@ -127,7 +129,14 @@ export function VistaMapa({
    * (`vista-pasajero.tsx`) dibujaba y que se perdió en #476 (decisión de ASAV,
    * 22-sep-2026).
    */
-  yo?: { lat: number; lon: number } | null;
+  yo?: { lat: number; lon: number; rumbo?: number | null } | null;
+  /**
+   * Tocar a Cami. Lo maneja quien tiene el trazado cargado —la ruta abierta—
+   * porque contar sus próximas paradas necesita la forma, y contarlas sin ella
+   * sería inventarlas. En el Mapa de la ciudad no se pasa: ahí tocar a Cami abre
+   * su ruta, que es lo que el dato alcanza a sostener.
+   */
+  alTocarCami?: (u: UnidadViva) => void;
 }) {
   const contenedor = useRef<HTMLDivElement | null>(null);
   const mapa = useRef<import("leaflet").Map | null>(null);
@@ -254,23 +263,37 @@ export function VistaMapa({
     if (!listo || !leaflet || !capaParadas.current || !forma || ciudad) return;
     capaParadas.current.clearLayers();
 
+    /*
+     * **Tino en cada parada** (§9, escalón 2), en vez del punto de antes.
+     *
+     * Su mirada es señal y no adorno: mira **de lado** —«de allá viene»— sólo
+     * cuando hay una unidad fresca en este sentido, y al frente cuando no la
+     * hay. Sin dato no se le pone cara de que viene algo.
+     */
+    const vieneAlguien = (vivo?.unidades ?? []).some((u) => u.sentido === sentido && u.fresco);
+    const mirada: MiradaDeTino = vieneAlguien ? "de-lado" : "al-frente";
+
     for (const p of forma.paradas) {
       if (p.sentido !== null && p.sentido !== sentido) continue;
       const abierta = p.id === paradaAbierta;
+      const icono = leaflet.divIcon({
+        className: `ontoy-tino-icono${abierta ? " abierta" : ""}`,
+        html: tinoEnLaParada({ color: forma.color_hex, mirada }),
+        /*
+         * 44 px de toque, como Cami. El ancla cae **abajo del centro** porque
+         * Tino es un poste: lo que marca la parada es su base, no su cabeza.
+         */
+        iconSize: [44, 44],
+        iconAnchor: [22, 36],
+      });
       leaflet
-        .circleMarker([p.lat, p.lon], {
-          radius: abierta ? 9 : 7,
-          color: forma.color_hex,
-          weight: abierta ? 4 : 2.5,
-          fillColor: lienzo,
-          fillOpacity: 1,
-        })
+        .marker([p.lat, p.lon], { icon: icono, keyboard: false })
         // El nombre acompaña al color siempre (8.8c): el marcador se anuncia con él.
         .bindTooltip(p.nombre, { direction: "top", opacity: 0.95 })
         .on("click", () => alTocarParada(p.id))
         .addTo(capaParadas.current);
     }
-  }, [listo, forma, sentido, paradaAbierta, lienzo, alTocarParada]);
+  }, [listo, forma, sentido, paradaAbierta, lienzo, alTocarParada, vivo, ciudad]);
 
   // ── Las unidades: donde su último fix las dejó ─────────────────────────
   useEffect(() => {
@@ -287,20 +310,37 @@ export function VistaMapa({
        * cuándo es (8.9). Borrarla mandaría al pasajero a creer que no hay
        * servicio; pintarla viva sería afirmar dónde está.
        */
-      const vieja = !u.fresco;
       const icono = leaflet.divIcon({
-        className: "ontoy-unidad-icono",
-        html: `<span class="ontoy-unidad${vieja ? " vieja" : ""}" style="--ruta:${forma.color_hex}">
-                 ${u.fresco ? '<span class="ontoy-anillo" aria-hidden="true"></span>' : ""}
-                 <span class="ontoy-unidad-punto"></span>
-                 <span class="ontoy-unidad-num">${u.economico}</span>
-                 <span class="ontoy-unidad-edad">${haceNMinutos(u.antiguedad_seg)}</span>
-               </span>`,
-        iconSize: [0, 0],
+        className: "ontoy-cami-icono",
+        html: camiDesdeArriba({
+          color: forma.color_hex,
+          rumbo: u.rumbo,
+          fresco: u.fresco,
+          economico: u.economico,
+          edad: haceNMinutos(u.antiguedad_seg),
+        }),
+        /*
+         * **44 px, y no es decoración: es el área de toque.**
+         *
+         * Con `iconSize: [0, 0]` —lo que este mapa usaba— el `div` del marcador
+         * mide cero y el dibujo se le sale por encima. Se VE, pero no hay nada
+         * que tocar: medido en el navegador, 0 px de ancho. Daba igual mientras
+         * tocar una unidad no hacía nada; con la hoja de Cami, la función entera
+         * quedaba fuera del alcance de un dedo.
+         *
+         * 44 es el mínimo del estándar, y es lo que un pulgar acierta de pie en
+         * una banqueta.
+         */
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
       });
-      leaflet.marker([u.lat, u.lon], { icon: icono, keyboard: false }).addTo(capaUnidades.current);
+      leaflet
+        .marker([u.lat, u.lon], { icon: icono, keyboard: false })
+        // Tocar a Cami abre sus próximas paradas, contadas desde donde va.
+        .on("click", () => alTocarCami?.(u))
+        .addTo(capaUnidades.current);
     }
-  }, [listo, forma, vivo, sentido]);
+  }, [listo, forma, vivo, sentido, alTocarCami]);
 
   // ── «tú»: dónde está el pasajero, si ya dio permiso ─────────────────────
   useEffect(() => {
@@ -310,7 +350,15 @@ export function VistaMapa({
     if (!yo) return;
     const icono = leaflet.divIcon({
       className: "ontoy-tu-icono",
-      html: `<span class="ontoy-tu"><span class="ontoy-tu-punto"></span><span class="ontoy-tu-palabra">tú</span></span>`,
+      /*
+       * **El pasajero**, no un punto (handoff §1: «"Tú estás aquí" = el
+       * pasajero»; Ontoy no señala datos en vivo).
+       *
+       * La linterna sale **sólo con rumbo medido**. `coords.heading` viene nulo
+       * casi siempre —un teléfono quieto no tiene rumbo—, y un cono al norte por
+       * omisión mandaría a alguien a caminar hacia el lado equivocado.
+       */
+      html: pasajeroConLinterna(yo.rumbo ?? null),
       iconSize: [0, 0],
     });
     // No mueve el mapa: el pasajero decide qué mira; «tú» sólo aparece donde está.
@@ -380,6 +428,13 @@ export function VistaMapa({
     const color = new Map(rutas.map((r) => [r.circuito_id, r.color_hex]));
     for (const p of ciudad.paradas) {
       if (!ciudad.prendidas.has(p.ruta)) continue;
+      /*
+       * **Aquí Tino se queda en punto, y es el §9 quien lo pide:** «zoom lejos:
+       * Tino → punto del color de la ruta». El Mapa de la ciudad enseña varias
+       * rutas completas a la vez —cuarenta paradas por ruta—, y un muñeco de
+       * 32 px en cada una tapa el mapa que vino a enseñar. Tino sale entero en
+       * la ruta abierta, que es cuando hay una sola y el zoom está cerca.
+       */
       leaflet
         .circleMarker([p.lat, p.lon], {
           radius: 4.5,
@@ -401,8 +456,18 @@ export function VistaMapa({
     capaParadas.current.clearLayers();
     for (const p of ciudad.guardadas) {
       const color = rutas.find((r) => r.circuito_id === p.ruta)?.color_hex ?? "#22282e";
+      /*
+       * Las guardadas SÍ llevan a Tino entero aunque estemos en la ciudad: son
+       * pocas —las que el pasajero escogió— y son lo que viene a buscar.
+       */
+      const icono = leaflet.divIcon({
+        className: "ontoy-tino-icono",
+        html: tinoEnLaParada({ color, mirada: "al-frente", guardada: true }),
+        iconSize: [44, 44],
+        iconAnchor: [22, 36],
+      });
       leaflet
-        .circleMarker([p.lat, p.lon], { radius: 8, color, weight: 4, fillColor: lienzo, fillOpacity: 1 })
+        .marker([p.lat, p.lon], { icon: icono, keyboard: false })
         .bindTooltip(`★ ${p.nombre}`, { direction: "top", opacity: 0.95 })
         .on("click", () => ciudad.alAbrirRuta(p.ruta, p.id))
         .addTo(capaParadas.current);
@@ -419,19 +484,27 @@ export function VistaMapa({
       const color = rutas.find((r) => r.circuito_id === ruta)?.color_hex;
       if (!v || !color) continue;
       for (const u of v.unidades) {
-        const vieja = !u.fresco;
         const icono = leaflet.divIcon({
-          className: "ontoy-unidad-icono",
-          html: `<span class="ontoy-unidad${vieja ? " vieja" : ""}" style="--ruta:${color}">
-                   ${u.fresco ? '<span class="ontoy-anillo" aria-hidden="true"></span>' : ""}
-                   <span class="ontoy-unidad-punto"></span>
-                   <span class="ontoy-unidad-num">${u.economico}</span>
-                   <span class="ontoy-unidad-edad">${haceNMinutos(u.antiguedad_seg)}</span>
-                 </span>`,
-          iconSize: [0, 0],
+          className: "ontoy-cami-icono",
+          html: camiDesdeArriba({
+            color,
+            rumbo: u.rumbo,
+            fresco: u.fresco,
+            economico: u.economico,
+            edad: haceNMinutos(u.antiguedad_seg),
+          }),
+          // El mismo área de toque de 44 px: ver el porqué en la ruta abierta.
+          iconSize: [44, 44],
+          iconAnchor: [22, 22],
         });
         leaflet
           .marker([u.lat, u.lon], { icon: icono, keyboard: false })
+          /*
+           * En la ciudad, tocar a Cami **abre su ruta**, no su hoja: desde aquí
+           * no hay trazado cargado con el que contar paradas, y contarlas sin él
+           * sería inventarlas. La hoja de Cami vive en la ruta abierta, que es
+           * donde el dato alcanza.
+           */
           .on("click", () => ciudad.alAbrirRuta(ruta))
           .addTo(capaUnidades.current);
       }

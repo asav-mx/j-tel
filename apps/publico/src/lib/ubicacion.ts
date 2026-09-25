@@ -47,7 +47,20 @@ export type EstadoDeUbicacion =
   | "sin-senal";
 
 export interface Ubicacion {
-  yo: { lat: number; lon: number } | null;
+  /**
+   * Dónde está el pasajero, y **hacia dónde mira si su aparato lo mide**.
+   *
+   * `rumbo` sale de `coords.heading` y es `number | null`. El nulo es el caso
+   * normal, no la excepción: la especificación dice que `heading` es null
+   * cuando el aparato no lo puede determinar, y **un teléfono quieto nunca lo
+   * determina** — se deriva del movimiento, no de la brújula. A pie y con el
+   * teléfono en la mano, muchos aparatos no lo dan jamás.
+   *
+   * Se conserva nulo **a propósito**. Es lo que apaga la linterna del pasajero
+   * en el mapa: un cono que apunta al norte por omisión manda a alguien a
+   * caminar hacia el lado equivocado, y eso es peor que no tener cono.
+   */
+  yo: { lat: number; lon: number; rumbo: number | null } | null;
   estado: EstadoDeUbicacion;
   /** Pide el permiso (sólo tras un toque del pasajero) y empieza a leer. */
   pedir: () => void;
@@ -69,7 +82,7 @@ export function estadoTrasError(codigo: number, hayPosicion: boolean): EstadoDeU
 }
 
 export function useUbicacion({ pedirAlAbrir }: { pedirAlAbrir: boolean }): Ubicacion {
-  const [yo, setYo] = useState<{ lat: number; lon: number } | null>(null);
+  const [yo, setYo] = useState<{ lat: number; lon: number; rumbo: number | null } | null>(null);
   const [estado, setEstado] = useState<EstadoDeUbicacion>("sin-pedir");
   const vigilancia = useRef<number | null>(null);
   /** Si ya llegó alguna posición: un error después de eso no la borra. */
@@ -85,7 +98,16 @@ export function useUbicacion({ pedirAlAbrir }: { pedirAlAbrir: boolean }): Ubica
     vigilancia.current = navigator.geolocation.watchPosition(
       (p) => {
         huboPosicion.current = true;
-        setYo({ lat: p.coords.latitude, lon: p.coords.longitude });
+        setYo({
+          lat: p.coords.latitude,
+          lon: p.coords.longitude,
+          /*
+           * `heading` llega en NaN en algunos navegadores cuando no hay rumbo,
+           * en vez del null que manda la especificación. Los dos casos son lo
+           * mismo —no se sabe hacia dónde mira— y se guardan igual: `null`.
+           */
+          rumbo: Number.isFinite(p.coords.heading) ? (p.coords.heading as number) : null,
+        });
         setEstado("concedida");
       },
       (err) => {
@@ -151,6 +173,6 @@ export function useUbicacion({ pedirAlAbrir }: { pedirAlAbrir: boolean }): Ubica
  * a esa pantalla a preguntar desde dónde sale. Devuelve `null` mientras no haya
  * permiso o no haya llegado el primer fix, y **eso no es un error**.
  */
-export function useMiUbicacion(): { lat: number; lon: number } | null {
+export function useMiUbicacion(): { lat: number; lon: number; rumbo: number | null } | null {
   return useUbicacion({ pedirAlAbrir: true }).yo;
 }
