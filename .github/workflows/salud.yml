@@ -19,6 +19,14 @@ name: Vigilante de salud
 # Requisito único: la variable de repositorio SALUD_URL con la URL pública de
 # /api/salud (Settings -> Secrets and variables -> Actions -> Variables).
 # Si además defines el secreto SALUD_TOKEN, se manda como Bearer.
+#
+# ✎ 25-sep-2026: ESTE NO ES EL ÚNICO VIGILANTE. Hay un tercero que no vive en el
+# repo —UptimeRobot, cada 5 min sobre ontoy.app y www.j-telemetry.com, avisando
+# al correo y al teléfono de ASAV— y por eso es invisible desde aquí. Mira menos
+# que este workflow (que las direcciones contesten, no el contrato de salud) y
+# avisa por un canal que no es nuestro, que es justo lo que este no puede hacer.
+# Los tres, con lo que cubre cada uno y lo que no cubre ninguno, están en
+# docs/Vigilancia-De-Produccion.md.
 
 on:
   schedule:
