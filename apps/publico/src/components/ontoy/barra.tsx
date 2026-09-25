@@ -1,5 +1,7 @@
 "use client";
 
+import { GlifoCasa, GlifoIra, GlifoMapa, GlifoPase } from "@/components/ontoy/glifos";
+
 /**
  * La barra de Ontoy — **Inicio · Mapa · Ir a · Pase** (8.8, 22-sep).
  *
@@ -7,65 +9,50 @@
  * se usa en la calle, de prisa y a veces por primera vez, adivinar es perder el
  * camión. Siempre visible: es la salida de cualquier pantalla (8.10).
  *
- * El lugar activo se marca con **forma y peso** —la pastilla de fondo y el trazo
- * más grueso—, no sólo con color.
+ * ## Con los objetos del universo (app-v1, 25-sep)
+ *
+ * Los íconos son los del diseño —la casita, el mapa, Ontoy de gorrito y el
+ * pase, todos con ojos—, no íconos de línea genéricos. La palabra va en tipo
+ * oración («Inicio», no «INICIO»).
+ *
+ * El lugar activo se marca con **forma y peso**, no sólo con color: la pastilla
+ * llena (carbón de día, hueso de noche), el glifo en la tinta contraria y la
+ * palabra en 700. Y **regla 2b**: el activo mira al frente y los demás voltean
+ * las pupilas 0.9 px hacia él — la barra entera señala dónde estás.
  */
 
 export type Lugar = "inicio" | "mapa" | "ira" | "pase";
 
-const LUGARES: Array<{ id: Lugar; palabra: string; icono: React.ReactNode }> = [
-  {
-    id: "inicio",
-    palabra: "Inicio",
-    icono: <path d="M4 11 12 4l8 7v8.5a.5.5 0 0 1-.5.5H15v-6h-6v6H4.5a.5.5 0 0 1-.5-.5z" />,
-  },
-  {
-    id: "mapa",
-    palabra: "Mapa",
-    icono: (
-      <>
-        <path d="M3.5 6.5 9 4l6 2.5L20.5 4v13.5L15 20l-6-2.5-5.5 2.5z" />
-        <path d="M9 4v13.5M15 6.5V20" />
-      </>
-    ),
-  },
-  {
-    id: "ira",
-    palabra: "Ir a",
-    icono: (
-      <>
-        <circle cx="10.5" cy="10.5" r="6" />
-        <path d="m15 15 5 5" />
-      </>
-    ),
-  },
-  {
-    id: "pase",
-    palabra: "Pase",
-    icono: (
-      <>
-        <rect x="3.5" y="6" width="17" height="12.5" rx="2.5" />
-        <path d="M3.5 10.5h17M7 15h4" />
-      </>
-    ),
-  },
+const LUGARES: Array<{ id: Lugar; palabra: string; Glifo: React.ComponentType<{ tamano?: number }> }> = [
+  { id: "inicio", palabra: "Inicio", Glifo: GlifoCasa },
+  { id: "mapa", palabra: "Mapa", Glifo: GlifoMapa },
+  { id: "ira", palabra: "Ir a", Glifo: GlifoIra },
+  { id: "pase", palabra: "Pase", Glifo: GlifoPase },
 ];
 
+/** Hacia dónde mira un lugar que no es el activo: hacia el activo. */
+export function miradaHacia(i: number, activo: number): string {
+  if (i === activo) return "0px";
+  return activo > i ? "0.9px" : "-0.9px";
+}
+
 export function Barra({ activo, alIr }: { activo: Lugar; alIr: (l: Lugar) => void }) {
+  const iActivo = LUGARES.findIndex((l) => l.id === activo);
   return (
     <nav className="ontoy-barra" aria-label="Secciones">
-      {LUGARES.map((l) => (
+      {LUGARES.map(({ id, palabra, Glifo }, i) => (
         <button
-          key={l.id}
+          key={id}
           type="button"
           className="ontoy-barra-lugar"
-          aria-current={activo === l.id ? "page" : undefined}
-          onClick={() => alIr(l.id)}
+          aria-current={activo === id ? "page" : undefined}
+          onClick={() => alIr(id)}
+          style={{ ["--mx" as string]: miradaHacia(i, iActivo) }}
         >
           <span className="ontoy-barra-pastilla" aria-hidden="true">
-            <svg viewBox="0 0 24 24">{l.icono}</svg>
+            <Glifo />
           </span>
-          <span className="ontoy-barra-palabra">{l.palabra}</span>
+          <span className="ontoy-barra-palabra">{palabra}</span>
         </button>
       ))}
     </nav>

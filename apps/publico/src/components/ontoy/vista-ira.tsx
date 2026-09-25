@@ -10,6 +10,7 @@ import {
   type RutaBuscable,
 } from "@/lib/ontoy/buscar-lugar";
 import { Ontoy } from "@/components/ontoy/ontoy-muneco";
+import { GlifoIra } from "@/components/ontoy/glifos";
 import { encontre } from "@/lib/ontoy/encontre";
 
 /**
@@ -112,7 +113,7 @@ export function VistaIrA({
 
       <section className="ontoy-seccion">
         <div className="ontoy-ira-campo">
-          <GlifoIra />
+          <GlifoIra tamano={28} className="ontoy-ira-glifo" />
           <input
             type="search"
             value={consulta}
@@ -235,34 +236,5 @@ export function VistaIrA({
         <a href="/privacidad">Qué datos usa la app y para qué</a>.
       </p>
     </div>
-  );
-}
-
-/**
- * **El glifo de «Ir a»**, del paquete de símbolos del #562 (`g-ira`).
- *
- * Es un objeto del universo —con ojos y en color de barrio— y no una lupa
- * genérica: el estándar es explícito en que no se usa ninguna fuente de iconos
- * ajena, y la lupa que había aquí era justamente eso.
- *
- * **Va escrito a mano y no importado del `.svg`**, y conviene saber por qué:
- * los archivos del paquete traen **16 KB de metadatos C2PA** cada uno —la
- * procedencia que estampa la herramienta de diseño—, contra unos 400 bytes de
- * dibujo. Copiarlos tal cual metería cuarenta veces su peso en la app que se
- * abre en la calle con datos contados. Lo que se copia es el dibujo.
- */
-function GlifoIra() {
-  return (
-    <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" className="ontoy-ira-glifo">
-      <path d="M12 11 7 1.4h10z" fill="#F2C14E" />
-      <circle cx="12" cy="14.6" r="7.6" fill="#fff" />
-      <circle cx="12" cy="14.6" r="6.4" fill="#1E2B4D" />
-      <circle cx="3.4" cy="17.8" r="1.7" fill="#1E2B4D" />
-      <circle cx="20.6" cy="17.8" r="1.7" fill="#1E2B4D" />
-      <circle cx="9.7" cy="13.6" r="1.9" fill="#fff" />
-      <circle cx="14.3" cy="13.6" r="1.9" fill="#fff" />
-      <circle cx="9.8" cy="12.9" r="1.05" fill="#2A2E37" />
-      <circle cx="14.4" cy="12.9" r="1.05" fill="#2A2E37" />
-    </svg>
   );
 }
