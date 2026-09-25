@@ -66,6 +66,8 @@ Tipografía: **Bricolage Grotesque 800** (títulos, números de ruta) · **Instr
 - Uso: ícono, splash, avisos, tu ubicación (pin), estados vacíos.
 
 ### Tino (8a) — parada oficial
+> **Enmienda 25-sep-2026: se llama «Páris»** (con acento en la A), decisión de Asav. Sólo cambia el nombre; ver §18.
+
 - Poste carbón con base, cabeza en disco del **color de la ruta**, manos flotantes del mismo color, carga su placa «51 · 3′» al pecho.
 - Estados: espera · mira la calle · aburrido · **¡ya viene!** (alza la placa sobre la cabeza, boca abierta, rebote; texto «¡ya!» en color de ruta).
 - Uso: paradas en el mapa, vista de ruta, «Tu próximo camión», avisos.
@@ -228,3 +230,9 @@ Tiendita «Abarrotes Lupita» (toldo rosa) · Tienda 24 h «Súper 24» (turques
 ## 17. Fuentes
 - Bricolage Grotesque (600, 800) e Instrument Sans (400–700). Las dos son gratuitas (licencia OFL).
 - Hoy se cargan desde Google Fonts. En producción conviene alojarlas en el propio sitio (woff2), por ejemplo con fontsource: `@fontsource-variable/bricolage-grotesque` y `@fontsource-variable/instrument-sans`.
+
+## 18. Enmienda: la parada se llama Páris (2026-09-25)
+- **Decisión de Asav, 25-sep-2026:** el personaje de la parada oficial deja de llamarse Tino y se llama **«Páris»**, con acento en la A. Paradito → Tino (provisional, §14) → **Páris**. Lo escrito arriba se deja como estaba; donde diga Tino, léase Páris.
+- Sólo cambia el nombre: dibujo, estados, placa y color de ruta, igual.
+- Lo que ve el pasajero ya dice Páris (landing). Los ids internos (`tino`, `ontoy-tino*`, `TinoDeLaLamina`, `paradito`…) se quedan: el detalle está en la enmienda (g) de `.claude/skills/ontoy-design/ENMIENDAS.md`.
+- **«Páris 7 de 18 · hacia Centro»:** el número de la parada dentro de su sentido se calcula por el orden en que el camión pasa (`numerarParadasDelSentido`, `packages/domain`). **Sólo en pantalla, nunca en láminas:** si se inserta una parada los números se corren y lo impreso no se corrige. Lo estable es el `qr_slug`.

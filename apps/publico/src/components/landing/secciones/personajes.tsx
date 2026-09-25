@@ -109,7 +109,7 @@ export function Personajes() {
           <p className="landing-rotulo landing-rotulo-claro">Así se lee Ontoy</p>
           <h2>No hace falta leer. Sus ojos te lo dicen.</h2>
           <p className="landing-lead landing-lead-claro">
-            Cada personaje es un dato: <strong>Ontoy te dice</strong>, Cami es tu camión y Tino
+            Cada personaje es un dato: <strong>Ontoy te dice</strong>, Cami es tu camión y Páris
             es tu parada. Toca cada mirada.
           </p>
         </div>
@@ -144,7 +144,7 @@ export function Personajes() {
             <figure>
               <Tino mirada={mirada} />
               <figcaption>
-                <b>Tino</b>
+                <b>Páris</b>
                 <span>tu parada</span>
               </figcaption>
             </figure>
@@ -259,7 +259,7 @@ function Cami({ mirada }: { mirada: Mirada }) {
  */
 function Tino({ mirada }: { mirada: Mirada }) {
   return (
-    <svg viewBox="0 0 120 120" aria-label="Tino">
+    <svg viewBox="0 0 120 120" aria-label="Páris">
       <rect x="57" y="36" width="6" height="72" fill="var(--hueso)" />
       <rect x="46" y="106" width="28" height="7" rx="3.5" fill="var(--hueso)" />
       <circle cx="60" cy="38" r="26" fill="var(--ruta)" />

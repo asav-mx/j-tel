@@ -164,6 +164,29 @@ Blanco sobre carbón da **13.6:1**. La señal de color no se pierde: se muda a l
 es un elemento gráfico y le basta con 3:1 — y además **el color nunca va solo**, porque la
 placa lleva el número de la ruta al lado.
 
+## (g) La parada se llama Páris — 25-sep-2026
+
+**Decisión de ASAV, 25-sep-2026.** El personaje de la parada oficial **ya no se llama Tino:
+se llama «Páris»**, con acento en la A. Donde `CLAUDE.md`, `readme.md`, las hojas
+`.dc.html` y las tarjetas de `guidelines/` digan «Tino», léase Páris. Es el tercer nombre
+del mismo muñeco: Paradito → Tino (provisional, 23-sep) → **Páris**.
+
+- **Sólo cambia el nombre.** El dibujo, sus estados, su placa, el color de ruta y las
+  reglas de la mirada son los mismos.
+- **Lo que el pasajero lee dice Páris:** la landing (la sección de personajes, «Tu color» y
+  el recorrido). En la app el nombre no se escribe en ninguna pantalla: el muñeco aparece,
+  pero no se presenta.
+- **Los nombres internos se quedan como están**, igual que `paradito` se quedó cuando llegó
+  Tino: clases `ontoy-tino*` y `letrero-tino`, `zoom-de-tino.ts` y `tinoEntero`, los
+  componentes `Tino`, `TinoGrande` y `TinoDeLaLamina`, las piezas `data-pieza="tino"` de la
+  calle, y los comentarios y nombres de pruebas que lo citan. Renombrarlos sólo mueve
+  archivos y no cambia nada que alguien vea. Quien escriba código nuevo **puede** llamarlo
+  `paris`; no hace falta volver sobre lo viejo.
+- **El número de la parada** que acompaña al nombre en pantalla —«Páris 7 de 18 · hacia
+  Centro»— sale de `numerarParadasDelSentido` (`packages/domain/src/numero-de-parada.ts`) y
+  **nunca se imprime**: si se inserta una parada los números se corren, y un letrero en la
+  calle no se corrige. Lo que se imprime es el `qr_slug`.
+
 ---
 
 ## Notas del repo (no son enmiendas: son cosas que este repo ya decidió)
@@ -195,6 +218,6 @@ carrier (el árbitro) **no llevan caritas**. Este universo es del lado del pasaj
 impreso de la calle y de redes. El letrero del poste **sí** lleva a Tino, aunque se imprima
 desde una pantalla de J-Staff: lo impreso es calle.
 
-**El 3D de Tino se llama `Paradito 3D.html`.** Es el nombre viejo del personaje; el id interno
+**El 3D de Tino (hoy Páris, enmienda g) se llama `Paradito 3D.html`.** Es el nombre viejo del personaje; el id interno
 sigue siendo `paradito` y el handoff §14 lo dice. No se renombró para no separar el archivo de
 su id.

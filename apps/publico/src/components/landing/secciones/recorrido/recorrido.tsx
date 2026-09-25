@@ -42,7 +42,7 @@ export function Recorrido() {
         <p className="landing-rotulo">Lo que hace Ontoy · en cinco paradas</p>
         <h2>Súbete. Baja despacio.</h2>
         <p className="landing-lead">
-          Mientras bajas, Cami recorre la ruta parada por parada. Fíjate en Tino:{" "}
+          Mientras bajas, Cami recorre la ruta parada por parada. Fíjate en Páris:{" "}
           <strong>su placa cuenta a cuántas paradas viene</strong>, y ya sabes leer su mirada.
         </p>
       </header>

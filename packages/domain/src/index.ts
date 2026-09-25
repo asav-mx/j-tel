@@ -800,6 +800,8 @@ export * from "./recorridos.js";
 export * from "./slugs-reservados.js";
 /* La dirección que va impresa en el letrero de una parada. */
 export * from "./letrero-de-parada.js";
+/* El número de una parada en su sentido: sólo pantalla, nunca lámina. */
+export * from "./numero-de-parada.js";
 /* El acta de un hecho sellado, congelada dentro del hecho (C24). */
 export * from "./acta-del-hecho.js";
 export * from "./tiempo.js";
