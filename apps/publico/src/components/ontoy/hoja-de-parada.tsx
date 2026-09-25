@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { ProntoEnLaCalle } from "@/components/ontoy/pronto-en-la-calle";
 
 export interface LlegadaEnLaHoja {
   /** Lo que se lee grande: «4–7 min», «Sin unidad a la vista», «Fuera de horario». */
@@ -44,6 +45,7 @@ export function HojaDeParada({
   nombre,
   direccion,
   llegadas,
+  porArrancar,
   promesa,
   guardada,
   sePuedeGuardar,
@@ -55,7 +57,13 @@ export function HojaDeParada({
   /** «Dirección → Centro». Sale de los datos del circuito, nunca del código. */
   direccion: string;
   llegadas: LlegadaEnLaHoja[];
-  /** La promesa publicada, ya en palabras. Siempre visible (8.2). */
+  /**
+   * La ruta todavía no arranca. Cuando viene, **reemplaza a las llegadas y a la
+   * promesa**: no hay unidad que contar ni frecuencia que prometer sobre un
+   * servicio que no ha salido.
+   */
+  porArrancar?: { ruta: string; arrancaEl: string | null } | null;
+  /** La promesa publicada, ya en palabras. Siempre visible (8.2) — salvo por arrancar. */
   promesa: string;
   guardada: boolean;
   /** `false` cuando el navegador no deja guardar. Se dice, no se esconde el botón. */
@@ -103,6 +111,19 @@ export function HojaDeParada({
         </div>
         <p className="ontoy-hoja-dir">{direccion}</p>
 
+        {/*
+          * **Por arrancar reemplaza a todo lo de abajo**, no se suma.
+          *
+          * La 8.2 dice que la promesa se muestra siempre, «como el horario
+          * impreso en un poste». Un poste de una ruta que no ha salido no
+          * tiene horario impreso todavía: lo que tiene es la fecha en que lo
+          * va a tener. Enseñar «pasa cada 15 min» aquí sería prometer sobre
+          * algo que nadie ha operado ni medido.
+          */}
+        {porArrancar ? (
+          <ProntoEnLaCalle color={color} ruta={porArrancar.ruta} arrancaEl={porArrancar.arrancaEl} />
+        ) : (
+          <>
         {/* Lo MEDIDO. */}
         {llegadas.map((l, i) => (
           <div key={i} className={`ontoy-llegada${l.vieja ? " vieja" : ""}${l.pasada ? " pasada" : ""}`}>
@@ -117,6 +138,8 @@ export function HojaDeParada({
 
         {/* LA PROMESA, separada por su línea y siempre presente (8.2, 8.3). */}
         <p className="ontoy-hoja-promesa">{promesa}</p>
+          </>
+        )}
         <p className="ontoy-hoja-nota">
           {/*
             Aquí decía «la guarda en tu teléfono, no en ningún servidor», y la

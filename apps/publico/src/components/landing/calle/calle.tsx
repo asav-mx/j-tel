@@ -69,6 +69,7 @@ export function Calle() {
       tinoTriste: pieza("tino-triste"),
       placa: pieza("placa"),
       placaFondo: pieza("placa-fondo"),
+      placaFranja: pieza("placa-franja"),
       pasajeros: [
         pieza("pasajero-0"),
         pieza("pasajero-1"),
@@ -176,24 +177,21 @@ export function Calle() {
         /* La placa se encoge para «¡ya!», que es mucho más corto. */
         const ancho = esYa ? 30 : 62;
         piezas.placaFondo?.setAttribute("width", String(ancho));
+        piezas.placaFranja?.setAttribute("width", String(ancho));
         if (piezas.placa) {
           piezas.placa.textContent = dicho;
           piezas.placa.setAttribute("x", String(948 + ancho / 2));
           /*
-           * **«¡ya!» destaca por TAMAÑO y no por color**, y el cambio lo obligó
-           * la medición.
+           * **El texto de la placa va SIEMPRE en blanco**, también en «¡ya!»
+           * (enmienda (f), decisión de ASAV del 24-sep). El color de la ruta
+           * vive en la franja de 3 px del filo de abajo.
            *
-           * El sistema de diseño dice que en «¡ya!» el texto va en el color de
-           * la ruta. Sobre la placa carbón eso da **3.47:1** con el azul de la
-           * 51 — por debajo del piso de 4.5 que pide el texto. Y no es cosa de
-           * este color: de los cinco de la lista ninguno llega a 4.5 sobre
-           * carbón, y pintando la placa del color de la ruta con su mejor tinta
-           * el mejor caso sigue siendo 3.92.
+           * La regla vieja —«en ¡ya! el texto va en el color de la ruta»— no se
+           * podía cumplir: sobre la placa carbón el azul da 3.47:1 y el morado
+           * 3.29, contra un piso de 4.5, y **ninguno de los cinco de la lista
+           * llega**. Blanco sobre carbón da 13.6.
            *
-           * Blanco sobre carbón da **13.6:1**. Así que el color sale y entra el
-           * tamaño. La 8.8c pide justamente eso —que el color no sea nunca lo
-           * único que porta una diferencia—, y aquí ni falta hacía: la palabra
-           * ya es distinta.
+           * «¡ya!» sigue destacando, por tamaño.
            */
           piezas.placa.style.fontSize = esYa ? "11px" : "8px";
         }
@@ -440,6 +438,12 @@ function Tino() {
        * La placa dice PARADAS y no minutos, y escribe la unidad. Por eso es más
        * ancha que la del prototipo, que cabía porque decía «3′».
        */}
+      {/*
+       * La franja del color de la ruta, en el filo de abajo (enmienda (f)).
+       * Va DETRÁS de la placa y asomando 3 px: así la placa no necesita un
+       * segundo rectángulo que la recorte, y la franja se estira con ella.
+       */}
+      <rect data-pieza="placa-franja" x="948" y="29" width="62" height="3" rx="1.5" fill="var(--ruta)" />
       <rect
         data-pieza="placa-fondo"
         x="948"

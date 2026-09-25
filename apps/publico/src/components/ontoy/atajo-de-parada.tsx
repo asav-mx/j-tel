@@ -15,6 +15,7 @@ import type { ParadaGuardada } from "@/lib/ontoy/paradas-guardadas";
 import { useForma } from "@/lib/ontoy/ruta-en-vivo";
 import type { Vivo } from "@/lib/ontoy/forma";
 import { avanceSobreTrazado } from "@jtel/domain";
+import { arranqueLargo } from "@/lib/fecha-arranque";
 
 /**
  * El atajo de una parada guardada (8.8b) — con su próximo paso ya visible.
@@ -209,7 +210,8 @@ function sinLlegada(e: {
   if (e.cargando) return "Preguntando…";
   if (!e.vivo) return "Sin datos de esta ruta ahorita";
   if (e.vivo.estado === "por_arrancar") {
-    return e.vivo.arranca_el ? `Arranca el ${e.vivo.arranca_el}` : "Todavía no arranca";
+    const cuando = arranqueLargo(e.vivo.arranca_el ?? "");
+    return cuando ? `Arranca el ${cuando}` : "Todavía no arranca";
   }
   if (e.vivo.estado === "fuera_de_horario") return `Fuera de horario · abre ${e.vivo.abre_a}`;
   return "Sin unidad a la vista ahorita";
