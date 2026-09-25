@@ -42,6 +42,11 @@ export interface Ontoy3D {
   animo(v: number): void;
   /** Deja de dibujar cuando no se ve: un canvas fuera de pantalla no tiene por qué gastar batería. */
   visible(v: boolean): void;
+  /**
+   * Que baile. Es lo que hace al pasar el ratón por encima del botón de abrir
+   * la app: Ontoy celebra que vas a entrar.
+   */
+  baila(v: boolean): void;
   /** Suelta el canvas, la geometría y las texturas. */
   destruir(): void;
 }
@@ -305,16 +310,39 @@ export function montarOntoy3D(
   let mezclaTruco = 0;
   let camZ = 0.66;
   let camY = 0.035;
+  let bailando = 0;
+  let bailandoQuiere = 0;
 
   const alMover = (ev: PointerEvent) => {
     if (ev.pointerType !== "mouse") return;
     const r = contenedor.getBoundingClientRect();
+    /*
+     * **`e` es qué tan cerca está el cursor, de 0 a 1** — y es lo que hace que
+     * Ontoy se vaya emocionando conforme te acercas: la boca se le abre más y
+     * más, se mueve más rápido y levanta la mano.
+     *
+     * Estaba puesto a 1 en cuanto el ratón se movía en cualquier parte de la
+     * página, así que Ontoy pasaba de dormido a emocionadísimo de golpe y se
+     * quedaba ahí. El acercamiento —que es la mitad de su gracia— no existía.
+     *
+     * Se mide del centro de su caja: pegado vale 1, y se apaga a unos 420 px.
+     */
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height * 0.45;
+    const d = Math.hypot(ev.clientX - cx, ev.clientY - cy);
+    const cercania = Math.max(0, Math.min(1, 1 - (d - r.width * 0.4) / 420));
+
     objetivo = {
       x: ((ev.clientX - r.left) / r.width - 0.5) * 2,
       y: ((ev.clientY - r.top) / r.height - 0.45) * 2,
-      e: 1,
+      e: cercania,
     };
-    ultimoMovimiento = (performance.now() - arranque) / 1000;
+    /*
+     * Y el ocio sólo se reinicia si el cursor está cerca. Con cualquier
+     * movimiento de la página, Ontoy no llegaba a aburrirse nunca — y
+     * aburrirse es lo que lo pone a jugar con su celular.
+     */
+    if (cercania > 0.02) ultimoMovimiento = (performance.now() - arranque) / 1000;
   };
 
   const alTocar = () => {
@@ -375,6 +403,9 @@ export function montarOntoy3D(
     const histericoQuiere = !quieto && combo.n >= 5 && t - ultimoClick < 2.2 ? 1 : 0;
     brincoteo += (histericoQuiere - brincoteo) * (1 - Math.exp(-dt * (histericoQuiere ? 5 : 1.6)));
 
+    /* El baile del botón: entra y sale suave, nunca de golpe. */
+    bailando += ((quieto ? 0 : bailandoQuiere) - bailando) * (1 - Math.exp(-dt * 4));
+
     if (!truco && cola.length) {
       truco = cola.shift()!;
       trucoT = 0;
@@ -430,8 +461,15 @@ export function montarOntoy3D(
     mezclaTruco += ((truco ? 1 : 0) - mezclaTruco) * (1 - Math.exp(-dt * (truco ? 6 : 2.2)));
 
     const altoBrinco = Math.abs(Math.sin(t * 17)) * 0.032 * brincoteo * (1 - mezclaTruco);
-    acrobacias.position.set(jx, jy + altoBrinco, 0);
-    acrobacias.rotation.set(rx, ry, rz);
+    /*
+     * El baile: un vaivén de lado con su balanceo, más lento que el brinco
+     * histérico. Se suma al resto en vez de reemplazarlo, así que bailar
+     * mientras se le hace clic no corta nada.
+     */
+    const vaivenX = Math.sin(t * 5.5) * 0.035 * bailando * (1 - mezclaTruco);
+    const vaivenY = Math.abs(Math.sin(t * 11)) * 0.018 * bailando * (1 - mezclaTruco);
+    acrobacias.position.set(jx + vaivenX, jy + altoBrinco + vaivenY, 0);
+    acrobacias.rotation.set(rx, ry, rz + Math.sin(t * 5.5) * 0.14 * bailando * (1 - mezclaTruco));
     const aplasteBrinco =
       1 - Math.max(0, 0.12 - Math.abs(Math.sin(t * 17)) * 0.12) * brincoteo * (1 - mezclaTruco);
     const S = Math.min(aplaste, aplasteBrinco);
@@ -470,7 +508,13 @@ export function montarOntoy3D(
      * sin boca**; la boca sólo sale en las reacciones. Por eso las tres se
      * esconden a la vez cuando no pasa nada.
      */
-    const abre = Math.max(risa, brincoteo, mezclaTruco, e > 0.35 ? (e - 0.35) / 0.65 : 0);
+    /*
+     * **La boca se abre con la cercanía.** `e` va de 0 a 1 según se acerque el
+     * cursor, y a partir de 0.35 la boca empieza a abrirse: es el gesto de
+     * emocionarse conforme llegas, y era lo que faltaba cuando `e` valía 1
+     * siempre.
+     */
+    const abre = Math.max(risa, brincoteo, mezclaTruco, bailando * 0.7, e > 0.35 ? (e - 0.35) / 0.65 : 0);
     bocaAbierta.visible = abre > 0.04;
     sonrisa.visible = !bocaAbierta.visible && (e > 0.1 || jugando > 0.5 || triste > 0.35);
     sonrisa.rotation.z = triste > 0.35 ? 0 : Math.PI;
@@ -520,6 +564,10 @@ export function montarOntoy3D(
     },
     animo(v) {
       animoPedido = v;
+    },
+    baila(v) {
+      bailandoQuiere = v ? 1 : 0;
+      if (v) ultimoMovimiento = (performance.now() - arranque) / 1000;
     },
     visible(v) {
       seVe = v;
