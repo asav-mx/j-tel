@@ -156,7 +156,7 @@ export function TuColor() {
  */
 function TinoGrande({ numero }: { numero: string }) {
   return (
-    <svg viewBox="0 0 120 120" aria-label="Tino, tu parada">
+    <svg viewBox="0 0 120 120" aria-label="Páris, tu parada">
       <rect x="57" y="36" width="6" height="72" fill="var(--carbon)" />
       <rect x="46" y="106" width="28" height="7" rx="3.5" fill="var(--carbon)" />
       <circle cx="60" cy="38" r="26" fill="var(--ruta)" />
