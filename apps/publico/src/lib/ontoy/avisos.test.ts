@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { avisosDeTusRutas, fechaDelAviso, hayAvisosNuevos } from "@/lib/ontoy/avisos";
+import { avisosDeTusRutas, deQuienSonLosAvisos, fechaDelAviso, hayAvisosNuevos } from "@/lib/ontoy/avisos";
 import { registrarSondeo, TELEFONO_INICIAL } from "@/lib/ontoy/avisos-del-telefono";
 import { rutasDeLaConsulta } from "@/lib/ontoy/consulta-de-la-raiz";
 import type { Vivo } from "@/lib/ontoy/forma";
@@ -88,5 +88,25 @@ describe("la consulta única de la raíz", () => {
   });
   it("una favorita abierta no se repite", () => {
     expect(rutasDeLaConsulta(["a", "b"], "a")).toEqual(["a", "b"]);
+  });
+});
+
+describe("de quién son los avisos (la línea bajo el título)", () => {
+  const de = (ruta: string) => ({ ruta }) as Parameters<typeof deQuienSonLosAvisos>[0][number];
+  const guardadas = new Set(["zaragoza-centro"]);
+
+  it("lo del diseño cuando es cierto: todos de tus guardadas", () => {
+    expect(deQuienSonLosAvisos([de("zaragoza-centro")], guardadas)).toBe("De tus rutas guardadas");
+  });
+
+  it("sin avisos también: el alcance que se consultó incluye tus guardadas", () => {
+    expect(deQuienSonLosAvisos([], guardadas)).toBe("De tus rutas guardadas");
+  });
+
+  it("un aviso de la ruta abierta que NO guardaste no se llama «de tus guardadas» (§D)", () => {
+    expect(deQuienSonLosAvisos([de("zaragoza-centro"), de("insurgentes")], guardadas)).toBe(
+      "De tus rutas guardadas y la que estás viendo",
+    );
+    expect(deQuienSonLosAvisos([de("insurgentes")], guardadas)).toBe("De la ruta que estás viendo");
   });
 });

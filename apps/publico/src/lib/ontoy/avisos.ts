@@ -67,3 +67,24 @@ export function fechaDelAviso(iso: string, zona: string, ahora: Date): string {
   const fecha = new Intl.DateTimeFormat("es-MX", { timeZone: zona, day: "numeric", month: "short" }).format(d).replace(".", "");
   return `${fecha}, ${hora}`;
 }
+
+/**
+ * **De quién son los avisos que se ven**, para la línea bajo el título.
+ *
+ * El diseño dice «De tus rutas guardadas» (3-ir-a/14), y casi siempre es
+ * cierto. Pero la campana junta los avisos de tus guardadas **y de la ruta que
+ * tienes abierta** (`rutasDeLaConsulta`), y ésa puede no estar guardada. Decir
+ * «guardadas» sobre un aviso de una ruta que no guardaste es un dato correcto
+ * con una etiqueta falsa (Marco §D), así que la frase sale de lo que hay:
+ *
+ * - todos de guardadas, o ninguno → «De tus rutas guardadas» (lo del diseño);
+ * - de guardadas y de la abierta → «De tus rutas guardadas y la que estás viendo»;
+ * - sólo de la abierta → «De la ruta que estás viendo».
+ */
+export function deQuienSonLosAvisos(avisos: AvisoEnLaCampana[], rutasGuardadas: ReadonlySet<string>): string {
+  const deGuardadas = avisos.some((a) => rutasGuardadas.has(a.ruta));
+  const deOtra = avisos.some((a) => !rutasGuardadas.has(a.ruta));
+  if (deOtra && deGuardadas) return "De tus rutas guardadas y la que estás viendo";
+  if (deOtra) return "De la ruta que estás viendo";
+  return "De tus rutas guardadas";
+}
