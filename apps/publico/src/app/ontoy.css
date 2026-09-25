@@ -1892,6 +1892,71 @@
   margin: 0;
 }
 
+/* ── las pantallas de estado completo (§G) ─────────────────────────────── */
+
+/*
+ * Ontoy al centro, una línea, una de ayuda y **un** botón. Va centrada en
+ * vertical porque es lo único que hay en la pantalla: alineada arriba deja un
+ * hueco abajo que se lee como que falta cargar algo.
+ */
+.ontoy-completa {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 32px 24px calc(32px + env(safe-area-inset-bottom));
+  background: var(--fondo);
+  color: var(--texto);
+  text-align: center;
+}
+.ontoy-completa-calle {
+  display: block;
+  margin: 6px 0 18px;
+  max-width: 100%;
+}
+.ontoy-completa-titular {
+  margin: 12px 0 0;
+  max-width: 17em;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.ontoy-completa-ayuda {
+  margin: 10px 0 0;
+  max-width: 24em;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--tenue);
+  text-wrap: pretty;
+}
+/*
+ * El botón **abraza su texto**, como el diseño, en vez de estirarse de orilla a
+ * orilla. En una pantalla centrada con una sola salida, un botón de ancho
+ * completo pesa más que todo lo demás junto y se lee como una alarma; aquí no
+ * hay ninguna urgencia, sólo una liga que no llevó a donde iba.
+ *
+ * Hacen falta **las dos**: `width: auto` porque la regla base de `.ontoy-boton`
+ * pone `width: 100%` —ahí los botones viven dentro de una tarjeta y sí ocupan
+ * el ancho—, y `align-self: center` porque sin él un hijo de un flex en columna
+ * se estira igual. Lo enseñó la captura: con sólo el segundo, seguía de orilla
+ * a orilla.
+ */
+.ontoy-completa .ontoy-boton {
+  width: auto;
+  align-self: center;
+  margin-top: 22px;
+  padding-left: 28px;
+  padding-right: 28px;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+}
+
 /* ── la campana (8.13b) ───────────────────────────────────────────────── */
 .ontoy-campana {
   position: relative;

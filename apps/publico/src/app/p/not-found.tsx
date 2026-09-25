@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PantallaCompleta } from "@/components/ontoy/pantalla-completa";
 
 /**
  * Lo que ve quien escanea un letrero que todavía no lleva a ninguna parte.
@@ -35,17 +35,19 @@ import Link from "next/link";
  */
 export default function LetreroNoActivo() {
   return (
-    <main className="puerta">
-      <h1>Este QR todavía no está activo</h1>
-      <p>
-        Revisa que el código esté bien escrito. Mientras, abre el inicio para ver las rutas que
-        ya puedes seguir.
-      </p>
-      <ul>
-        <li>
-          <Link href="/">Ver las rutas</Link>
-        </li>
-      </ul>
-    </main>
+    <PantallaCompleta
+      /*
+       * **Al frente, no al otro lado.** El 404 de la app mira al otro lado
+       * porque la liga no lleva a ningún lado; aquí sí hay una parada del otro
+       * lado del QR —o la va a haber—, y lo que Ontoy hace es **hablarte**.
+       * «Todavía» es lo único honesto que sirve para los dos casos: el letrero
+       * que se pegó antes de publicar, y el código mal escrito.
+       */
+      pose="al-frente"
+      titular="Este QR todavía no está activo."
+      ayuda="Revisa que el código esté bien escrito. Mientras, aquí están las rutas que ya puedes seguir."
+      /* A `/rutas`: desde el #550 la raíz es la landing, no la app. */
+      boton={{ texto: "Ver las rutas", a: "/rutas" }}
+    />
   );
 }
