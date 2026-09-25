@@ -184,7 +184,18 @@
 }
 
 /* ── la barra (8.8, 22-sep): cuatro lugares, cada ícono con su palabra ── */
+/*
+ * `position: relative` y `z-index` **sólo para que la barra se pinte encima de
+ * la hoja de una parada**, que es fija y la cubría. No cambia dónde está ni cómo
+ * se ve: la barra sigue siendo el último renglón de la columna.
+ *
+ * Es la 8.10: la barra es la salida de cualquier pantalla, y una hoja que la
+ * tapa deja al pasajero sin ella. En las láminas del diseño se ve debajo de la
+ * hoja en las tres alturas.
+ */
 .ontoy-barra {
+  position: relative;
+  z-index: 902;
   display: flex;
   background: var(--panel);
   border-top: 1px solid var(--linea);
@@ -932,27 +943,98 @@
   background: rgba(0, 0, 0, 0.35);
   cursor: pointer;
 }
+/*
+ * **El velo de la hoja de una parada no tiñe: sólo recoge el toque de fuera.**
+ *
+ * Medido sobre las láminas del diseño: con la hoja a media altura, el mapa de
+ * `02-mapa-hoja-media-dia.png` tiene el MISMO brillo que con la hoja asomada
+ * (215 contra 221, que es la diferencia entre dos trozos de mapa distintos). El
+ * diseño no lo oscurece. El velo del 35 % que traíamos lo bajaba 79 puntos.
+ *
+ * Y tiene que ser así: la hoja existe para que tocar una parada **no** saque al
+ * pasajero del mapa. Apagar el mapa detrás lo saca igual, sólo que sin cambiar
+ * de pantalla. Las tres salidas (8.10) se quedan enteras —el botón, la tecla de
+ * escape y tocar fuera—; lo único que se va es el tinte.
+ */
+.ontoy-scrim.transparente {
+  background: transparent;
+}
+/*
+ * **La hoja mide una FRACCIÓN de la pantalla**, que le pone el componente en
+ * `--alto-hoja` (asomada, media o completa; ver `alturas-de-la-hoja.ts`).
+ *
+ * La transición es la del estándar —0.6 s con la curva `--ease`, sin rebote— y
+ * se APAGA mientras el dedo la trae (`.arrastrando`): con transición, la hoja
+ * llegaría siempre un poco después que el dedo y el arrastre se sentiría
+ * pegajoso. Es la misma razón por la que Cami suaviza entre posiciones del GPS
+ * pero no entre toques.
+ */
 .ontoy-hoja {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 901;
+  display: flex;
+  flex-direction: column;
+  height: calc(var(--alto-hoja, 0.615) * 100dvh);
   background: var(--panel);
   border-top: 1px solid var(--linea);
   border-radius: 20px 20px 0 0;
   box-shadow: var(--sombra-hoja);
-  padding: 14px 18px calc(18px + env(safe-area-inset-bottom, 0px));
-  max-height: 72dvh;
-  overflow-y: auto;
+  transition: height 0.6s var(--ease, cubic-bezier(0.2, 0, 0, 1));
 }
+.ontoy-hoja.arrastrando {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ontoy-hoja {
+    transition: none;
+  }
+}
+/*
+ * El cuerpo es lo que corre. La hoja entera no puede correr: el asa se iría
+ * hacia arriba con el contenido y el pasajero se quedaría sin el control que
+ * cambia la altura justo cuando más lejos está de él.
+ */
+.ontoy-hoja-cuerpo {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /*
+   * El hueco de abajo es el de la barra, que la hoja **no tapa** (8.10). El alto
+   * lo mide el componente del DOM; el `0px` de respaldo es para el instante
+   * antes de la primera medida y para cuando no hay barra.
+   */
+  padding: 0 18px calc(18px + var(--alto-barra, 0px) + env(safe-area-inset-bottom, 0px));
+}
+/*
+ * El asa: 5 px de raya, pero **44 px de toque** alrededor. La raya sola es
+ * imposible de agarrar con el pulgar, y es el único control que cambia la
+ * altura.
+ */
 .ontoy-hoja-asa {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  flex-shrink: 0;
+}
+.ontoy-hoja-asa:active {
+  cursor: grabbing;
+}
+.ontoy-hoja-asa > span {
   display: block;
-  width: 38px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--linea);
-  margin: 0 auto 12px;
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--arena-2, var(--linea));
 }
 .ontoy-hoja-cabeza {
   display: flex;
@@ -1000,13 +1082,30 @@
  * partía en dos renglones a la izquierda. Lo enseñó la captura. Una frase
  * necesita el ancho entero y poder envolver.
  */
+/*
+ * **La tarjeta de lo medido** — hueso, radio 22, anillo arena (estándar,
+ * «Tarjeta y fila hueso»). Encierra las filas de llegada y **sólo** esas: la
+ * promesa va fuera, debajo, porque lo que midió el GPS y lo que declaró la
+ * concesión no comparten caja (8.3).
+ */
+.ontoy-hoja-medido {
+  background: var(--panel2);
+  border-radius: 22px;
+  box-shadow: 0 0 0 1px var(--linea);
+  padding: 2px 14px;
+  margin: 12px 0 14px;
+}
 .ontoy-llegada {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  padding: 9px 0;
+  padding: 11px 0;
   border-top: 1px solid var(--linea);
   flex-wrap: wrap;
+}
+/* La primera fila no lleva raya: la tarjeta ya la separa de lo de arriba. */
+.ontoy-hoja-medido .ontoy-llegada:first-child {
+  border-top: 0;
 }
 /*
  * `align-items: center` y no `baseline`: con la placa y el número de 34 px en
