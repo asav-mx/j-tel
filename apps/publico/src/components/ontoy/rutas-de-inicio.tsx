@@ -60,6 +60,7 @@ export function RutasDeInicio({
   listaConError,
   alReintentarLista,
   alAbrirRuta,
+  abiertas = false,
 }: {
   rutas: RutaDeLaCiudad[];
   estados: EstadoDeRuta[];
@@ -70,8 +71,13 @@ export function RutasDeInicio({
   listaConError: boolean;
   alReintentarLista: () => void;
   alAbrirRuta: (circuitoId: string, parada?: string, sentido?: "ida" | "vuelta") => void;
+  /**
+   * Si la lista nace abierta: cuando se llega desde el «Ver todas las rutas» de
+   * «Ir a», que prometió TODAS, no tres.
+   */
+  abiertas?: boolean;
 }) {
-  const [todas, setTodas] = useState(false);
+  const [todas, setTodas] = useState(abiertas);
   const { yo, estado, reintentar } = ubicacion;
   const { rutas: ordenadas, porDistancia } = useMemo(
     () => ordenarRutas(rutas, paradas, yo),

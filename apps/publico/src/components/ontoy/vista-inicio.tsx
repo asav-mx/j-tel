@@ -63,6 +63,7 @@ export function VistaInicio({
   alVerAvisos,
   deNoche: pielDeNoche,
   alAlternarPiel,
+  rutasAbiertas = false,
 }: {
   rutas: RutaDeLaCiudad[];
   estados: EstadoDeRuta[];
@@ -88,6 +89,8 @@ export function VistaInicio({
   /** La piel, no la ciudad: si la app se está viendo de noche. */
   deNoche: boolean;
   alAlternarPiel: () => void;
+  /** La lista de rutas nace abierta: se llegó desde «Ver todas las rutas» de «Ir a». */
+  rutasAbiertas?: boolean;
 }) {
   const lista = useParadasDeLaCiudad(ubicacion.estado === "concedida");
 
@@ -215,6 +218,7 @@ export function VistaInicio({
         listaConError={lista.error}
         alReintentarLista={lista.reintentar}
         alAbrirRuta={alAbrirRuta}
+        abiertas={rutasAbiertas}
       />
 
       {/* Al pie: los datos (lo que es ley vive allá, no en la pantalla) y la piel. */}
