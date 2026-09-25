@@ -54,6 +54,7 @@ export function OntoyEn3D({ children }: { children: React.ReactNode }) {
     let vivo = true;
     let ontoy: Ontoy3D | null = null;
     let cancelarOcio: (() => void) | null = null;
+    let soltarElBaile: (() => void) | null = null;
 
     const traer = async () => {
       try {
@@ -61,6 +62,33 @@ export function OntoyEn3D({ children }: { children: React.ReactNode }) {
         if (!vivo || !hueco.current) return;
         ontoy = montarOntoy3D(hueco.current, { quieto });
         setMontado(true);
+
+        /*
+         * **Ontoy baila cuando el ratón se pone sobre el botón de abrir la
+         * app.** Celebra que vas a entrar, y es lo único de la portada que
+         * reacciona a algo que no es él mismo.
+         *
+         * Se engancha por selector y no por `ref` porque el botón lo rinde el
+         * servidor, en otro árbol: pasar una referencia desde allá obligaría a
+         * volver cliente media portada para un gesto de dos segundos.
+         */
+        const botones = document.querySelectorAll<HTMLElement>("[data-baila-ontoy]");
+        const entra = () => ontoy?.baila(true);
+        const sale = () => ontoy?.baila(false);
+        botones.forEach((b) => {
+          b.addEventListener("pointerenter", entra);
+          b.addEventListener("pointerleave", sale);
+          b.addEventListener("focus", entra);
+          b.addEventListener("blur", sale);
+        });
+        soltarElBaile = () => {
+          botones.forEach((b) => {
+            b.removeEventListener("pointerenter", entra);
+            b.removeEventListener("pointerleave", sale);
+            b.removeEventListener("focus", entra);
+            b.removeEventListener("blur", sale);
+          });
+        };
       } catch {
         /*
          * Si el fragmento no baja —red caída, un bloqueador, una tarjeta de
@@ -90,6 +118,7 @@ export function OntoyEn3D({ children }: { children: React.ReactNode }) {
       vivo = false;
       mirando.disconnect();
       cancelarOcio?.();
+      soltarElBaile?.();
       ontoy?.destruir();
       setMontado(false);
     };

@@ -36,13 +36,19 @@ import { useNivel } from "./nivel-contexto";
  * mueve.
  */
 
-export type Reaccion = "cosquillas" | "brinca" | "timido";
+export type Reaccion = "cosquillas" | "brinca" | "timido" | "dormido";
 
 /** Lo que dice cada cara al tocarla, en orden. */
 const DICHOS: Record<Reaccion, string[]> = {
   cosquillas: ["¡ja ja!", "¡jaja!", "¡ya, ya! jaja", "¡me haces llorar! jaja", "¡basta! JAJAJA"],
   brinca: ["¡uy!", "¡otra!", "¡más alto!", "ay… me mareé", "ya, ya… ay"],
   timido: ["…hola", "ay", "¡no me veas!", "¡basta! >///<"],
+  /*
+   * El dormido se despierta **a medias** y se vuelve a dormir: la sección dice
+   * que Ontoy descansa cuando no hay corridas, y despertarlo del todo
+   * contradiría la frase que tiene al lado.
+   */
+  dormido: ["¡cinco minutitos más!", "mmm…", "ya voy, ya voy", "…zzz"],
 };
 
 /** Los clics cuentan como racha si pasan menos de esto entre uno y otro. */
@@ -88,6 +94,13 @@ export function OntoyQueReacciona({
   /* El tímido se tapa la cara al final de su racha, no desde el primer toque. */
   const tapandose = reaccion === "timido" && fuerza > 0.6;
 
+  /*
+   * El dormido sigue dormido: lo que cambia es que abre un ojo, y en el último
+   * dicho —«…zzz»— vuelve a cerrarlo. Las zetas sólo se van mientras está
+   * medio despierto.
+   */
+  const medioDespierto = reaccion === "dormido" && reaccionando && nivelDeRisa < dichos.length - 1;
+
   /* Con `reduced-motion` la cara cambia, pero el cuerpo no se mueve. */
   const gesto = quieto ? "" : gestoDelCuerpo(reaccion, fuerza, reaccionando);
 
@@ -99,6 +112,19 @@ export function OntoyQueReacciona({
       aria-label={`Ontoy: tócalo`}
     >
       <svg viewBox="-16 -40 152 160" aria-hidden="true">
+        {/*
+         * Las zetas del sueño. **Se mueven**: suben y se desvanecen, una detrás
+         * de otra. Es lo único de la portada que se anima sin que nadie la
+         * toque, y se lo permite la sección: dice que Ontoy está durmiendo, y
+         * alguien durmiendo respira.
+         */}
+        {reaccion === "dormido" && !quieto && !medioDespierto && (
+          <g className="landing-zzz" aria-hidden="true">
+            <text x="104" y="6" className="landing-z1">z</text>
+            <text x="116" y="-8" className="landing-z2">z</text>
+            <text x="128" y="-24" className="landing-z3">Z</text>
+          </g>
+        )}
         <g style={{ transform: gesto, transformOrigin: "60px 96px", transition: "transform .18s var(--curva)" }}>
           <ellipse cx="44" cy="96" rx="9" ry="6" fill="var(--ontoy)" />
           <ellipse cx="76" cy="96" rx="9" ry="6" fill="var(--ontoy)" />
@@ -174,6 +200,10 @@ function gestoDelCuerpo(reaccion: Reaccion, fuerza: number, reaccionando: boolea
     /* Se retuerce: la risa no levanta, sacude. */
     return `translateX(${fuerza * 4}px) rotate(${fuerza * 5}deg)`;
   }
+  if (reaccion === "dormido") {
+    /* Se remueve: el que no quiere levantarse se da la vuelta, no salta. */
+    return `translateX(${fuerza * 5}px) rotate(${-fuerza * 4}deg)`;
+  }
   /* El tímido se encoge y se echa para atrás. */
   return `translateY(${fuerza * 4}px) scale(${1 - fuerza * 0.05})`;
 }
@@ -202,6 +232,28 @@ function Ojos({
       />
     );
   }
+  /* El dormido tiene los ojos cerrados SIEMPRE, salvo el que abre al despertar. */
+  if (reaccion === "dormido") {
+    const abreUno = reaccionando && fuerza < 0.9;
+    return (
+      <>
+        <path
+          d={abreUno ? "M66 51 q10 6 20 0" : "M40 53 q10 6 20 0 M66 51 q10 6 20 0"}
+          fill="none"
+          stroke="var(--pupila)"
+          strokeWidth="3.4"
+          strokeLinecap="round"
+        />
+        {abreUno && (
+          <>
+            <circle cx="50" cy="52" r="11" fill="var(--ojo)" />
+            <circle cx="50" cy="52" r="6" fill="var(--pupila)" />
+          </>
+        )}
+      </>
+    );
+  }
+
   const cerrados = reaccionando && (reaccion === "cosquillas" || reaccion === "timido");
   if (cerrados) {
     return (
@@ -238,6 +290,19 @@ function Boca({
   reaccionando: boolean;
 }) {
   if (!reaccionando) return null;
+
+  if (reaccion === "dormido") {
+    /* Una línea: el dormido que refunfuña no se ríe. */
+    return (
+      <path
+        d="M54 74 h16"
+        fill="none"
+        stroke="var(--pupila)"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    );
+  }
 
   if (reaccion === "timido") {
     /* Una línea ondulada: ni contento ni triste, incómodo. */
