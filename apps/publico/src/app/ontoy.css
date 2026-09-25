@@ -2348,6 +2348,7 @@
 /* «Hoy 9:10 · según la concesión», y el punto de nuevo a la derecha (3-ir-a/14). */
 .ontoy-aviso-cuando {
   display: flex;
+  align-self: stretch;
   align-items: center;
   gap: 8px;
   font-size: 13px;
