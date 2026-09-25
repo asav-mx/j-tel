@@ -2159,9 +2159,10 @@
 /* Los títulos de sección de Inicio, como el diseño: 800 20, en tipo oración. */
 .ontoy-inicio-seccion-cabeza {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 4px 12px;
   margin: 4px 0 12px;
 }
 .ontoy-inicio-seccion-titulo {
@@ -2171,11 +2172,12 @@
   font-size: 20px;
   line-height: 1;
   letter-spacing: -0.02em;
+  /* El título no se parte: si el contexto no cabe al lado, baja a su renglón. */
+  white-space: nowrap;
 }
 .ontoy-inicio-seccion-contexto {
   font-size: 13px;
   color: var(--tenue);
-  text-align: right;
 }
 .ontoy-liga {
   padding: 0;
