@@ -658,6 +658,7 @@ export function Ontoy({
       {!campanaAbierta && lugar === "pase" && (
         <VistaPase
           volverAlInicio={volverAlInicioDelLugar}
+          alVolverAlInicio={() => irA("inicio")}
           pase={elPase.pase}
           disponible={elPase.disponible}
           alComprar={elPase.comprar}

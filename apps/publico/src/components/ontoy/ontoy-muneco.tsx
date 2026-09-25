@@ -21,11 +21,14 @@
  * | `contento` | sonrisa: llegó, o lo lograste |
  * | `triste` | boca hacia abajo: no encontré nada — y enseguida propone otra cosa |
  * | `al-otro-lado` | las dos pupilas corridas: se va, o esto no lleva a ningún lado |
+ * | `con-boleto` | enseña su boleto, mirándolo: lo que todavía no se puede hacer, dicho sin alarma |
  *
  * ## De dónde salen los dibujos
  *
  * `al-frente`, `sin-dato` y `contento` están **copiados** del handoff
  * (`App Inicio.dc.html` del #562: `O-frente`, `O-sindato`, `O-sonrisa`).
+ * `con-boleto` también: es `s-ontoy-boleto` de `App Pase y Lector.dc.html`
+ * (4-pase/03), con las manos sosteniendo el boleto en vez de flotar a los lados.
  *
  * **`sin-red`, `dormido`, `triste` y `al-otro-lado` no venían dibujados**, y se arman aquí con la misma
  * construcción y las reglas escritas del skill —«sin red: abajo con boca
@@ -40,8 +43,18 @@
 const NARANJA = "#F6A15B";
 const CARBON = "#2A2E37";
 const BLANCO = "#ffffff";
+/* El papel del boleto: el `#F7F3EC` del símbolo del diseño. */
+const PAPEL = "#F7F3EC";
 
-export type PoseDeOntoy = "al-frente" | "sin-dato" | "sin-red" | "dormido" | "contento" | "triste" | "al-otro-lado";
+export type PoseDeOntoy =
+  | "al-frente"
+  | "sin-dato"
+  | "sin-red"
+  | "dormido"
+  | "contento"
+  | "triste"
+  | "al-otro-lado"
+  | "con-boleto";
 
 /** Qué lee en voz alta un lector de pantalla. La pose es información, no adorno. */
 const DICHO: Record<PoseDeOntoy, string> = {
@@ -52,6 +65,7 @@ const DICHO: Record<PoseDeOntoy, string> = {
   contento: "Ontoy, contento",
   triste: "Ontoy, triste",
   "al-otro-lado": "Ontoy, mirando al otro lado",
+  "con-boleto": "Ontoy con su boleto",
 };
 
 export function Ontoy({
@@ -81,15 +95,56 @@ export function Ontoy({
         d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z"
         fill={NARANJA}
       />
-      <circle cx="14" cy="80" r="6" fill={NARANJA} />
-      <circle cx="108" cy="78" r="6" fill={NARANJA} />
+      {pose !== "con-boleto" && (
+        <>
+          <circle cx="14" cy="80" r="6" fill={NARANJA} />
+          <circle cx="108" cy="78" r="6" fill={NARANJA} />
+        </>
+      )}
 
       <Cara pose={pose} />
+      {pose === "con-boleto" && <Boleto />}
     </svg>
   );
 }
 
+/**
+ * El boleto que Ontoy enseña, con las manos encima — copiado de `s-ontoy-boleto`.
+ * Es un QR **de dibujo**: no codifica nada, y por eso no sale en ninguna pantalla
+ * donde un QR de verdad pudiera confundirse con él.
+ */
+function Boleto() {
+  return (
+    <>
+      <rect x="70" y="64" width="42" height="42" rx="6" fill={PAPEL} stroke={CARBON} strokeWidth="2.5" />
+      <rect x="76" y="70" width="10" height="10" rx="1.5" fill={CARBON} />
+      <rect x="96" y="70" width="10" height="10" rx="1.5" fill={CARBON} />
+      <rect x="76" y="90" width="10" height="10" rx="1.5" fill={CARBON} />
+      <rect x="89" y="72" width="4" height="4" fill={CARBON} />
+      <rect x="89" y="83" width="5" height="5" fill={CARBON} />
+      <rect x="98" y="86" width="4" height="4" fill={CARBON} />
+      <rect x="96" y="95" width="6" height="5" fill={CARBON} />
+      <rect x="89" y="94" width="4" height="4" fill={CARBON} />
+      <circle cx="70" cy="98" r="6" fill={NARANJA} />
+      <circle cx="112" cy="72" r="6" fill={NARANJA} />
+    </>
+  );
+}
+
 function Cara({ pose }: { pose: PoseDeOntoy }) {
+  if (pose === "con-boleto") {
+    /* Mira su boleto: las pupilas abajo y a la derecha, y una sonrisa chica. */
+    return (
+      <>
+        <circle cx="50" cy="52" r="11" fill={BLANCO} />
+        <circle cx="76" cy="50" r="11" fill={BLANCO} />
+        <circle cx="53" cy="56" r="6" fill={CARBON} />
+        <circle cx="79" cy="54" r="6" fill={CARBON} />
+        <path d="M44 74 q8 7 16 0" fill="none" stroke={CARBON} strokeWidth="3" strokeLinecap="round" />
+      </>
+    );
+  }
+
   if (pose === "dormido") {
     /*
      * Ojos cerrados: dos arcos, no dos puntos. Y sus «z», que es lo que

@@ -17,9 +17,57 @@ import {
 import { textoDelQr } from "@/lib/ontoy/pase-del-telefono";
 import { CodigoQr } from "@/components/ontoy/codigo-qr";
 import { BandaRd } from "@/components/ontoy/banda-rd";
+import { Ontoy } from "@/components/ontoy/ontoy-muneco";
+import { usePaseDePruebas } from "@/lib/ontoy/pase-de-pruebas";
 
 /**
- * **Tu pase** — la cartera del pasajero (8.14; Ontoy 3.0 · PR P2).
+ * **Tu pase**, el lugar de la barra.
+ *
+ * **El día del lanzamiento, el pasajero ve «Pronto podrás pagar con tu
+ * teléfono»** (4-pase/03 y 05; decisión de ASAV, 25-sep-2026): ningún camión
+ * lee pases todavía, y enseñar un QR que no sirve —o compras que no cobran— es
+ * prometer lo que nadie cumple. **Sin la banda de R&D**: la banda existe para
+ * avisar que lo de abajo es de mentira, y en esta pantalla no hay nada de
+ * mentira.
+ *
+ * El pase de pruebas sigue entero debajo, para quien lo prenda con
+ * `?pase=pruebas` (`lib/ontoy/pase-de-pruebas.ts`).
+ */
+export function VistaPase(props: Parameters<typeof PaseDePruebas>[0] & { alVolverAlInicio: () => void }) {
+  const pruebas = usePaseDePruebas();
+  if (!pruebas) return <PaseProximamente alVolver={props.alVolverAlInicio} />;
+  return <PaseDePruebas {...props} />;
+}
+
+/**
+ * **Pronto podrás pagar con tu teléfono** — 4-pase/03 (día) y /05 (noche).
+ *
+ * Ontoy enseña su boleto y dice cuándo sí: «cuando tu ruta empiece». El botón
+ * regresa a Inicio, que es donde está lo que la app ya hace. Va con contorno y
+ * no relleno, como el diseño: no hay nada urgente que hacer aquí.
+ */
+function PaseProximamente({ alVolver }: { alVolver: () => void }) {
+  return (
+    <div className="ontoy-vista">
+      <section className="ontoy-seccion">
+        <h2 className="ontoy-seccion-titulo">Tu pase</h2>
+      </section>
+      <section className="ontoy-completa ontoy-completa-dentro">
+        <Ontoy pose="con-boleto" tamano={160} />
+        <h3 className="ontoy-completa-titular">Pronto podrás pagar con tu teléfono.</h3>
+        <p className="ontoy-completa-ayuda">
+          Todavía ningún camión lee pases. Cuando tu ruta empiece, aquí aparece tu pase.
+        </p>
+        <button type="button" className="ontoy-boton ontoy-boton-principal ontoy-boton-contorno" onClick={alVolver}>
+          Volver al inicio
+        </button>
+      </section>
+    </div>
+  );
+}
+
+/**
+ * **El pase de pruebas** — la cartera del pasajero (8.14; Ontoy 3.0 · PR P2).
  *
  * Tres pantallas dentro de un lugar de la barra: el pase, el QR y la compra.
  * Toda pantalla tiene su salida (8.10): el QR y la compra vuelven con su botón,
@@ -36,7 +84,7 @@ import { BandaRd } from "@/components/ontoy/banda-rd";
  * Decidido por Asav el 23-sep-2026, sobre tres opciones. Es la única que no
  * afirma lo que no comprobó.
  */
-export function VistaPase({
+function PaseDePruebas({
   volverAlInicio,
   pase,
   disponible,
