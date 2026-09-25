@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNivel } from "../nivel-contexto";
 import { MS_POR_CUADRO } from "../nivel-de-rendimiento";
+import { OntoyQueReacciona } from "../ontoy-que-reacciona";
 
 /**
  * **«Personajes»** — la hoja de las miradas.
@@ -115,7 +116,15 @@ export function Personajes() {
 
         <div className="landing-miradas-dibujo">
           <figure>
-            <Ontoy mirada={mirada} />
+            {/*
+             * Ontoy aquí es el ÚNICO que reacciona al tocarlo. Los otros dos
+             * siguen la mirada y nada más: es la regla del universo — sólo
+             * Ontoy responde al clic.
+             */}
+            <OntoyQueReacciona
+              reaccion="timido"
+              className="landing-ontoy-personaje"
+            />
             <figcaption>
               <b>Ontoy</b>
               <span>te dice</span>
