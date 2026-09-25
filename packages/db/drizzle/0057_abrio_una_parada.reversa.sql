@@ -11,3 +11,12 @@
 DROP INDEX IF EXISTS stop_opens_resumen_idx;
 DROP INDEX IF EXISTS stop_opens_un_dia;
 DROP TABLE IF EXISTS stop_opens;
+
+-- Y `circuit_opens` vuelve a CASCADE, que es como estaba antes de la 0057.
+-- ⚠ Revertir esto **reabre** la puerta por la que un borrado se lleva aperturas
+-- que no se pueden recalcular.
+ALTER TABLE circuit_opens
+  DROP CONSTRAINT IF EXISTS circuit_opens_circuit_id_fkey;
+ALTER TABLE circuit_opens
+  ADD CONSTRAINT circuit_opens_circuit_id_fkey
+  FOREIGN KEY (circuit_id) REFERENCES circuits(id) ON DELETE CASCADE;

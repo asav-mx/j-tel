@@ -1571,7 +1571,7 @@ export const circuitOpens = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     circuitId: uuid("circuit_id")
       .notNull()
-      .references(() => circuits.id, { onDelete: "cascade" }),
+      .references(() => circuits.id, { onDelete: "restrict" }),
     /**
      * El día CIVIL DEL CIRCUITO, no el del servidor. Es la misma fecha con la
      * que rota la huella, así que si aquí se guardara otra, la unicidad de abajo
@@ -1635,7 +1635,7 @@ export const stopOpens = pgTable(
      */
     stopId: uuid("stop_id")
       .notNull()
-      .references(() => circuitStops.id, { onDelete: "cascade" }),
+      .references(() => circuitStops.id, { onDelete: "restrict" }),
     /** El día CIVIL DEL CIRCUITO de esa parada, el mismo con el que rota la huella. */
     localDate: date("local_date").notNull(),
     /** HMAC del día, la parada y lo que la petición ya traía. */
@@ -1731,7 +1731,7 @@ export const circuitStopVersions = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     stopId: uuid("stop_id")
       .notNull()
-      .references(() => circuitStops.id, { onDelete: "cascade" }),
+      .references(() => circuitStops.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
     orden: integer("orden").notNull(),
     /** NULL = sirve en los dos sentidos. */
@@ -2043,7 +2043,7 @@ export const circuitStopPasses = pgTable(
       .references(() => circuits.id, { onDelete: "cascade" }),
     stopId: uuid("stop_id")
       .notNull()
-      .references(() => circuitStops.id, { onDelete: "cascade" }),
+      .references(() => circuitStops.id, { onDelete: "restrict" }),
     /** La parada COMO ESTABA cuando se detectó — no se sigue a la vigente de hoy. */
     stopVersionId: uuid("stop_version_id")
       .notNull()

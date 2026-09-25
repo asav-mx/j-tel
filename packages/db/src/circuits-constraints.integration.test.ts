@@ -1,6 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { eq, inArray } from "drizzle-orm";
-import { createDb, createRepositories, accounts, circuits, circuitStops } from "../src/index.js";
+import {
+  createDb,
+  createRepositories,
+  accounts,
+  circuits,
+  circuitStops,
+  circuitOpens,
+  stopOpens,
+} from "../src/index.js";
 
 /*
  * Que los CHECK de `circuits` MUERDAN.
@@ -84,7 +92,22 @@ afterAll(async () => {
     .from(circuits)
     .where(eq(circuits.concessionAccountId, concesionId));
   if (suyos.length) {
-    await db.delete(circuitStops).where(inArray(circuitStops.circuitId, suyos.map((c) => c.id)));
+    const ids = suyos.map((c) => c.id);
+    /*
+     * ⚠ **Las APERTURAS primero, y luego las paradas.** Desde la 0057 las dos
+     * tablas de aperturas apuntan a su padre con RESTRICT, porque una apertura
+     * es un evento observado y no se puede recalcular. El orden importa:
+     * `stop_opens` cuelga de la parada, así que se va antes que ella.
+     */
+    const paradas = await db
+      .select({ id: circuitStops.id })
+      .from(circuitStops)
+      .where(inArray(circuitStops.circuitId, ids));
+    if (paradas.length) {
+      await db.delete(stopOpens).where(inArray(stopOpens.stopId, paradas.map((p) => p.id)));
+    }
+    await db.delete(circuitOpens).where(inArray(circuitOpens.circuitId, ids));
+    await db.delete(circuitStops).where(inArray(circuitStops.circuitId, ids));
   }
   await db.delete(accounts).where(inArray(accounts.id, [concesionId].filter(Boolean)));
 });

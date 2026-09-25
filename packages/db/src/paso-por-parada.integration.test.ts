@@ -6,6 +6,8 @@ import {
   accounts,
   circuits,
   circuitStops,
+  circuitOpens,
+  stopOpens,
   telemetryPoints,
   circuitStopPasses,
   circuitUnitAssignments,
@@ -178,9 +180,18 @@ async function borrarParadasDe(cuentaIds: string[]) {
     .select({ id: circuits.id })
     .from(circuits)
     .where(inArray(circuits.concessionAccountId, ids));
-  if (suyos.length) {
-    await db.delete(circuitStops).where(inArray(circuitStops.circuitId, suyos.map((c) => c.id)));
+  if (!suyos.length) return;
+  const cids = suyos.map((c) => c.id);
+  /* Las aperturas antes que su padre: desde la 0057 son RESTRICT. */
+  const paradas = await db
+    .select({ id: circuitStops.id })
+    .from(circuitStops)
+    .where(inArray(circuitStops.circuitId, cids));
+  if (paradas.length) {
+    await db.delete(stopOpens).where(inArray(stopOpens.stopId, paradas.map((p) => p.id)));
   }
+  await db.delete(circuitOpens).where(inArray(circuitOpens.circuitId, cids));
+  await db.delete(circuitStops).where(inArray(circuitStops.circuitId, cids));
 }
 
 afterAll(async () => {

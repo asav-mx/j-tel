@@ -201,6 +201,33 @@ De paso, tener el circuito en la dirección permite comprobar que la parada es
 suya: sin eso, cualquiera podría sumarle aperturas a la parada de otra ruta
 mandando el slug que quisiera.
 
+### RESTRICT en las dos, y por qué se corrigió
+
+La primera versión de la 0057 puso **CASCADE** en `stop_opens.stop_id`, copiando
+el patrón de `circuit_opens` y de `circuit_stop_versions`. ASAV lo cazó en la
+revisión y tenía razón: **fue un patrón copiado, no una decisión pesada.**
+
+El argumento que sí aplica aquí: **una apertura no se puede recalcular.** Es un
+evento observado, no un derivado. Si se borra no hay de dónde volver a sacarlo, y
+el hueco que deja se lee como «nadie abrió» — la §D en su forma de alcance,
+encima del único número con el que se decide si la app se usa. CASCADE convierte
+un borrado, que ya es una anomalía, en la destrucción silenciosa de esa medición.
+
+Y **borrar ya no es la forma de quitar una parada**: `circuit_stops` tiene
+`retired_at` desde su primer día, y hoy no existe ningún camino que borre una —
+ni un método del repositorio, ni una pantalla de J-Staff; sólo los guiones de
+escenario. RESTRICT no le quita a nadie una operación legítima: cierra la
+ilegítima, igual que la 0055 con el circuito.
+
+`circuit_opens` se enderezó en la misma migración. Dejar una CASCADE y la otra
+RESTRICT habría sido peor que las dos iguales, porque nadie podría decir cuál es
+la regla.
+
+**Lo que costó, que es el mismo costo de la 0055:** las limpiezas que borran
+cuentas o circuitos con aperturas tienen que borrar las aperturas primero — y
+`stop_opens` antes que la parada. Son guiones de escenario y `afterAll` de
+pruebas; ninguna pantalla borra cuentas ni circuitos.
+
 ### Un cero sigue sin ser un hueco, y aquí importa más
 
 Este contador **nace el 25-sep-2026**. Todos los días anteriores de todas las
