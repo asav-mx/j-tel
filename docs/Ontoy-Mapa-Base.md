@@ -13,14 +13,10 @@ almacenamiento.
 
 | | |
 |---|---|
-| **El archivo en el repo, con su guion y su valla** | hecho |
-| **El estilo (la ropa de Ontoy) y la conexión a la app** | su propio PR, con capturas |
-| **El mapa sin red** (que el service worker guarde el archivo) | pendiente, ver abajo |
-
-Hasta que entre el PR del estilo, **la app sigue pidiendo los mosaicos a
-OpenStreetMap**: el archivo está en el repo y nadie lo usa. Van separados a
-propósito — el archivo pesa 14 MB y el estilo se revisa mirándolo; un PR con las
-dos cosas no deja revisar ninguna.
+| **El archivo en el repo, con su guion y su valla** | hecho (#571) |
+| **El estilo (la ropa de Ontoy) y la conexión a la app** | hecho (#576) |
+| **El mapa sin señal — lo que el pasajero ya miró** | hecho, ver abajo |
+| **El botón «Guardar el mapa para usarlo sin datos»** | decidido, **después del lanzamiento**; necesita pantalla |
 
 ## Por qué está aquí y no se pide a nadie
 
@@ -89,18 +85,41 @@ sacarlos de ahí.
 `mapa-base.test.ts` se cae si el archivo y `FECHA_DEL_MAPA` no coinciden, y si
 queda un `.pmtiles` de más.
 
-## El mapa sin red, que hoy es una pérdida
+## El mapa sin señal
 
-El service worker guarda hoy **hasta 300 mosaicos** de los que el pasajero ya
-miró, así que sin señal ve el pedazo de ciudad por donde anduvo. Con un archivo
-leído por rangos eso **deja de funcionar**: las respuestas parciales (`206`) no se
-pueden guardar en la caché del navegador, y el mismo mecanismo no sirve.
+**Se guarda lo que el pasajero ya bajó, y ni un byte más** (decisión de ASAV,
+25-sep-2026). El service worker guarda el cuerpo de cada pedazo del archivo que la
+app pidió y lo vuelve a servir de ahí; sin señal, el pasajero ve **la parte de la
+ciudad por la que anduvo, en los zooms que usó**, y lo demás queda del color del
+suelo. Es lo que había con los 300 mosaicos de OpenStreetMap, y un poco mejor,
+porque ahora los nombres de las calles viajan en el pedazo.
 
-Se puede hacer mejor de lo que había —guardar el archivo **completo** la primera
-vez que alguien abre el mapa y servir los rangos desde ahí: 14 MB una vez, contra
-los ~15 MB que ya gastaban 300 mosaicos, y sin señal se tiene **toda la ciudad, en
-todos los zooms**, no nada más lo que se miró—. Es su propio PR y no entra al
-mismo que el estilo.
+**Por qué no se baja la ciudad completa, que era la idea original.** Medido el
+25-sep: abrir el Mapa cuesta **112 KB** y una sesión de mirar y arrastrar, **658
+KB**. El archivo entero son 18 MB — veintiocho veces más. Bajarlo en segundo plano
+daría toda la ciudad sin señal, pero se gastaría **del plan de datos del pasajero,
+en silencio**, y otra vez entero cada vez que refresquemos el mapa, porque el
+nombre del archivo lleva la fecha. *«Nunca gastamos su plan en silencio, y menos
+18 MB cada vez que refresquemos el mapa»* (ASAV).
 
-**Mientras no entre, esto es una pérdida y no un empate**, y va dicho aquí para
-que nadie cierre el frente creyendo que quedó parejo.
+**El paso siguiente, ya decidido: un botón «Guardar el mapa para usarlo sin
+datos».** Baja los 18 MB **sólo cuando el pasajero lo toca**, diciéndole lo que
+pesa. Es lo único que puede prometer la ciudad completa sin cobrarle nada a quien
+no la quiere. **Necesita una pantalla, y las pantallas son de otro frente**, así
+que entra **después del lanzamiento** del 1 de octubre.
+
+### Las dos trampas de guardar un archivo que se lee por rangos
+
+1. **Una respuesta parcial (`206`) no se puede meter en la caché del navegador** —
+   `cache.put` la rechaza. Lo que se guarda es **el cuerpo** del pedazo, como una
+   respuesta normal, bajo una dirección inventada que dice qué tramo de bytes
+   trae; el `206` se arma al servirlo.
+2. **El tramo que se pide casi nunca es el tramo que se guardó.** `pmtiles` junta
+   teselas vecinas en una sola petición, y qué teselas toca dibujar cambia con el
+   encuadre. Por eso se busca un pedazo que **contenga** el rango pedido, no uno
+   igual: con coincidencia exacta, volver a una calle ya vista fallaría la mitad
+   de las veces y el pasajero vería huecos donde sí anduvo.
+
+Y lo que queda sin resolver, dicho: **el mapa vacío no se explica solo.** Donde el
+pasajero no anduvo, sin señal, ve suelo liso sin una palabra que le diga por qué.
+Decirlo es una pantalla, así que va con el botón.
