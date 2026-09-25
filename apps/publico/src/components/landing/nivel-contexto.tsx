@@ -29,10 +29,13 @@ const NivelDeLaPagina = createContext<{
   nivel: Nivel;
   /** Si se baja y se monta el 3D. Se decide una vez y **no se revoca**. */
   cargarEl3D: boolean;
+  /** Y si se monta en su forma ligera: sin sombras y a 1x, la de `medio` (§15). */
+  el3DLigero: boolean;
   quieto: boolean;
 }>({
   nivel: "bajo",
   cargarEl3D: false,
+  el3DLigero: false,
   quieto: false,
 });
 
