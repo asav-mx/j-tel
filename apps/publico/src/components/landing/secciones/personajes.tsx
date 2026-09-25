@@ -114,53 +114,58 @@ export function Personajes() {
           </p>
         </div>
 
-        <div className="landing-miradas-dibujo">
-          <figure>
-            {/*
-             * Ontoy aquí es el ÚNICO que reacciona al tocarlo. Los otros dos
-             * siguen la mirada y nada más: es la regla del universo — sólo
-             * Ontoy responde al clic.
-             */}
-            <OntoyQueReacciona
-              reaccion="timido"
-              className="landing-ontoy-personaje"
-            />
-            <figcaption>
-              <b>Ontoy</b>
-              <span>te dice</span>
-            </figcaption>
-          </figure>
-          <figure>
-            <Cami mirada={mirada} />
-            <figcaption>
-              <b>Cami</b>
-              <span>tu camión</span>
-            </figcaption>
-          </figure>
-          <figure>
-            <Tino mirada={mirada} />
-            <figcaption>
-              <b>Tino</b>
-              <span>tu parada</span>
-            </figcaption>
-          </figure>
-        </div>
+        {/*
+         * Los tres dibujos y la lista **uno al lado del otro**, como el diseño:
+         * debajo, la lista quedaba a una pantalla de distancia de las caras que
+         * describe, y lo que se toca en una tiene que verse en la otra sin
+         * mover la página.
+         */}
+        <div className="landing-miradas">
+          <div className="landing-miradas-dibujo">
+            <figure>
+              {/*
+               * Ontoy aquí es el ÚNICO que reacciona al tocarlo. Los otros dos
+               * siguen la mirada y nada más: es la regla del universo — sólo
+               * Ontoy responde al clic.
+               */}
+              <OntoyQueReacciona reaccion="timido" className="landing-ontoy-personaje" />
+              <figcaption>
+                <b>Ontoy</b>
+                <span>te dice</span>
+              </figcaption>
+            </figure>
+            <figure>
+              <Cami mirada={mirada} />
+              <figcaption>
+                <b>Cami</b>
+                <span>tu camión</span>
+              </figcaption>
+            </figure>
+            <figure>
+              <Tino mirada={mirada} />
+              <figcaption>
+                <b>Tino</b>
+                <span>tu parada</span>
+              </figcaption>
+            </figure>
+          </div>
 
-        <ul className="landing-miradas-lista">
-          {MIRADAS.map((m, i) => (
-            <li key={m.posicion}>
-              <button
-                type="button"
-                onClick={() => escoger(i)}
-                onPointerEnter={() => escoger(i)}
-                aria-pressed={i === cual}
-              >
-                <b>{m.posicion}</b>
-                <span>{m.significa}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+          <ul className="landing-miradas-lista">
+            {MIRADAS.map((m, i) => (
+              <li key={m.posicion}>
+                <button
+                  type="button"
+                  onClick={() => escoger(i)}
+                  onPointerEnter={() => escoger(i)}
+                  aria-pressed={i === cual}
+                >
+                  <b>{m.posicion}</b>
+                  <span>{m.significa}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </section>
   );

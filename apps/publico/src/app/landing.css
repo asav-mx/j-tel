@@ -793,25 +793,56 @@ body:has(.landing) {
   gap: 16px;
 }
 
+/*
+ * Las dos columnas de la sección: **la lista a un lado de los personajes**,
+ * como el diseño. Debajo se leía como una nota al pie de un dibujo; al lado se
+ * lee como lo que es — la leyenda de un idioma, junto a quienes lo hablan.
+ *
+ * `auto-fit` con 400 de mínimo las apila solas en cuanto no caben, que es lo
+ * que tiene que pasar en teléfono: ahí sí van una encima de otra.
+ */
+.landing-miradas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
+  gap: 48px;
+  align-items: center;
+}
+
+/*
+ * Los tres en una fila y colgados del mismo suelo, como el diseño: 30 / 40 / 30
+ * — Cami es el más ancho porque es el más ancho.
+ *
+ * Sin `nowrap` se partían en dos filas al meterlos al lado de la lista, y con
+ * Tino solo debajo la frase «Ontoy te dice, Cami es tu camión y Tino es tu
+ * parada» dejaba de leerse como una sola. Y con `justify-content: flex-end` los
+ * tres rótulos quedan a la misma altura aunque los dibujos midan distinto: lo
+ * que se compara son las miradas, no los tamaños.
+ */
 .landing-miradas-dibujo {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: stretch;
   justify-content: center;
-  gap: clamp(24px, 5vw, 64px);
+  gap: 3%;
 }
 
 .landing-miradas-dibujo figure {
   margin: 0;
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   align-items: center;
   gap: 12px;
-  flex: 0 1 180px;
+  flex: 0 1 30%;
+}
+
+.landing-miradas-dibujo figure:nth-child(2) {
+  flex-basis: 40%;
 }
 
 .landing-miradas-dibujo svg {
   width: 100%;
-  max-width: 180px;
+  max-width: 200px;
   height: auto;
   display: block;
 }
@@ -842,18 +873,18 @@ body:has(.landing) {
   transition: transform 0.45s var(--curva);
 }
 
+/*
+ * Apiladas, no en rejilla: al lado de los personajes la lista es una columna, y
+ * las seis miradas se leen de arriba abajo como lo que son — una escala, de la
+ * que te incluye a ti a la que dice que no hay nada que mirar.
+ */
 .landing-miradas-lista {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  /*
-   * 170 y no 200: con 200 las seis miradas se quedaban en 1244 px por cuatro
-   * píxeles, y la sexta —«cerrados», que es la que más importa— caía sola en
-   * otra fila como si fuera una nota al pie.
-   */
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .landing-miradas-lista button {
@@ -942,10 +973,17 @@ body:has(.landing) {
   align-self: start;
 }
 
+/*
+ * El alto es lo que manda el tamaño del dibujo: el lienzo es de 300 × 900, así
+ * que con 640 px de tope el recorrido se encoge a 0.71 y la placa de Tino
+ * —«a 4 paradas», que es texto y no tres glifos— baja a 7.8 px. Con 760 queda
+ * en 9.3 y sigue cabiendo debajo de la cabecera pegajosa en una pantalla de
+ * 1000 px de alto: 88 + 760 = 848.
+ */
 .landing-hilo {
   width: 100%;
   height: auto;
-  max-height: min(70vh, 640px);
+  max-height: min(78vh, 760px);
   display: block;
 }
 
