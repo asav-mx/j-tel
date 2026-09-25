@@ -59,6 +59,8 @@
    * dice por qué: esto se lee de pie, en la calle, con sol.
    */
   --tenue: var(--carbon-2);
+  /* La tinta de lo que va encima de un relleno en `--texto` (la pastilla activa de la barra). */
+  --tinta-sobre-texto: var(--hueso);
   /*
    * La sombra de la hoja es lo único que no sale de la paleta, y no es color: es
    * profundidad. Se queda en rgba porque un token opaco no puede difuminarse.
@@ -85,6 +87,7 @@
     --linea: var(--noche-3);
     --texto: var(--hueso);
     --tenue: var(--arena-2);
+    --tinta-sobre-texto: var(--carbon);
     --sombra-hoja: 0 -18px 48px rgba(0, 0, 0, 0.5);
   }
 }
@@ -96,6 +99,7 @@
   --linea: var(--noche-3);
   --texto: var(--hueso);
   --tenue: var(--arena-2);
+  --tinta-sobre-texto: var(--carbon);
   --sombra-hoja: 0 -18px 48px rgba(0, 0, 0, 0.5);
 }
 
@@ -183,74 +187,73 @@
   }
 }
 
-/* ── la barra (8.8, 22-sep): cuatro lugares, cada ícono con su palabra ── */
-/*
- * `position: relative` y `z-index` **sólo para que la barra se pinte encima de
- * la hoja de una parada**, que es fija y la cubría. No cambia dónde está ni cómo
- * se ve: la barra sigue siendo el último renglón de la columna.
- *
- * Es la 8.10: la barra es la salida de cualquier pantalla, y una hoja que la
- * tapa deja al pasajero sin ella. En las láminas del diseño se ve debajo de la
- * hoja en las tres alturas.
- */
+/* ── la barra (8.8, 22-sep; app-v1, 25-sep): cuatro lugares, cada ícono con su palabra ── */
 .ontoy-barra {
-  position: relative;
-  z-index: 902;
   display: flex;
-  background: var(--panel);
-  border-top: 1px solid var(--linea);
-  padding: 6px 6px calc(8px + env(safe-area-inset-bottom, 0px));
+  background: var(--fondo);
+  box-shadow: 0 -1px 0 var(--linea);
+  padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 0px));
 }
 .ontoy-barra-lugar {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 5px 2px;
+  min-height: 52px;
+  padding: 2px;
   border: 0;
   border-radius: 12px;
   background: none;
-  color: var(--tenue);
+  color: var(--texto);
   cursor: pointer;
 }
+/* La pastilla de 56×30 del diseño; sólo la del lugar activo se llena. */
 .ontoy-barra-pastilla {
+  width: 56px;
+  height: 30px;
   display: grid;
   place-items: center;
-  padding: 4px 16px;
-  border-radius: 14px;
+  border-radius: 999px;
+  transition: background 0.2s;
 }
-.ontoy-barra svg {
-  width: 23px;
-  height: 23px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.ontoy-barra-pastilla svg {
+  width: 26px;
+  height: 26px;
+  overflow: visible;
 }
-/*
- * **12 px, el mínimo del estándar** — y lo que el diseño del #562 pone para la
- * palabra de la barra. Estaba en 10, en las cuatro pestañas y en todas las
- * pantallas: es el texto que más veces se lee de esta app.
- */
+/* Regla 2b: las pupilas miran hacia el lugar activo (`--mx`, lo pone la barra). */
+.ontoy-barra .glifo-pupilas {
+  transform: translate(var(--mx, 0px), 0);
+  transition: transform 0.2s;
+}
+/* 12 px, el mínimo del estándar. En tipo oración, sin mayúsculas ni espaciado. */
 .ontoy-barra-palabra {
   font-family: var(--fuente-texto), system-ui, sans-serif;
   font-size: 12px;
+  line-height: 1;
   font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  color: var(--tenue);
 }
-/* El lugar activo lo dicen la FORMA y el PESO —pastilla y trazo grueso—, no sólo el color. */
-.ontoy-barra-lugar[aria-current="page"] {
+/* El lugar activo lo dicen la FORMA y el PESO —pastilla llena y 700—, no sólo el color. */
+.ontoy-barra-lugar[aria-current="page"] .ontoy-barra-pastilla {
+  background: var(--texto);
+  color: var(--tinta-sobre-texto);
+}
+.ontoy-barra-lugar[aria-current="page"] .ontoy-barra-palabra {
+  font-weight: 700;
   color: var(--texto);
 }
-.ontoy-barra-lugar[aria-current="page"] .ontoy-barra-pastilla {
-  background: var(--panel2);
-  box-shadow: inset 0 0 0 1px var(--linea);
+.ontoy-barra-lugar:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
 }
-.ontoy-barra-lugar[aria-current="page"] svg {
-  stroke-width: 2.3;
+@media (prefers-reduced-motion: reduce) {
+  .ontoy-barra-pastilla,
+  .ontoy-barra .glifo-pupilas {
+    transition: none;
+  }
 }
 
 /* ── botones de una pantalla ────────────────────────────────────────── */
