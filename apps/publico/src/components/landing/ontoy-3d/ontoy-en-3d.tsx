@@ -19,7 +19,10 @@ import type { Ontoy3D } from "./escena";
  *
  * ## Las tres puertas antes de bajar `three`
  *
- * 1. **El nivel.** Sólo `alto`.
+ * 1. **El nivel al abrir.** Sólo `alto` — y esa respuesta **no se revoca**: si
+ *    después la página va lenta, baja el RITMO, pero la escena no se quita de
+ *    debajo de quien la está mirando. Mezclar las dos cosas fue el defecto que
+ *    hacía que el 3D no se viera nunca.
  * 2. **Que se vea.** Un `IntersectionObserver` espera a que el hueco esté a la
  *    vista. Quien abre la portada y baja de golpe al pie no llega a pedirlo.
  * 3. **Que el navegador esté desocupado.** `requestIdleCallback` con un tope de
@@ -39,12 +42,12 @@ import type { Ontoy3D } from "./escena";
  * además deja pedir el módulo en el momento exacto.
  */
 export function OntoyEn3D({ children }: { children: React.ReactNode }) {
-  const { nivel, quieto } = useNivel();
+  const { cargarEl3D, quieto } = useNivel();
   const hueco = useRef<HTMLDivElement>(null);
   const [montado, setMontado] = useState(false);
 
   useEffect(() => {
-    if (nivel !== "alto") return;
+    if (!cargarEl3D) return;
     const caja = hueco.current;
     if (!caja) return;
 
@@ -90,7 +93,7 @@ export function OntoyEn3D({ children }: { children: React.ReactNode }) {
       ontoy?.destruir();
       setMontado(false);
     };
-  }, [nivel, quieto]);
+  }, [cargarEl3D, quieto]);
 
   return (
     <div className="landing-ontoy-3d">

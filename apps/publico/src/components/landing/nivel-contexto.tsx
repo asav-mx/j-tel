@@ -25,8 +25,14 @@ import { useNivelDeRendimiento, type Nivel } from "./nivel-de-rendimiento";
  * título, la frase y el botón de la portada siguen llegando en el HTML, y lo
  * único que espera al JavaScript es el movimiento.
  */
-const NivelDeLaPagina = createContext<{ nivel: Nivel; quieto: boolean }>({
+const NivelDeLaPagina = createContext<{
+  nivel: Nivel;
+  /** Si se baja y se monta el 3D. Se decide una vez y **no se revoca**. */
+  cargarEl3D: boolean;
+  quieto: boolean;
+}>({
   nivel: "bajo",
+  cargarEl3D: false,
   quieto: false,
 });
 
@@ -39,7 +45,7 @@ export function ProveedorDeNivel({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** El nivel de esta visita y si el movimiento está apagado. */
+/** El nivel de esta visita, si se carga el 3D, y si el movimiento está apagado. */
 export function useNivel() {
   return useContext(NivelDeLaPagina);
 }
