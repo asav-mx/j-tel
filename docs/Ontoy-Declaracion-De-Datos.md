@@ -19,6 +19,7 @@ Cada respuesta lleva dónde se comprueba. Si un día el texto y el código no co
 | **Ubicación precisa** | Se lee en el teléfono (`watchPosition`) sólo si el pasajero da permiso. **No se pide al abrir:** se pide al tocar «Ver paradas cerca de mí», y si el permiso ya estaba dado se usa sin volver a preguntar (`navigator.permissions`, que no pregunta). Se usa ahí mismo para escoger las paradas cercanas, marcar «tú» en el mapa y «aquí estás» sobre la ruta abierta, y calcular la llegada hasta él. **No viaja** en ninguna petición nuestra. | `apps/publico/src/lib/ubicacion.ts`, `lib/ontoy/paradas-cerca.ts`; las únicas peticiones de la app son las de la tabla de abajo |
 | **Paradas guardadas**, **avisos ya vistos** y **piel clara/oscura** | En el almacenamiento del navegador (`localStorage`), en el teléfono. No viajan. De los avisos se guardan sólo los ids de los vigentes, para apagar el punto de la campana. | `lib/ontoy/paradas-guardadas.ts`, `lib/ontoy/avisos-vistos.ts`, `lib/tema.ts` |
 | **Apertura de una ruta** | Un `POST` **sin cuerpo** a `/api/circuitos/‹ruta›/apertura`. El servidor guarda `{circuito, día local, huella}`. La huella es un HMAC de IP + agente + día + circuito; **la IP y el agente no se guardan**, y la huella rota cada día. | `app/api/circuitos/[slug]/apertura/route.ts`, `huellaDeApertura` en `@jtel/domain/publico` |
+| **Apertura de una parada** (desde el 25-sep-2026) | Un `POST` **sin cuerpo** a `/api/circuitos/‹ruta›/paradas/‹parada›/apertura`, cuando se abre la hoja de una parada —tocándola en el mapa, o escaneando su letrero—. El servidor guarda `{parada, día local, huella}`. La huella es un HMAC de IP + agente + día + **la palabra `parada`** + parada; **la IP y el agente no se guardan**, y rota cada día igual que la otra. Es una **cifra aparte**, en su propia tabla: «abrió una parada» y «abrió una ruta» miden cosas distintas y no se suman. | `app/api/circuitos/[slug]/paradas/[qrSlug]/apertura/route.ts`, `huellaDeAperturaDeParada` en `@jtel/domain/publico` |
 | **Paradas cerca de ti** | Un `GET /api/circuitos/paradas-de-la-ciudad` **sin parámetros**, igual para todos: baja las paradas públicas de la ciudad (por ruta: id público, nombre, color; por parada: id público, ruta, nombre, sentido, posición — **cero mediciones**). El cruce con la ubicación ocurre en el teléfono. Se pide **al abrir el Mapa** (para dibujar los puntitos de parada del filtro y marcar tus guardadas), en Inicio con ubicación (para ordenar las rutas por cercanía) y en «Ir a» (para emparejar lo que escribes, aquí mismo). Desde el 22-sep el Mapa la pide **aunque no hayas dado ubicación**: un interruptor de paradas que aparece y desaparece según el permiso es peor que esta petición, que es igual para todos y no lleva nada tuyo. | `app/api/circuitos/paradas-de-la-ciudad/route.ts`, `lib/paradas-de-la-ciudad.ts` (y su prueba) |
 | **Las rutas de tus paradas guardadas** | Para enseñar sus camiones en Inicio y en el Mapa de la ciudad, un `GET /api/circuitos/en-vivo?rutas=‹ruta›,‹ruta›` cada 15 s, **una sola consulta para todas** (antes, una por tarjeta). Lleva **cuáles rutas** —ids públicos, ordenados, como mucho 8—, **no cuáles paradas**, ni ubicación, ni identificador. El servidor contesta y **no la guarda**; como con cualquier petición, la plataforma puede anotar la dirección pedida (y con ella esa lista) en sus registros técnicos por un tiempo corto. Es lo mismo que ya pasaba al pedir cada ruta por su nombre, ahora junto. | `app/api/circuitos/en-vivo/route.ts`, `lib/rutas-pedidas.ts`, `lib/ontoy/en-vivo.ts` |
 | **Búsqueda** | Vive en el lugar «Ir a», y es la única de la app (22-sep). Corre en el teléfono sobre las paradas de la ciudad ya bajadas: **lo que el pasajero escribe no viaja a ningún lado**, porque la petición que lo mandaría no existe. No hay buscador de direcciones (decisión del 2 sep, `DESPUES.md` §6). Tampoco se guarda lo buscado. | `lib/ontoy/buscar-lugar.ts`, `components/ontoy/vista-ira.tsx` |
@@ -27,7 +28,7 @@ Cada respuesta lleva dónde se comprueba. Si un día el texto y el código no co
 | **Letras** | Servidas del mismo sitio (`next/font`), no de Google. | `app/layout.tsx` |
 
 **Las peticiones que hace la app, completas:** los recorridos por tramo (`GET /api/circuitos/recorridos`, sin parámetros, agregados del circuito), las paradas de la ciudad (`GET /api/circuitos/paradas-de-la-ciudad`, sin parámetros), la forma de la ruta (`GET /api/circuitos/‹ruta›`),
-los camiones en vivo de la ruta abierta (`GET …/unidades`, cada 15 s) y los de tus rutas favoritas (`GET /api/circuitos/en-vivo?rutas=…`, cada 15 s, una para todas), la apertura (`POST …/apertura`, vacío), **los folios en uso del pase** (`POST /api/boletos/estado`, sólo cuando hay alguno) y
+los camiones en vivo de la ruta abierta (`GET …/unidades`, cada 15 s) y los de tus rutas favoritas (`GET /api/circuitos/en-vivo?rutas=…`, cada 15 s, una para todas), la apertura de la ruta y la de la parada (`POST …/apertura`, vacíos), **los folios en uso del pase** (`POST /api/boletos/estado`, sólo cuando hay alguno) y
 **el mapa de fondo, que es un archivo de este mismo servidor** (ver abajo). Las respuestas de los camiones traen además **los avisos de la concesión** que valen en ese momento (título, detalle, fechas; nada de quién los capturó) — datos públicos de la ruta, no del pasajero, desde la 0052. Ninguna petición lleva ubicación, nombre, correo,
 teléfono ni identificador del aparato.
 
@@ -55,12 +56,17 @@ distinta de la anterior y conviene no juntarlas:
 Confundirlas produce los dos errores contrarios: quitar el crédito porque «ya no les
 pedimos nada», o seguir declarando un tercero porque «el crédito sigue ahí».
 
-### El contador de aperturas subcuenta, y hay que decirlo
+### Los contadores de apertura subcuentan, y hay que decirlo
 
 La huella sale de la IP. Detrás de un NAT de red celular, **media colonia sale con la
 misma IP**: varios teléfonos distintos cuentan como uno. El número es un **indicio de
 demanda** (Marco 9.4), no un conteo de personas, y siempre **por debajo** del real. La
 página pública lo dice con esas palabras.
+
+Vale igual para los dos: el de rutas y el de paradas. **Son dos cifras y no se suman.**
+Desde el 25-sep tocar una parada ya no abre su ruta —la hoja se abre encima del mapa—,
+así que el contador viejo dejó de ver ese gesto y el nuevo lo cuenta aparte. Sumarlos
+diría «aperturas» de dos cosas distintas, y nadie podría decir de cuál.
 
 ### Lo que no entra en esta declaración
 

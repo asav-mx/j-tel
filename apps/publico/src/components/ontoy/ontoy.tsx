@@ -17,7 +17,7 @@ import {
   useVelocidadDelCorredor,
   proximasParadasDeLaUnidad,
 } from "@/lib/ontoy/llegadas";
-import { useContarApertura } from "@/lib/ontoy/apertura";
+import { useContarApertura, useContarAperturaDeParada } from "@/lib/ontoy/apertura";
 import { useParadasGuardadas } from "@/lib/ontoy/paradas-guardadas";
 import { useForma } from "@/lib/ontoy/ruta-en-vivo";
 import { HojaDeParada, type LlegadaEnLaHoja } from "@/components/ontoy/hoja-de-parada";
@@ -185,6 +185,13 @@ export function Ontoy({
   // La única escritura de la app: una apertura por ruta abierta (8.7).
   // Mirar tus favoritas en el mapa de la ciudad no es abrir una ruta: no cuenta.
   useContarApertura(enElMapa && rutaAbierta ? enfocada : null);
+  /*
+   * Y la apertura de la PARADA, que es otra cifra y otra tabla (ASAV, 25-sep).
+   * Cuelga de que la hoja esté abierta, así que cuenta las tres formas de
+   * llegar a ella: el toque en el mapa de la ciudad, el toque dentro de una
+   * ruta abierta, y el letrero escaneado.
+   */
+  useContarAperturaDeParada(enElMapa ? consultada : null, enElMapa ? paradaAbierta : null);
 
   /*
    * El filtro del Mapa (ASAV, 22-sep): qué rutas se dibujan. `apagadas` son las

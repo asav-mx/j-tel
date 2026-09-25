@@ -9,6 +9,8 @@ import {
   circuitPaths,
   circuitStopVersions,
   circuitStops,
+  circuitOpens,
+  stopOpens,
   circuitUnitAssignments,
   circuits,
   circuitPromiseBands,
@@ -151,7 +153,22 @@ async function limpiar(db: ReturnType<typeof createDb>) {
    * el escenario falla con un 23503 — y eso es la restricción haciendo su
    * trabajo, no un error del guion.
    */
-  await db.delete(circuitStops).where(inArray(circuitStops.circuitId, SEMILLAS.map((s) => s.id)));
+  /*
+   * Y **las aperturas antes que su padre**: desde la 0057 `stop_opens` y
+   * `circuit_opens` apuntan con RESTRICT, porque una apertura es un evento
+   * observado y no se puede recalcular. `stop_opens` cuelga de la parada, así
+   * que se va antes que ella.
+   */
+  const ids = SEMILLAS.map((s) => s.id);
+  const paradas = await db
+    .select({ id: circuitStops.id })
+    .from(circuitStops)
+    .where(inArray(circuitStops.circuitId, ids));
+  if (paradas.length) {
+    await db.delete(stopOpens).where(inArray(stopOpens.stopId, paradas.map((p) => p.id)));
+  }
+  await db.delete(circuitOpens).where(inArray(circuitOpens.circuitId, ids));
+  await db.delete(circuitStops).where(inArray(circuitStops.circuitId, ids));
 
   try {
     await db.delete(accounts).where(inArray(accounts.id, Object.values(CUENTAS)));
