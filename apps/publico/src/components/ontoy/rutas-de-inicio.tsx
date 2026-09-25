@@ -1,21 +1,24 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { RutaDeLaCiudad } from "@/lib/ontoy/forma";
 import type { ParadaDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
 import type { EstadoDeRuta } from "@/lib/ontoy/estado-de-ruta";
 import { promesaEnPalabras } from "@/lib/ontoy/llegadas";
 import { distanciaEnPalabras } from "@/lib/ontoy/distancia";
-import { ordenarRutas } from "@/lib/ontoy/rutas-cerca";
+import { ordenarRutas, RUTAS_A_LA_VISTA } from "@/lib/ontoy/rutas-cerca";
 import type { Ubicacion } from "@/lib/ubicacion";
 import { arranqueCorto } from "@/lib/fecha-arranque";
 
 /**
  * **Las rutas, en Inicio** (8.8; ASAV, 22-sep y 25-sep).
  *
- * **Todas, en renglones compactos** con su franja de color, como en
- * `1-inicio/01` y `02`. Sin botón de «Ver todas»: con renglones compactos la
- * ciudad cabe, y un botón grande para desplegarla era la pantalla vieja.
+ * **Tres a la vista y el resto tras un enlace** (Marco 8.8, segunda enmienda
+ * del 22-sep), en renglones compactos con su franja de color, como en
+ * `1-inicio/01` y `02`. El enlace es **discreto** —«Ver todas las rutas», en
+ * texto, debajo de la caja— y no un botón grande (ASAV, 25-sep): así se
+ * cumplen el Marco y la regla de Inicio sin botones grandes. Aquí vive el
+ * único camino a la lista completa de la ciudad.
  *
  * ## El renglón contesta la pregunta completa (ASAV, 22-sep, tarde)
  *
@@ -68,6 +71,7 @@ export function RutasDeInicio({
   alReintentarLista: () => void;
   alAbrirRuta: (circuitoId: string, parada?: string, sentido?: "ida" | "vuelta") => void;
 }) {
+  const [todas, setTodas] = useState(false);
   const { yo, estado, reintentar } = ubicacion;
   const { rutas: ordenadas, porDistancia } = useMemo(
     () => ordenarRutas(rutas, paradas, yo),
@@ -132,7 +136,7 @@ export function RutasDeInicio({
       </div>
 
       <div className="ontoy-renglones">
-        {ordenadas.map(({ ruta: r, entrada }) => {
+        {(todas ? ordenadas : ordenadas.slice(0, RUTAS_A_LA_VISTA)).map(({ ruta: r, entrada }) => {
           const e = estadoDe.get(r.circuito_id);
           const cuando = e?.situacion === "por_arrancar" ? arranqueCorto(e.arranca_el ?? "") : null;
           return (
@@ -169,6 +173,14 @@ export function RutasDeInicio({
           );
         })}
       </div>
+
+      {ordenadas.length > RUTAS_A_LA_VISTA && (
+        <p className="ontoy-renglones-mas">
+          <button type="button" className="ontoy-liga" aria-expanded={todas} onClick={() => setTodas((a) => !a)}>
+            {todas ? "Ver menos" : "Ver todas las rutas"}
+          </button>
+        </p>
+      )}
     </section>
   );
 }

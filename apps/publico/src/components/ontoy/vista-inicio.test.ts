@@ -149,3 +149,17 @@ describe("las poses de Ontoy", () => {
     expect(nombradas).toEqual(["al-otro-lado", "dormido", "mirando-arriba", "sin-red", "triste"]);
   });
 });
+
+describe("las rutas de Inicio: el Marco 8.8 y sin botones grandes (ASAV, 25-sep)", () => {
+  const rutas = sinComentarios(readFileSync(path.join(AQUI, "rutas-de-inicio.tsx"), "utf8"));
+
+  it("tres a la vista y el resto tras «Ver todas las rutas»", () => {
+    expect(rutas).toContain("ordenadas.slice(0, RUTAS_A_LA_VISTA)");
+    expect(rutas).toContain('"Ver todas las rutas"');
+  });
+
+  it("es un enlace discreto, no un botón grande", () => {
+    expect(rutas).toContain('className="ontoy-liga"');
+    expect(rutas).not.toMatch(/ontoy-boton|ontoy-desplegar/);
+  });
+});
