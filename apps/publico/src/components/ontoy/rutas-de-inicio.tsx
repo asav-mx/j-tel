@@ -89,13 +89,25 @@ export function RutasDeInicio({
    * hacer algo, se dice y se ofrece; si no, sólo el orden.
    */
   const reintentable = estado === "sin-senal" || (estado === "concedida" && listaConError);
+  /*
+   * **Cada caso dice lo suyo** (Marco 8.8, tercera enmienda del 22-sep): un
+   * permiso negado, un teléfono que no la da y una lista que no bajó son cosas
+   * distintas, y juntarlas en «no se pudo» le quita al pasajero saber si hay
+   * algo que él pueda hacer. Ya no en un párrafo: en el contexto, corto.
+   */
   const contexto = porDistancia
     ? "en línea recta"
     : estado === "buscando"
       ? "buscando dónde estás…"
-      : reintentable
-        ? "no pude medir la distancia"
-        : "en orden alfabético";
+      : estado === "sin-senal"
+        ? "tu teléfono no dio tu posición"
+        : reintentable
+          ? "no pude bajar las paradas"
+          : estado === "negada"
+            ? "en orden alfabético · sin permiso de ubicación"
+            : estado === "no-disponible"
+              ? "en orden alfabético · el teléfono no da ubicación"
+              : "en orden alfabético";
 
   return (
     /* El ancla de «Buscar mi parada» de la bienvenida: una liga de verdad, sin JavaScript. */
