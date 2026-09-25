@@ -164,10 +164,11 @@
   font-size: 17px;
   margin: 0;
 }
+/* 44 px de toque, como la campana de al lado. Medía 34. */
 .ontoy-piel {
   margin-left: auto;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   flex: none;
   display: grid;
   place-items: center;
@@ -217,9 +218,14 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+/*
+ * **12 px, el mínimo del estándar** — y lo que el diseño del #562 pone para la
+ * palabra de la barra. Estaba en 10, en las cuatro pestañas y en todas las
+ * pantallas: es el texto que más veces se lee de esta app.
+ */
 .ontoy-barra-palabra {
   font-family: var(--fuente-texto), system-ui, sans-serif;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -250,6 +256,8 @@
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
+  /* 44: el mínimo del estándar. Medía menos y se toca de pie. */
+  min-height: 44px;
 }
 .ontoy-boton-segundo {
   background: transparent;
@@ -361,7 +369,7 @@
 }
 .ontoy-seccion-titulo {
   font-family: var(--fuente-texto), system-ui, sans-serif;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--tenue);
@@ -376,7 +384,7 @@
 }
 .ontoy-pie {
   padding: 6px 18px 22px;
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.55;
   color: var(--tenue);
 }
@@ -622,13 +630,15 @@
   font-weight: 600;
   font-size: 13.5px;
   cursor: pointer;
+  /* 44: el mínimo del estándar. Medía menos y se toca de pie. */
+  min-height: 44px;
 }
 .ontoy-desplegar:hover {
   border-color: var(--texto);
 }
 .ontoy-desplegar-flecha {
   color: var(--tenue);
-  font-size: 11px;
+  font-size: 12px;
 }
 .ontoy-rutas-nota {
   margin-top: 11px;
@@ -2147,11 +2157,12 @@
 }
 
 /* ── la campana (8.13b) ───────────────────────────────────────────────── */
+/* 44 px de toque: es lo que un pulgar acierta de pie. Medía 34. */
 .ontoy-campana {
   position: relative;
   margin-left: auto;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   flex: none;
   display: grid;
   place-items: center;
@@ -2329,7 +2340,7 @@
 }
 .ontoy-ira-limite {
   margin: 8px 0 12px;
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.5;
   color: var(--tenue);
 }
@@ -2373,7 +2384,7 @@
   width: 52px;
   /* Alinea el rótulo con la primera línea del nombre, no con la caja. */
   padding-top: 3px;
-  font-size: 9.5px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--tenue);
@@ -2385,7 +2396,7 @@
   font-weight: 600;
 }
 .ontoy-ira-donde {
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.35;
   color: var(--tenue);
 }
@@ -2432,6 +2443,12 @@
   background: var(--panel);
   border: 1.5px solid var(--linea);
   border-radius: 999px;
+  /*
+   * `min-height` y no más relleno, para no engordar el chip de lado: medía 34
+   * de alto y **la tira se toca en movimiento**, de pie y con el mapa debajo.
+   * Un fallo aquí prende o apaga una ruta del mapa.
+   */
+  min-height: 44px;
   padding: 8px 14px;
   font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
   font-weight: 600;
@@ -2499,9 +2516,13 @@
   gap: 8px;
   align-items: center;
 }
+/* Los controles del mapa —«Paradas» y la diana— también a 44. Medían 32 y 35. */
 .ontoy-ctrl {
+  min-height: 44px;
+  min-width: 44px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   cursor: pointer;
   background: var(--panel);
@@ -2633,7 +2654,7 @@
   padding: 8px 18px;
   background: var(--texto);
   color: var(--fondo);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.5;
   letter-spacing: 0.04em;
   text-align: center;
@@ -2669,7 +2690,7 @@
   background: transparent;
   border-radius: 6px;
   padding: 4px 7px;
-  font-size: 9.5px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--tenue);
@@ -2680,6 +2701,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* 44: el mínimo del estándar. Medía menos y se toca de pie. */
+  min-height: 44px;
 }
 /*
  * Lo enseñado y sin confirmar. En tinta y sin adorno: no es una alarma, es un
@@ -2777,7 +2800,7 @@
 }
 .ontoy-pase-rotulo {
   font-family: var(--fuente-texto), system-ui, sans-serif;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--tenue);
