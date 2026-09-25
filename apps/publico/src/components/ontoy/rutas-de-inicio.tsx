@@ -8,6 +8,7 @@ import { promesaEnPalabras } from "@/lib/ontoy/llegadas";
 import { distanciaEnPalabras } from "@/lib/ontoy/distancia";
 import { ordenarRutas, RUTAS_A_LA_VISTA } from "@/lib/ontoy/rutas-cerca";
 import type { Ubicacion } from "@/lib/ubicacion";
+import { arranqueCorto } from "@/lib/fecha-arranque";
 
 /**
  * **Las rutas, en Inicio** (8.8; ASAV, 22-sep-2026).
@@ -123,8 +124,8 @@ export function RutasDeInicio({
                 </span>
               )}
               <span className="ontoy-ruta-sub">
-                {e?.situacion === "por_arrancar" && e.arranca_el
-                  ? `Arranca el ${e.arranca_el}`
+                {e?.situacion === "por_arrancar" && arranqueCorto(e.arranca_el ?? "")
+                  ? `Arranca el ${arranqueCorto(e.arranca_el ?? "")}`
                   : e?.situacion === "cerrado"
                     ? `Fuera de horario · abre ${e.abre_a}`
                     : promesaEnPalabras(r.promesa, null)}

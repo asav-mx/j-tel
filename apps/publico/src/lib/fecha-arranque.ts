@@ -46,14 +46,20 @@ function alMediodia(fechaIso: string): Date | null {
 }
 
 /**
- * El titular: `15 sep`.
+ * El titular: `1 de oct`.
  *
- * Corto porque va en el número grande de la tarjeta, donde rima con el
- * `Abre 05:00` de fuera de horario. La fecha completa va en la frase de abajo,
- * que es donde hay lugar para leerla sin abreviar.
+ * Corto porque va en el renglón de la derecha de la fila de la ruta, donde rima
+ * con el `Abre 05:00` de fuera de horario. La fecha completa va en la frase de
+ * la tarjeta, que es donde hay lugar para leerla sin abreviar.
  *
  * `null` si la fecha no se puede leer: **un titular vacío es mejor que uno
  * inventado**, y la frase de abajo tampoco se dibuja.
+ *
+ * > ✎ **25-sep-2026 — lleva «de».** Nació escribiendo `15 sep` y el diseño
+ * > final de la app lo escribe `1 de oct`. El copy del handoff es final
+ * > (#562), así que manda él. Se deja anotado porque cambiar el formato de una
+ * > fecha no rompe nada y por eso se cambia sin querer: si alguien lo ve
+ * > distinto al diseño, es que lo movieron después de esto.
  */
 export function arranqueCorto(fechaIso: string): string | null {
   const d = alMediodia(fechaIso);
@@ -67,30 +73,32 @@ export function arranqueCorto(fechaIso: string): string | null {
     /* `es-MX` escribe «15 sept» y a veces con punto. Se recorta a tres letras
        sin punto: cabe en el titular y se lee igual de rápido. */
     .replace(/\.$/, "")
-    .replace(/(\d+)\s+(\p{L}{3})\p{L}*/u, "$1 $2");
+    .replace(/(\d+)\s+(\p{L}{3})\p{L}*/u, "$1 de $2");
 }
 
 /**
- * La frase: `lunes 15 de septiembre`.
+ * La frase: `1 de octubre`.
  *
- * Con día de la semana porque es lo que la gente usa para ubicarse — «el
- * lunes» se agenda, «el 15» se busca en el calendario. Sin año: un arranque se
- * declara con semanas de anticipación, no con años, y el año de más ocupa
- * lugar sin decir nada.
+ * Sin año: un arranque se declara con semanas de anticipación, no con años, y
+ * el año de más ocupa lugar sin decir nada.
+ *
+ * > ✎ **25-sep-2026 — se le quitó el día de la semana.** Nació escribiendo
+ * > `martes 15 de septiembre`, con este argumento, que sigue siendo bueno: «es
+ * > lo que la gente usa para ubicarse — *el lunes* se agenda, *el 15* se busca
+ * > en el calendario».
+ * >
+ * > Lo que manda encima es que **el copy del handoff es final** (#562): la
+ * > tarjeta dice «Arranca el **1 de octubre**.» y la fila «arranca · 1 de oct».
+ * > Nadie llamaba a esta función todavía, así que el cambio no movió ninguna
+ * > pantalla — pero se anota, con su argumento entero, para que reponerlo
+ * > cueste una línea y no una investigación.
  */
 export function arranqueLargo(fechaIso: string): string | null {
   const d = alMediodia(fechaIso);
   if (!d) return null;
-  return (
-    new Intl.DateTimeFormat("es-MX", {
-      timeZone: "UTC",
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    })
-      .format(d)
-      /* `es-MX` mete una coma —«martes, 15 de septiembre»— que dentro de una
-         frase corrida se lee como una pausa que nadie quiso. */
-      .replace(",", "")
-  );
+  return new Intl.DateTimeFormat("es-MX", {
+    timeZone: "UTC",
+    day: "numeric",
+    month: "long",
+  }).format(d);
 }

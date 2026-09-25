@@ -43,6 +43,7 @@ import { useAvisosVistos } from "@/lib/ontoy/avisos-vistos";
 import { VistaAvisos } from "@/components/ontoy/vista-avisos";
 import { useParadasDeLaCiudad } from "@/lib/ontoy/usar-paradas-de-la-ciudad";
 import { useElPase, useConfirmacionDelPase } from "@/lib/ontoy/pase-del-telefono";
+import { arranqueCorto, arranqueLargo } from "@/lib/fecha-arranque";
 
 /**
  * **Ontoy** — el cascarón de los cuatro lugares (8.8, 22-sep).
@@ -348,7 +349,7 @@ export function Ontoy({
     if (vivo.estado === "por_arrancar") {
       return [
         {
-          rotulo: vivo.arranca_el ? `Arranca el ${vivo.arranca_el}` : "Todavía no arranca",
+          rotulo: arranqueCorto(vivo.arranca_el ?? "") ?? "Todavía no arranca",
           apoyo: "esta ruta aún no da servicio",
           vieja: true,
         },
@@ -564,6 +565,11 @@ export function Ontoy({
             hastaMi ? ` · hasta donde estás ${hastaMi}` : ""
           }`}
           llegadas={llegadasDeLaHoja}
+          porArrancar={
+            vivo?.estado === "por_arrancar"
+              ? { ruta: rutaEnfocada.nombre, arrancaEl: vivo.arranca_el }
+              : null
+          }
           promesa={promesaEnPalabras(vivo?.promesa ?? null, sentido) ?? ""}
           guardada={guardadas.estaGuardada(parada.id)}
           sePuedeGuardar={guardadas.disponible}
@@ -599,7 +605,10 @@ function avisoDeLaEscalera(
 ): string | null {
   if (error) return "No pudimos preguntar ahorita. Lo que ves es lo último que supimos.";
   if (!vivo) return null;
-  if (vivo.estado === "por_arrancar") return vivo.arranca_el ? `Arranca el ${vivo.arranca_el}` : "Todavía no arranca";
+  if (vivo.estado === "por_arrancar") {
+    const cuando = arranqueLargo(vivo.arranca_el ?? "");
+    return cuando ? `Arranca el ${cuando}` : "Todavía no arranca";
+  }
   if (vivo.estado === "fuera_de_horario") return `Fuera de horario · abre ${vivo.abre_a}`;
   return null;
 }
