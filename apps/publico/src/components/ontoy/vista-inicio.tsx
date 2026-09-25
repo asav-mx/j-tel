@@ -10,6 +10,8 @@ import type { Vivo } from "@/lib/ontoy/forma";
 import { useParadasDeLaCiudad } from "@/lib/ontoy/usar-paradas-de-la-ciudad";
 import type { EstadoDeRuta } from "@/lib/ontoy/estado-de-ruta";
 import { RutasDeInicio } from "@/components/ontoy/rutas-de-inicio";
+import { fechaDelAviso, type AvisoEnLaCampana } from "@/lib/ontoy/avisos";
+import { GlifoAviso, GlifoLuna, GlifoSol } from "@/components/ontoy/glifos";
 
 /**
  * **Inicio** — la app abre contestando (8.8, 22-sep).
@@ -56,6 +58,11 @@ export function VistaInicio({
   alQuitarGuardada,
   alVerTusParadas,
   enVivo,
+  avisos,
+  avisosNuevos,
+  alVerAvisos,
+  deNoche: pielDeNoche,
+  alAlternarPiel,
 }: {
   rutas: RutaDeLaCiudad[];
   estados: EstadoDeRuta[];
@@ -73,6 +80,14 @@ export function VistaInicio({
    * Inicio ya no pregunta por su cuenta.
    */
   enVivo: { vivos: Map<string, Vivo>; error: boolean; respondio: boolean };
+  /** Los avisos de la concesión de tus rutas: la puerta que antes era la campana. */
+  avisos: AvisoEnLaCampana[];
+  /** Si hay alguno que no has visto: prende el punto. */
+  avisosNuevos: boolean;
+  alVerAvisos: () => void;
+  /** La piel, no la ciudad: si la app se está viendo de noche. */
+  deNoche: boolean;
+  alAlternarPiel: () => void;
 }) {
   const lista = useParadasDeLaCiudad(ubicacion.estado === "concedida");
 
@@ -196,6 +211,8 @@ export function VistaInicio({
         )
       )}
 
+      {avisos.length > 0 && <PuertaDeAvisos avisos={avisos} nuevos={avisosNuevos} alAbrir={alVerAvisos} />}
+
       <RutasDeInicio
         rutas={rutas}
         estados={estados}
@@ -210,7 +227,73 @@ export function VistaInicio({
         Tus paradas guardadas se quedan en tu teléfono. No hace falta cuenta.{" "}
         <a href="/privacidad">Qué datos usa la app y para qué</a>.
       </p>
+      <RenglonDePiel deNoche={pielDeNoche} alAlternar={alAlternarPiel} />
     </div>
+  );
+}
+
+/**
+ * **La puerta a los avisos** — lo que antes era la campana de la cabecera
+ * (ASAV, 25-sep; el diseño la dibuja en `6-prototipo/06`).
+ *
+ * Enseña el aviso más reciente, fechado y atribuido como en su lista, y cuántos
+ * más hay. **Sólo sale si hay avisos**: una tarjeta que dice «no hay avisos» en
+ * Inicio es ruido todos los días para decir nada.
+ *
+ * El punto es el de la campana y dice lo mismo: **hay avisos de la concesión que
+ * no has visto** (decisión de ASAV, 22-sep). Es forma —un círculo lleno en
+ * tinta—, nunca rojo.
+ */
+function PuertaDeAvisos({
+  avisos,
+  nuevos,
+  alAbrir,
+}: {
+  avisos: AvisoEnLaCampana[];
+  nuevos: boolean;
+  alAbrir: () => void;
+}) {
+  const [primero] = avisos;
+  const mas = avisos.length - 1;
+  return (
+    <section className="ontoy-seccion">
+      <button
+        type="button"
+        className="ontoy-puerta-avisos"
+        onClick={alAbrir}
+        aria-label={`Avisos de tus rutas${nuevos ? ", hay nuevos" : ""}: ${primero.titulo}${mas > 0 ? ` y ${mas} más` : ""}`}
+      >
+        <GlifoAviso />
+        <span className="ontoy-puerta-avisos-texto">
+          <span className="ontoy-puerta-avisos-titulo">{primero.titulo}</span>
+          <span className="ontoy-puerta-avisos-cuando cifra">
+            {fechaDelAviso(primero.desde, primero.zona, new Date())} · según la concesión
+            {mas > 0 && ` · y ${mas} más`}
+          </span>
+        </span>
+        {nuevos && <span className="ontoy-puerta-avisos-punto" aria-hidden="true" />}
+        <svg className="ontoy-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <path d="m9 6 6 6-6 6" />
+        </svg>
+      </button>
+    </section>
+  );
+}
+
+/**
+ * **El interruptor de piel**, al pie de Inicio (ASAV, 25-sep, opción a).
+ *
+ * La app sigue al teléfono por omisión (`useTema`); esto es para quien quiera
+ * otra cosa. Vivía en la cabecera, que ya no existe. El glifo es **a donde
+ * lleva**, no donde estás: la luna de día, el sol de noche — igual que el botón
+ * de antes.
+ */
+function RenglonDePiel({ deNoche, alAlternar }: { deNoche: boolean; alAlternar: () => void }) {
+  return (
+    <button type="button" className="ontoy-renglon-piel" onClick={alAlternar}>
+      {deNoche ? <GlifoSol /> : <GlifoLuna />}
+      <span>{deNoche ? "Ver de día" : "Ver de noche"}</span>
+    </button>
   );
 }
 
