@@ -11,6 +11,7 @@ import { pistaDelMapa } from "@/lib/ontoy/pista-del-mapa";
 import type { Forma, RutaDeLaCiudad, Sentido, UnidadViva, Vivo } from "@/lib/ontoy/forma";
 import type { ParadaDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
 import { camiDesdeArriba, pasajeroConLinterna, tinoEnLaParada, type MiradaDeTino } from "@/lib/ontoy/munecos";
+import { tinoEntero } from "@/lib/ontoy/zoom-de-tino";
 import type { RutaOrdenada } from "@/lib/ontoy/rutas-cerca";
 import { TiraDeRutas } from "@/components/ontoy/tira-de-rutas";
 
@@ -159,6 +160,15 @@ export function VistaMapa({
   /** El encuadre se hace una vez por apertura del Mapa, no en cada filtro. */
   const yaEncuadro = useRef(false);
   const [listo, setListo] = useState(false);
+  /**
+   * **El acercamiento de ahorita.** De él depende si una parada se dibuja como
+   * Tino entero o como punto — no de en qué vista está el pasajero.
+   *
+   * Vive en estado y no en una lectura suelta del mapa porque los efectos que
+   * dibujan tienen que **volver a correr** cuando cambia: sin eso, acercarse no
+   * redibuja nada y las paradas se quedan como estaban.
+   */
+  const [zoom, setZoom] = useState(13);
 
   const rutaEnfocada = rutas.find((r) => r.circuito_id === enfocada) ?? null;
   const lienzo = deNoche ? LIENZO.noche : LIENZO.dia;
@@ -241,6 +251,14 @@ export function VistaMapa({
        * navegador ya repartió el alto.
        */
       requestAnimationFrame(() => m.invalidateSize());
+      /*
+       * `zoomend` y no `zoom`: el segundo dispara en cada cuadro de la
+       * animación, y redibujar treinta marcadores en cada uno se siente como
+       * que el mapa se traba. Al terminar el gesto basta — el cambio de Tino a
+       * punto pasa una vez, cuando el acercamiento ya se decidió.
+       */
+      m.on("zoomend", () => setZoom(m.getZoom()));
+      setZoom(m.getZoom());
       setListo(true);
     })();
     return () => {
@@ -322,6 +340,33 @@ export function VistaMapa({
     for (const p of forma.paradas) {
       if (p.sentido !== null && p.sentido !== sentido) continue;
       const abierta = p.id === paradaAbierta;
+
+      /*
+       * **La misma regla del acercamiento vale aquí.** Una ruta abierta no es
+       * sinónimo de estar cerca: Oasis–Centro tiene 17 paradas a 667 m, y
+       * viéndola entera de punta a punta caben en la pantalla con 20 px entre
+       * una y otra. Diecisiete muñecos encimados tapan el trazado que se vino a
+       * mirar.
+       *
+       * **La parada abierta es la excepción**: se dibuja entera aunque esté
+       * lejos, porque es la única de la que el pasajero está preguntando algo y
+       * lo que marca es cuál está mirando.
+       */
+      if (!abierta && !tinoEntero(zoom)) {
+        leaflet
+          .circleMarker([p.lat, p.lon], {
+            radius: 4.5,
+            color: lienzo,
+            weight: 2,
+            fillColor: forma.color_hex,
+            fillOpacity: 1,
+          })
+          .bindTooltip(p.nombre, { direction: "top", opacity: 0.95 })
+          .on("click", () => alTocarParada(p.id))
+          .addTo(capaParadas.current);
+        continue;
+      }
+
       const icono = leaflet.divIcon({
         className: `ontoy-tino-icono${abierta ? " abierta" : ""}`,
         html: tinoEnLaParada({ color: forma.color_hex, mirada }),
@@ -339,7 +384,7 @@ export function VistaMapa({
         .on("click", () => alTocarParada(p.id))
         .addTo(capaParadas.current);
     }
-  }, [listo, forma, sentido, paradaAbierta, lienzo, alTocarParada, vivo, ciudad]);
+  }, [listo, forma, sentido, paradaAbierta, lienzo, alTocarParada, vivo, ciudad, zoom]);
 
   // ── Las unidades: donde su último fix las dejó ─────────────────────────
   useEffect(() => {
@@ -475,25 +520,45 @@ export function VistaMapa({
     for (const p of ciudad.paradas) {
       if (!ciudad.prendidas.has(p.ruta)) continue;
       /*
-       * **Aquí Tino se queda en punto, y es el §9 quien lo pide:** «zoom lejos:
-       * Tino → punto del color de la ruta». El Mapa de la ciudad enseña varias
-       * rutas completas a la vez —cuarenta paradas por ruta—, y un muñeco de
-       * 32 px en cada una tapa el mapa que vino a enseñar. Tino sale entero en
-       * la ruta abierta, que es cuando hay una sola y el zoom está cerca.
+       * **Tino entero o punto, según el ACERCAMIENTO** (§9: «zoom lejos: Tino →
+       * punto del color de la ruta»).
+       *
+       * La primera versión de esto preguntaba «¿hay una ruta abierta?» en vez
+       * de «¿qué tan cerca estoy?» —lo escribí yo en el #566— y el resultado era
+       * que en la vista general las paradas se quedaban como puntos **aunque el
+       * pasajero se acercara al máximo**, con dos paradas en pantalla. La regla
+       * del handoff nunca habló de vistas: habla de zoom.
+       *
+       * El umbral y de dónde sale, en `zoom-de-tino.ts`.
        */
-      leaflet
-        .circleMarker([p.lat, p.lon], {
-          radius: 4.5,
-          color: lienzo,
-          weight: 2,
-          fillColor: color.get(p.ruta) ?? lienzo,
-          fillOpacity: 1,
-        })
-        .bindTooltip(p.nombre, { direction: "top", opacity: 0.95 })
-        .on("click", () => ciudad.alAbrirRuta(p.ruta, p.id))
-        .addTo(capaParadasCiudad.current);
+      const c = color.get(p.ruta) ?? lienzo;
+      if (tinoEntero(zoom)) {
+        const icono = leaflet.divIcon({
+          className: "ontoy-tino-icono",
+          html: tinoEnLaParada({ color: c, mirada: "al-frente" }),
+          iconSize: [44, 44],
+          iconAnchor: [22, 36],
+        });
+        leaflet
+          .marker([p.lat, p.lon], { icon: icono, keyboard: false })
+          .bindTooltip(p.nombre, { direction: "top", opacity: 0.95 })
+          .on("click", () => ciudad.alAbrirRuta(p.ruta, p.id))
+          .addTo(capaParadasCiudad.current);
+      } else {
+        leaflet
+          .circleMarker([p.lat, p.lon], {
+            radius: 4.5,
+            color: lienzo,
+            weight: 2,
+            fillColor: c,
+            fillOpacity: 1,
+          })
+          .bindTooltip(p.nombre, { direction: "top", opacity: 0.95 })
+          .on("click", () => ciudad.alAbrirRuta(p.ruta, p.id))
+          .addTo(capaParadasCiudad.current);
+      }
     }
-  }, [listo, rutas, lienzo, prendidasClave, ciudad?.verParadas, ciudad?.paradas, !!ciudad]);
+  }, [listo, rutas, lienzo, prendidasClave, ciudad?.verParadas, ciudad?.paradas, !!ciudad, zoom]);
 
   // Tus paradas guardadas, con su estrella en el nombre.
   useEffect(() => {
