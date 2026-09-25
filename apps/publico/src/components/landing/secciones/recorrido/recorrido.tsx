@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Hilo } from "./hilo";
+import { OntoyQueReacciona } from "../../ontoy-que-reacciona";
 
 /**
  * **«El recorrido»** — lo que hace Ontoy, en cinco paradas.
@@ -65,7 +66,15 @@ export function Recorrido() {
               Escribe el nombre y Ontoy te la abre en el mapa, con sus camiones en vivo.
               Pruébalo aquí.
             </p>
-            <Buscador />
+            <div className="landing-con-ontoy">
+              <Buscador />
+              {/*
+               * El Ontoy que brinca y se marea. El diseño lo tenía en esta
+               * tarjeta y se perdió al reescribirla como buscador: la tarjeta
+               * cambió de tema, no de gracia.
+               */}
+              <OntoyQueReacciona reaccion="brinca" />
+            </div>
           </Parada>
 
           <Parada n={3} titulo="Tu parada, a un toque.">
@@ -218,78 +227,26 @@ function Guardadas() {
   );
 }
 
-/** Las cosquillas de Ontoy: suben con los clicks seguidos y bajan de ritmo solas. */
-const COSQUILLAS = ["¡ja ja!", "¡jaja!", "¡ya, ya! jaja", "¡me haces llorar! jaja", "¡basta! JAJAJA"];
-
 /**
  * La tarjeta 04 — **la app abierta, no una notificación**.
  *
  * El prototipo enseñaba una pantalla bloqueada a las 7:42. Las notificaciones
  * (8.13) esperan, así que esto enseña lo que la app sí hace: lo abres y ya
  * está ahí. Y **sin minutos**: «¡ya viene!» y «a 2 paradas de ti».
+ *
+ * Las cosquillas las pone `OntoyQueReacciona`, que es el mismo Ontoy de la
+ * tarjeta 02 y de los personajes: **una sola mecánica de reacciones para toda
+ * la portada**, porque un Ontoy que se ríe distinto en cada sección son tres
+ * dibujos, no un personaje.
  */
 function YaViene() {
-  const [risa, setRisa] = useState(-1);
-  const ultima = useRef(-99);
-
-  const cosquillas = () => {
-    const ahora = performance.now() / 1000;
-    /* Cuentan como racha si pasan menos de 1.4 s entre una y otra. */
-    setRisa((r) => (ahora - ultima.current < 1.4 ? Math.min(r + 1, COSQUILLAS.length - 1) : 0));
-    ultima.current = ahora;
-  };
-
   return (
     <div className="landing-demo landing-demo-yaviene">
       <div className="landing-yaviene-dicho">
         <b>¡Ya viene tu 51!</b>
         <small>A 2 paradas de Av. Tecnológico</small>
       </div>
-      <button
-        type="button"
-        className="landing-cosquillas"
-        onClick={cosquillas}
-        aria-label="Hazle cosquillas a Ontoy"
-      >
-        <svg viewBox="0 0 120 120" aria-hidden="true">
-          <ellipse cx="44" cy="96" rx="9" ry="6" fill="var(--ontoy)" />
-          <ellipse cx="76" cy="96" rx="9" ry="6" fill="var(--ontoy)" />
-          <path
-            d="M34 30 C40 18 60 16 74 19 C90 22 98 34 97 52 C96 68 94 80 86 88 C78 94 66 95 58 94 C46 95 34 92 28 82 C22 70 22 52 26 42 C28 36 30 33 34 30 Z"
-            fill="var(--ontoy)"
-          />
-          {/* Riéndose los ojos se cierran: son dos arcos, como en el universo. */}
-          {risa >= 0 ? (
-            <path
-              d="M40 50 q10 7 20 0 M66 48 q10 7 20 0"
-              fill="none"
-              stroke="var(--pupila)"
-              strokeWidth="3.4"
-              strokeLinecap="round"
-            />
-          ) : (
-            <>
-              <circle cx="50" cy="52" r="11" fill="var(--ojo)" />
-              <circle cx="76" cy="50" r="11" fill="var(--ojo)" />
-              <circle cx="50" cy="52" r="6" fill="var(--pupila)" />
-              <circle cx="76" cy="50" r="6" fill="var(--pupila)" />
-            </>
-          )}
-          {/* La boca sólo sale en las reacciones, y reírse es una. */}
-          {risa >= 0 && (
-            <ellipse
-              cx="63"
-              cy="74"
-              rx={7 + risa}
-              ry={8 + risa * 1.5}
-              fill="var(--pupila)"
-            />
-          )}
-          <circle cx="12" cy="58" r="6" fill="var(--ontoy)" />
-          <circle cx="110" cy="54" r="6" fill="var(--ontoy)" />
-        </svg>
-        <span className="landing-tocalo">{risa >= 0 ? COSQUILLAS[risa] : "tócalo"}</span>
-      </button>
+      <OntoyQueReacciona reaccion="cosquillas" />
     </div>
   );
 }
