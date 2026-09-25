@@ -46,37 +46,74 @@ function alMediodia(fechaIso: string): Date | null {
 }
 
 /**
- * El titular: `15 sep`.
+ * El renglón corto: `jue 1 oct`.
  *
- * Corto porque va en el número grande de la tarjeta, donde rima con el
- * `Abre 05:00` de fuera de horario. La fecha completa va en la frase de abajo,
- * que es donde hay lugar para leerla sin abreviar.
+ * Corto porque va en la columna de la derecha de la fila de la ruta, donde rima
+ * con el `Abre 05:00` de fuera de horario. La fecha completa va en la frase de
+ * la tarjeta, que es donde hay lugar para leerla sin abreviar.
  *
- * `null` si la fecha no se puede leer: **un titular vacío es mejor que uno
+ * **Lleva el día de la semana y no lleva «de»,** y las dos cosas van juntas: en
+ * una forma donde el mes ya se abrevia a `oct` y el día a `jue`, un «de» entero
+ * está fuera de registro — y sobre todo ocupa el lugar que el `jue` necesita.
+ * De los dos, el que se acuerda la gente es el día de la semana.
+ *
+ * `null` si la fecha no se puede leer: **un renglón vacío es mejor que uno
  * inventado**, y la frase de abajo tampoco se dibuja.
+ *
+ * > ✎ **Historia, porque este formato ya se movió dos veces en tres días.**
+ * > Nació `15 sep` (#373). El diseño final lo escribió `1 de oct` y se ajustó
+ * > (#569). ASAV lo corrigió el 25-sep: **con día de la semana**, «la gente se
+ * > acuerda del jueves». Queda `jue 1 oct`.
  */
 export function arranqueCorto(fechaIso: string): string | null {
   const d = alMediodia(fechaIso);
   if (!d) return null;
-  return new Intl.DateTimeFormat("es-MX", {
-    timeZone: "UTC",
-    day: "numeric",
-    month: "short",
-  })
-    .format(d)
-    /* `es-MX` escribe «15 sept» y a veces con punto. Se recorta a tres letras
-       sin punto: cabe en el titular y se lee igual de rápido. */
-    .replace(/\.$/, "")
-    .replace(/(\d+)\s+(\p{L}{3})\p{L}*/u, "$1 $2");
+  return (
+    new Intl.DateTimeFormat("es-MX", {
+      timeZone: "UTC",
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    })
+      .format(d)
+      /*
+       * `es-MX` escribe «mar, 15 sept» — con coma y con cuatro letras en el
+       * mes, a veces con punto. Se deja en tres letras sin punto y sin coma:
+       * cabe en la columna y se lee igual de rápido.
+       *
+       * Se recorta **cada palabra de letras por separado** en vez de una sola
+       * expresión con todo adentro: así `septiembre` y `miércoles` se cortan
+       * igual sin tener que acertarle al orden en que `Intl` los ponga, que no
+       * es el mismo en todas las versiones de Node.
+       */
+      .replace(/\./g, "")
+      .replace(/,/g, "")
+      .replace(/\p{L}{3}\p{L}+/gu, (palabra) => palabra.slice(0, 3))
+      /*
+       * Y el «de» que `Intl` mete solo: `es-MX` con `month: "short"` devuelve
+       * «jue, 1 de oct», no «jue 1 oct». En la forma larga el «de» es parte de
+       * la frase; aquí, entre abreviaturas, es la palabra que sobra — y es
+       * justo el lugar que el `jue` necesita en la columna.
+       */
+      .replace(/ de /g, " ")
+  );
 }
 
 /**
- * La frase: `lunes 15 de septiembre`.
+ * La frase: `jueves 1 de octubre`.
  *
- * Con día de la semana porque es lo que la gente usa para ubicarse — «el
- * lunes» se agenda, «el 15» se busca en el calendario. Sin año: un arranque se
- * declara con semanas de anticipación, no con años, y el año de más ocupa
- * lugar sin decir nada.
+ * **Con día de la semana**, que es lo que la gente usa para ubicarse: «el
+ * jueves» se agenda, «el 1» se busca en el calendario. Sin año: un arranque se
+ * declara con semanas de anticipación, no con años, y el año de más ocupa lugar
+ * sin decir nada.
+ *
+ * > ✎ **Fue y volvió, y por eso queda escrito.** Nació así (#373). El #569 se
+ * > lo quitó para seguir el copy del handoff, que escribe «Arranca el **1 de
+ * > octubre**». ASAV lo devolvió el 25-sep: *«la gente se acuerda del jueves»*.
+ * >
+ * > O sea que **el copy final del diseño no lo traía y aun así se pone**: es
+ * > una corrección de ASAV encima del handoff, no un descuido. Quien compare
+ * > la pantalla con el diseño va a ver la diferencia; está aquí la razón.
  */
 export function arranqueLargo(fechaIso: string): string | null {
   const d = alMediodia(fechaIso);

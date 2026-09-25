@@ -272,10 +272,16 @@ function Tino({ mirada }: { mirada: Mirada }) {
        * por lo mismo de siempre: **escribe la unidad**. «a 3» a secas, en la
        * placa de una parada, se lee como tres minutos con la misma facilidad.
        */}
-      <rect x="12" y="70" width="96" height="22" rx="6" fill="var(--hueso)" />
+      {/*
+       * Aquí la placa va en hueso, no en carbón: la sección es oscura y una
+       * placa carbón sobre fondo carbón desaparecería. La franja del color de
+       * la ruta va igual en el filo de abajo (enmienda (f)).
+       */}
+      <rect x="12" y="89" width="96" height="3" rx="1.5" fill="var(--ruta)" />
+      <rect x="12" y="70" width="96" height="19" rx="6" fill="var(--hueso)" />
       <text
         x="60"
-        y="84.5"
+        y="83.5"
         textAnchor="middle"
         fill="var(--carbon)"
         style={{ font: "800 9px var(--titular)" }}

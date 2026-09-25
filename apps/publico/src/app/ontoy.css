@@ -1514,6 +1514,56 @@
   color: var(--tenue);
 }
 
+/* ── «Pronto me verás en la calle» (por arrancar) ───────────────────────
+ *
+ * Cami de frente, del color de su ruta, con las dos líneas al lado. Sin
+ * frecuencia y sin hora de apertura: ver el porqué en el componente.
+ */
+.ontoy-pronto {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 12px 0 4px;
+  padding: 14px;
+  background: var(--panel2);
+  border-radius: var(--r-card-sm, 22px);
+}
+.ontoy-pronto-cami {
+  flex: none;
+  /* Se sale de su caja a propósito: los espejos van por fuera del cuerpo. */
+  overflow: visible;
+}
+.ontoy-pronto-letrero {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 10px;
+}
+.ontoy-pronto-dicho {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.ontoy-pronto-titular {
+  margin: 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--texto);
+  text-wrap: balance;
+}
+.ontoy-pronto-cuando {
+  margin: 0;
+  font-size: 14px;
+  color: var(--tenue);
+}
+.ontoy-pronto-cuando b {
+  color: var(--texto);
+  font-weight: 700;
+}
+
 /* ── la campana (8.13b) ───────────────────────────────────────────────── */
 .ontoy-campana {
   position: relative;
