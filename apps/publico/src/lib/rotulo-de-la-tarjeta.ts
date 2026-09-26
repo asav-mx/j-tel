@@ -157,8 +157,16 @@ export function minutosDesdeQueSeVio(antiguedadSeg: number): number {
  * No lleva sujeto a propósito: la pastilla la pega al lado del camión y el
  * rótulo la pega detrás de «Vimos una unidad en la ruta». El sujeto lo pone
  * cada quien; el hecho y su hora son los mismos.
+ *
+ * ✎ **26-sep-2026: con menos de un minuto, en segundos** (auditoría del 25-sep).
+ * Una posición de 20 s decía «hace 1 min», y la lámina dice «posición de hace
+ * 10 s»: el dato fresco se veía más viejo de lo que es. Por debajo de 55 s va
+ * de 10 en 10 —«hace 10 s», «hace 20 s»…, nunca «hace 0 s», que diría
+ * «ahorita»—; de ahí en adelante, los minutos de siempre. El nombre se quedó
+ * por las diecisiete pantallas que lo llaman: la frase es una sola.
  */
 export function haceNMinutos(antiguedadSeg: number): string {
+  if (antiguedadSeg < 55) return `hace ${Math.max(10, Math.round(antiguedadSeg / 10) * 10)} s`;
   return `hace ${minutosDesdeQueSeVio(antiguedadSeg)} min`;
 }
 

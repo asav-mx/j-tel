@@ -24,7 +24,7 @@ describe("sin señal, lo último que supimos", () => {
     const d = dichoDeOntoy(l, "Zaragoza–Centro");
     expect(d.pose).toBe("sin-red");
     expect(d.dicho).toBe("Sin señal");
-    expect(d.apoyo).toBe("Lo último que supimos: la 2120 iba a 1 parada, posición de hace 1 min.");
+    expect(d.apoyo).toBe("Lo último que supimos: la 2120 iba a 1 parada, posición de hace 20 s.");
     expect(`${d.dicho} ${d.apoyo}`).not.toMatch(/\bviene\b/);
   });
 
@@ -49,7 +49,7 @@ describe("sin señal, lo último que supimos", () => {
   it("el renglón no lleva cifra grande: el número grande se lee como de ahorita", () => {
     const r = dichoDelRenglon({ tipo: "lo-ultimo", paradas: 1, unidad: "2120", edadSeg: 20 });
     expect(r.grande).toBeNull();
-    expect(r.chico).toBe("sin señal · la 2120 iba a 1 parada · hace 1 min");
+    expect(r.chico).toBe("sin señal · la 2120 iba a 1 parada · hace 20 s");
   });
 });
 

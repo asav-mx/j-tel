@@ -229,6 +229,18 @@ describe("el rótulo y la pastilla del camión dicen lo mismo", () => {
     expect(haceNMinutos(390)).toBe("hace 7 min");
   });
 
+  it("con menos de un minuto, en segundos y de 10 en 10 (lámina: «posición de hace 10 s»)", () => {
+    expect(haceNMinutos(0)).toBe("hace 10 s");
+    expect(haceNMinutos(8)).toBe("hace 10 s");
+    expect(haceNMinutos(14)).toBe("hace 10 s");
+    expect(haceNMinutos(20)).toBe("hace 20 s");
+    expect(haceNMinutos(46)).toBe("hace 50 s");
+    expect(haceNMinutos(54)).toBe("hace 50 s");
+    /* Desde 55 s ya es un minuto: nunca «hace 60 s». */
+    expect(haceNMinutos(55)).toBe("hace 1 min");
+    expect(haceNMinutos(89)).toBe("hace 1 min");
+  });
+
   it("LA PANTALLA LA USA, y no una copia suya que redondee por su cuenta", () => {
     /*
      * Esto lee el fuente a propósito, y es la única mitad que una prueba de
