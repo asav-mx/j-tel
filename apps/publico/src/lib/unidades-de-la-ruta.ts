@@ -3,7 +3,6 @@ import {
   estadoDelCircuito,
   medirUnidad,
   sentidoDeLaUnidad,
-  yaArrancoElServicio,
   type EstadoDelCircuito,
   type TrazadoDeSentido,
 } from "@jtel/domain/publico";
@@ -11,6 +10,7 @@ import { velocidadCalibrada } from "@jtel/domain";
 import { getRepos } from "@/lib/db";
 import { circuitoParaLaApp } from "@/lib/vista-previa";
 import { promesaDelCircuito } from "@/lib/promesa";
+import { arrancoParaEstaConsulta } from "@/lib/ensayo";
 
 /** Segundos que la respuesta vive en el CDN. El cuerpo dice lo mismo que el encabezado. */
 export const TTL_SEGUNDOS = 15;
@@ -25,8 +25,13 @@ export const TTL_SEGUNDOS = 15;
  *
  * `null` es «esta ruta no existe para la app» — no publicada o inventada — y
  * cada consulta lo contesta a su modo sin distinguir las dos.
+ *
+ * `ensayo: true` lo pasa **sólo** la puerta de ensayo (`en-vivo/ensayo`), después
+ * de comprobar la llave, y lo único que cambia es la fecha de arranque: la ruta
+ * se trata como arrancada (`lib/ensayo.ts`). Una valla en su prueba se cae si
+ * otra consulta lo pasa.
  */
-export async function unidadesDeLaRuta(slug: string, ahora: Date) {
+export async function unidadesDeLaRuta(slug: string, ahora: Date, opciones: { ensayo?: boolean } = {}) {
   const visible = await circuitoParaLaApp(slug);
   if (!visible) return null;
   const { circuito } = visible;
@@ -56,7 +61,12 @@ export async function unidadesDeLaRuta(slug: string, ahora: Date) {
    * el reloj: preguntarle a la hora si está abierto un servicio que todavía no
    * arranca es preguntar por la puerta de algo que aún no existe.
    */
-  const yaArranco = yaArrancoElServicio(ahora, circuito.serviceLaunchDate, circuito.timeZone);
+  const yaArranco = arrancoParaEstaConsulta(
+    ahora,
+    circuito.serviceLaunchDate,
+    circuito.timeZone,
+    opciones.ensayo === true,
+  );
 
   const enHorario = enHorarioDeServicio(
     ahora,

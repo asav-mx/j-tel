@@ -27,6 +27,7 @@ import {
  *   pnpm --filter @jtel/db escenario-ontoy
  *   pnpm --filter @jtel/db escenario-ontoy --un-sentido   # Insurgentes sin paradas de vuelta
  *   pnpm --filter @jtel/db escenario-ontoy --limpiar
+ *   pnpm --filter @jtel/db escenario-ontoy --por-arrancar   # Zaragoza–Centro arranca en 4 días
  *
  * Tres rutas publicadas, porque las tres cosas que la app tiene que saber decir
  * son distintas y no se ven con una sola:
@@ -199,8 +200,13 @@ async function limpiar(db: ReturnType<typeof createDb>) {
 /**
  * `unSentido`: las paradas de Insurgentes quedan sólo de ida, y su vuelta sin
  * ninguna — para ver que el mapa no invita a tocar lo que no existe.
+ *
+ * `porArrancar`: Zaragoza–Centro —la que tiene camiones reportando— arranca en
+ * cuatro días. Es el ensayo general: un camión real dando vueltas en una ruta
+ * que todavía no da servicio. Con él se ve que el público NO ve el camión y que
+ * un teléfono con la llave de ensayo sí (`apps/publico/src/lib/ensayo.ts`).
  */
-async function sembrar(db: ReturnType<typeof createDb>, unSentido: boolean) {
+async function sembrar(db: ReturnType<typeof createDb>, unSentido: boolean, porArrancar = false) {
   const ahora = new Date();
   await limpiar(db);
 
@@ -228,7 +234,7 @@ async function sembrar(db: ReturnType<typeof createDb>, unSentido: boolean) {
       arrivalTolerancePct: 50,
       avgSpeedKmh: 22,
       colorHex: s.color,
-      serviceLaunchDate: null,
+      serviceLaunchDate: porArrancar && s.slug === "zaragoza-centro" ? diaCivilEn(ahora, 4) : null,
       // La cerrada abrió y cerró ya; las otras están abiertas ahorita.
       serviceStartLocal: s.cerrada ? "05:00:00" : `${hhmm(new Date(ahora.getTime() - 60 * 60_000))}:00`,
       serviceEndLocal: s.cerrada ? `${hhmm(new Date(ahora.getTime() - 30 * 60_000))}:00` : "23:59:00",
@@ -321,6 +327,13 @@ async function sembrar(db: ReturnType<typeof createDb>, unSentido: boolean) {
   console.log("[escenario-ontoy] al terminar:  pnpm --filter @jtel/db escenario-ontoy --limpiar");
 }
 
+/** El día civil `dias` después de hoy, en la zona del escenario: `AAAA-MM-DD`. */
+function diaCivilEn(desde: Date, dias: number): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: zona, year: "numeric", month: "2-digit", day: "2-digit" }).format(
+    new Date(desde.getTime() + dias * 86_400_000),
+  );
+}
+
 const args = process.argv.slice(2);
 const iBase = args.indexOf("--base");
 const veredicto = revisarDesechable({
@@ -336,5 +349,5 @@ console.log(`[escenario-ontoy] destino: ${veredicto.identidad.host}/${veredicto.
 
 const db = createDb(process.env.DATABASE_URL_TEST!);
 if (args.includes("--limpiar")) await limpiar(db);
-else await sembrar(db, args.includes("--un-sentido"));
+else await sembrar(db, args.includes("--un-sentido"), args.includes("--por-arrancar"));
 process.exit(0);
