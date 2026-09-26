@@ -131,8 +131,15 @@ export function tinoEnLaParada(entrada: {
   mirada: MiradaDeTino;
   /** Una parada guardada lleva su estrella, como en la lista. */
   guardada?: boolean;
+  /**
+   * **Páris sonríe.** No es una mirada —los ojos siguen diciendo lo suyo—: es
+   * la boca, y la ponen quienes tienen algo bueno que decir: la hoja que te
+   * recibe al escanear el letrero («Estás en esta parada», lámina
+   * `5-paradas/04`) y, en el mapa, tu parada guardada.
+   */
+  sonrie?: boolean;
 }): string {
-  const { color, mirada, guardada = false } = entrada;
+  const { color, mirada, guardada = false, sonrie = false } = entrada;
   /* Las pupilas se corren para mirar de lado; cerrados son dos rayas. */
   const ojos =
     mirada === "dormido"
@@ -148,6 +155,7 @@ export function tinoEnLaParada(entrada: {
     <rect x="46" y="106" width="28" height="7" rx="3.5" fill="${CARBON}"/>
     <circle cx="60" cy="38" r="26" fill="${color}"/>
     ${ojos}
+    ${sonrie ? `<path d="M52 47 q8 7 16 0" fill="none" stroke="${CARBON}" stroke-width="3" stroke-linecap="round"/>` : ""}
   </svg>
   ${guardada ? '<span class="ontoy-tino-estrella" aria-hidden="true">★</span>' : ""}
 </span>`;
