@@ -2198,6 +2198,17 @@
   font-size: 16px;
   cursor: pointer;
 }
+/* «Reintentar» de Inicio sin señal (lámina 7/05): contorno, del ancho de su texto, con la flecha de recargar. */
+.ontoy-inicio-reintentar {
+  padding: 0 18px;
+  margin: 6px 0 18px;
+}
+.ontoy-inicio-reintentar .ontoy-boton-contorno {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+}
 
 /* ── las pantallas de estado completo (§G) ─────────────────────────────── */
 
