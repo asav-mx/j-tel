@@ -36,6 +36,8 @@ import { armarParadas, haciaDonde } from "@/lib/ontoy/paradas-de-la-ruta";
 import { rutasFavoritas } from "@/lib/ontoy/favoritas";
 import { paradaAsomada, porQueEnPalabras } from "@/lib/ontoy/parada-asomada";
 import { laMasCercanaDeTi } from "@/lib/ontoy/hoja-de-cami";
+import { vivoAlDia } from "@/lib/ontoy/vivo-al-dia";
+import { useAhoraMientras } from "@/lib/ontoy/ahora";
 import { gruposPorSentido } from "@/lib/ontoy/grupos-por-sentido";
 import { ordenarRutas } from "@/lib/ontoy/rutas-cerca";
 import { armarLaTira } from "@/lib/ontoy/tira-de-rutas";
@@ -338,8 +340,23 @@ export function Ontoy({
   const estadosALaVista = enVivo.estadosDeEnsayo ?? estados;
   const f = useForma(consultada);
   const forma = f.forma;
-  const vivo = consultada ? (enVivo.vivos.get(consultada) ?? null) : null;
   const error = enVivo.error || f.error;
+  /*
+   * **Sin señal, lo último que se supo, visto desde ahorita** (a1, 25-sep):
+   * la edad sigue con el reloj y ninguna unidad es fresca. Se hace aquí, en
+   * la fuente, para que Cami, su hoja, la vista «Paradas» y la hoja de parada
+   * lo hereden juntos. Inicio hace lo mismo con su lectura (#610).
+   */
+  const ahora = useAhoraMientras(enVivo.error);
+  /* Todas las rutas, no sólo la consultada: el mapa de la ciudad dibuja los Cami de todas las prendidas. */
+  const vivosAlDia = useMemo(
+    () =>
+      enVivo.error
+        ? new Map([...enVivo.vivos].map(([k, v]) => [k, vivoAlDia(v, true, enVivo.recibidoEn, ahora)]))
+        : enVivo.vivos,
+    [enVivo.vivos, enVivo.error, enVivo.recibidoEn, ahora],
+  );
+  const vivo = consultada ? (vivosAlDia.get(consultada) ?? null) : null;
   const reintentar = enVivo.reintentar;
   const { velocidad, trazadoPorSentido } = useVelocidadDelCorredor(forma, vivo);
 
@@ -501,7 +518,7 @@ export function Ontoy({
       tira: filtro.tira,
       prendidas: filtro.prendidas,
       cuantasMas: filtro.resto.length,
-      vivos: enVivo.vivos,
+      vivos: vivosAlDia,
       guardadas: paradasGuardadasEnElMapa,
       paradas: paradasDeLaCiudad,
       verParadas,
@@ -512,7 +529,7 @@ export function Ontoy({
       alTocarParadaDeLaCiudad: tocarParadaDeLaCiudad,
       alBuscar: () => irA("ira"),
     }),
-    [filtro, enVivo.vivos, paradasGuardadasEnElMapa, paradasDeLaCiudad, verParadas, alternarRuta, abrirRuta, tocarParadaDeLaCiudad, irA],
+    [filtro, vivosAlDia, paradasGuardadasEnElMapa, paradasDeLaCiudad, verParadas, alternarRuta, abrirRuta, tocarParadaDeLaCiudad, irA],
   );
 
   /* Las paradas de la ruta abierta: se arma en `lib/ontoy/paradas-de-la-ruta.ts`, aquí sólo se pide. */
@@ -595,9 +612,15 @@ export function Ontoy({
    */
   const llegadasEnSentido = useCallback((sentidoPedido: Sentido): LlegadaEnLaHoja[] => {
     if (!forma || !parada) return [];
-    if (error) {
-      return [{ rotulo: "No pudimos preguntar", apoyo: "lo que ves es lo último que supimos", vieja: true }];
-    }
+    const noPudimos: LlegadaEnLaHoja = { rotulo: "No pudimos preguntar", apoyo: "lo que ves es lo último que supimos", vieja: true };
+    /*
+     * Sin señal y sin nada que ya se supiera, sólo eso. Con algo que ya se
+     * sabía, se sigue abajo: `vivo` ya viene al día (`vivoAlDia`), sin
+     * unidades frescas, así que las filas salen en pasado y con su edad
+     * creciendo — «iba 2 paradas · la 2120 · posición de hace 6 min», como la
+     * lámina 2-mapa/08.
+     */
+    if (error && !vivo) return [noPudimos];
     if (!vivo) return [{ rotulo: "Preguntando…", apoyo: "un momento", vieja: true }];
     if (vivo.estado === "por_arrancar") {
       return [
@@ -616,10 +639,13 @@ export function Ontoy({
     if (abscisa === null) {
       return [{ rotulo: "Sin dato en este sentido", apoyo: "esta parada no cae en el trazado de ida y vuelta", vieja: true }];
     }
-    const lista = llegadasHasta(
-      { avanceMetros: abscisa, sentido: sentidoPedido },
-      { forma, vivo, velocidadKmh: velocidad.kmh, trazadoPorSentido },
-    );
+    /* Sin señal no hay rango: sería una predicción sacada de una posición de hace rato. */
+    const lista = error
+      ? []
+      : llegadasHasta(
+          { avanceMetros: abscisa, sentido: sentidoPedido },
+          { forma, vivo, velocidadKmh: velocidad.kmh, trazadoPorSentido },
+        );
     const enMinutos: LlegadaEnLaHoja[] = lista.slice(0, 3).map((l, i) => ({
       rotulo: rangoEnPalabras(l.rango),
       apoyo: `viene la ${l.unidad} · ${haceNMinutos(l.antiguedadSeg)}`,
@@ -673,6 +699,8 @@ export function Ontoy({
         vieja: i > 0,
       }));
     const todas = [...frescas, ...viejas].slice(0, 3);
+    /* Sin señal y sin ninguna unidad que contar: no sabemos, no «no hay». */
+    if (todas.length === 0 && error) return [noPudimos];
     if (todas.length === 0) {
       return [{ rotulo: "Sin unidad a la vista", apoyo: "ahorita no hay ninguna que se pueda medir", vieja: true }];
     }

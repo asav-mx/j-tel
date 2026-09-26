@@ -14,7 +14,7 @@ import { useForma } from "@/lib/ontoy/ruta-en-vivo";
 import type { Vivo } from "@/lib/ontoy/forma";
 import { avanceSobreTrazado } from "@jtel/domain";
 import { Ontoy } from "@/components/ontoy/ontoy-muneco";
-import { useEffect, useState } from "react";
+import { useAhoraMientras } from "@/lib/ontoy/ahora";
 import {
   dichoDeOntoy,
   dichoDelRenglon,
@@ -243,16 +243,4 @@ export function RenglonDeParada(props: PropsDeLaGuardada) {
       </svg>
     </button>
   );
-}
-
-/** La hora del teléfono, al día cada 15 s mientras `activo`; quieta si no. */
-function useAhoraMientras(activo: boolean): number {
-  const [ahora, setAhora] = useState(() => Date.now());
-  useEffect(() => {
-    if (!activo) return;
-    setAhora(Date.now());
-    const id = setInterval(() => setAhora(Date.now()), 15_000);
-    return () => clearInterval(id);
-  }, [activo]);
-  return ahora;
 }
