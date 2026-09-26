@@ -36,7 +36,7 @@ import { armarParadas, haciaDonde } from "@/lib/ontoy/paradas-de-la-ruta";
 import { rutasFavoritas } from "@/lib/ontoy/favoritas";
 import { paradaAsomada, porQueEnPalabras } from "@/lib/ontoy/parada-asomada";
 import { laMasCercanaDeTi } from "@/lib/ontoy/hoja-de-cami";
-import { horarioEnPalabras } from "@/lib/ontoy/horario-en-palabras";
+import { horaSinCero, horarioEnPalabras } from "@/lib/ontoy/horario-en-palabras";
 import { vivoAlDia } from "@/lib/ontoy/vivo-al-dia";
 import { useAhoraMientras } from "@/lib/ontoy/ahora";
 import { gruposPorSentido } from "@/lib/ontoy/grupos-por-sentido";
@@ -650,7 +650,7 @@ export function Ontoy({
       ];
     }
     if (vivo.estado === "fuera_de_horario") {
-      return [{ rotulo: "Fuera de horario", apoyo: `abre ${vivo.abre_a}`, vieja: true }];
+      return [{ rotulo: "Fuera de horario", apoyo: `abre ${horaSinCero(vivo.abre_a)}`, vieja: true }];
     }
 
     const abscisa = dondeCaeLaParada(parada, trazadoPorSentido.get(sentidoPedido), forma.corredor_m);
@@ -1020,7 +1020,7 @@ function avisoDeLaEscalera(
     const cuando = arranqueLargo(vivo.arranca_el ?? "");
     return cuando ? `Arranca el ${cuando}` : "Todavía no arranca";
   }
-  if (vivo.estado === "fuera_de_horario") return `Fuera de horario · abre ${vivo.abre_a}`;
+  if (vivo.estado === "fuera_de_horario") return `Fuera de horario · abre ${horaSinCero(vivo.abre_a)}`;
   return null;
 }
 

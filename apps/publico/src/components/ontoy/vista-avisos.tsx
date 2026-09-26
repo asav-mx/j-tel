@@ -5,6 +5,7 @@ import { etiquetaCortaDeLaRuta } from "@jtel/domain";
 import { deQuienSonLosAvisos, fechaDelAviso, type AvisoEnLaCampana } from "@/lib/ontoy/avisos";
 import type { AvisoDelTelefono } from "@/lib/ontoy/avisos-del-telefono";
 import { Ontoy } from "@/components/ontoy/ontoy-muneco";
+import { horaSinCero } from "@/lib/ontoy/horario-en-palabras";
 
 /**
  * **El número de la ruta, si lo trae** («51», «T1»), para su placa; `null` si
@@ -65,7 +66,7 @@ export function VistaAvisos({
   const [vistosAlAbrir] = useState(vistos);
   const ahora = new Date();
   const hora = (iso: string) =>
-    new Intl.DateTimeFormat("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso));
+    horaSinCero(new Intl.DateTimeFormat("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso)));
   const minutos = (a: AvisoDelTelefono) =>
     Math.max(1, Math.round(((a.hasta ? new Date(a.hasta) : ahora).getTime() - new Date(a.desde).getTime()) / 60_000));
 

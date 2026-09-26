@@ -1,4 +1,5 @@
 import type { EstadoDeRuta } from "./estado-de-ruta";
+import { horaSinCero } from "@/lib/ontoy/horario-en-palabras";
 
 /**
  * **La ciudad cerrada** — cuando ninguna ruta publicada está operando ahorita.
@@ -57,5 +58,7 @@ export function ciudadCerrada(estados: EstadoDeRuta[]): CiudadCerrada | null {
  * puede mentir**, no el cálculo.
  */
 export function vuelvenEnPalabras(c: CiudadCerrada): string {
-  return c.todasIgual ? `Vuelven a las ${c.abre}.` : `La primera vuelve a las ${c.abre}.`;
+  /* La hora se ordena como HH:MM y se dice sin cero, como la lámina: «5:30». */
+  const hora = horaSinCero(c.abre);
+  return c.todasIgual ? `Vuelven a las ${hora}.` : `La primera vuelve a las ${hora}.`;
 }

@@ -20,7 +20,7 @@ describe("cuándo la ciudad está cerrada", () => {
   it("con todas cerradas y la misma hora, lo dice de todas", () => {
     const c = ciudadCerrada([r("a", "cerrado"), r("b", "cerrado")]);
     expect(c).toEqual({ abre: "05:30", todasIgual: true });
-    expect(vuelvenEnPalabras(c!)).toBe("Vuelven a las 05:30.");
+    expect(vuelvenEnPalabras(c!)).toBe("Vuelven a las 5:30.");
   });
 
   it("con horas distintas NO dice la primera como si fuera de todas", () => {
@@ -31,7 +31,7 @@ describe("cuándo la ciudad está cerrada", () => {
      */
     const c = ciudadCerrada([r("a", "cerrado", "05:30:00"), r("b", "cerrado", "09:53:00")]);
     expect(c).toEqual({ abre: "05:30", todasIgual: false });
-    expect(vuelvenEnPalabras(c!)).toBe("La primera vuelve a las 05:30.");
+    expect(vuelvenEnPalabras(c!)).toBe("La primera vuelve a las 5:30.");
   });
 
   it("con una abierta, la ciudad NO está cerrada", () => {
@@ -58,5 +58,12 @@ describe("cuándo la ciudad está cerrada", () => {
 
   it("una hora ilegible no inventa una: sin hora que decir, no se dice", () => {
     expect(ciudadCerrada([r("a", "cerrado", "")])).toBeNull();
+  });
+});
+
+describe("la noche de la ciudad dice la hora sin cero", () => {
+  it("«Vuelven a las 5:30», no «05:30»", () => {
+    expect(vuelvenEnPalabras({ abre: "05:30", todasIgual: true })).toBe("Vuelven a las 5:30.");
+    expect(vuelvenEnPalabras({ abre: "01:00", todasIgual: false })).toBe("La primera vuelve a las 1:00.");
   });
 });

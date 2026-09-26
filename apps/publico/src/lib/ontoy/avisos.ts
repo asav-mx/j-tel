@@ -1,4 +1,5 @@
 import type { Vivo } from "./forma";
+import { horaSinCero } from "@/lib/ontoy/horario-en-palabras";
 
 /**
  * Los avisos de la concesión en la campana (8.13b; Ontoy 2.0, PR 4b).
@@ -61,7 +62,8 @@ export function hayAvisosNuevos(avisos: AvisoEnLaCampana[], vistos: Set<string>)
 export function fechaDelAviso(iso: string, zona: string, ahora: Date): string {
   const d = new Date(iso);
   const dia = (x: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: zona }).format(x);
-  const hora = new Intl.DateTimeFormat("es-MX", { timeZone: zona, hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
+  /* Sin cero a la izquierda, como la lámina 3/06: «Hoy 9:10». */
+  const hora = horaSinCero(new Intl.DateTimeFormat("es-MX", { timeZone: zona, hour: "2-digit", minute: "2-digit", hour12: false }).format(d));
   if (dia(d) === dia(ahora)) return `Hoy ${hora}`;
   if (dia(d) === dia(new Date(ahora.getTime() - 86_400_000))) return `Ayer ${hora}`;
   const fecha = new Intl.DateTimeFormat("es-MX", { timeZone: zona, day: "numeric", month: "short" }).format(d).replace(".", "");

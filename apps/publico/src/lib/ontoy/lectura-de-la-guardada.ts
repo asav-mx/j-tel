@@ -3,6 +3,7 @@ import { arranqueCorto, arranqueLargo } from "@/lib/fecha-arranque";
 import { paradasEnPalabras, rangoEnPalabras, type LlegadaCalculada, type ParadasDeUnaUnidad } from "@/lib/ontoy/llegadas";
 import type { Vivo } from "@/lib/ontoy/forma";
 import type { PoseDeOntoy } from "@/components/ontoy/ontoy-muneco";
+import { horaSinCero } from "@/lib/ontoy/horario-en-palabras";
 
 /**
  * **Lo que Inicio dice de una parada guardada**, sin React: qué lectura toca y
@@ -108,7 +109,7 @@ export function dichoDeOntoy(
       return { pose: "al-frente", dicho: cuando ? `Pronto salimos: ${cuando}` : "Pronto salimos", apoyo: null };
     }
     case "fuera":
-      return { pose: "dormido", dicho: `Vuelven a las ${l.abreA}`, apoyo: "Fuera de horario. Todavía no sale ninguna unidad." };
+      return { pose: "dormido", dicho: `Vuelven a las ${horaSinCero(l.abreA)}`, apoyo: "Fuera de horario. Todavía no sale ninguna unidad." };
     case "vieja":
       return {
         pose: "dormido",
@@ -142,7 +143,7 @@ export function dichoDelRenglon(l: Lectura): { grande: string | null; chico: str
       return { grande: null, chico: cuando ? `arranca el ${cuando}` : "todavía no arranca" };
     }
     case "fuera":
-      return { grande: null, chico: `abre a las ${l.abreA}` };
+      return { grande: null, chico: `abre a las ${horaSinCero(l.abreA)}` };
     case "sin-unidad":
       return { grande: null, chico: "sin unidad a la vista" };
     case "sin-red":

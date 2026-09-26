@@ -9,6 +9,7 @@ import { distanciaParaDecir, esImprecisa, margenEnPalabras } from "@/lib/ontoy/d
 import { ordenarRutas, RUTAS_A_LA_VISTA } from "@/lib/ontoy/rutas-cerca";
 import type { Ubicacion } from "@/lib/ubicacion";
 import { arranqueCorto } from "@/lib/fecha-arranque";
+import { horaSinCero } from "@/lib/ontoy/horario-en-palabras";
 
 /**
  * **Las rutas, en Inicio** (8.8; ASAV, 22-sep y 25-sep).
@@ -180,7 +181,7 @@ export function RutasDeInicio({
                       ? `Arranca el ${cuando}`
                       : "Todavía no arranca"
                     : e?.situacion === "cerrado"
-                      ? `Fuera de horario · abre ${e.abre_a}`
+                      ? `Fuera de horario · abre ${horaSinCero(e.abre_a)}`
                       : promesaFirmada(r.promesa, null)}
                 </span>
               </span>

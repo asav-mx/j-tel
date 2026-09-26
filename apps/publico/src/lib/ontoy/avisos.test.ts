@@ -45,7 +45,7 @@ describe("los avisos en la campana", () => {
 
   it("la fecha va en la hora de la ruta: hoy, ayer, o el día", () => {
     const ahora = new Date("2026-09-22T18:00:00Z"); // 12:00 en Juárez
-    expect(fechaDelAviso("2026-09-22T12:32:00Z", ZONA, ahora)).toBe("Hoy 06:32");
+    expect(fechaDelAviso("2026-09-22T12:32:00Z", ZONA, ahora)).toBe("Hoy 6:32");
     expect(fechaDelAviso("2026-09-21T20:20:00Z", ZONA, ahora)).toBe("Ayer 14:20");
     expect(fechaDelAviso("2026-09-15T20:20:00Z", ZONA, ahora)).toMatch(/^15 sep, 14:20$/);
   });
