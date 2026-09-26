@@ -738,15 +738,24 @@
 .ontoy-tino-icono.abierta .ontoy-tino svg {
   transform: scale(1.25);
 }
+/*
+ * La estrella de tu parada guardada: `g-estrella-si`, arriba a la derecha de
+ * Páris. Ya no es un «★» de texto —dependía de la fuente del teléfono—, así que
+ * el contorno que la despegaba del mapa pasa de `text-stroke` a una sombra
+ * del color del fondo, que hace lo mismo con un dibujo.
+ */
 .ontoy-tino-estrella {
   position: absolute;
-  top: -2px;
-  right: -4px;
-  font-size: 12px;
-  line-height: 1;
-  color: var(--maiz);
-  -webkit-text-stroke: 2px var(--fondo);
-  paint-order: stroke;
+  /*
+   * **Sobre la cabeza de Páris, no en la esquina de la caja de toque.** La caja
+   * mide 44 × 44 y Páris 32 × 32 al centro: su cabeza (centro 60,38 radio 26
+   * en su retícula de 120) cae en 22,16 de la caja. La estrella de 16 px va
+   * centrada en su orilla de arriba a la derecha, como una insignia. Con
+   * `top/right` negativos quedaba en la esquina de la caja, flotando lejos.
+   */
+  top: 0;
+  left: 21px;
+  filter: drop-shadow(0 0 1.5px var(--fondo)) drop-shadow(0 0 1px var(--fondo));
 }
 
 /* ── la hoja de una parada (8.10: siempre hay salida) ───────────────── */
@@ -1829,8 +1838,14 @@
   flex: none;
   display: block;
 }
+.ontoy-hoja-tino .ontoy-tino-estrella {
+  /* En la hoja la caja mide 44 × 56 y Páris cae 6 px más abajo. */
+  top: 6px;
+}
 .ontoy-hoja-tino .ontoy-tino {
-  position: static;
+  /* `relative` para que la estrella de una guardada se ubique contra Páris y
+     no contra otro ancestro de la hoja. No mueve nada: sin desplazamientos. */
+  position: relative;
   width: 44px;
   height: 56px;
   display: grid;

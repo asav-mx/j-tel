@@ -351,7 +351,8 @@ export function HojaDeParada({
                 color,
                 mirada: porArrancar ? "dormido" : llegadas.some((l) => l.enVivo) ? "de-lado" : "al-frente",
                 guardada,
-                sonrie: !!delLetrero,
+                /* El letrero la pide; si no, sonríe si es tuya (lo decide `guardada`). */
+                sonrie: delLetrero ? true : undefined,
               }),
             }}
           />

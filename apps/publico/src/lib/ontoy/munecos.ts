@@ -104,6 +104,20 @@ export function camiDesdeArriba(u: CamiEnElMapa): string {
 </span>`;
 }
 
+/**
+ * `g-estrella-si` —la estrella maíz que sonríe— en cadena, para ponerla en la
+ * esquina del muñeco. Copiada de `docs/diseno/app-v1/simbolos/g-estrella-si.svg`
+ * sin sus metadatos; es la misma que el botón «Guardada» (`GlifoEstrellaSi`).
+ * Antes era un «★» de texto: dependía de la fuente del teléfono para verse, y
+ * no era la estrella del diseño.
+ */
+const ESTRELLA_SI = `<svg class="ontoy-tino-estrella" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+    <path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z" fill="#F2C14E" stroke="#F2C14E" stroke-width="1.2" stroke-linejoin="round"/>
+    <circle cx="10" cy="11.2" r="1.6" fill="#fff"/><circle cx="14" cy="11.2" r="1.6" fill="#fff"/>
+    <circle cx="10" cy="11.2" r="0.85" fill="#2A2E37"/><circle cx="14" cy="11.2" r="0.85" fill="#2A2E37"/>
+    <path d="M10.7 13.9q1.3 1.1 2.6 0" fill="none" stroke="#2A2E37" stroke-width="1.1" stroke-linecap="round"/>
+  </svg>`;
+
 /** Cómo mira Tino. La mirada es señal, no adorno (handoff §1c). */
 export type MiradaDeTino =
   /** Al frente: te habla a ti. Sin dato que decir. */
@@ -129,7 +143,11 @@ export type MiradaDeTino =
 export function tinoEnLaParada(entrada: {
   color: string;
   mirada: MiradaDeTino;
-  /** Una parada guardada lleva su estrella, como en la lista. */
+  /**
+   * **Tu parada guardada: Páris sonriendo, con su estrella** (ASAV, 25-sep).
+   * La estrella es la del diseño —`g-estrella-si`, maíz y sonriente—, no un
+   * carácter de texto; y guardada implica sonrisa, salvo que la ruta duerma.
+   */
   guardada?: boolean;
   /**
    * **Páris sonríe.** No es una mirada —los ojos siguen diciendo lo suyo—: es
@@ -139,7 +157,14 @@ export function tinoEnLaParada(entrada: {
    */
   sonrie?: boolean;
 }): string {
-  const { color, mirada, guardada = false, sonrie = false } = entrada;
+  const { color, mirada, guardada = false } = entrada;
+  /*
+   * Guardada ⇒ sonríe: «tu parada guardada = Páris sonriendo con estrella».
+   * **Salvo dormido**: con la ruta cerrada, Páris duerme, y una sonrisa encima
+   * de unos ojos cerrados diría «todo bien» justo cuando no pasa ningún camión.
+   * Lo cerrado manda; la estrella sí se queda, porque sigue siendo tuya.
+   */
+  const sonrie = mirada !== "dormido" && (entrada.sonrie ?? guardada);
   /* Las pupilas se corren para mirar de lado; cerrados son dos rayas. */
   const ojos =
     mirada === "dormido"
@@ -157,7 +182,7 @@ export function tinoEnLaParada(entrada: {
     ${ojos}
     ${sonrie ? `<path d="M52 47 q8 7 16 0" fill="none" stroke="${CARBON}" stroke-width="3" stroke-linecap="round"/>` : ""}
   </svg>
-  ${guardada ? '<span class="ontoy-tino-estrella" aria-hidden="true">★</span>' : ""}
+  ${guardada ? ESTRELLA_SI : ""}
 </span>`;
 }
 

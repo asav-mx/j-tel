@@ -443,6 +443,11 @@ export function Ontoy({
   }, [bajarALasRutas, lugar]);
 
   const rutaEnfocada = rutas.find((r) => r.circuito_id === enfocada) ?? null;
+  /* Tus guardadas de la ruta abierta, para que en su mapa sonrían con su estrella. */
+  const guardadasDeLaRuta = useMemo(
+    () => new Set(guardadas.guardadas.filter((g) => g.ruta === enfocada).map((g) => g.parada)),
+    [guardadas.guardadas, enfocada],
+  );
   /**
    * **La ruta de la hoja abierta** — la consultada, que en la ciudad es la de la
    * parada tocada y no la que el mapa tiene resaltada. Usar `rutaEnfocada` aquí
@@ -789,6 +794,7 @@ export function Ontoy({
             ) : (
           <VistaMapa
               rutaAbierta
+              paradasGuardadas={guardadasDeLaRuta}
               yo={yo}
               alTocarCami={setCamiTocado}
             rutas={rutas}
