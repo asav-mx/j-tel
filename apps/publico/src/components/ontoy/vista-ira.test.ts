@@ -48,3 +48,10 @@ describe("antes de escribir (3-ir-a/02)", () => {
     expect(visible).toMatch(/\{escribio \? \([\s\S]*?\) : \(\s*<AntesDeEscribir/);
   });
 });
+
+describe("Ir a entra con el cursor en el buscador (estándar §C)", () => {
+  it("el campo tiene foco al entrar", () => {
+    const fuente = readFileSync(new URL("./vista-ira.tsx", import.meta.url), "utf8");
+    expect(fuente).toMatch(/<input\s+autoFocus\s+type="search"/);
+  });
+});

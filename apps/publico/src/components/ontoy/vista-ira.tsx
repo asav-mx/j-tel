@@ -125,7 +125,15 @@ export function VistaIrA({
       <section className="ontoy-seccion">
         <div className="ontoy-ira-campo">
           <GlifoIra tamano={28} className="ontoy-ira-glifo" />
+          {/*
+            * **Con foco al entrar** (estándar §C: «Buscador grande, con foco al
+            * entrar»). Ir a es sólo un buscador: quien toca la pestaña viene a
+            * escribir. Antes el foco se quedaba en la pestaña de la barra y lo
+            * tecleado no llegaba a ningún lado (auditoría del 25-sep). La vista
+            * se monta cada vez que se entra, así que `autoFocus` basta.
+            */}
           <input
+            autoFocus
             type="search"
             value={consulta}
             onChange={(e) => setConsulta(e.target.value)}
