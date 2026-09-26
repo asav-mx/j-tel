@@ -36,6 +36,7 @@ import { armarParadas, haciaDonde } from "@/lib/ontoy/paradas-de-la-ruta";
 import { rutasFavoritas } from "@/lib/ontoy/favoritas";
 import { paradaAsomada, porQueEnPalabras } from "@/lib/ontoy/parada-asomada";
 import { laMasCercanaDeTi } from "@/lib/ontoy/hoja-de-cami";
+import { horarioEnPalabras } from "@/lib/ontoy/horario-en-palabras";
 import { vivoAlDia } from "@/lib/ontoy/vivo-al-dia";
 import { useAhoraMientras } from "@/lib/ontoy/ahora";
 import { gruposPorSentido } from "@/lib/ontoy/grupos-por-sentido";
@@ -970,6 +971,7 @@ export function Ontoy({
           promesa={promesaEnPalabras(vivo?.promesa ?? null, sentidoDeLaHoja) ?? ""}
           /* Sólo lo declarado lleva firma: ver el porqué en la prop. */
           promesaDeclarada={vivo?.promesa?.estado === "declarada"}
+          horario={forma ? horarioEnPalabras(forma.horario.inicio, forma.horario.fin) : null}
           guardada={guardadas.estaGuardada(parada.id)}
           sePuedeGuardar={guardadas.disponible}
           color={rutaDeLaHoja.color_hex}

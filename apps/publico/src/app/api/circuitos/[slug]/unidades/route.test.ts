@@ -233,6 +233,27 @@ describe("fuera del corredor", () => {
   });
 });
 
+describe("el último minuto del día, con el reloj FIJO (auditoría a1, 26-sep)", () => {
+  /*
+   * «dato viejo» (abajo) usa la hora real, y falló en CI una sola vez: corrió a
+   * las 23:59 de Juárez, cuando la franja «todo el día» (00:00–23:59:59) no
+   * cubría ese minuto y la promesa salía \`sin_franja\`. El arreglo vive en el
+   * dominio (\`hastaParaLeer\`); aquí se clava el reloj en ese minuto para que
+   * el endpoint lo compruebe siempre, y no sólo la noche que CI tenga suerte.
+   */
+  it("a las 23:59:30 la franja de todo el día sigue prometiendo", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-26T05:59:30Z")); // 23:59:30 en Juárez
+    try {
+      repos.circuits.getPublishedCircuitBySlug.mockResolvedValue(CIRCUITO);
+      const cuerpo = await (await GET(pedir(), ctx("oasis-centro"))).json();
+      expect(cuerpo.promesa).toEqual({ estado: "declarada", ida: 20, vuelta: 20 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("dato viejo", () => {
   it("pasada la VENTANA DE CONFIANZA no se publica, ni queda rastro de ella", async () => {
     repos.circuits.getPublishedCircuitBySlug.mockResolvedValue(CIRCUITO);

@@ -95,6 +95,7 @@ export function HojaDeParada({
   cerrada = false,
   promesa,
   promesaDeclarada = false,
+  horario = null,
   guardada,
   sePuedeGuardar,
   color,
@@ -134,6 +135,12 @@ export function HojaDeParada({
    * invertida.
    */
   promesaDeclarada?: boolean;
+  /**
+   * El horario de servicio en palabras —«Hoy de 5:30 a 22:30»—, o `null`. Va
+   * **sólo en la hoja completa**, como la lámina 2-mapa/03: la media enseña la
+   * frecuencia y nada más (2-mapa/02). Lo declara la concesión: lleva su firma.
+   */
+  horario?: string | null;
   guardada: boolean;
   /** `false` cuando el navegador no deja guardar. Se dice, no se esconde el botón. */
   sePuedeGuardar: boolean;
@@ -438,6 +445,12 @@ export function HojaDeParada({
           <span>{promesa}</span>
           {promesaDeclarada && <span className="ontoy-hoja-firma">según la concesión</span>}
         </p>
+        {altura === "completa" && horario && (
+          <p className="ontoy-hoja-promesa ontoy-hoja-horario">
+            <span>{horario}</span>
+            <span className="ontoy-hoja-firma">según la concesión</span>
+          </p>
+        )}
           </>
         )}
         {/*
