@@ -920,7 +920,14 @@ export function Ontoy({
         * **La hoja vive encima del mapa, en la ciudad y en una ruta abierta.**
         * Su ruta es la CONSULTADA (`rutaDeLaHoja`), no la resaltada.
         */}
-      {!campanaAbierta && enElMapa && parada && rutaDeLaHoja && (
+      {/*
+        * **Con «Más rutas» abierto, la hoja no se pinta** (auditoría a1, 25-sep).
+        * Los dos viven en `z-index: 901` y la hoja iba después en el DOM, así
+        * que la asomada tapaba la mitad del panel: la lista que el pasajero
+        * acababa de pedir quedaba debajo de una parada que nadie tocó. El panel
+        * lleva su velo y se cierra con él; al cerrarlo, la hoja vuelve sola.
+        */}
+      {!campanaAbierta && !panelAbierto && enElMapa && parada && rutaDeLaHoja && (
         <HojaDeParada
           /*
            * La llave cambia con la parada Y con si es la asomada o la tocada:
