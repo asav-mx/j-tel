@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { RutaDeLaCiudad } from "@/lib/ontoy/forma";
 import type { ParadaDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
+import type { ParadaGuardada } from "@/lib/ontoy/paradas-guardadas";
 import {
   emparejarLugares,
   MAXIMO_SUGERENCIAS,
@@ -59,6 +60,7 @@ export function VistaIrA({
   alReintentar,
   alAbrirRuta,
   alVerTodasLasRutas,
+  guardadas,
 }: {
   rutas: RutaDeLaCiudad[];
   /** Las paradas públicas de la ciudad. Vacío mientras bajan. */
@@ -71,6 +73,8 @@ export function VistaIrA({
   alAbrirRuta: (circuitoId: string, parada?: string, sentido?: "ida" | "vuelta") => void;
   /** Lleva a la lista de rutas de Inicio: la salida de una búsqueda sin resultados. */
   alVerTodasLasRutas: () => void;
+  /** Tus paradas guardadas: lo que se ofrece antes de escribir (3-ir-a/02). */
+  guardadas: ParadaGuardada[];
 }) {
   const [consulta, setConsulta] = useState("");
 
@@ -148,9 +152,19 @@ export function VistaIrA({
           )}
         </div>
 
-        <p className="ontoy-ira-limite">
-          Busca por <b>nombre de parada o de ruta</b>. Todavía no entiende calle y número.
-        </p>
+        {/*
+          * **Antes de escribir** (3-ir-a/02): Ontoy dice qué escribir y debajo
+          * van tus paradas, para no tener que escribir la de siempre. El límite
+          * —nombres, no calle y número— lo dice Ontoy aquí, y la línea chica
+          * cuando ya se escribió.
+          */}
+        {escribio ? (
+          <p className="ontoy-ira-limite">
+            Busca por <b>nombre de parada o de ruta</b>. Todavía no entiende calle y número.
+          </p>
+        ) : (
+          <AntesDeEscribir guardadas={guardadas} rutas={rutas} paradas={paradas} alAbrirRuta={alAbrirRuta} />
+        )}
 
         {escribio &&
           (error && !paradasListas ? (
@@ -247,5 +261,68 @@ export function VistaIrA({
         <a href="/privacidad">Qué datos usa la app y para qué</a>.
       </p>
     </div>
+  );
+}
+
+/**
+ * **«Ir a» antes de escribir** (3-ir-a/02, ASAV 25-sep).
+ *
+ * Ontoy de frente dice qué escribir —el nombre, porque **las rutas no tienen
+ * número en la versión 1** y el diseño pide «el número de la ruta»—, y debajo
+ * «Tus paradas» en renglones compactos, como en Inicio: franja y nombre de la
+ * ruta, no una placa numerada. Tocar una la abre en su ruta, con esa parada.
+ *
+ * Es el Ontoy de la pantalla (uno), así que el asomado se esconde solo.
+ */
+function AntesDeEscribir({
+  guardadas,
+  rutas,
+  paradas,
+  alAbrirRuta,
+}: {
+  guardadas: ParadaGuardada[];
+  rutas: RutaDeLaCiudad[];
+  paradas: ParadaDeLaCiudad[];
+  alAbrirRuta: (circuitoId: string, parada?: string) => void;
+}) {
+  return (
+    <>
+      <div className="ontoy-ira-antes">
+        <Ontoy pose="al-frente" tamano={96} />
+        <p className="ontoy-ira-antes-frase">Escribe el nombre de tu parada o de la ruta.</p>
+      </div>
+
+      {guardadas.length > 0 && (
+        <section className="ontoy-ira-tus-paradas">
+          <h2 className="ontoy-ira-tus-paradas-titulo">Tus paradas</h2>
+          <div className="ontoy-renglones">
+            {guardadas.map((g) => {
+              const ruta = rutas.find((r) => r.circuito_id === g.ruta) ?? null;
+              const parada = paradas.find((p) => p.id === g.parada && p.ruta === g.ruta) ?? null;
+              return (
+                <button
+                  key={`${g.ruta}-${g.parada}`}
+                  type="button"
+                  className="ontoy-renglon"
+                  style={{ ["--ruta" as string]: ruta?.color_hex ?? "currentColor" }}
+                  onClick={() => alAbrirRuta(g.ruta, g.parada)}
+                >
+                  {/* El color es identidad y NUNCA va solo: el nombre de la ruta lo acompaña (8.8c). */}
+                  <span className="ontoy-franja-vertical" aria-hidden="true" />
+                  <span className="ontoy-renglon-texto">
+                    {/* Mientras baja la lista de la ciudad, el nombre todavía no se sabe: no se inventa. */}
+                    <span className="ontoy-renglon-titulo">{parada?.nombre ?? "Preguntando…"}</span>
+                    <span className="ontoy-renglon-sub">Ruta {ruta?.nombre ?? "—"}</span>
+                  </span>
+                  <svg className="ontoy-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+    </>
   );
 }

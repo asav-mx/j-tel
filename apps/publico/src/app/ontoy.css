@@ -1838,6 +1838,33 @@
  * Sin resultados: Ontoy triste, y la frase propone otra cosa enseguida. No hay
  * rojo ni alarma — es un «no lo encontré», no un error.
  */
+/* Antes de escribir (3-ir-a/02): Ontoy de frente y su frase grande al lado. */
+.ontoy-ira-antes {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+}
+.ontoy-ira-antes-frase {
+  margin: 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.ontoy-ira-tus-paradas {
+  margin-top: 26px;
+}
+.ontoy-ira-tus-paradas-titulo {
+  margin: 0 0 10px 4px;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--tenue);
+}
+
 .ontoy-ira-nada {
   display: flex;
   flex-direction: column;

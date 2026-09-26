@@ -688,6 +688,7 @@ export function Ontoy({
           alReintentar={listaDeLaCiudad.reintentar}
           alAbrirRuta={abrirRuta}
           alVerTodasLasRutas={verTodasLasRutas}
+          guardadas={guardadas.guardadas}
         />
       )}
 
