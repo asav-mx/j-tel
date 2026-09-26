@@ -1717,6 +1717,17 @@
 .ontoy-muneco-z.chica {
   font-size: 12px;
 }
+/*
+ * Las «z» salen en carbón del dibujo, y sobre una superficie oscura no se ven.
+ * En la tarjeta carbón (no se voltea) van en arena; en la noche de la ciudad
+ * siguen la piel, como la tarjeta: claras de noche, como en la lámina 1/05.
+ */
+.ontoy-proximo .ontoy-muneco-z {
+  fill: var(--arena-2);
+}
+.ontoy-noche-ciudad .ontoy-muneco-z {
+  fill: var(--tenue);
+}
 
 /* ── la hoja de parada, con el diseño del #562 ────────────────────────── */
 
@@ -1857,6 +1868,33 @@
  * Sin resultados: Ontoy triste, y la frase propone otra cosa enseguida. No hay
  * rojo ni alarma — es un «no lo encontré», no un error.
  */
+/* Antes de escribir (3-ir-a/02): Ontoy de frente y su frase grande al lado. */
+.ontoy-ira-antes {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+}
+.ontoy-ira-antes-frase {
+  margin: 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.ontoy-ira-tus-paradas {
+  margin-top: 26px;
+}
+.ontoy-ira-tus-paradas-titulo {
+  margin: 0 0 10px 4px;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--tenue);
+}
+
 .ontoy-ira-nada {
   display: flex;
   flex-direction: column;
@@ -2254,6 +2292,34 @@
   border-top: 1px solid var(--asfalto);
   font-size: 13px;
   color: var(--arena-2);
+}
+
+/*
+ * **La noche de la ciudad** (1-inicio/05): superficie de la interfaz, con los
+ * ROLES —no se queda en carbón como la del próximo camión—. De noche sale
+ * `#26365e` con su anillo, como en la lámina.
+ */
+.ontoy-noche-ciudad {
+  margin: 12px 18px 4px;
+  padding: 28px 22px 30px;
+  border-radius: 26px;
+  background: var(--panel);
+  box-shadow: 0 0 0 1px var(--linea);
+  color: var(--texto);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.ontoy-noche-ciudad-frase {
+  margin: 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
 }
 
 /* Los títulos de sección de Inicio, como el diseño: 800 20, en tipo oración. */

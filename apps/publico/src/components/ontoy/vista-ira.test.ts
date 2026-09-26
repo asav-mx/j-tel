@@ -35,3 +35,16 @@ describe("una búsqueda sin resultados no es un callejón (8.10)", () => {
     expect(visible).not.toMatch(/número de la ruta/);
   });
 });
+
+describe("antes de escribir (3-ir-a/02)", () => {
+  it("Ontoy dice qué escribir, y debajo van tus paradas", () => {
+    expect(visible).toContain("<AntesDeEscribir guardadas={guardadas}");
+    expect(visible).toContain("Escribe el nombre de tu parada o de la ruta.");
+    expect(visible).toContain("Tus paradas");
+    expect(raiz).toContain("guardadas={guardadas.guardadas}");
+  });
+
+  it("sólo cuando no se ha escrito nada: al escribir, manda la búsqueda", () => {
+    expect(visible).toMatch(/\{escribio \? \([\s\S]*?\) : \(\s*<AntesDeEscribir/);
+  });
+});
