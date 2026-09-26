@@ -92,9 +92,30 @@ describe("Tino en una parada", () => {
     expect(html).not.toMatch(/\d+\s*[′']/);
   });
 
-  it("una parada guardada lleva su estrella", () => {
-    expect(tinoEnLaParada({ color: "#4F7FD8", mirada: "al-frente", guardada: true })).toContain("★");
-    expect(tinoEnLaParada({ color: "#4F7FD8", mirada: "al-frente" })).not.toContain("★");
+  it("una parada guardada lleva LA estrella del diseño, no un carácter de texto", () => {
+    const g = tinoEnLaParada({ color: "#4F7FD8", mirada: "al-frente", guardada: true });
+    expect(g).toContain('class="ontoy-tino-estrella"');
+    expect(g).toContain("#F2C14E"); // maíz: g-estrella-si
+    expect(g).not.toContain("★");
+  });
+
+  it("tu parada guardada SONRÍE; una cualquiera no", () => {
+    const BOCA = 'd="M52 47 q8 7 16 0"';
+    expect(tinoEnLaParada({ color: "#4F7FD8", mirada: "al-frente", guardada: true })).toContain(BOCA);
+    expect(tinoEnLaParada({ color: "#4F7FD8", mirada: "de-lado", guardada: true })).toContain(BOCA);
+    expect(tinoEnLaParada({ color: "#4F7FD8", mirada: "al-frente" })).not.toContain(BOCA);
+  });
+
+  it("con la ruta cerrada duerme SIN sonrisa, pero con su estrella", () => {
+    /* Una sonrisa sobre ojos cerrados diría «todo bien» justo cuando no pasa
+       ningún camión. La estrella se queda: sigue siendo tuya. */
+    const d = tinoEnLaParada({ color: "#4F7FD8", mirada: "dormido", guardada: true });
+    expect(d).not.toContain('d="M52 47 q8 7 16 0"');
+    expect(d).toContain('class="ontoy-tino-estrella"');
+  });
+
+  it("el letrero puede pedir la sonrisa aunque la parada no esté guardada", () => {
+    expect(tinoEnLaParada({ color: "#4F7FD8", mirada: "al-frente", sonrie: true })).toContain('d="M52 47 q8 7 16 0"');
   });
 });
 

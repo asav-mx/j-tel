@@ -123,6 +123,7 @@ export function VistaMapa({
   centrarEn = null,
   yo = null,
   alTocarCami,
+  paradasGuardadas,
 }: {
   rutas: RutaDeLaCiudad[];
   enfocada: string | null;
@@ -165,6 +166,12 @@ export function VistaMapa({
    * su ruta, que es lo que el dato alcanza a sostener.
    */
   alTocarCami?: (u: UnidadViva) => void;
+  /**
+   * Las paradas guardadas de la ruta ABIERTA (sus `qr_slug`), para que en su
+   * mapa también se vean como tuyas: Páris sonriendo, con su estrella. En la
+   * ciudad no hace falta: ahí las guardadas tienen su propia capa.
+   */
+  paradasGuardadas?: ReadonlySet<string>;
 }) {
   const contenedor = useRef<HTMLDivElement | null>(null);
   const mapa = useRef<import("leaflet").Map | null>(null);
@@ -178,6 +185,9 @@ export function VistaMapa({
   const fondo = useRef<CapaDeFondo | null>(null);
   /** El encuadre se hace una vez por apertura del Mapa, no en cada filtro. */
   const yaEncuadro = useRef(false);
+  /* Clave estable del conjunto de guardadas: un `Set` nuevo en cada render no
+     debe redibujar todas las paradas. */
+  const clavesGuardadas = paradasGuardadas ? [...paradasGuardadas].sort().join(",") : "";
   const [listo, setListo] = useState(false);
   /**
    * **El acercamiento de ahorita.** De él depende si una parada se dibuja como
@@ -371,7 +381,13 @@ export function VistaMapa({
        * lejos, porque es la única de la que el pasajero está preguntando algo y
        * lo que marca es cuál está mirando.
        */
-      if (!abierta && !tinoEntero(zoom)) {
+      /*
+       * Tu guardada va entera a cualquier acercamiento, como en la ciudad: son
+       * pocas y son lo que el pasajero viene a buscar. De lejos, un punto más
+       * entre los demás se perdería justo cuando más falta hace encontrarla.
+       */
+      const guardada = !!paradasGuardadas?.has(p.id);
+      if (!abierta && !guardada && !tinoEntero(zoom)) {
         leaflet
           .circleMarker([p.lat, p.lon], {
             radius: 4.5,
@@ -387,7 +403,7 @@ export function VistaMapa({
 
       const icono = leaflet.divIcon({
         className: `ontoy-tino-icono${abierta ? " abierta" : ""}`,
-        html: tinoEnLaParada({ color: forma.color_hex, mirada }),
+        html: tinoEnLaParada({ color: forma.color_hex, mirada, guardada }),
         /*
          * 44 px de toque, como Cami. El ancla cae **abajo del centro** porque
          * Tino es un poste: lo que marca la parada es su base, no su cabeza.
@@ -401,7 +417,7 @@ export function VistaMapa({
         .on("click", () => alTocarParada(p.id))
         .addTo(capaParadas.current);
     }
-  }, [listo, forma, sentido, paradaAbierta, lienzo, alTocarParada, vivo, ciudad, zoom]);
+  }, [listo, forma, sentido, paradaAbierta, lienzo, alTocarParada, vivo, ciudad, zoom, clavesGuardadas]);
 
   // ── Las unidades: donde su último fix las dejó ─────────────────────────
   useEffect(() => {
@@ -581,8 +597,15 @@ export function VistaMapa({
     capaParadasCiudad.current.clearLayers();
     if (!ciudad.verParadas) return;
     const color = new Map(rutas.map((r) => [r.circuito_id, r.color_hex]));
+    /*
+     * **Las guardadas se saltan aquí**: las dibuja su propia capa, sonriendo y
+     * con su estrella. Antes salían DOS veces en el mismo punto —la normal y la
+     * guardada—, y según cuál quedara encima, la normal tapaba la estrella.
+     */
+    const suyas = new Set(ciudad.guardadas.map((g) => `${g.ruta}/${g.id}`));
     for (const p of ciudad.paradas) {
       if (!ciudad.prendidas.has(p.ruta)) continue;
+      if (suyas.has(`${p.ruta}/${p.id}`)) continue;
       /*
        * **Tino entero o punto, según el ACERCAMIENTO** (§9: «zoom lejos: Tino →
        * punto del color de la ruta»).
@@ -622,7 +645,12 @@ export function VistaMapa({
     }
   }, [listo, rutas, lienzo, prendidasClave, ciudad?.verParadas, ciudad?.paradas, !!ciudad, zoom]);
 
-  // Tus paradas guardadas, con su estrella en el nombre.
+  /*
+   * Tus paradas guardadas: Páris sonriendo, con su estrella (ASAV, 25-sep).
+   * Sin el cuadrito blanco con el nombre, igual que las demás desde el #592 —
+   * éste sobrevivió porque se escribía con plantilla (`★ ${nombre}`) y la
+   * limpieza buscaba la forma literal—.
+   */
   useEffect(() => {
     const leaflet = L.current;
     if (!listo || !leaflet || !capaParadas.current || !ciudad) return;
@@ -641,7 +669,6 @@ export function VistaMapa({
       });
       leaflet
         .marker([p.lat, p.lon], { icon: icono, keyboard: false })
-        .bindTooltip(`★ ${p.nombre}`, { direction: "top", opacity: 0.95 })
         .on("click", () => ciudad.alTocarParadaDeLaCiudad(p.ruta, p.id, p.sentido ?? null))
         .addTo(capaParadas.current);
     }
