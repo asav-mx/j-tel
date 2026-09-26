@@ -4,6 +4,7 @@ import {
   validarFranjas,
   promesaEnInstante,
   promesaAhora,
+  hastaParaLeer,
   proximaFronteraDeLoPublicado,
   explicarRechazoFranja,
   type FranjaCapturada,
@@ -247,5 +248,52 @@ describe("proximaFronteraDeLoPublicado — hasta cuándo vale lo que dice la lis
   it("justo en la frontera no se queda en ella: busca la siguiente", () => {
     const a09 = new Date("2026-09-21T15:00:00Z");
     expect(proximaFronteraDeLoPublicado(["09:00", "12:00"], a09, ZONA).toISOString()).toBe("2026-09-21T18:00:00.000Z");
+  });
+});
+
+describe("el último minuto del día (auditoría a1, 26-sep) — con el reloj FIJO", () => {
+  /*
+   * Estas pruebas no leen la hora del reloj: cada instante está escrito. La
+   * que destapó esto (\`unidades/route.test.ts\`) sí la leía, y fallaba sólo si
+   * CI corría entre las 23:59:00 y las 23:59:59 de Juárez.
+   */
+  const ZONA = "America/Ciudad_Juarez";
+  const todoElDia = (hastaLocal: string): FranjaCapturada[] =>
+    (["entre_semana", "sabado", "domingo"] as const).map((diaTipo) => ({
+      diaTipo,
+      sentido: null,
+      desdeLocal: "00:00:00",
+      hastaLocal,
+      frequencyMinutes: 20,
+    }));
+  // Sábado 26 sep 2026. Juárez es UTC-6: 05:59:30Z = 23:59:30 del viernes 25.
+  const lasOnceCincuentaYNueve = new Date("2026-09-26T05:59:30Z");
+  const medianoche = new Date("2026-09-26T06:00:05Z");
+  const lasOnceCincuentaYOcho = new Date("2026-09-26T05:58:59Z");
+
+  it("una franja 00:00–23:59:59 sí cubre las 23:59:30", () => {
+    expect(promesaAhora(todoElDia("23:59:59"), lasOnceCincuentaYNueve, ZONA)).toEqual({ estado: "declarada", ida: 20, vuelta: 20 });
+  });
+
+  it("y la que el editor guarda de verdad, 23:59:00, también", () => {
+    expect(promesaAhora(todoElDia("23:59:00"), lasOnceCincuentaYNueve, ZONA)).toEqual({ estado: "declarada", ida: 20, vuelta: 20 });
+  });
+
+  it("los minutos de al lado no cambian: 23:58 y 00:00", () => {
+    expect(promesaAhora(todoElDia("23:59:59"), lasOnceCincuentaYOcho, ZONA)).toMatchObject({ estado: "declarada" });
+    expect(promesaAhora(todoElDia("23:59:59"), medianoche, ZONA)).toMatchObject({ estado: "declarada" });
+  });
+
+  it("una franja que termina antes sigue terminando donde dice: [desde, hasta)", () => {
+    const hastaLasOnce = [franja({ desdeLocal: "06:00", hastaLocal: "23:00" })];
+    expect(promesaEnInstante(hastaLasOnce, { diaTipo: "entre_semana", horaLocal: "23:00", sentido: "ida" })).toEqual({ declarada: false });
+  });
+
+  it("hastaParaLeer: sólo 23:59 se vuelve fin del día", () => {
+    expect(hastaParaLeer("23:59:59")).toBe("24:00");
+    expect(hastaParaLeer("23:59:00")).toBe("24:00");
+    expect(hastaParaLeer("23:59")).toBe("24:00");
+    expect(hastaParaLeer("23:58:59")).toBe("23:58");
+    expect(hastaParaLeer("09:00:00")).toBe("09:00");
   });
 });

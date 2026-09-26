@@ -184,6 +184,29 @@ export type PromesaEnInstante =
  * Aquí sólo se busca, entre las franjas ya válidas de ese día, la que cubre
  * la hora pedida.
  */
+/**
+ * **Hasta dónde llega una franja, para LEERLA** — con el fin del día incluido.
+ *
+ * Las franjas son `[desde, hasta)` y se comparan en `HH:MM`. Eso deja fuera,
+ * sin querer, el último minuto del día: una franja capturada «todo el día»
+ * como 00:00–23:59 no cubría las 23:59, y durante ese minuto la app decía «Sin
+ * frecuencia publicada para esta hora» de una ruta que sí la publica
+ * (auditoría a1, 26-sep; lo destapó una prueba que corrió a las 23:59).
+ *
+ * **Un «hasta» de 23:59 —con cualquier segundo— se lee como fin del día.** No
+ * sólo 23:59:59: el editor de J-Staff captura con `<input type="time">`, que no
+ * puede escribir 24:00, así que «hasta el final del día» se guarda como 23:59
+ * (`23:59:00` en la base). Una franja que de verdad quisiera terminar a las
+ * 23:59 y no un minuto después no se puede distinguir de ésa, y la que se
+ * escribe es la de todo el día.
+ *
+ * Sólo para leer la promesa. Validar al capturar sigue comparando lo escrito.
+ */
+export function hastaParaLeer(hastaLocal: string): string {
+  const hasta = hastaLocal.slice(0, 5);
+  return hasta === "23:59" ? "24:00" : hasta;
+}
+
 export function promesaEnInstante(
   franjas: FranjaCapturada[],
   entrada: { diaTipo: TipoDeDiaCircuito; horaLocal: string; sentido: "ida" | "vuelta" },
@@ -194,7 +217,7 @@ export function promesaEnInstante(
       f.diaTipo === entrada.diaTipo &&
       (f.sentido === null || f.sentido === entrada.sentido) &&
       f.desdeLocal.slice(0, 5) <= hora &&
-      hora < f.hastaLocal.slice(0, 5),
+      hora < hastaParaLeer(f.hastaLocal),
   );
   if (!franja) return { declarada: false };
   return { declarada: true, frequencyMinutes: franja.frequencyMinutes, franja };
