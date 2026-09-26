@@ -457,6 +457,12 @@
   font-size: 12.5px;
   color: var(--tenue);
 }
+/* El horario va pegado a la frecuencia, sin su propia raya: son dos renglones de lo mismo (lámina 2-mapa/03). */
+.ontoy-hoja-promesa.ontoy-hoja-horario {
+  margin-top: 4px;
+  padding-top: 0;
+  border-top: 0;
+}
 /* En la hoja, la promesa y su firma van en los dos extremos del renglón. */
 .ontoy-hoja-promesa {
   display: flex;
