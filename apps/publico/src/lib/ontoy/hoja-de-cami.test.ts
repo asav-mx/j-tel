@@ -27,6 +27,12 @@ describe("laMasCercanaDeTi — sólo entre las que le faltan al camión", () => 
   it("una que ya pasó no cuenta, aunque esté más cerca", () => {
     expect(laMasCercanaDeTi([P("a", 1), P("b", 2)], coords, { lat: 31.7301, lon: -106.438 })).toBe("b");
   });
+  it("con 3 km de margen tampoco: no se puede afirmar cuál es (#613)", () => {
+    expect(laMasCercanaDeTi([P("a", 1), P("b", 2)], coords, { lat: 31.73, lon: -106.438, margenM: 3000 })).toBeNull();
+  });
+  it("con GPS normal sí", () => {
+    expect(laMasCercanaDeTi([P("a", 1), P("b", 2)], coords, { lat: 31.73, lon: -106.438, margenM: 20 })).toBe("b");
+  });
   it("sin ubicación no hay «más cerca»", () => {
     expect(laMasCercanaDeTi([P("a", 1)], coords, null)).toBeNull();
   });

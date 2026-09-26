@@ -1,4 +1,4 @@
-import { distanciaM } from "./distancia";
+import { distanciaM, esImprecisa } from "./distancia";
 import type { ParadaPorDelante } from "./llegadas";
 
 /**
@@ -35,13 +35,18 @@ export interface RenglonDeCami extends ParadaPorDelante {
  * Sin ubicación no hay «más cerca»: devuelve `null` y ningún renglón se
  * resalta. No se sustituye por tu parada guardada, porque «la más cerca de ti»
  * es una afirmación sobre dónde estás.
+ *
+ * **Con ubicación imprecisa, tampoco** (a1, 25-sep; la regla de `esImprecisa`).
+ * Con 3 km de margen, afirmar cuál de las próximas es LA más cerca es presentar
+ * el punto que dio el teléfono como dónde estás; la hoja asomada ya dejó de
+ * decirlo por lo mismo (#613).
  */
 export function laMasCercanaDeTi(
   proximas: ParadaPorDelante[],
   coordenadas: Array<{ id: string; lat: number; lon: number }>,
-  yo: { lat: number; lon: number } | null,
+  yo: { lat: number; lon: number; margenM?: number | null } | null,
 ): string | null {
-  if (!yo) return null;
+  if (!yo || esImprecisa(yo.margenM)) return null;
   let mejor: string | null = null;
   let d = Infinity;
   for (const p of proximas) {
