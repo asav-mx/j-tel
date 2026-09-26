@@ -58,6 +58,10 @@ it("loQueDiceOntoyAhora dice lo mismo que la app", () => {
 
 it("con ida y vuelta distintas cita la frase EXACTA de Ontoy, no una propia", () => {
   expect(loQueDiceOntoyAhora({ estado: "declarada", ida: 10, vuelta: 20 })).toBe(
-    "«Frecuencia · ida cada 10 min · vuelta cada 20 min».",
+    "«Pasa de ida cada 10 min · de vuelta cada 20 min».",
   );
+});
+
+it("con ida y vuelta iguales también cita la frase exacta de Ontoy", () => {
+  expect(loQueDiceOntoyAhora({ estado: "declarada", ida: 10, vuelta: 10 })).toBe("«Pasa cada 10 min», en los dos sentidos.");
 });

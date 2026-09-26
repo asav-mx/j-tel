@@ -284,6 +284,13 @@ export function proximaFronteraDeLoPublicado(horasLocales: string[], instante: D
  *   un promedio.
  *
  * `null` mientras no llega: no se dice nada que no se sabe.
+ *
+ * ✎ **26-sep-2026:** «Pasa cada 12 min», como la lámina 1/02 (antes «Frecuencia ·
+ * cada 12 min»). La lámina dibuja un rango («12–15»); aquí **no hay rango** porque
+ * el dato no lo tiene: la franja guarda UN número por sentido, y partir de un
+ * número para decir dos sería inventar (ASAV). Si algún día la captura permite
+ * declarar un rango, la frase lo dirá. La firma («· según la concesión») la pone
+ * cada pantalla del pasajero, sólo sobre lo declarado.
  */
 export function promesaEnPalabras(promesa: PromesaAhora | null, sentido: "ida" | "vuelta" | null): string | null {
   if (!promesa) return null;
@@ -292,8 +299,10 @@ export function promesaEnPalabras(promesa: PromesaAhora | null, sentido: "ida" |
   const cada = (n: number | null) => (n === null ? "sin frecuencia a esta hora" : `cada ${n} min`);
   if (sentido) {
     const n = promesa[sentido];
-    return n === null ? "Sin frecuencia publicada para esta hora" : `Frecuencia · cada ${n} min`;
+    return n === null ? "Sin frecuencia publicada para esta hora" : `Pasa cada ${n} min`;
   }
-  if (promesa.ida === promesa.vuelta) return `Frecuencia · cada ${promesa.ida} min`;
-  return `Frecuencia · ida ${cada(promesa.ida)} · vuelta ${cada(promesa.vuelta)}`;
+  /* Los dos vacíos no son «iguales»: antes esto decía «cada null min». */
+  if (promesa.ida === null && promesa.vuelta === null) return "Sin frecuencia publicada para esta hora";
+  if (promesa.ida === promesa.vuelta) return `Pasa cada ${promesa.ida} min`;
+  return `Pasa de ida ${cada(promesa.ida)} · de vuelta ${cada(promesa.vuelta)}`;
 }
