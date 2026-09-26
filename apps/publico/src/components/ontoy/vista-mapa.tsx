@@ -47,6 +47,8 @@ export interface ModoCiudad {
   /** Cuántas quedan fuera de la tira, para el chip de «+N rutas más». */
   cuantasMas: number;
   vivos: Map<string, Vivo>;
+  /** Las rutas fuera de horario ahorita: sus Páris duermen (lámina 2-mapa/13). */
+  cerradas: Set<string>;
   guardadas: Array<{ id: string; ruta: string; nombre: string; lat: number; lon: number; sentido: Sentido | null }>;
   /** Las paradas públicas de la ciudad; los puntitos salen de aquí. */
   paradas: ParadaDeLaCiudad[];
@@ -364,7 +366,9 @@ export function VistaMapa({
      * hay. Sin dato no se le pone cara de que viene algo.
      */
     const vieneAlguien = (vivo?.unidades ?? []).some((u) => u.sentido === sentido && u.fresco);
-    const mirada: MiradaDeTino = vieneAlguien ? "de-lado" : "al-frente";
+    /* Con la ruta fuera de horario, Páris duerme (lámina 2-mapa/13). */
+    const mirada: MiradaDeTino =
+      vivo?.estado === "fuera_de_horario" ? "dormido" : vieneAlguien ? "de-lado" : "al-frente";
 
     for (const p of forma.paradas) {
       if (p.sentido !== null && p.sentido !== sentido) continue;
@@ -622,7 +626,7 @@ export function VistaMapa({
       if (tinoEntero(zoom)) {
         const icono = leaflet.divIcon({
           className: "ontoy-tino-icono",
-          html: tinoEnLaParada({ color: c, mirada: "al-frente" }),
+          html: tinoEnLaParada({ color: c, mirada: ciudad.cerradas.has(p.ruta) ? "dormido" : "al-frente" }),
           iconSize: [44, 44],
           iconAnchor: [22, 36],
         });
@@ -643,7 +647,7 @@ export function VistaMapa({
           .addTo(capaParadasCiudad.current);
       }
     }
-  }, [listo, rutas, lienzo, prendidasClave, ciudad?.verParadas, ciudad?.paradas, !!ciudad, zoom]);
+  }, [listo, rutas, lienzo, prendidasClave, ciudad?.verParadas, ciudad?.paradas, ciudad?.cerradas, !!ciudad, zoom]);
 
   /*
    * Tus paradas guardadas: Páris sonriendo, con su estrella (ASAV, 25-sep).
@@ -663,7 +667,7 @@ export function VistaMapa({
        */
       const icono = leaflet.divIcon({
         className: "ontoy-tino-icono",
-        html: tinoEnLaParada({ color, mirada: "al-frente", guardada: true }),
+        html: tinoEnLaParada({ color, mirada: ciudad.cerradas.has(p.ruta) ? "dormido" : "al-frente", guardada: true }),
         iconSize: [44, 44],
         iconAnchor: [22, 36],
       });

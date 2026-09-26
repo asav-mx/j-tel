@@ -147,3 +147,22 @@ describe("el pasajero", () => {
     expect(html).not.toContain("--ruta");
   });
 });
+
+describe("Páris dormido lleva sus «z» (lámina 2-mapa/13)", () => {
+  it("dormido: ojos cerrados y zzz", () => {
+    expect(tinoEnLaParada({ color: "#1E6FD9", mirada: "dormido" })).toContain("ontoy-tino-z");
+  });
+  it("despierto: sin zzz", () => {
+    expect(tinoEnLaParada({ color: "#1E6FD9", mirada: "al-frente" })).not.toContain("ontoy-tino-z");
+    expect(tinoEnLaParada({ color: "#1E6FD9", mirada: "de-lado" })).not.toContain("ontoy-tino-z");
+  });
+  it("guardada y dormida: estrella sí, sonrisa no, zzz sí", () => {
+    const h = tinoEnLaParada({ color: "#1E6FD9", mirada: "dormido", guardada: true });
+    expect(h).toContain("ontoy-tino-z");
+    expect(h).toContain("ontoy-tino-estrella");
+  });
+  it("guardada y dormida: las «z» se van a la izquierda para no quedar bajo la estrella", () => {
+    expect(tinoEnLaParada({ color: "#1E6FD9", mirada: "dormido", guardada: true })).toContain('x="14" y="22" class="ontoy-tino-z"');
+    expect(tinoEnLaParada({ color: "#1E6FD9", mirada: "dormido" })).toContain('x="86" y="22" class="ontoy-tino-z"');
+  });
+});

@@ -217,3 +217,22 @@ describe("el renglón de una parada guardada en un teléfono angosto", () => {
     expect(css).toMatch(/\.ontoy-renglon-parada > \.ontoy-renglon-dato \{\s*max-width: none;/);
   });
 });
+
+describe("sin señal, Inicio ofrece Reintentar (lámina 7/05)", () => {
+  const codigo = sinComentarios(vista);
+
+  it("sale sólo con la consulta caída, y pregunta ya con la misma consulta", () => {
+    const i = codigo.indexOf("{sinRed && (");
+    expect(i).toBeGreaterThan(0);
+    const bloque = codigo.slice(i, codigo.indexOf("<RutasDeInicio", i));
+    expect(bloque).toContain("onClick={enVivo.reintentar}");
+    expect(bloque).toContain("Reintentar");
+  });
+
+  it("es de contorno: el botón principal de la pantalla no es éste", () => {
+    const i = codigo.indexOf("{sinRed && (");
+    const bloque = codigo.slice(i, codigo.indexOf("<RutasDeInicio", i));
+    expect(bloque).toContain("ontoy-boton-contorno");
+    expect(bloque).not.toContain("ontoy-boton-principal");
+  });
+});

@@ -514,12 +514,28 @@ export function Ontoy({
   );
 
 
+  /*
+   * **Las rutas fuera de horario ahorita**, para que sus Páris duerman en el
+   * mapa de la ciudad. Manda lo vivo cuando lo hay —la página pudo abrirse a
+   * las 23:58—; si esa ruta no se está consultando, la situación con que llegó
+   * la página.
+   */
+  const cerradas = useMemo(() => {
+    const s = new Set<string>();
+    for (const e of estadosALaVista) {
+      const v = vivosAlDia.get(e.circuito_id);
+      if (v ? v.estado === "fuera_de_horario" : e.situacion === "cerrado") s.add(e.circuito_id);
+    }
+    return s;
+  }, [estadosALaVista, vivosAlDia]);
+
   const ciudad = useMemo(
     () => ({
       tira: filtro.tira,
       prendidas: filtro.prendidas,
       cuantasMas: filtro.resto.length,
       vivos: vivosAlDia,
+      cerradas,
       guardadas: paradasGuardadasEnElMapa,
       paradas: paradasDeLaCiudad,
       verParadas,
@@ -530,7 +546,7 @@ export function Ontoy({
       alTocarParadaDeLaCiudad: tocarParadaDeLaCiudad,
       alBuscar: () => irA("ira"),
     }),
-    [filtro, vivosAlDia, paradasGuardadasEnElMapa, paradasDeLaCiudad, verParadas, alternarRuta, abrirRuta, tocarParadaDeLaCiudad, irA],
+    [filtro, vivosAlDia, cerradas, paradasGuardadasEnElMapa, paradasDeLaCiudad, verParadas, alternarRuta, abrirRuta, tocarParadaDeLaCiudad, irA],
   );
 
   /* Las paradas de la ruta abierta: se arma en `lib/ontoy/paradas-de-la-ruta.ts`, aquí sólo se pide. */
@@ -945,6 +961,7 @@ export function Ontoy({
           haciaDonde={nombreDeSentido(sentidoDeLaHoja) ?? null}
           delLetrero={paradaDelLetrero && paradaAbierta === paradaDelLetrero ? paradaDelLetrero : null}
           llegadas={llegadasDeLaHoja}
+          cerrada={vivo?.estado === "fuera_de_horario"}
           porArrancar={
             vivo?.estado === "por_arrancar"
               ? { ruta: rutaDeLaHoja.nombre, arrancaEl: vivo.arranca_el }
