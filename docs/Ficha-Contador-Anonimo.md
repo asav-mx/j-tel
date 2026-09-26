@@ -228,6 +228,35 @@ cuentas o circuitos con aperturas tienen que borrar las aperturas primero — y
 `stop_opens` antes que la parada. Son guiones de escenario y `afterAll` de
 pruebas; ninguna pantalla borra cuentas ni circuitos.
 
+### ⚠ El escalón del 25-sep-2026 en «abrió una ruta» — no es menos uso
+
+**Quien lea la serie de `circuit_opens` va a ver una caída el 25 de septiembre
+de 2026. No significa que menos gente use la app.** Ese día dos gestos que
+antes ABRÍAN una ruta dejaron de hacerlo, y desde entonces cuentan en
+«abrió una parada» (`stop_opens`):
+
+| Gesto | Hasta el 24-sep | Desde el 25-sep |
+|---|---|---|
+| Tocar una parada en el mapa de la ciudad | abría la ruta → «abrió una ruta» | hoja encima del mapa → «abrió una parada» (#592) |
+| Entrar por el letrero de una parada (`/p/‹qr_slug›`) | abría la ruta → «abrió una ruta» | mapa con la hoja «Estás en esta parada» → «abrió una parada» (#607) |
+
+Lo que sigue contando como «abrió una ruta» es **abrir la ruta de verdad**: la
+liga de una ruta compartida (`/rutas?ruta=…`, `/c/…`), tocar su traza en el
+mapa, y abrirla desde Inicio o desde «Ir a». (La tira de rutas no la abre: sólo
+la prende o la apaga.) Es la misma pregunta de siempre —«¿alguien abrió esta ruta?»—, pero
+desde esa fecha le llegan menos caminos.
+
+**Cómo leer la serie:**
+- **No se comparan** días antes y después del 25-sep en «abrió una ruta» como
+  si midieran lo mismo: antes incluían a quien sólo miraba una parada.
+- **Tampoco se suman** las dos cifras para «recuperar» la de antes: una misma
+  persona que escanea un letrero y luego abre la ruta cuenta en las dos, y la
+  suma contaría dos veces lo que antes era una.
+- Cualquier pantalla que dibuje la serie de «abrió una ruta» cruzando esa fecha
+  **tiene que marcar el escalón** en el propio dibujo, no en una nota al pie: un
+  cambio de definición sin marca es la §D en su forma de alcance — el número
+  correcto afirmando una caída que no ocurrió.
+
 ### Un cero sigue sin ser un hueco, y aquí importa más
 
 Este contador **nace el 25-sep-2026**. Todos los días anteriores de todas las

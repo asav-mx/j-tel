@@ -14,6 +14,7 @@ import { camiDesdeArriba, pasajeroConLinterna, tinoEnLaParada, type MiradaDeTino
 import { tinoEntero } from "@/lib/ontoy/zoom-de-tino";
 import type { RutaOrdenada } from "@/lib/ontoy/rutas-cerca";
 import { TiraDeRutas } from "@/components/ontoy/tira-de-rutas";
+import { GlifoIra } from "@/components/ontoy/glifos";
 
 /**
  * **El Mapa de la ciudad** — el pasajero decide qué rutas ve (8.8; ASAV, 22-sep).
@@ -55,6 +56,8 @@ export interface ModoCiudad {
   alAlternarParadas: () => void;
   alAbrirPanel: () => void;
   alAbrirRuta: (ruta: string, parada?: string) => void;
+  /** El buscador flotante: lleva a «Ir a», que es EL buscador de la app. */
+  alBuscar: () => void;
   /**
    * **Tocar una parada NO es abrir su ruta.** Son dos verbos distintos y por eso
    * son dos props: `alAbrirRuta` cambia de pantalla (se llega desde Inicio y
@@ -492,8 +495,21 @@ export function VistaMapa({
     for (const r of rutas) {
       if (!ciudad.prendidas.has(r.circuito_id)) continue;
       const halo = haloParaLaTraza(r.color_hex, lienzo);
+      /*
+       * **Las dos vías, siempre** (ASAV, 25-sep: «como la lámina»).
+       *
+       * Aquí había un `if (t.sentido !== "ida") continue`, con la razón de que
+       * «ida y vuelta suelen compartir calle». Suelen, no siempre: donde no la
+       * comparten, el mapa de la ciudad enseñaba la ida y callaba la vuelta. Y
+       * las PARADAS sí se dibujaban de los dos sentidos, así que las de regreso
+       * que caen en otra calle quedaban flotando lejos de cualquier línea — un
+       * Páris sin ruta que lo explique.
+       *
+       * Donde comparten calle, la vuelta cae exacta encima de la ida con el mismo
+       * color, y no se ve doble. Donde no, se ven las dos. Es lo que la ruta hace
+       * en la calle.
+       */
       for (const t of r.trazados) {
-        if (t.sentido !== "ida") continue; // ida y vuelta suelen compartir calle; la ruta abierta enseña las dos
         const latlngs = t.coordenadas.map(([lon, lat]) => [lat, lon] as [number, number]);
         if (halo > 0) {
           leaflet.polyline(latlngs, { color: lienzo, weight: 7, opacity: 0.9, interactive: false }).addTo(capaRutas.current);
@@ -674,9 +690,10 @@ export function VistaMapa({
 
   return (
     /*
-     * `ontoy-mapa-ciudad` es lo que acomoda la pila de arriba —controles, tira,
-     * aviso de red y créditos— sólo en la ciudad: con una ruta abierta no hay
-     * tira, y bajar lo demás ahí dejaría un hueco sin razón.
+     * `ontoy-mapa-ciudad` acomoda la pila de arriba —el buscador, la tira, los
+     * controles, el aviso de red y los créditos— sólo en la ciudad: una ruta
+     * abierta tiene su cabecera, no lleva buscador ni tira, y bajar lo demás ahí
+     * dejaría un hueco sin razón.
      */
     <div className={`ontoy-mapa${ciudad ? " ontoy-mapa-ciudad" : ""}`}>
       <div ref={contenedor} className="ontoy-lienzo" style={{ background: lienzo }} />
@@ -712,6 +729,24 @@ export function VistaMapa({
 
       {ciudad && (
         <>
+          {/*
+            * **El buscador flotante** (lámina `2-mapa/01`, y el prototipo).
+            *
+            * Parece un campo pero es un BOTÓN, y así lo tiene el prototipo:
+            * `onClick={irBuscar}` → la pantalla «Ir a». No se escribe aquí,
+            * porque «Ir a» ya es el buscador de la app (versión 1: «Ir a» es
+            * sólo un buscador) y dos buscadores que busquen distinto serían
+            * dos respuestas a la misma pregunta.
+            *
+            * Por eso es un `<button>` y no un `<input>`: un lector de pantalla
+            * tiene que anunciar «botón, busca una ruta o una parada» y no un
+            * campo donde escribir que al tocarlo te saca de la pantalla.
+            */}
+          <button type="button" className="ontoy-buscador-flotante" onClick={ciudad.alBuscar}>
+            <GlifoIra tamano={28} />
+            <span>Busca una ruta o una parada</span>
+          </button>
+
           <div className="ontoy-ctrl-mapa">
             <button
               type="button"

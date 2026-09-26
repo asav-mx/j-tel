@@ -103,6 +103,8 @@ export function HojaDeParada({
   porQue = null,
   haciaDonde = null,
   delLetrero = null,
+  grupos = null,
+  direccionDosSentidos = null,
 }: {
   nombre: string;
   /** «Dirección → Centro». Sale de los datos del circuito, nunca del código. */
@@ -162,6 +164,14 @@ export function HojaDeParada({
    * y «Mándala» (`05`). `null` en cualquier otro camino a la hoja.
    */
   delLetrero?: string | null;
+  /**
+   * Las llegadas **por sentido**, cuando la parada sirve a los dos. Se enseñan
+   * sólo con la hoja hasta arriba, como la lámina `03-hoja-completa`; en la
+   * media y en la asomada manda `llegadas`, que es un sentido.
+   */
+  grupos?: Array<{ sentido: string; titulo: string; llegadas: LlegadaEnLaHoja[] }> | null;
+  /** «Ruta ‹nombre› · paran los dos sentidos» — el renglón de la hoja completa. */
+  direccionDosSentidos?: string | null;
 }) {
   const cerrarRef = useRef<HTMLButtonElement | null>(null);
   const [altura, setAltura] = useState<AlturaDeLaHoja>(alturaInicial);
@@ -242,7 +252,6 @@ export function HojaDeParada({
    * arrastrada y la hoja brincaría bajo el dedo.
    */
   const compacta = altura === "asomada";
-  const subtitulo = compacta && porQue ? porQue : direccion;
   /* En la asomada y en la hoja del letrero, «hacia Centro» baja a la fila: el
      renglón de arriba lo ocupa el porqué, o nadie (la lámina `04` no lo lleva). */
   const tituloDeLaFila = (compacta && porQue) || delLetrero ? haciaDonde : null;
@@ -263,6 +272,20 @@ export function HojaDeParada({
     const r = await mandarParada({ nombre, liga, nav: navigator });
     setMandada(mandadaEnPalabras(r, liga));
   }, [delLetrero, nombre]);
+  /** Los dos sentidos se ven sólo arriba, y sólo si hay dos que enseñar. */
+  const verDosSentidos = altura === "completa" && !!grupos && grupos.length > 1;
+  /**
+   * El renglón de debajo del nombre: en la asomada, por qué se asoma; arriba
+   * del todo con los dos sentidos, «paran los dos sentidos»; si no, la ruta y
+   * su sentido. Las dos primeras no pueden coincidir: una es la altura más baja
+   * y la otra la más alta.
+   */
+  const subtitulo =
+    compacta && porQue
+      ? porQue
+      : verDosSentidos && direccionDosSentidos
+        ? direccionDosSentidos
+        : direccion;
 
   return (
     <>
@@ -379,46 +402,31 @@ export function HojaDeParada({
           * GPS y dónde empieza la promesa, que va fuera y debajo. Sin ella, las
           * dos cosas son una lista sola (8.3).
           */}
+        {verDosSentidos ? (
+          /*
+           * **Los dos sentidos, cada uno con su título y su tarjeta** — la
+           * lámina `03-hoja-completa`. Un título por grupo y no una columna
+           * «sentido» en cada fila: el pasajero busca primero hacia dónde va,
+           * y luego qué viene.
+           */
+          grupos!.map((g) => (
+            <section key={g.sentido} className="ontoy-hoja-grupo" aria-label={g.titulo}>
+              <h3 className="ontoy-hoja-sentido">{g.titulo}</h3>
+              <div className="ontoy-hoja-medido">
+                {g.llegadas.map((l, i) => (
+                  <FilaDeLlegada key={i} l={l} color={color} />
+                ))}
+              </div>
+            </section>
+          ))
+        ) : (
         <div className="ontoy-hoja-medido">
         {filas.map((l, i) => (
-          <div
-            key={i}
-            className={`ontoy-llegada${l.cifra ? " con-cifra" : ""}${l.vieja ? " vieja" : ""}${l.pasada ? " pasada" : ""}`}
-          >
-            {l.placa && (
-              <span className="ontoy-placa" style={{ ["--ruta" as string]: color }}>
-                {l.placa}
-              </span>
-            )}
-            <span className="ontoy-llegada-dicho">
-              {/*
-                * En la asomada la ruta y el sentido bajan aquí —«hacia
-                * Centro»—, porque el renglón de arriba lo ocupa el porqué. Sólo
-                * en la primera fila: es la única que se ve a esa altura.
-                */}
-              {i === 0 && tituloDeLaFila && <b className="ontoy-llegada-titulo">{tituloDeLaFila}</b>}
-              <span className="ontoy-llegada-apoyo">
-                {l.enVivo && <span className="ontoy-punto-vivo" aria-hidden="true" />}
-                {l.pasada && <span className="ontoy-punto-viejo" aria-hidden="true" />}
-                {l.apoyo}
-              </span>
-            </span>
-            {/*
-              * Con cifra, el número grande y su palabra chica. Sin ella, el
-              * rótulo entero —«Fuera de horario» no tiene un número que agrandar,
-              * y agrandarle la primera palabra lo volvería un titular falso.
-              */}
-            {l.cifra ? (
-              <span className="ontoy-llegada-cifra">
-                <b className="cifra">{l.cifra.valor}</b>
-                <span className="ontoy-llegada-unidad">{l.cifra.unidad}</span>
-              </span>
-            ) : (
-              <span className="ontoy-llegada-rotulo cifra">{l.rotulo}</span>
-            )}
-          </div>
+          /* En la asomada, la primera fila lleva «hacia Centro» (ver `tituloDeLaFila`). */
+          <FilaDeLlegada key={i} l={l} color={color} titulo={i === 0 ? tituloDeLaFila : null} />
         ))}
         </div>
+        )}
 
         {/* LA PROMESA, separada por su línea y siempre presente (8.2, 8.3). */}
         <p className="ontoy-hoja-promesa">
@@ -543,5 +551,57 @@ function LetreroGuardar({
         {mandada ?? "Ya está en Inicio y en Tus paradas."}
       </p>
     </>
+  );
+}
+
+/**
+ * **Un renglón de llegada**: placa, lo que se sabe, y la cifra o el rótulo.
+ *
+ * Salió de la hoja a su propio componente cuando la hoja completa empezó a
+ * pintar dos grupos (uno por sentido): copiar este JSX dos veces habría sido
+ * la forma segura de que un día digan dos cosas distintas.
+ *
+ * `titulo`, cuando viene, va en negrita encima del apoyo —«hacia Centro»—.
+ */
+function FilaDeLlegada({
+  l,
+  color,
+  titulo = null,
+}: {
+  l: LlegadaEnLaHoja;
+  color: string;
+  titulo?: string | null;
+}) {
+  return (
+          <div
+            className={`ontoy-llegada${l.cifra ? " con-cifra" : ""}${l.vieja ? " vieja" : ""}${l.pasada ? " pasada" : ""}`}
+          >
+            {l.placa && (
+              <span className="ontoy-placa" style={{ ["--ruta" as string]: color }}>
+                {l.placa}
+              </span>
+            )}
+            <span className="ontoy-llegada-dicho">
+              {titulo && <b className="ontoy-llegada-titulo">{titulo}</b>}
+              <span className="ontoy-llegada-apoyo">
+                {l.enVivo && <span className="ontoy-punto-vivo" aria-hidden="true" />}
+                {l.pasada && <span className="ontoy-punto-viejo" aria-hidden="true" />}
+                {l.apoyo}
+              </span>
+            </span>
+            {/*
+              * Con cifra, el número grande y su palabra chica. Sin ella, el
+              * rótulo entero —«Fuera de horario» no tiene un número que agrandar,
+              * y agrandarle la primera palabra lo volvería un titular falso.
+              */}
+            {l.cifra ? (
+              <span className="ontoy-llegada-cifra">
+                <b className="cifra">{l.cifra.valor}</b>
+                <span className="ontoy-llegada-unidad">{l.cifra.unidad}</span>
+              </span>
+            ) : (
+              <span className="ontoy-llegada-rotulo cifra">{l.rotulo}</span>
+            )}
+          </div>
   );
 }
