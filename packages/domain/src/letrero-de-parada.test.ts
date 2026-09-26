@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CASA_DE_ONTOY,
   etiquetaCortaDeLaRuta,
+  numeroDeLaRuta,
   tituloDelQr,
   direccionDelLetrero,
   direccionDelLetreroEnPalabras,
@@ -136,5 +137,31 @@ describe("el título de la página del QR, que es el nombre del archivo PDF", ()
       "QR · Zaragoza–Sur · Catedral",
     );
     expect(tituloDelQr({ circuito: " C4 ", parada: "Oasis" })).toBe("QR · C4 · Oasis");
+  });
+});
+
+describe("el número de la ruta: lo único que va en una placa carbón de lo impreso", () => {
+  /*
+   * ASAV, 26-sep-2026, antes de imprimir las 18 láminas: nunca iniciales. La
+   * placa carbón es para identificadores cortos que existen; sin número, la ruta
+   * va con su franja de color y su nombre como texto.
+   */
+  it("con número, el número", () => {
+    expect(numeroDeLaRuta("Ruta 51 · Centro–Tecnológico")).toBe("51");
+    expect(numeroDeLaRuta("51")).toBe("51");
+    expect(numeroDeLaRuta("Ruta T1 · Parque industrial")).toBe("T1");
+    expect(numeroDeLaRuta("C4")).toBe("C4");
+  });
+
+  it("sin número, NADA: ni iniciales ni el nombre corto", () => {
+    expect(numeroDeLaRuta("Oasis – Parroquia Santa Teresa de Jesús")).toBeNull();
+    expect(numeroDeLaRuta("Oasis-Centro")).toBeNull();
+    expect(numeroDeLaRuta("Zaragoza–Centro")).toBeNull();
+    expect(numeroDeLaRuta("Oasis")).toBeNull();
+    expect(numeroDeLaRuta("Panamericana")).toBeNull();
+  });
+
+  it("un año no es un número de ruta", () => {
+    expect(numeroDeLaRuta("Corredor Oriente 2026 · Centro")).toBeNull();
   });
 });

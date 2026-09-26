@@ -105,6 +105,33 @@ export const CORRECCION_DEL_LETRERO = "H" as const;
  * dos hacen lo mismo y las dos tienen prueba; si alguna cambia, que cambie la
  * otra.
  */
+/**
+ * **El número de la ruta, o `null`** — lo único que puede ir en una placa
+ * carbón de lo impreso (ASAV, 26-sep-2026, antes de imprimir las 18 láminas).
+ *
+ * La regla: **nunca iniciales**. La placa carbón es para identificadores cortos
+ * que existen —el número de la ruta o el de la unidad—, y una ruta sin número
+ * va con **su franja de color y su nombre como texto**. «OC» por
+ * Oasis–Centro no es un identificador: es uno inventado, y atornillado a un
+ * poste por años sería el nombre de la ruta que nadie usa.
+ *
+ * Tampoco un nombre corto sin número: «Oasis» no es un identificador corto,
+ * es un nombre, y va como nombre.
+ *
+ * Es el mismo reconocimiento de número que `etiquetaCortaDeLaRuta` —un token de
+ * hasta tres caracteres, todo dígitos o una letra seguida de dígitos: «51»,
+ * «4», «T1», «C2»—, sin el camino de las iniciales.
+ */
+export function numeroDeLaRuta(nombre: string): string | null {
+  const partes = nombre
+    .trim()
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .split(/[\s-]+/)
+    .filter(Boolean);
+  const conNumero = partes.find((t) => /^(?:\d{1,3}|\p{L}\d{1,2})$/u.test(t));
+  return conNumero ? conNumero.toUpperCase() : null;
+}
+
 export function etiquetaCortaDeLaRuta(nombre: string): string {
   const limpio = nombre.trim();
   if (limpio.length <= 8) return limpio;

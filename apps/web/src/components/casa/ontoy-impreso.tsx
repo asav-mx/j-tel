@@ -1,4 +1,4 @@
-import { etiquetaCortaDeLaRuta } from "@jtel/domain";
+import { numeroDeLaRuta } from "@jtel/domain";
 
 /**
  * **Tino y Ontoy, sólo para lo que se imprime.**
@@ -42,13 +42,20 @@ const CARBON = "#2A2E37";
  * es**. Los minutos los dice la app, que es la que los mide, y para eso está el
  * código.
  *
- * Y lleva **el nombre si cabe, o sus iniciales si no**
- * (`etiquetaCortaDeLaRuta`). El primer intento lo apretaba al ancho de la placa
- * con `textLength`, y con «Oasis – Parroquia Santa Teresa de Jesús» salió una
- * mancha gris — se vio en la primera captura. No se pierde nada: el nombre
- * completo va en la placa carbón de al lado, en el mismo letrero.
+ * ✎ **26-sep-2026 (ASAV): la placa lleva el NÚMERO de la ruta, o no hay
+ * placa.** Antes llevaba el nombre si cabía o sus iniciales si no
+ * (`etiquetaCortaDeLaRuta`), y la ruta de las 18 láminas salía con «OC» en el
+ * pecho de Páris — un identificador que nadie usa, inventado por la función e
+ * impreso para años. La regla ya decidida: **nunca iniciales**; la placa carbón
+ * es sólo para identificadores cortos que existen (el número de la ruta o de
+ * la unidad). Sin número, Páris va sin placa: la ruta la nombra el letrero, con
+ * su franja de color y su nombre como texto.
+ *
+ * `ruta` es el nombre completo: de él sale el número, y el lector de pantalla
+ * lo dice entero.
  */
 export function TinoDeLaLamina({ ruta, colorHex }: { ruta: string; colorHex: string }) {
+  const numero = numeroDeLaRuta(ruta);
   return (
     <svg
       viewBox="0 0 120 120"
@@ -69,17 +76,22 @@ export function TinoDeLaLamina({ ruta, colorHex }: { ruta: string; colorHex: str
       <circle cx="69" cy="36" r="7.5" fill="#fff" />
       <circle cx="51" cy="36" r="4" fill={CARBON} />
       <circle cx="69" cy="36" r="4" fill={CARBON} />
-      {/* Su placa: carbón con texto blanco. Su etiqueta corta, nunca minutos. */}
-      <rect x="31" y="70" width="58" height="26" rx="6.5" fill={CARBON} />
-      <text
-        x="60"
-        y="87"
-        textAnchor="middle"
-        fill="#fff"
-        style={{ font: "800 13px var(--letra-titular), sans-serif" }}
-      >
-        {etiquetaCortaDeLaRuta(ruta)}
-      </text>
+      {/* Su placa: carbón con texto blanco, y sólo con el número de la ruta. Sin
+          número no hay placa: nunca iniciales, nunca minutos. */}
+      {numero && (
+        <>
+          <rect x="31" y="70" width="58" height="26" rx="6.5" fill={CARBON} />
+          <text
+            x="60"
+            y="87"
+            textAnchor="middle"
+            fill="#fff"
+            style={{ font: "800 13px var(--letra-titular), sans-serif" }}
+          >
+            {numero}
+          </text>
+        </>
+      )}
     </svg>
   );
 }
