@@ -1,5 +1,6 @@
 "use client";
 
+import { tituloArriba } from "@/lib/ontoy/titulo-de-fila";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProntoEnLaCalle } from "@/components/ontoy/pronto-en-la-calle";
 import {
@@ -573,17 +574,20 @@ function FilaDeLlegada({
   color: string;
   titulo?: string | null;
 }) {
+  /* Un destino largo sube a su renglón, a todo lo ancho: ver `tituloArriba`. */
+  const arriba = tituloArriba(titulo);
   return (
           <div
-            className={`ontoy-llegada${l.cifra ? " con-cifra" : ""}${l.vieja ? " vieja" : ""}${l.pasada ? " pasada" : ""}`}
+            className={`ontoy-llegada${l.cifra ? " con-cifra" : ""}${l.vieja ? " vieja" : ""}${l.pasada ? " pasada" : ""}${arriba ? " titulo-arriba" : ""}`}
           >
+            {arriba && <b className="ontoy-llegada-titulo ontoy-llegada-titulo-arriba">{titulo}</b>}
             {l.placa && (
               <span className="ontoy-placa" style={{ ["--ruta" as string]: color }}>
                 {l.placa}
               </span>
             )}
             <span className="ontoy-llegada-dicho">
-              {titulo && <b className="ontoy-llegada-titulo">{titulo}</b>}
+              {titulo && !arriba && <b className="ontoy-llegada-titulo">{titulo}</b>}
               <span className="ontoy-llegada-apoyo">
                 {l.enVivo && <span className="ontoy-punto-vivo" aria-hidden="true" />}
                 {l.pasada && <span className="ontoy-punto-viejo" aria-hidden="true" />}
