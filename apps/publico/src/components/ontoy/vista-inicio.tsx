@@ -80,7 +80,7 @@ export function VistaInicio({
    * Los camiones de TODAS tus rutas, de la consulta única de la raíz (PR 4b):
    * Inicio ya no pregunta por su cuenta.
    */
-  enVivo: { vivos: Map<string, Vivo>; error: boolean; respondio: boolean };
+  enVivo: { vivos: Map<string, Vivo>; error: boolean; respondio: boolean; recibidoEn: number | null };
   /** Los avisos de la concesión de tus rutas: la puerta que antes era la campana. */
   avisos: AvisoEnLaCampana[];
   /** Si hay alguno que no has visto: prende el punto. */
@@ -151,6 +151,7 @@ export function VistaInicio({
       yo={ubicacion.yo}
       vivo={enVivo.vivos.get(primera.ruta) ?? (enVivo.respondio ? null : undefined)}
       errorVivo={enVivo.error}
+      recibidoEn={enVivo.recibidoEn}
       alAbrir={() => alAbrirRuta(primera.ruta, primera.parada)}
       alQuitar={() => alQuitarGuardada(primera)}
     />
@@ -203,6 +204,7 @@ export function VistaInicio({
                 yo={ubicacion.yo}
                 vivo={enVivo.vivos.get(g.ruta) ?? (enVivo.respondio ? null : undefined)}
                 errorVivo={enVivo.error}
+                recibidoEn={enVivo.recibidoEn}
                 alAbrir={() => alAbrirRuta(g.ruta, g.parada)}
               />
             ))}
