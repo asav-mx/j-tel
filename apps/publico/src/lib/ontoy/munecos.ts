@@ -118,6 +118,17 @@ const ESTRELLA_SI = `<svg class="ontoy-tino-estrella" viewBox="0 0 24 24" width=
     <path d="M10.7 13.9q1.3 1.1 2.6 0" fill="none" stroke="#2A2E37" stroke-width="1.1" stroke-linecap="round"/>
   </svg>`;
 
+/**
+ * **Las «z» de Páris dormido** (README: «Cerrada: … todos los Tino duermen con
+ * zzz»; lámina 2-mapa/13). Arriba a la derecha de la cabeza, una grande y una
+ * chica, como las de Ontoy dormido. Su color sigue la piel (`.ontoy-tino-z`):
+ * carbón de día, claras de noche, con un filo del fondo para leerse sobre el
+ * mapa.
+ */
+const ZZZ = `<text x="86" y="22" class="ontoy-tino-z">z</text><text x="104" y="0" class="ontoy-tino-z chica">z</text>`;
+/** Guardada y dormida: la estrella ya ocupa la orilla derecha, así que las «z» suben por la izquierda. */
+const ZZZ_A_LA_IZQUIERDA = `<text x="14" y="22" class="ontoy-tino-z">z</text><text x="-4" y="0" class="ontoy-tino-z chica">z</text>`;
+
 /** Cómo mira Tino. La mirada es señal, no adorno (handoff §1c). */
 export type MiradaDeTino =
   /** Al frente: te habla a ti. Sin dato que decir. */
@@ -175,12 +186,13 @@ export function tinoEnLaParada(entrada: {
          <circle cx="${mirada === "de-lado" ? 47.5 : 51}" cy="35" r="4" fill="${CARBON}"/>
          <circle cx="${mirada === "de-lado" ? 65.5 : 69}" cy="35" r="4" fill="${CARBON}"/>`;
   return `<span class="ontoy-tino" style="--ruta:${color}">
-  <svg viewBox="0 0 120 120" width="32" height="32" aria-hidden="true">
+  <svg viewBox="0 0 120 120" width="32" height="32" aria-hidden="true" style="overflow:visible">
     <rect x="57" y="36" width="6" height="72" fill="${CARBON}"/>
     <rect x="46" y="106" width="28" height="7" rx="3.5" fill="${CARBON}"/>
     <circle cx="60" cy="38" r="26" fill="${color}"/>
     ${ojos}
     ${sonrie ? `<path d="M52 47 q8 7 16 0" fill="none" stroke="${CARBON}" stroke-width="3" stroke-linecap="round"/>` : ""}
+    ${mirada === "dormido" ? (guardada ? ZZZ_A_LA_IZQUIERDA : ZZZ) : ""}
   </svg>
   ${guardada ? ESTRELLA_SI : ""}
 </span>`;

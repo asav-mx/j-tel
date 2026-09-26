@@ -2198,6 +2198,17 @@
   font-size: 16px;
   cursor: pointer;
 }
+/* «Reintentar» de Inicio sin señal (lámina 7/05): contorno, del ancho de su texto, con la flecha de recargar. */
+.ontoy-inicio-reintentar {
+  padding: 0 18px;
+  margin: 6px 0 18px;
+}
+.ontoy-inicio-reintentar .ontoy-boton-contorno {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+}
 
 /* ── las pantallas de estado completo (§G) ─────────────────────────────── */
 
@@ -3720,4 +3731,24 @@
   font-weight: 700;
   font-size: 17px;
   white-space: nowrap;
+}
+
+/*
+ * ── Las «z» de Páris dormido (lámina 2-mapa/13) ────────────────────────
+ *
+ * Siguen la piel: carbón de día, hueso de noche. El filo del color del fondo
+ * (`paint-order: stroke`) es lo que las deja leerse sobre calles y manzanas.
+ */
+.ontoy-tino-z {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  /* En la retícula de 120: con Páris de 32 px, 42 da ~11 px en pantalla y 30 da ~8. */
+  font-size: 42px;
+  fill: var(--texto);
+  stroke: var(--fondo);
+  stroke-width: 7px;
+  paint-order: stroke;
+}
+.ontoy-tino-z.chica {
+  font-size: 30px;
 }

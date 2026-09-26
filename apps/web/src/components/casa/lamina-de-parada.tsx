@@ -1,4 +1,4 @@
-import { direccionDelLetreroEnPalabras, etiquetaCortaDeLaRuta } from "@jtel/domain";
+import { direccionDelLetreroEnPalabras, numeroDeLaRuta } from "@jtel/domain";
 import { CodigoQrImpreso, type FormaDeLasEsquinas, type FormaDeLosModulos } from "@/components/casa/codigo-qr-impreso";
 import { TinoDeLaLamina } from "@/components/casa/ontoy-impreso";
 
@@ -85,11 +85,13 @@ export function LaminaDeParada({
   esquinasComo?: FormaDeLasEsquinas;
 }) {
   /*
-   * La etiqueta corta —«51» de «Ruta 51 · Centro–Tecnológico»— es la que cabe en
-   * la placa de Tino y en la chapa. El nombre largo va al lado, porque **el
-   * color nunca va solo** (8.8c) y un número suelto tampoco dice de qué ruta es.
+   * El número —«51» de «Ruta 51 · Centro–Tecnológico»— es lo único que va en
+   * una placa: la de Páris y la chapa. **Sin número no hay placa ni chapa**: la
+   * ruta va con su franja de color y su nombre como texto (ASAV, 26-sep: nunca
+   * iniciales). El nombre largo va siempre al lado, porque **el color nunca va
+   * solo** (8.8c) y un número suelto tampoco dice de qué ruta es.
    */
-  const corta = etiquetaCortaDeLaRuta(ruta.nombre);
+  const numero = numeroDeLaRuta(ruta.nombre);
 
   return (
     <section className="lamina">
@@ -102,7 +104,7 @@ export function LaminaDeParada({
 
         <div className="lamina-cuerpo">
           <div className="lamina-quien">
-            <TinoDeLaLamina ruta={corta} colorHex={ruta.colorHex} />
+            <TinoDeLaLamina ruta={ruta.nombre} colorHex={ruta.colorHex} />
             <div>
               <h1 className="lamina-titulo">Esta es tu parada.</h1>
               {/*
@@ -143,10 +145,18 @@ export function LaminaDeParada({
           </div>
 
           <div className="lamina-ruta">
-            {/* La chapa lleva el color de la ruta, con su franja y su nombre al lado. */}
-            <span className="lamina-chapa" style={{ background: ruta.colorHex }}>
-              <span className="lamina-chapa-texto">{corta}</span>
-            </span>
+            {/*
+              * Con número, la chapa del color de la ruta con su número. Sin
+              * número, la franja de color: identifica la ruta sin inventarle un
+              * identificador, y el nombre de al lado dice cuál es.
+              */}
+            {numero ? (
+              <span className="lamina-chapa" style={{ background: ruta.colorHex }}>
+                <span className="lamina-chapa-texto">{numero}</span>
+              </span>
+            ) : (
+              <span className="lamina-franja" style={{ background: ruta.colorHex }} aria-hidden="true" />
+            )}
             <div>
               <p className="lamina-ruta-nombre">{ruta.nombre}</p>
               {/*

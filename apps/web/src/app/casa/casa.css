@@ -524,17 +524,15 @@
 /* El color es identidad (8.8c) y NUNCA va solo: la placa lleva el nombre. */
 .letrero-ruta {
   display: flex;
-  align-items: baseline;
+  /* Al centro y no a la línea base: la franja no tiene texto que alinear. */
+  align-items: center;
   flex-wrap: wrap;
   gap: 0.3cm;
   margin: 0;
 }
 
-/* La placa con el nombre completo de la ruta. **Se parte antes de salirse de la
-   hoja**: un nombre como «Oasis – Parroquia Santa Teresa de Jesús» cabe raspando,
-   y el siguiente más largo se iría al borde del papel — donde la guillotina de la
-   imprenta no perdona. `min-width: 0` es lo que permite que un hijo de un flex
-   se encoja por debajo de su contenido; sin él, `max-width` no hace nada aquí. */
+/* La placa carbón: **sólo el número de la ruta** (ASAV, 26-sep). Antes llevaba el
+   nombre completo; ahora el nombre va como texto al lado (`.letrero-ruta-nombre`). */
 .letrero-placa {
   font-family: var(--letra-titular);
   font-weight: 800;
@@ -546,6 +544,31 @@
   padding: 0.16cm 0.3cm;
   min-width: 0;
   max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * **La franja**: el color de la ruta cuando la ruta no tiene número. Identifica
+ * sin inventar un identificador, y nunca va sola: el nombre va al lado.
+ */
+.letrero-franja {
+  flex: none;
+  width: 0.24cm;
+  height: 0.9cm;
+  border-radius: 0.12cm;
+}
+
+/* El nombre de la ruta, como texto. **Se parte antes de salirse de la hoja**: un
+   nombre como «Oasis – Parroquia Santa Teresa de Jesús» cabe raspando, y el
+   siguiente más largo se iría al borde del papel — donde la guillotina de la
+   imprenta no perdona. `min-width: 0` deja que un hijo de un flex se encoja. */
+.letrero-ruta-nombre {
+  font-family: var(--letra-titular);
+  font-weight: 800;
+  font-size: 0.58cm;
+  line-height: 1.15;
+  color: #2a2e37;
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 
@@ -824,6 +847,18 @@
   display: grid;
   place-items: center;
   padding: 0 0.5cm;
+}
+
+/*
+ * **La franja** de la ruta sin número: su color, del alto de la chapa, y el
+ * nombre al lado. No se le inventa un identificador (ASAV, 26-sep: nunca
+ * iniciales).
+ */
+.lamina-franja {
+  flex: none;
+  width: 0.7cm;
+  height: 2.6cm;
+  border-radius: 0.35cm;
 }
 
 .lamina-chapa-texto {
