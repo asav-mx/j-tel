@@ -3758,3 +3758,16 @@
 .ontoy-tino-z.chica {
   font-size: 30px;
 }
+
+/* Texto que sólo lee el lector de pantalla: el número y la edad de Cami fresco. */
+.ontoy-solo-lector {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
