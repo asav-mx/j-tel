@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { direccionEnVivo } from "@/lib/rutas-pedidas";
 import { proximaEspera, SONDEO_MS } from "./ritmo-del-sondeo";
 import type { Vivo } from "./forma";
+import type { EstadoDeRuta } from "./estado-de-ruta";
+import { CABECERA_DE_ENSAYO, direccionDeEnsayo } from "./llave-de-ensayo";
 
 /**
  * Los camiones de **varias rutas en una sola consulta** cada 15 s — las
@@ -16,12 +18,21 @@ import type { Vivo } from "./forma";
  *
  * La lista va ordenada y sin repetidas (`direccionEnVivo`): el mismo conjunto de
  * favoritas es la misma dirección, y el CDN la comparte entre teléfonos.
+ *
+ * **Con la llave de ensayo** (`llave-de-ensayo.ts`) pregunta en la puerta
+ * aparte, con la llave en una cabecera y sin caché. Si el servidor contesta 404
+ * —llave mala o apagada— avisa con `alRechazarEnsayo` y el teléfono vuelve a la
+ * consulta pública.
  */
 export function useEnVivo(
   rutas: string[],
   opciones: {
     /** Cada sondeo, bien o mal: de aquí salen los avisos del teléfono. */
     alSondear?: (s: { ok: boolean; status: number | null; ahora: Date }) => void;
+    /** La llave de ensayo de este teléfono, o `null` si es un teléfono cualquiera. */
+    llaveDeEnsayo?: string | null;
+    /** El servidor no reconoció la llave: hay que olvidarla. */
+    alRechazarEnsayo?: () => void;
   } = {},
 ): {
   vivos: Map<string, Vivo>;
@@ -31,18 +42,25 @@ export function useEnVivo(
   respondio: boolean;
   /** Vuelve a preguntar ya, sin esperar el siguiente sondeo. */
   reintentar: () => void;
+  /** Con la llave: la situación de todas las rutas vista como ensayo. `null` sin llave. */
+  estadosDeEnsayo: EstadoDeRuta[] | null;
 } {
   const [vivos, setVivos] = useState<Map<string, Vivo>>(new Map());
   const [error, setError] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [respondio, setRespondio] = useState(false);
   const [intento, setIntento] = useState(0);
+  const [estadosDeEnsayo, setEstadosDeEnsayo] = useState<EstadoDeRuta[] | null>(null);
+  const llave = opciones.llaveDeEnsayo ?? null;
+  const alRechazarEnsayo = useRef(opciones.alRechazarEnsayo);
+  alRechazarEnsayo.current = opciones.alRechazarEnsayo;
   const alSondear = useRef(opciones.alSondear);
   alSondear.current = opciones.alSondear;
   const visible = useRef(true);
   const direccion = rutas.length > 0 ? direccionEnVivo(rutas) : null;
 
   useEffect(() => {
+    if (!llave) setEstadosDeEnsayo(null);
     if (!direccion) {
       setVivos(new Map());
       return;
@@ -65,13 +83,21 @@ export function useEnVivo(
       let retryAfter: string | null = null;
       if (visible.current) {
         try {
-          const r = await fetch(direccion);
+          const r = llave
+            ? await fetch(direccionDeEnsayo(direccion), { headers: { [CABECERA_DE_ENSAYO]: llave }, cache: "no-store" })
+            : await fetch(direccion);
           status = r.status;
           retryAfter = r.headers.get("retry-after");
+          if (llave && r.status === 404) {
+            /* La llave ya no abre: se olvida, y la siguiente vuelta es la consulta pública. */
+            alRechazarEnsayo.current?.();
+            return;
+          }
           if (!r.ok) throw new Error(String(r.status));
-          const cuerpo: { rutas: Record<string, Vivo> } = await r.json();
+          const cuerpo: { rutas: Record<string, Vivo>; estados?: EstadoDeRuta[] } = await r.json();
           if (montado) {
             setVivos(new Map(Object.entries(cuerpo.rutas)));
+            if (llave) setEstadosDeEnsayo(cuerpo.estados ?? null);
             setRespondio(true);
             setError(false);
           }
@@ -93,7 +119,7 @@ export function useEnVivo(
       clearTimeout(id);
       document.removeEventListener("visibilitychange", mirar);
     };
-  }, [direccion, intento]);
+  }, [direccion, intento, llave]);
 
-  return { vivos, error, cargando, respondio, reintentar: () => setIntento((n) => n + 1) };
+  return { vivos, error, cargando, respondio, reintentar: () => setIntento((n) => n + 1), estadosDeEnsayo };
 }

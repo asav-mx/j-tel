@@ -1,4 +1,5 @@
-import { enHorarioDeServicio, yaArrancoElServicio } from "@jtel/domain/publico";
+import { enHorarioDeServicio } from "@jtel/domain/publico";
+import { arrancoParaEstaConsulta } from "@/lib/ensayo";
 import { proximaFronteraDeLoPublicado } from "@jtel/domain";
 import { getRepos } from "@/lib/db";
 import { promesaConSusFronteras } from "@/lib/promesa";
@@ -74,15 +75,33 @@ export async function ciudadPublicada(): Promise<CiudadPublicada> {
       })),
     });
 
-    const arranco = yaArrancoElServicio(ahora, c.serviceLaunchDate, c.timeZone);
-    const abierto = enHorarioDeServicio(ahora, c.serviceStartLocal, c.serviceEndLocal, c.timeZone);
-    estados.push({
-      circuito_id: c.publicSlug,
-      situacion: !arranco ? "por_arrancar" : abierto ? "abierto" : "cerrado",
-      abre_a: c.serviceStartLocal.slice(0, 5),
-      arranca_el: c.serviceLaunchDate,
-    });
+    estados.push(estadoDeLaRuta(c, ahora, false));
   }
 
   return { rutas, estados, vigenteHasta: vigenteHasta?.toISOString() ?? null };
+}
+
+type CircuitoPublicado = Awaited<ReturnType<ReturnType<typeof getRepos>["circuits"]["listPublishedCircuits"]>>[number];
+
+/**
+ * La situación de una ruta en la lista de la ciudad: por arrancar, abierta o
+ * cerrada. **Una sola función para las dos puertas** —la página y la consulta
+ * de ensayo—, para que la lista diga lo mismo por las dos salvo la fecha de
+ * arranque, que es lo único que la llave de ensayo cambia (`lib/ensayo.ts`).
+ */
+export function estadoDeLaRuta(c: CircuitoPublicado, ahora: Date, ensayo: boolean): EstadoDeRuta {
+  const arranco = arrancoParaEstaConsulta(ahora, c.serviceLaunchDate, c.timeZone, ensayo);
+  const abierto = enHorarioDeServicio(ahora, c.serviceStartLocal, c.serviceEndLocal, c.timeZone);
+  return {
+    circuito_id: c.publicSlug,
+    situacion: !arranco ? "por_arrancar" : abierto ? "abierto" : "cerrado",
+    abre_a: c.serviceStartLocal.slice(0, 5),
+    arranca_el: c.serviceLaunchDate,
+  };
+}
+
+/** La lista de la ciudad vista con la llave de ensayo: todas las rutas publicadas, dadas por arrancadas. */
+export async function estadosDeEnsayo(ahora: Date): Promise<EstadoDeRuta[]> {
+  const publicados = await getRepos().circuits.listPublishedCircuits();
+  return publicados.map((c) => estadoDeLaRuta(c, ahora, true));
 }

@@ -3180,6 +3180,21 @@
   text-align: left;
 }
 
+/*
+ * La banda de ENSAYO (`banda-de-ensayo.tsx`): la de R&D con su palabra en
+ * grueso. Arriba de todo y sin encogerse: el mapa ocupa lo que sobra, no se
+ * come la banda.
+ */
+.ontoy-banda-ensayo {
+  flex: none;
+  position: relative;
+  z-index: 5;
+}
+.ontoy-banda-ensayo b {
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
 .ontoy-pase-tarjeta {
   background: var(--panel);
   border: 1px solid var(--linea);

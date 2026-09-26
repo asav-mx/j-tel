@@ -40,6 +40,8 @@ import { ordenarRutas } from "@/lib/ontoy/rutas-cerca";
 import { armarLaTira } from "@/lib/ontoy/tira-de-rutas";
 import { PanelDeRutas } from "@/components/ontoy/panel-de-rutas";
 import { useEnVivo } from "@/lib/ontoy/en-vivo";
+import { useLlaveDeEnsayo } from "@/lib/ontoy/llave-de-ensayo";
+import { BandaDeEnsayo } from "@/components/ontoy/banda-de-ensayo";
 import { rutasDeLaConsulta } from "@/lib/ontoy/consulta-de-la-raiz";
 import { avisosDeTusRutas, hayAvisosNuevos } from "@/lib/ontoy/avisos";
 import { registrarSondeo, TELEFONO_INICIAL, type EstadoDelTelefono } from "@/lib/ontoy/avisos-del-telefono";
@@ -111,6 +113,8 @@ export function Ontoy({
   paradaInicial: string | null;
 }) {
   const { deNoche, alternar: alternarPiel } = useTema();
+  /* La llave de ensayo de este teléfono, si la tiene (`lib/ensayo.ts`). */
+  const ensayo = useLlaveDeEnsayo();
   const pedida = rutaInicial && rutas.some((r) => r.circuito_id === rutaInicial) ? rutaInicial : null;
   /**
    * **Se llegó por el letrero de una parada** (`/p/‹qr_slug›`): el MAPA de la
@@ -210,7 +214,10 @@ export function Ontoy({
   const yo = ubicacion.yo;
   // La única escritura de la app: una apertura por ruta abierta (8.7).
   // Mirar tus favoritas en el mapa de la ciudad no es abrir una ruta: no cuenta.
-  useContarApertura(enElMapa && rutaAbierta ? enfocada : null);
+  /* Un teléfono de ensayo no cuenta: sus aperturas serían del equipo, no del
+     público. Y hasta leer la llave no se sabe si lo es, así que se espera. */
+  const cuentaAperturas = ensayo.leida && !ensayo.llave;
+  useContarApertura(cuentaAperturas && enElMapa && rutaAbierta ? enfocada : null);
 
   /*
    * El filtro del Mapa (ASAV, 22-sep): qué rutas se dibujan. `apagadas` son las
@@ -313,11 +320,21 @@ export function Ontoy({
    * tres formas de llegar a una hoja. **La asomada no es ninguna**: aparece
    * sola, y su `paradaAbierta` es `null`, así que aquí no manda nada.
    */
-  useContarAperturaDeParada(enElMapa ? consultada : null, enElMapa ? paradaAbierta : null);
+  useContarAperturaDeParada(
+    cuentaAperturas && enElMapa ? consultada : null,
+    cuentaAperturas && enElMapa ? paradaAbierta : null,
+  );
 
   const [telefono, setTelefono] = useState<EstadoDelTelefono>(TELEFONO_INICIAL);
   const consulta = useMemo(() => rutasDeLaConsulta(favoritas, consultada), [favoritas, consultada]);
-  const enVivo = useEnVivo(consulta, { alSondear: (s) => setTelefono((e) => registrarSondeo(e, s)) });
+  const enVivo = useEnVivo(consulta, {
+    alSondear: (s) => setTelefono((e) => registrarSondeo(e, s)),
+    llaveDeEnsayo: ensayo.llave,
+    alRechazarEnsayo: ensayo.olvidar,
+  });
+  /* Con la llave, la lista de la ciudad también se ve como ensayo: si no, Inicio
+     diría «Arranca el 1 oct» junto al camión en vivo de esa misma ruta. */
+  const estadosALaVista = enVivo.estadosDeEnsayo ?? estados;
   const f = useForma(consultada);
   const forma = f.forma;
   const vivo = consultada ? (enVivo.vivos.get(consultada) ?? null) : null;
@@ -711,6 +728,9 @@ export function Ontoy({
 
   return (
     <div className="ontoy">
+      {/* Sólo cuando el servidor ya contestó como ensayo: una llave guardada que
+          nadie ha comprobado no es un ensayo, y la banda diría algo falso. */}
+      {enVivo.estadosDeEnsayo && <BandaDeEnsayo />}
       {/* Sin cabecera (ASAV, 25-sep): Ontoy se asoma arriba y lleva a Inicio. No sale sobre el Mapa. */}
       {lugar !== "mapa" && <Asomado alTocar={() => irA("inicio")} />}
 
@@ -745,7 +765,7 @@ export function Ontoy({
         <VistaInicio
           alVerTusParadas={() => setVerTusParadas(true)}
           rutas={rutas}
-          estados={estados}
+          estados={estadosALaVista}
           guardadas={guardadas.guardadas}
           guardadasListas={guardadas.listo}
           puedeGuardar={guardadas.disponible}

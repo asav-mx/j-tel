@@ -64,7 +64,12 @@ describe("el service worker: lo vivo no se cachea", () => {
   const contesta = cargarServiceWorker();
 
   it("la prueba encuentra las consultas vivas de verdad (guarda contra un falso verde)", () => {
-    expect(consultasVivas().sort()).toEqual(["/api/circuitos/en-vivo", "/api/circuitos/zaragoza-centro/unidades"]);
+    /* La puerta de ensayo es viva también: camiones, y además sin llave de nadie en caché. */
+    expect(consultasVivas().sort()).toEqual([
+      "/api/circuitos/en-vivo",
+      "/api/circuitos/en-vivo/ensayo",
+      "/api/circuitos/zaragoza-centro/unidades",
+    ]);
   });
 
   it("ninguna consulta viva pasa por la caché", () => {
