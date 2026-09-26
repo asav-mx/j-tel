@@ -66,13 +66,24 @@ export function ProntoEnLaCalle({
  * Sin boca: es la versión original. La boca sólo aparece en las reacciones, y
  * ésta no es una reacción a un dato — es un estado.
  */
-function CamiDeFrente({ color, ruta }: { color: string; ruta: string }) {
+export function CamiDeFrente({
+  color,
+  ruta,
+  tam = 84,
+  className = "ontoy-pronto-cami",
+}: {
+  color: string;
+  ruta: string;
+  /** 84 en «Pronto me verás»; 60 en la hoja de Cami (lámina `6-prototipo/04`). */
+  tam?: number;
+  className?: string;
+}) {
   return (
     <svg
-      className="ontoy-pronto-cami"
+      className={className}
       viewBox="0 0 120 120"
-      width="84"
-      height="84"
+      width={tam}
+      height={tam}
       role="img"
       aria-label={`Camión de la ruta ${ruta}`}
     >
