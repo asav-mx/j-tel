@@ -12,6 +12,7 @@ import type { EstadoDeRuta } from "@/lib/ontoy/estado-de-ruta";
 import { RutasDeInicio } from "@/components/ontoy/rutas-de-inicio";
 import { fechaDelAviso, type AvisoEnLaCampana } from "@/lib/ontoy/avisos";
 import { GlifoAviso, GlifoLuna, GlifoSol } from "@/components/ontoy/glifos";
+import { esImprecisa, margenEnPalabras } from "@/lib/ontoy/distancia";
 
 /**
  * **Inicio** — la app abre contestando (8.8, 22-sep).
@@ -127,6 +128,15 @@ export function VistaInicio({
    */
   const sinRed = enVivo.error;
 
+  /*
+   * **Te ubico por aquí, más o menos** (lámina 5/09): hay posición, pero con un
+   * margen que no alcanza para decir metros (`esImprecisa`, #613). Sólo sin
+   * guardadas: con ellas manda «Tu próximo camión», y la cercanía de las rutas
+   * de abajo ya dice su margen en la cabecera.
+   */
+  const margenImpreciso =
+    ubicacion.estado === "concedida" && ubicacion.yo && esImprecisa(ubicacion.yo.margenM) ? ubicacion.yo.margenM : null;
+
   const [primera, ...demas] = guardadas;
   /*
    * **El Ontoy de Inicio, y es uno** (regla 3; ASAV, 25-sep). Siempre hay uno
@@ -157,6 +167,8 @@ export function VistaInicio({
     />
   ) : deNoche ? (
     <NocheDeLaCiudad vuelven={vuelvenEnPalabras(deNoche)} />
+  ) : margenImpreciso !== null ? (
+    <UbicacionImprecisa margenM={margenImpreciso} alReintentar={ubicacion.reintentar} />
   ) : puedeGuardar ? (
     <TarjetaDeOntoy
       pose="al-frente"
@@ -172,6 +184,7 @@ export function VistaInicio({
         conGuardadas={guardadas.length > 0}
         sinRed={sinRed}
         deNoche={deNoche !== null}
+        imprecisa={!primera && !deNoche && margenImpreciso !== null}
       />
 
       {tarjeta}
@@ -372,11 +385,14 @@ function Encabezado({
   conGuardadas,
   sinRed,
   deNoche,
+  imprecisa,
 }: {
   primeraVez: boolean;
   conGuardadas: boolean;
   sinRed: boolean;
   deNoche: boolean;
+  /** Está la tarjeta de la 5/09: la posición llegó con un margen grande. */
+  imprecisa: boolean;
 }) {
   const contexto = primeraVez
     ? "Todavía no sé dónde estás"
@@ -384,7 +400,9 @@ function Encabezado({
       ? "Sin señal ahorita"
       : deNoche
         ? "La ciudad está cerrada"
-        : null;
+        : imprecisa
+          ? "Por aquí, más o menos"
+          : null;
 
   return (
     <header className="ontoy-inicio-cabeza">
@@ -393,6 +411,58 @@ function Encabezado({
       </h1>
       {contexto && <p className="ontoy-inicio-contexto">{contexto}</p>}
     </header>
+  );
+}
+
+/**
+ * **«Te ubico por aquí, más o menos»** (lámina `5-paradas-qr-ubicacion/09`).
+ *
+ * El teléfono dio posición, pero con un margen que no alcanza para decir metros
+ * (más de 100 m: `esImprecisa`). La app sigue ordenando por cercanía —es la
+ * mejor apuesta— y aquí dice por qué no da distancias.
+ *
+ * **Un cambio de texto contra la lámina, a propósito.** La lámina dice «Las
+ * distancias pueden variar» porque debajo enseña «a unos 300 m». Desde el #613
+ * con este margen no se enseñan metros (ASAV, 25-sep), así que la frase dice
+ * lo que sí pasa: que no te damos metros, y por qué.
+ *
+ * Va en la tarjeta de la bienvenida —hueso, con anillo— y no en carbón: no
+ * habla de ningún camión. Y con el pasajero en vez de Ontoy: lo que está en
+ * duda es dónde estás tú. **Sin cono**: no hay rumbo que apuntar (ver
+ * `pasajeroConLinterna`).
+ */
+function UbicacionImprecisa({ margenM, alReintentar }: { margenM: number; alReintentar: () => void }) {
+  return (
+    <section className="ontoy-bienvenida ontoy-imprecisa">
+      <div className="ontoy-bienvenida-dicho">
+        <span className="ontoy-imprecisa-yo" aria-hidden="true">
+          <svg viewBox="0 0 60 60" width="44" height="44">
+            <circle cx="30" cy="34" r="14" fill="var(--blanco)" />
+            <circle cx="30" cy="34" r="11.5" fill="var(--noche)" />
+            <circle cx="25.5" cy="31" r="3.6" fill="var(--blanco)" />
+            <circle cx="34.5" cy="31" r="3.6" fill="var(--blanco)" />
+            <circle cx="25.8" cy="29.4" r="2" fill="var(--carbon)" />
+            <circle cx="34.8" cy="29.4" r="2" fill="var(--carbon)" />
+            <circle cx="12" cy="40" r="4" fill="var(--noche)" />
+            <circle cx="48" cy="40" r="4" fill="var(--noche)" />
+          </svg>
+        </span>
+        <div>
+          <p className="ontoy-bienvenida-titulo">Te ubico por aquí, más o menos.</p>
+          <p className="ontoy-bienvenida-apoyo">
+            Tu teléfono da un margen de {margenEnPalabras(margenM)}. Por eso no te digo a cuántos metros
+            está cada parada.
+          </p>
+        </div>
+      </div>
+      <button type="button" className="ontoy-boton ontoy-boton-segundo" onClick={alReintentar}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M20 12a8 8 0 1 1-2.3-5.6" />
+          <path d="M20 4v5h-5" />
+        </svg>
+        Intentar de nuevo
+      </button>
+    </section>
   );
 }
 

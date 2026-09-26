@@ -874,7 +874,7 @@
 .ontoy-hoja-nombre {
   flex: 1;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   margin: 0;
   font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
   font-weight: 700;
@@ -1448,7 +1448,7 @@
 .ontoy-paradas-nombre {
   flex: 1;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
   font-weight: 600;
   font-size: 15.5px;
@@ -1682,7 +1682,7 @@
   font-size: 22px;
   line-height: 1.05;
   letter-spacing: -0.02em;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 /* Sin `flex`: el punto va en línea con el texto, y si la frase envuelve, envuelve el texto. */
 .ontoy-cami-dir {
@@ -1771,7 +1771,7 @@
   font-size: 15px;
   font-weight: 700;
   /* Un nombre de parada puede ser «Parroquia Santa Teresa de Jesús». */
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .ontoy-cami-parada-nota {
   font-size: 12px;
@@ -1916,6 +1916,29 @@
   line-height: 1.45;
   color: var(--tenue);
   text-wrap: pretty;
+}
+/*
+ * «Te ubico por aquí, más o menos» (lámina 5/09): el molde de la bienvenida,
+ * con el pasajero en su círculo y un titular de dos renglones, no de uno.
+ */
+.ontoy-imprecisa-yo {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--fondo);
+  box-shadow: 0 0 0 1px var(--linea);
+  display: grid;
+  place-items: center;
+}
+.ontoy-imprecisa .ontoy-bienvenida-titulo {
+  font-size: 22px;
+  line-height: 1.05;
+}
+.ontoy-imprecisa .ontoy-boton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 /* Las dos salidas miden lo mismo: ninguna de las dos es la que «hay que» tocar. */
 .ontoy-bienvenida .ontoy-boton {
@@ -2829,6 +2852,28 @@
   font-size: 17px;
   line-height: 1.2;
   letter-spacing: -0.01em;
+}
+/*
+ * La ruta de un aviso sin número: franja y nombre, en su renglón (ASAV, 26-sep:
+ * la placa es sólo para identificadores cortos). La franja se queda arriba,
+ * junto al primer renglón, aunque el nombre ocupe dos.
+ */
+.ontoy-aviso-ruta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--texto);
+}
+.ontoy-aviso-ruta .ontoy-franja {
+  align-self: flex-start;
+  margin-top: 0.5em;
+}
+.ontoy-aviso-ruta > span:last-child {
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 .ontoy-aviso-titulo .ontoy-placa {
   flex: none;

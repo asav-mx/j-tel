@@ -7,16 +7,19 @@ import type { AvisoDelTelefono } from "@/lib/ontoy/avisos-del-telefono";
 import { Ontoy } from "@/components/ontoy/ontoy-muneco";
 
 /**
- * Lo que dice la placa: el número si la ruta lo trae («51»), o su nombre entero.
+ * **El número de la ruta, si lo trae** («51», «T1»), para su placa; `null` si
+ * no.
  *
- * `etiquetaCortaDeLaRuta` baja a iniciales cuando no hay número —«OC» por
- * Oasis-Centro—, y eso sirve en una lámina con el nombre impreso al lado. Aquí
- * la placa va sola junto al título: unas iniciales no nombran ninguna ruta, y
- * el color no puede ir solo (8.8c).
+ * La placa carbón es sólo para identificadores cortos (ASAV, 26-sep, regla de
+ * toda la app). Sin número la ruta va con su franja y su nombre como texto:
+ * antes la placa llevaba el nombre entero, y con «Oasis – Parroquia Santa
+ * Teresa de Jesús» se partía en dos renglones o aplastaba el título. Por eso
+ * esto es estricto: un nombre de ocho letras o menos —«Centro», «Km 20»— no es
+ * un número aunque `etiquetaCortaDeLaRuta` lo devuelva entero.
  */
-export function nombreEnLaPlaca(nombre: string): string {
+export function numeroDeLaRuta(nombre: string): string | null {
   const corta = etiquetaCortaDeLaRuta(nombre);
-  return /\d/.test(corta) || corta === nombre.trim() ? corta : nombre.trim();
+  return /^[A-Za-z]?\d{1,3}$/.test(corta) ? corta : null;
 }
 
 /**
@@ -115,13 +118,30 @@ export function VistaAvisos({
                 {fechaDelAviso(a.desde, a.zona, ahora)} · según la concesión
                 {!vistosAlAbrir.has(a.id) && <span className="ontoy-aviso-nuevo" aria-label="nuevo" />}
               </span>
-              <span className="ontoy-aviso-titulo">
-                {/* La placa lleva la franja de su ruta y su nombre corto: el color nunca va solo (8.8c). */}
-                <span className="ontoy-placa" style={{ ["--ruta" as string]: a.color }}>
-                  {nombreEnLaPlaca(a.nombreDeRuta)}
+              {/*
+                * La ruta, con su color y su nombre: el color nunca va solo (8.8c).
+                * Con número, en su placa al lado del título, como la lámina 3/06;
+                * sin él, franja y nombre en su renglón, que puede partirse en dos
+                * sin esconder qué ruta es.
+                */}
+              {numeroDeLaRuta(a.nombreDeRuta) ? (
+                <span className="ontoy-aviso-titulo">
+                  <span className="ontoy-placa" style={{ ["--ruta" as string]: a.color }}>
+                    {numeroDeLaRuta(a.nombreDeRuta)}
+                  </span>
+                  <span>{a.titulo}</span>
                 </span>
-                <span>{a.titulo}</span>
-              </span>
+              ) : (
+                <>
+                  <span className="ontoy-aviso-ruta" style={{ ["--ruta" as string]: a.color }}>
+                    <span className="ontoy-franja" aria-hidden="true" />
+                    <span>Ruta {a.nombreDeRuta}</span>
+                  </span>
+                  <span className="ontoy-aviso-titulo">
+                    <span>{a.titulo}</span>
+                  </span>
+                </>
+              )}
               {a.detalle && <span className="ontoy-aviso-detalle">{a.detalle}</span>}
               {a.hasta && <span className="ontoy-aviso-hasta cifra">hasta el {fechaDelAviso(a.hasta, a.zona, ahora).replace(/^(Hoy|Ayer) /, (m) => m.toLowerCase())}</span>}
             </button>

@@ -2,16 +2,25 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { nombreEnLaPlaca } from "./vista-avisos";
+import { numeroDeLaRuta } from "./vista-avisos";
 
-describe("lo que dice la placa de un aviso", () => {
-  it("el número, si la ruta lo trae", () => {
-    expect(nombreEnLaPlaca("Ruta 51 · Centro–Tecnológico")).toBe("51");
+describe("la placa es sólo para el número de la ruta (ASAV, 26-sep)", () => {
+  it("con número, el número", () => {
+    expect(numeroDeLaRuta("Ruta 51 · Centro–Tecnológico")).toBe("51");
   });
 
-  it("sin número, el nombre entero: unas iniciales no nombran ninguna ruta", () => {
-    expect(nombreEnLaPlaca("Oasis-Centro")).toBe("Oasis-Centro");
-    expect(nombreEnLaPlaca("Zaragoza–Centro")).toBe("Zaragoza–Centro");
+  it("sin número, nada: la ruta va con su franja y su nombre como texto", () => {
+    expect(numeroDeLaRuta("Oasis – Parroquia Santa Teresa de Jesús")).toBeNull();
+    expect(numeroDeLaRuta("Zaragoza–Centro")).toBeNull();
+    /* Un nombre corto no es un número aunque quepa en una placa. */
+    expect(numeroDeLaRuta("Centro")).toBeNull();
+    expect(numeroDeLaRuta("Km 20")).toBeNull();
+  });
+
+  it("el aviso sin número no mete el nombre en una placa", () => {
+    const vista = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "vista-avisos.tsx"), "utf8");
+    expect(vista).not.toContain("nombreEnLaPlaca");
+    expect(vista).toMatch(/className="ontoy-aviso-ruta"[\s\S]*className="ontoy-franja"/);
   });
 });
 
