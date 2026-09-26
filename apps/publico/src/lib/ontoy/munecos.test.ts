@@ -45,13 +45,20 @@ describe("el giro de Cami", () => {
     expect(rotacionDeCami(Number.NaN)).toBe(0);
   });
 
-  it("lleva su número y su edad, y los dos se quedan derechos", () => {
+  it("con dato fresco no lleva número ni edad a la vista, pero el lector sí los lee (a1, 26-sep)", () => {
+    const html = camiDesdeArriba(CAMI);
+    expect(html).not.toContain("ontoy-cami-num");
+    expect(html).not.toContain("ontoy-cami-edad");
+    expect(html).toContain('<span class="ontoy-solo-lector">la 2120 · posición de hace 10 s</span>');
+  });
+
+  it("con dato viejo lleva su número y su edad, y los dos se quedan derechos", () => {
     /*
      * Sólo el cuerpo gira. Un rótulo que rota con el camión queda de cabeza la
      * mitad del recorrido, y la edad del dato es lo que no se puede volver
      * ilegible (estándar, regla 4: sin edad no se muestra).
      */
-    const html = camiDesdeArriba(CAMI);
+    const html = camiDesdeArriba({ ...CAMI, fresco: false });
     expect(html).toContain("2120");
     expect(html).toContain("hace 10 s");
     const cuerpo = html.slice(html.indexOf("<svg"), html.indexOf("</svg>"));

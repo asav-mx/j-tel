@@ -80,6 +80,14 @@ export function rotacionDeCami(rumbo: number | null): number {
  * **Sólo el cuerpo gira.** El número y la edad se quedan derechos: un rótulo que
  * rota con el camión queda de cabeza la mitad del recorrido, y la edad del dato
  * es justo lo que no se puede volver ilegible.
+ *
+ * **Con dato fresco, sin número ni edad a la vista** (auditoría a1; decisión de
+ * ASAV, 26-sep; ENMIENDAS (h), con el límite exacto de «fresco» y dónde vive). La lámina `2-mapa/01` dibuja a Cami fresco limpio: la etiqueta
+ * de edad sólo aparece con dato viejo («hace 6 min», README). Con dos unidades
+ * cerca, los rótulos se enciman entre sí y tapan el punto «tú». El dato no se
+ * pierde: el número y la edad siguen en el marcador para el lector de pantalla,
+ * y a la vista en las filas de la hoja y en la hoja de Cami, a un toque.
+ * Con dato viejo no cambia nada: número y edad a la vista.
  */
 export function camiDesdeArriba(u: CamiEnElMapa): string {
   const giro = rotacionDeCami(u.rumbo);
@@ -99,8 +107,12 @@ export function camiDesdeArriba(u: CamiEnElMapa): string {
     <circle cx="48" cy="20.5" r="3.4" fill="${CARBON}"/>
     <rect x="27" y="52" width="26" height="22" rx="6" fill="${HUESO}"/>
   </svg>
-  <span class="ontoy-cami-num">${u.economico}</span>
-  <span class="ontoy-cami-edad cifra">${u.edad}</span>
+  ${
+    viejo
+      ? `<span class="ontoy-cami-num">${u.economico}</span>
+  <span class="ontoy-cami-edad cifra">${u.edad}</span>`
+      : `<span class="ontoy-solo-lector">la ${u.economico} · posición de ${u.edad}</span>`
+  }
 </span>`;
 }
 

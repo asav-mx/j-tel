@@ -189,6 +189,40 @@ del mismo muñeco: Paradito → Tino (provisional, 23-sep) → **Páris**.
 
 ---
 
+## (h) Cami con dato fresco no lleva edad a la vista — 26-sep-2026
+
+**Decisión de ASAV, 26-sep-2026** (auditoría a1, #630). Matiza la regla 5 del `readme.md`
+(«Cada dato en vivo lleva su edad… Sin edad no se muestra») para Cami en el mapa:
+
+- **Cami con dato fresco no lleva edad a la vista, porque su estado encendido la dice.** Ni
+  número ni «hace N s» encima: la lámina `2-mapa/01` lo dibuja limpio, y con dos unidades cerca
+  los rótulos se enciman y tapan el punto «tú».
+- **Con dato viejo lleva número y edad**, apagado al 40 %, como pide el README («Cami queda al
+  40 % con una etiqueta "hace 6 min"»).
+- **La edad exacta siempre está en la hoja**: en las filas de la hoja de parada y en la hoja de
+  Cami, a un toque. Y en el marcador mismo, para el lector de pantalla («la 2120 · posición de
+  hace 10 s»).
+
+**El límite exacto de «fresco», y dónde vive.** Una regla y un valor de origen:
+
+| Qué | Dónde |
+|---|---|
+| **La regla:** fresco ⇔ antigüedad **<** umbral (estricto: con 180 s de umbral, 179 s es fresco y 180 s ya es viejo) | `esFresco()`, `packages/domain/src/publico.ts` |
+| **El valor de origen: 180 s** — una sola constante | `ORIGEN_DEL_CIRCUITO.frescuraSegundos`, mismo archivo |
+| **El umbral de cada circuito:** la columna `circuits.stale_after_seconds`, que nace con ese valor de origen y se puede ajustar por circuito en J-Staff («Dato viejo (s)») | esquema, `packages/db/src/schema/index.ts` |
+
+- **Lo decide el servidor, una vez por unidad**, con el umbral de su circuito (`medirUnidad`, que
+  llama `apps/publico/src/lib/unidades-de-la-ruta.ts`), y la respuesta trae `fresco` ya
+  resuelto. **La app no lo recalcula**: el teléfono no conoce el umbral del circuito.
+- **La única excepción es sin señal:** con la consulta caída, toda unidad pasa a no fresca
+  (`vivoAlDia`, `apps/publico/src/lib/ontoy/vivo-al-dia.ts`, #616). Sin señal no se habla en
+  presente.
+- **El ajuste por circuito se queda, a propósito** (ASAV, 26-sep): se documenta como está.
+
+**Los 180 s se revisan después del ensayo del martes 29-sep, con datos reales.** Es un valor de
+origen, no medido: el ensayo es la primera vez que se ve cuánto tarda de verdad una posición en
+llegar, y con eso se decide si 180 se queda.
+
 ## Notas del repo (no son enmiendas: son cosas que este repo ya decidió)
 
 **Las fuentes no se bajan de Google al compilar.** `tokens/typography.css` trae un
