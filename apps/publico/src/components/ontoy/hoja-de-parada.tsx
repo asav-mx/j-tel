@@ -9,6 +9,7 @@ import {
   masArriba,
   type AlturaDeLaHoja,
 } from "@/lib/ontoy/alturas-de-la-hoja";
+import { useAltoDeLaBarra } from "@/lib/ontoy/alto-de-la-barra";
 import { tinoEnLaParada } from "@/lib/ontoy/munecos";
 
 export interface LlegadaEnLaHoja {
@@ -96,6 +97,9 @@ export function HojaDeParada({
   alGuardar,
   alCerrar,
   alturaInicial = "media",
+  fija = false,
+  porQue = null,
+  haciaDonde = null,
 }: {
   nombre: string;
   /** «Dirección → Centro». Sale de los datos del circuito, nunca del código. */
@@ -129,6 +133,25 @@ export function HojaDeParada({
   alCerrar: () => void;
   /** Con qué altura nace. La hoja de un toque nace en la media (§2 del diseño). */
   alturaInicial?: AlturaDeLaHoja;
+  /**
+   * **La hoja que se asoma sola, y que por eso no se cierra.**
+   *
+   * «Abajo del mapa siempre se asoma» (ASAV, 25-sep). Cerrarla dejaría el mapa
+   * sin lo único que contesta sin tocar nada, así que sus tres salidas —el
+   * botón, la tecla de escape y tocar fuera— y arrastrarla hasta abajo **la
+   * regresan a la asomada** en vez de quitarla. Tampoco se roba el foco al
+   * aparecer: nadie la abrió, y mover el foco a su botón cada vez que se abre
+   * el mapa le quitaría el lugar a quien navega con teclado.
+   */
+  fija?: boolean;
+  /**
+   * Por qué se asoma ésta —«La más cerca de ti · a 90 m en línea recta», «Tu
+   * parada guardada»—. En la altura asomada reemplaza al renglón de la ruta,
+   * como en la lámina; la ruta y el sentido bajan a la fila (ver `haciaDonde`).
+   */
+  porQue?: string | null;
+  /** «hacia Centro». En la asomada, título de la primera fila. */
+  haciaDonde?: string | null;
 }) {
   const cerrarRef = useRef<HTMLButtonElement | null>(null);
   const [altura, setAltura] = useState<AlturaDeLaHoja>(alturaInicial);
@@ -141,33 +164,25 @@ export function HojaDeParada({
    * sentiría pegajosa—, y al soltar vuelve a mandar la altura, que sí se anima.
    */
   const [arrastrando, setArrastrando] = useState<number | null>(null);
-  /**
-   * **Cuánto mide la barra de abajo**, medido del DOM y no escrito aquí.
-   *
-   * La hoja no puede tapar la barra: la barra es la salida de cualquier pantalla
-   * (8.10), y una hoja que la cubre deja al pasajero con una salida menos justo
-   * encima del mapa. En las láminas del diseño la barra se ve debajo de la hoja
-   * en las tres alturas.
-   *
-   * Se **mide** en vez de escribirse porque el estándar dice 64 px y la barra de
-   * hoy mide 75: la palabra subió a 12 px en el #589 y eso la creció. Un número
-   * copiado aquí volvería a separarse de la realidad la próxima vez que alguien
-   * toque la barra —y lo está haciendo hoy—, sin que ninguna prueba lo notara.
-   */
-  const [altoBarra, setAltoBarra] = useState(0);
-  useEffect(() => {
-    const barra = document.querySelector(".ontoy-barra");
-    setAltoBarra(barra ? Math.round(barra.getBoundingClientRect().height) : 0);
-  }, []);
+  /* Dónde termina la hoja: arriba de la barra, que no se tapa (8.10). Ver el hook. */
+  const altoBarra = useAltoDeLaBarra();
 
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => {
-      if (e.key === "Escape") alCerrar();
+      if (e.key !== "Escape") return;
+      if (fija) setAltura("asomada");
+      else alCerrar();
     };
     window.addEventListener("keydown", alTeclear);
-    cerrarRef.current?.focus();
+    if (!fija) cerrarRef.current?.focus();
     return () => window.removeEventListener("keydown", alTeclear);
-  }, [alCerrar]);
+  }, [alCerrar, fija]);
+
+  /** Lo que hacen las salidas: la fija baja a la asomada; la tocada se cierra. */
+  const salir = useCallback(() => {
+    if (fija) setAltura("asomada");
+    else alCerrar();
+  }, [fija, alCerrar]);
 
   /**
    * El arrastre del asa.
@@ -195,17 +210,38 @@ export function HojaDeParada({
         window.removeEventListener("pointercancel", soltar);
         setArrastrando(null);
         const veredicto = alSoltar((alto - ev.clientY) / alto);
-        if (veredicto === "cerrar") alCerrar();
+        if (veredicto === "cerrar") salir();
         else setAltura(veredicto);
       };
       window.addEventListener("pointermove", mover);
       window.addEventListener("pointerup", soltar);
       window.addEventListener("pointercancel", soltar);
     },
-    [alCerrar],
+    [salir],
   );
 
   const fraccion = arrastrando ?? FRACCION[altura];
+  /**
+   * **La cabecera compacta de la asomada**, como la lámina `01-mapa-asomada`:
+   * el nombre y debajo por qué se asoma, sin Tino. A esa altura la hoja tiene
+   * 31.8 % de la pantalla y Tino se comería el renglón que contesta; además,
+   * el Tino de esa parada ya está en el mapa, justo encima.
+   *
+   * Durante el arrastre se decide por la altura que tenía al agarrarla, no por
+   * la fracción del dedo: si no, la cabecera cambiaría de forma a media
+   * arrastrada y la hoja brincaría bajo el dedo.
+   */
+  const compacta = altura === "asomada";
+  const subtitulo = compacta && porQue ? porQue : direccion;
+  const tituloDeLaFila = compacta && porQue ? haciaDonde : null;
+  /**
+   * **En la asomada, una sola fila**: la próxima llegada. La lámina pone una
+   * sola dentro de su tarjeta cerrada, y la regla de ASAV dice «su ruta y su
+   * llegada», en singular. Con todas, la segunda asomaba cortada por la barra —
+   * medio renglón que no se puede leer y que obliga a subir la hoja para saber
+   * qué decía—. Al subirla aparecen todas.
+   */
+  const filas = compacta ? llegadas.slice(0, 1) : llegadas;
 
   return (
     <>
@@ -215,7 +251,13 @@ export function HojaDeParada({
         * mirando y convertiría una hoja que acompaña en una que interrumpe.
         */}
       {altura !== "asomada" && (
-        <button type="button" className="ontoy-scrim transparente" aria-label="Cerrar" onClick={alCerrar} />
+        <button
+          type="button"
+          className="ontoy-scrim transparente"
+          style={{ ["--alto-barra" as string]: `${altoBarra}px` }}
+          aria-label={fija ? "Bajar la hoja" : "Cerrar"}
+          onClick={salir}
+        />
       )}
       <section
         className={`ontoy-hoja${arrastrando !== null ? " arrastrando" : ""}`}
@@ -256,6 +298,7 @@ export function HojaDeParada({
             * decir una cosa distinta de la que dice el dato: es la misma
             * pregunta contestada dos veces, y contestada una sola vez.
             */}
+          {!compacta && (
           <span
             className="ontoy-hoja-tino"
             aria-hidden="true"
@@ -267,14 +310,27 @@ export function HojaDeParada({
               }),
             }}
           />
+          )}
           <h2 className="ontoy-hoja-nombre">{nombre}</h2>
-          <button ref={cerrarRef} type="button" className="ontoy-cerrar" onClick={alCerrar} aria-label="Cerrar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
+          {/*
+            * La fija asomada no lleva ✕: ya está en su altura más baja y no hay
+            * a dónde cerrarla. Arriba de la asomada sí lo lleva, y la regresa.
+            */}
+          {!(fija && compacta) && (
+            <button
+              ref={cerrarRef}
+              type="button"
+              className="ontoy-cerrar"
+              onClick={salir}
+              aria-label={fija ? "Bajar la hoja" : "Cerrar"}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          )}
         </div>
-        <p className="ontoy-hoja-dir">{direccion}</p>
+        <p className={`ontoy-hoja-dir${compacta && porQue ? " por-que" : ""}`}>{subtitulo}</p>
 
         {/*
           * **Por arrancar reemplaza a todo lo de abajo**, no se suma.
@@ -297,7 +353,7 @@ export function HojaDeParada({
           * dos cosas son una lista sola (8.3).
           */}
         <div className="ontoy-hoja-medido">
-        {llegadas.map((l, i) => (
+        {filas.map((l, i) => (
           <div
             key={i}
             className={`ontoy-llegada${l.cifra ? " con-cifra" : ""}${l.vieja ? " vieja" : ""}${l.pasada ? " pasada" : ""}`}
@@ -308,6 +364,12 @@ export function HojaDeParada({
               </span>
             )}
             <span className="ontoy-llegada-dicho">
+              {/*
+                * En la asomada la ruta y el sentido bajan aquí —«hacia
+                * Centro»—, porque el renglón de arriba lo ocupa el porqué. Sólo
+                * en la primera fila: es la única que se ve a esa altura.
+                */}
+              {i === 0 && tituloDeLaFila && <b className="ontoy-llegada-titulo">{tituloDeLaFila}</b>}
               <span className="ontoy-llegada-apoyo">
                 {l.enVivo && <span className="ontoy-punto-vivo" aria-hidden="true" />}
                 {l.pasada && <span className="ontoy-punto-viejo" aria-hidden="true" />}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useAltoDeLaBarra } from "@/lib/ontoy/alto-de-la-barra";
 import { paradasEnPalabras } from "@/lib/ontoy/llegadas";
 import type { ParadaPorDelante } from "@/lib/ontoy/llegadas";
 
@@ -58,10 +59,15 @@ export function HojaDeCami({
     return () => window.removeEventListener("keydown", alTeclear);
   }, [alCerrar]);
 
+  /* Arriba de la barra, no encima de ella (8.10): ver `useAltoDeLaBarra`. */
+  const altoBarra = useAltoDeLaBarra();
+  const hastaLaBarra = { ["--alto-barra" as string]: `${altoBarra}px` };
+
   return (
     <>
-      <button type="button" className="ontoy-scrim" aria-label="Cerrar" onClick={alCerrar} />
+      <button type="button" className="ontoy-scrim" style={hastaLaBarra} aria-label="Cerrar" onClick={alCerrar} />
       <section
+        style={hastaLaBarra}
         className={`ontoy-hoja ontoy-hoja-cami${fresca ? "" : " vieja"}`}
         role="dialog"
         aria-modal="false"

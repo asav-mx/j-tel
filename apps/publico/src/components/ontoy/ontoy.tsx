@@ -34,6 +34,7 @@ import { CabezaDeRuta } from "@/components/ontoy/cabeza-de-ruta";
 import { VistaParadas } from "@/components/ontoy/vista-paradas";
 import { armarParadas, haciaDonde } from "@/lib/ontoy/paradas-de-la-ruta";
 import { rutasFavoritas } from "@/lib/ontoy/favoritas";
+import { paradaAsomada, porQueEnPalabras } from "@/lib/ontoy/parada-asomada";
 import { ordenarRutas } from "@/lib/ontoy/rutas-cerca";
 import { armarLaTira } from "@/lib/ontoy/tira-de-rutas";
 import { PanelDeRutas } from "@/components/ontoy/panel-de-rutas";
@@ -179,19 +180,13 @@ export function Ontoy({
    * cifra que dice cuántas rutas se abrieron.
    */
   const abierta = enElMapa && rutaAbierta ? enfocada : null;
-  const consultada = abierta ?? (enLaCiudad ? (paradaTocada?.ruta ?? null) : null);
+  /* `consultada` se calcula más abajo, junto a la consulta: desde la hoja asomada
+     depende también de la lista de la ciudad y del filtro del mapa. */
   const ubicacion = useUbicacion({ pedirAlAbrir: false });
   const yo = ubicacion.yo;
   // La única escritura de la app: una apertura por ruta abierta (8.7).
   // Mirar tus favoritas en el mapa de la ciudad no es abrir una ruta: no cuenta.
   useContarApertura(enElMapa && rutaAbierta ? enfocada : null);
-  /*
-   * Y la apertura de la PARADA, que es otra cifra y otra tabla (ASAV, 25-sep).
-   * Cuelga de que la hoja esté abierta, así que cuenta las tres formas de
-   * llegar a ella: el toque en el mapa de la ciudad, el toque dentro de una
-   * ruta abierta, y el letrero escaneado.
-   */
-  useContarAperturaDeParada(enElMapa ? consultada : null, enElMapa ? paradaAbierta : null);
 
   /*
    * El filtro del Mapa (ASAV, 22-sep): qué rutas se dibujan. `apagadas` son las
@@ -216,6 +211,78 @@ export function Ontoy({
    * la lista de paradas y la campana: 4 peticiones por minuto en toda la app —antes, con
    * una ruta abierta, eran 8— y los avisos al día en cualquier pantalla.
    */
+  /*
+   * La lista pública de paradas. Una sola bajada, cacheada por el hook.
+   *
+   * ✎ **22-sep-2026 (ASAV): también al abrir el Mapa**, y no sólo si hay
+   * paradas guardadas. La piden los puntitos de parada del filtro, y un
+   * interruptor que aparece o desaparece según si diste ubicación es peor que
+   * una petición más. Es un `GET` **sin parámetros, igual para todos y con
+   * caché largo**: no lleva nada del pasajero y no lo identifica (8.7).
+   */
+  /*
+   * «Tus paradas» también la necesita: sin la lista de la ciudad no hay de
+   * dónde sacar el nombre de cada guardada —el teléfono sólo guarda su slug—.
+   */
+  const listaDeLaCiudad = useParadasDeLaCiudad(lugar === "mapa" || lugar === "ira" || verTusParadas);
+
+  /*
+   * La tira: las cercanas primero (por distancia con ubicación, alfabéticas sin
+   * ella) más las que el pasajero sumó desde el panel. La regla y su porqué,
+   * en `lib/ontoy/tira-de-rutas.ts`.
+   */
+  const paradasDeLaCiudad = listaDeLaCiudad.datos?.paradas ?? [];
+  const ordenDeLasRutas = useMemo(
+    () => ordenarRutas(rutas, paradasDeLaCiudad, ubicacion.yo).rutas,
+    [rutas, paradasDeLaCiudad, ubicacion.yo],
+  );
+  const filtro = useMemo(
+    () => armarLaTira(ordenDeLasRutas, agregadas, apagadas),
+    [ordenDeLasRutas, agregadas, apagadas],
+  );
+
+  /**
+   * **La parada que se asoma abajo del mapa** — la más cerca de ti; sin
+   * ubicación, tu guardada; sin nada, nada. La regla y su orden, en
+   * `lib/ontoy/parada-asomada.ts`.
+   *
+   * Sólo en el Mapa de la ciudad: con una ruta abierta, la pantalla es de esa
+   * ruta y la asomada hablaría de otra cosa.
+   *
+   * ⚠ **No es una apertura.** La asomada aparece sola; nadie la escogió. El
+   * contador de paradas (0057) cuenta las tres formas de LLEGAR a una hoja
+   * —tocarla en el mapa, tocarla en una ruta, escanear su letrero— y ésta no
+   * es ninguna. Por eso no toca `paradaAbierta`, que es de lo que cuelga el
+   * contador.
+   */
+  const asomada = useMemo(
+    () =>
+      enLaCiudad
+        ? paradaAsomada({
+            yo: ubicacion.yo,
+            paradas: paradasDeLaCiudad,
+            apagadas,
+            guardadas: guardadas.guardadas,
+          })
+        : null,
+    [enLaCiudad, ubicacion.yo, paradasDeLaCiudad, apagadas, guardadas.guardadas],
+  );
+  /*
+   * La ruta que se CONSULTA (ver el comentario largo junto a `abierta`): la
+   * abierta; en la ciudad, la de la parada tocada; y si no hay ninguna tocada,
+   * la de la asomada — que tiene que decir su llegada, y sin su ruta en la
+   * consulta no tendría qué decir.
+   */
+  const consultada =
+    abierta ?? (enLaCiudad ? (paradaTocada?.ruta ?? asomada?.ruta ?? null) : null);
+  /*
+   * Y la apertura de la PARADA, que es otra cifra y otra tabla (ASAV, 25-sep).
+   * Cuelga de `paradaAbierta` —la tocada o la escaneada—, así que cuenta las
+   * tres formas de llegar a una hoja. **La asomada no es ninguna**: aparece
+   * sola, y su `paradaAbierta` es `null`, así que aquí no manda nada.
+   */
+  useContarAperturaDeParada(enElMapa ? consultada : null, enElMapa ? paradaAbierta : null);
+
   const [telefono, setTelefono] = useState<EstadoDelTelefono>(TELEFONO_INICIAL);
   const consulta = useMemo(() => rutasDeLaConsulta(favoritas, consultada), [favoritas, consultada]);
   const enVivo = useEnVivo(consulta, { alSondear: (s) => setTelefono((e) => registrarSondeo(e, s)) });
@@ -245,20 +312,6 @@ export function Ontoy({
     // Abierta, lo que está en pantalla queda visto: el punto se apaga.
     if (campanaAbierta) marcarVistos(avisos.map((a) => a.id));
   }, [campanaAbierta, avisos, marcarVistos]);
-  /*
-   * La lista pública de paradas. Una sola bajada, cacheada por el hook.
-   *
-   * ✎ **22-sep-2026 (ASAV): también al abrir el Mapa**, y no sólo si hay
-   * paradas guardadas. La piden los puntitos de parada del filtro, y un
-   * interruptor que aparece o desaparece según si diste ubicación es peor que
-   * una petición más. Es un `GET` **sin parámetros, igual para todos y con
-   * caché largo**: no lleva nada del pasajero y no lo identifica (8.7).
-   */
-  /*
-   * «Tus paradas» también la necesita: sin la lista de la ciudad no hay de
-   * dónde sacar el nombre de cada guardada —el teléfono sólo guarda su slug—.
-   */
-  const listaDeLaCiudad = useParadasDeLaCiudad(lugar === "mapa" || lugar === "ira" || verTusParadas);
   const paradasGuardadasEnElMapa = useMemo(() => {
     const todas = listaDeLaCiudad.datos?.paradas ?? [];
     return guardadas.guardadas.flatMap((g) => {
@@ -383,20 +436,6 @@ export function Ontoy({
     [],
   );
 
-  /*
-   * La tira: las cercanas primero (por distancia con ubicación, alfabéticas sin
-   * ella) más las que el pasajero sumó desde el panel. La regla y su porqué,
-   * en `lib/ontoy/tira-de-rutas.ts`.
-   */
-  const paradasDeLaCiudad = listaDeLaCiudad.datos?.paradas ?? [];
-  const ordenDeLasRutas = useMemo(
-    () => ordenarRutas(rutas, paradasDeLaCiudad, ubicacion.yo).rutas,
-    [rutas, paradasDeLaCiudad, ubicacion.yo],
-  );
-  const filtro = useMemo(
-    () => armarLaTira(ordenDeLasRutas, agregadas, apagadas),
-    [ordenDeLasRutas, agregadas, apagadas],
-  );
 
   const ciudad = useMemo(
     () => ({
@@ -436,7 +475,25 @@ export function Ontoy({
     (s: Sentido) => (forma ? haciaDonde(forma, s, trazadoPorSentido) : null),
     [forma, trazadoPorSentido],
   );
-  const parada = forma?.paradas.find((p) => p.id === paradaAbierta) ?? null;
+  /**
+   * La parada de la hoja: la TOCADA si hay una; si no, en la ciudad, la
+   * asomada. Son dos hojas distintas —una la escogiste, la otra se asoma sola—
+   * y la pantalla las trata distinto (ver `fija` en la hoja).
+   */
+  const laHojaEsLaAsomada = !paradaAbierta && enLaCiudad && asomada !== null;
+  const paradaDeLaHoja = paradaAbierta ?? (laHojaEsLaAsomada ? asomada!.id : null);
+  const parada = forma?.paradas.find((p) => p.id === paradaDeLaHoja) ?? null;
+  /**
+   * **El sentido de la hoja sale de su parada**, sin tocar el estado global.
+   *
+   * Al TOCAR una parada, `tocarParadaDeLaCiudad` ya pone su sentido en el
+   * estado, porque el pasajero la escogió. La asomada no la escogió nadie, y
+   * cambiar el sentido global cada vez que el GPS hace que otra parada quede
+   * más cerca se llevaría ese sentido a la ruta que abras después. Por eso aquí
+   * se DERIVA y no se guarda. Una parada que sirve a los dos sentidos trae
+   * `null` y se queda el que había.
+   */
+  const sentidoDeLaHoja: Sentido = laHojaEsLaAsomada ? (asomada!.sentido ?? sentido) : sentido;
 
   /*
    * Las próximas paradas del camión tocado. Se recalculan con cada sondeo, que
@@ -478,12 +535,12 @@ export function Ontoy({
       return [{ rotulo: "Fuera de horario", apoyo: `abre ${vivo.abre_a}`, vieja: true }];
     }
 
-    const abscisa = dondeCaeLaParada(parada, trazadoPorSentido.get(sentido), forma.corredor_m);
+    const abscisa = dondeCaeLaParada(parada, trazadoPorSentido.get(sentidoDeLaHoja), forma.corredor_m);
     if (abscisa === null) {
       return [{ rotulo: "Sin dato en este sentido", apoyo: "esta parada no cae en el trazado de ida y vuelta", vieja: true }];
     }
     const lista = llegadasHasta(
-      { avanceMetros: abscisa, sentido },
+      { avanceMetros: abscisa, sentido: sentidoDeLaHoja },
       { forma, vivo, velocidadKmh: velocidad.kmh, trazadoPorSentido },
     );
     const enMinutos: LlegadaEnLaHoja[] = lista.slice(0, 3).map((l, i) => ({
@@ -504,7 +561,7 @@ export function Ontoy({
      * 8.9b: sin minutos, la cuenta de paradas. Y el dato viejo se queda como
      * dato viejo (8.9): en pasado, con su edad, al final — con o sin minutos.
      */
-    const porParadas = paradasHastaLaParada({ avanceMetros: abscisa, sentido }, { forma, vivo, trazadoPorSentido });
+    const porParadas = paradasHastaLaParada({ avanceMetros: abscisa, sentido: sentidoDeLaHoja }, { forma, vivo, trazadoPorSentido });
     const viejas: LlegadaEnLaHoja[] = porParadas
       .filter((p) => !p.fresca)
       .map((p) => ({
@@ -543,20 +600,20 @@ export function Ontoy({
       return [{ rotulo: "Sin unidad a la vista", apoyo: "ahorita no hay ninguna que se pueda medir", vieja: true }];
     }
     return todas;
-  }, [forma, parada, vivo, error, sentido, trazadoPorSentido, velocidad.kmh]);
+  }, [forma, parada, vivo, error, sentidoDeLaHoja, trazadoPorSentido, velocidad.kmh]);
 
   /* 8.3b: hasta donde está el pasajero, calculado aquí y sin que salga nada. */
   const hastaMi = useMemo(() => {
     if (!forma || !vivo || !yo) return null;
-    const trazado = trazadoPorSentido.get(sentido);
+    const trazado = trazadoPorSentido.get(sentidoDeLaHoja);
     const mi = trazado ? avanceSobreTrazado(yo, trazado, forma.corredor_m) : null;
     if (!mi) return null;
     const l = llegadasHasta(
-      { avanceMetros: mi.avanceMetros, sentido },
+      { avanceMetros: mi.avanceMetros, sentido: sentidoDeLaHoja },
       { forma, vivo, velocidadKmh: velocidad.kmh, trazadoPorSentido },
     )[0];
     return l ? rangoEnPalabras(l.rango) : null;
-  }, [forma, vivo, yo, sentido, trazadoPorSentido, velocidad.kmh]);
+  }, [forma, vivo, yo, sentidoDeLaHoja, trazadoPorSentido, velocidad.kmh]);
 
   return (
     <div className="ontoy">
@@ -718,17 +775,27 @@ export function Ontoy({
         */}
       {!campanaAbierta && enElMapa && parada && rutaDeLaHoja && (
         <HojaDeParada
+          /*
+           * La llave cambia con la parada Y con si es la asomada o la tocada:
+           * tocar la misma parada que se estaba asomando tiene que abrirla en
+           * la media, no dejarla donde estaba.
+           */
+          key={`${parada.id}:${laHojaEsLaAsomada ? "asomada" : "tocada"}`}
           nombre={parada.nombre}
-          direccion={`Ruta ${rutaDeLaHoja.nombre} · ${nombreDeSentido(sentido) ?? (sentido === "ida" ? "ida" : "vuelta")}${
+          direccion={`Ruta ${rutaDeLaHoja.nombre} · ${nombreDeSentido(sentidoDeLaHoja) ?? (sentidoDeLaHoja === "ida" ? "ida" : "vuelta")}${
             hastaMi ? ` · hasta donde estás ${hastaMi}` : ""
           }`}
+          fija={laHojaEsLaAsomada}
+          alturaInicial={laHojaEsLaAsomada ? "asomada" : "media"}
+          porQue={laHojaEsLaAsomada ? porQueEnPalabras(asomada!.porQue) : null}
+          haciaDonde={nombreDeSentido(sentidoDeLaHoja) ?? null}
           llegadas={llegadasDeLaHoja}
           porArrancar={
             vivo?.estado === "por_arrancar"
               ? { ruta: rutaDeLaHoja.nombre, arrancaEl: vivo.arranca_el }
               : null
           }
-          promesa={promesaEnPalabras(vivo?.promesa ?? null, sentido) ?? ""}
+          promesa={promesaEnPalabras(vivo?.promesa ?? null, sentidoDeLaHoja) ?? ""}
           /* Sólo lo declarado lleva firma: ver el porqué en la prop. */
           promesaDeclarada={vivo?.promesa?.estado === "declarada"}
           guardada={guardadas.estaGuardada(parada.id)}
