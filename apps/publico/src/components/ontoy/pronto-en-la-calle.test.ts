@@ -89,11 +89,12 @@ describe("la fecha de arranque nunca sale cruda a la pantalla", () => {
     const llaman = fuentes(SRC).filter(
       ([f, t]) => !f.includes("fecha-arranque") && /arranque(Corto|Largo)\(/.test(t),
     );
+    /* ✎ 26-sep: las frases de la tarjeta de Inicio viven ahora en `lectura-de-la-guardada.ts`. */
     expect(llaman.map(([f]) => f).sort()).toEqual([
-      "components/ontoy/atajo-de-parada.tsx",
       "components/ontoy/ontoy.tsx",
       "components/ontoy/pronto-en-la-calle.tsx",
       "components/ontoy/rutas-de-inicio.tsx",
+      "lib/ontoy/lectura-de-la-guardada.ts",
     ]);
   });
 });

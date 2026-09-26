@@ -44,6 +44,11 @@ export function useEnVivo(
   reintentar: () => void;
   /** Con la llave: la situación de todas las rutas vista como ensayo. `null` sin llave. */
   estadosDeEnsayo: EstadoDeRuta[] | null;
+  /**
+   * Cuándo llegó la última respuesta buena, con el reloj del teléfono. Sin
+   * señal, lo que se enseña es de ese momento, y su edad crece desde ahí.
+   */
+  recibidoEn: number | null;
 } {
   const [vivos, setVivos] = useState<Map<string, Vivo>>(new Map());
   const [error, setError] = useState(false);
@@ -51,6 +56,7 @@ export function useEnVivo(
   const [respondio, setRespondio] = useState(false);
   const [intento, setIntento] = useState(0);
   const [estadosDeEnsayo, setEstadosDeEnsayo] = useState<EstadoDeRuta[] | null>(null);
+  const [recibidoEn, setRecibidoEn] = useState<number | null>(null);
   const llave = opciones.llaveDeEnsayo ?? null;
   const alRechazarEnsayo = useRef(opciones.alRechazarEnsayo);
   alRechazarEnsayo.current = opciones.alRechazarEnsayo;
@@ -97,6 +103,7 @@ export function useEnVivo(
           const cuerpo: { rutas: Record<string, Vivo>; estados?: EstadoDeRuta[] } = await r.json();
           if (montado) {
             setVivos(new Map(Object.entries(cuerpo.rutas)));
+            setRecibidoEn(Date.now());
             if (llave) setEstadosDeEnsayo(cuerpo.estados ?? null);
             setRespondio(true);
             setError(false);
@@ -121,5 +128,5 @@ export function useEnVivo(
     };
   }, [direccion, intento, llave]);
 
-  return { vivos, error, cargando, respondio, reintentar: () => setIntento((n) => n + 1), estadosDeEnsayo };
+  return { vivos, error, cargando, respondio, reintentar: () => setIntento((n) => n + 1), estadosDeEnsayo, recibidoEn };
 }
