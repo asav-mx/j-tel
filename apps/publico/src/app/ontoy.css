@@ -1255,6 +1255,23 @@
   color: var(--tenue);
   text-underline-offset: 2px;
 }
+/* La puerta discreta a Avisos: se lee como enlace y se toca como botón (44 px). */
+.ontoy-pie-avisos {
+  padding-bottom: 0;
+}
+.ontoy-enlace-pie {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tenue);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
 
 /* ── la ruta abierta: cabeza teñida (8.8d) ──────────────────────────────
  * Fondo = color de la ruta. Texto = el que escoge `textoSobreLaRuta` (≥4.5:1).

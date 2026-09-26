@@ -236,3 +236,25 @@ describe("sin señal, Inicio ofrece Reintentar (lámina 7/05)", () => {
     expect(bloque).not.toContain("ontoy-boton-principal");
   });
 });
+
+describe("«Sin avisos» se puede abrir (auditoría del 25-sep)", () => {
+  const codigo = sinComentarios(vista);
+
+  it("sin avisos de la concesión, un enlace discreto al pie, sólo con guardadas", () => {
+    const i = codigo.indexOf("{guardadas.length > 0 && avisos.length === 0 && (");
+    expect(i).toBeGreaterThan(0);
+    const bloque = codigo.slice(i, codigo.indexOf("</p>", i));
+    expect(bloque).toContain("onClick={alVerAvisos}");
+    expect(bloque).toContain("Avisos de tus rutas");
+  });
+
+  it("la puerta grande sigue saliendo sólo si hay avisos: no es ruido diario", () => {
+    expect(codigo).toContain("{avisos.length > 0 && <PuertaDeAvisos");
+  });
+
+  it("el enlace se toca como botón: 44 px", () => {
+    const css = readFileSync(path.join(AQUI, "../../app/ontoy.css"), "utf8");
+    const i = css.indexOf(".ontoy-enlace-pie {");
+    expect(css.slice(i, css.indexOf("}", i))).toContain("min-height: 44px");
+  });
+});

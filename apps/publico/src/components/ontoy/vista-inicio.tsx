@@ -255,6 +255,22 @@ export function VistaInicio({
         abiertas={rutasAbiertas}
       />
 
+      {/*
+        * **La otra puerta a Avisos, discreta** (auditoría del 25-sep: «Sin
+        * avisos» no se podía abrir). La grande de arriba sale sólo cuando la
+        * concesión publicó algo —una tarjeta que dice «no hay avisos» es ruido
+        * todos los días—; sin ella, la pantalla de Avisos y lo que le pasó a tu
+        * teléfono quedaban sin camino. Un enlace de texto al pie, sólo con
+        * paradas guardadas: los avisos son de tus rutas.
+        */}
+      {guardadas.length > 0 && avisos.length === 0 && (
+        <p className="ontoy-pie ontoy-pie-avisos">
+          <button type="button" className="ontoy-enlace-pie" onClick={alVerAvisos}>
+            Avisos de tus rutas
+          </button>
+        </p>
+      )}
+
       {/* Al pie: los datos (lo que es ley vive allá, no en la pantalla) y la piel. */}
       <p className="ontoy-pie">
         <a href="/privacidad">Qué datos usa la app y para qué</a>
