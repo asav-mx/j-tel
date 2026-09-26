@@ -2148,6 +2148,10 @@
   letter-spacing: -0.02em;
   text-wrap: balance;
 }
+/* Los grupos de resultados (lámina 3/04): «Rutas» y «Paradas», cada uno con su título. */
+.ontoy-ira-grupo {
+  margin-top: 16px;
+}
 .ontoy-ira-tus-paradas {
   margin-top: 26px;
 }
@@ -2966,17 +2970,22 @@
    como renglones de lista, no como pastillas: lo que se escoge es un lugar.
    Sin color propio — «Parada» y «Ruta» se distinguen por su rótulo, nunca
    por un color (8.8c). */
+/*
+ * El buscador de «Ir a», como la lámina 3/04 (README: «56 en Ir a con borde de
+ * 2 px carbón»): pastilla de 56 con el borde en la tinta del texto —carbón de
+ * día, hueso de noche—. Antes medía 52 con un hilo de 1 px que sólo se
+ * oscurecía con el foco. El borde grueso es el de siempre: es el campo de la
+ * pantalla, con foco o sin él.
+ */
 .ontoy-ira-campo {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 0 13px;
-  border: 1px solid var(--linea);
-  border-radius: 13px;
+  min-height: 56px;
+  padding: 0 16px;
+  border: 2px solid var(--texto);
+  border-radius: var(--r-pill, 999px);
   background: var(--panel);
-}
-.ontoy-ira-campo:focus-within {
-  border-color: var(--texto);
 }
 .ontoy-ira-campo svg {
   flex: none;

@@ -48,3 +48,34 @@ describe("antes de escribir (3-ir-a/02)", () => {
     expect(visible).toMatch(/\{escribio \? \([\s\S]*?\) : \(\s*<AntesDeEscribir/);
   });
 });
+
+describe("los resultados de «Ir a», como la lámina 3/04", () => {
+  const fuente = readFileSync(new URL("./vista-ira.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../../app/ontoy.css", import.meta.url), "utf8");
+
+  it("primero las rutas y luego las paradas, cada grupo con su título", () => {
+    const rutas = fuente.indexOf("{rutasEncontradas.length > 0 && (");
+    const paradas = fuente.indexOf("{paradasEncontradas.length > 0 && (");
+    expect(rutas).toBeGreaterThan(0);
+    expect(paradas).toBeGreaterThan(rutas);
+  });
+
+  it("sin rótulos «PARADA»/«RUTA» y sin placa: franja y nombre, como Inicio", () => {
+    expect(fuente).not.toContain('className="ontoy-ira-que');
+    const resultados = fuente.slice(fuente.indexOf("{rutasEncontradas.length > 0 && ("), fuente.indexOf("Recortar callando"));
+    expect(resultados).not.toContain("ontoy-placa");
+    expect(resultados.match(/ontoy-franja-vertical/g) ?? []).toHaveLength(2);
+  });
+
+  it("una ruta dice su frecuencia con firma; una parada, de qué ruta es", () => {
+    expect(fuente).toContain("promesaFirmada(ruta.promesa, null)");
+    expect(fuente).toContain("Ruta {s.circuitoNombre}");
+  });
+
+  it("el buscador mide 56 y lleva el borde de 2 px en la tinta del texto", () => {
+    const i = css.indexOf(".ontoy-ira-campo {");
+    const regla = css.slice(i, css.indexOf("}", i));
+    expect(regla).toContain("min-height: 56px");
+    expect(regla).toContain("border: 2px solid var(--texto)");
+  });
+});

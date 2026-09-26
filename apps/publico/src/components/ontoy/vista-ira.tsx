@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { RutaDeLaCiudad } from "@/lib/ontoy/forma";
+import { promesaFirmada } from "@/lib/ontoy/promesa-firmada";
 import type { ParadaDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
 import type { ParadaGuardada } from "@/lib/ontoy/paradas-guardadas";
 import {
@@ -115,6 +116,9 @@ export function VistaIrA({
    */
   const buscando = escribio && !paradasListas && !error;
 
+  const rutasEncontradas = sugerencias.flatMap((s) => (s.tipo === "ruta" ? [s] : []));
+  const paradasEncontradas = sugerencias.flatMap((s) => (s.tipo === "parada" ? [s] : []));
+
   return (
     <div className="ontoy-vista ontoy-ira">
       <header className="ontoy-inicio-cabeza">
@@ -197,49 +201,76 @@ export function VistaIrA({
               <p className="ontoy-ira-encontre">
                 <Ontoy pose="contento" tamano={40} />
                 <span>
-                  {encontre(
-                    sugerencias.filter((s) => s.tipo === "ruta").length,
-                    sugerencias.filter((s) => s.tipo === "parada").length,
-                  )}
+                  {encontre(rutasEncontradas.length, paradasEncontradas.length)}
                 </span>
               </p>
-              <ul className="ontoy-ira-lista">
-                {sugerencias.map((s, i) => (
-                  <li key={`${s.clave}-${i}`}>
-                    {s.tipo === "parada" ? (
-                      <button
-                        type="button"
-                        className="ontoy-ira-sugerencia"
-                        onClick={() => alAbrirRuta(s.circuitoSlug, s.paradaId, s.sentido ?? undefined)}
-                      >
-                        <span className="ontoy-ira-que cifra">Parada</span>
-                        <span className="ontoy-ira-texto">
-                          <span className="ontoy-ira-nombre">{s.nombre}</span>
-                          {/*
-                            La ruta, completa y en su propio renglón. Al lado se
-                            truncaba —«Circuito de muestra — O…»—, y una parada
-                            que no dice de qué ruta es deja de distinguirse de la
-                            otra parada con el mismo nombre (8.8c).
-                          */}
-                          <span className="ontoy-ira-donde">{s.circuitoNombre}</span>
-                        </span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="ontoy-ira-sugerencia"
-                        onClick={() => alAbrirRuta(s.slug)}
-                      >
-                        <span className="ontoy-ira-que cifra">Ruta</span>
-                        <span className="ontoy-ira-texto">
-                          <span className="ontoy-ira-nombre">{s.nombre}</span>
-                          <span className="ontoy-ira-donde">toda la ruta, con sus paradas</span>
-                        </span>
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              {/*
+                * **Como la lámina 3/04: primero las rutas, luego las paradas**, cada
+                * grupo con su título y en renglones como los de Inicio —franja del
+                * color de su ruta, nombre, flecha—. Sin la placa: las rutas no
+                * tienen número en la versión 1, y la placa carbón es sólo para
+                * identificadores cortos (ASAV, 26-sep). Antes era una sola lista
+                * con «PARADA» y «RUTA» escritos y las rutas al final.
+                */}
+              {rutasEncontradas.length > 0 && (
+                <section className="ontoy-ira-grupo">
+                  <h2 className="ontoy-ira-tus-paradas-titulo">{rutasEncontradas.length === 1 ? "Ruta" : "Rutas"}</h2>
+                  <div className="ontoy-renglones">
+                    {rutasEncontradas.map((s, i) => {
+                      const ruta = rutas.find((r) => r.circuito_id === s.slug) ?? null;
+                      return (
+                        <button
+                          key={`${s.clave}-${i}`}
+                          type="button"
+                          className="ontoy-renglon"
+                          style={{ ["--ruta" as string]: ruta?.color_hex ?? "currentColor" }}
+                          onClick={() => alAbrirRuta(s.slug)}
+                        >
+                          <span className="ontoy-franja-vertical" aria-hidden="true" />
+                          <span className="ontoy-renglon-texto">
+                            <span className="ontoy-renglon-titulo">{s.nombre}</span>
+                            <span className="ontoy-renglon-sub">
+                              {(ruta && promesaFirmada(ruta.promesa, null)) ?? "toda la ruta, con sus paradas"}
+                            </span>
+                          </span>
+                          <Chevron />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+              {paradasEncontradas.length > 0 && (
+                <section className="ontoy-ira-grupo">
+                  <h2 className="ontoy-ira-tus-paradas-titulo">{paradasEncontradas.length === 1 ? "Parada" : "Paradas"}</h2>
+                  <div className="ontoy-renglones">
+                    {paradasEncontradas.map((s, i) => {
+                      const ruta = rutas.find((r) => r.circuito_id === s.circuitoSlug) ?? null;
+                      return (
+                        <button
+                          key={`${s.clave}-${i}`}
+                          type="button"
+                          className="ontoy-renglon"
+                          style={{ ["--ruta" as string]: ruta?.color_hex ?? "currentColor" }}
+                          onClick={() => alAbrirRuta(s.circuitoSlug, s.paradaId, s.sentido ?? undefined)}
+                        >
+                          <span className="ontoy-franja-vertical" aria-hidden="true" />
+                          <span className="ontoy-renglon-texto">
+                            <span className="ontoy-renglon-titulo">{s.nombre}</span>
+                            {/*
+                              La ruta, completa y en su propio renglón: una parada que no
+                              dice de qué ruta es deja de distinguirse de la otra parada
+                              con el mismo nombre (8.8c).
+                            */}
+                            <span className="ontoy-renglon-sub">Ruta {s.circuitoNombre}</span>
+                          </span>
+                          <Chevron />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
               {/* Recortar callando dejaría al pasajero creyendo que su parada no existe. */}
               {omitidas > 0 && (
                 <p className="ontoy-ira-omitidas">
@@ -261,6 +292,14 @@ export function VistaIrA({
         <a href="/privacidad">Qué datos usa la app y para qué</a>.
       </p>
     </div>
+  );
+}
+
+function Chevron() {
+  return (
+    <svg className="ontoy-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
   );
 }
 
