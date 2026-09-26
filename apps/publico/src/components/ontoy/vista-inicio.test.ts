@@ -193,3 +193,27 @@ describe("qué se voltea con la piel y qué no (ASAV, 25-sep; como la placa del 
     expect(sinComentarios(vista)).toContain("<NocheDeLaCiudad vuelven={vuelvenEnPalabras(deNoche)} />");
   });
 });
+
+describe("el renglón de una parada guardada en un teléfono angosto", () => {
+  /*
+   * Auditoría con el nombre más largo (26-sep): a 320 px el dato de la derecha
+   * se quedaba con el ancho y el nombre de la parada bajaba a cuatro renglones.
+   * Lo visto se midió en el navegador (en el PR); esto cerca la regla.
+   */
+  const css = readFileSync(path.join(AQUI, "../../app/ontoy.css"), "utf8");
+  const atajo = readFileSync(path.join(AQUI, "atajo-de-parada.tsx"), "utf8");
+
+  it("el renglón de parada tiene su propia clase, y los de rutas no la llevan", () => {
+    expect(atajo).toContain('className="ontoy-renglon ontoy-renglon-parada"');
+  });
+
+  it("por debajo de 360 px el dato baja debajo del nombre", () => {
+    const angosto = css.slice(css.indexOf("@media (max-width: 359px)"));
+    expect(angosto.slice(0, 600)).toMatch(/\.ontoy-renglon-parada > \.ontoy-renglon-dato \{[^}]*grid-row: 2/);
+  });
+
+  it("la columna del dato no se encoge al mínimo, y su tope no se mide contra ella", () => {
+    expect(css).toContain("grid-template-columns: 5px minmax(0, 1fr) fit-content(45%) 16px");
+    expect(css).toMatch(/\.ontoy-renglon-parada > \.ontoy-renglon-dato \{\s*max-width: none;/);
+  });
+});

@@ -228,7 +228,7 @@ export function RenglonDeParada(props: PropsDeLaGuardada) {
   const g = useLecturaDeLaGuardada(props);
   const { grande, chico } = dichoDelRenglon(g.lectura);
   return (
-    <button type="button" className="ontoy-renglon" onClick={props.alAbrir} style={{ ["--ruta" as string]: g.color }}>
+    <button type="button" className="ontoy-renglon ontoy-renglon-parada" onClick={props.alAbrir} style={{ ["--ruta" as string]: g.color }}>
       <span className="ontoy-franja-vertical" aria-hidden="true" />
       <span className="ontoy-renglon-texto">
         <span className="ontoy-renglon-titulo">{g.nombreParada ?? props.guardada.parada}</span>

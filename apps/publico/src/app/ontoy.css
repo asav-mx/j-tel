@@ -2699,6 +2699,50 @@
   font-size: 20px;
   color: var(--texto);
 }
+/*
+ * **El renglón de una parada guardada, en un teléfono angosto.**
+ *
+ * Tiene una columna más que los demás renglones: lo que se sabe de su camión,
+ * a la derecha. A 320 px esa columna se quedaba con el ancho y el nombre de la
+ * parada bajaba a cuatro renglones —«Hospital / General de / Zona núm. 35 /
+ * del IMSS»— (auditoría con el nombre más largo, 26-sep). Por debajo de 360 px
+ * el dato baja debajo del nombre, alineado con él; la franja y la flecha cubren
+ * los dos renglones. Arriba de 360 se queda a la derecha, como la lámina 1/02.
+ */
+.ontoy-renglon-parada {
+  display: grid;
+  /* `fit-content(45%)` y no `auto`: en la cuadrícula `auto` se encoge al mínimo y «abre a las 01:00» caía en tres renglones. */
+  grid-template-columns: 5px minmax(0, 1fr) fit-content(45%) 16px;
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: center;
+}
+.ontoy-renglon-parada > .ontoy-franja-vertical {
+  grid-row: 1 / -1;
+}
+/* El tope del 45 % ya lo pone la columna; en la cuadrícula un `max-width` en % se mediría contra ella. */
+.ontoy-renglon-parada > .ontoy-renglon-dato {
+  max-width: none;
+}
+@media (max-width: 359px) {
+  .ontoy-renglon-parada {
+    grid-template-columns: 5px minmax(0, 1fr) 16px;
+  }
+  .ontoy-renglon-parada > .ontoy-renglon-dato {
+    grid-column: 2;
+    grid-row: 2;
+    align-items: flex-start;
+    max-width: none;
+    text-align: left;
+  }
+  .ontoy-renglon-parada > .ontoy-franja-vertical,
+  .ontoy-renglon-parada > .ontoy-chevron {
+    grid-row: 1 / span 2;
+  }
+  .ontoy-renglon-parada > .ontoy-chevron {
+    grid-column: 3;
+  }
+}
 
 /* ── la puerta a los avisos en Inicio: lo que era la campana (25-sep) ── */
 .ontoy-puerta-avisos {
