@@ -109,7 +109,11 @@ export function resumenDeLaPromesa(franjas: FranjaCapturada[] | null): string {
 export function loQueDiceOntoyAhora(p: PromesaAhora): string {
   if (p.estado === "sin_capturar") return "«Esta ruta no publica cada cuánto pasa» — no hay promesa capturada.";
   if (p.estado === "sin_franja") return "«Sin frecuencia publicada para esta hora» — ninguna franja cubre este momento.";
-  if (p.ida === p.vuelta) return `«Frecuencia · cada ${p.ida} min», en los dos sentidos.`;
-  // Con ida y vuelta distintas, la frase exacta de Ontoy — antes aquí había otra que ya no coincidía.
+  /*
+   * Siempre la frase EXACTA de Ontoy, del dominio. Con ida y vuelta iguales
+   * esto la escribía a mano, y el 26-sep la frase cambió («Pasa cada…»): la
+   * copia habría seguido citando la vieja.
+   */
+  if (p.ida !== null && p.ida === p.vuelta) return `«${promesaEnPalabras(p, null)}», en los dos sentidos.`;
   return `«${promesaEnPalabras(p, null)}».`;
 }

@@ -4,17 +4,17 @@ import { promesaFirmada } from "./promesa-firmada";
 
 /*
  * **LA FRECUENCIA LLEVA SU FIRMA** (auditoría del 25-sep). Inicio decía
- * «Frecuencia · cada 12 min» y la hoja del Mapa «… según la concesión»: la
+ * la frecuencia sin firma y la hoja del Mapa con «… según la concesión»: la
  * misma promesa, una con dueño y otra sin él.
  */
 
 describe("lo que la concesión declaró, firmado", () => {
   it("una frecuencia declarada lleva «según la concesión»", () => {
     expect(promesaFirmada({ estado: "declarada", ida: 12, vuelta: 12 }, null)).toBe(
-      "Frecuencia · cada 12 min · según la concesión",
+      "Pasa cada 12 min · según la concesión",
     );
     expect(promesaFirmada({ estado: "declarada", ida: 12, vuelta: 20 }, "vuelta")).toBe(
-      "Frecuencia · cada 20 min · según la concesión",
+      "Pasa cada 20 min · según la concesión",
     );
   });
 

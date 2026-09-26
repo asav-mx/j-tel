@@ -5,7 +5,7 @@ import type { PromesaAhora } from "@jtel/domain";
 export const FIRMA_DE_LA_CONCESION = "según la concesión";
 
 /**
- * **La frecuencia, con quién la dijo** — «Frecuencia · cada 12 min · según la
+ * **La frecuencia, con quién la dijo** — «Pasa cada 12 min · según la
  * concesión», como el diseño (auditoría del 25-sep: Inicio la decía sin firma y
  * la hoja del Mapa con ella; la misma promesa, dicha de dos formas).
  *
