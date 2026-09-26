@@ -35,6 +35,7 @@ import { VistaParadas } from "@/components/ontoy/vista-paradas";
 import { armarParadas, haciaDonde } from "@/lib/ontoy/paradas-de-la-ruta";
 import { rutasFavoritas } from "@/lib/ontoy/favoritas";
 import { paradaAsomada, porQueEnPalabras } from "@/lib/ontoy/parada-asomada";
+import { gruposPorSentido } from "@/lib/ontoy/grupos-por-sentido";
 import { ordenarRutas } from "@/lib/ontoy/rutas-cerca";
 import { armarLaTira } from "@/lib/ontoy/tira-de-rutas";
 import { PanelDeRutas } from "@/components/ontoy/panel-de-rutas";
@@ -486,8 +487,9 @@ export function Ontoy({
       alAbrirPanel: () => setPanelAbierto(true),
       alAbrirRuta: (ruta: string, parada?: string) => abrirRuta(ruta, parada),
       alTocarParadaDeLaCiudad: tocarParadaDeLaCiudad,
+      alBuscar: () => irA("ira"),
     }),
-    [filtro, enVivo.vivos, paradasGuardadasEnElMapa, paradasDeLaCiudad, verParadas, alternarRuta, abrirRuta, tocarParadaDeLaCiudad],
+    [filtro, enVivo.vivos, paradasGuardadasEnElMapa, paradasDeLaCiudad, verParadas, alternarRuta, abrirRuta, tocarParadaDeLaCiudad, irA],
   );
 
   /* Las paradas de la ruta abierta: se arma en `lib/ontoy/paradas-de-la-ruta.ts`, aquí sólo se pide. */
@@ -563,7 +565,12 @@ export function Ontoy({
     : null;
 
   /* Lo que la hoja enseña: lo medido arriba, la promesa abajo, nunca fundidos. */
-  const llegadasDeLaHoja = useMemo((): LlegadaEnLaHoja[] => {
+  /**
+   * Lo que la hoja enseña **en un sentido**. Una función y no un valor porque
+   * la hoja completa de una parada que sirve a los dos pide los dos (ver
+   * `gruposDeLaHoja`); la media y la asomada piden sólo el suyo.
+   */
+  const llegadasEnSentido = useCallback((sentidoPedido: Sentido): LlegadaEnLaHoja[] => {
     if (!forma || !parada) return [];
     if (error) {
       return [{ rotulo: "No pudimos preguntar", apoyo: "lo que ves es lo último que supimos", vieja: true }];
@@ -582,12 +589,12 @@ export function Ontoy({
       return [{ rotulo: "Fuera de horario", apoyo: `abre ${vivo.abre_a}`, vieja: true }];
     }
 
-    const abscisa = dondeCaeLaParada(parada, trazadoPorSentido.get(sentidoDeLaHoja), forma.corredor_m);
+    const abscisa = dondeCaeLaParada(parada, trazadoPorSentido.get(sentidoPedido), forma.corredor_m);
     if (abscisa === null) {
       return [{ rotulo: "Sin dato en este sentido", apoyo: "esta parada no cae en el trazado de ida y vuelta", vieja: true }];
     }
     const lista = llegadasHasta(
-      { avanceMetros: abscisa, sentido: sentidoDeLaHoja },
+      { avanceMetros: abscisa, sentido: sentidoPedido },
       { forma, vivo, velocidadKmh: velocidad.kmh, trazadoPorSentido },
     );
     const enMinutos: LlegadaEnLaHoja[] = lista.slice(0, 3).map((l, i) => ({
@@ -608,7 +615,7 @@ export function Ontoy({
      * 8.9b: sin minutos, la cuenta de paradas. Y el dato viejo se queda como
      * dato viejo (8.9): en pasado, con su edad, al final — con o sin minutos.
      */
-    const porParadas = paradasHastaLaParada({ avanceMetros: abscisa, sentido: sentidoDeLaHoja }, { forma, vivo, trazadoPorSentido });
+    const porParadas = paradasHastaLaParada({ avanceMetros: abscisa, sentido: sentidoPedido }, { forma, vivo, trazadoPorSentido });
     const viejas: LlegadaEnLaHoja[] = porParadas
       .filter((p) => !p.fresca)
       .map((p) => ({
@@ -647,7 +654,42 @@ export function Ontoy({
       return [{ rotulo: "Sin unidad a la vista", apoyo: "ahorita no hay ninguna que se pueda medir", vieja: true }];
     }
     return todas;
-  }, [forma, parada, vivo, error, sentidoDeLaHoja, trazadoPorSentido, velocidad.kmh]);
+  }, [forma, parada, vivo, error, trazadoPorSentido, velocidad.kmh]);
+  const llegadasDeLaHoja = useMemo(() => llegadasEnSentido(sentidoDeLaHoja), [llegadasEnSentido, sentidoDeLaHoja]);
+
+  /**
+   * **La hoja completa de una parada que sirve a los dos sentidos: los dos,
+   * agrupados** (ASAV, 25-sep: «como la lámina»).
+   *
+   * La lámina lo separa por ALTURA, no por tipo de parada: la media de «Av.
+   * Tecnológico y Calle 16» dice «hacia Centro» con sus filas, y la completa
+   * de la misma parada dice «paran los dos sentidos» y enseña «Hacia Centro» y
+   * «Hacia Tecnológico», cada uno con las suyas. Aquí sólo se calcula; es la
+   * hoja la que decide enseñarlo al subir hasta arriba.
+   *
+   * `null` —y la hoja se queda con un sentido— en tres casos:
+   * - la parada es de UN sentido: no hay otro que enseñar;
+   * - la ruta no tiene trazado de los dos: no hay cómo contar el otro;
+   * - ningún sentido tiene una unidad medida: dos veces «Sin unidad a la
+   *   vista» bajo dos títulos es la misma frase dicha dos veces, no dos
+   *   respuestas.
+   *
+   * El sentido que la hoja traía va primero: es el que el pasajero estaba
+   * leyendo, y subir la hoja no tiene por qué cambiarle el orden.
+   */
+  const gruposDeLaHoja = useMemo(
+    () =>
+      forma && parada
+        ? gruposPorSentido({
+            sentidoDeLaParada: parada.sentido,
+            hayTrazado: (s) => !!trazadoPorSentido.get(s),
+            sentidoActual: sentidoDeLaHoja,
+            llegadasEn: llegadasEnSentido,
+            nombreDe: nombreDeSentido,
+          })
+        : null,
+    [forma, parada, sentidoDeLaHoja, trazadoPorSentido, nombreDeSentido, llegadasEnSentido],
+  );
 
   /* 8.3b: hasta donde está el pasajero, calculado aquí y sin que salga nada. */
   const hastaMi = useMemo(() => {
@@ -852,6 +894,8 @@ export function Ontoy({
           color={rutaDeLaHoja.color_hex}
           alGuardar={() => guardadas.alternar({ parada: parada.id, ruta: rutaDeLaHoja.circuito_id })}
           alCerrar={cerrarLaHoja}
+          grupos={gruposDeLaHoja}
+          direccionDosSentidos={`Ruta ${rutaDeLaHoja.nombre} · paran los dos sentidos`}
         />
       )}
 
