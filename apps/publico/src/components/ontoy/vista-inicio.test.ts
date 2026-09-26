@@ -36,7 +36,7 @@ describe("un Ontoy por pantalla, y sólo si dice algo", () => {
      * bloque: una cadena de `? :` no puede dar dos.
      */
     const codigo = sinComentarios(vista);
-    expect(codigo).toContain("const tarjeta = primeraVez ? (");
+    expect(codigo).toContain("const tarjeta = bienvenida ? (");
     expect(codigo.match(/\{tarjeta\}/g) ?? []).toHaveLength(1);
     /* Y fuera de la tarjeta no queda otro Ontoy suelto en la pantalla. */
     const pantalla = codigo.slice(codigo.indexOf("return (\n    <div className=\"ontoy-vista\">"), codigo.indexOf("function NocheDeLaCiudad"));
@@ -234,5 +234,22 @@ describe("sin señal, Inicio ofrece Reintentar (lámina 7/05)", () => {
     const bloque = codigo.slice(i, codigo.indexOf("<RutasDeInicio", i));
     expect(bloque).toContain("ontoy-boton-contorno");
     expect(bloque).not.toContain("ontoy-boton-principal");
+  });
+});
+
+describe("de madrugada, «Ya no hay corridas» aunque sea la primera vez", () => {
+  /*
+   * Auditoría del 25-sep: a las 00:20, quien abría por primera vez veía
+   * «¿Ontás? … te digo qué pasa cerca» con la ciudad cerrada. La noche gana; la
+   * bienvenida sale cuando la ciudad abre, porque nada se contestó.
+   */
+  const codigo = sinComentarios(vista);
+
+  it("la bienvenida es la primera vez con la ciudad abierta", () => {
+    expect(codigo).toContain("const bienvenida = primeraVez && !deNoche;");
+  });
+
+  it("el encabezado sigue a la tarjeta: de noche dice que la ciudad está cerrada", () => {
+    expect(codigo).toContain("primeraVez={bienvenida}");
   });
 });
