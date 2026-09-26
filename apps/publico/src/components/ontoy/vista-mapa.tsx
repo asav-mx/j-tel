@@ -631,7 +631,12 @@ export function VistaMapa({
   const pista = pistaDelMapa(forma, enfocada, sentido);
 
   return (
-    <div className="ontoy-mapa">
+    /*
+     * `ontoy-mapa-ciudad` es lo que acomoda la pila de arriba —controles, tira,
+     * aviso de red y créditos— sólo en la ciudad: con una ruta abierta no hay
+     * tira, y bajar lo demás ahí dejaría un hueco sin razón.
+     */
+    <div className={`ontoy-mapa${ciudad ? " ontoy-mapa-ciudad" : ""}`}>
       <div ref={contenedor} className="ontoy-lienzo" style={{ background: lienzo }} />
 
       {/* El sentido, arriba: la misma ruta tiene dos, y mezclarlas es mezclar dos servicios. */}

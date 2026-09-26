@@ -753,6 +753,9 @@
 .ontoy-scrim {
   position: fixed;
   inset: 0;
+  /* Hasta la barra, no encima: un velo sobre la barra convertiría el primer
+     toque en «Inicio» en un «cerrar la hoja» (8.10). */
+  bottom: var(--alto-barra, 0px);
   z-index: 900;
   border: 0;
   background: rgba(0, 0, 0, 0.35);
@@ -792,7 +795,14 @@
   z-index: 901;
   display: flex;
   flex-direction: column;
-  height: calc(var(--alto-hoja, 0.615) * 100dvh);
+  /*
+   * **La hoja se detiene arriba de la barra**, y su borde de arriba queda donde
+   * lo mide la lámina: la fracción se cuenta desde el pie de la pantalla, y lo
+   * que ocupa la barra se descuenta del alto. Así el borde no se mueve y la
+   * barra no se tapa. El alto de la barra lo mide `useAltoDeLaBarra`.
+   */
+  bottom: var(--alto-barra, 0px);
+  height: calc(var(--alto-hoja, 0.615) * 100dvh - var(--alto-barra, 0px));
   background: var(--panel);
   border-top: 1px solid var(--linea);
   border-radius: 20px 20px 0 0;
@@ -817,12 +827,7 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  /*
-   * El hueco de abajo es el de la barra, que la hoja **no tapa** (8.10). El alto
-   * lo mide el componente del DOM; el `0px` de respaldo es para el instante
-   * antes de la primera medida y para cuando no hay barra.
-   */
-  padding: 0 18px calc(18px + var(--alto-barra, 0px) + env(safe-area-inset-bottom, 0px));
+  padding: 0 18px 18px;
 }
 /*
  * El asa: 5 px de raya, pero **44 px de toque** alrededor. La raya sola es
@@ -960,6 +965,20 @@
 .ontoy-llegada-apoyo {
   font-size: 12.5px;
   color: var(--tenue);
+}
+/* «hacia Centro»: en la asomada, título de la primera fila (lámina 01). */
+.ontoy-llegada-titulo {
+  display: block;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+/* El porqué de la asomada: «La más cerca de ti · a 90 m en línea recta». */
+.ontoy-hoja-dir.por-que {
+  font-size: 13px;
+  margin-top: 3px;
 }
 .ontoy-hoja-nota {
   margin: 7px 0 0;
@@ -2657,6 +2676,36 @@
   bottom: 10px;
   z-index: 500;
   pointer-events: none;
+}
+/*
+ * **En la ciudad, la pila de arriba**: controles, la tira, y debajo el aviso de
+ * red y los créditos del mapa.
+ *
+ * La tira vivía ABAJO (`bottom: 10px`), y ahí es donde ahora se asoma la hoja
+ * de la parada más cercana —el 31.8 % de abajo de la pantalla—. Se habría
+ * comido los chips con su ojo, que es la única forma de apagar una ruta. La
+ * lámina `7-tira…/01-mapa-tira-de-rutas-dia` la tiene arriba, bajo el buscador,
+ * así que subirla no es decisión nuestra: es el diseño.
+ *
+ * Los créditos bajan con ella porque **no se pueden tapar**: son de la
+ * licencia de OpenStreetMap, no adorno.
+ *
+ * Las tres alturas van en variables para que el buscador flotante —que entra
+ * arriba de todo— sólo tenga que empujarlas, y no reescribir cada regla.
+ */
+.ontoy-mapa-ciudad {
+  --pila-tira: 62px;
+  --pila-abajo-de-la-tira: 116px;
+}
+.ontoy-mapa-ciudad .ontoy-tira-marco {
+  top: var(--pila-tira);
+  bottom: auto;
+}
+.ontoy-mapa-ciudad .ontoy-aviso-red {
+  top: var(--pila-abajo-de-la-tira);
+}
+.ontoy-mapa-ciudad .leaflet-top.leaflet-right {
+  top: var(--pila-abajo-de-la-tira);
 }
 .ontoy-tira {
   display: flex;
