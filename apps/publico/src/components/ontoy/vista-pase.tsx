@@ -42,9 +42,15 @@ export function VistaPase(props: Parameters<typeof PaseDePruebas>[0] & { alVolve
 /**
  * **Pronto podrás pagar con tu teléfono** — 4-pase/03 (día) y /05 (noche).
  *
- * Ontoy enseña su boleto y dice cuándo sí: «cuando tu ruta empiece». El botón
- * regresa a Inicio, que es donde está lo que la app ya hace. Va con contorno y
- * no relleno, como el diseño: no hay nada urgente que hacer aquí.
+ * Ontoy enseña su boleto y dice **sólo lo que es cierto hoy**: que ningún
+ * camión lee pases. El botón regresa a Inicio, que es donde está lo que la app
+ * ya hace. Va con contorno y no relleno, como el diseño: no hay nada urgente
+ * que hacer aquí.
+ *
+ * ✎ **26-sep-2026 (ASAV):** la lámina y la pantalla decían además «Cuando tu
+ * ruta empiece, aquí aparece tu pase». Es falso: la ruta arranca el jueves 1 de
+ * octubre y los pases no, son Ontoy 3.0. Se quitó esa oración y no se pone
+ * otra en su lugar: **ni fecha ni aviso** que nadie va a cumplir.
  */
 function PaseProximamente({ alVolver }: { alVolver: () => void }) {
   return (
@@ -56,7 +62,7 @@ function PaseProximamente({ alVolver }: { alVolver: () => void }) {
         <Ontoy pose="con-boleto" tamano={160} />
         <h2 className="ontoy-completa-titular">Pronto podrás pagar con tu teléfono.</h2>
         <p className="ontoy-completa-ayuda">
-          Todavía ningún camión lee pases. Cuando tu ruta empiece, aquí aparece tu pase.
+          Todavía ningún camión lee pases.
         </p>
         <button type="button" className="ontoy-boton ontoy-boton-principal ontoy-boton-contorno" onClick={alVolver}>
           Volver al inicio
