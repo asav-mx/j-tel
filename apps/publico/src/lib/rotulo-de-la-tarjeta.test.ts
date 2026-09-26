@@ -246,8 +246,14 @@ describe("el rótulo y la pastilla del camión dicen lo mismo", () => {
      * —una por componente— mientras esta función ya existía. Ninguna prueba de
      * unidad lo habría visto; ésta sí.
      */
+    /*
+     * ✎ **26-sep-2026:** las frases de Inicio salieron de `atajo-de-parada.tsx`
+     * a `lectura-de-la-guardada.ts` (sin señal no se habla en presente). La
+     * valla las sigue a donde fueron, y la tarjeta se queda cercada abajo: que
+     * no vuelva a escribir su propio redondeo.
+     */
     const caras = [
-      "../components/ontoy/atajo-de-parada.tsx",
+      "./ontoy/lectura-de-la-guardada.ts",
       "../components/ontoy/vista-mapa.tsx",
       "../components/ontoy/ontoy.tsx",
     ].map((r) => ({ r, fuente: readFileSync(new URL(r, import.meta.url), "utf8") }));
@@ -258,5 +264,8 @@ describe("el rótulo y la pastilla del camión dicen lo mismo", () => {
       expect(fuente, r).not.toContain("antiguedad_seg / 60");
       expect(fuente, r).not.toContain("antiguedadSeg / 60");
     }
+    const tarjeta = readFileSync(new URL("../components/ontoy/atajo-de-parada.tsx", import.meta.url), "utf8");
+    expect(tarjeta).not.toContain("antiguedad_seg / 60");
+    expect(tarjeta).not.toContain("antiguedadSeg / 60");
   });
 });

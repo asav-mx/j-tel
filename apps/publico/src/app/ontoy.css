@@ -1646,42 +1646,155 @@
   box-shadow: inset 0 -3px 0 var(--ruta), 0 0 0 1px var(--noche-3);
 }
 
-/* Dato viejo: la hoja entera se apaga, como el muñeco en el mapa. */
-.ontoy-hoja-cami.vieja .ontoy-cami-paradas {
-  opacity: 0.65;
+/*
+ * ── La hoja de Cami (lámina `6-prototipo/04-hoja-de-cami`) ─────────────
+ *
+ * Cami de frente de 60, el título «La 2120 va hacia Centro», la X en su
+ * círculo de 44, «Sus próximas paradas» y una tarjeta con un renglón por
+ * parada: Páris de 34, nombre y nota, y la cifra a la derecha. El margen lo
+ * pone `.ontoy-hoja-cuerpo`, el mismo de la hoja de parada.
+ */
+.ontoy-hoja-cami .ontoy-hoja-cabeza {
+  gap: 12px;
+  margin-bottom: 12px;
 }
-
+.ontoy-cami-frente {
+  flex: none;
+  overflow: visible;
+}
+.ontoy-cami-titulos {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ontoy-cami-titulo {
+  margin: 0;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+/* Sin `flex`: el punto va en línea con el texto, y si la frase envuelve, envuelve el texto. */
+.ontoy-cami-dir {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tenue);
+}
+/* La X de la lámina: 44 de toque, con su círculo del color del fondo. */
+.ontoy-hoja-cami .ontoy-cerrar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  background: var(--fondo);
+  color: var(--texto);
+}
+.ontoy-cami-sus {
+  margin: 0 0 8px;
+  padding: 0 4px;
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--tenue);
+}
+/* La tarjeta: hueso, radio 18, anillo arena; las filas la llenan de orilla a orilla. */
 .ontoy-cami-paradas {
   list-style: none;
-  margin: 12px 0 0;
+  margin: 0 0 10px;
   padding: 0;
+  background: var(--panel);
+  border-radius: 18px;
+  box-shadow: 0 0 0 1px var(--linea);
+  overflow: hidden;
+}
+.ontoy-cami-paradas > li + li {
+  border-top: 1px solid var(--linea);
 }
 .ontoy-cami-parada {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--linea);
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 6px 14px 6px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
-.ontoy-cami-parada:last-child {
-  border-bottom: none;
+/* La más cerca de ti: resaltada con el fondo de la pantalla, como en la lámina. */
+.ontoy-cami-parada.resaltada {
+  background: var(--fondo);
+}
+.ontoy-cami-parada-tino {
+  display: block;
+  width: 34px;
+  height: 34px;
+}
+.ontoy-cami-parada-tino .ontoy-tino {
+  cursor: inherit;
+}
+/*
+ * La estrella de una guardada, contra la cabeza de ESTE Páris: aquí mide 34 y
+ * va en la esquina de su caja, así que su cabeza cae en 17,11 (y no en 22,16
+ * como en el mapa). Mismo desplazamiento que allá: +7 a la derecha, −8 arriba.
+ */
+.ontoy-cami-parada-tino .ontoy-tino-estrella {
+  top: -5px;
+  left: 16px;
+}
+/* Sólo el dibujo de Páris: la estrella también es un `svg` y se queda en 16. */
+.ontoy-cami-parada-tino .ontoy-tino > svg:not(.ontoy-tino-estrella) {
+  width: 34px;
+  height: 34px;
+  filter: none;
+}
+.ontoy-cami-parada-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 .ontoy-cami-parada-nombre {
   font-size: 15px;
-  font-weight: 600;
-  color: var(--texto);
+  font-weight: 700;
   /* Un nombre de parada puede ser «Parroquia Santa Teresa de Jesús». */
-  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ontoy-cami-parada-nota {
+  font-size: 12px;
+  color: var(--tenue);
+}
+.ontoy-cami-parada.resaltada .ontoy-cami-parada-nota {
+  font-weight: 700;
 }
 /*
- * La cuenta va en `cifra` —tabular— para que «a 1 parada» y «a 10 paradas» no
- * muevan la columna cuando el camión avanza mientras la hoja está abierta.
+ * La cifra en `cifra` —tabular— para que «1 parada» y «10 paradas» no muevan
+ * la columna cuando el camión avanza mientras la hoja está abierta.
  */
 .ontoy-cami-parada-cuenta {
-  flex: none;
-  font-size: 13px;
-  color: var(--tenue);
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ontoy-cami-parada-cuenta .cifra {
+  font-family: var(--fuente-titular), var(--fuente-texto), sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1;
+}
+/* Dato viejo: la lista se apaga, como el muñeco en el mapa. */
+.ontoy-hoja-cami.vieja .ontoy-cami-paradas {
+  opacity: 0.65;
 }
 
 /* ── «Pronto me verás en la calle» (por arrancar) ───────────────────────

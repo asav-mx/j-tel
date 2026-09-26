@@ -35,6 +35,7 @@ import { VistaParadas } from "@/components/ontoy/vista-paradas";
 import { armarParadas, haciaDonde } from "@/lib/ontoy/paradas-de-la-ruta";
 import { rutasFavoritas } from "@/lib/ontoy/favoritas";
 import { paradaAsomada, porQueEnPalabras } from "@/lib/ontoy/parada-asomada";
+import { laMasCercanaDeTi } from "@/lib/ontoy/hoja-de-cami";
 import { gruposPorSentido } from "@/lib/ontoy/grupos-por-sentido";
 import { ordenarRutas } from "@/lib/ontoy/rutas-cerca";
 import { armarLaTira } from "@/lib/ontoy/tira-de-rutas";
@@ -929,10 +930,18 @@ export function Ontoy({
       {!campanaAbierta && enElMapa && camiAhora && rutaEnfocada && (
         <HojaDeCami
           economico={camiAhora.economico}
+          ruta={rutaEnfocada.nombre}
+          hacia={camiAhora.sentido ? nombreDeSentido(camiAhora.sentido) : null}
           color={rutaEnfocada.color_hex}
           edad={haceNMinutos(camiAhora.antiguedad_seg)}
           fresca={camiAhora.fresco}
           paradas={paradasDeCami}
+          masCercana={laMasCercanaDeTi(paradasDeCami, forma?.paradas ?? [], yo)}
+          estaGuardada={guardadas.estaGuardada}
+          alAbrirParada={(id) => {
+            setCamiTocado(null);
+            setParadaAbierta(id);
+          }}
           alCerrar={() => setCamiTocado(null)}
         />
       )}

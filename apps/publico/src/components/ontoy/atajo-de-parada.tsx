@@ -1,11 +1,9 @@
 "use client";
 
-import { haceNMinutos } from "@/lib/rotulo-de-la-tarjeta";
 import type { RutaDeLaCiudad } from "@/lib/ontoy/forma";
 import {
   dondeCaeLaParada,
   llegadasHasta,
-  paradasEnPalabras,
   paradasHastaLaParada,
   promesaEnPalabras,
   rangoEnPalabras,
@@ -15,8 +13,15 @@ import type { ParadaGuardada } from "@/lib/ontoy/paradas-guardadas";
 import { useForma } from "@/lib/ontoy/ruta-en-vivo";
 import type { Vivo } from "@/lib/ontoy/forma";
 import { avanceSobreTrazado } from "@jtel/domain";
-import { arranqueCorto, arranqueLargo } from "@/lib/fecha-arranque";
-import { Ontoy, type PoseDeOntoy } from "@/components/ontoy/ontoy-muneco";
+import { Ontoy } from "@/components/ontoy/ontoy-muneco";
+import { useEffect, useState } from "react";
+import {
+  dichoDeOntoy,
+  dichoDelRenglon,
+  edadAlDia,
+  elegirLectura,
+  type Lectura,
+} from "@/lib/ontoy/lectura-de-la-guardada";
 
 /**
  * Una parada guardada con su próximo paso (8.8b) — **en dos tamaños**.
@@ -53,17 +58,7 @@ import { Ontoy, type PoseDeOntoy } from "@/components/ontoy/ontoy-muneco";
  * lo tenga de verdad en J-Staff.
  */
 
-/** Lo que se sabe de la próxima llegada a una parada guardada, ya resuelto. */
-export type Lectura =
-  | { tipo: "rango"; rango: string; unidad: string; edadSeg: number }
-  | { tipo: "paradas"; paradas: number; unidad: string; edadSeg: number }
-  | { tipo: "vieja"; paradas: number; unidad: string; edadSeg: number }
-  | { tipo: "cargando" }
-  | { tipo: "sin-red" }
-  | { tipo: "sin-ruta" }
-  | { tipo: "por-arrancar"; arrancaEl: string | null }
-  | { tipo: "fuera"; abreA: string }
-  | { tipo: "sin-unidad" };
+export type { Lectura };
 
 export function useLecturaDeLaGuardada({
   guardada,
@@ -71,6 +66,7 @@ export function useLecturaDeLaGuardada({
   yo,
   vivo: vivoDeInicio,
   errorVivo,
+  recibidoEn = null,
 }: {
   guardada: ParadaGuardada;
   ruta: RutaDeLaCiudad | null;
@@ -84,6 +80,8 @@ export function useLecturaDeLaGuardada({
   vivo: Vivo | null | undefined;
   /** La consulta única falló: lo que se ve es lo último que se supo. */
   errorVivo: boolean;
+  /** Cuándo llegó la última respuesta buena, con el reloj del teléfono (`useEnVivo`). */
+  recibidoEn?: number | null;
 }) {
   const { forma, error: errorForma, cargando: cargandoForma } = useForma(guardada.ruta);
   const vivo = vivoDeInicio ?? null;
@@ -115,8 +113,6 @@ export function useLecturaDeLaGuardada({
     forma && vivo && enServicio && abscisa !== null
       ? paradasHastaLaParada({ avanceMetros: abscisa, sentido }, { forma, vivo, trazadoPorSentido })
       : [];
-  const fresca = porParadas.find((p) => p.fresca) ?? null;
-  const vieja = porParadas.find((p) => !p.fresca) ?? null;
 
   /* 8.3b: hasta DONDE ESTÁ EL PASAJERO, y sólo si está sobre el corredor. */
   const miAvance = yo && trazado && forma ? avanceSobreTrazado(yo, trazado, forma.corredor_m) : null;
@@ -128,23 +124,21 @@ export function useLecturaDeLaGuardada({
         )[0] ?? null
       : null;
 
-  const lectura: Lectura = proxima
-    ? { tipo: "rango", rango: rangoEnPalabras(proxima.rango), unidad: proxima.unidad, edadSeg: proxima.antiguedadSeg }
-    : fresca
-      ? { tipo: "paradas", paradas: fresca.paradas, unidad: fresca.unidad, edadSeg: fresca.antiguedadSeg }
-      : error
-        ? { tipo: "sin-red" }
-        : cargando
-          ? { tipo: "cargando" }
-          : !vivo
-            ? { tipo: "sin-ruta" }
-            : vivo.estado === "por_arrancar"
-              ? { tipo: "por-arrancar", arrancaEl: vivo.arranca_el }
-              : vivo.estado === "fuera_de_horario"
-                ? { tipo: "fuera", abreA: vivo.abre_a }
-                : vieja
-                  ? { tipo: "vieja", paradas: vieja.paradas, unidad: vieja.unidad, edadSeg: vieja.antiguedadSeg }
-                  : { tipo: "sin-unidad" };
+  /*
+   * Sin señal, la edad sigue creciendo mientras la red no vuelva: el reloj
+   * avanza cada 15 s (el ritmo del sondeo) sólo mientras dura la caída.
+   */
+  const ahora = useAhoraMientras(error);
+  const envejecer = <T extends { antiguedadSeg: number }>(x: T): T =>
+    error ? { ...x, antiguedadSeg: edadAlDia(x.antiguedadSeg, recibidoEn, ahora) } : x;
+
+  const lectura: Lectura = elegirLectura({
+    error,
+    cargando,
+    vivo,
+    proxima,
+    porParadas: porParadas.map(envejecer),
+  });
 
   /*
    * La promesa de ahora, del sentido de ESTA parada: del vivo, o de la portada
@@ -162,72 +156,9 @@ export function useLecturaDeLaGuardada({
     sentidoDeLaParada: parada?.sentido ?? null,
     lectura,
     promesa,
-    hastaMi: hastaMi ? rangoEnPalabras(hastaMi.rango) : null,
+    /* Sin señal no hay «hasta donde estás»: sería un rango en presente sacado de un dato viejo. */
+    hastaMi: hastaMi && !error ? rangoEnPalabras(hastaMi.rango) : null,
   };
-}
-
-/** Lo que Ontoy dice de una lectura: su pose, la frase grande y la de apoyo. */
-export function dichoDeOntoy(
-  l: Lectura,
-  ruta: string,
-): { pose: PoseDeOntoy; dicho: string; apoyo: string | null } {
-  const edad = (s: number) => `posición de ${haceNMinutos(s)}`;
-  switch (l.tipo) {
-    case "rango":
-      return { pose: "mirando-arriba", dicho: `Tu ${ruta} llega en ${l.rango}`, apoyo: `viene la ${l.unidad} · ${edad(l.edadSeg)}` };
-    case "paradas":
-      return {
-        pose: "mirando-arriba",
-        dicho: `Tu ${ruta} viene ${paradasEnPalabras(l.paradas)}`,
-        apoyo: `viene la ${l.unidad} · ${edad(l.edadSeg)}`,
-      };
-    case "por-arrancar": {
-      const cuando = arranqueLargo(l.arrancaEl ?? "");
-      return { pose: "al-frente", dicho: cuando ? `Pronto salimos: ${cuando}` : "Pronto salimos", apoyo: null };
-    }
-    case "fuera":
-      return { pose: "dormido", dicho: `Vuelven a las ${l.abreA}`, apoyo: "Fuera de horario. Todavía no sale ninguna unidad." };
-    case "vieja":
-      return {
-        pose: "dormido",
-        dicho: `No veo tu ${ruta} ahorita`,
-        apoyo: `No te invento una hora. Lo último que supe: la ${l.unidad} iba ${paradasEnPalabras(l.paradas)}, ${edad(l.edadSeg)}.`,
-      };
-    case "sin-unidad":
-      return { pose: "dormido", dicho: `No veo tu ${ruta} ahorita`, apoyo: "No te invento una hora." };
-    case "sin-red":
-      return { pose: "sin-red", dicho: "Sin señal", apoyo: "No pudimos preguntar ahorita." };
-    case "cargando":
-      return { pose: "sin-dato", dicho: "Preguntando…", apoyo: null };
-    case "sin-ruta":
-      return { pose: "sin-dato", dicho: "Sin datos de esta ruta ahorita", apoyo: null };
-  }
-}
-
-/** Lo que dice el renglón compacto, a la derecha: corto, y con su edad cuando es medido. */
-export function dichoDelRenglon(l: Lectura): { grande: string | null; chico: string } {
-  switch (l.tipo) {
-    case "rango":
-      return { grande: l.rango, chico: `la ${l.unidad} · ${haceNMinutos(l.edadSeg)}` };
-    case "paradas":
-      return { grande: `${l.paradas} ${l.paradas === 1 ? "parada" : "paradas"}`, chico: `la ${l.unidad} · ${haceNMinutos(l.edadSeg)}` };
-    case "vieja":
-      return { grande: null, chico: `la ${l.unidad} iba ${paradasEnPalabras(l.paradas)} · ${haceNMinutos(l.edadSeg)}` };
-    case "por-arrancar": {
-      const cuando = arranqueCorto(l.arrancaEl ?? "");
-      return { grande: null, chico: cuando ? `arranca el ${cuando}` : "todavía no arranca" };
-    }
-    case "fuera":
-      return { grande: null, chico: `abre a las ${l.abreA}` };
-    case "sin-unidad":
-      return { grande: null, chico: "sin unidad a la vista" };
-    case "sin-red":
-      return { grande: null, chico: "sin señal" };
-    case "cargando":
-      return { grande: null, chico: "Preguntando…" };
-    case "sin-ruta":
-      return { grande: null, chico: "sin datos ahorita" };
-  }
 }
 
 type PropsDeLaGuardada = Parameters<typeof useLecturaDeLaGuardada>[0] & { alAbrir: () => void };
@@ -312,4 +243,16 @@ export function RenglonDeParada(props: PropsDeLaGuardada) {
       </svg>
     </button>
   );
+}
+
+/** La hora del teléfono, al día cada 15 s mientras `activo`; quieta si no. */
+function useAhoraMientras(activo: boolean): number {
+  const [ahora, setAhora] = useState(() => Date.now());
+  useEffect(() => {
+    if (!activo) return;
+    setAhora(Date.now());
+    const id = setInterval(() => setAhora(Date.now()), 15_000);
+    return () => clearInterval(id);
+  }, [activo]);
+  return ahora;
 }
