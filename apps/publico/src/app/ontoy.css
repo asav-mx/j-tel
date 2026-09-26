@@ -1344,10 +1344,16 @@
   font-size: 11.5px;
   font-weight: 500;
   cursor: pointer;
-  white-space: nowrap;
+  /*
+   * **Sin «…»** (regla de nombres largos, ASAV 26-sep): «hacia Central de A…»
+   * escondía a dónde va el camión. El destino se parte en renglones; el botón
+   * crece hacia abajo, y los dos del grupo quedan del mismo alto.
+   */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+  line-height: 1.2;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .ontoy-cabeza-ruta-grupo button[aria-pressed="true"] {
   background: var(--texto-cabeza);
@@ -1969,9 +1975,23 @@
   flex: 1;
   min-width: 0;
 }
-/* Sin cifra, el rótulo va primero y con su ancho de siempre. */
+/*
+ * Sin cifra, el rótulo va primero y con su ancho de siempre. El apoyo pide al
+ * menos 11em: si no caben junto al rótulo («Sin dato en este sentido» a 320 px),
+ * baja entero al renglón de abajo en vez de quedar una palabra por renglón.
+ */
 .ontoy-llegada:not(.con-cifra) .ontoy-llegada-dicho {
   order: 2;
+  flex: 1 1 11em;
+}
+/* Un destino largo, en su propio renglón y a todo lo ancho: ver `tituloArriba`. */
+.ontoy-llegada.titulo-arriba {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.ontoy-llegada-titulo-arriba {
+  flex: 0 0 100%;
+  margin-bottom: 0;
 }
 .ontoy-llegada-cifra {
   flex: none;
