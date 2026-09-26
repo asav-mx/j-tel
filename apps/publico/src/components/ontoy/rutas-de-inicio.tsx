@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { RutaDeLaCiudad } from "@/lib/ontoy/forma";
 import type { ParadaDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
 import type { EstadoDeRuta } from "@/lib/ontoy/estado-de-ruta";
-import { promesaEnPalabras } from "@/lib/ontoy/llegadas";
+import { promesaFirmada } from "@/lib/ontoy/promesa-firmada";
 import { distanciaParaDecir, esImprecisa, margenEnPalabras } from "@/lib/ontoy/distancia";
 import { ordenarRutas, RUTAS_A_LA_VISTA } from "@/lib/ontoy/rutas-cerca";
 import type { Ubicacion } from "@/lib/ubicacion";
@@ -181,7 +181,7 @@ export function RutasDeInicio({
                       : "Todavía no arranca"
                     : e?.situacion === "cerrado"
                       ? `Fuera de horario · abre ${e.abre_a}`
-                      : promesaEnPalabras(r.promesa, null)}
+                      : promesaFirmada(r.promesa, null)}
                 </span>
               </span>
               <svg className="ontoy-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
