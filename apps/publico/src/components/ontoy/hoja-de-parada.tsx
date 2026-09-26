@@ -11,6 +11,8 @@ import {
 } from "@/lib/ontoy/alturas-de-la-hoja";
 import { useAltoDeLaBarra } from "@/lib/ontoy/alto-de-la-barra";
 import { tinoEnLaParada } from "@/lib/ontoy/munecos";
+import { GlifoCarta, GlifoEstrella, GlifoEstrellaSi } from "@/components/ontoy/glifos";
+import { ligaDeLaParada, mandadaEnPalabras, mandarParada } from "@/lib/ontoy/mandar-parada";
 
 export interface LlegadaEnLaHoja {
   /** Lo que se lee grande: «4–7 min», «Sin unidad a la vista», «Fuera de horario». */
@@ -100,6 +102,7 @@ export function HojaDeParada({
   fija = false,
   porQue = null,
   haciaDonde = null,
+  delLetrero = null,
 }: {
   nombre: string;
   /** «Dirección → Centro». Sale de los datos del circuito, nunca del código. */
@@ -152,6 +155,13 @@ export function HojaDeParada({
   porQue?: string | null;
   /** «hacia Centro». En la asomada, título de la primera fila. */
   haciaDonde?: string | null;
+  /**
+   * **Se llegó escaneando el letrero de esta parada** — su `qr_slug`, para
+   * poder mandarla. La hoja saluda —«Estás en esta parada»—, Páris sonríe, y
+   * guardar se ofrece como en la lámina `5-paradas/04`; ya guardada, «Guardada»
+   * y «Mándala» (`05`). `null` en cualquier otro camino a la hoja.
+   */
+  delLetrero?: string | null;
 }) {
   const cerrarRef = useRef<HTMLButtonElement | null>(null);
   const [altura, setAltura] = useState<AlturaDeLaHoja>(alturaInicial);
@@ -233,7 +243,9 @@ export function HojaDeParada({
    */
   const compacta = altura === "asomada";
   const subtitulo = compacta && porQue ? porQue : direccion;
-  const tituloDeLaFila = compacta && porQue ? haciaDonde : null;
+  /* En la asomada y en la hoja del letrero, «hacia Centro» baja a la fila: el
+     renglón de arriba lo ocupa el porqué, o nadie (la lámina `04` no lo lleva). */
+  const tituloDeLaFila = (compacta && porQue) || delLetrero ? haciaDonde : null;
   /**
    * **En la asomada, una sola fila**: la próxima llegada. La lámina pone una
    * sola dentro de su tarjeta cerrada, y la regla de ASAV dice «su ruta y su
@@ -241,7 +253,16 @@ export function HojaDeParada({
    * medio renglón que no se puede leer y que obliga a subir la hoja para saber
    * qué decía—. Al subirla aparecen todas.
    */
-  const filas = compacta ? llegadas.slice(0, 1) : llegadas;
+  /* La del letrero también enseña una: «estás aquí, esto es lo que viene» (lámina 04). */
+  const filas = compacta || delLetrero ? llegadas.slice(0, 1) : llegadas;
+  /** Lo que se dijo al tocar «Mándala», si hubo algo que decir. */
+  const [mandada, setMandada] = useState<string | null>(null);
+  const alMandar = useCallback(async () => {
+    if (!delLetrero) return;
+    const liga = ligaDeLaParada(window.location.origin, delLetrero);
+    const r = await mandarParada({ nombre, liga, nav: navigator });
+    setMandada(mandadaEnPalabras(r, liga));
+  }, [delLetrero, nombre]);
 
   return (
     <>
@@ -307,11 +328,15 @@ export function HojaDeParada({
                 color,
                 mirada: porArrancar ? "dormido" : llegadas.some((l) => l.enVivo) ? "de-lado" : "al-frente",
                 guardada,
+                sonrie: !!delLetrero,
               }),
             }}
           />
           )}
-          <h2 className="ontoy-hoja-nombre">{nombre}</h2>
+          <h2 className="ontoy-hoja-nombre">
+            {delLetrero && <span className="ontoy-hoja-saludo">Estás en esta parada</span>}
+            {nombre}
+          </h2>
           {/*
             * La fija asomada no lleva ✕: ya está en su altura más baja y no hay
             * a dónde cerrarla. Arriba de la asomada sí lo lleva, y la regresa.
@@ -330,7 +355,9 @@ export function HojaDeParada({
             </button>
           )}
         </div>
-        <p className={`ontoy-hoja-dir${compacta && porQue ? " por-que" : ""}`}>{subtitulo}</p>
+        {!delLetrero && (
+          <p className={`ontoy-hoja-dir${compacta && porQue ? " por-que" : ""}`}>{subtitulo}</p>
+        )}
 
         {/*
           * **Por arrancar reemplaza a todo lo de abajo**, no se suma.
@@ -409,6 +436,16 @@ export function HojaDeParada({
           * sus 52 px de alto. Arriba competía por el lugar con la salida y se
           * leía como un adorno del título.
           */}
+        {delLetrero ? (
+          <LetreroGuardar
+            guardada={guardada}
+            sePuedeGuardar={sePuedeGuardar}
+            alGuardar={alGuardar}
+            alMandar={alMandar}
+            mandada={mandada}
+          />
+        ) : (
+          <>
         <button
           type="button"
           className={`ontoy-boton ontoy-boton-principal ontoy-hoja-guardar${guardada ? " guardada" : ""}`}
@@ -434,8 +471,77 @@ export function HojaDeParada({
             ? "Guardar una parada la deja a la mano en este teléfono. No hace falta cuenta."
             : "Tu navegador no deja guardar nada en este teléfono, así que el atajo no está disponible. Todo lo demás funciona igual."}
         </p>
+          </>
+        )}
         </div>
       </section>
+    </>
+  );
+}
+
+/**
+ * **Guardar y mandar, en la hoja a la que se llegó por el letrero** — láminas
+ * `5-paradas/04` (sin guardar) y `05` (guardada).
+ *
+ * Sin guardar, una tarjeta que dice para qué sirve —«Así la próxima vez Inicio
+ * ya te dice a cuántas paradas viene»— y UN botón principal, «Guárdala». Quien
+ * escaneó está parado ahí: es el momento en que guardar tiene más sentido, y
+ * la tarjeta lo dice en vez de sólo ofrecerlo.
+ *
+ * Guardada, dos botones secundarios: «Guardada» —que la quita, como el de la
+ * hoja de siempre— y «Mándala». Y la nota dice dónde quedó.
+ */
+function LetreroGuardar({
+  guardada,
+  sePuedeGuardar,
+  alGuardar,
+  alMandar,
+  mandada,
+}: {
+  guardada: boolean;
+  sePuedeGuardar: boolean;
+  alGuardar: () => void;
+  alMandar: () => void;
+  mandada: string | null;
+}) {
+  if (!guardada) {
+    return (
+      <div className="ontoy-letrero-guardar">
+        <p className="ontoy-letrero-guardar-titulo">¿La usas seguido? Guárdala.</p>
+        <p className="ontoy-letrero-guardar-ayuda">
+          {sePuedeGuardar
+            ? "Así la próxima vez Inicio ya te dice a cuántas paradas viene."
+            : "Tu navegador no deja guardar nada en este teléfono, así que el atajo no está disponible. Todo lo demás funciona igual."}
+        </p>
+        <button
+          type="button"
+          className="ontoy-boton ontoy-boton-principal ontoy-letrero-guardala"
+          onClick={alGuardar}
+          disabled={!sePuedeGuardar}
+          aria-pressed={false}
+        >
+          <GlifoEstrella />
+          Guárdala
+        </button>
+      </div>
+    );
+  }
+  return (
+    <>
+      <div className="ontoy-letrero-dos">
+        <button type="button" className="ontoy-boton ontoy-letrero-secundario" onClick={alGuardar} aria-pressed>
+          <GlifoEstrellaSi />
+          Guardada
+        </button>
+        <button type="button" className="ontoy-boton ontoy-letrero-secundario" onClick={alMandar}>
+          <GlifoCarta />
+          Mándala
+        </button>
+      </div>
+      {/* `aria-live`: lo que se dijo al mandar tiene que oírse, no sólo verse. */}
+      <p className="ontoy-hoja-nota ontoy-letrero-nota" aria-live="polite">
+        {mandada ?? "Ya está en Inicio y en Tus paradas."}
+      </p>
     </>
   );
 }

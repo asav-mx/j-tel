@@ -117,6 +117,7 @@ export function VistaMapa({
   alReintentar,
   rutaAbierta = false,
   ciudad,
+  centrarEn = null,
   yo = null,
   alTocarCami,
 }: {
@@ -139,6 +140,13 @@ export function VistaMapa({
   rutaAbierta?: boolean;
   /** Con esto, el mapa es el de la ciudad y no el de una ruta. */
   ciudad?: ModoCiudad;
+  /**
+   * **Dónde poner el mapa al abrir**, cuando se llegó por el letrero de una
+   * parada: esa parada, cerca y arriba de la hoja. Sin esto el mapa encuadraba
+   * la ciudad entera y la parada en la que el pasajero está parado quedaba como
+   * un punto perdido —o debajo de su propia hoja—.
+   */
+  centrarEn?: { lat: number; lon: number } | null;
   /**
    * Dónde está el pasajero, **sólo si ya dio permiso** (el mapa nunca pregunta).
    * Se dibuja como «tú»: en tinta y con su palabra, sin el color de ninguna ruta
@@ -509,6 +517,40 @@ export function VistaMapa({
     }
     // Sin `ciudad` en la lista a propósito: cambia cada 15 s con los camiones.
   }, [listo, rutas, lienzo, prendidasClave, !!ciudad]);
+
+  /**
+   * **La parada del letrero, a la vista**, una vez.
+   *
+   * Cerca (zoom 16, Páris entero) y **en la franja de mapa que queda libre**
+   * entre la pila de arriba y la hoja: con la hoja a media altura y el
+   * buscador, la tira y los controles arriba, el centro del mapa cae debajo de
+   * la hoja. Las dos orillas se MIDEN del DOM y no se escriben: la pila cambia
+   * cuando alguien le agrega algo, y la hoja tiene tres alturas.
+   *
+   * Marca `yaEncuadro` para que el encuadre de la ciudad entera no lo pise.
+   */
+  const yaCentro = useRef<string | null>(null);
+  useEffect(() => {
+    const m = mapa.current;
+    if (!listo || !m || !centrarEn || !contenedor.current) return;
+    const llave = `${centrarEn.lat},${centrarEn.lon}`;
+    if (yaCentro.current === llave) return;
+    yaCentro.current = llave;
+    yaEncuadro.current = true;
+    const cuadro = requestAnimationFrame(() => {
+      const cont = contenedor.current?.getBoundingClientRect();
+      if (!cont) return;
+      const pila = contenedor.current?.parentElement?.querySelector(".ontoy-ctrl-mapa")?.getBoundingClientRect();
+      const hoja = document.querySelector(".ontoy-hoja")?.getBoundingClientRect();
+      const arriba = pila ? pila.bottom : cont.top;
+      const abajo = hoja ? Math.min(hoja.top, cont.bottom) : cont.bottom;
+      const objetivo = (arriba + abajo) / 2;
+      const centro = cont.top + cont.height / 2;
+      m.setView([centrarEn.lat, centrarEn.lon], 16, { animate: false });
+      m.panBy([0, centro - objetivo], { animate: false });
+    });
+    return () => cancelAnimationFrame(cuadro);
+  }, [listo, centrarEn]);
 
   /**
    * Los puntitos de parada de las rutas prendidas, tras su interruptor.

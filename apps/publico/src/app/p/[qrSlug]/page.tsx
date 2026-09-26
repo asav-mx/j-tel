@@ -62,12 +62,13 @@ export default async function PuertaDelLetrero({
         </p>
         <ul>
           <li>
-            <Link href={`/?ruta=${encodeURIComponent(parada.ruta.slug)}`}>
+            <Link href={`/rutas?ruta=${encodeURIComponent(parada.ruta.slug)}`}>
               Ver la ruta {parada.ruta.nombre}
             </Link>
           </li>
           <li>
-            <Link href="/">Ver todas las rutas</Link>
+            {/* `/rutas`, no `/`: la raíz es la landing (ver `c/[slug]/page.tsx`). */}
+            <Link href="/rutas">Ver todas las rutas</Link>
           </li>
         </ul>
       </main>

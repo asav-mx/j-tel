@@ -84,7 +84,7 @@ export function Ontoy({
   /** Hasta cuándo vale lo que dice la lista (ISO); en ese instante se vuelve a pedir. */
   vigenteHasta: string | null;
   /**
-   * La ruta que la dirección pidió (`/?ruta=…`, o una liga vieja `/c/‹slug›`).
+   * La ruta que la dirección pidió (`/rutas?ruta=…`, o una liga vieja `/c/‹slug›`).
    * Cuando viene, la app abre en el Mapa con esa ruta enfocada: quien llega por
    * una liga compartida quiere ver ESA ruta, no la lista de la ciudad.
    */
@@ -94,7 +94,12 @@ export function Ontoy({
    *
    * Quien llega escaneando un letrero atornillado a un poste está **parado en
    * esa parada**: la app abre en su hoja, no en la lista de la ciudad ni en la
-   * ruta entera. La parada se abre sobre su ruta, que viene en `rutaInicial`.
+   * ruta entera. La hoja se abre **encima del mapa de la ciudad**, con su ruta
+   * —que viene en `rutaInicial`— prendida en la tira (ver `delLetrero`).
+   *
+   * ✎ 25-sep: hasta aquí el texto ya lo decía, pero el código abría la RUTA
+   * debajo de la hoja —la pantalla con la lista de sus paradas—, y al cerrar la
+   * hoja eso es lo que quedaba. Ahora queda el mapa.
    *
    * No se valida aquí contra la forma de la ruta —las paradas llegan después,
    * con la consulta— y no hace falta: si el slug no fuera de esta ruta, la hoja
@@ -106,11 +111,21 @@ export function Ontoy({
 }) {
   const { deNoche, alternar: alternarPiel } = useTema();
   const pedida = rutaInicial && rutas.some((r) => r.circuito_id === rutaInicial) ? rutaInicial : null;
+  /**
+   * **Se llegó por el letrero de una parada** (`/p/‹qr_slug›`): el MAPA de la
+   * ciudad con la hoja de esa parada encima, no la pantalla de la ruta con su
+   * lista (ASAV, 25-sep; láminas `5-paradas/04` y `05`).
+   *
+   * Sólo cuando viene parada. Una liga de RUTA compartida —`/rutas?ruta=…`,
+   * `/c/…`— sigue abriendo la ruta: quien la manda quiere enseñar la ruta.
+   */
+  const delLetrero = pedida && paradaInicial ? paradaInicial : null;
   const [lugar, setLugar] = useState<Lugar>(pedida ? "mapa" : "inicio");
   const [enfocada, setEnfocada] = useState<string | null>(pedida ?? rutas[0]?.circuito_id ?? null);
   const [sentido, setSentido] = useState<Sentido>("ida");
   /* Con `paradaInicial` la app nace con la hoja abierta: quien escaneó el
-     letrero está parado ahí. Cerrarla lo deja en su ruta, no en la nada. */
+     letrero está parado ahí. Cerrarla lo deja en el mapa, con la parada más
+     cercana asomándose abajo —no en la nada, ni en la lista de la ruta—. */
   const [paradaAbierta, setParadaAbierta] = useState<string | null>(
     pedida ? paradaInicial : null,
   );
@@ -119,7 +134,7 @@ export function Ontoy({
    * llega por la liga de una ruta la ve abierta; el Mapa sin ruta abierta es el
    * de la ciudad.
    */
-  const [rutaAbierta, setRutaAbierta] = useState<boolean>(pedida !== null);
+  const [rutaAbierta, setRutaAbierta] = useState<boolean>(pedida !== null && !delLetrero);
   /**
    * El camión tocado, si hay uno. Se guarda **la unidad entera** y no su número:
    * la hoja necesita su posición para contar las paradas que le siguen, y
@@ -137,7 +152,15 @@ export function Ontoy({
    * daría la respuesta de otra ruta el día que el pasajero toque una parada de
    * una ruta distinta a la que está resaltada, que es justo el caso normal.
    */
-  const [paradaTocada, setParadaTocada] = useState<{ ruta: string; parada: string } | null>(null);
+  const [paradaTocada, setParadaTocada] = useState<{ ruta: string; parada: string } | null>(
+    delLetrero && pedida ? { ruta: pedida, parada: delLetrero } : null,
+  );
+  /**
+   * La parada del letrero, mientras su hoja siga abierta. Se suelta al cerrarla
+   * o al tocar otra: tocarla después desde el mapa ya no es «llegar por el
+   * letrero», y la hoja no tiene por qué volver a saludar.
+   */
+  const [paradaDelLetrero, setParadaDelLetrero] = useState<string | null>(delLetrero);
   /**
    * «Tus paradas» cuelga de Inicio, como la ruta abierta cuelga del Mapa: la
    * barra tiene cuatro lugares y eso es ley (8.8). No es un quinto lugar.
@@ -195,7 +218,15 @@ export function Ontoy({
    * todas las de la tira están prendidas otra vez (8.7).
    */
   const [apagadas, setApagadas] = useState<Set<string>>(new Set());
-  const [agregadas, setAgregadas] = useState<Set<string>>(new Set());
+  /*
+   * La ruta del letrero entra a la tira como si el pasajero la hubiera sumado
+   * desde el panel: sin ubicación la tira es alfabética, y sin esto la ruta de
+   * la parada que acaba de escanear podía no dibujarse — el mapa se abría sin
+   * la parada en la que está parado.
+   */
+  const [agregadas, setAgregadas] = useState<Set<string>>(
+    () => new Set(delLetrero && pedida ? [pedida] : []),
+  );
   const [verParadas, setVerParadas] = useState(true);
   const [panelAbierto, setPanelAbierto] = useState(false);
 
@@ -321,6 +352,7 @@ export function Ontoy({
   }, [listaDeLaCiudad.datos, guardadas.guardadas]);
 
   const abrirRuta = useCallback((circuitoId: string, parada?: string, enSentido?: Sentido) => {
+    setParadaDelLetrero(null);
     setEnfocada(circuitoId);
     setParadaAbierta(parada ?? null);
     setParadaTocada(null);
@@ -348,6 +380,7 @@ export function Ontoy({
     (ruta: string, parada: string, enSentido: Sentido | null) => {
       setParadaTocada({ ruta, parada });
       setParadaAbierta(parada);
+      setParadaDelLetrero(null);
       setCamiTocado(null);
       /*
        * **El sentido sale de la parada tocada**, no del que traía la app.
@@ -365,6 +398,7 @@ export function Ontoy({
   const cerrarLaHoja = useCallback(() => {
     setParadaAbierta(null);
     setParadaTocada(null);
+    setParadaDelLetrero(null);
   }, []);
 
   /**
@@ -380,6 +414,7 @@ export function Ontoy({
   /* Si Inicio abre su lista de rutas completa: sólo al llegar desde «Ver todas las rutas» de «Ir a». */
   const [rutasAbiertas, setRutasAbiertas] = useState(false);
   const irA = useCallback((l: Lugar) => {
+    setParadaDelLetrero(null);
     setLugar(l);
     setRutaAbierta(false);
     setParadaAbierta(null);
@@ -493,7 +528,19 @@ export function Ontoy({
    * se DERIVA y no se guarda. Una parada que sirve a los dos sentidos trae
    * `null` y se queda el que había.
    */
-  const sentidoDeLaHoja: Sentido = laHojaEsLaAsomada ? (asomada!.sentido ?? sentido) : sentido;
+  /*
+   * La hoja del letrero tampoco la abrió un toque que haya puesto el sentido:
+   * se saca de su parada en la lista de la ciudad, igual que la asomada.
+   */
+  const paradaDelLetreroEnLaCiudad =
+    paradaDelLetrero && paradaAbierta === paradaDelLetrero
+      ? (paradasDeLaCiudad.find((p) => p.id === paradaDelLetrero && p.ruta === paradaTocada?.ruta) ?? null)
+      : null;
+  const sentidoDeLaHoja: Sentido = laHojaEsLaAsomada
+    ? (asomada!.sentido ?? sentido)
+    : paradaDelLetreroEnLaCiudad
+      ? (paradaDelLetreroEnLaCiudad.sentido ?? sentido)
+      : sentido;
 
   /*
    * Las próximas paradas del camión tocado. Se recalculan con cada sondeo, que
@@ -720,6 +767,7 @@ export function Ontoy({
         ) : (
           <VistaMapa
             ciudad={ciudad}
+            centrarEn={paradaDelLetreroEnLaCiudad}
             yo={yo}
             rutas={rutas}
             enfocada={enfocada}
@@ -789,6 +837,7 @@ export function Ontoy({
           alturaInicial={laHojaEsLaAsomada ? "asomada" : "media"}
           porQue={laHojaEsLaAsomada ? porQueEnPalabras(asomada!.porQue) : null}
           haciaDonde={nombreDeSentido(sentidoDeLaHoja) ?? null}
+          delLetrero={paradaDelLetrero && paradaAbierta === paradaDelLetrero ? paradaDelLetrero : null}
           llegadas={llegadasDeLaHoja}
           porArrancar={
             vivo?.estado === "por_arrancar"

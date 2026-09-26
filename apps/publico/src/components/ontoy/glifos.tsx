@@ -149,3 +149,47 @@ export function GlifoPase({ tamano = 26 }: { tamano?: number }) {
     </svg>
   );
 }
+
+/**
+ * `g-estrella`: la estrella arena con ojos — **sin guardar**. Copiada de
+ * `docs/diseno/app-v1/simbolos/g-estrella.svg` sin sus 8 KB de metadatos.
+ */
+export function GlifoEstrella({ tamano = 22 }: { tamano?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={tamano} height={tamano} aria-hidden="true">
+      <path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z" fill="#C9C1B3" stroke="#C9C1B3" strokeWidth="1.2" strokeLinejoin="round" />
+      <circle cx="10" cy="11.6" r="1.6" fill={BLANCO} />
+      <circle cx="14" cy="11.6" r="1.6" fill={BLANCO} />
+      <circle cx="10" cy="11.6" r="0.85" fill={CARBON} />
+      <circle cx="14" cy="11.6" r="0.85" fill={CARBON} />
+    </svg>
+  );
+}
+
+/** `g-estrella-si`: la estrella maíz que sonríe — **guardada**. */
+export function GlifoEstrellaSi({ tamano = 22 }: { tamano?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={tamano} height={tamano} aria-hidden="true">
+      <path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z" fill="#F2C14E" stroke="#F2C14E" strokeWidth="1.2" strokeLinejoin="round" />
+      <circle cx="10" cy="11.2" r="1.6" fill={BLANCO} />
+      <circle cx="14" cy="11.2" r="1.6" fill={BLANCO} />
+      <circle cx="10" cy="11.2" r="0.85" fill={CARBON} />
+      <circle cx="14" cy="11.2" r="0.85" fill={CARBON} />
+      <path d="M10.7 13.9q1.3 1.1 2.6 0" fill="none" stroke={CARBON} strokeWidth="1.1" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** `g-carta`: la carta rosa con ojos — **«Mándala»**, compartir la parada. */
+export function GlifoCarta({ tamano = 22 }: { tamano?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={tamano} height={tamano} aria-hidden="true">
+      <rect x="2.4" y="5.4" width="19.2" height="13.6" rx="2.4" fill="#E36F8C" />
+      <path d="M3.8 6.8 12 12.2l8.2-5.4" fill="none" stroke={CARBON} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="8.8" cy="14.8" r="1.8" fill={BLANCO} />
+      <circle cx="15.2" cy="14.8" r="1.8" fill={BLANCO} />
+      <circle cx="8.8" cy="14.8" r="0.95" fill={CARBON} />
+      <circle cx="15.2" cy="14.8" r="0.95" fill={CARBON} />
+    </svg>
+  );
+}
