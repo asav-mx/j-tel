@@ -5,7 +5,6 @@ import {
   dondeCaeLaParada,
   llegadasHasta,
   paradasHastaLaParada,
-  promesaEnPalabras,
   rangoEnPalabras,
   useVelocidadDelCorredor,
 } from "@/lib/ontoy/llegadas";
@@ -22,6 +21,7 @@ import {
   elegirLectura,
   type Lectura,
 } from "@/lib/ontoy/lectura-de-la-guardada";
+import { promesaFirmada } from "@/lib/ontoy/promesa-firmada";
 
 /**
  * Una parada guardada con su próximo paso (8.8b) — **en dos tamaños**.
@@ -147,7 +147,7 @@ export function useLecturaDeLaGuardada({
   const promesa =
     lectura.tipo === "por-arrancar"
       ? null
-      : promesaEnPalabras(vivo?.promesa ?? ruta?.promesa ?? null, parada?.sentido ?? null) || null;
+      : promesaFirmada(vivo?.promesa ?? ruta?.promesa ?? null, parada?.sentido ?? null) || null;
 
   return {
     nombreParada: parada?.nombre ?? null,
