@@ -139,6 +139,13 @@ export function VistaInicio({
 
   const [primera, ...demas] = guardadas;
   /*
+   * **«Va. Búscala tú»** (lámina 5/08; estándar §H: «Si dices que no: “Va.
+   * Búscala tú”»). El permiso negado, sin guardadas y con la ciudad abierta:
+   * reemplaza a la invitación, que decía «Guarda tu parada» como si nada
+   * hubiera pasado. Con guardadas manda «Tu próximo camión»; de noche, la noche.
+   */
+  const sinUbicacion = ubicacion.estado === "negada" && !primera && !deNoche;
+  /*
    * **El Ontoy de Inicio, y es uno** (regla 3; ASAV, 25-sep). Siempre hay uno
    * y siempre dice algo, así que el asomado de arriba se esconde aquí solo:
    *
@@ -147,6 +154,7 @@ export function VistaInicio({
    * | primera vez, con la ciudad abierta | la bienvenida | «¿Ontás?» — y pide la ubicación, la única vez |
    * | con guardadas | «Tu próximo camión» | la llegada de la primera, del dato |
    * | sin guardadas, de noche — **aunque sea la primera vez** | la noche de la ciudad | «Ya no hay corridas» + a qué hora vuelve la primera |
+   * | sin guardadas, permiso negado | «Va. Búscala tú» | que todo funciona igual, y cómo cambiar de idea |
    * | sin guardadas, de día | la invitación | cómo se guarda una parada |
    *
    * **De madrugada la noche le gana a la bienvenida** (auditoría del 25-sep):
@@ -175,6 +183,8 @@ export function VistaInicio({
     <NocheDeLaCiudad vuelven={vuelvenEnPalabras(deNoche)} />
   ) : margenImpreciso !== null ? (
     <UbicacionImprecisa margenM={margenImpreciso} alReintentar={ubicacion.reintentar} />
+  ) : sinUbicacion ? (
+    <SinUbicacion />
   ) : puedeGuardar ? (
     <TarjetaDeOntoy
       pose="al-frente"
@@ -191,6 +201,7 @@ export function VistaInicio({
         sinRed={sinRed}
         deNoche={deNoche !== null}
         imprecisa={!primera && !deNoche && margenImpreciso !== null}
+        sinUbicacion={sinUbicacion}
       />
 
       {tarjeta}
@@ -411,6 +422,7 @@ function Encabezado({
   sinRed,
   deNoche,
   imprecisa,
+  sinUbicacion,
 }: {
   primeraVez: boolean;
   conGuardadas: boolean;
@@ -418,6 +430,8 @@ function Encabezado({
   deNoche: boolean;
   /** Está la tarjeta de la 5/09: la posición llegó con un margen grande. */
   imprecisa: boolean;
+  /** Está la tarjeta de la 5/08: el pasajero dijo que no a la ubicación. */
+  sinUbicacion: boolean;
 }) {
   const contexto = primeraVez
     ? "Todavía no sé dónde estás"
@@ -427,7 +441,9 @@ function Encabezado({
         ? "La ciudad está cerrada"
         : imprecisa
           ? "Por aquí, más o menos"
-          : null;
+          : sinUbicacion
+            ? "Sin tu ubicación"
+            : null;
 
   return (
     <header className="ontoy-inicio-cabeza">
@@ -487,6 +503,42 @@ function UbicacionImprecisa({ margenM, alReintentar }: { margenM: number; alRein
         </svg>
         Intentar de nuevo
       </button>
+    </section>
+  );
+}
+
+/**
+ * **«Va. Búscala tú»** (lámina `5-paradas-qr-ubicacion/08`), con el permiso
+ * de ubicación negado.
+ *
+ * Dice lo que pasa sin reclamar nada: sin ubicación la app **no pierde ninguna
+ * función**, sólo deja de ordenar por cercanía (8.7). Y el camino de vuelta
+ * está en el teléfono, no aquí: una vez negado, el navegador ya no deja
+ * volver a preguntar, así que un botón «Usar mi ubicación» prometería algo
+ * que no puede hacer.
+ *
+ * Misma tarjeta que la bienvenida (hueso, con anillo) y un solo botón
+ * principal, que baja a la lista de rutas.
+ */
+function SinUbicacion() {
+  return (
+    <section className="ontoy-bienvenida">
+      <div className="ontoy-bienvenida-dicho">
+        <Ontoy pose="al-frente" tamano={72} />
+        <div>
+          {/* «Búscala tú» no se parte: a 320 px dejaba «tú.» solo en su renglón. */}
+          <p className="ontoy-bienvenida-titulo">Va. Búscala{"\u00a0"}tú.</p>
+          <p className="ontoy-bienvenida-apoyo">
+            Sin tu ubicación no ordeno por cercanía, y todo lo demás funciona igual.
+          </p>
+        </div>
+      </div>
+      <a className="ontoy-boton ontoy-boton-principal" href="#ontoy-rutas">
+        Buscar mi parada
+      </a>
+      <p className="ontoy-bienvenida-nota">
+        Si cambias de idea, dale permiso de ubicación en los ajustes de tu teléfono.
+      </p>
     </section>
   );
 }

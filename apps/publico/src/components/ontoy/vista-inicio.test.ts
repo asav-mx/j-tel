@@ -253,3 +253,23 @@ describe("de madrugada, «Ya no hay corridas» aunque sea la primera vez", () =>
     expect(codigo).toContain("primeraVez={bienvenida}");
   });
 });
+
+describe("con el permiso negado, «Va. Búscala tú» (lámina 5/08; estándar §H)", () => {
+  const codigo = sinComentarios(vista);
+
+  it("sale sin guardadas y con la ciudad abierta, y reemplaza a la invitación", () => {
+    expect(codigo).toContain('const sinUbicacion = ubicacion.estado === "negada" && !primera && !deNoche;');
+    expect(codigo.indexOf(") : sinUbicacion ? (")).toBeLessThan(codigo.indexOf(") : puedeGuardar ? ("));
+  });
+
+  it("no ofrece volver a pedir la ubicación: una vez negada, el navegador ya no pregunta", () => {
+    const tarjeta = codigo.slice(codigo.indexOf("function SinUbicacion"), codigo.indexOf("function Bienvenida"));
+    expect(tarjeta).toContain("Buscar mi parada");
+    expect(tarjeta).not.toContain("ubicacion.pedir");
+    expect(tarjeta).toContain("ajustes de tu teléfono");
+  });
+
+  it("el encabezado lo dice", () => {
+    expect(codigo).toContain('? "Sin tu ubicación"');
+  });
+});
