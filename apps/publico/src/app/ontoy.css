@@ -1917,6 +1917,29 @@
   color: var(--tenue);
   text-wrap: pretty;
 }
+/*
+ * «Te ubico por aquí, más o menos» (lámina 5/09): el molde de la bienvenida,
+ * con el pasajero en su círculo y un titular de dos renglones, no de uno.
+ */
+.ontoy-imprecisa-yo {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--fondo);
+  box-shadow: 0 0 0 1px var(--linea);
+  display: grid;
+  place-items: center;
+}
+.ontoy-imprecisa .ontoy-bienvenida-titulo {
+  font-size: 22px;
+  line-height: 1.05;
+}
+.ontoy-imprecisa .ontoy-boton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 /* Las dos salidas miden lo mismo: ninguna de las dos es la que «hay que» tocar. */
 .ontoy-bienvenida .ontoy-boton {
   width: 100%;
