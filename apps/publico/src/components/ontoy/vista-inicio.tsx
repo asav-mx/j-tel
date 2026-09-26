@@ -81,7 +81,7 @@ export function VistaInicio({
    * Los camiones de TODAS tus rutas, de la consulta única de la raíz (PR 4b):
    * Inicio ya no pregunta por su cuenta.
    */
-  enVivo: { vivos: Map<string, Vivo>; error: boolean; respondio: boolean; recibidoEn: number | null };
+  enVivo: { vivos: Map<string, Vivo>; error: boolean; respondio: boolean; recibidoEn: number | null; reintentar: () => void };
   /** Los avisos de la concesión de tus rutas: la puerta que antes era la campana. */
   avisos: AvisoEnLaCampana[];
   /** Si hay alguno que no has visto: prende el punto. */
@@ -223,6 +223,25 @@ export function VistaInicio({
             ))}
           </div>
         </section>
+      )}
+
+      {/*
+        * **Reintentar**, sin señal y debajo de tus paradas, como la lámina 7/05.
+        * Contorno y no principal: la acción de la pantalla sigue siendo leer lo
+        * que se sabía; esto sólo pregunta ya, sin esperar la vuelta del sondeo.
+        * Sólo sale con la consulta caída, que sólo existe con guardadas (ver
+        * `sinRed`, arriba).
+        */}
+      {sinRed && (
+        <div className="ontoy-inicio-reintentar">
+          <button type="button" className="ontoy-boton-contorno" onClick={enVivo.reintentar}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M20 12a8 8 0 1 1-2.35-5.65" />
+              <path d="M20 4v5h-5" />
+            </svg>
+            Reintentar
+          </button>
+        </div>
       )}
 
       <RutasDeInicio
