@@ -82,7 +82,7 @@ export function rotacionDeCami(rumbo: number | null): number {
  * es justo lo que no se puede volver ilegible.
  *
  * **Con dato fresco, sin número ni edad a la vista** (auditoría a1; decisión de
- * ASAV, 26-sep). La lámina `2-mapa/01` dibuja a Cami fresco limpio: la etiqueta
+ * ASAV, 26-sep; ENMIENDAS (h), con el límite exacto de «fresco» y dónde vive). La lámina `2-mapa/01` dibuja a Cami fresco limpio: la etiqueta
  * de edad sólo aparece con dato viejo («hace 6 min», README). Con dos unidades
  * cerca, los rótulos se enciman entre sí y tapan el punto «tú». El dato no se
  * pierde: el número y la edad siguen en el marcador para el lector de pantalla,

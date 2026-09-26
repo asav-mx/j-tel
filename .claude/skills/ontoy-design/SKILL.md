@@ -4,7 +4,7 @@ description: Use this skill to generate well-branded interfaces and assets for �
 user-invocable: true
 ---
 
-**Lee `ENMIENDAS.md` primero: manda sobre este archivo, sobre `CLAUDE.md` y sobre `readme.md`.** Trae lo que Asav cambió después de exportar el skill (el color de ruta, lo que la landing promete, las direcciones de ontoy.app, el nombre de la parada: Páris) y las reglas que este repo ya tiene y que el skill no sabe.
+**Lee `ENMIENDAS.md` primero: manda sobre este archivo, sobre `CLAUDE.md` y sobre `readme.md`.** Trae lo que Asav cambió después de exportar el skill (el color de ruta, lo que la landing promete, las direcciones de ontoy.app, el nombre de la parada: Páris; Cami sin edad a la vista con dato fresco) y las reglas que este repo ya tiene y que el skill no sabe.
 
 Read the readme.md file within this skill, and CLAUDE.md for the approved rules, then explore the other available files.
 If creating visual artifacts (slides, mocks, throwaway prototypes, etc), copy assets out and create static HTML files for the user to view. If working on production code, copy assets and read the rules here to become an expert in designing with this brand.
