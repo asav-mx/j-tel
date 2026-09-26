@@ -92,6 +92,7 @@ export function HojaDeParada({
   direccion,
   llegadas,
   porArrancar,
+  cerrada = false,
   promesa,
   promesaDeclarada = false,
   guardada,
@@ -118,6 +119,8 @@ export function HojaDeParada({
    * servicio que no ha salido.
    */
   porArrancar?: { ruta: string; arrancaEl: string | null } | null;
+  /** La ruta está fuera de horario: Páris duerme, con sus «z» (lámina 2-mapa/13). */
+  cerrada?: boolean;
   /** La promesa publicada, ya en palabras. Siempre visible (8.2) — salvo por arrancar. */
   promesa: string;
   /**
@@ -350,7 +353,7 @@ export function HojaDeParada({
             dangerouslySetInnerHTML={{
               __html: tinoEnLaParada({
                 color,
-                mirada: porArrancar ? "dormido" : llegadas.some((l) => l.enVivo) ? "de-lado" : "al-frente",
+                mirada: porArrancar || cerrada ? "dormido" : llegadas.some((l) => l.enVivo) ? "de-lado" : "al-frente",
                 guardada,
                 /* El letrero la pide; si no, sonríe si es tuya (lo decide `guardada`). */
                 sonrie: delLetrero ? true : undefined,
