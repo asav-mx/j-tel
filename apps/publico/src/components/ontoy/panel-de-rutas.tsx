@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { RutaOrdenada } from "@/lib/ontoy/rutas-cerca";
-import { distanciaEnPalabras } from "@/lib/ontoy/distancia";
+import { distanciaParaDecir } from "@/lib/ontoy/distancia";
 
 /**
  * **El panel de «+N rutas más»** — las rutas que no caben en la tira (8.8;
@@ -21,11 +21,14 @@ import { distanciaEnPalabras } from "@/lib/ontoy/distancia";
  * Marcar y desmarcar no cuesta una petición ni se guarda en ningún lado.
  */
 export function PanelDeRutas({
+  margenM,
   resto,
   alCerrar,
   alAgregar,
 }: {
   resto: RutaOrdenada[];
+  /** El margen de la posición: con más de 100 m no se dicen metros (`esImprecisa`). */
+  margenM: number | null;
   alCerrar: () => void;
   /** Las marcadas, todas juntas al cerrar: el mapa se redibuja una vez, no una por casilla. */
   alAgregar: (ids: string[]) => void;
@@ -73,7 +76,11 @@ export function PanelDeRutas({
                   {/* Sin distancia medida no va número: el hueco se calla, no se rellena. */}
                   {entrada && (
                     <span className="ontoy-panel-donde">
-                      por {entrada.nombre}, {distanciaEnPalabras(entrada.distanciaM)}
+                      por {entrada.nombre}
+                      {(() => {
+                        const d = distanciaParaDecir(entrada.distanciaM, margenM);
+                        return d ? `, ${d}` : null;
+                      })()}
                     </span>
                   )}
                 </span>

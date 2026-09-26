@@ -881,6 +881,7 @@ export function Ontoy({
       {!campanaAbierta && enLaCiudad && panelAbierto && (
         <PanelDeRutas
           resto={filtro.resto}
+          margenM={ubicacion.yo?.margenM ?? null}
           alCerrar={() => setPanelAbierto(false)}
           alAgregar={agregarRutas}
         />

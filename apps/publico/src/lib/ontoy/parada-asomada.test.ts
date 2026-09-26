@@ -142,7 +142,7 @@ describe("qué parada se asoma", () => {
 
 describe("el renglón de debajo del nombre, como lo escribe el diseño", () => {
   it("la más cerca: con la distancia y «en línea recta»", () => {
-    expect(porQueEnPalabras({ tipo: "la-mas-cerca", distanciaM: 88 })).toBe(
+    expect(porQueEnPalabras({ tipo: "la-mas-cerca", distanciaM: 88, margenM: 20 })).toBe(
       "La más cerca de ti · a 90 m en línea recta",
     );
   });
@@ -150,7 +150,13 @@ describe("el renglón de debajo del nombre, como lo escribe el diseño", () => {
   it("«en línea recta» se queda también en kilómetros", () => {
     /* No es caminando. Quitarlo en la cifra grande, que es donde más se nota
        la diferencia con el camino de verdad, sería lo peor. */
-    expect(porQueEnPalabras({ tipo: "la-mas-cerca", distanciaM: 1234 })).toMatch(/km en línea recta$/);
+    expect(porQueEnPalabras({ tipo: "la-mas-cerca", distanciaM: 1234, margenM: null })).toMatch(/km en línea recta$/);
+  });
+
+  it("con 3 km de margen no dice «la más cerca» ni metros (a1, 25-sep)", () => {
+    const t = porQueEnPalabras({ tipo: "la-mas-cerca", distanciaM: 48, margenM: 3000 });
+    expect(t).toBe("Cerca de ti, más o menos · margen de unos 3 km");
+    expect(t).not.toMatch(/\d+ m\b/);
   });
 
   it("la guardada dice que es tuya, y no inventa una distancia", () => {
