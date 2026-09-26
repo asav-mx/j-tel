@@ -144,15 +144,21 @@ export function VistaInicio({
    *
    * | Cuándo | Qué tarjeta | Qué dice Ontoy |
    * |---|---|---|
-   * | primera vez | la bienvenida | «¿Ontás?» — y pide la ubicación, la única vez |
+   * | primera vez, con la ciudad abierta | la bienvenida | «¿Ontás?» — y pide la ubicación, la única vez |
    * | con guardadas | «Tu próximo camión» | la llegada de la primera, del dato |
-   * | sin guardadas, de noche | la noche de la ciudad | «Ya no hay corridas» + a qué hora vuelve la primera |
+   * | sin guardadas, de noche — **aunque sea la primera vez** | la noche de la ciudad | «Ya no hay corridas» + a qué hora vuelve la primera |
    * | sin guardadas, de día | la invitación | cómo se guarda una parada |
+   *
+   * **De madrugada la noche le gana a la bienvenida** (auditoría del 25-sep):
+   * a las 00:20 «¿Ontás? Dime dónde estás y te digo qué pasa cerca» promete
+   * algo que no hay —no pasa nada cerca, ni lejos—. La bienvenida no se pierde:
+   * nada se contestó, así que sale en cuanto la ciudad abre.
    *
    * Sin red no tiene tarjeta propia: sólo puede pasar con guardadas (ver
    * `sinRed`), y entonces la dice la tarjeta del próximo camión.
    */
-  const tarjeta = primeraVez ? (
+  const bienvenida = primeraVez && !deNoche;
+  const tarjeta = bienvenida ? (
     <Bienvenida alPedirUbicacion={ubicacion.pedir} puedeGuardar={puedeGuardar} />
   ) : primera ? (
     <TarjetaDelProximoCamion
@@ -180,7 +186,7 @@ export function VistaInicio({
   return (
     <div className="ontoy-vista">
       <Encabezado
-        primeraVez={primeraVez}
+        primeraVez={bienvenida}
         conGuardadas={guardadas.length > 0}
         sinRed={sinRed}
         deNoche={deNoche !== null}
