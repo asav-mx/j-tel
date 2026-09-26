@@ -155,7 +155,7 @@ export function VistaInicio({
       alQuitar={() => alQuitarGuardada(primera)}
     />
   ) : deNoche ? (
-    <TarjetaDeOntoy pose="dormido" dicho="Ya no hay corridas." apoyo={vuelvenEnPalabras(deNoche)} />
+    <NocheDeLaCiudad vuelven={vuelvenEnPalabras(deNoche)} />
   ) : puedeGuardar ? (
     <TarjetaDeOntoy
       pose="al-frente"
@@ -231,10 +231,36 @@ export function VistaInicio({
 }
 
 /**
- * **Una tarjeta de Ontoy** cuando Inicio no tiene una parada que contar: la
- * noche de la ciudad, o cómo se guarda la primera. Misma forma que la del
+ * **La noche de la ciudad**, como la lámina `1-inicio/05` (ASAV, 25-sep).
+ *
+ * **No es carbón, y es a propósito.** La tarjeta del próximo camión es carbón
+ * en las dos pieles porque habla de UN camión, como la placa (#602). Ésta no
+ * habla de ninguno: es la pantalla diciendo que la ciudad duerme, y por eso es
+ * **superficie de la interfaz** —los roles `--panel`, `--linea`, `--texto`,
+ * que sí siguen la piel—. Medido en la lámina de noche: `#26365e` con su
+ * anillo, igual que las demás superficies.
+ *
+ * Ontoy dormido al centro, grande (hasta 160 en una pantalla de noche, §G), y
+ * las dos frases como título: qué pasa y cuándo vuelve **la primera**.
+ */
+function NocheDeLaCiudad({ vuelven }: { vuelven: string }) {
+  return (
+    <section className="ontoy-noche-ciudad">
+      <Ontoy pose="dormido" tamano={140} />
+      <p className="ontoy-noche-ciudad-frase">
+        Ya no hay corridas.
+        <br />
+        {vuelven}
+      </p>
+    </section>
+  );
+}
+
+/**
+ * **Una tarjeta de Ontoy** cuando Inicio no tiene una parada que contar y la
+ * ciudad está abierta: cómo se guarda la primera. Misma forma que la del
  * próximo camión —carbón, Ontoy a la izquierda, la frase grande— para que
- * Inicio abra siempre igual.
+ * Inicio abra siempre igual. (La noche de la ciudad tiene la suya, arriba.)
  */
 function TarjetaDeOntoy({ pose, dicho, apoyo }: { pose: PoseDeOntoy; dicho: string; apoyo: string }) {
   return (

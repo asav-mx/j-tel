@@ -39,7 +39,7 @@ describe("un Ontoy por pantalla, y sólo si dice algo", () => {
     expect(codigo).toContain("const tarjeta = primeraVez ? (");
     expect(codigo.match(/\{tarjeta\}/g) ?? []).toHaveLength(1);
     /* Y fuera de la tarjeta no queda otro Ontoy suelto en la pantalla. */
-    const pantalla = codigo.slice(codigo.indexOf("return (\n    <div className=\"ontoy-vista\">"), codigo.indexOf("function TarjetaDeOntoy"));
+    const pantalla = codigo.slice(codigo.indexOf("return (\n    <div className=\"ontoy-vista\">"), codigo.indexOf("function NocheDeLaCiudad"));
     expect(pantalla).not.toContain("<Ontoy ");
   });
 
@@ -161,5 +161,35 @@ describe("las rutas de Inicio: el Marco 8.8 y sin botones grandes (ASAV, 25-sep)
   it("es un enlace discreto, no un botón grande", () => {
     expect(rutas).toContain('className="ontoy-liga"');
     expect(rutas).not.toMatch(/ontoy-boton|ontoy-desplegar/);
+  });
+});
+
+describe("qué se voltea con la piel y qué no (ASAV, 25-sep; como la placa del #602)", () => {
+  const css = readFileSync(path.join(AQUI, "..", "..", "app", "ontoy.css"), "utf8");
+  const regla = (sel: string) => {
+    const i = css.indexOf(`${sel} {`);
+    expect(i, `falta la regla ${sel}`).toBeGreaterThanOrEqual(0);
+    return css.slice(i, css.indexOf("}", i));
+  };
+
+  it("«Tu próximo camión» es carbón en las dos pieles: tokens de la PALETA, no roles", () => {
+    /*
+     * `--texto` y `--panel` se voltean de noche; `--carbon` y `--hueso` no.
+     * Escribir la paleta es la forma de decir «esto no se voltea».
+     */
+    const tarjeta = regla(".ontoy-proximo");
+    expect(tarjeta).toContain("background: var(--carbon)");
+    expect(tarjeta).toContain("color: var(--hueso)");
+    expect(tarjeta).not.toMatch(/var\(--(texto|panel|panel2|fondo)\)/);
+    for (const hija of [".ontoy-proximo-ruta", ".ontoy-proximo-apoyo", ".ontoy-proximo-promesa"]) {
+      expect(regla(hija), hija).not.toMatch(/var\(--(texto|tenue|panel|panel2|fondo|linea)\)/);
+    }
+  });
+
+  it("la noche de la ciudad es superficie de la interfaz: ROLES, como la lámina 1/05", () => {
+    const noche = regla(".ontoy-noche-ciudad");
+    expect(noche).toContain("background: var(--panel)");
+    expect(noche).not.toContain("var(--carbon)");
+    expect(sinComentarios(vista)).toContain("<NocheDeLaCiudad vuelven={vuelvenEnPalabras(deNoche)} />");
   });
 });
