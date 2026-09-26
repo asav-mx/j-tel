@@ -41,6 +41,7 @@ import { ordenarRutas } from "@/lib/ontoy/rutas-cerca";
 import { armarLaTira } from "@/lib/ontoy/tira-de-rutas";
 import { PanelDeRutas } from "@/components/ontoy/panel-de-rutas";
 import { useEnVivo } from "@/lib/ontoy/en-vivo";
+import { promesaFirmada } from "@/lib/ontoy/promesa-firmada";
 import { useLlaveDeEnsayo } from "@/lib/ontoy/llave-de-ensayo";
 import { BandaDeEnsayo } from "@/components/ontoy/banda-de-ensayo";
 import { rutasDeLaConsulta } from "@/lib/ontoy/consulta-de-la-raiz";
@@ -805,7 +806,7 @@ export function Ontoy({
                 renglones={renglones}
                 cargando={!forma || !vivo}
                 aviso={avisoDeLaEscalera(vivo, error)}
-                promesa={promesaEnPalabras(vivo?.promesa ?? rutaEnfocada.promesa ?? null, sentido) ?? ""}
+                promesa={promesaFirmada(vivo?.promesa ?? rutaEnfocada.promesa ?? null, sentido) ?? ""}
                 color={rutaEnfocada.color_hex}
                 paradaMarcada={paradaAbierta}
                 alTocarParada={setParadaAbierta}
