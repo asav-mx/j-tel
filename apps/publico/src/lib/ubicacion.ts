@@ -46,6 +46,18 @@ export type EstadoDeUbicacion =
    */
   | "sin-senal";
 
+export interface Posicion {
+  lat: number;
+  lon: number;
+  rumbo: number | null;
+  /**
+   * **El margen con que el teléfono da la posición**, en metros (`coords.accuracy`).
+   * Con más de 100 m la app deja de decir distancias en metros: ver
+   * `esImprecisa` en `lib/ontoy/distancia.ts`. Nulo si el aparato no lo dio.
+   */
+  margenM: number | null;
+}
+
 export interface Ubicacion {
   /**
    * Dónde está el pasajero, y **hacia dónde mira si su aparato lo mide**.
@@ -60,7 +72,7 @@ export interface Ubicacion {
    * en el mapa: un cono que apunta al norte por omisión manda a alguien a
    * caminar hacia el lado equivocado, y eso es peor que no tener cono.
    */
-  yo: { lat: number; lon: number; rumbo: number | null } | null;
+  yo: Posicion | null;
   estado: EstadoDeUbicacion;
   /** Pide el permiso (sólo tras un toque del pasajero) y empieza a leer. */
   pedir: () => void;
@@ -82,7 +94,7 @@ export function estadoTrasError(codigo: number, hayPosicion: boolean): EstadoDeU
 }
 
 export function useUbicacion({ pedirAlAbrir }: { pedirAlAbrir: boolean }): Ubicacion {
-  const [yo, setYo] = useState<{ lat: number; lon: number; rumbo: number | null } | null>(null);
+  const [yo, setYo] = useState<Posicion | null>(null);
   const [estado, setEstado] = useState<EstadoDeUbicacion>("sin-pedir");
   const vigilancia = useRef<number | null>(null);
   /** Si ya llegó alguna posición: un error después de eso no la borra. */
@@ -107,6 +119,7 @@ export function useUbicacion({ pedirAlAbrir }: { pedirAlAbrir: boolean }): Ubica
            * mismo —no se sabe hacia dónde mira— y se guardan igual: `null`.
            */
           rumbo: Number.isFinite(p.coords.heading) ? (p.coords.heading as number) : null,
+          margenM: Number.isFinite(p.coords.accuracy) ? p.coords.accuracy : null,
         });
         setEstado("concedida");
       },
@@ -173,6 +186,6 @@ export function useUbicacion({ pedirAlAbrir }: { pedirAlAbrir: boolean }): Ubica
  * a esa pantalla a preguntar desde dónde sale. Devuelve `null` mientras no haya
  * permiso o no haya llegado el primer fix, y **eso no es un error**.
  */
-export function useMiUbicacion(): { lat: number; lon: number; rumbo: number | null } | null {
+export function useMiUbicacion(): Posicion | null {
   return useUbicacion({ pedirAlAbrir: true }).yo;
 }

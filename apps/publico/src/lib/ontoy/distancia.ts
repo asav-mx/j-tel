@@ -38,3 +38,41 @@ export function distanciaEnPalabras(m: number): string {
   if (m < 950) return `a ${Math.round(m / 50) * 50} m`;
   return `a ${(Math.round(m / 100) / 10).toLocaleString("es-MX")} km`;
 }
+
+/**
+ * **Cuándo la ubicación ya no alcanza para decir metros** (auditoría a1, 25-sep).
+ *
+ * El teléfono dice con qué margen da la posición (`coords.accuracy`, en metros,
+ * radio del 95 %). Con GPS son 5–30 m; con wifi o antenas, cientos o miles.
+ * Con 3 km de margen la app decía «a 50 m», que es el §D del Marco: el dato
+ * correcto —la distancia al punto que dio el teléfono— presentado como un hecho
+ * sobre dónde está el pasajero.
+ *
+ * **El corte es 100 m.** Debajo de 950 m las distancias se dicen de 50 en 50
+ * (`distanciaEnPalabras`), y con un margen de más de 100 m ya no se sabe ni el
+ * primer dígito de «a 350 m». Arriba del corte **no se dicen metros en ningún
+ * lado de la app**: el orden por cercanía se queda, porque sigue siendo la
+ * mejor apuesta, y la pantalla dice «más o menos» y el margen.
+ */
+export const MARGEN_QUE_ALCANZA_M = 100;
+
+/** Imprecisa = el teléfono dio un margen mayor al corte. Sin margen (nulo) no se castiga. */
+export function esImprecisa(margenM: number | null | undefined): boolean {
+  return typeof margenM === "number" && Number.isFinite(margenM) && margenM > MARGEN_QUE_ALCANZA_M;
+}
+
+/**
+ * La distancia que la pantalla puede decir, o `null` si no puede.
+ *
+ * Todas las pantallas pasan por aquí y no por `distanciaEnPalabras` directo:
+ * una que se salte la regla volvería a decir «a 50 m» con 3 km de margen.
+ */
+export function distanciaParaDecir(m: number, margenM: number | null | undefined): string | null {
+  return esImprecisa(margenM) ? null : distanciaEnPalabras(m);
+}
+
+/** «unos 600 m», «unos 3 km». Hacia arriba: un margen se dice sin achicarlo. */
+export function margenEnPalabras(margenM: number): string {
+  if (margenM < 950) return `unos ${Math.ceil(margenM / 50) * 50} m`;
+  return `unos ${(Math.ceil(margenM / 100) / 10).toLocaleString("es-MX")} km`;
+}

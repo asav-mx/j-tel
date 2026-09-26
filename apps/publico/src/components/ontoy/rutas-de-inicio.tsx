@@ -5,7 +5,7 @@ import type { RutaDeLaCiudad } from "@/lib/ontoy/forma";
 import type { ParadaDeLaCiudad } from "@/lib/paradas-de-la-ciudad";
 import type { EstadoDeRuta } from "@/lib/ontoy/estado-de-ruta";
 import { promesaEnPalabras } from "@/lib/ontoy/llegadas";
-import { distanciaEnPalabras } from "@/lib/ontoy/distancia";
+import { distanciaParaDecir, esImprecisa, margenEnPalabras } from "@/lib/ontoy/distancia";
 import { ordenarRutas, RUTAS_A_LA_VISTA } from "@/lib/ontoy/rutas-cerca";
 import type { Ubicacion } from "@/lib/ubicacion";
 import { arranqueCorto } from "@/lib/fecha-arranque";
@@ -105,8 +105,16 @@ export function RutasDeInicio({
    * distintas, y juntarlas en «no se pudo» le quita al pasajero saber si hay
    * algo que él pueda hacer. Ya no en un párrafo: en el contexto, corto.
    */
+  /*
+   * **Con ubicación imprecisa el orden se queda y los metros se van** (a1,
+   * 25-sep). El orden sigue siendo la mejor apuesta; «a 50 m» con 3 km de
+   * margen no lo es. La cabecera dice por qué no hay metros.
+   */
+  const imprecisa = esImprecisa(yo?.margenM);
   const contexto = porDistancia
-    ? "en línea recta"
+    ? imprecisa && yo?.margenM
+      ? `más o menos · margen de ${margenEnPalabras(yo.margenM)}`
+      : "en línea recta"
     : estado === "buscando"
       ? "buscando dónde estás…"
       : estado === "sin-senal"
@@ -159,7 +167,11 @@ export function RutasDeInicio({
                 <span className="ontoy-renglon-titulo">{r.nombre}</span>
                 {entrada && (
                   <span className="ontoy-renglon-sub">
-                    por <b>{entrada.nombre}</b>, {distanciaEnPalabras(entrada.distanciaM)}
+                    por <b>{entrada.nombre}</b>
+                    {(() => {
+                      const d = distanciaParaDecir(entrada.distanciaM, yo?.margenM);
+                      return d ? `, ${d}` : null;
+                    })()}
                   </span>
                 )}
                 <span className="ontoy-renglon-sub">
