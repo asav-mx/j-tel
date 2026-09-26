@@ -2,6 +2,7 @@ import {
   CORRECCION_DEL_LETRERO,
   direccionDelLetrero,
   direccionDelLetreroEnPalabras,
+  numeroDeLaRuta,
 } from "@jtel/domain";
 import { TinoDeLaLamina } from "@/components/casa/ontoy-impreso";
 import {
@@ -148,6 +149,7 @@ export function LetreroDeParada({
   /** El 1b son `ojos`; `normales` es el patrón de siempre. */
   esquinasComo?: FormaDeLasEsquinas;
 }) {
+  const numero = numeroDeLaRuta(ruta.nombre);
   return (
     <section className="letrero">
       <div className="letrero-tarjeta">
@@ -159,9 +161,20 @@ export function LetreroDeParada({
             <TinoDeLaLamina ruta={ruta.nombre} colorHex={ruta.colorHex} />
             <div className="letrero-dicho">
               <h1 className="letrero-pregunta">¿Cuándo pasa? Escanea.</h1>
-              {/* El color nunca va solo: la placa lleva el nombre de la ruta. */}
+              {/*
+                * La ruta: con número, su placa carbón con el número; sin número,
+                * su franja de color. Y el nombre siempre al lado, como texto: el
+                * color nunca va solo (8.8c) y la placa carbón es sólo para
+                * identificadores cortos que existen — nunca iniciales, nunca el
+                * nombre completo metido en una placa (ASAV, 26-sep).
+                */}
               <p className="letrero-ruta">
-                <span className="letrero-placa">{ruta.nombre}</span>
+                {numero ? (
+                  <span className="letrero-placa">{numero}</span>
+                ) : (
+                  <span className="letrero-franja" style={{ background: ruta.colorHex }} aria-hidden="true" />
+                )}
+                <span className="letrero-ruta-nombre">{ruta.nombre}</span>
                 <span className="letrero-parada">{parada.nombre}</span>
               </p>
             </div>
